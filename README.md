@@ -1,4 +1,4 @@
 # h5RDMtoolbox
-Toolbox to work with HDF file following the FAIR principles.
+"HDF5 Research Datamanagement Toolbox" to work with HDF5 files following the FAIR principles.
 
 The repository is under development in another private repo and will be published here once ready development is finished.
