@@ -1,0 +1,53 @@
+*.xml
+*.log
+*.res.lck
+*.out
+*.res
+*.ccl
+*.iml
+*.pyc
+*-checkpoint.ipynb*
+*.nc
+*.hdf
+
+# build
+*.egg*
+build/
+dist/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# pyCharm project setting
+.idea
+.idea/
+
+# macOS DS indices
+.DS_STORE
+Thumbs.db
+
+# testdata
+#testdata
+testdata_*
+h5database/tests/*.toc.h5
+
+# jupyter
+*.ipynb_checkpoints*
+
+# docs
+#docs/Makefile
+#docs/make.bat
+doc/_build*
+docs/build
+docs/doctrees
+docs/source/_static
+docs/source/_templates
+docs_bak
+*.tiff
+*.par
+docs_bak
+
+# pytest
+.coverage
+htmlcov
