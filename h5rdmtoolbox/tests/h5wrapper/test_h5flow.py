@@ -1,11 +1,12 @@
 import unittest
 
+import numpy as np
 import xarray as xr
 
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.standard_names import StandardNameConvention
 from h5rdmtoolbox.h5wrapper import H5Flow
-from h5rdmtoolbox.h5wrapper.h5flow import XRVelocityDataset, VectorDataset
+from h5rdmtoolbox.h5wrapper.h5flow import XRVelocityDataset, VectorInterface
 
 
 class TestH5Flow(unittest.TestCase):
@@ -13,16 +14,15 @@ class TestH5Flow(unittest.TestCase):
     def test_vector(self):
         with tutorial.get_H5PIV('minimal_flow', mode='r') as h5:
             vec = h5.get_vector(names=('u', 'v'))
-            self.assertIsInstance(vec, VectorDataset)
+            self.assertIsInstance(vec, VectorInterface)
             vecarr = vec[:, :]
             self.assertIsInstance(vecarr, xr.Dataset)
 
-            self.assertIsInstance(h5.VelocityVector, VectorDataset)
+            self.assertIsInstance(h5.VelocityVector, VectorInterface)
             vel = h5.VelocityVector[0, 0, :, :]
             self.assertIsInstance(vel, xr.Dataset)
-            self.assertIsInstance(h5.VelocityVector('x_velocity', 'y_velocity'), VectorDataset)
+            self.assertIsInstance(h5.VelocityVector('x_velocity', 'y_velocity'), VectorInterface)
             vel = h5.VelocityVector('x_velocity', 'y_velocity')[0, 0, :, :]
-            print(vel)
             self.assertIsInstance(vel, xr.Dataset)
             with self.assertRaises(ValueError):
                 h5.VelocityVector('x_velocity')
@@ -81,6 +81,26 @@ class TestH5Flow(unittest.TestCase):
             v.attrs['standard_name'] = 'y_velocity'
             with self.assertRaises(NameError):
                 vel4 = h5['grp'].VelocityVector[:, :]
+
+    def test_VelocityDataset2(self):
+        with H5Flow() as h5:
+            u = h5.create_dataset('u', shape=(10, 20), standard_name='x_velocity', units='m/s')
+            v = h5.create_dataset('v', shape=(10, 20), standard_name='y_velocity', units='m/s')
+            u[:, :] = np.random.random((10, 20))
+            v[:, :] = np.random.random((10, 20))
+
+            vel = h5.VelocityVector[2:4, 5:10]
+            vel.compute_magnitude()
+            vel.magnitude.create_dataset()
+            # with self.assertRaises(RuntimeError):
+            #     vel.u[0]
+            self.assertTrue('magnitude' in h5)
+            # print(h5.magnitude[2:4, 5:10])
+            # print(h5.magnitude[2:4, 4:10])
+        vel.compute_magnitude()
+        print(vel)
+        # vel.magnitude.create_dataset()
+            # print(h5)
 
     def test_Layout(self):
         self.assertTrue(H5Flow.Layout.filename.exists())

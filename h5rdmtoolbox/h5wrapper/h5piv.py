@@ -9,8 +9,8 @@ import numpy as np
 from pint_xarray import unit_registry as ureg
 
 from .h5base import config
-from .h5flow import H5Flow, H5FlowLayout, XRVectorDataset
-from .h5flow import VectorDataset
+from .h5flow import H5Flow, H5FlowLayout, FrozenDataset
+from .h5flow import VectorInterface
 from .. import utils, user_data_dir
 from ..conventions.standard_names import PIVConvention
 from ..x2hdf import piv2hdf
@@ -40,7 +40,7 @@ def _check_piv_software(software_name):
     return False
 
 
-class XRUncertaintyDataset(XRVectorDataset):
+class XRUncertaintyDataset(FrozenDataset):
     """
     xarray Dataset for uncertaint computation based on displacement or velocity field.
     """
@@ -274,7 +274,7 @@ class H5PIV(H5Flow):
 
         return res_xy, res_xyz
 
-    def compute_uncertainty(self, displacement_dataset: VectorDataset, method: Callable, *args, **kwargs):
+    def compute_uncertainty(self, displacement_dataset: VectorInterface, method: Callable, *args, **kwargs):
         return displacement_dataset(method, *args, **kwargs)
 
     @property

@@ -13,12 +13,9 @@ from pint_xarray import unit_registry as ureg
 from h5rdmtoolbox import h5wrapper, __version__
 from h5rdmtoolbox.conventions.data import DataSourceType
 from h5rdmtoolbox.conventions.standard_names import StandardNameConvention, StandardNameError
-from h5rdmtoolbox.h5wrapper import H5File
-from h5rdmtoolbox.h5wrapper import config
-from h5rdmtoolbox.h5wrapper import set_loglevel
+from h5rdmtoolbox.h5wrapper import H5File, config, set_loglevel
 from h5rdmtoolbox.h5wrapper.h5base import WrapperAttributeManager
-from h5rdmtoolbox.h5wrapper.h5file import H5Dataset
-from h5rdmtoolbox.h5wrapper.h5file import H5Group
+from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 
 logger = logging.getLogger('h5rdmtoolbox.h5wrapper')
@@ -65,6 +62,18 @@ class TestH5File(unittest.TestCase):
             ds = h5.create_dataset('velocity', data=da)
             self.assertEqual(ds.attrs['units'], 'm/s')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
+
+    def test_SpecialDataset(self):
+
+        with H5File() as h5:
+            u = h5.create_dataset('u', shape=(10, 20), standard_name='x_velocity')
+            v = h5.create_dataset('v', shape=(10, 20), standard_name='y_velocity')
+            print(type(h5.Vector))
+            vec = h5.Vector[:, :]
+            vec.compute_magnitude()
+            print(vec)
+            # print(h5.Vector[:, :])
+            # print(h5.Vector(names=('u', 'v')))
 
     def test_create_group(self):
         """testing the creation of groups"""
