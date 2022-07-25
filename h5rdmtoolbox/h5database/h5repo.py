@@ -117,7 +117,8 @@ class SingleResult:
     _obj = None
 
     def __init__(self, filename, wrapperpy_class=None):
-        self.filename = filename
+        self.filename = pathlib.Path(filename)
+        self.directory = self.filename.parent
         if wrapperpy_class is None:
             self.wrapperpy_class = H5File
         else:
