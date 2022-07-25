@@ -3,6 +3,7 @@ from typing import List, Tuple
 
 import h5py
 import xarray as xr
+from IPython.display import HTML, display
 
 
 class SpecialDatasetRegistrationWarning(Warning):
@@ -55,6 +56,7 @@ def _register_special_dataset(name, cls):
                 SpecialDatasetRegistrationWarning,
                 stacklevel=2,
             )
+        # print(f'Registering {name} in class {cls.__name__}')
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
 
@@ -67,10 +69,13 @@ def register_special_dataset(name, grpcls):
 
 # sample class:
 class SpecialDataset:
+    """Basic class of special datasets. Inherited classes typically are vector datasets"""
+
     standard_names: Tuple = ()
 
     def __init__(self, h5grp: h5py.Group, comp_names: List = None, attrs=None):
         self._grp = h5grp
+        self._grp_name = self._grp.name
         if attrs is None:
             self._attrs = {}
         else:
@@ -87,8 +92,18 @@ class SpecialDataset:
         _comp_dataarrays = self._get_datasets(args, names, standard_names)
         SpecialDataset(self._grp, _comp_dataarrays)
 
+    def _repr_html_(self):
+        return display(HTML(self._dset._repr_html_()))
+
+    def __repr__(self):
+        if self._grp.name is None:
+            return f'SpecialDataset of group "{self._grp_name}" (closed)\n' + self._dset.__repr__()
+        return f'SpecialDataset of group "{self._grp_name}"\n' + self._dset.__repr__()
+
     def __str__(self):
-        return f'SpecialDataset of group "{self._grp.name}"\n' + self._dset.__str__()
+        if self._grp.name is None:
+            return f'SpecialDataset of group "{self._grp_name}" (closed)\n' + self._dset.__str__()
+        return f'SpecialDataset of group "{self._grp_name}"\n' + self._dset.__str__()
 
     def __getitem__(self, args, new_dtype=None):
         if isinstance(args, str):
@@ -109,10 +124,6 @@ class SpecialDataset:
         self._dset = xrds
         return self
 
-    @property
-    def data_vars(self):
-        return self._dset.data_vars
-
     def __getattr__(self, item):
         try:
             return self._dset[item]
@@ -125,19 +136,15 @@ class SpecialDataset:
         raise AttributeError(e)
         # if name not in {"__dict__", "__setstate__"}:
 
-    #     a = self.__getattribute__(item)
-    #     print(a)
-    #     return a
-    #
-    #     if item in self._dset:
-    #         return self._dset[item]
-    #     return self.__getattribute__(item)
-
     def __setitem__(self, key, value):
         try:
             self._dset[key] = value
         except AttributeError as exr:
             raise AttributeError(exr)
+
+    @property
+    def data_vars(self):
+        return self._dset.data_vars
 
     def _get_datasets(self, *args, names=None, standard_names=None):
         """get vector dataset by standard names or names. Either must be given"""
@@ -166,6 +173,24 @@ class SpecialDataset:
                 raise ValueError('Not enough vector components identified. '
                                  'Need at least two to build a vector dataset')
         return list_of_component_datasets
+
+    def get_by_attribute(self, attr_name):
+        candidats = []
+        for var in self._dset.data_vars:
+            if attr_name in self._dset[var].attrs:
+                candidats.append(self._dset[var])
+        if len(candidats) == 1:
+            return candidats[0]
+        return candidats
+
+    def get_by_standard_name(self, standard_name):
+        candidats = []
+        for var in self._dset.data_vars:
+            if self._dset[var].attrs.get('standard_name') == standard_name:
+                candidats.append(self._dset[var])
+        if len(candidats) == 1:
+            return candidats[0]
+        return candidats
 
     def to_grp(self, h5grp=None):
         raise NotImplementedError('Writing dataset to hdf group not implemented yet')
