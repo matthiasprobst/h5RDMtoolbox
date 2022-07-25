@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 from h5rdmtoolbox.h5wrapper import H5File
+from h5rdmtoolbox.utils import generate_temporary_filename, generate_temporary_directory
 
 
 def build_test_repo(repo_dir, n_files: int = 100):

@@ -26,9 +26,8 @@ class TestH5Flow(unittest.TestCase):
             u[:, :] = np.random.random((10, 20))
             v[:, :] = np.random.random((10, 20))
 
-            vel = h5.Velocity[2:4, 5:10]
+            vel = h5.VelocityVector[2:4, 5:10]
             vel.compute_magnitude()
-            print(vel)
 
     def test_Layout(self):
         self.assertTrue(H5Flow.Layout.filename.exists())

@@ -1,7 +1,6 @@
 import pathlib
 import warnings
 
-import appdirs
 import yaml
 
 from ._logger import logger
@@ -12,12 +11,6 @@ user_config_dir = pathlib.Path.home() / ".config" / __package__.replace('.', '/'
 if not user_config_dir.exists():
     user_config_dir.mkdir(parents=True)
 user_yaml_filename = user_config_dir / f'{name}.yaml'
-
-user_data_dir = pathlib.Path(appdirs.user_data_dir(name))
-# if not user_data_dir.exists():
-#     user_data_dir.mkdir(parents=True)
-
-testdir = pathlib.Path.joinpath(pathlib.Path(__file__).resolve().parent, '../testdata')
 
 config = {
     'datapath': 'data',
@@ -78,4 +71,4 @@ from .h5repo import H5repo
 if not user_yaml_filename.exists():
     write_default_user_yaml_file(silent=False)
 
-__all__ = ['testdir', 'config', 'user_config_dir', 'set_loglevel']
+__all__ = ['config', 'user_config_dir', 'set_loglevel']

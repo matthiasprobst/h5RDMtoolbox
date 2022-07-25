@@ -8,11 +8,12 @@ import h5py
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox.h5wrapper.accessory import register_special_dataset
 from . import pivutils
+from .accessory import register_special_dataset
 from .h5base import config
 from .h5flow import DisplacementDataset, H5FlowGroup
-from .h5flow import H5Flow, H5FlowLayout
+from .h5flow import H5Flow, H5FlowLayout, XRVectorDataset
+from .h5flow import VectorDataset
 from .. import utils, user_data_dir
 from ..conventions.standard_names import PIVConvention
 from ..x2hdf import piv2hdf
@@ -42,18 +43,17 @@ def _check_piv_software(software_name):
     return False
 
 
-#
-# class XRUncertaintyDataset(FrozenDataset):
-#     """
-#     xarray Dataset for uncertaint computation based on displacement or velocity field.
-#     """
-#
-#     __slots__ = ()
-#
-# def compute_uncertainty(self, method: Callable, *args, **kwargs):
-#     """computes the uncertainty using the passed method"""
-#     return method(self, *args, **kwargs)
-#
+class XRUncertaintyDataset(XRVectorDataset):
+    """
+    xarray Dataset for uncertaint computation based on displacement or velocity field.
+    """
+
+    __slots__ = ()
+
+    def compute_uncertainty(self, method: Callable, *args, **kwargs):
+        """computes the uncertainty using the passed method"""
+        return method(self, *args, **kwargs)
+
 
 class H5PIVLayout(H5FlowLayout):
 
@@ -281,8 +281,8 @@ class H5PIV(H5Flow, H5PIVGroup):
 
         return res_xy, res_xyz
 
-    # def compute_uncertainty(self, displacement_dataset: VectorInterface, method: Callable, *args, **kwargs):
-    #     return displacement_dataset(method, *args, **kwargs)
+    def compute_uncertainty(self, displacement_dataset: VectorDataset, method: Callable, *args, **kwargs):
+        return displacement_dataset(method, *args, **kwargs)
 
     def special_inspect(self, silent: bool = False) -> int:
         """Conditional inspection"""
@@ -671,8 +671,8 @@ class H5PIV(H5Flow, H5PIVGroup):
         return vtk_path
 
 
-@register_special_dataset("UncertaintyDataset", H5PIVGroup)
-class UncertaintyDataset(DisplacementDataset):
+@register_special_dataset("DisplacementVector", H5PIVGroup)
+class PIVDisplacementDataset(DisplacementDataset):
     def compute_uncertainty(self, method: Callable, *args, **kwargs):
         """computes the uncertainty using the passed method"""
         return method(self, *args, **kwargs)

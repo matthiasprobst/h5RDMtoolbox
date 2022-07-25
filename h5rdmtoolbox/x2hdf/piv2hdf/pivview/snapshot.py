@@ -10,9 +10,9 @@ import pandas as pd
 from . import core
 from .utils import _get_header_line, _get_headernames_from_pivview_dat, _get_ijk_from_pivview_dat, \
     _get_first_N_lines_from_file
+from ..utils import PIVviewFlag
 from ..nc import process_pivview_nc_data
 from ..par import PivViewParFile, PivViewConfigFile
-from ..utils import PIVviewFlag
 from ....conventions.pivview import translation_dict
 
 logger = logging.getLogger('x2hdf')
@@ -182,8 +182,7 @@ class PIVSnapshot(core.PIVNCConverter):
                                 ds.attrs[attr_key] = attr_val
             # pivflags explanation:
             unique_flags = np.unique(main['piv_flags'][:])
-            main['piv_flags'].attrs['flag_translation'] = json.dumps(
-                {str(PIVviewFlag(u)): int(u) for u in unique_flags})
+            main['piv_flags'].attrs['flag_translation'] = json.dumps({str(PIVviewFlag(u)): int(u) for u in unique_flags})
         return nc_data, nc_root_attr, nc_variable_attr
 
     def _coordinates_from_nc(self):

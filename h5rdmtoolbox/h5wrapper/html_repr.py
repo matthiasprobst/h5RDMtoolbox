@@ -82,7 +82,7 @@ def _group_repr_html(h5group, max_attr_length: Union[int, None], collapsed: bool
             checkbox_state = ''
 
     _html = f"""\n
-          <ul style="list-style-type: none;" class="h5tb-sections">
+          <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
                     <input id="group-{_id}" type="checkbox" {checkbox_state}>
                     <label style="font-weight: bold" for="group-{_id}">
@@ -157,8 +157,8 @@ def _html_repr_dataset(h5dataset, max_attr_length: Union[int, None],
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname' 
                     for="{_id2}">{ds_name}</label>
-                <span class="h5tb-dims">{_shape_repr}</span>
-                <span class="h5tb-units">[{_unit}]</span>"""
+                <span class="h5tb-dims">{_shape_repr}</span>  [
+                <span class="h5tb-unit">{_unit}</span>]"""
     # now all attributes of the dataset:
     # open attribute section:
     _html_ds_attrs = f"""\n<ul class="h5tb-attr-list">"""
@@ -214,6 +214,8 @@ def h5file_html_repr(h5, max_attr_length: Union[int, None], preamble: str = None
     _html += "\n</div>"
 
     if build_debug_html_page:
+        from pathlib import Path
+        print(Path('debug_html_page._html').resolve())
         with open('debug_html_page._html', 'w', encoding='utf-8') as f:
             f.write(_html)
     return _html

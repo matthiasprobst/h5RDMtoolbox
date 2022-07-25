@@ -53,4 +53,4 @@ class TestH5PIV(unittest.TestCase):
 
     def test_UncertaintyDataset(self):
         with tutorial.get_H5PIV('vortex_snapshot', mode='r') as h5:
-            h5.UncertaintyDataset[:, :].compute_uncertainty(my_uncertainty_method, None, None)
+            h5.DisplacementVector[:, :].compute_uncertainty(my_uncertainty_method, None, None)

@@ -2,7 +2,6 @@ import glob
 import os
 import unittest
 from pathlib import Path
-from h5rdmtoolbox.utils import generate_temporary_filename
 from shutil import rmtree
 
 from h5rdmtoolbox import h5database
@@ -14,6 +13,8 @@ from h5rdmtoolbox.h5database.h5repo import H5repo
 from h5rdmtoolbox.h5database.tutorial import build_test_repo
 from h5rdmtoolbox.h5wrapper import H5File
 from h5rdmtoolbox.h5wrapper import set_loglevel
+from h5rdmtoolbox.utils import generate_temporary_directory
+from h5rdmtoolbox.utils import generate_temporary_filename
 
 h5database.use(Path(__file__).parent.joinpath('test_h5database.yaml'))
 
@@ -26,6 +27,9 @@ class H5TestClass(H5File):
     def vfr(self):
         """returns volume flow_utils rate"""
         return self['operation_point/vfr'][:]
+
+
+h5database.config['datapath'] = generate_temporary_directory()
 
 
 class TestH5Repo(unittest.TestCase):
@@ -139,19 +143,19 @@ class TestH5Repo(unittest.TestCase):
             ds[0] == h5['var'][0]
             self.assertTrue(ds.search(h5))
 
-            ds[0] == h5['var'][0]+1
+            ds[0] == h5['var'][0] + 1
             self.assertFalse(ds.search(h5))
 
-            ds[0] > h5['var'][0]+1
+            ds[0] > h5['var'][0] + 1
             self.assertFalse(ds.search(h5))
 
-            ds[0] >= h5['var'][0]+1
+            ds[0] >= h5['var'][0] + 1
             self.assertFalse(ds.search(h5))
 
-            ds[0] < h5['var'][0]+1
+            ds[0] < h5['var'][0] + 1
             self.assertTrue(ds.search(h5))
 
-            ds[0] <= h5['var'][0]+1
+            ds[0] <= h5['var'][0] + 1
             self.assertTrue(ds.search(h5))
 
             ds[:] == h5['var'][:]
