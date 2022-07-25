@@ -25,7 +25,7 @@ from . import plane
 from .snapshot import PIVSnapshotDatFile, PIVSnapshot
 from ....conventions.pivview import translation_dict, update_standard_names
 from .. import vtk_utils
-from ..calc import compute_z_derivative_of_z_velocity
+from ....h5wrapper.pivutils import compute_z_derivative_of_z_velocity
 from ..vtk_utils import result_3D_to_vtk
 from .... import __version__
 

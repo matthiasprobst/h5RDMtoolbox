@@ -8,9 +8,11 @@ import h5py
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
+from h5rdmtoolbox.h5wrapper.accessory import register_special_dataset
+from . import pivutils
 from .h5base import config
-from .h5flow import H5Flow, H5FlowLayout, FrozenDataset
-from .h5flow import VectorInterface
+from .h5flow import DisplacementDataset, H5FlowGroup
+from .h5flow import H5Flow, H5FlowLayout
 from .. import utils, user_data_dir
 from ..conventions.standard_names import PIVConvention
 from ..x2hdf import piv2hdf
@@ -40,17 +42,18 @@ def _check_piv_software(software_name):
     return False
 
 
-class XRUncertaintyDataset(FrozenDataset):
-    """
-    xarray Dataset for uncertaint computation based on displacement or velocity field.
-    """
-
-    __slots__ = ()
-
-    def compute_uncertainty(self, method: Callable, *args, **kwargs):
-        """computes the uncertainty using the passed method"""
-        return method(self, *args, **kwargs)
-
+#
+# class XRUncertaintyDataset(FrozenDataset):
+#     """
+#     xarray Dataset for uncertaint computation based on displacement or velocity field.
+#     """
+#
+#     __slots__ = ()
+#
+# def compute_uncertainty(self, method: Callable, *args, **kwargs):
+#     """computes the uncertainty using the passed method"""
+#     return method(self, *args, **kwargs)
+#
 
 class H5PIVLayout(H5FlowLayout):
 
@@ -120,7 +123,11 @@ class H5PIVLayout(H5FlowLayout):
             ds_vel.attrs['standard_name'] = 'y_velocity'
 
 
-class H5PIV(H5Flow):
+class H5PIVGroup(H5FlowGroup):
+    pass
+
+
+class H5PIV(H5Flow, H5PIVGroup):
     Layout: H5PIVLayout = H5FlowLayout(Path.joinpath(user_data_dir, f'layout/H5PIV.hdf'))
 
     @property
@@ -274,18 +281,8 @@ class H5PIV(H5Flow):
 
         return res_xy, res_xyz
 
-    def compute_uncertainty(self, displacement_dataset: VectorInterface, method: Callable, *args, **kwargs):
-        return displacement_dataset(method, *args, **kwargs)
-
-    @property
-    def DisplacementVector(self):
-        return self.get_vector(standard_names=('x_displacement', 'y_displacement'),
-                               xrcls=XRUncertaintyDataset)
-
-    @property
-    def VelocityVector(self):
-        return self.get_vector(standard_names=('x_velocity', 'y_velocity'),
-                               xrcls=XRUncertaintyDataset)
+    # def compute_uncertainty(self, displacement_dataset: VectorInterface, method: Callable, *args, **kwargs):
+    #     return displacement_dataset(method, *args, **kwargs)
 
     def special_inspect(self, silent: bool = False) -> int:
         """Conditional inspection"""
@@ -472,7 +469,7 @@ class H5PIV(H5Flow):
         if name in self and not overwrite:
             # let h5py raise the error:
             self.create_dataset(name, shape=(1,))
-        dwdz = compute_dwdz(dudx[:].pint.quantify(), dvdy[:].pint.quantify())
+        dwdz = pivutils.compute_z_derivative_of_z_velocity(dudx[:].pint.quantify(), dvdy[:].pint.quantify())
         ds = self.create_dataset(name=name, standard_name='z_derivative_of_z_velocity',
                                  long_name=long_name,
                                  data=dwdz, overwrite=overwrite)
@@ -503,8 +500,8 @@ class H5PIV(H5Flow):
         vdp_data = np.zeros(shape=(nz, nt, 1, 1))
         for iz in range(nz):
             for it in range(nt):
-                vdp_data[iz, it, 0, 0] = vdp(piv_flags=piv_flags[iz, it, :, :], flag_valid=flag_valid,
-                                             flag_masked=flag_masked, abs=False)
+                vdp_data[iz, it, 0, 0] = pivutils.vdp(piv_flags=piv_flags[iz, it, :, :], flag_valid=flag_valid,
+                                                      flag_masked=flag_masked, abs=False)
         description = 'valid detection probability'
         comment = 'The absolute or relative number of valid vectors of the result array without taking masked ' \
                   f'entries into account. The following flags were used for processing. Valid={flag_valid}, ' \
@@ -593,7 +590,7 @@ class H5PIV(H5Flow):
             dataset_desc = f'Running mean of {dataset}'
         else:
             dataset_desc = f'Running mean of {dataset.name}'
-        return self._compute_running_statistics(statistics.running_mean,
+        return self._compute_running_statistics(pivutils.running_mean,
                                                 grp_name='post/running_mean',
                                                 grp_long_name=grp_desc,
                                                 dataset=dataset,
@@ -624,7 +621,7 @@ class H5PIV(H5Flow):
             dataset_desc = f'Running standard deviation of {dataset}'
         else:
             dataset_desc = f'Running standard deviation of {dataset.name}'
-        return self._compute_running_statistics(statistics.running_std,
+        return self._compute_running_statistics(pivutils.running_std,
                                                 grp_name='post/running_std',
                                                 grp_long_name=grp_desc,
                                                 dataset=dataset,
@@ -672,3 +669,10 @@ class H5PIV(H5Flow):
         _, vtk_path = piv2hdf.vtk_utils.result_3D_to_vtk(
             data, target_filename=_vtk_filename)
         return vtk_path
+
+
+@register_special_dataset("UncertaintyDataset", H5PIVGroup)
+class UncertaintyDataset(DisplacementDataset):
+    def compute_uncertainty(self, method: Callable, *args, **kwargs):
+        """computes the uncertainty using the passed method"""
+        return method(self, *args, **kwargs)

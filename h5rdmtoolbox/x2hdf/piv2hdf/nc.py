@@ -10,9 +10,9 @@ from netCDF4 import Dataset as ncDataset
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import Delaunay
 
-from h5rdmtoolbox.conventions.pivview import translation_dict
-from .calc import compute_z_derivative_of_z_velocity
 from .utils import is_time
+from ...conventions.pivview import translation_dict
+from ...h5wrapper.pivutils import compute_z_derivative_of_z_velocity
 
 logger = logging.getLogger('x2hdf')
 

@@ -544,7 +544,8 @@ class H5BaseGroup(h5py.Group):
     def __setitem__(self, name, obj):
         if isinstance(obj, xr.DataArray):
             return obj.hdf.to_group(self, name)
-        super().__setitem__(name, obj)
+        else:
+            super().__setitem__(name, obj)
 
     def __getitem__(self, name):
         ret = super().__getitem__(name)

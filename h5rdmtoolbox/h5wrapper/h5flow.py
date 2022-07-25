@@ -1,13 +1,14 @@
 import logging
 from pathlib import Path
-from typing import Tuple, List, Union
+from typing import List
+from typing import Tuple, Union
 
 import h5py
 import numpy as np
-import xarray as xr
 from pandas import read_csv
 from pint_xarray import unit_registry as ureg
 
+from h5rdmtoolbox.h5wrapper.accessory import register_special_dataset, SpecialDataset
 from . import config
 from .h5file import H5File, H5Group, H5FileLayout
 from .. import user_data_dir
@@ -42,360 +43,8 @@ DIM_NAMES = ('z', 'time', 'y', 'x')
 #     return xrds
 
 
-from h5rdmtoolbox.h5wrapper.accessory import register_special_dataset
-from typing import List
-
-
-@register_special_dataset("Vector", H5Group)
-class SpecialDataset:
-    def __init__(self, h5grp: h5py.Group, comp_names: List = None, attrs=None):
-        self._grp = h5grp
-        if attrs is None:
-            self._attrs = {}
-        else:
-            self._attrs = attrs
-        self._comp_dataarrays = comp_names
-        if comp_names is None:
-            self._comp_dataarrays = self._get_vector('x_velocity', 'y_velocity')
-        self._dset = None
-
-    def _get_vector(self, *args, names=None, standard_names=None):
-        """get vector dataset by standard names or names. Either must be given"""
-        if standard_names is None and names is None and len(args) == 0:
-            raise ValueError('Either standard_names or names must be provided')
-        if args and standard_names is None:
-            standard_names = args
-        if standard_names and names:
-            raise ValueError('Either standard_names or names must be provided but not both')
-
-        if standard_names:
-            list_of_component_datasets = []
-            for sn in standard_names:
-                try:
-                    list_of_component_datasets.append(self._grp.get_dataset_by_standard_name(sn, n=1))
-                except NameError:
-                    logger.debug(f'Could not find sandard_name {sn}')
-            if len(list_of_component_datasets) == 0:
-                list_of_component_datasets = None
-
-        elif names:
-            list_of_component_datasets = [self._grp.get(sn) for sn in names]
-
-        if list_of_component_datasets is not None:
-            if len(list_of_component_datasets) < 2:
-                raise ValueError('Not enough vector components identified. '
-                                 'Need at least two to build a vector dataset')
-        return list_of_component_datasets
-
-    def __contains__(self, item):
-        return item in self._dset
-
-    def __call__(self, *args, names=None, standard_names=None):
-        _comp_dataarrays = self._get_vector(args, names, standard_names)
-        SpecialDataset(self._grp, _comp_dataarrays)
-
-    def __str__(self):
-        return f'SpecialDataset of group "{self._grp.name}"\n' + self._dset.__str__()
-
-    def __getitem__(self, args, new_dtype=None):
-        if isinstance(args, str):
-            return self._dset[args]
-        if self._comp_dataarrays is None:
-            raise NameError('Could not determine component datasets.')
-        base_shape = self._comp_dataarrays[0].shape
-        assert all([ds.shape == base_shape for ds in self._comp_dataarrays[1:]])
-
-        xrds = xr.merge([ds.__getitem__(args, new_dtype=new_dtype) for ds in self._comp_dataarrays],
-                        combine_attrs="drop_conflicts")
-        for icomp, xrarr in enumerate(xrds):
-            xrds[xrarr].attrs['vector_component'] = icomp
-        xrds.attrs['long_name'] = self._attrs.pop('long_name', 'vector data')
-        for k, v in self._attrs.items():
-            xrds.attrs[k] = v
-        # return xrds
-        self._dset = xrds
-        return self
-
-    @property
-    def vector_vars(self):
-        _vector_datasets = [(self._dset[dv].attrs.get('vector_component'), dv) for dv in self._dset.data_vars if
-                            'vector_component' in self._dset[dv].attrs]
-        # sort and return
-        _vector_datasets.sort()
-        return tuple([v[1] for v in _vector_datasets])
-
-    def compute_magnitude(self, standard_name=None):
-        """Computes the magnitude of the vector."""
-        mag2 = None
-        for ids, comp in enumerate(self.vector_vars):
-            if mag2 is None:
-                if comp in self._dset:
-                    mag2 = self._dset[comp].pint.quantify() ** 2
-            else:
-                if comp in self:
-                    mag2 += self[comp].pint.quantify() ** 2
-        mag = np.sqrt(mag2).pint.dequantify(format=ureg.default_format)
-        self._dset['magnitude'] = mag
-        self._dset['magnitude'].attrs = mag.attrs
-        if standard_name is None:
-            # trying to determine a new standard name
-            # TODO: compute new standard_name from standard_names of components: magnitude_of_[common_standard_name]
-            component_standard_names = [self._dset[comp].attrs.get('standard_name') for comp in
-                                        self.vector_vars]
-            if all(component_standard_names):
-                if all(['velocity' in c for c in component_standard_names]):
-                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_velocity'
-                elif all(['displacement' in c for c in component_standard_names]):
-                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_displacement'
-
-    def to_grp(self, h5grp=None):
-        raise NotImplementedError('Writing dataset to hdf group not implemented yet')
-        if h5grp is None:
-            h5grp = self._grp
-        # TODO:
-        # h5grp.from_xarray_dataset(self._dset, drop='conflicts')
-
-class FrozenDataArray:
-    __slots__ = ('_da', '_grp', '_base_shape', '_slice')
-
-    def __init__(self, da, grp, base_shape, _slice):
-        self._da = da
-        self._grp = grp
-        self._base_shape = base_shape
-        self._slice = _slice
-
-    def __str__(self):
-        return self._da.__str__()
-
-    def __getitem__(self, item):
-        return self._da[item]
-        # raise RuntimeError(f'Cannot slice a {self.__class__.__name__}')
-
-    def create_dataset(self, overwrite=False):
-        if overwrite:
-            if self._da.name in self._grp:
-                del self._grp[self._da.name]
-        ds = self._grp.create_dataset(self._da.name, shape=self._base_shape, attrs=self._da.attrs)
-        ds[self._slice] = self._da[...]
-        # TODO apply scales!
-        # print(f'create HDF5 dataset {self._da.name} in group {self._grp}')
-
-
-class FrozenDataset:
-    __slots__ = ('_dset', '_grp', '_base_shape', '_slice')
-
-    def __init__(self, dset, grp, base_shape, _slice):
-        self._dset = dset
-        self._grp = grp
-        self._base_shape = base_shape
-        self._slice = _slice
-
-    def __str__(self):
-        return self._dset.__str__()
-
-    def get_by_sn(self, standard_name: str, on_multiple='list'):
-        """Returns the dataset corresponding to the standard_name.
-        If none is found None is returned.
-        If 1 is found, the dataset is returned
-        If multiples are found list or error is raise, depending on parameter on_multiple"""
-        candidates = []
-        for v in self.values():
-            if 'standard_name' in v.attrs:
-                if standard_name == v.attrs['standard_name']:
-                    candidates.append(v)
-        if len(candidates) == 0:
-            return None
-        if len(candidates) == 1:
-            return candidates[0]
-        if on_multiple == 'list':
-            return candidates
-        if on_multiple == 'error':
-            raise ValueError(f'Multiple datasets found with standard name {standard_name}')
-
-    def __getitem__(self, item):
-        return self._dset[item]
-
-    @property
-    def data_vars(self):
-        return self._dset.data_vars
-
-    @property
-    def vector_vars(self):
-        _vector_datasets = [(self[dv].attrs.get('vector_component'), dv) for dv in self._dset.data_vars if
-                            'vector_component' in self[dv].attrs]
-        # sort and return
-        _vector_datasets.sort()
-        return tuple([v[1] for v in _vector_datasets])
-
-    def __contains__(self, item):
-        return item in self._dset
-
-    def __setitem__(self, key, value):
-        self._dset[key] = value
-
-    def __getattr__(self, item):
-        if item in self._dset:
-            return FrozenDataArray(self._dset[item], self._grp, self._base_shape, self._slice)
-
-    def compute_magnitude(self, standard_name=None):
-        """Computes the magnitude of the vector."""
-        mag2 = None
-        for ids, comp in enumerate(self.vector_vars):
-            if mag2 is None:
-                if comp in self._dset:
-                    mag2 = self[comp].pint.quantify() ** 2
-            else:
-                if comp in self:
-                    mag2 += self[comp].pint.quantify() ** 2
-        mag = np.sqrt(mag2).pint.dequantify(format=ureg.default_format)
-        self._dset['magnitude'] = mag
-        self._dset['magnitude'].attrs = mag.attrs
-        if standard_name is None:
-            # trying to determine a new standard name
-            # TODO: compute new standard_name from standard_names of components: magnitude_of_[common_standard_name]
-            component_standard_names = [self[comp].attrs.get('standard_name') for comp in self.vector_vars]
-            if all(component_standard_names):
-                if all(['velocity' in c for c in component_standard_names]):
-                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_velocity'
-                elif all(['displacement' in c for c in component_standard_names]):
-                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_displacement'
-
-
-class XRVelocityDataset(FrozenDataset):
-    """subclass of xr.Dataset to enable typical computation tasks for
-    velocity data such as computation of tke, reyn, vorticity, ...
-
-    Velocity components are u, v, w (not all must exist!). Those
-    names are fixed.
-    """
-    __slots__ = ()
-
-    def tke(self):
-        raise NotImplementedError()
-
-    def reyn(self):
-        raise NotImplementedError()
-
-    def vorticity(self):
-        raise NotImplementedError()
-
-    def compute_rotational_speed(self, rot_speed: float, suffix='_rot',
-                                 rot_axis='z', rot_center=(0, 0)) -> None:
-        """Computes and adds the rotational speed based on rot_speed [1/s] and the
-        coordinates of the dataset. Center of rotation per default is (0, 0, 0) and
-        axis of rotation is z. Direction of rotation is controlled by the sign of
-        rot_speed. Created rotational speed data arrays have units [m/s]"""
-        if not rot_axis.lower() == 'z':
-            # TODO implement different rotation axes
-            raise NotImplementedError('Rotation axis different than z is not implemented yet.')
-        if rot_center != (0, 0):
-            # TODO implement different rotation center
-            raise NotImplementedError('Rotation center different than (0, 0) is not implemented yet.')
-
-        # Code for currently available axis/rotation options:
-        # turning whatever unit into [m]:
-        xx, yy = np.meshgrid(self.x.values, self.y.values)
-        x = xr.DataArray(name='x', dims=('y', 'x'),
-                         data=xx).pint.quantify(self.x.attrs['units'])
-        y = xr.DataArray(name='y', dims=('y', 'x'),
-                         data=yy).pint.quantify(self.y.attrs['units'])
-        r = np.sqrt(x.pint.to('m') ** 2 + y.pint.to('m') ** 2)
-        omega = 2 * np.pi * rot_speed / ureg.s
-        alpha = np.arctan2(y, x)
-        v = omega * r * np.cos(alpha)
-        u = -omega * r * np.sin(alpha)
-        u = u.assign_coords({'x': self.x, 'y': self.y})
-        v = v.assign_coords({'x': self.x, 'y': self.y})
-        self[f'magnitude{suffix}'] = np.sqrt(u ** 2 + v ** 2).pint.dequantify(format=ureg.default_format)
-        self[f'u{suffix}'] = u.pint.dequantify(format=ureg.default_format)
-        self[f'v{suffix}'] = v.pint.dequantify(format=ureg.default_format)
-
-
-class VectorInterface:
-    """Vector class returned when get_vector() is called"""
-
-    def __init__(self, grp, datasets, attrs=None, xrcls=None):
-        self.grp = grp
-        self.datasets = datasets
-        if self.datasets:
-            self.base_shape = self.datasets[0].shape
-        else:
-            self.base_shape = None
-        self.xrcls = xrcls
-        self.slice = None
-        if attrs is None:
-            self.attrs = {}
-        else:
-            self.attrs = attrs
-
-    def __call__(self, *args, standard_names=None, names=None):
-        if args and standard_names is None:
-            standard_names = args
-        return self.grp.get_vector(standard_names=standard_names, names=names, xrcls=self.xrcls)
-
-    def __getitem__(self, args, new_dtype=None):
-        if self.datasets is None:
-            raise NameError('Could not determine component datasets')
-        assert all([ds.shape == self.base_shape for ds in self.datasets[1:]])
-        self.slice = args
-        xrds = xr.merge([ds.__getitem__(args, new_dtype=new_dtype) for ds in self.datasets],
-                        combine_attrs="drop_conflicts")
-        for icomp, xrarr in enumerate(xrds):
-            xrds[xrarr].attrs['vector_component'] = icomp
-        xrds.attrs['long_name'] = self.attrs.pop('long_name', 'vector data')
-        for k, v in self.attrs:
-            xrds.attrs[k] = v
-        if self.xrcls is None:
-            return xrds
-        else:
-            return FrozenDataset(xrds, self.grp, self.base_shape, self.slice)
-            # return self.xrcls(xrds, self.grp, self.base_shape, self.slice)
-
-
 class H5FlowGroup(H5Group):
     """HDF5 Group for specifically for flow data"""
-
-    def get_vector(self, *args, standard_names=None, names=None, xrcls=None):
-        """get vector dataset by standard names or names. Either must be given"""
-        if standard_names is None and names is None and len(args) == 0:
-            raise ValueError('Either standard_names or names must be provided')
-        if args and standard_names is None:
-            standard_names = args
-        if standard_names and names:
-            raise ValueError('Either standard_names or names must be provided but not both')
-
-        if standard_names:
-            list_of_component_datasets = []
-            for sn in standard_names:
-                try:
-                    list_of_component_datasets.append(self.get_dataset_by_standard_name(sn, n=1))
-                except NameError:
-                    logger.debug(f'Could not find sandard_name {sn}')
-            if len(list_of_component_datasets) == 0:
-                list_of_component_datasets = None
-
-        elif names:
-            list_of_component_datasets = [self.get(sn) for sn in names]
-
-        if list_of_component_datasets is not None:
-            if len(list_of_component_datasets) < 2:
-                raise ValueError('Not enough vector components identified. Need at least two to build a vector dataset')
-
-        return VectorInterface(self, list_of_component_datasets, xrcls=xrcls)
-
-    @property
-    def VelocityVector(self):
-        """Returns a xarray.Dataset containing the velocity components found
-        in the group. Velocity data is found based on standard_names. However,
-        if components are available multiple times, the components must be specified
-        by e.g. VelocityDataset('u', 'v')"""
-        return self.get_vector(standard_names=('x_velocity', 'y_velocity', 'z_velocity'),
-                               xrcls=XRVelocityDataset)
-
-    @property
-    def DisplacementVector(self):
-        return self.get_vector(standard_names=('x_displacement', 'y_displacement', 'z_displacement'),
-                               xrcls=FrozenDataset)
 
     def create_coordinates(self, x, y, z=0, time=0, coords_unit='m', time_unit='s'):
         for ds_name in ('x', 'y', 'z', 'time'):
@@ -625,3 +274,80 @@ class H5Flow(H5File, H5FlowGroup):
 
 
 H5FlowGroup._h5grp = H5FlowGroup
+
+
+class VectorDataset(SpecialDataset):
+
+    @property
+    def vector_vars(self):
+        _vector_datasets = [(self._dset[dv].attrs.get('vector_component'), dv) for dv in self._dset.data_vars if
+                            'vector_component' in self._dset[dv].attrs]
+        # sort and return
+        _vector_datasets.sort()
+        return tuple([v[1] for v in _vector_datasets])
+
+    def compute_magnitude(self, standard_name=None):
+        """Computes the magnitude of the vector."""
+        mag2 = None
+        for ids, comp in enumerate(self.vector_vars):
+            if mag2 is None:
+                if comp in self._dset:
+                    mag2 = self._dset[comp].pint.quantify() ** 2
+            else:
+                if comp in self:
+                    mag2 += self[comp].pint.quantify() ** 2
+        mag = np.sqrt(mag2).pint.dequantify(format=ureg.default_format)
+        self._dset['magnitude'] = mag
+        self._dset['magnitude'].attrs = mag.attrs
+        if standard_name is None:
+            # trying to determine a new standard name
+            # TODO: compute new standard_name from standard_names of components: magnitude_of_[common_standard_name]
+            component_standard_names = [self._dset[comp].attrs.get('standard_name') for comp in
+                                        self.vector_vars]
+            if all(component_standard_names):
+                if all(['velocity' in c for c in component_standard_names]):
+                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_velocity'
+                elif all(['displacement' in c for c in component_standard_names]):
+                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_displacement'
+
+
+@register_special_dataset("Displacement", H5Group)
+class DisplacementDataset(VectorDataset):
+    standard_names = ('x_displacement', 'y_displacement')
+
+
+@register_special_dataset("Velocity", H5Group)
+class VelocityDataset(VectorDataset):
+    standard_names = ('x_velocity', 'y_velocity')
+
+    @property
+    def vector_vars(self):
+        _vector_datasets = [(self._dset[dv].attrs.get('vector_component'), dv) for dv in self._dset.data_vars if
+                            'vector_component' in self._dset[dv].attrs]
+        # sort and return
+        _vector_datasets.sort()
+        return tuple([v[1] for v in _vector_datasets])
+
+    def compute_magnitude(self, standard_name=None):
+        """Computes the magnitude of the vector."""
+        mag2 = None
+        for ids, comp in enumerate(self.vector_vars):
+            if mag2 is None:
+                if comp in self._dset:
+                    mag2 = self._dset[comp].pint.quantify() ** 2
+            else:
+                if comp in self:
+                    mag2 += self[comp].pint.quantify() ** 2
+        mag = np.sqrt(mag2).pint.dequantify(format=ureg.default_format)
+        self._dset['magnitude'] = mag
+        self._dset['magnitude'].attrs = mag.attrs
+        if standard_name is None:
+            # trying to determine a new standard name
+            # TODO: compute new standard_name from standard_names of components: magnitude_of_[common_standard_name]
+            component_standard_names = [self._dset[comp].attrs.get('standard_name') for comp in
+                                        self.vector_vars]
+            if all(component_standard_names):
+                if all(['velocity' in c for c in component_standard_names]):
+                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_velocity'
+                elif all(['displacement' in c for c in component_standard_names]):
+                    self['magnitude'].attrs['standard_name'] = 'magnitude_of_displacement'

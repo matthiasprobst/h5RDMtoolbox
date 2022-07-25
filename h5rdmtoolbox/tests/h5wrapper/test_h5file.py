@@ -63,18 +63,6 @@ class TestH5File(unittest.TestCase):
             self.assertEqual(ds.attrs['units'], 'm/s')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
-    def test_SpecialDataset(self):
-
-        with H5File() as h5:
-            u = h5.create_dataset('u', shape=(10, 20), standard_name='x_velocity')
-            v = h5.create_dataset('v', shape=(10, 20), standard_name='y_velocity')
-            print(type(h5.Vector))
-            vec = h5.Vector[:, :]
-            vec.compute_magnitude()
-            print(vec)
-            # print(h5.Vector[:, :])
-            # print(h5.Vector(names=('u', 'v')))
-
     def test_create_group(self):
         """testing the creation of groups"""
         with H5File() as h5:
