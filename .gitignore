@@ -29,8 +29,7 @@ Thumbs.db
 
 # testdata
 #testdata
-testdata_*
-h5database/tests/*.toc.h5
+tests/
 
 # jupyter
 *.ipynb_checkpoints*
