@@ -273,12 +273,14 @@ class H5FlowLayout(H5FileLayout):
             ds_y = h5.create_dataset('y', shape=(1,))
             ds_z = h5.create_dataset('z', shape=(1,))
             ds_t = h5.create_dataset('time', shape=(1,))
-            for ds in (ds_x, ds_y, ds_z, ds_t):
+            for ds in (ds_x, ds_y, ds_z):
                 ds.attrs['__ndim__'] = (0, 1)
                 ds.attrs['units'] = 'm'
             ds_x.attrs['standard_name'] = 'x_coordinate'
             ds_y.attrs['standard_name'] = 'y_coordinate'
             ds_z.attrs['standard_name'] = 'z_coordinate'
+            ds_t.attrs['units'] = 's'
+            ds_t.attrs['__ndim__'] = (0, 1)
 
 
 class H5Flow(H5File, H5FlowGroup):
