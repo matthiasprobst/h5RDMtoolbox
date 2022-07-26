@@ -20,7 +20,7 @@ try:
 except ImportError:
     raise ImportError('Package netCDF4 is not installed.')
 
-from .utils import generate_temporary_directory
+from .utils import generate_temporary_directory, generate_temporary_filename
 from . import testdir
 
 
@@ -223,10 +223,11 @@ def get_H5PIV(name, mode) -> pathlib.Path:
     from .h5wrapper import H5PIV
     if name == 'minimal_flow':
         fname = testdir / 'minimal_flow.hdf'
-        if fname.exists():
-            return H5PIV(fname, mode=mode)
+        tmp_filename = shutil.copy2(fname, generate_temporary_filename(suffix='.hdf'))
+        if tmp_filename.exists():
+            return H5PIV(tmp_filename, mode=mode)
         else:
-            raise FileNotFoundError(fname)
+            raise FileNotFoundError(tmp_filename)
     elif name == 'vortex_snapshot':
 
         def _rgb2gray(rgb):
@@ -241,11 +242,9 @@ def get_H5PIV(name, mode) -> pathlib.Path:
             return gray
 
         vortex1_hdf_fname = testdir / 'PIV/vortexpair/vortex1.hdf'
-        tmp_fname = utils.generate_temporary_filename(suffix='.hdf')
+        tmp_fname = shutil.copy2(vortex1_hdf_fname, generate_temporary_filename(suffix='.hdf'))
 
-        with H5PIV(vortex1_hdf_fname, 'r+') as h5:
-            h5.saveas(tmp_fname, keep_old=True)
-
+        # add the images to the hdf file:
         with H5PIV(tmp_fname, 'r+') as h5:
             h5.create_dataset_from_image(testdir / 'PIV/vortexpair/vp1a.tif', 'imgA',
                                          long_name='piv_image_a',
