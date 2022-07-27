@@ -2,7 +2,7 @@ from pathlib import Path
 
 import h5py
 
-translation_dict = {'time': 'time',
+pivview_to_standardnames_dict = {'time': 'time',
                     'u': 'x_velocity',
                     'v': 'y_velocity',
                     'w': 'z_velocity',
@@ -45,6 +45,42 @@ translation_dict = {'time': 'time',
                     'vv': 'yy_reynolds_stress',
                     'vw': 'yz_reynolds_stress',
                     'ww': 'zz_reynolds_stress'}
+
+pivview_to_cgns_dict = {'time': 'Time',
+                    'u': 'VelocityX',
+                    'v': 'VelocityY',
+                    'w': 'VelocityZ',
+                    'x': 'CoordinateX',
+                    'y': 'CoordinateY',
+                    'ix': 'PixelCoordinateX',
+                    'iy': 'PixelCoordinateY',
+                    'z': 'CoordinateZ',
+                    'velmag': 'VelocityMagnitude',
+                    'dx': 'DisplacementX',
+                    'piv_peak1_dx': 'Peak1DisplacementX',
+                    'piv_peak2_dx': 'Peak2DisplacementX',
+                    'piv_peak3_dx': 'Peak3DisplacementX',
+                    'dy': 'DisplacementY',
+                    'piv_peak1_dy': 'Peak1DisplacementY',
+                    'piv_peak2_dy': 'Peak2DisplacementY',
+                    'piv_peak3_dy': 'Peak3DisplacementY',
+                    'dz': 'DisplacementZ',
+                    'piv_snr_data': 'SignalToNoise',
+                    'piv_flags': 'PivFlag',
+                    'valid': 'ValidationFlag',
+                    'piv_peak1_corr': 'PivCorrelatioValue',
+                    'piv_peak2_corr': 'PivCorrelationValue',
+                    'piv_peak3_corr': 'PivCorrelationValue',
+                    'piv_correlation_coeff': 'PivCorrelationCoefficient',
+                    #'piv_3c_residuals': 'least_square_residual_of_z_displacement_reconstruction',
+                    'tke': 'TurbulentEnergyKinetic',
+                    'uu': 'ReynoldsStressXX',
+                    'uv': 'ReynoldsStressXY',
+                    'uw': 'ReynoldsStressXZ',
+                    'vv': 'ReynoldsStressYY',
+                    'vw': 'ReynoldsStressYZ',
+                    'ww': 'ReynoldsStressZZ'}
+
 
 
 def update(dataset):
