@@ -6,7 +6,7 @@ import pint_xarray
 
 from .identifier import equal_base_units
 
-assert pint_xarray.__version__ == '0.2.1'
+assert pint_xarray.__version__ >= '0.2.1'
 
 
 class H5Inspect:

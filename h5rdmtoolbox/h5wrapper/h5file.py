@@ -21,7 +21,7 @@ from ..x2hdf import xr2hdf
 logger = logging.getLogger(__package__)
 
 # the following two lines are needed, otherwise automating formatting of the code will remove pint and xarray2hdf accessors
-assert pint_xarray.__version__ == '0.2.1'
+assert pint_xarray.__version__ >= '0.2.1'
 assert xr2hdf.__version__ == '0.1.0'
 
 ureg.default_format = 'C~'

@@ -35,7 +35,7 @@ from ..x2hdf import xr2hdf
 logger = logging.getLogger(__package__)
 
 # keep this line, otherwise pycharm will remove obsolete import, but it isn't as it enables pint with xarray
-assert pint_xarray.__version__ == '0.2.1'
+assert pint_xarray.__version__ >= '0.2.1'
 assert xr2hdf.__version__ == '0.1.0'
 
 ureg.default_format = 'C~'
