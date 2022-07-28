@@ -15,7 +15,7 @@ from .h5flow import DisplacementDataset, H5FlowGroup
 from .h5flow import H5Flow, H5FlowLayout, XRVectorDataset
 from .h5flow import VectorDataset
 from .. import utils, user_data_dir
-from ..conventions.cf import piv_standard_name_table
+from ..conventions.custom import PIVSTANDARDNAMETABLE
 from ..x2hdf import piv2hdf
 from ..x2hdf.piv2hdf.par import PivViewParFile
 
@@ -397,7 +397,7 @@ class H5PIV(H5Flow, H5PIVGroup):
 
         """
         if standard_name_table is None:
-            standard_name_table = piv_standard_name_table
+            standard_name_table = PIVSTANDARDNAMETABLE
         super(H5PIV, self).__init__(name=name, mode=mode, title=title,
                                     standard_name_table=standard_name_table, **kwargs)
         if software is not None:
