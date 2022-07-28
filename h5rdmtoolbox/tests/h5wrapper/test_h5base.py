@@ -1,5 +1,7 @@
 import unittest
 
+import h5py
+
 from h5rdmtoolbox.h5wrapper import H5Base
 
 
@@ -25,6 +27,29 @@ class TestH5Base(unittest.TestCase):
             h5.title = 'my title'
             n_issuess = h5.check()
             self.assertEqual(n_issuess, 0)
+
+    def test_special_attribute(self):
+        with H5Base() as h5:
+            ds = h5.create_dataset('x', data=1)
+            h5.attrs['link_to_ds'] = ds
+            self.assertIsInstance(h5.attrs['link_to_ds'], h5py.Dataset)
+            ds.attrs['link_to_ds'] = ds
+            self.assertIsInstance(ds.attrs['link_to_ds'], h5py.Dataset)
+            h5.attrs['attibute_of_links_to_ds'] = {'x': ds, 'xcopy': ds, 'astr': 'test', 'afloat': 3.1}
+            self.assertIsInstance(h5.attrs['attibute_of_links_to_ds'], dict)
+            self.assertIsInstance(h5.attrs['attibute_of_links_to_ds']['x'], h5py.Dataset)
+            self.assertIsInstance(h5.attrs['attibute_of_links_to_ds']['xcopy'], h5py.Dataset)
+            self.assertEqual(h5.attrs['attibute_of_links_to_ds']['xcopy'], ds)
+            self.assertIsInstance(h5.attrs['attibute_of_links_to_ds']['astr'], str)
+            self.assertIsInstance(h5.attrs['attibute_of_links_to_ds']['afloat'], float)
+            ds.attrs['attibute_of_links_to_ds'] = {'x': ds, 'xcopy': ds, 'astr': 'test', 'afloat': 3.1}
+
+            self.assertIsInstance(ds.attrs['attibute_of_links_to_ds'], dict)
+            self.assertIsInstance(ds.attrs['attibute_of_links_to_ds']['x'], h5py.Dataset)
+            self.assertIsInstance(ds.attrs['attibute_of_links_to_ds']['xcopy'], h5py.Dataset)
+            self.assertEqual(ds.attrs['attibute_of_links_to_ds']['xcopy'], ds)
+            self.assertIsInstance(ds.attrs['attibute_of_links_to_ds']['astr'], str)
+            self.assertIsInstance(ds.attrs['attibute_of_links_to_ds']['afloat'], float)
 
     def test_create_dataset_from_image(self):
         # just call the tutorial

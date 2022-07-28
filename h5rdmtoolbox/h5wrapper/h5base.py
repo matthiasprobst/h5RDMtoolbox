@@ -41,6 +41,27 @@ assert xr2hdf.__version__ == '0.1.0'
 ureg.default_format = 'C~'
 
 
+def get_rootparent(obj):
+    """Returns the root group instance."""
+
+    def get_root(parent):
+        global found
+        found = parent.parent
+
+        def search(parent):
+            global found
+            parent = parent.parent
+            if parent.name == '/':
+                found = parent
+            else:
+                _ = search(parent)
+
+        search(parent)
+        return found
+
+    return get_root(obj.parent)
+
+
 def pop_hdf_attributes(attrs: Dict) -> dict:
     """removes HDF attributes like NAME, CLASS, ...."""
     return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
@@ -65,21 +86,25 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if isinstance(ret, str):
             if ret:
                 if ret[0] == '{':
-                    return json.loads(ret)
-                # elif ret[0] == '/':  # it may be group or dataset path
-                #     if isinstance(self._id, h5py.h5g.GroupID):
-                #         # call like this, otherwise recursive call!
-                #         _root = self._h5_group_class(self._id)
-                #     else:
-                #         _root = self._h5_dataset_class(self._id).rootparent
-                #     if ret in _root:
-                #         return _root[ret]
-                #         # obj = _root[ret]
-                #         # if isinstance(obj, h5py.Dataset):
-                #         #     return self._h5_dataset_class(obj.id)
-                #         # return self._h5_group_class(obj.id)
-                #     else:
-                #         return ret
+                    dictionary = json.loads(ret)
+                    for k, v in dictionary.items():
+                        if isinstance(v, str):
+                            if v[0] == '/':
+                                if isinstance(self._id, h5py.h5g.GroupID):
+                                    rootgrp = get_rootparent(h5py.Group(self._id))
+                                    dictionary[k] = rootgrp.get(v)
+                                elif isinstance(self._id, h5py.h5d.DatasetID):
+                                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+                                    dictionary[k] = rootgrp.get(v)
+                    return dictionary
+                elif ret[0] == '/':  # it may be group or dataset path
+                    if isinstance(self._id, h5py.h5g.GroupID):
+                        # call like this, otherwise recursive call!
+                        rootgrp = get_rootparent(h5py.Group(self._id))
+                        return rootgrp.get(ret)
+                    else:
+                        rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+                        return rootgrp.get(ret)
                 else:
                     return ret
             else:
@@ -95,8 +120,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
-
         if isinstance(value, dict):
+            # some value might be changed to a string first, like h5py objects
+            for k, v in value.items():
+                if isinstance(v, (h5py.Dataset, h5py.Group)):
+                    value[k] = v.name
             _value = json.dumps(value)
         elif isinstance(value, Path):
             _value = str(value)
@@ -1462,8 +1490,7 @@ class H5Base(h5py.File, H5BaseGroup):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return WrapperAttributeManager(self,
-                                           None)
+            return WrapperAttributeManager(self, None)
 
     @property
     def version(self):
