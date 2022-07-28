@@ -18,19 +18,17 @@ def is_valid_email_address(email: str) -> bool:
     return False
 
 
-def dict2xml(convention_dict: dict, name: str, filename: Path, version: int,
+def dict2xml(dictionary: dict, name: str, filename: Path, version_number: int,
              institution: str, contact: str, datetime_str=None) -> Path:
     """writes standard_names dictionary into a xml in style of cf-standard-name-table"""
-    if not is_valid_email_address(contact):
-        raise ValueError(f'Invalid email address: {contact}')
 
     if datetime_str is None:
         datetime_str = '%Y-%m-%d_%H:%M:%S'
 
     root = ET.Element(name)
 
-    item_version = ET.Element("version")
-    item_version.text = str(version)
+    item_version_number = ET.Element("version_number")
+    item_version_number.text = str(version_number)
 
     item_last_modified = ET.Element("last_modified")
     item_last_modified.text = datetime.now().strftime(datetime_str)
@@ -41,12 +39,12 @@ def dict2xml(convention_dict: dict, name: str, filename: Path, version: int,
     item_contact = ET.Element("contact")
     item_contact.text = contact
 
-    root.append(item_version)
+    root.append(item_version_number)
     root.append(item_last_modified)
     root.append(item_institution)
     root.append(item_contact)
 
-    for k, v in convention_dict.items():
+    for k, v in dictionary.items():
         entry = ET.SubElement(root, "entry", attrib={'id': k})
         for kk, vv in v.items():
             item = ET.SubElement(entry, kk)
@@ -78,7 +76,8 @@ def xml2dict(xml_filename: Path) -> Tuple[dict, dict]:
     tree = ET.parse(xml_filename)
     root = tree.getroot()
     standard_names = {}
-    meta = {'name': root.tag, 'version': int(root.find('version').text), 'contact': root.find('contact').text,
+    meta = {'name': root.tag, 'version_number': int(root.find('version_number').text),
+            'contact': root.find('contact').text,
             'institution': root.find('institution').text, 'last_modified': root.find('last_modified').text}
     for child in root.iter('entry'):
         standard_names[child.attrib['id']] = {}

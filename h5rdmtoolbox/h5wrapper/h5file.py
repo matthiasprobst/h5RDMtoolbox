@@ -1,3 +1,4 @@
+import json
 import logging
 import warnings
 from pathlib import Path
@@ -7,9 +8,11 @@ import h5py
 import pint
 import pint_xarray
 import xarray as xr
+from h5py import h5i
+from h5py._hl.base import phil, with_phil
 from pint_xarray import unit_registry as ureg
 
-from .h5base import H5BaseDataset, H5BaseGroup, H5Base, H5BaseLayout
+from .h5base import H5BaseDataset, H5BaseGroup, H5Base, H5BaseLayout, WrapperAttributeManager
 from .. import conventions
 from .. import user_data_dir
 from .. import utils
@@ -26,6 +29,40 @@ ureg.default_format = 'C~'
 _SNC_LS = {}
 
 
+class ConventionSensitiveAttributeManager(WrapperAttributeManager):
+    """Attribute manager class which checks validity if attribute name
+    is standard_name."""
+
+    @with_phil
+    def __setitem__(self, name, value):
+        """ Set a new attribute, overwriting any existing attribute.
+
+        The type and shape of the attribute are determined from the data.  To
+        use a specific type or shape, or to preserve the type of attribute,
+        use the methods create() and modify().
+        """
+
+        if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
+            if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
+                raise AttributeError(f'Attribute name {name} is reserverd '
+                                     'for dataset only.')
+            if h5i.get_type(self._id) == h5i.DATASET:
+                # check for standardized data-name identifiers
+                self.identifier_convention.check_name(value, strict=conventions.identifier.STRICT)
+
+        super().__setitem__(name, value)
+
+        if isinstance(value, dict):
+            _value = json.dumps(value)
+        elif isinstance(value, Path):
+            _value = str(value)
+        elif isinstance(value, (h5py.Dataset, h5py.Group)):
+            return self.create(name, data=value.name)
+        else:
+            _value = value
+        self.create(name, data=_value)
+
+
 class H5Dataset(H5BaseDataset):
     """
     Subclass of h5py.Dataset implementing a model.
@@ -36,14 +73,26 @@ class H5Dataset(H5BaseDataset):
     """
 
     @property
+    def attrs(self):
+        """Exact copy of parent class:
+        Attributes attached to this object """
+        with phil:
+            return ConventionSensitiveAttributeManager(self, self.standard_name_table)
+
+    @property
     def units(self):
         """Returns the attribute units. Returns None if it does not exist."""
         return self.attrs.get('units')
 
     @property
-    def sn_convention(self):
-        """returns the standar name convention associated with the file instance"""
+    def standard_name_table(self):
+        """returns the standard name convention associated with the file instance"""
         return _SNC_LS[self.file.id.id]
+
+    @standard_name_table.setter
+    def standard_name_table(self, convention: conventions.StandardizedNameTable):
+        """returns the standard name convention associated with the file instance"""
+        _SNC_LS[self.id.id] = convention
 
     @units.setter
     def units(self, units):
@@ -60,7 +109,7 @@ class H5Dataset(H5BaseDataset):
             _units = units
         standard_name = self.attrs.get('standard_name')
         if standard_name:
-            self.sn_convention.validate_units(standard_name, _units)
+            self.standard_name_table.check_units(standard_name, _units)
 
         self.attrs.modify('units', _units)
 
@@ -83,14 +132,14 @@ class H5Dataset(H5BaseDataset):
         attrs_string = self.attrs.get('standard_name')
         if attrs_string is None:
             return None
-        return self.sn_convention.get(attrs_string)
+        return self.standard_name_table.get(attrs_string)
 
     @standard_name.setter
     def standard_name(self, new_standard_name):
         """Writes attribute standard_name if passed string is not None.
         The rules for the standard_name is checked before writing to file."""
         if new_standard_name:
-            if self.sn_convention.is_valid(new_standard_name):
+            if self.standard_name_table.is_valid(new_standard_name):
                 self.attrs['standard_name'] = new_standard_name
 
     def __str__(self):
@@ -161,6 +210,13 @@ class H5Group(H5BaseGroup):
     """
 
     @property
+    def attrs(self):
+        """Exact copy of parent class:
+        Attributes attached to this object """
+        with phil:
+            return ConventionSensitiveAttributeManager(self, self.standard_name_table)
+
+    @property
     def data_source_type(self) -> conventions.data.DataSourceType:
         """returns data source type as DataSourceType"""
         ds_value = self.attrs.get(conventions.data.DataSourceType.get_attr_name())
@@ -173,9 +229,16 @@ class H5Group(H5BaseGroup):
             return conventions.data.DataSourceType.unknown
 
     @property
-    def sn_convention(self) -> conventions.standard_names.StandardNameConvention:
+    def standard_name_table(self) -> conventions.StandardizedNameTable:
         """returns the standar name convention associated with the file instance"""
-        return _SNC_LS[self.file.id.id]
+        if self.file.id.id in _SNC_LS:
+            return _SNC_LS[self.file.id.id]
+        return None
+
+    @standard_name_table.setter
+    def standard_name_table(self, convention: conventions.StandardizedNameTable):
+        """returns the standard name convention associated with the file instance"""
+        _SNC_LS[self.id.id] = convention
 
     def create_group(self, name, long_name=None, overwrite=None,
                      attrs=None, track_order=None):
@@ -211,7 +274,7 @@ class H5Group(H5BaseGroup):
 
     def create_dataset(self, name, shape=None, dtype=None, data=None,
                        units=None, long_name=None,
-                       standard_name: Union[str, conventions.standard_names.StandardName] = None,
+                       standard_name: Union[str, conventions.StandardizedName] = None,
                        overwrite=None, chunks=True,
                        attrs=None, attach_scales=None, make_scale=False,
                        **kwargs):
@@ -340,7 +403,7 @@ class H5Group(H5BaseGroup):
                           '"standard_name" and you passed the parameter "standard_name". The latter will overwrite '
                           'the data array units!')
         if standard_name is not None:
-            self.sn_convention.validate(standard_name, attrs['units'])
+            self.standard_name_table.check_units(standard_name, attrs['units'])
             attrs['standard_name'] = standard_name
 
         if attrs.get('standard_name') is None and attrs.get('long_name') is None:
@@ -414,6 +477,13 @@ class H5File(H5Base, H5Group):
     Layout: H5FileLayout = H5FileLayout(Path.joinpath(user_data_dir, f'layout/H5File.hdf'))
 
     @property
+    def attrs(self):
+        """Exact copy of parent class:
+        Attributes attached to this object """
+        with phil:
+            return ConventionSensitiveAttributeManager(self, self.standard_name_table)
+
+    @property
     def title(self) -> Union[str, None]:
         """Returns the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
         return self.attrs.get('title')
@@ -423,7 +493,7 @@ class H5File(H5Base, H5Group):
         """Sets the title of the file"""
         self.attrs.modify('title', title)
 
-    def __init__(self, name: Path = None, mode='r', title=None, sn_convention=None,
+    def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
@@ -442,16 +512,15 @@ class H5File(H5Base, H5Group):
         if title is not None:
             self.attrs['title'] = title
 
-        # print(H5File(self.file.id))
-        if sn_convention is None:
-            snc = conventions.standard_names.EmptyStandardNameConvention
-        elif isinstance(sn_convention, conventions.standard_names.StandardNameConvention):
-            snc = sn_convention
-        elif isinstance(sn_convention, str):
-            snc = conventions.standard_names.StandardNameConvention.from_xml(sn_convention)
+        if isinstance(standard_name_table, str):
+            snc = conventions.StandardizedNameTable.from_xml(standard_name_table)
+        elif isinstance(standard_name_table, conventions.StandardizedNameTable):
+            snc = standard_name_table
+        elif standard_name_table is None:
+            snc = conventions.empty_standardized_name_table
         else:
-            raise TypeError(f'Unexpected type for the standard name convention: {type(sn_convention)}')
-        _SNC_LS[self.id.id] = snc
+            raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
+        self.standard_name_table = snc
 
 
 H5Dataset._h5grp = H5Group

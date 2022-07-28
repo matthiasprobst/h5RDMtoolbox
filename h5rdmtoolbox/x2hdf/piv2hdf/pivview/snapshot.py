@@ -13,7 +13,7 @@ from .utils import _get_header_line, _get_headernames_from_pivview_dat, _get_ijk
 from ..utils import PIVviewFlag
 from ..nc import process_pivview_nc_data
 from ..par import PivViewParFile, PivViewConfigFile
-from ....conventions.pivview import translation_dict
+from ....conventions.translations import pivview_name_to_standard_name
 
 logger = logging.getLogger('x2hdf')
 
@@ -342,15 +342,15 @@ class PIVSnapshotDatFile(core.PIVConverter):
                 ds.attrs['long_name'] = variable_long_name_dict[variable_name]
 
                 if variable_name == 'z':
-                    ds.attrs['standard_name'] = translation_dict['z']
+                    ds.attrs['standard_name'] = pivview_name_to_standard_name['z']
                 elif variable_name == 'x':
-                    ds.attrs['standard_name'] = translation_dict['x']
+                    ds.attrs['standard_name'] = pivview_name_to_standard_name['x']
                     ds.make_scale()
                 elif variable_name == 'y':
-                    ds.attrs['standard_name'] = translation_dict['y']
+                    ds.attrs['standard_name'] = pivview_name_to_standard_name['y']
                     ds.make_scale()
                 elif variable_name == 'time':
-                    ds.attrs['standard_name'] = translation_dict['time']
+                    ds.attrs['standard_name'] = pivview_name_to_standard_name['time']
                     ds.make_scale()
                 else:
                     ds.attrs['COORDINATES'] = ['z', ]

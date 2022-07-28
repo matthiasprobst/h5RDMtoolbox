@@ -54,11 +54,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
     the name (string) is identified as a dataset or group, then this object is returned.
     """
 
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, identifier_convention: conventions.StandardizedNameTable):
         """ Private constructor."""
         super().__init__(parent)
-        self._h5_group_class = kwargs.pop('_h5_group_class', h5py.Group)
-        self._h5_dataset_class = kwargs.pop('_h5_dataset_class', h5py.Dataset)
+        self.identifier_convention = identifier_convention  # standard_name_convention
 
     @with_phil
     def __getitem__(self, name):
@@ -67,20 +66,20 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if ret:
                 if ret[0] == '{':
                     return json.loads(ret)
-                elif ret[0] == '/':  # it may be group or dataset path
-                    if isinstance(self._id, h5py.h5g.GroupID):
-                        # call like this, otherwise recursive call!
-                        _root = self._h5_group_class(self._id)
-                    else:
-                        _root = self._h5_dataset_class(self._id).rootparent
-                    if ret in _root:
-                        return _root[ret]
-                        # obj = _root[ret]
-                        # if isinstance(obj, h5py.Dataset):
-                        #     return self._h5_dataset_class(obj.id)
-                        # return self._h5_group_class(obj.id)
-                    else:
-                        return ret
+                # elif ret[0] == '/':  # it may be group or dataset path
+                #     if isinstance(self._id, h5py.h5g.GroupID):
+                #         # call like this, otherwise recursive call!
+                #         _root = self._h5_group_class(self._id)
+                #     else:
+                #         _root = self._h5_dataset_class(self._id).rootparent
+                #     if ret in _root:
+                #         return _root[ret]
+                #         # obj = _root[ret]
+                #         # if isinstance(obj, h5py.Dataset):
+                #         #     return self._h5_dataset_class(obj.id)
+                #         # return self._h5_group_class(obj.id)
+                #     else:
+                #         return ret
                 else:
                     return ret
             else:
@@ -96,8 +95,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
-        if name in ('_h5_group_class', '_h5_dataset_class'):
-            return super().__setattr__(name, value)
 
         if isinstance(value, dict):
             _value = json.dumps(value)
@@ -124,8 +121,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return outstr[:-1]
 
     def __getattr__(self, item):
-        if item in ('_h5_dataset_class', '_h5_group_class'):
-            return self.__getattribute__(item)
+        # if item in ('_h5_dataset_class', '_h5_group_class'):
+        #     return self.__getattribute__(item)
         if config.natural_naming:
             if item in self.keys():
                 return self[item]
@@ -133,10 +130,13 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
+        if key == 'identifier_convention':
+            super().__setattr__(key, value)
+            return
         if not isinstance(value, ObjectID):
             self.__setitem__(key, value)
-        else:
-            super().__setattr__(key, value)
+            return
+        super().__setattr__(key, value)
 
 
 def _is_not_valid_natural_name(instance, name, is_natural_naming_enabled):
@@ -319,9 +319,7 @@ class H5BaseDataset(h5py.Dataset):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return WrapperAttributeManager(self,
-                                           _h5_dataset_class=self._h5ds,
-                                           _h5_group_class=self._h5grp)
+            return WrapperAttributeManager(self, None)
 
     @property
     def rootparent(self):
@@ -485,9 +483,7 @@ class H5BaseGroup(h5py.Group):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return WrapperAttributeManager(self,
-                                           _h5_group_class=self._h5grp,
-                                           _h5_dataset_class=self._h5ds)
+            return WrapperAttributeManager(self, None)
 
     @property
     def rootparent(self):
@@ -1467,8 +1463,7 @@ class H5Base(h5py.File, H5BaseGroup):
         Attributes attached to this object """
         with phil:
             return WrapperAttributeManager(self,
-                                           _h5_dataset_class=self._h5ds,
-                                           _h5_group_class=self._h5grp)
+                                           None)
 
     @property
     def version(self):

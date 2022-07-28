@@ -15,7 +15,7 @@ from .h5flow import DisplacementDataset, H5FlowGroup
 from .h5flow import H5Flow, H5FlowLayout, XRVectorDataset
 from .h5flow import VectorDataset
 from .. import utils, user_data_dir
-from ..conventions.standard_names import PIVConvention
+from ..conventions.cf import piv_standard_name_table
 from ..x2hdf import piv2hdf
 from ..x2hdf.piv2hdf.par import PivViewParFile
 
@@ -371,7 +371,7 @@ class H5PIV(H5Flow, H5PIVGroup):
         else:
             raise NotImplementedError(f'H5PIV currently ony supports PivTec PIVview')
 
-    def __init__(self, name=None, mode="r+", title=None, sn_convention=None,
+    def __init__(self, name=None, mode="r+", title=None, standard_name_table=None,
                  software=None, run_layout_check=False, **kwargs):
         """
         name : str, optional=None
@@ -396,10 +396,10 @@ class H5PIV(H5Flow, H5PIVGroup):
         None
 
         """
-        if sn_convention is None:
-            sn_convention = PIVConvention
+        if standard_name_table is None:
+            standard_name_table = piv_standard_name_table
         super(H5PIV, self).__init__(name=name, mode=mode, title=title,
-                                    sn_convention=sn_convention, **kwargs)
+                                    standard_name_table=standard_name_table, **kwargs)
         if software is not None:
             if isinstance(software, str):
                 if mode in ('r+', 'w'):

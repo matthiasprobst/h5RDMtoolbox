@@ -6,11 +6,11 @@ from typing import Tuple
 
 import numpy as np
 import xarray as xr
+from h5rdmtoolbox.conventions.translations import pivview_name_to_standard_name
 from netCDF4 import Dataset as ncDataset
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import Delaunay
 
-from h5rdmtoolbox.conventions.pivview import translation_dict
 from .calc import compute_z_derivative_of_z_velocity
 from .utils import is_time
 
@@ -181,7 +181,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
 
         piv_data_array_dict['valid'] = mask
         ncVariableAttributes['valid'] = {'units': '',
-                                         'standard_name': translation_dict['valid'],
+                                         'standard_name': pivview_name_to_standard_name['valid'],
                                          'long_name': 'valid data based on user '
                                                       'input during nc-to-hdf conversion. '
                                                       f'{masking} was used, which means '
@@ -196,7 +196,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                         data[~mask] = np.nan
                     piv_data_array_dict[name] = data
                     ncVariableAttributes[name] = {'units': 'pixel',
-                                                  'standard_name': translation_dict[name]}
+                                                  'standard_name': pivview_name_to_standard_name[name]}
             elif k == 'velocity':
                 for i, name in zip(range(v.shape[-1]), ('u', 'v', 'w')):
                     data = v[0, :, :, i]
@@ -204,9 +204,9 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                         data[~mask] = np.nan
                     piv_data_array_dict[name] = data
                     ncVariableAttributes[name] = {'units': ncVariableAttributes['velocity']['units'],
-                                                  'standard_name': translation_dict[name]}
+                                                  'standard_name': pivview_name_to_standard_name[name]}
             elif k == 'piv_flags':
-                ncVariableAttributes[k].update({'units': '', 'standard_name': translation_dict[k]})
+                ncVariableAttributes[k].update({'units': '', 'standard_name': pivview_name_to_standard_name[k]})
                 continue  # We take the flags from above to save computation time
             elif k in ('piv_peak1', 'piv_peak2', 'piv_peak3'):
                 for i, suffix, units in zip(range(v.shape[-1]),
@@ -218,7 +218,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                     name = f'{k}{suffix}'
                     piv_data_array_dict[name] = data
                     ncVariableAttributes[name] = {'units': units,
-                                                  'standard_name': translation_dict[name]}
+                                                  'standard_name': pivview_name_to_standard_name[name]}
             else:
                 data = v[0, ...]
                 if apply_mask:
@@ -227,13 +227,13 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                 piv_data_array_dict[k] = data
                 if k == 'piv_correlation_coeff':
                     ncVariableAttributes[k].update({'units': '',
-                                                    'standard_name': translation_dict[k]})
+                                                    'standard_name': pivview_name_to_standard_name[k]})
                 elif k == 'piv_snr_data':
                     ncVariableAttributes[k].update({'units': '',
-                                                    'standard_name': translation_dict[k]})
+                                                    'standard_name': pivview_name_to_standard_name[k]})
                 elif k == 'piv_3c_residuals':
                     ncVariableAttributes[k].update({'units': '',
-                                                    'standard_name': translation_dict[k],
+                                                    'standard_name': pivview_name_to_standard_name[k],
                                                     'long_name': 'least square residual for z_velocity',
                                                     'comment': 'Residuals from least-squares fit to determined '
                                                                'out-of-plane component. It is a measure of quality of '
@@ -241,7 +241,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                                                                'pixel'})
                 elif 'velocity gradient' in ncVariableAttributes[k]['long_name']:
                     ncVariableAttributes[k].update({'units': f"1/{ncVariableAttributes['velocity']['units'][-1]}",
-                                                    'standard_name': translation_dict[k]})
+                                                    'standard_name': pivview_name_to_standard_name[k]})
 
         if interpolate:
             # While there exist some base functions assuming reg. grids and / or
@@ -292,9 +292,9 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
 
             _gradient_unit = f"1/{ncVariableAttributes['velocity']['units'][-1]}"
             ncVariableAttributes['dwdx'] = {'units': _gradient_unit,
-                                            'standard_name': translation_dict['dwdx']}
+                                            'standard_name': pivview_name_to_standard_name['dwdx']}
             ncVariableAttributes['dwdy'] = {'units': _gradient_unit,
-                                            'standard_name': translation_dict['dwdy']}
+                                            'standard_name': pivview_name_to_standard_name['dwdy']}
 
             if compute_dwdz:
                 if 'dudx' in piv_data_array_dict.keys() and 'dvdy' in piv_data_array_dict.keys():
@@ -302,14 +302,14 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                     piv_data_array_dict['dwdz'] = compute_z_derivative_of_z_velocity(piv_data_array_dict['dudx'],
                                                                                      piv_data_array_dict['dvdy'])
                     ncVariableAttributes['dwdz'] = {'units': _gradient_unit,
-                                                    'standard_name': translation_dict['dwdz']}
+                                                    'standard_name': pivview_name_to_standard_name['dwdz']}
                 else:
                     logger.error(
                         "Could not compute dwdz based on continuity as dudx and dvdy are missing. Continuing ...")
 
         piv_data_array_dict['time'] = timestep
         ncVariableAttributes['time'] = {'long_name': 'Recording time since start.',
-                                        'standard_name': translation_dict['time'],
+                                        'standard_name': pivview_name_to_standard_name['time'],
                                         'units': time_unit}
         if not is_time(ncVariableAttributes['time']['units']):
             raise AttributeError(f'Time unit is incorrect: {ncVariableAttributes["t"]["unit"]}')
@@ -319,16 +319,16 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
             # the velocity dataset has the attribute coord_min and coord_max from which the coordinates can be derived:
             piv_data_array_dict['x'] = np.linspace(fr[0], to[0], w)
             piv_data_array_dict['y'] = np.linspace(fr[1], to[1], h)
-            ncVariableAttributes['x'] = {'standard_name': translation_dict['x'],
+            ncVariableAttributes['x'] = {'standard_name': pivview_name_to_standard_name['x'],
                                          'units': ncRootAttributes['length_conversion_units']}
-            ncVariableAttributes['y'] = {'standard_name': translation_dict['y'],
+            ncVariableAttributes['y'] = {'standard_name': pivview_name_to_standard_name['y'],
                                          'units': ncRootAttributes['length_conversion_units']}
             piv_data_array_dict['ix'] = np.linspace(px_fr[0], px_to[0], w).astype(int)
             piv_data_array_dict['iy'] = np.linspace(px_fr[1], px_to[1], h).astype(int)
-            ncVariableAttributes['ix'] = {'standard_name': translation_dict['ix'],
+            ncVariableAttributes['ix'] = {'standard_name': pivview_name_to_standard_name['ix'],
                                           'long_name': 'pixel x-location of vector',
                                           'units': 'pixel'}
-            ncVariableAttributes['iy'] = {'standard_name': translation_dict['iy'],
+            ncVariableAttributes['iy'] = {'standard_name': pivview_name_to_standard_name['iy'],
                                           'long_name': 'pixel y-location of vector',
                                           'units': 'pixel'}
 
@@ -359,7 +359,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                 z = 0
 
             piv_data_array_dict['z'] = z
-            ncVariableAttributes['z'] = {'standard_name': translation_dict['z'],
+            ncVariableAttributes['z'] = {'standard_name': pivview_name_to_standard_name['z'],
                                          'units': z_unit}
 
         # correct shape if needed to (nz, nt, ny, nx) or (nz, nt, ny, nx, nv) respectively

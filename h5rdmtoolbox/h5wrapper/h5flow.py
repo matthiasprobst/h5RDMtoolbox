@@ -12,7 +12,7 @@ from . import config
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5FileLayout
 from .. import user_data_dir
-from ..conventions.standard_names import FluidConvention
+from ..conventions.cf import fluid_standard_name_table
 
 logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
@@ -284,14 +284,14 @@ class H5FlowLayout(H5FileLayout):
 class H5Flow(H5File, H5FlowGroup):
     Layout: H5FlowLayout = H5FlowLayout(Path.joinpath(user_data_dir, f'layout/H5Flow.hdf'))
 
-    def __init__(self, name: Path = None, mode='r', title=None, sn_convention=None,
+    def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
-        if sn_convention is None:
-            sn_convention = FluidConvention
-        super().__init__(name, mode, title, sn_convention,
+        if standard_name_table is None:
+            standard_name_table = fluid_standard_name_table
+        super().__init__(name, mode, title, standard_name_table,
                          driver, libver, userblock_size,
                          swmr, rdcc_nslots, rdcc_nbytes, rdcc_w0,
                          track_order, fs_strategy, fs_persist, fs_threshold,
