@@ -4,11 +4,9 @@ import h5py
 import numpy as np
 import pint_xarray
 
-from .standard_names import equal_base_units
+from .identifier import equal_base_units
 
-# from .standard_names import standard_names_dict
-
-assert pint_xarray.__version__ == '0.2.1'
+assert pint_xarray.__version__ >= '0.2.1'
 
 
 class H5Inspect:

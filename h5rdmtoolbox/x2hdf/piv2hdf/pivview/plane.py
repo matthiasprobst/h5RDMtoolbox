@@ -23,7 +23,7 @@ from datetime import datetime
 from . import core
 from . import plane
 from .snapshot import PIVSnapshotDatFile, PIVSnapshot
-from ....conventions.pivview import translation_dict, update_standard_names
+from ....conventions.translations import pivview_name_to_standard_name, update_standard_names
 from .. import vtk_utils
 from ..calc import compute_z_derivative_of_z_velocity
 from ..vtk_utils import result_3D_to_vtk
@@ -1556,12 +1556,12 @@ def multiplane_from_average_dat_files(plane_folders: List[pathlib.Path], target:
                 ds = h5.create_dataset(dn, data=h5plane[dn][()])
                 ds.make_scale(core.DEFAULT_DATASET_LONG_NAMES[dn])
                 ds.attrs['units'] = h5plane[dn].attrs['units']
-                ds.attrs['standard_name'] = translation_dict[dn]
+                ds.attrs['standard_name'] = pivview_name_to_standard_name[dn]
             ds = h5.create_dataset('z', shape=(nz,))
             ds.make_scale(core.DEFAULT_DATASET_LONG_NAMES['z'])
             ds.attrs['units'] = h5plane[dn].attrs['units']
             ds[0] = h5plane['z'][()]
-            ds.attrs['standard_name'] = translation_dict['z']
+            ds.attrs['standard_name'] = pivview_name_to_standard_name['z']
 
             for plane_ds_name, plane_ds in h5plane['timeAverages'].items():
                 ds = gav.create_dataset(plane_ds_name, shape=(nz, ny, nx))

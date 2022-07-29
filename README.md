@@ -24,16 +24,18 @@ The sub-packages are described in detail in the [documentation](./doc/_build/ind
 
 
 ## Installation
+Navigate to the repository directory.
+
 For development:
 
-    python3.8 -m pip install -e .
+    python3.8 -m pip install -e ".[complete]"
 otherwise
 
-    python3.8 -m pip install .
+    python3.8 -m pip install ".[complete]"
 
 To only install special functionality, e.g. only vtk support in addition to core dependendies, run:
 
-    pip install "h5rdmtoolbox[vtk]"
+    pip install (-e) ".[vtk]"
 
 **Note**: There are some optional packages that are not listed in the requirements, which 
 you have to install yourself:

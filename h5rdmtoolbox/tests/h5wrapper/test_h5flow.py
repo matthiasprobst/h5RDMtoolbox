@@ -2,11 +2,8 @@ import unittest
 
 import numpy as np
 
-from h5rdmtoolbox.conventions.standard_names import StandardNameConvention
+from h5rdmtoolbox.conventions import StandardizedNameTable, StandardizedNameError
 from h5rdmtoolbox.h5wrapper import H5Flow
-
-
-# from h5rdmtoolbox.h5wrapper.h5flow import XRVelocityDataset, VectorInterface
 
 
 class TestH5Flow(unittest.TestCase):
@@ -15,9 +12,9 @@ class TestH5Flow(unittest.TestCase):
         self.assertTrue(H5Flow.Layout.filename.exists())
         self.assertEqual(H5Flow.Layout.filename.stem, 'H5Flow')
         with H5Flow() as h5:
-            self.assertIsInstance(h5.sn_convention, StandardNameConvention)
-            self.assertEqual(h5.sn_convention.version, 1)
-            self.assertEqual(h5.sn_convention.name, 'Fluid_Standard_Name')
+            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
+            self.assertEqual(h5.standard_name_table.version_number, 1)
+            self.assertEqual(h5.standard_name_table.name, 'Fluid_Standard_Name')
 
     def test_VelocityDataset(self):
         with H5Flow() as h5:
@@ -40,6 +37,15 @@ class TestH5Flow(unittest.TestCase):
             h5.title = 'my title'
             n_issuess = h5.check()
             self.assertEqual(n_issuess, 4)
+
+            # check for standard anmes
+            # CGNS convention:
+            # create dataset with cf convention:
+            ds = h5.create_dataset('x', data=1, units='m', standard_name='x_coordinate')
+            with self.assertRaises(StandardizedNameError):
+                ds.attrs['standard_name'] = 'CoordinateX'
+            h5.check()
+            del h5['x']
 
             # generatig wrong x coordinate dimension:
             h5.create_dataset('x', shape=(2, 1), units='m', standard_name='x_coordinate')
