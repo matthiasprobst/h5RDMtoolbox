@@ -174,7 +174,7 @@ def layout_inspection(h5root: h5py.Group, layout_file: Path, silent: bool = Fals
 
     with h5py.File(layout_file) as h5layout:
         # check root attributes
-        h5inspect = H5InspectLayout(h5root, h5layout)
+        h5inspect = H5InspectLayout(h5root, h5layout, silent)
         h5layout.visititems(h5inspect)
         if not silent:
             print(f' --> {h5inspect.nissues} issue(s) found during layout inspection')
