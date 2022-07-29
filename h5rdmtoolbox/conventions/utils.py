@@ -1,8 +1,7 @@
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Dict
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
 
@@ -18,35 +17,20 @@ def is_valid_email_address(email: str) -> bool:
     return False
 
 
-def dict2xml(convention_dict: dict, name: str, filename: Path, version: int,
-             institution: str, contact: str, datetime_str=None) -> Path:
-    """writes standard_names dictionary into a xml in style of cf-standard-name-table"""
-    if not is_valid_email_address(contact):
-        raise ValueError(f'Invalid email address: {contact}')
+def dict2xml(filename, name: str, dictionary: Dict, metadata: Dict) -> Path:
+    """writes standard_names dictionary into a xml in style of cf-standard-name-table
 
-    if datetime_str is None:
-        datetime_str = '%Y-%m-%d_%H:%M:%S'
+    data must be a Tuple where first entry is the dictionary and the second one is meta data
+    """
 
     root = ET.Element(name)
 
-    item_version = ET.Element("version")
-    item_version.text = str(version)
+    for k, v in metadata.items():
+        item = ET.Element(k)
+        item.text = str(v)
+        root.append(item)
 
-    item_last_modified = ET.Element("last_modified")
-    item_last_modified.text = datetime.now().strftime(datetime_str)
-
-    item_institution = ET.Element("institution")
-    item_institution.text = institution
-
-    item_contact = ET.Element("contact")
-    item_contact.text = contact
-
-    root.append(item_version)
-    root.append(item_last_modified)
-    root.append(item_institution)
-    root.append(item_contact)
-
-    for k, v in convention_dict.items():
+    for k, v in dictionary.items():
         entry = ET.SubElement(root, "entry", attrib={'id': k})
         for kk, vv in v.items():
             item = ET.SubElement(entry, kk)
@@ -78,7 +62,8 @@ def xml2dict(xml_filename: Path) -> Tuple[dict, dict]:
     tree = ET.parse(xml_filename)
     root = tree.getroot()
     standard_names = {}
-    meta = {'name': root.tag, 'version': int(root.find('version').text), 'contact': root.find('contact').text,
+    meta = {'name': root.tag, 'version_number': int(root.find('version_number').text),
+            'contact': root.find('contact').text,
             'institution': root.find('institution').text, 'last_modified': root.find('last_modified').text}
     for child in root.iter('entry'):
         standard_names[child.attrib['id']] = {}

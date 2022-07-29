@@ -12,7 +12,7 @@ from . import config
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5FileLayout
 from .. import user_data_dir
-from ..conventions.standard_names import FluidConvention
+from ..conventions.custom import FluidStandardNameTable
 
 logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
@@ -273,25 +273,27 @@ class H5FlowLayout(H5FileLayout):
             ds_y = h5.create_dataset('y', shape=(1,))
             ds_z = h5.create_dataset('z', shape=(1,))
             ds_t = h5.create_dataset('time', shape=(1,))
-            for ds in (ds_x, ds_y, ds_z, ds_t):
+            for ds in (ds_x, ds_y, ds_z):
                 ds.attrs['__ndim__'] = (0, 1)
                 ds.attrs['units'] = 'm'
             ds_x.attrs['standard_name'] = 'x_coordinate'
             ds_y.attrs['standard_name'] = 'y_coordinate'
             ds_z.attrs['standard_name'] = 'z_coordinate'
+            ds_t.attrs['units'] = 's'
+            ds_t.attrs['__ndim__'] = (0, 1)
 
 
 class H5Flow(H5File, H5FlowGroup):
     Layout: H5FlowLayout = H5FlowLayout(Path.joinpath(user_data_dir, f'layout/H5Flow.hdf'))
 
-    def __init__(self, name: Path = None, mode='r', title=None, sn_convention=None,
+    def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
-        if sn_convention is None:
-            sn_convention = FluidConvention
-        super().__init__(name, mode, title, sn_convention,
+        if standard_name_table is None:
+            standard_name_table = FluidStandardNameTable
+        super().__init__(name, mode, title, standard_name_table,
                          driver, libver, userblock_size,
                          swmr, rdcc_nslots, rdcc_nbytes, rdcc_w0,
                          track_order, fs_strategy, fs_persist, fs_threshold,

@@ -4,15 +4,16 @@ import h5py
 import numpy as np
 import xarray as xr
 
+from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.data import DataSourceType, DataSource
-from h5rdmtoolbox.conventions.pivview import translation_dict
+from h5rdmtoolbox.conventions.translations import pivview_name_to_standard_name
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.x2hdf.piv2hdf.pivview import PIVMultiPlane
 from h5rdmtoolbox.x2hdf.piv2hdf.pivview import PIVSnapshot
 from h5rdmtoolbox.x2hdf.piv2hdf.pivview import plane
 from h5rdmtoolbox.x2hdf.piv2hdf.pivview.core import InvalidZSourceError, PIV_FILE_TYPE_NAME
 from h5rdmtoolbox.x2hdf.piv2hdf.pivview.snapshot import NotAFileError
-from h5rdmtoolbox import tutorial
+
 
 class TestPIV2HDF(unittest.TestCase):
 
@@ -88,7 +89,7 @@ class TestPIV2HDF(unittest.TestCase):
             for k in h5.keys():
                 if isinstance(h5[k], h5py.Dataset):
                     try:
-                        self.assertEqual(h5[k].attrs['standard_name'], translation_dict[k])
+                        self.assertEqual(h5[k].attrs['standard_name'], pivview_name_to_standard_name[k])
                     except Exception as e:
                         print(f'Standard name missing in {k}: "{e}"')
 
@@ -141,7 +142,7 @@ class TestPIV2HDF(unittest.TestCase):
             # check standard names
             for k in h5.keys():
                 if isinstance(h5[k], h5py.Dataset):
-                    self.assertEqual(h5[k].attrs['standard_name'], translation_dict[k])
+                    self.assertEqual(h5[k].attrs['standard_name'], pivview_name_to_standard_name[k])
 
             # check for dimension scales:
             for k in h5.keys():
@@ -195,7 +196,7 @@ class TestPIV2HDF(unittest.TestCase):
             for k in h5.keys():
                 if isinstance(h5[k], h5py.Dataset):
                     try:
-                        self.assertEqual(h5[k].attrs['standard_name'], translation_dict[k])
+                        self.assertEqual(h5[k].attrs['standard_name'], pivview_name_to_standard_name[k])
                     except Exception as e:
                         print(f"Standard name check failed on dataset {k}: {e}")
 
@@ -362,7 +363,7 @@ class TestPIV2HDF(unittest.TestCase):
     #         # check standard names
     #         for k in h5.keys():
     #             if isinstance(h5[k], h5py.Dataset):
-    #                 self.assertEqual(h5[k].attrs['standard_name'], translation_dict[k])
+    #                 self.assertEqual(h5[k].attrs['standard_name'], pivview_name_to_standard_name[k])
     #
     #         # check for dimension scales:
     #         for k in h5.keys():
@@ -452,7 +453,7 @@ class TestPIV2HDF(unittest.TestCase):
             # check standard names
             for k in h5.keys():
                 if isinstance(h5[k], h5py.Dataset):
-                    self.assertEqual(h5[k].attrs['standard_name'], translation_dict[k])
+                    self.assertEqual(h5[k].attrs['standard_name'], pivview_name_to_standard_name[k])
 
             self.assertIn('x', h5)
             self.assertIn('y', h5)

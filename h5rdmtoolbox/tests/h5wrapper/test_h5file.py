@@ -12,7 +12,7 @@ from pint_xarray import unit_registry as ureg
 
 from h5rdmtoolbox import h5wrapper, __version__
 from h5rdmtoolbox.conventions.data import DataSourceType
-from h5rdmtoolbox.conventions.standard_names import StandardNameConvention, StandardNameError
+from h5rdmtoolbox.conventions.identifier import StandardizedNameError, StandardizedNameTable
 from h5rdmtoolbox.h5wrapper import H5File, config, set_loglevel
 from h5rdmtoolbox.h5wrapper.h5base import WrapperAttributeManager
 from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
@@ -28,9 +28,9 @@ class TestH5File(unittest.TestCase):
         self.assertTrue(H5File.Layout.filename.exists())
         self.assertEqual(H5File.Layout.filename.stem, 'H5File')
         with H5File() as h5:
-            self.assertIsInstance(h5.sn_convention, StandardNameConvention)
-            self.assertEqual(h5.sn_convention.version, 0)
-            self.assertEqual(h5.sn_convention.name, 'EmptyStandardNameConvention')
+            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
+            self.assertEqual(h5.standard_name_table.version_number, -1)
+            self.assertEqual(h5.standard_name_table.name, 'EmptyStandardizedNameTable')
 
     def test_create_dataset(self):
         """H5File has more parameters to pass as H5Base"""
@@ -83,6 +83,28 @@ class TestH5File(unittest.TestCase):
             h5.attrs['mean'] = 1.2
             self.assertTrue(isinstance(h5.attrs, WrapperAttributeManager))
 
+            from h5rdmtoolbox.conventions.identifier import StandardizedNameTable
+            convention = StandardizedNameTable(name='empty',
+                                               table_dict={'x_velocity': {'description': '',
+                                                                          'units': 'm/s'}},
+                                               version_number=0,
+                                               valid_characters='[^a-zA-Z0-9_]',
+                                               institution='', contact='a.b@test.com')
+            h5.standard_name_table = convention
+            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
+            ds = h5.create_dataset('ds', shape=(), long_name='x_velocity')
+            with self.assertRaises(StandardizedNameError):
+                ds.attrs['standard_name'] = ' x_velocity'
+            from h5rdmtoolbox.conventions import identifier
+            identifier.STRICT = False
+            ds.attrs['standard_name'] = 'x_velocityyy'
+            with self.assertRaises(StandardizedNameError):
+                ds.attrs['standard_name'] = '!x_velocityyy'
+            identifier.STRICT = True
+            with self.assertRaises(StandardizedNameError):
+                ds.attrs['standard_name'] = 'x_velocityyy'
+            del h5['ds']
+
             config.natural_naming = False
 
             with self.assertRaises(AttributeError):
@@ -94,11 +116,11 @@ class TestH5File(unittest.TestCase):
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
 
-            h5.attrs['gr'] = h5['/']
-            self.assertEqual(h5.attrs['gr'].name, '/')
+            # h5.attrs['gr'] = h5['/']
+            # self.assertEqual(h5.attrs['gr'].name, '/')
 
-            h5.attrs.gr2 = h5['/']
-            self.assertEqual(h5.attrs['gr2'].name, '/')
+            # h5.attrs.gr2 = h5['/']
+            # self.assertEqual(h5.attrs['gr2'].name, '/')
 
             dset = h5.create_dataset('ds', data=1, long_name='a long name', attrs={'a1': 1, 'a2': 'str',
                                                                                    'a3': {'a': 2}})
@@ -108,19 +130,19 @@ class TestH5File(unittest.TestCase):
             h5.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(h5.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
-            h5.attrs['ds'] = dset
-            self.assertEqual(h5.attrs['ds'], dset)
-            self.assertIsInstance(h5.attrs['ds'], H5Dataset)
+            # h5.attrs['ds'] = dset
+            # self.assertEqual(h5.attrs['ds'], dset)
+            # self.assertIsInstance(h5.attrs['ds'], H5Dataset)
 
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
     def test_H5File_and_standard_name(self):
-        with self.assertRaises(FileExistsError):
-            with H5File(mode='w', sn_convention='wrong file name'):
+        with self.assertRaises(FileNotFoundError):
+            with H5File(mode='w', standard_name_table='wrong file name'):
                 pass
-        with H5File(mode='w', sn_convention=None) as h5:
-            self.assertIsInstance(h5.sn_convention, StandardNameConvention)
+        with H5File(mode='w', standard_name_table=None) as h5:
+            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
 
     def test_creation_time(self):
         with H5File(mode='w') as h5:
@@ -290,12 +312,12 @@ class TestH5Group(unittest.TestCase):
             self.assertEqual(h5.attrs.mean, 1.2)
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
+            #
+            # h5.attrs['gr'] = h5['/']
+            # self.assertEqual(h5.attrs['gr'].name, '/')
 
-            h5.attrs['gr'] = h5['/']
-            self.assertEqual(h5.attrs['gr'].name, '/')
-
-            h5.attrs.gr2 = h5['/']
-            self.assertEqual(h5.attrs['gr2'].name, '/')
+            # h5.attrs.gr2 = h5['/']
+            # self.assertEqual(h5.attrs['gr2'].name, '/')
 
             dset = h5.create_dataset('ds', data=1, long_name='a long name', attrs={'a1': 1, 'a2': 'str',
                                                                                    'a3': {'a': 2}})
@@ -305,9 +327,9 @@ class TestH5Group(unittest.TestCase):
             h5.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(h5.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
-            h5.attrs['ds'] = dset
-            self.assertEqual(h5.attrs['ds'], dset)
-            self.assertIsInstance(h5.attrs['ds'], H5Dataset)
+            # h5.attrs['ds'] = dset
+            # self.assertEqual(h5.attrs['ds'], dset)
+            # self.assertIsInstance(h5.attrs['ds'], H5Dataset)
 
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
@@ -341,8 +363,8 @@ class TestH5Group(unittest.TestCase):
 
     def test_create_dataset(self):
         config.natural_naming = True
-        sc = StandardNameConvention(standard_name_dict={}, name='Test_SNC', version=1,
-                                    contact='contact@python.com', institution='my_institution')
+        sc = StandardizedNameTable(table_dict={}, name='Test_SNC', version_number=1,
+                                   contact='contact@python.com', institution='my_institution')
         sc.set('time', canonical_units='s', description='physical time')
         sc.set('x_velocity', canonical_units='m/s',
                description='velocity is a vector quantity. x indicates the component in x-axis direction')
@@ -351,12 +373,12 @@ class TestH5Group(unittest.TestCase):
         sc.set('z_velocity', canonical_units='m/s',
                description='velocity is a vector quantity. z indicates the component in z-axis direction')
 
-        with H5File(mode='w', sn_convention=sc) as h5:
+        with H5File(mode='w', standard_name_table=sc) as h5:
             with self.assertRaises(RuntimeError):
                 ds = h5.create_dataset('ds', shape=(2, 3))
-            with self.assertRaises(StandardNameError):
+            with self.assertRaises(StandardizedNameError):
                 ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity')
-            with self.assertRaises(StandardNameError):
+            with self.assertRaises(StandardizedNameError):
                 ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity_wrong')
             ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity', units='m/s')
             self.assertEqual(ds.units, 'm/s')

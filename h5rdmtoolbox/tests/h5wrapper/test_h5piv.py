@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.standard_names import StandardNameConvention
+from h5rdmtoolbox.conventions import StandardizedNameTable
 from h5rdmtoolbox.h5wrapper import H5PIV
 
 
@@ -47,9 +47,9 @@ class TestH5PIV(unittest.TestCase):
         self.assertTrue(H5PIV.Layout.filename.exists())
         self.assertEqual(H5PIV.Layout.filename.stem, 'H5PIV')
         with H5PIV() as h5:
-            self.assertIsInstance(h5.sn_convention, StandardNameConvention)
-            self.assertEqual(h5.sn_convention.version, 1)
-            self.assertEqual(h5.sn_convention.name, 'PIV_Standard_Name')
+            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
+            self.assertEqual(h5.standard_name_table.version_number, 1)
+            self.assertEqual(h5.standard_name_table.name, 'PIV_Standard_Name')
 
     def test_UncertaintyDataset(self):
         with tutorial.get_H5PIV('vortex_snapshot', mode='r') as h5:

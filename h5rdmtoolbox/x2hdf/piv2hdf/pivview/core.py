@@ -12,8 +12,9 @@ from .. import config
 from .._config import read_yaml_file, check_yaml_file
 from ..statistics import running_std, running_mean
 from .... import __version__
+from .... import conventions
 from ....conventions.data import DataSourceType, DataSource
-from ....conventions.pivview import translation_dict
+from ....conventions.translations import pivview_name_to_standard_name
 
 logger = logging.getLogger('x2hdf')
 
@@ -140,7 +141,15 @@ def piv_conversion(conversion_method):
                 h5.attrs[DataSource.get_attr_name()] = DataSource.particle_image_velocimetry.name
                 h5.attrs['piv_data_type'] = PIV_FILE_TYPE_NAME[args[0].__class__.__name__]
                 h5.attrs['piv_dimension'] = '2D2C' if args[0].is_2d2c else '2D3C'
-                h5.attrs['configuration'] = json.dumps(args[0].configuration)
+                _configuration = None
+                for k, v in args[0].configuration.items():
+                    if isinstance(v, conventions.StandardizedNameTable):
+                        _configuration = args[0].configuration.copy()
+                        _configuration[k] = str(v)
+                if _configuration is None:
+                    h5.attrs['configuration'] = json.dumps(args[0].configuration)
+                else:
+                    h5.attrs['configuration'] = json.dumps(_configuration)
                 h5.attrs['__h5rdmtoolbox_version__'] = __version__
                 class_name = args[0].__class__.__name__
                 if class_name == 'PIVSnapshot':
@@ -173,8 +182,8 @@ def piv_conversion(conversion_method):
                 for name, ds in h5.items():
                     if isinstance(ds, h5py.Dataset):
                         if 'standard_name' not in ds.attrs:
-                            if name in translation_dict:
-                                ds.attrs['standard_name'] = translation_dict[name]
+                            if name in pivview_name_to_standard_name:
+                                ds.attrs['standard_name'] = pivview_name_to_standard_name[name]
         args[0].conversion_time = time.time() - conversion_starting_time
         return hdf_filename
 

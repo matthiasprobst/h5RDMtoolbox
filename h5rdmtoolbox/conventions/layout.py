@@ -4,11 +4,9 @@ import h5py
 import numpy as np
 import pint_xarray
 
-from .standard_names import equal_base_units
+from .identifier import equal_base_units
 
-# from .standard_names import standard_names_dict
-
-assert pint_xarray.__version__ == '0.2.1'
+assert pint_xarray.__version__ >= '0.2.1'
 
 
 class H5Inspect:
@@ -101,7 +99,7 @@ class H5InspectLayout:
                 required_units = layout_dataset_attributes['units']
                 if not equal_base_units(target_units, required_units):
                     if not self.silent:
-                        print(f'Units have unequal base units: {target_units} <> {required_units}')
+                        print(f'Units issue for dataset {layout_dataset.name}: Unequal base units: {target_units} <> {required_units}')
                     self.nissues += 1
 
             else:
@@ -176,7 +174,7 @@ def layout_inspection(h5root: h5py.Group, layout_file: Path, silent: bool = Fals
 
     with h5py.File(layout_file) as h5layout:
         # check root attributes
-        h5inspect = H5InspectLayout(h5root, h5layout)
+        h5inspect = H5InspectLayout(h5root, h5layout, silent)
         h5layout.visititems(h5inspect)
         if not silent:
             print(f' --> {h5inspect.nissues} issue(s) found during layout inspection')
