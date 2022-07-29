@@ -96,10 +96,14 @@ piv_name_table_dict.update({'x_pixel_coordinate': {'canonical_units': 'pixel', '
                             'y_displacement_of_peak2': {'canonical_units': '', 'description': None},
                             'y_displacement_of_peak3': {'canonical_units': '', 'description': None},
                             })
+
+from h5rdmtoolbox.conventions.pivview import pivview_to_standardnames_dict
+
 PIVStandardNameTable = StandardizedNameTable(name='PIV_Standard_Name', table_dict=piv_name_table_dict,
                                              version_number=1, contact='matthias.probst@kit.edu',
                                              institution='Karlsruhe Institute of Technology',
-                                             valid_characters='[^a-zA-Z0-9_]')
+                                             valid_characters='[^a-zA-Z0-9_]',
+                                             translation_dict={'pivview': pivview_to_standardnames_dict})
 
 if __name__ == '__main__':
     """creating xml convention files in xml/folder which will be installed with the package.

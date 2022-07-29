@@ -75,7 +75,7 @@ class StandardizedNameTable(_StandardizedNameTable):
     def __init__(self, name: str, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = ''):
+                 valid_characters: str = '', translation_dict: dict = None):
         self._name = name
         self._version_number = version_number
         self._valid_characters = valid_characters
@@ -96,6 +96,17 @@ class StandardizedNameTable(_StandardizedNameTable):
         if not self.has_valid_structure():
             raise KeyError(f'Invalid dictionary structure. Each entry must contain "desciption" and '
                            '"canonical units"')
+
+        if translation_dict:
+            for k, v in translation_dict.items():
+                if not isinstance(v, dict):
+                    raise ValueError(f'Unexpected translation dictionary structure')
+                for kk, vv in v.items():
+                    if not isinstance(vv, str):
+                        raise ValueError(f'Unexpected translation dictionary structure')
+        else:
+            translation_dict = dict()
+        self._translation_dict = translation_dict
 
     @property
     def names(self):
@@ -244,9 +255,25 @@ class StandardizedNameTable(_StandardizedNameTable):
         """saves the convention in a XML file"""
         if not xml_filename.parent.exists() and parents:
             xml_filename.parent.mkdir(parents=parents)
-        return dict2xml(self._dict, name=self.name, filename=xml_filename, version_number=self.version_number,
-                        contact=self.contact, institution=self.institution,
-                        datetime_str=datetime_str)
+        if datetime_str is None:
+            datetime_str = '%Y-%m-%d_%H:%M:%S'
+        last_modified = datetime.now().strftime(datetime_str)
+
+        xml_parent = xml_filename.parent
+        xml_name = xml_filename.name
+        xml_translation_filename = xml_parent / 'translation' / xml_name
+        if not xml_translation_filename.parent.exists():
+            xml_translation_filename.parent.mkdir(parents=True)
+        dict2xml(xml_translation_filename,
+                 'tanslation', self._translation_dict, dict(version_number=self.version_number,
+                                                            contact=self.contact,
+                                                            institution=self.institution,
+                                                            last_modified=last_modified))
+        return dict2xml(xml_filename,
+                        self.name, self._dict, dict(version_number=self.version_number,
+                                                    contact=self.contact,
+                                                    institution=self.institution,
+                                                    last_modified=last_modified))
 
     def check_name(self, name, strict=False) -> bool:
         """Verifies general requirements like lower-case writing and no
@@ -273,6 +300,11 @@ class StandardizedNameTable(_StandardizedNameTable):
                 raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
                                             f'"{units}" != "{self[name].canonical_units}"')
         return True
+
+    def translate(self, name, source='pivview'):
+        """If convention/xml file comes with tanslation entries, this method converts
+        the input name into the convention's standardized name"""
+        raise NotImplementedError()
 
 
 empty_standardized_name_table = StandardizedNameTable(name='EmptyStandardizedNameTable',

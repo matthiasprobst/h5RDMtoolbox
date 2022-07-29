@@ -1,8 +1,7 @@
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Dict
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
 
@@ -18,31 +17,18 @@ def is_valid_email_address(email: str) -> bool:
     return False
 
 
-def dict2xml(dictionary: dict, name: str, filename: Path, version_number: int,
-             institution: str, contact: str, datetime_str=None) -> Path:
-    """writes standard_names dictionary into a xml in style of cf-standard-name-table"""
+def dict2xml(filename, name: str, dictionary: Dict, metadata: Dict) -> Path:
+    """writes standard_names dictionary into a xml in style of cf-standard-name-table
 
-    if datetime_str is None:
-        datetime_str = '%Y-%m-%d_%H:%M:%S'
+    data must be a Tuple where first entry is the dictionary and the second one is meta data
+    """
 
     root = ET.Element(name)
 
-    item_version_number = ET.Element("version_number")
-    item_version_number.text = str(version_number)
-
-    item_last_modified = ET.Element("last_modified")
-    item_last_modified.text = datetime.now().strftime(datetime_str)
-
-    item_institution = ET.Element("institution")
-    item_institution.text = institution
-
-    item_contact = ET.Element("contact")
-    item_contact.text = contact
-
-    root.append(item_version_number)
-    root.append(item_last_modified)
-    root.append(item_institution)
-    root.append(item_contact)
+    for k, v in metadata.items():
+        item = ET.Element(k)
+        item.text = str(v)
+        root.append(item)
 
     for k, v in dictionary.items():
         entry = ET.SubElement(root, "entry", attrib={'id': k})
