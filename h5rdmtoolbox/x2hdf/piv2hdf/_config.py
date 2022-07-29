@@ -4,6 +4,13 @@ from pathlib import Path
 import yaml
 
 from h5rdmtoolbox.conventions import datetime_str
+from ...conventions.custom import PIVStandardNameTable
+
+# to use CGNS:
+# from ...conventions.cgns import PIVCGNSStandardNameTable
+# and change next line:
+
+DEFAULT_CONVENTION = PIVStandardNameTable
 
 DEFAULT_CONFIGURATION = {
     'interpolation': False,
@@ -16,6 +23,7 @@ DEFAULT_CONFIGURATION = {
     'compression': 'gzip',
     'compression_opts': 5,
     'take_min_nt': True,  # False will fill datasets up with np.NA
+    'standardized_name_table': DEFAULT_CONVENTION,  # convention to use for PIV variables
     'timeAverages': {'compute': True,
                      'use_nc': False},  # reads avg.nc, reyn.nc and rms.nc if available
     'post': {
