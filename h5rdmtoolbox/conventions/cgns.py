@@ -3,26 +3,27 @@ This is work in progress and as long as there is no official version provided by
 this repository uses this convention
 """
 
-from h5rdmtoolbox.conventions.standard_names import StandardNameConvention
+from h5rdmtoolbox.conventions import StandardizedNameTable
+from h5rdmtoolbox.conventions.pivview import pivview_to_cgns_dict
 
 cgns_standard_names_dict = {
     'Time': {'canonical_units': 's', 'description': 'physical time'},
     'VelocityX': {'canonical_units': 'm/s',
-                   'description': 'velocity is a vector quantity. X indicates the component in x-axis direction'},
+                  'description': 'velocity is a vector quantity. X indicates the component in x-axis direction'},
     'VelocityY': {'canonical_units': 'm/s',
-                   'description': 'velocity is a vector quantity. Y indicates the component in y-axis direction'},
+                  'description': 'velocity is a vector quantity. Y indicates the component in y-axis direction'},
     'VelocityZ': {'canonical_units': 'm/s',
-                   'description': 'velocity is a vector quantity. Z indicates the component in z-axis direction'},
+                  'description': 'velocity is a vector quantity. Z indicates the component in z-axis direction'},
     'VorticityZ': {'canonical_units': '1/s',
-                    'description': 'vorticity is a vector quantity. Z indicates the component in z-axis direction'},
-    'VelocityR' : {'canonical_units': 'm/s',
-                    'description':	'vorticity is a vector quantity	. R indicates the component in radial direction'},
-    'VelocityTheta' : {'canonical_units': 'm/s',
-                    'description':	'vorticity is a vector quantity	. Theta indicates the component in theta-direction'},
-    'VelocityPhi' : {'canonical_units': 'm/s',
-                    'description':	'vorticity is a vector quantity	. Phi indicates the component in phi-direction'},
+                   'description': 'vorticity is a vector quantity. Z indicates the component in z-axis direction'},
+    'VelocityR': {'canonical_units': 'm/s',
+                  'description': 'vorticity is a vector quantity	. R indicates the component in radial direction'},
+    'VelocityTheta': {'canonical_units': 'm/s',
+                      'description': 'vorticity is a vector quantity	. Theta indicates the component in theta-direction'},
+    'VelocityPhi': {'canonical_units': 'm/s',
+                    'description': 'vorticity is a vector quantity	. Phi indicates the component in phi-direction'},
     'VelocityMagnitude': {'canonical_units': 'm/s',
-                              'description': 'Magnitude of the vector quantity velocity.'},
+                          'description': 'Magnitude of the vector quantity velocity.'},
     'CoordinateX': {'canonical_units': 'm', 'description': None},
     'CoordinateY': {'canonical_units': 'm', 'description': None},
     'CoordinateZ': {'canonical_units': 'm', 'description': None},
@@ -47,17 +48,21 @@ cgns_standard_names_dict = {
 
 piv_extended_cgns_standard_names_dict = cgns_standard_names_dict.copy()
 piv_extended_cgns_standard_names_dict.update({
-                                'PixelCoordinateX': {'canonical_units': 'pixel', 'description': None},
-                                'PixelCoordinateY': {'canonical_units': 'pixel', 'description': None},
-                                'Peak1DisplacementX': {'canonical_units': '', 'description': None},
-                                'Peak2DisplacementX': {'canonical_units': '', 'description': None},
-                                'Peak3DisplacementX': {'canonical_units': '', 'description': None},
-                                'Peak1DisplacementY': {'canonical_units': '', 'description': None},
-                                'Peak2DisplacementY': {'canonical_units': '', 'description': None},
-                                'Peak3DisplacementY': {'canonical_units': '', 'description': None},
-                                })
+    'PixelCoordinateX': {'canonical_units': 'pixel', 'description': None},
+    'PixelCoordinateY': {'canonical_units': 'pixel', 'description': None},
+    'Peak1DisplacementX': {'canonical_units': '', 'description': None},
+    'Peak2DisplacementX': {'canonical_units': '', 'description': None},
+    'Peak3DisplacementX': {'canonical_units': '', 'description': None},
+    'Peak1DisplacementY': {'canonical_units': '', 'description': None},
+    'Peak2DisplacementY': {'canonical_units': '', 'description': None},
+    'Peak3DisplacementY': {'canonical_units': '', 'description': None},
+})
 
-
+PIVCGNSStandardNameTable = StandardizedNameTable(name='CGNS_Standard_Name', table_dict=cgns_standard_names_dict,
+                                                 version_number=1, contact='matthias.probst@kit.edu',
+                                                 institution='Karlsruhe Institute of Technology',
+                                                 valid_characters='[^a-zA-Z0-9_]',
+                                                 translation_dict={'pivview': pivview_to_cgns_dict})
 
 if __name__ == '__main__':
     """creating xml convention files in xml/folder which will be installed with the package.
@@ -65,11 +70,6 @@ if __name__ == '__main__':
     package"""
     import pathlib
 
-    cgns_convention = StandardNameConvention(cgns_standard_names_dict, name='CGNS_Standard_Name',
-                                              version=1, contact='matthias.probst@kit.edu',
-                                              institution='Karlsruhe Institute of Technology')
-    _ = cgns_convention.to_xml(pathlib.Path(__file__).parent / 'snxml' / f'cgns-v{cgns_convention.version}.xml')
-    piv_convention = StandardNameConvention(piv_extended_standard_names_dict, name='PIV_extended_CGNS_Standard_Name',
-                                            version=1, contact='matthias.probst@kit.edu',
-                                            institution='Karlsruhe Institute of Technology')
-    _ = piv_convention.to_xml(pathlib.Path(__file__).parent / 'snxml' / f'piv-v{piv_convention.version}.xml')
+    PIVCGNSStandardNameTable.to_xml(
+        pathlib.Path(__file__).parent / 'snxml' / f'fluid-v{PIVCGNSStandardNameTable.version_number}.xml',
+        parents=True)

@@ -10,15 +10,16 @@ import pandas as pd
 from . import core
 from .utils import _get_header_line, _get_headernames_from_pivview_dat, _get_ijk_from_pivview_dat, \
     _get_first_N_lines_from_file
-from ..utils import PIVviewFlag
 from ..nc import process_pivview_nc_data
 from ..par import PivViewParFile, PivViewConfigFile
+from ..utils import PIVviewFlag
 from ....conventions.translations import pivview_name_to_standard_name
 
 logger = logging.getLogger('x2hdf')
 
 
 class NotAFileError(Exception):
+    """Exception if filename is not a file"""
 
     def __init__(self, filename):
         self.filename = filename
@@ -61,7 +62,8 @@ class PIVSnapshot(core.PIVNCConverter):
             self.parameter_file = core.get_parameter_file_from_plane(self.name.parent)
 
     @property
-    def is_2d2c(self):
+    def is_2d2c(self) -> bool:
+        """returns whether the PIV data is 2D2C or not"""
         return self._is_2d2c
 
     def _get_nc_data(self, build_coord_datasets=True):
@@ -74,7 +76,8 @@ class PIVSnapshot(core.PIVNCConverter):
                                        masking=masking,
                                        interpolate=interpolation,
                                        apply_mask=apply_mask,
-                                       build_coord_datasets=build_coord_datasets)
+                                       build_coord_datasets=build_coord_datasets,
+                                       standardized_name_table=self.configuration['standardized_name_table'])
 
     @core.piv_conversion
     def convert(self, target_hdf_filename: Path = None,
@@ -182,7 +185,8 @@ class PIVSnapshot(core.PIVNCConverter):
                                 ds.attrs[attr_key] = attr_val
             # pivflags explanation:
             unique_flags = np.unique(main['piv_flags'][:])
-            main['piv_flags'].attrs['flag_translation'] = json.dumps({str(PIVviewFlag(u)): int(u) for u in unique_flags})
+            main['piv_flags'].attrs['flag_translation'] = json.dumps(
+                {str(PIVviewFlag(u)): int(u) for u in unique_flags})
         return nc_data, nc_root_attr, nc_variable_attr
 
     def _coordinates_from_nc(self):

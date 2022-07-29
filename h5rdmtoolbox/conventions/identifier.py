@@ -136,6 +136,11 @@ class StandardizedNameTable(_StandardizedNameTable):
     def version_number(self):
         return self._version_number
 
+    @property
+    def has_translation_dictionary(self):
+        """returns whether the table is associated with a translation dict"""
+        return len(self._translation_dict) > 0
+
     @contact.setter
     def contact(self, contact):
         if not is_valid_email_address(contact):
@@ -154,7 +159,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         return f"{name} (version number: {version})"
 
     def __str__(self):
-        return self.__repr__()
+        return self.name
 
     def __getitem__(self, item) -> StandardizedName:
         return StandardizedName(item, self._dict[item]['description'],
@@ -242,15 +247,6 @@ class StandardizedNameTable(_StandardizedNameTable):
         meta.update(dict(table_dict=_dict))
         return StandardizedNameTable(**meta)
 
-    # def from_xml(self, xml_filename):
-    #     """reads the table from an xml file"""
-    #     from .utils import xml2dict
-    #     _dict, meta = xml2dict(xml_filename)
-    #     self._dict = _dict
-    #     self.version_number = meta['version_number']
-    #     self.contact = meta['contact']
-    #     self.institution = meta['institution']
-
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:
         """saves the convention in a XML file"""
         if not xml_filename.parent.exists() and parents:
@@ -301,10 +297,16 @@ class StandardizedNameTable(_StandardizedNameTable):
                                             f'"{units}" != "{self[name].canonical_units}"')
         return True
 
-    def translate(self, name, source='pivview'):
+    def translate(self, name: str, source: str) -> Union[str, None]:
         """If convention/xml file comes with tanslation entries, this method converts
         the input name into the convention's standardized name"""
-        raise NotImplementedError()
+        if self._translation_dict:
+            if source in self._translation_dict:
+                if name in self._translation_dict[source]:
+                    return self._translation_dict[source][name]
+                return None
+            return None
+        raise ValueError(f'Translation dictionary is empty!')
 
 
 empty_standardized_name_table = StandardizedNameTable(name='EmptyStandardizedNameTable',
