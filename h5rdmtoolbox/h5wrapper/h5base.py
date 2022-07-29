@@ -1332,17 +1332,19 @@ class H5BaseGroup(h5py.Group):
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
-    def dump(self, max_attr_length=None, **kwargs):
+    def dump(self, max_attr_length=None, check=True, **kwargs):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used"""
         if max_attr_length is None:
             max_attr_length = config.html_max_string_length
         if self.name == '/':
-            pre_text = f'<p>{Path(self.filename).name}</p>\n'
+            preamble = f'<p>{Path(self.filename).name}</p>\n'
         else:
-            pre_text = f'<p>Group: {self.name}</p>\n'
+            preamble = f'<p>Group: {self.name}</p>\n'
+        if check:
+            preamble += f'<p>Check resuted in {self.check(silent=True)} issues.</p>\n'
         build_debug_html_page = kwargs.pop('build_debug_html_page', False)
-        display(HTML(h5file_html_repr(self, max_attr_length, preamble=pre_text,
+        display(HTML(h5file_html_repr(self, max_attr_length, preamble=preamble,
                                       build_debug_html_page=build_debug_html_page)))
 
     def _repr_html_(self):
