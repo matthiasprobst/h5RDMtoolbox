@@ -290,11 +290,12 @@ class StandardizedNameTable(_StandardizedNameTable):
 
     def check_units(self, name, units) -> bool:
         """Raises an error if units is wrong"""
-        self.check_name(name, strict=True)  # will raise an error if name not in self._dict
+        self.check_name(name, strict=STRICT)  # will raise an error if name not in self._dict
         if self._dict:
-            if not equal_base_units(self._dict[name]['canonical_units'], units):
-                raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
-                                            f'"{units}" != "{self[name].canonical_units}"')
+            if STRICT:
+                if not equal_base_units(self._dict[name]['canonical_units'], units):
+                    raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
+                                                f'"{units}" != "{self[name].canonical_units}"')
         return True
 
     def translate(self, name: str, source: str) -> Union[str, None]:
