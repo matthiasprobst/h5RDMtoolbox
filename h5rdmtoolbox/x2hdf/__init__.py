@@ -1,4 +1,5 @@
 from . import piv2hdf
+from .cfd.ansys.cfx2hdf import cfx2hdf
 
 from ._logger import logger, _file_handler, _stream_handler
 
@@ -10,4 +11,4 @@ def set_loglevel(level):
     _stream_handler.setLevel(level.upper())
 
 
-__all__ = ['piv2hdf', 'set_loglevel']
+__all__ = ['piv2hdf', 'set_loglevel', 'cfx2hdf']
