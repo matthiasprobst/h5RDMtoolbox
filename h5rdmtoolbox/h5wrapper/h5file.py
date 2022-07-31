@@ -418,19 +418,20 @@ class H5Dataset(h5py.Dataset):
             raise TypeError('long_name must not be type None.')
 
     @property
-    def standard_name(self):
-        """Returns the attribute standard_name. Returns None if it does not exist."""
+    def standard_name(self) -> Union[str, None]:
+        """Returns the standardized name of the dataset. The attribute name is `standard_name`.
+        Returns `None` if it does not exist."""
         attrs_string = self.attrs.get('standard_name')
         if attrs_string is None:
             return None
-        return self.standard_name_table.get(attrs_string)
+        return self.standard_name_table[attrs_string]
 
     @standard_name.setter
     def standard_name(self, new_standard_name):
         """Writes attribute standard_name if passed string is not None.
         The rules for the standard_name is checked before writing to file."""
         if new_standard_name:
-            if self.standard_name_table.is_valid(new_standard_name):
+            if self.standard_name_table.check_name(new_standard_name):
                 self.attrs['standard_name'] = new_standard_name
 
     def __setitem__(self, key, value):

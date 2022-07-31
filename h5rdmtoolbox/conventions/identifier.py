@@ -53,12 +53,16 @@ class _NameIdentifierConvention:
 class StandardizedName:
     """basic stndardized name class"""
     name: str
-    description: str
-    canonical_units: str
+    description: Union[str, None]
+    canonical_units: Union[str, None]
     convention: _NameIdentifierConvention
 
     def __str__(self):
         return self.name
+
+    def check(self):
+        """Run the name check of the convention."""
+        self.convention.check_name(self.name)
 
 
 class _StandardizedNameTable:
@@ -162,14 +166,18 @@ class StandardizedNameTable(_StandardizedNameTable):
         return self.name
 
     def __getitem__(self, item) -> StandardizedName:
-        return StandardizedName(item, self._dict[item]['description'],
-                                self._dict[item]['canonical_units'],
-                                convention=self)
+        if item in self._dict:
+            return StandardizedName(item, self._dict[item]['description'], self._dict[item]['canonical_units'],
+                                    convention=self)
+        else:
+            # return a standard name that is not in the table
+            return StandardizedName(item, None, None, convention=self)
 
     def __contains__(self, item):
         return item in self._dict
 
     def set(self, name: str, description: str, canonical_units: str):
+        """Sets the value of a standardized name"""
         if name in self._dict:
             raise StandardizedNameError(f'name "{name}" already exists in table. Use modify() '
                                         f'to change the content')
@@ -208,6 +216,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         return f"{name} (version: {version})\n{tabulate(sorted_df, headers='keys', tablefmt='psql')}"
 
     def sdump(self, sort_by: str = 'name') -> None:
+        """Dumps (prints) the content as string"""
         print(self.get_table(sort_by=sort_by))
 
     def dump(self, sort_by: str = 'name'):

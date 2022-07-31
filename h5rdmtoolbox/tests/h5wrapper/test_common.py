@@ -8,6 +8,7 @@ from h5rdmtoolbox.h5wrapper import H5File, H5Flow, H5PIV
 from h5rdmtoolbox.h5wrapper import config
 from h5rdmtoolbox.h5wrapper.h5file import H5Group, WrapperAttributeManager
 from h5rdmtoolbox.h5wrapper.h5flow import H5FlowGroup
+from h5rdmtoolbox.conventions.identifier import StandardizedName
 
 
 class TestCommon(unittest.TestCase):
@@ -74,6 +75,12 @@ class TestCommon(unittest.TestCase):
                 # TODO Fix the following issue:
                 h5.non_existing_attribute = 1
                 print(h5.non_existing_attribute)
+
+                self.assertEqual(ds.standard_name, None)
+                ds.standard_name = 'x_velocity'
+                self.assertIsInstance(ds.standard_name, StandardizedName)
+                self.assertIsInstance(ds.attrs['standard_name'], str)
+                self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
     def test_Layout(self):
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
