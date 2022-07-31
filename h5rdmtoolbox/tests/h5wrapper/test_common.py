@@ -2,18 +2,140 @@
 
 import unittest
 
+import h5py
+
 from h5rdmtoolbox.h5wrapper import H5File, H5Flow, H5PIV
-from h5rdmtoolbox.h5wrapper.h5file import H5Group
+from h5rdmtoolbox.h5wrapper.h5file import H5Group, WrapperAttributeManager
 from h5rdmtoolbox.h5wrapper.h5flow import H5FlowGroup
 
 
 class TestCommon(unittest.TestCase):
 
+    def setUp(self) -> None:
+        self.wrapper_classes = (H5File, H5Flow, H5PIV)
+        self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5FlowGroup)
+
     def test_create_group(self):
         """testing the creation of groups"""
-        wrapper_classes = (H5File, H5Flow, H5PIV)
-        wrapper_grouclasses = (H5Group, H5FlowGroup, H5FlowGroup)
-        for wc, gc in zip(wrapper_classes, wrapper_grouclasses):
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc() as h5:
+                h5.mode == 'r+'
                 grp = h5.create_group('testgrp')
                 self.assertIsInstance(grp, gc)
+
+    def test_attrs(self):
+        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            with CLS() as h5:
+                # root attributes
+                h5.attrs['an_attr'] = 'a_string'
+                self.assertEqual(h5.attrs['an_attr'], 'a_string')
+                h5.attrs['mean'] = 1.2
+                self.assertEqual(h5.attrs['mean'], 1.2)
+                with self.assertRaises(AttributeError):
+                    h5.attrs['standard_name'] = 'a_string'
+
+                with self.assertRaises(KeyError):
+                    h5.attrs['non_existing_attribute']
+
+                # dataset attibutes
+                ds = h5.create_dataset('ds', shape=(), long_name='a long name')
+                ds.attrs['an_attr'] = 'a_string'
+                self.assertEqual(ds.attrs['an_attr'], 'a_string')
+                ds.attrs['mean'] = 1.2
+                self.assertEqual(ds.attrs['mean'], 1.2)
+
+                # group attributes
+                gr = h5.create_group('gr')
+                gr.attrs['an_attr'] = 'a_string'
+                self.assertEqual(gr.attrs['an_attr'], 'a_string')
+                gr.attrs['mean'] = 1.2
+                self.assertEqual(gr.attrs['mean'], 1.2)
+
+                # special attributes:
+                for obj in (h5, ds, gr):
+                    obj.attrs['link_to_group'] = h5['/']
+                    self.assertEqual(obj.attrs['link_to_group'].name, '/')
+                    self.assertIsInstance(obj.attrs['link_to_group'], h5py.Group)
+                    obj.attrs['link_to_ds'] = ds
+                    self.assertEqual(obj.attrs['link_to_ds'].name, ds.name)
+                    self.assertIsInstance(obj.attrs['link_to_ds'], h5py.Dataset)
+                    obj.attrs['attibute_of_links_to_ds'] = {'ds': ds, 'gr': gr, 'astr': 'test', 'afloat': 3.1}
+                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds'], dict)
+                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['ds'], h5py.Dataset)
+                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['gr'], h5py.Group)
+                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['astr'], str)
+                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['afloat'], float)
+
+                self.assertTrue(isinstance(h5.attrs, WrapperAttributeManager))
+                self.assertTrue(isinstance(ds.attrs, WrapperAttributeManager))
+                self.assertTrue(isinstance(gr.attrs, WrapperAttributeManager))
+
+                # TODO Fix the following issue:
+                h5.non_existing_attribute = 1
+                print(h5.non_existing_attribute)
+
+    def test_Layout(self):
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            self.assertTrue(wc.Layout.filename.exists())
+            self.assertEqual(wc.Layout.filename.stem, wc.__name__)
+            with wc() as h5:
+                n_issuess = h5.check()
+                self.assertIsInstance(n_issuess, int)
+                self.assertTrue(n_issuess > 0)
+
+    def test_properties(self):
+        import datetime
+        from h5rdmtoolbox.conventions.data import DataSourceType
+        from h5rdmtoolbox import __version__
+        from pint_xarray import unit_registry as ureg
+        import pathlib
+
+        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            with CLS() as h5:
+                self.assertIsInstance(h5.creation_time, datetime.datetime)
+                self.assertIsInstance(h5.data_source_type, DataSourceType)
+                self.assertEqual(h5.data_source_type, DataSourceType.none)
+                h5.attrs['data_source_type'] = 'experimental'
+                self.assertEqual(h5.data_source_type, DataSourceType.experimental)
+                self.assertEqual(h5.title, None)
+                h5.title = 'my title'
+                self.assertEqual(h5.title, 'my title')
+                self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
+                self.assertEqual(h5.version, __version__)
+                self.assertEqual(h5.filesize.units, ureg.byte)
+                self.assertIsInstance(h5.hdf_filename, pathlib.Path)
+
+    def test_common_method(self):
+        from h5rdmtoolbox.utils import generate_temporary_filename
+        from h5rdmtoolbox.h5wrapper import open
+        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            with CLS() as h5:
+                old_filename = h5.hdf_filename
+                new_filename = generate_temporary_filename(suffix='.hdf')
+                self.assertFalse(new_filename.exists())
+                new_filename = h5.moveto(new_filename)
+                self.assertTrue(new_filename.exists())
+                self.assertNotEqual(old_filename, h5.filename)
+                self.assertNotEqual(old_filename, h5.hdf_filename)
+                with self.assertRaises(FileExistsError):
+                    h5.moveto(new_filename)
+                self.assertTrue(new_filename.exists())
+                self.assertFalse(old_filename.exists())
+
+            with CLS() as h5:
+                old_filename = h5.hdf_filename
+                new_filename = generate_temporary_filename(suffix='.hdf')
+                new_filename = h5.saveas(new_filename)
+                self.assertTrue(new_filename.exists())
+                self.assertTrue(old_filename.exists())
+
+            with CLS() as h5:
+                filename = h5.hdf_filename
+            obj = open(filename)
+            self.assertIsInstance(obj, CLS)
+
+        with CLS() as h5:
+            del h5.attrs['__wrcls__']
+            filename = h5.hdf_filename
+        obj = open(filename)
+        self.assertIsInstance(obj, H5File)

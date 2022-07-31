@@ -1,4 +1,3 @@
-import datetime
 import logging
 import unittest
 from pathlib import Path
@@ -10,11 +9,10 @@ import xarray as xr
 import yaml
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox import h5wrapper, __version__
-from h5rdmtoolbox.conventions.data import DataSourceType
+from h5rdmtoolbox import h5wrapper
 from h5rdmtoolbox.conventions.identifier import StandardizedNameError, StandardizedNameTable
 from h5rdmtoolbox.h5wrapper import H5File, config, set_loglevel
-from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group, WrapperAttributeManager
+from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 
 logger = logging.getLogger('h5rdmtoolbox.h5wrapper')
@@ -79,9 +77,6 @@ class TestH5File(unittest.TestCase):
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            h5.attrs['mean'] = 1.2
-            self.assertTrue(isinstance(h5.attrs, WrapperAttributeManager))
-
             from h5rdmtoolbox.conventions.identifier import StandardizedNameTable
             convention = StandardizedNameTable(name='empty',
                                                table_dict={'x_velocity': {'description': '',
@@ -111,7 +106,6 @@ class TestH5File(unittest.TestCase):
 
             config.natural_naming = True
 
-            self.assertEqual(h5.attrs.mean, 1.2)
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
 
@@ -142,44 +136,6 @@ class TestH5File(unittest.TestCase):
                 pass
         with H5File(mode='w', standard_name_table=None) as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
-
-    def test_creation_time(self):
-        with H5File(mode='w') as h5:
-            self.assertIsInstance(h5.creation_time, datetime.datetime)
-
-    def test_data_source_type(self):
-        with H5File(mode='w') as h5:
-            self.assertIsInstance(h5.data_source_type, DataSourceType)
-            self.assertEqual(h5.data_source_type, DataSourceType.none)
-            h5.attrs['data_source_type'] = 'experimental'
-            self.assertEqual(h5.data_source_type, DataSourceType.experimental)
-
-    def test_title(self):
-        with H5File(mode='w') as h5:
-            self.assertEqual(h5.title, None)
-            h5.title = 'my title'
-            self.assertEqual(h5.title, 'my title')
-
-    def test_version(self):
-        with H5File(mode='w') as h5:
-            self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
-            self.assertEqual(h5.version, __version__)
-
-    def test_filesize(self):
-        with H5File(mode='w') as h5:
-            self.assertEqual(h5.filesize.units, ureg.byte)
-
-    def test_moveto(self):
-        with H5File(mode='w') as h5:
-            new_filename = h5.moveto('.')
-            self.assertTrue(new_filename.exists())
-        new_filename.unlink()
-
-    def test_saveas(self):
-        with H5File(mode='w') as h5:
-            new_filename = h5.saveas('here.hdf')
-            self.assertTrue(new_filename.exists())
-        new_filename.unlink()
 
     def test_open(self):
         with H5File(mode='w') as h5:
@@ -298,9 +254,6 @@ class TestH5Group(unittest.TestCase):
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            h5.attrs['mean'] = 1.2
-            self.assertTrue(isinstance(h5.attrs, WrapperAttributeManager))
-
             config.natural_naming = False
 
             with self.assertRaises(AttributeError):
@@ -308,7 +261,6 @@ class TestH5Group(unittest.TestCase):
 
             config.natural_naming = True
 
-            self.assertEqual(h5.attrs.mean, 1.2)
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
             #

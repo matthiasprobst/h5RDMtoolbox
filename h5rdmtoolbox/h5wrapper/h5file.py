@@ -2020,7 +2020,7 @@ class H5File(h5py.File, H5Group):
         """Optional special inspection, e.g. conditional checks."""
         return 0
 
-    def moveto(self, target_dir: Path, filename: Path = None, overwrite: bool = False) -> Path:
+    def moveto(self, filename: Path, overwrite: bool = False) -> Path:
         """
         moves the file to a new location and optionally renames the file if asked.
 
@@ -2040,26 +2040,22 @@ class H5File(h5py.File, H5Group):
         new_filepath : str
             Path to new file location
         """
-        target_dir = Path(target_dir)
-        if filename is None:
-            filename = self.hdf_filename.name
-        else:
-            filename = Path(filename)
-        trg = Path.joinpath(target_dir, filename)
-        if trg.exists() and not overwrite:
-            raise FileExistsError(f'The target file "{trg}" already exists and overwriting is set to False.'
+        trg_fname = Path(filename)
+        if trg_fname.exists() and not overwrite:
+            raise FileExistsError(f'The target file "{trg_fname}" already exists and overwriting is set to False.'
                                   ' Not moving the file!')
-        logger.debug(f'Moving file {self.hdf_filename} to {trg}')
+        logger.debug(f'Moving file {self.hdf_filename} to {trg_fname}')
 
-        if not target_dir.exists():
-            Path.mkdir(Path(target_dir), parents=True)
-            logger.debug(f'Created directory {target_dir}')
+        if not trg_fname.parent.exists():
+            Path.mkdir(trg_fname.parent, parents=True)
+            logger.debug(f'Created directory {trg_fname.parent}')
 
         mode = self.mode
         self.close()
-        shutil.move(self.hdf_filename, trg)
-        super().__init__(trg, mode=mode)
-        new_filepath = trg.absolute()
+        shutil.move(self.hdf_filename, trg_fname)
+        super().__init__(trg_fname, mode=mode)
+        new_filepath = trg_fname.absolute()
+        self.hdf_filename = new_filepath
         return new_filepath
 
     def saveas(self, filename: Path, overwrite: bool = False, keep_old: bool = True):
