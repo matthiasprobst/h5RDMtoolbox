@@ -1,7 +1,11 @@
 import logging
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Dict
 from typing import Tuple, List
+from typing import Union
 
+import h5py
 import numpy as np
 import xarray as xr
 from pandas import read_csv
@@ -9,114 +13,14 @@ from pint_xarray import unit_registry as ureg
 
 from . import config
 from .accessory import SpecialDataset, register_special_dataset
-from .h5file import H5File, H5Group, H5FileLayout
+from .accessory import register_special_property
+from .h5file import H5File, H5Group, H5FileLayout, H5Dataset
 from .. import user_data_dir
 from ..conventions.custom import FluidStandardNameTable
 
 logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
 DEVICE_ATTR_NAME = 'device'
-
-
-class XRVectorDataset(xr.Dataset):
-    __slots__ = ()
-
-    def get_by_sn(self, standard_name: str, on_multiple='list'):
-        """Returns the dataset corresponding to the standard_name.
-        If none is found None is returned.
-        If 1 is found, the dataset is returned
-        If multiples are found list or error is raise, depending on parameter on_multiple"""
-        candidates = []
-        for v in self.values():
-            if 'standard_name' in v.attrs:
-                if standard_name == v.attrs['standard_name']:
-                    candidates.append(v)
-        if len(candidates) == 0:
-            return None
-        if len(candidates) == 1:
-            return candidates[0]
-        if on_multiple == 'list':
-            return candidates
-        if on_multiple == 'error':
-            raise ValueError(f'Multiple datasets found with standard name {standard_name}')
-
-    @property
-    def vector_vars(self):
-        _vector_datasets = [(self[dv].attrs.get('vector_component'), dv) for dv in self.data_vars if
-                            'vector_component' in self[dv].attrs]
-        # sort and return
-        _vector_datasets.sort()
-        return tuple([v[1] for v in _vector_datasets])
-
-    def compute_magnitude(self, standard_name=None):
-        """Computes the magnitude of the vector."""
-        mag2 = None
-        for ids, comp in enumerate(self.vector_vars):
-            if mag2 is None:
-                if comp in self:
-                    mag2 = self[comp].pint.quantify() ** 2
-            else:
-                if comp in self:
-                    mag2 += self[comp].pint.quantify() ** 2
-        mag = np.sqrt(mag2).pint.dequantify(format=ureg.default_format)
-        self['magnitude'] = mag
-        self['magnitude'].attrs = mag.attrs
-        if standard_name is None:
-            # trying to determine a new standard name
-            # TODO: compute new standard_name from standard_names of components: magnitude_of_[common_standard_name]
-            component_standard_names = [self[comp].attrs.get('standard_name') for comp in self.vector_vars]
-            if all(['velocity' in c for c in component_standard_names]):
-                self['magnitude'].attrs['standard_name'] = 'magnitude_of_velocity'
-
-
-class XRVelocityDataset(XRVectorDataset):
-    """subclass of xr.Dataset to enable typical computation tasks for
-    velocity data such as computation of tke, reyn, vorticity, ...
-
-    Velocity components are u, v, w (not all must exist!). Those
-    names are fixed.
-    """
-    __slots__ = ()
-
-    def tke(self):
-        raise NotImplementedError()
-
-    def reyn(self):
-        raise NotImplementedError()
-
-    def vorticity(self):
-        raise NotImplementedError()
-
-    def compute_rotational_speed(self, rot_speed: float, suffix='_rot',
-                                 rot_axis='z', rot_center=(0, 0)) -> None:
-        """Computes and adds the rotational speed based on rot_speed [1/s] and the
-        coordinates of the dataset. Center of rotation per default is (0, 0, 0) and
-        axis of rotation is z. Direction of rotation is controlled by the sign of
-        rot_speed. Created rotational speed data arrays have units [m/s]"""
-        if not rot_axis.lower() == 'z':
-            # TODO implement different rotation axes
-            raise NotImplementedError('Rotation axis different than z is not implemented yet.')
-        if rot_center != (0, 0):
-            # TODO implement different rotation center
-            raise NotImplementedError('Rotation center different than (0, 0) is not implemented yet.')
-
-        # Code for currently available axis/rotation options:
-        # turning whatever unit into [m]:
-        xx, yy = np.meshgrid(self.x.values, self.y.values)
-        x = xr.DataArray(name='x', dims=('y', 'x'),
-                         data=xx).pint.quantify(self.x.attrs['units'])
-        y = xr.DataArray(name='y', dims=('y', 'x'),
-                         data=yy).pint.quantify(self.y.attrs['units'])
-        r = np.sqrt(x.pint.to('m') ** 2 + y.pint.to('m') ** 2)
-        omega = 2 * np.pi * rot_speed / ureg.s
-        alpha = np.arctan2(y, x)
-        v = omega * r * np.cos(alpha)
-        u = -omega * r * np.sin(alpha)
-        u = u.assign_coords({'x': self.x, 'y': self.y})
-        v = v.assign_coords({'x': self.x, 'y': self.y})
-        self[f'magnitude{suffix}'] = np.sqrt(u ** 2 + v ** 2).pint.dequantify(format=ureg.default_format)
-        self[f'u{suffix}'] = u.pint.dequantify(format=ureg.default_format)
-        self[f'v{suffix}'] = v.pint.dequantify(format=ureg.default_format)
 
 
 class VectorDataset:
@@ -150,18 +54,6 @@ class VectorDataset:
             return xrds
         else:
             return self.xrcls(xrds)
-
-
-from typing import Dict
-
-from dataclasses import dataclass
-from .h5flow import DEVICE_ATTR_NAME
-from .h5file import H5Dataset
-from typing import Union
-
-import h5py
-from .accessory import register_special_property
-import xarray as xr
 
 
 @dataclass(repr=False)

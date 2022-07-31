@@ -8,11 +8,11 @@ import h5py
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
+from . import config
 from . import pivutils
 from .accessory import register_special_dataset
-from . import config
 from .h5flow import DisplacementDataset, H5FlowGroup
-from .h5flow import H5Flow, H5FlowLayout, XRVectorDataset
+from .h5flow import H5Flow, H5FlowLayout
 from .h5flow import VectorDataset
 from .. import utils, user_data_dir
 from ..conventions.custom import PIVStandardNameTable
@@ -41,18 +41,6 @@ def _check_piv_software(software_name):
     else:
         logger.warning(utils._failtext('Software not set as attribute in File!'))
     return False
-
-
-class XRUncertaintyDataset(XRVectorDataset):
-    """
-    xarray Dataset for uncertaint computation based on displacement or velocity field.
-    """
-
-    __slots__ = ()
-
-    def compute_uncertainty(self, method: Callable, *args, **kwargs):
-        """computes the uncertainty using the passed method"""
-        return method(self, *args, **kwargs)
 
 
 class H5PIVLayout(H5FlowLayout):
