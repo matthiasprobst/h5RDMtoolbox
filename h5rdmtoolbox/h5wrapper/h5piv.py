@@ -10,7 +10,7 @@ from pint_xarray import unit_registry as ureg
 
 from . import pivutils
 from .accessory import register_special_dataset
-from .h5base import config
+from . import config
 from .h5flow import DisplacementDataset, H5FlowGroup
 from .h5flow import H5Flow, H5FlowLayout, XRVectorDataset
 from .h5flow import VectorDataset

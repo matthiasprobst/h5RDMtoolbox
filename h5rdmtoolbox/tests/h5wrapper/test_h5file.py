@@ -14,8 +14,7 @@ from h5rdmtoolbox import h5wrapper, __version__
 from h5rdmtoolbox.conventions.data import DataSourceType
 from h5rdmtoolbox.conventions.identifier import StandardizedNameError, StandardizedNameTable
 from h5rdmtoolbox.h5wrapper import H5File, config, set_loglevel
-from h5rdmtoolbox.h5wrapper.h5base import WrapperAttributeManager
-from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
+from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group, WrapperAttributeManager
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 
 logger = logging.getLogger('h5rdmtoolbox.h5wrapper')

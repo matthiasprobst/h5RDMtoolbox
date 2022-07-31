@@ -4,7 +4,6 @@ Contains wrapper classes
 """
 
 from ._logger import logger, _file_handler, _stream_handler
-from .h5base import H5Base
 from .h5file import H5File
 from .h5flow import H5Flow
 from .h5piv import H5PIV
@@ -19,7 +18,7 @@ def set_loglevel(level):
 
 def build_all_layoutfiles():
     """builds layout files of all wrapper classes in the user directory"""
-    all_wrapperclasses = (H5Base, H5File, H5Flow, H5PIV)
+    all_wrapperclasses = (H5File, H5Flow, H5PIV)
     for wrapperclass in all_wrapperclasses:
         wrapperclass.Layout.write()
 
@@ -35,8 +34,6 @@ def open_wrapper(filename, mode='r', **kwargs):
         _class = h5.attrs.get('__wrcls__')
     if _class is None:
         return H5File(filename, mode=mode, **kwargs)
-    if _class.lower() == 'h5base':
-        return H5Base(filename, mode=mode, **kwargs)
     if _class.lower() == 'h5file':
         return H5File(filename, mode=mode, **kwargs)
     if _class.lower() == 'h5flow':
@@ -45,4 +42,4 @@ def open_wrapper(filename, mode='r', **kwargs):
         return H5PIV(filename, mode=mode, **kwargs)
 
 
-__all__ = ['H5Base', 'H5File', 'H5Flow', 'H5PIV', 'set_loglevel']
+__all__ = ['H5File', 'H5Flow', 'H5PIV', 'set_loglevel']
