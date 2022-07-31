@@ -68,3 +68,39 @@ class TestH5Flow(unittest.TestCase):
             h5['x'].attrs['units'] = 'kg'
             n_issuess = h5.check()
             self.assertEqual(n_issuess, 4)
+
+    def test_device(self):
+        from h5rdmtoolbox.h5wrapper.h5flow import H5Dataset, Device
+        from h5rdmtoolbox.h5wrapper.accessory import register_special_property
+
+        # register a device prperty:
+        with self.assertRaises(AttributeError):
+            @register_special_property(H5Dataset)
+            class DeviceProperty:
+                """Device Property"""
+                doc = 'device'
+                name = 'device'
+
+                def get(self):
+                    """get"""
+                    pass
+
+                def set(self, device):
+                    """set"""
+                    pass
+
+        with H5Flow() as h5:
+            with self.assertRaises(AttributeError):
+                h5.Device
+            ds = h5.create_dataset('pressure', data=[1, 2, 3], standard_name='pressure', units='Pa')
+            grp = h5.create_group('devices')
+            ps_grp = grp.create_group('PressureSensor')
+            ps_grp.attrs['manufacturer'] = 'unknown'
+            ps_grp.create_dataset('x', data=0, units='m', standard_name='x_coordinate')
+            ps_grp.create_dataset('y', data=0, units='m', standard_name='y_coordinate')
+            ps_grp.create_dataset('z', data=0, units='m', standard_name='z_coordinate')
+            ds.assign_device(ps_grp)
+
+            self.assertIsInstance(ds.device, Device)
+            print(ds.device)
+            # h5.sdump()

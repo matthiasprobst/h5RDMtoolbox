@@ -1,8 +1,7 @@
 import logging
 from pathlib import Path
-from typing import Tuple, List, Union
+from typing import Tuple, List
 
-import h5py
 import numpy as np
 import xarray as xr
 from pandas import read_csv
@@ -16,31 +15,7 @@ from ..conventions.custom import FluidStandardNameTable
 
 logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
-
-
-#
-# def _find_time_scale(ds):
-#     i_time = None
-#     for i, d in enumerate(ds.dims):
-#         for j in range(len(d)):
-#             if d[j].attrs.get('standard_name') == 'time':
-#                 i_time = (i, j)
-#                 break
-#         if i_time is not None:
-#             break
-#     if i_time is None:
-#         raise ValueError(f'Dataset with standard name "time" not found as attached scales. '
-#                          f'Cannot determine axis along which to compute reynolds stresses.')
-#     return i_time
-
-
-# def _get_reyn(obj):
-#     return _build_xarray_dataset([obj[n] for n in ('uu', 'uv', 'uw', 'vv', 'vw', 'ww')], 'reynolds stresses')
-#
-# def _build_xarray_dataset(names, long_name):
-#     xrds = xr.merge([n[:] for n in names])
-#     xrds.attrs['long_name'] = long_name
-#     return xrds
+DEVICE_ATTR_NAME = 'device'
 
 
 class XRVectorDataset(xr.Dataset):
@@ -177,8 +152,83 @@ class VectorDataset:
             return self.xrcls(xrds)
 
 
+from typing import Dict
+
+from dataclasses import dataclass
+from .h5flow import DEVICE_ATTR_NAME
+from .h5file import H5Dataset
+from typing import Union
+
+import h5py
+from .accessory import register_special_property
+import xarray as xr
+
+
+@dataclass(repr=False)
+class Device:
+    """Device Class. Expected use: A dataset has the attbute DEVICE_ATTR_NAME which s a
+    referrs to a group entry in the HDF5 file."""
+
+    name: str
+    manufacturer: str = ''
+    x: Union[xr.DataArray, Tuple[Union[float, int, np.ndarray], Union[str, Dict]]] = None
+    y: Union[Tuple[Union[float, int, np.ndarray], str]] = None
+    z: Union[Tuple[Union[float, int, np.ndarray], str]] = None
+    additional_attributes: Dict = None
+
+    def __repr__(self):
+        return f'Device "{self.name}" from "{self.manufacturer}" @({self.x.data}, {self.y.data}, {self.z.data})' \
+               f' [{self.x.units}])'
+
+    def __post_init__(self):
+        if self.additional_attributes:
+            self.additional_attributes = {}
+        for coord_name, coord in zip(('x', 'y', 'z'), (self.x, self.y, self.z)):
+            if coord is not None:
+                if not isinstance(coord, xr.DataArray):
+                    if isinstance(coord[1], str):
+                        coord = xr.DataArray(name=coord_name, data=coord[0], attrs=dict(units=coord[1]))
+                    else:
+                        coord = xr.DataArray(name=coord_name, data=coord[0], attrs=coord[1])
+
+    def to_hdf_group(self):
+        """writes data to an hdf group. strings are written to attributes of the group,
+        dictionary entries"""
+
+
+# register a device property:
+@register_special_property(H5Dataset)
+class DeviceProperty:
+    """Device Property"""
+    doc = 'device'
+    name = 'device'
+
+    def get(self):
+        """The device class referenced to this dataset"""
+        if DEVICE_ATTR_NAME not in self.attrs:
+            raise AttributeError(f'The dataset "{self.name}" has no attribute device, thus no reference to '
+                                 f'a device in the HDF5 file exists!')
+        device_grp = self.attrs[DEVICE_ATTR_NAME]
+
+        coords = dict()
+        for coord_name in ('x', 'y', 'z'):
+            if coord_name in device_grp:
+                coords[coord_name] = xr.DataArray(name=coord_name, data=device_grp[coord_name][()],
+                                                  attrs=device_grp[coord_name].attrs.items())
+            else:
+                coords[coord_name] = None
+
+        return Device(device_grp.name.rsplit('/', 1)[1], device_grp.attrs['manufacturer'],
+                      **coords)
+
+    def set(self, device: Union[str, h5py.Group, Device]):
+        """Assigning a device to a dataset"""
+        print('setting ', device)
+        # self.assign_device(device)
+
+
 class H5FlowGroup(H5Group):
-    """HDF5 Group for specifically for flow data"""
+    """HDF5 Group specifically for flow data"""
 
     def create_coordinates(self, x, y, z=0, time=0, coords_unit='m', time_unit='s'):
         for ds_name in ('x', 'y', 'z', 'time'):
@@ -249,6 +299,39 @@ class H5FlowGroup(H5Group):
                                                 attach_scales=_scales,
                                                 units=units, standard_name='magnitude_of_velocity'))
         return datasets
+
+
+class H5FlowDataset(H5Dataset):
+    """HDF5 Dataset specifically for flow data"""
+
+    # @property
+    # def device(self):
+    #     """The device class referenced to this dataset"""
+    #     if DEVICE_ATTR_NAME not in self.attrs:
+    #         raise AttributeError(f'The dataset "{self.name}" has no attribute device, thus no reference to '
+    #                              f'a device in the HDF5 file exists!')
+    #     return Device(self.attrs[DEVICE_ATTR_NAME])
+    #
+    # @device.setter
+    # def device(self, device: Union[str, h5py.Group, Device]):
+    #     """Assigning a device to a dataset"""
+    #     self.assign_device(device)
+
+    def assign_device(self, device: Union[str, h5py.Group, Device], overwrite: bool = False):
+        """Assigning a device to a dataset"""
+        if isinstance(device, str):
+            if device in self:
+                # setting the hdf goup reference
+                self.attrs[DEVICE_ATTR_NAME] = self[device]
+            elif device in self.rootparent:
+                device_path = self.rootparent[device]
+            else:
+                raise AttributeError(f'No "device" found in hdf file found')
+        elif isinstance(device, h5py.Group):
+            # setting the hdf goup reference
+            self.attrs[DEVICE_ATTR_NAME] = self.rootparent[device.name]
+        elif isinstance(device, Device):
+            self.attrs[DEVICE_ATTR_NAME] = device._grp
 
 
 class H5FlowLayout(H5FileLayout):
@@ -410,6 +493,7 @@ class H5Flow(H5File, H5FlowGroup):
 
 
 H5FlowGroup._h5grp = H5FlowGroup
+H5FlowGroup._h5ds = H5FlowDataset
 
 
 class VectorDataset(SpecialDataset):

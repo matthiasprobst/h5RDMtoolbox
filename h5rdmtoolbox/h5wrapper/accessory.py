@@ -1,9 +1,12 @@
 import warnings
 from typing import List, Tuple
+from typing import Union
 
 import h5py
 import xarray as xr
 from IPython.display import HTML, display
+
+from .h5file import H5Dataset, H5Group
 
 
 class SpecialDatasetRegistrationWarning(Warning):
@@ -56,15 +59,50 @@ def _register_special_dataset(name, cls):
                 SpecialDatasetRegistrationWarning,
                 stacklevel=2,
             )
-        # print(f'Registering {name} in class {cls.__name__}')
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
 
     return decorator
 
 
-def register_special_dataset(name, grpcls):
-    return _register_special_dataset(name, grpcls)  # grpcls --> e.g. H5FlowGroup
+def _register_special_property(cls):
+    def decorator(accessor):
+        """decorator"""
+        if hasattr(accessor, 'name'):
+            name = accessor.name
+        else:
+            name = accessor.__name__
+        if hasattr(cls, name):
+            raise AttributeError(f'Cannot register property {name} to {cls} because it has already a property with '
+                                 'this name.')
+        fget, fset, fdel, doc = None, None, None, None
+        if hasattr(accessor, 'get'):
+            fget = accessor.get
+        if hasattr(accessor, 'set'):
+            fset = accessor.set
+        if hasattr(accessor, 'delete'):
+            fdel = accessor.delete
+        if hasattr(accessor, 'doc'):
+            doc = accessor.doc
+        setattr(cls, name, property(fget, fset, fdel, doc))
+        return accessor
+
+    return decorator
+
+
+def register_special_dataset(name, cls: Union[H5Dataset, H5Group]):
+    """registers a special dataset to a wrapper class"""
+    # if not isinstance(cls, (H5Dataset, H5Group)):
+    #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
+    return _register_special_dataset(name, cls)  # grpcls --> e.g. H5FlowGroup
+
+
+def register_special_property(cls: Union[H5Dataset, H5Group]):
+    """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
+    also docstring is optional but strongly recommended!"""
+    # if not isinstance(cls, (H5Dataset, H5Group)):
+    #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
+    return _register_special_property(cls)
 
 
 # sample class:
