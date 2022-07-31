@@ -9,10 +9,7 @@ import dotenv
 import h5py
 import numpy as np
 
-from . import CFX_DOTENV_FILENAME
-from . import PATHLIKE
-from . import session
-from . import CFX5PRE, CFX5CMDS
+from . import session, AnsysInstallation, PATHLIKE, CFX_DOTENV_FILENAME
 from .cmd import call_cmd
 from .session import cfx2def
 from .utils import change_suffix
@@ -296,7 +293,7 @@ def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
         # build def file and then call _generate_from_def
         # this is the safe way!
         if cfx5pre is None:
-            cfx5pre = CFX5PRE
+            cfx5pre = AnsysInstallation.cfx5pre
 
         def_filename = cfx2def(input_file)
         return _generate_from_def(def_filename, ccl_filename, overwrite)
@@ -329,7 +326,7 @@ def _generate_from_def(def_filename: PATHLIKE,
     """generates a ccl file from a def file"""
     if ccl_filename.exists() and overwrite:
         ccl_filename.unlink()
-    cmd = f'"{CFX5CMDS}" -read -def "{def_filename}" -text "{ccl_filename}"'
+    cmd = f'"{AnsysInstallation.cfx5cmds}" -read -def "{def_filename}" -text "{ccl_filename}"'
     call_cmd(cmd, wait=True)
 
     if not ccl_filename.exists():
