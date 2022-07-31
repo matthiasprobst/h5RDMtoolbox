@@ -42,6 +42,10 @@ ureg.default_format = 'C~'
 _SNC_LS = {}
 
 
+class UnitsError(Exception):
+    pass
+
+
 def get_rootparent(obj):
     """Returns the root group instance."""
 
@@ -896,6 +900,8 @@ class H5Group(h5py.Group):
                 warnings.warn('"units" is over-defined. Your data array is associated with the attribute "units" and '
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
+            if config.require_units:
+                raise UnitsError('Units cannot be None. A dimensionless dataset has units "''"-')
             attrs['units'] = ''
         else:
             attrs['units'] = units
@@ -1204,6 +1210,7 @@ class H5Group(h5py.Group):
         _compression, _compression_opts = config.hdf_compression, config.hdf_compression_opts
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
+        units = kwargs.pop('units', 'px')
         ds = None
 
         if isinstance(img_filename, (str, Path)):
@@ -1228,6 +1235,7 @@ class H5Group(h5py.Group):
                                                  overwrite=overwrite,
                                                  dtype=dtype, compression=compression,
                                                  compression_opts=compression_opts,
+                                                 units=units,
                                                  **kwargs)
                         return ds
 

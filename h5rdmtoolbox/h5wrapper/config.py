@@ -9,3 +9,4 @@ info_table_spacing = '30,20,8,30'  # string length for each column when text out
 html_max_string_length = 40  # used for HTML representation of strings (.dump())
 mpl_style = 'h5rdmtoolbox'
 xarray_unit_repr_in_plots = '/'
+require_units = True  # datasets require units

@@ -5,6 +5,7 @@ import unittest
 import h5py
 
 from h5rdmtoolbox.h5wrapper import H5File, H5Flow, H5PIV
+from h5rdmtoolbox.h5wrapper import config
 from h5rdmtoolbox.h5wrapper.h5file import H5Group, WrapperAttributeManager
 from h5rdmtoolbox.h5wrapper.h5flow import H5FlowGroup
 
@@ -38,7 +39,7 @@ class TestCommon(unittest.TestCase):
                     h5.attrs['non_existing_attribute']
 
                 # dataset attibutes
-                ds = h5.create_dataset('ds', shape=(), long_name='a long name')
+                ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='')
                 ds.attrs['an_attr'] = 'a_string'
                 self.assertEqual(ds.attrs['an_attr'], 'a_string')
                 ds.attrs['mean'] = 1.2
@@ -139,3 +140,20 @@ class TestCommon(unittest.TestCase):
             filename = h5.hdf_filename
         obj = open_wrapper(filename)
         self.assertIsInstance(obj, H5File)
+
+    def test_create_dataset(self):
+        from h5rdmtoolbox.h5wrapper.h5file import UnitsError
+        from h5rdmtoolbox.conventions import empty_standardized_name_table
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            with wc(standard_name_table=empty_standardized_name_table) as h5:
+                self.assertEqual(h5.standard_name_table.name, empty_standardized_name_table.name)
+                config.require_units = True
+                with self.assertRaises(UnitsError):
+                    h5.create_dataset(name='x', standard_name='x_coordinate', data=1)
+                config.require_units = False
+                h5.create_dataset(name='x', standard_name='x_coordinate', data=1, units=None)
+                config.require_units = True
+                h5.create_dataset(name='x1', standard_name='x_coordinate', data=1, units='m')
+                h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
+                h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')
+                h5.create_dataset(name='x4', standard_name='NoRealStdName', data=1, units='m')

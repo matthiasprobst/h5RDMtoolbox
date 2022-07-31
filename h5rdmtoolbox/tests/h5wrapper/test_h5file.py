@@ -33,14 +33,14 @@ class TestH5File(unittest.TestCase):
         """H5File has more parameters to pass as H5Base"""
         with H5File() as h5:
             with self.assertRaises(RuntimeError):
-                _ = h5.create_dataset('u', shape=())
+                _ = h5.create_dataset('u', shape=(), units='m/s')
         with H5File() as h5:
-            ds = h5.create_dataset('u', shape=(), long_name='velocity')
+            ds = h5.create_dataset('u', shape=(), long_name='velocity', units='')
             self.assertEqual(ds.name, '/u')
             self.assertEqual(ds.attrs['units'], '')
             self.assertEqual(ds.attrs['long_name'], 'velocity')
         with H5File() as h5:
-            ds = h5.create_dataset('velocity', shape=(), standard_name='x_velocity')
+            ds = h5.create_dataset('velocity', shape=(), standard_name='x_velocity', units='')
             self.assertEqual(ds.attrs['units'], '')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
         with H5File() as h5:
@@ -71,8 +71,8 @@ class TestH5File(unittest.TestCase):
         self.assertTrue(H5File.Layout.filename.exists())
         self.assertEqual(H5File.Layout.filename.stem, 'H5File')
         with H5File() as h5:
-            h5.create_dataset('test', shape=(3,), long_name='daadw')
-            h5.create_dataset('testgrp/ds2', shape=(30,), long_name='daadw')
+            h5.create_dataset('test', shape=(3,), long_name='daadw', units='')
+            h5.create_dataset('testgrp/ds2', shape=(30,), long_name='daadw', units='')
             n_issuess = h5.check()
 
     def test_attrs(self):
@@ -86,7 +86,7 @@ class TestH5File(unittest.TestCase):
                                                institution='', contact='a.b@test.com')
             h5.standard_name_table = convention
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
-            ds = h5.create_dataset('ds', shape=(), long_name='x_velocity')
+            ds = h5.create_dataset('ds', shape=(), long_name='x_velocity', units='m/s')
             with self.assertRaises(StandardizedNameError):
                 ds.attrs['standard_name'] = ' x_velocity'
             from h5rdmtoolbox.conventions import identifier
@@ -115,8 +115,8 @@ class TestH5File(unittest.TestCase):
             # h5.attrs.gr2 = h5['/']
             # self.assertEqual(h5.attrs['gr2'].name, '/')
 
-            dset = h5.create_dataset('ds', data=1, long_name='a long name', attrs={'a1': 1, 'a2': 'str',
-                                                                                   'a3': {'a': 2}})
+            dset = h5.create_dataset('ds', data=1, long_name='a long name', units='', attrs={'a1': 1, 'a2': 'str',
+                                                                                             'a3': {'a': 2}})
             self.assertEqual(dset.attrs.get('a1'), 1)
             self.assertEqual(dset.attrs.get('a2'), 'str')
 
@@ -171,7 +171,7 @@ class TestH5Dataset(unittest.TestCase):
         with H5File(mode='w') as h5:
             grp = h5.create_group('grp1/grp2/grp3')
             self.assertIsInstance(grp, H5Group)
-            dset = grp.create_dataset('test', data=1, long_name='some long name')
+            dset = grp.create_dataset('test', data=1, units='', long_name='some long name')
             self.assertIsInstance(dset, H5Dataset)
             self.assertEqual(dset.rootparent, h5['/'])
 
@@ -228,9 +228,9 @@ a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m
         with H5File(mode='w') as h5:
             h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
             h5.attrs['modification_time'] = '2022-07-19T17:01:41Z+0200'
-            h5.create_dataset('test', shape=(), long_name='a long name')
+            h5.create_dataset('test', shape=(), long_name='a long name', units='')
             grp = h5.create_group('grp')
-            grp.create_dataset('test', shape=(), long_name='a long name')
+            grp.create_dataset('test', shape=(), long_name='a long name', units='')
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
@@ -271,7 +271,8 @@ class TestH5Group(unittest.TestCase):
             # self.assertEqual(h5.attrs['gr2'].name, '/')
 
             dset = h5.create_dataset('ds', data=1, long_name='a long name', attrs={'a1': 1, 'a2': 'str',
-                                                                                   'a3': {'a': 2}})
+                                                                                   'a3': {'a': 2}},
+                                     units='')
             self.assertEqual(dset.attrs.get('a1'), 1)
             self.assertEqual(dset.attrs.get('a2'), 'str')
 
@@ -287,7 +288,7 @@ class TestH5Group(unittest.TestCase):
 
     def test_units(self):
         with H5File(mode='w', title='semantic test file') as h5:
-            ds = h5.create_dataset(name='x', standard_name='x_coordinate', shape=(10, 20))
+            ds = h5.create_dataset(name='x', standard_name='x_coordinate', shape=(10, 20), units='')
             self.assertEqual(ds.units, '')
             ds.units = 'm'
             self.assertEqual(ds.units, 'm')
@@ -326,11 +327,11 @@ class TestH5Group(unittest.TestCase):
 
         with H5File(mode='w', standard_name_table=sc) as h5:
             with self.assertRaises(RuntimeError):
-                ds = h5.create_dataset('ds', shape=(2, 3))
+                ds = h5.create_dataset('ds', shape=(2, 3), units='')
             with self.assertRaises(StandardizedNameError):
-                ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity')
+                ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity', units='')
             with self.assertRaises(StandardizedNameError):
-                ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity_wrong')
+                ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity_wrong', units='')
             ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity', units='m/s')
             self.assertEqual(ds.units, 'm/s')
 
@@ -338,22 +339,24 @@ class TestH5Group(unittest.TestCase):
             self.assertTrue(isinstance(ds[:], xarray.DataArray))
             self.assertTrue(isinstance(ds.values[:], np.ndarray))
             h5.create_dataset('grp/test', shape=(1,),
-                              long_name='a long name')
+                              long_name='a long name', units='')
             self.assertIn('test', h5['grp'])
 
-            dset = h5.create_dataset('default_compression', data=[1, 2, 3], long_name='default long_name of dset')
+            dset = h5.create_dataset('default_compression', data=[1, 2, 3], long_name='default long_name of dset',
+                                     units='')
             self.assertEqual(dset.compression, config.hdf_compression)
             self.assertEqual(dset.compression_opts, config.hdf_compression_opts)
             config.hdf_compression = 'gzip'
             config.hdf_compression_opts = 2
-            dset = h5.create_dataset('other_compression', data=[1, 2, 3], long_name='default long_name of dset')
+            dset = h5.create_dataset('other_compression', data=[1, 2, 3], long_name='default long_name of dset',
+                                     units='')
             self.assertEqual(dset.compression, 'gzip')
             self.assertEqual(dset.compression_opts, 2)
 
     def test_assign_data_to_existing_dset(self):
         config.natural_naming = True
         with H5File(mode='w') as h5:
-            ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name')
+            ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name', units='')
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
 
@@ -373,11 +376,11 @@ class TestH5Group(unittest.TestCase):
             self.assertTrue('COORDINATES' in h5['u'].attrs)
 
             time = xarray.DataArray(dims='time', data=np.linspace(0, 1, 5),
-                                    attrs={'standard_name': 'time'})
+                                    attrs={'standard_name': 'time', 'units': 's'})
             h5['xr_data'] = xarray.DataArray(dims='time',
                                              data=np.random.rand(5, ),
                                              coords={'time': time},
-                                             attrs={'long_name': 'xr data'})
+                                             attrs={'long_name': 'xr data', 'units': 's'})
             self.assertEqual(h5['xr_data'].shape, (5,))
             self.assertIn('time', h5)
             self.assertEqual(h5.xr_data.dims[0][0], h5['time'])
@@ -389,14 +392,15 @@ class TestH5Group(unittest.TestCase):
             h5['xr_data2'] = xarray.DataArray(dims='time',
                                               data=np.random.rand(5, ),
                                               coords={'time': time},
-                                              attrs={'long_name': 'xr data with same time coord'})
+                                              attrs={'long_name': 'xr data with same time coord', 'units': 's'})
             self.assertIn('long_name', h5['xr_data2'].attrs)
 
-            xrtime2 = xarray.DataArray(dims='time2', data=np.linspace(0, 3, 5), attrs={'standard_name': 'time'})
+            xrtime2 = xarray.DataArray(dims='time2', data=np.linspace(0, 3, 5),
+                                       attrs={'standard_name': 'time', 'units': 's'})
             ds = h5.create_dataset('xr_data3', data=xarray.DataArray(dims='time2',
                                                                      data=np.random.rand(5, ),
                                                                      coords={'time2': xrtime2},
-                                                                     attrs={'standard_name': 'time'}))
+                                                                     attrs={'standard_name': 'time', 'units': 's'}))
             with self.assertRaises(ValueError):
                 # dataset "time" already exists
                 h5.create_dataset('xr_data4', data=xarray.DataArray(dims='time',
@@ -452,10 +456,10 @@ class TestH5Group(unittest.TestCase):
 
     def test_get_dataset_names(self):
         with H5File(mode='w') as h5:
-            h5.create_dataset('one', data=1, long_name='long name')
-            h5.create_dataset('two', data=1, long_name='long name')
-            h5.create_dataset('grp/three', data=1, long_name='long name')
-            h5.create_dataset('grp/two', data=1, long_name='long name')
+            h5.create_dataset('one', data=1, long_name='long name', units='')
+            h5.create_dataset('two', data=1, long_name='long name', units='')
+            h5.create_dataset('grp/three', data=1, long_name='long name', units='')
+            h5.create_dataset('grp/two', data=1, long_name='long name', units='')
             self.assertEqual(h5.get_dataset_names(), ['grp/three', 'grp/two', 'one', 'two'])
 
     def test_inspection(self):
