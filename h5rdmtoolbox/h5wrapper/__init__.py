@@ -26,7 +26,7 @@ def build_all_layoutfiles():
 build_all_layoutfiles()
 
 
-def open(filename, mode='r', **kwargs):
+def open_wrapper(filename, mode='r', **kwargs):
     """opens an HDF file and returns an opened instance of the identified wrapper class which
     has been writng to the file the last time it was opened."""
     from h5py import File

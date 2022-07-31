@@ -107,7 +107,7 @@ class TestCommon(unittest.TestCase):
 
     def test_common_method(self):
         from h5rdmtoolbox.utils import generate_temporary_filename
-        from h5rdmtoolbox.h5wrapper import open
+        from h5rdmtoolbox.h5wrapper import open_wrapper
         for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with CLS() as h5:
                 old_filename = h5.hdf_filename
@@ -131,11 +131,11 @@ class TestCommon(unittest.TestCase):
 
             with CLS() as h5:
                 filename = h5.hdf_filename
-            obj = open(filename)
+            obj = open_wrapper(filename)
             self.assertIsInstance(obj, CLS)
 
         with CLS() as h5:
             del h5.attrs['__wrcls__']
             filename = h5.hdf_filename
-        obj = open(filename)
+        obj = open_wrapper(filename)
         self.assertIsInstance(obj, H5File)
