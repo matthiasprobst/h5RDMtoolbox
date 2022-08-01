@@ -14,7 +14,7 @@ from .accessory import register_special_dataset
 from .h5flow import DisplacementDataset, H5FlowGroup
 from .h5flow import H5Flow, H5FlowLayout
 from .h5flow import VectorDataset
-from .. import utils, user_data_dir
+from .. import utils
 from ..conventions.custom import PIVStandardNameTable
 from ..x2hdf import piv2hdf
 from ..x2hdf.piv2hdf.par import PivViewParFile
@@ -116,7 +116,7 @@ class H5PIVGroup(H5FlowGroup):
 
 
 class H5PIV(H5Flow, H5PIVGroup):
-    Layout: H5PIVLayout = H5FlowLayout(Path.joinpath(user_data_dir, f'layout/H5PIV.hdf'))
+    Layout: H5PIVLayout = H5FlowLayout(Path.joinpath(utils.user_data_dir, f'layout/H5PIV.hdf'))
 
     @property
     def timesteps(self):

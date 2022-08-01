@@ -6,7 +6,7 @@ from typing import Union
 import dotenv
 
 from .utils import ansys_version_from_inst_dir
-from .... import user_config_dir
+from ....utils import user_config_dir
 
 logger = logging.getLogger('cfdtoolkit')
 

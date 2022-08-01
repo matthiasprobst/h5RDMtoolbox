@@ -1,4 +1,4 @@
-from ... import user_data_dir
+from ...utils import user_data_dir
 
 if (user_data_dir / 'piv2hdf.yaml').exists():
     from ._config import read_yaml_file

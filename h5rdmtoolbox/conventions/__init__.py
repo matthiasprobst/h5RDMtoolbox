@@ -10,6 +10,7 @@ in the fluid.py file but in later versions the conventions will only be provided
 
 from . import data, layout
 from ._logger import logger
+from .custom import PIVStandardNameTable, FluidStandardNameTable
 from .identifier import StandardizedNameTable, StandardizedNameError, StandardizedName, empty_standardized_name_table
 from .longname import LongName
 from .utils import xml2dict, dict2xml, is_valid_email_address
@@ -24,7 +25,15 @@ def set_loglevel(level):
         logger.setLevel(level)
 
 
+class UnitsError(Exception):
+    """Units Error"""
+    pass
+
+
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
 __all__ = ['layout', 'datetime_str', 'set_loglevel',
            'StandardizedNameTable', 'StandardizedNameError', 'StandardizedName',
-           'empty_standardized_name_table', 'LongName']
+           'empty_standardized_name_table', 'LongName',
+           'FluidStandardNameTable',
+           'PIVStandardNameTable',
+           'UnitsError']

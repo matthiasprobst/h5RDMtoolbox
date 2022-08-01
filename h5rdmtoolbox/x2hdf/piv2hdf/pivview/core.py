@@ -11,8 +11,8 @@ import h5py
 from .. import config
 from .._config import read_yaml_file, check_yaml_file
 from ..statistics import running_std, running_mean
-from .... import __version__
 from .... import conventions
+from ...._version import __version__
 from ....conventions.data import DataSourceType, DataSource
 from ....conventions.translations import pivview_name_to_standard_name
 

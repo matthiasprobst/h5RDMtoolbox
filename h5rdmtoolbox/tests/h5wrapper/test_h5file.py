@@ -515,7 +515,6 @@ class TestCore(unittest.TestCase):
             iy = h5.create_dataset('iy', data=[0, 16, 32])
 
             signal = h5.create_dataset('signal', data=np.ones((3, 3)))
-            print(signal[:, :])
 
             x.make_scale('x')
             ix.make_scale('ix')

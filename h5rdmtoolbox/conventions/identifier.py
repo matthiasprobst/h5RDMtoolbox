@@ -298,7 +298,7 @@ class StandardizedNameTable(_StandardizedNameTable):
             raise StandardizedNameError(f'Name must not end with a space!')
 
         if re_sub(self.valid_characters, '', name) != name:
-            raise StandardizedNameError(f'Invalid characters in name "{name}": Only "_" is allowed.')
+            raise StandardizedNameError(f'Invalid special characters in name "{name}": Only "_" is allowed.')
 
         if strict:
             if self._dict:

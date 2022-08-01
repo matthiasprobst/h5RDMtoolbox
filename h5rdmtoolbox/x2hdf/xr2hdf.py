@@ -40,10 +40,10 @@ class HDFArrayAccessor:
             if coord in h5group:  # coordinate already exists:
                 _raise = False
                 if h5group[coord].ndim == 0:
-                    if float(h5group[coord][()].values) != float(self._obj.coords[coord].values[()]):
+                    if float(h5group[coord][()]) != float(self._obj.coords[coord][()]):
                         _raise = True
                 else:
-                    if not np.array_equal(h5group[coord][()].values, self._obj.coords[coord].values):
+                    if not np.array_equal(h5group[coord][()], self._obj.coords[coord]):
                         _raise = True
                 if _raise:
                     raise ValueError(f'The xarray coordinate "{coord}" exists already '
@@ -57,9 +57,17 @@ class HDFArrayAccessor:
 
         for coord in self._obj.coords:
             if coord not in h5group:
-                cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
-                                             attrs=self._obj.coords[coord].attrs,
-                                             **kwargs)
+                _data = self._obj.coords[coord].values
+                if _data.ndim == 0:
+                    _ = kwargs.pop('compression_opts')
+                    _ = kwargs.pop('compression')
+                    cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
+                                                 **kwargs)
+                else:
+                    cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
+                                                 **kwargs)
+                for k, v in self._obj.coords[coord].attrs.items():
+                    cds.attrs[k] = v
                 cds.make_scale()
 
             if 'REFERENCE_LIST' not in h5group[coord].attrs:

@@ -4,36 +4,12 @@ name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
 
 import atexit
-import pathlib
 import shutil
-import sys
-from importlib.metadata import version as _version
-from itertools import count
-
-import appdirs
 
 from . import conventions
 
+
 # from .convention.time import datetime_str
-
-__version__ = _version("h5rdmtoolbox")
-user_data_dir = pathlib.Path(appdirs.user_data_dir(name))
-sys.path.insert(0, str(user_data_dir.absolute()))
-
-user_config_dir = pathlib.Path.home() / ".config" / name
-if not user_config_dir.exists():
-    user_config_dir.mkdir(parents=True)
-user_config_filename = user_config_dir / f'{name}.yaml'
-
-# tmp folder name is individual for every call of the package:
-_dircounter = count()
-_root_tmp_dir = user_data_dir / 'tmp'
-user_tmp_dir = _root_tmp_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
-
-if not user_tmp_dir.exists():
-    user_tmp_dir.mkdir(parents=True)
-
-testdir = pathlib.Path(__file__).parent / 'tests/data'
 
 
 def set_loglevel(level):
@@ -48,9 +24,11 @@ def set_loglevel(level):
     conventions_set_loglevel(level)
 
 
-from .h5wrapper import H5File, H5Flow, H5PIV
-
-__all__ = ['__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV']
+from .h5wrapper import H5File, H5Flow, H5PIV, open_wrapper
+from .utils import generate_temporary_filename, generate_temporary_directory, user_data_dir, user_tmp_dir
+from ._version import __version__
+__all__ = ['__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV', 'open_wrapper',
+           'generate_temporary_filename', 'generate_temporary_directory']
 
 
 @atexit.register

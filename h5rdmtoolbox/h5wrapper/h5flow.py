@@ -14,7 +14,7 @@ from pint_xarray import unit_registry as ureg
 from . import config
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5FileLayout, H5Dataset
-from .. import user_data_dir
+from ..utils import user_data_dir
 from ..conventions.custom import FluidStandardNameTable
 
 logger = logging.getLogger(__package__)

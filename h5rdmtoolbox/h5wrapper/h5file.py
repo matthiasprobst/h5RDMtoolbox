@@ -25,10 +25,10 @@ from tqdm import tqdm
 from . import config
 from ._hdf_constants import H5_DIM_ATTRS
 from .html_repr import h5file_html_repr
-from .. import __version__
 from .. import conventions
-from .. import user_data_dir
 from .. import utils
+from .._version import __version__
+from ..utils import user_data_dir
 from ..x2hdf import xr2hdf
 
 logger = logging.getLogger(__package__)
@@ -40,10 +40,6 @@ assert xr2hdf.__version__ == '0.1.0'
 ureg.default_format = 'C~'
 
 _SNC_LS = {}
-
-
-class UnitsError(Exception):
-    pass
 
 
 def get_rootparent(obj):
@@ -785,7 +781,7 @@ class H5Group(h5py.Group):
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
             if config.require_units:
-                raise UnitsError('Units cannot be None. A dimensionless dataset has units "''"-')
+                raise conventions.UnitsError('Units cannot be None. A dimensionless dataset has units "''"')
             attrs['units'] = ''
         else:
             attrs['units'] = units

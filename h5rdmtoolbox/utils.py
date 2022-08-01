@@ -1,15 +1,34 @@
+import pathlib
+import sys
 from datetime import datetime
 from itertools import count
-from pathlib import Path
 from re import sub as re_sub
 
+import appdirs
 from cv2 import imread as cv2_imread
 from dateutil.tz import tzlocal
 from h5py import File
 from pco_tools import pco_reader as pco
 
-from . import __version__
-from . import user_tmp_dir
+from ._version import __version__
+
+user_data_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
+sys.path.insert(0, str(user_data_dir.absolute()))
+
+user_config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
+if not user_config_dir.exists():
+    user_config_dir.mkdir(parents=True)
+user_config_filename = user_config_dir / 'h5rdmtoolbox.yaml'
+
+# tmp folder name is individual for every call of the package:
+_dircounter = count()
+_root_tmp_dir = user_data_dir / 'tmp'
+user_tmp_dir = _root_tmp_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
+
+if not user_tmp_dir.exists():
+    user_tmp_dir.mkdir(parents=True)
+
+testdir = pathlib.Path(__file__).parent / 'tests/data'
 
 _filecounter = count()
 _dircounter = count()
@@ -51,7 +70,7 @@ def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     return _cleaned_str
 
 
-def generate_temporary_filename(prefix='tmp', suffix: str = None) -> Path:
+def generate_temporary_filename(prefix='tmp', suffix: str = None) -> pathlib.Path:
     """generates a temporary filename in user tmp file directory
 
     Parameters
@@ -63,7 +82,7 @@ def generate_temporary_filename(prefix='tmp', suffix: str = None) -> Path:
 
     Returns
     -------
-    tmp_filename: Path
+    tmp_filename: pathlib.Path
         The generated temporary filename
     """
     _filename = user_tmp_dir / f"{prefix}{next(_filecounter)}{suffix}"
@@ -72,7 +91,7 @@ def generate_temporary_filename(prefix='tmp', suffix: str = None) -> Path:
     return _filename
 
 
-def generate_temporary_directory(prefix='tmp') -> Path:
+def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     """generates a temporary directory in user tmp file directory
 
     Parameters
@@ -82,7 +101,7 @@ def generate_temporary_directory(prefix='tmp') -> Path:
 
     Returns
     -------
-    tmp_filename: Path
+    tmp_filename: pathlib.Path
         The generated temporary filename
     """
     _dir = user_tmp_dir / f"{prefix}{next(_filecounter)}"
@@ -103,7 +122,7 @@ def generate_time_str(dtime: datetime, fmt: str) -> str:
         raise ValueError(f'Invalid formatting string. Can only handle one %z formatter')
 
 
-def touch_tmp_hdf5_file(touch=True) -> Path:
+def touch_tmp_hdf5_file(touch=True) -> pathlib.Path:
     """
     Generates a file path in directory h5wrapperclasses/.tmp
     with filename dsXXXX.hdf where XXXX is more or less a
@@ -112,7 +131,7 @@ def touch_tmp_hdf5_file(touch=True) -> Path:
 
     Returns
     --------
-    hdf_filepath: Path
+    hdf_filepath: pathlib.Path
         file path to created hdf5 file
     touch : bool, optional=True
         touches the file
@@ -157,11 +176,11 @@ def _oktext(string):
     return f"{bcolors.OKGREEN}{string}{bcolors.ENDC}"
 
 
-def load_img(img_filepath: Path):
+def load_img(img_filepath: pathlib.Path):
     """
     loads b16 or other file format
     """
-    img_filepath = Path(img_filepath)
+    img_filepath = pathlib.Path(img_filepath)
     if not img_filepath.exists():
         raise FileExistsError(f'Image "{img_filepath}" not found.')
 

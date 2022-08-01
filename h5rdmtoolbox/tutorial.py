@@ -13,7 +13,6 @@ from typing import Tuple
 
 import numpy as np
 import xarray as xr
-from . import utils
 
 try:
     from netCDF4 import Dataset as ncDataset
@@ -21,7 +20,7 @@ except ImportError:
     raise ImportError('Package netCDF4 is not installed.')
 
 from .utils import generate_temporary_directory, generate_temporary_filename
-from . import testdir
+from .utils import testdir
 
 
 class PIVview:
