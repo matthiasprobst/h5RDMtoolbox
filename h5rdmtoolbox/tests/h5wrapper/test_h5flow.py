@@ -6,6 +6,7 @@ import xarray as xr
 from h5rdmtoolbox.conventions import StandardizedNameTable, StandardizedNameError
 from h5rdmtoolbox.h5wrapper import H5Flow
 from h5rdmtoolbox.h5wrapper.accessory import SpecialDataset
+from h5rdmtoolbox.h5wrapper.h5flow import Device
 
 
 class TestH5Flow(unittest.TestCase):
@@ -109,3 +110,20 @@ class TestH5Flow(unittest.TestCase):
             self.assertEqual(ds.device.y, 1)
             self.assertEqual(ds.device.x, 0)
             h5.sdump()
+
+        p_sensor = Device('PressureSensor', manufacturer='unknown',
+                          x=(0, dict(units='m', standard_name='x_coordinate')),
+                          y=(0, dict(units='m', standard_name='y_coordinate')),
+                          z=(0, dict(units='m', standard_name='z_coordinate')))
+        p_sensor
+        with H5Flow() as h5:
+            ds = h5.create_dataset('pressure', data=np.random.random(100), units='Pa', standard_name='pressure')
+            ds.device = p_sensor
+
+        with H5Flow() as h5:
+            devices_grp = h5.create_group('devices')
+            sensor_grp = p_sensor.to_hdf_group(devices_grp)
+
+            ds = h5.create_dataset('pressure', data=np.random.random(100), units='Pa', standard_name='pressure',
+                                   device=sensor_grp)
+            ds.device = sensor_grp

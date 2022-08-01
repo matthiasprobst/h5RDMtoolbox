@@ -23,6 +23,7 @@ class HDFArrayAccessor:
         overwrite: bool, optional=False
             Whether to overwrite an existing dataset with that name
         """
+        h5group = h5py.Group(h5group.id)
         if not self._obj.name and name is None:
             raise AttributeError(f'Data Array has no name and no name is passed as function parameter.')
         if self._obj.name and name is None:
@@ -68,7 +69,10 @@ class HDFArrayAccessor:
                 coordinates_0dim.append(coord)  # will be written to attribute "COORDINATES"
             else:
                 attach_scales.append(coord)
-        dset = h5group.create_dataset(name, data=self._obj.data, attrs=ds_attrs)
+
+        dset = h5group.create_dataset(name, data=self._obj.data)
+        for k, v in ds_attrs.items():
+            dset.attrs[k] = v
 
         # TODO check that there are "intermediate" coords like ix(x), iy(y)
         for i, s in enumerate(self._obj.dims):

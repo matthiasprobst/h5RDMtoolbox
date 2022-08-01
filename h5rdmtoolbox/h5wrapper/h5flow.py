@@ -72,15 +72,25 @@ class Device:
                f' [{self.x.units}])'
 
     def __post_init__(self):
-        if self.additional_attributes:
+        if self.additional_attributes is None:
             self.additional_attributes = {}
-        for coord_name, coord in zip(('x', 'y', 'z'), (self.x, self.y, self.z)):
-            if coord is not None:
-                if not isinstance(coord, xr.DataArray):
-                    if isinstance(coord[1], str):
-                        coord = xr.DataArray(name=coord_name, data=coord[0], attrs=dict(units=coord[1]))
-                    else:
-                        coord = xr.DataArray(name=coord_name, data=coord[0], attrs=coord[1])
+
+        def process_coord(coord, coord_name):
+            if coord is None:
+                return None
+
+            if isinstance(coord, xr.DataArray):
+                return coord
+
+            if isinstance(coord, tuple):
+                if isinstance(coord[1], str):
+                    return xr.DataArray(name=coord_name, data=coord[0], attrs=dict(units=coord[1]))
+                else:
+                    return xr.DataArray(name=coord_name, data=coord[0], attrs=coord[1])
+
+        self.x = process_coord(self.x, 'x')
+        self.y = process_coord(self.y, 'y')
+        self.z = process_coord(self.z, 'z')
 
     @staticmethod
     def from_hdf_group(device_grp):
@@ -101,16 +111,33 @@ class Device:
     def to_hdf_group(self, grp: h5py.Group) -> h5py.Group:
         """writes data to an hdf group. strings are written to attributes of the group,
         dictionary entries"""
-        grp.attrs['manufacturer'] = self.manufacturer
+        device_grp = grp.create_group(self.name)
+        device_grp.attrs['manufacturer'] = self.manufacturer
         for coord in (self.x, self.y, self.z):
             if coord is not None:
-                coord.hdf.to_group(grp)
+                coord.hdf.to_group(device_grp)
         for k, v in self.additional_attributes.items():
-            grp.attrs[k] = v
+            device_grp.attrs[k] = v
+
+        return device_grp
 
 
 class H5FlowGroup(H5Group):
     """HDF5 Group specifically for flow data"""
+
+    def create_dataset(self, *args, **kwargs):
+        """Advanced dataset creation allowing for parameter device to pass during
+        dataset creation"""
+        attrs = kwargs.get('attrs', None)
+        if attrs is None:
+            _device = None
+        else:
+            _device = attrs.pop('device', None)
+        device = kwargs.pop('device', _device)
+        ds = super().create_dataset(*args, **kwargs)
+        if device is not None:
+            ds.attrs[DEVICE_ATTR_NAME] = device
+        return ds
 
     def create_coordinates(self, x, y, z=0, time=0, coords_unit='m', time_unit='s'):
         for ds_name in ('x', 'y', 'z', 'time'):
@@ -214,7 +241,9 @@ class H5FlowDataset(H5Dataset):
             # setting the hdf goup reference
             self.attrs[DEVICE_ATTR_NAME] = self.rootparent[device.name]
         elif isinstance(device, Device):
-            grp_name = self.rootparent[f'devices/{device.name}']
+            if 'devices/' not in self.rootparent:
+                self.rootparent.create_group('devices')
+            grp_name = self.rootparent['devices']
             device_grp = device.to_hdf_group(grp_name)
             self.attrs[DEVICE_ATTR_NAME] = device_grp
 

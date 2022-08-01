@@ -134,6 +134,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
+        if not isinstance(name, str):
+            raise TypeError(f'Attribute name must be a str but got {type(name)}')
         if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
             if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
                 raise AttributeError(f'Attribute name {name} is reserverd '

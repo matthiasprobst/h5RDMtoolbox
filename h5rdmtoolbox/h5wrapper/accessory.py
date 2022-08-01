@@ -142,9 +142,12 @@ class SpecialDataset:
         return display(HTML(self._dset._repr_html_()))
 
     def __repr__(self):
-        if self._grp.name is None:
-            return f'SpecialDataset of group "{self._grp_name}" (closed)\n' + self._dset.__repr__()
-        return f'SpecialDataset of group "{self._grp_name}"\n' + self._dset.__repr__()
+        if self._dset is None:
+            if self._grp.name is None:
+                return f'SpecialDataset of group "{self._grp_name}" (closed)\n' + self._dset.__repr__()
+            if self._dset is None:
+                return f'SpecialDataset of group "{self._grp_name}"\n' + self._dset.__repr__()
+        return self._dset.__repr__()
 
     def __str__(self):
         if self._grp.name is None:
