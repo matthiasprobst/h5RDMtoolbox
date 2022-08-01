@@ -177,9 +177,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return outstr[:-1]
 
     def __getattr__(self, item):
-        # if item in ('_h5_dataset_class', '_h5_group_class'):
-        #     return self.__getattribute__(item)
         if config.natural_naming:
+            if item in self.__dict__:
+                return super().__getattribute__(item)
             if item in self.keys():
                 return self[item]
             return super().__getattribute__(item)
