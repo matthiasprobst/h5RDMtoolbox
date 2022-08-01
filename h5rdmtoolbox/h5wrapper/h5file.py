@@ -814,7 +814,7 @@ class H5Group(h5py.Group):
         long_name : str
             The long name (human readable description of the dataset).
             If None, standard_name must be provided
-        standard_name: str or StandardName
+        standard_name: str or conventions.StandardizedName
             The standard name of the dataset. If None, long_name must be provided
         units : str, optional=None
             Physical units of the data. Can only be None if data is not attached with such attribute,

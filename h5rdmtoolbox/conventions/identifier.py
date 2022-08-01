@@ -240,6 +240,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         return True
 
     def copy(self):
+        """returns a copy of the object"""
         return StandardizedNameTable(self._dict)
 
     def update(self, data: Union[Dict, _StandardizedNameTable]):
@@ -286,6 +287,15 @@ class StandardizedNameTable(_StandardizedNameTable):
         If strict is True, it is further checked whether the name exists
         in the standard name table. This is a global setting which can be changed
         in `conventions.identifier.STRICT`"""
+
+        if not len(name) > 0:
+            raise StandardizedNameError(f'Name too short!')
+
+        if name[0] == ' ':
+            raise StandardizedNameError(f'Name must not start with a space!')
+
+        if name[-1] == ' ':
+            raise StandardizedNameError(f'Name must not end with a space!')
 
         if re_sub(self.valid_characters, '', name) != name:
             raise StandardizedNameError(f'Invalid characters in name "{name}": Only "_" is allowed.')
