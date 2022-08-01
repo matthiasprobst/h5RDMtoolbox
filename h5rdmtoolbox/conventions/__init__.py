@@ -11,6 +11,7 @@ in the fluid.py file but in later versions the conventions will only be provided
 from . import data, layout
 from ._logger import logger
 from .identifier import StandardizedNameTable, StandardizedNameError, StandardizedName, empty_standardized_name_table
+from .longname import LongName
 from .utils import xml2dict, dict2xml, is_valid_email_address
 
 NAME_IDENTIFIER_ATTR_NAME = 'standard_name'
@@ -26,4 +27,4 @@ def set_loglevel(level):
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
 __all__ = ['layout', 'datetime_str', 'set_loglevel',
            'StandardizedNameTable', 'StandardizedNameError', 'StandardizedName',
-           'empty_standardized_name_table']
+           'empty_standardized_name_table', 'LongName']

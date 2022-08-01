@@ -72,106 +72,6 @@ def pop_hdf_attributes(attrs: Dict) -> dict:
     return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
 
 
-class WrapperAttributeManager(h5py.AttributeManager):
-    """
-    Subclass of h5py's Attribute Manager.
-    Allows to store dictionaries as json strings and to store a dataset or a group as an
-    attribute. The latter uses the name of the object. When __getitem__() is called and
-    the name (string) is identified as a dataset or group, then this object is returned.
-    """
-
-    def __init__(self, parent, identifier_convention: conventions.StandardizedNameTable):
-        """ Private constructor."""
-        super().__init__(parent)
-        self.identifier_convention = identifier_convention  # standard_name_convention
-
-    @with_phil
-    def __getitem__(self, name):
-        ret = super(WrapperAttributeManager, self).__getitem__(name)
-        if isinstance(ret, str):
-            if ret:
-                if ret[0] == '{':
-                    dictionary = json.loads(ret)
-                    for k, v in dictionary.items():
-                        if isinstance(v, str):
-                            if v[0] == '/':
-                                if isinstance(self._id, h5py.h5g.GroupID):
-                                    rootgrp = get_rootparent(h5py.Group(self._id))
-                                    dictionary[k] = rootgrp.get(v)
-                                elif isinstance(self._id, h5py.h5d.DatasetID):
-                                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                                    dictionary[k] = rootgrp.get(v)
-                    return dictionary
-                elif ret[0] == '/':  # it may be group or dataset path
-                    if isinstance(self._id, h5py.h5g.GroupID):
-                        # call like this, otherwise recursive call!
-                        rootgrp = get_rootparent(h5py.Group(self._id))
-                        return rootgrp.get(ret)
-                    else:
-                        rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                        return rootgrp.get(ret)
-                else:
-                    return ret
-            else:
-                return ret
-        else:
-            return ret
-
-    @with_phil
-    def __setitem__(self, name, value):
-        """ Set a new attribute, overwriting any existing attribute.
-
-        The type and shape of the attribute are determined from the data.  To
-        use a specific type or shape, or to preserve the type of attribute,
-        use the methods create() and modify().
-        """
-        if isinstance(value, dict):
-            # some value might be changed to a string first, like h5py objects
-            for k, v in value.items():
-                if isinstance(v, (h5py.Dataset, h5py.Group)):
-                    value[k] = v.name
-            _value = json.dumps(value)
-        elif isinstance(value, Path):
-            _value = str(value)
-        elif isinstance(value, (h5py.Dataset, h5py.Group)):
-            return self.create(name, data=value.name)
-        else:
-            _value = value
-        self.create(name, data=_value)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        outstr = ''
-        adict = dict(self.items())
-        key_lens = [len(k) for k in adict.keys()]
-        if len(key_lens) == 0:
-            return None
-        keylen = max([len(k) for k in adict.keys()])
-        for k, v in adict.items():
-            outstr += f'{k:{keylen}}  {v}\n'
-        return outstr[:-1]
-
-    def __getattr__(self, item):
-        # if item in ('_h5_dataset_class', '_h5_group_class'):
-        #     return self.__getattribute__(item)
-        if config.natural_naming:
-            if item in self.keys():
-                return self[item]
-            return super().__getattribute__(item)
-        return super().__getattribute__(item)
-
-    def __setattr__(self, key, value):
-        if key == 'identifier_convention':
-            super().__setattr__(key, value)
-            return
-        if not isinstance(value, ObjectID):
-            self.__setitem__(key, value)
-            return
-        super().__setattr__(key, value)
-
-
 def _is_not_valid_natural_name(instance, name, is_natural_naming_enabled):
     """checks if name is already a function call or a property"""
     if is_natural_naming_enabled:
@@ -234,6 +134,14 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
+        if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
+            if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
+                raise AttributeError(f'Attribute name {name} is reserverd '
+                                     'for dataset only.')
+            if h5i.get_type(self._id) == h5i.DATASET:
+                # check for standardized data-name identifiers
+                self.identifier_convention.check_name(value, strict=conventions.identifier.STRICT)
+
         if isinstance(value, dict):
             # some value might be changed to a string first, like h5py objects
             for k, v in value.items():
@@ -246,7 +154,13 @@ class WrapperAttributeManager(h5py.AttributeManager):
             return self.create(name, data=value.name)
         else:
             _value = value
-        self.create(name, data=_value)
+        try:
+            self.create(name, data=_value)
+        except TypeError:
+            try:
+                self.create(name, data=str(_value))
+            except Exception as e2:
+                raise RuntimeError(f'Could not set attribute due to: {e2}')
 
     def __repr__(self):
         return self.__str__()
@@ -281,40 +195,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         super().__setattr__(key, value)
 
 
-class ConventionSensitiveAttributeManager(WrapperAttributeManager):
-    """Attribute manager class which checks validity if attribute name
-    is standard_name."""
-
-    @with_phil
-    def __setitem__(self, name, value):
-        """ Set a new attribute, overwriting any existing attribute.
-
-        The type and shape of the attribute are determined from the data.  To
-        use a specific type or shape, or to preserve the type of attribute,
-        use the methods create() and modify().
-        """
-
-        if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
-            if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
-                raise AttributeError(f'Attribute name {name} is reserverd '
-                                     'for dataset only.')
-            if h5i.get_type(self._id) == h5i.DATASET:
-                # check for standardized data-name identifiers
-                self.identifier_convention.check_name(value, strict=conventions.identifier.STRICT)
-
-        super().__setitem__(name, value)
-
-        if isinstance(value, dict):
-            _value = json.dumps(value)
-        elif isinstance(value, Path):
-            _value = str(value)
-        elif isinstance(value, (h5py.Dataset, h5py.Group)):
-            return self.create(name, data=value.name)
-        else:
-            _value = value
-        self.create(name, data=_value)
-
-
 class DatasetValues:
     """helper class to work around xarray"""
 
@@ -342,7 +222,7 @@ class H5Dataset(h5py.Dataset):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return ConventionSensitiveAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self, self.standard_name_table)
 
     @property
     def rootparent(self):
@@ -615,7 +495,7 @@ class H5Group(h5py.Group):
     def attrs(self):
         """Calls the wrapper attibute manager"""
         with phil:
-            return ConventionSensitiveAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self, self.standard_name_table)
 
     @property
     def rootparent(self):
@@ -889,7 +769,7 @@ class H5Group(h5py.Group):
             if 'standard_name' in data.attrs:
                 attrs['standard_name'] = data.attrs['standard_name']
             if 'long_name' in data.attrs:
-                attrs['long_name'] = data.attrs['long_name']
+                attrs['long_name'] = conventions.LongName(data.attrs['long_name'])
 
         if units is None:
             if attrs:
@@ -912,7 +792,7 @@ class H5Group(h5py.Group):
                           '"long_name" and you passed the parameter "long_name".\nThe latter will overwrite '
                           'the data array units!')
         if long_name is not None:
-            attrs['long_name'] = long_name
+            attrs['long_name'] = conventions.LongName(long_name)
 
         if 'standard_name' in attrs and standard_name is not None:
             warnings.warn(f'"standard_name" is over-defined for dataset "{name}". '
@@ -1911,7 +1791,7 @@ class H5File(h5py.File, H5Group):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return ConventionSensitiveAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self, self.standard_name_table)
 
     @property
     def version(self):

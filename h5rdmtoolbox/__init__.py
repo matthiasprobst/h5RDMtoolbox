@@ -52,10 +52,12 @@ __all__ = ['__version__', '__author__', 'user_data_dir', 'conventions']
 
 
 @atexit.register
-def cleanTempData():
+def clean_temp_data():
+    """cleaning up the tmp directory"""
     if user_tmp_dir.exists():
         try:
+            print(user_tmp_dir)
             shutil.rmtree(user_tmp_dir)
-        except RuntimeError:
-            print(f'removing tmp folder "{user_tmp_dir}" failed. Best is you '
+        except RuntimeError as e:
+            print(f'removing tmp folder "{user_tmp_dir}" failed due to "{e}". Best is you '
                   f'manually delete the directory.')
