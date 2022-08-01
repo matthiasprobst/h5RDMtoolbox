@@ -122,17 +122,21 @@ class SpecialDataset:
             self._attrs = {}
         else:
             self._attrs = attrs
-        self._comp_dataarrays = comp_names
-        if comp_names is None:
-            self._comp_dataarrays = self._get_datasets(*self.standard_names)
         self._dset = None
+        if comp_names is None:
+            if len(self.standard_names) == 0:
+                self._comp_dataarrays = None
+            else:
+                self._comp_dataarrays = self._get_datasets(self.standard_names)
+        else:
+            self._comp_dataarrays = comp_names
 
     def __contains__(self, item):
         return item in self._dset
 
-    def __call__(self, *args, names=None, standard_names=None):
-        _comp_dataarrays = self._get_datasets(args, names, standard_names)
-        SpecialDataset(self._grp, _comp_dataarrays)
+    def __call__(self, standard_names=None, names=None):
+        _comp_dataarrays = self._get_datasets(standard_names=standard_names, names=names)
+        return self.__class__(self._grp, _comp_dataarrays)
 
     def _repr_html_(self):
         return display(HTML(self._dset._repr_html_()))
@@ -167,16 +171,18 @@ class SpecialDataset:
         return self
 
     def __getattr__(self, item):
-        try:
+        if item in self.__dict__:
+            return object.__getattribute__(item)
+        if self._dset is not None:
             return self._dset[item]
-        except AttributeError as e:
-            pass
-        try:
-            return object.__getattribute__(self, item)
-        except AttributeError as e2:
-            raise AttributeError(e2)
-        raise AttributeError(e)
-        # if name not in {"__dict__", "__setstate__"}:
+        if self._comp_dataarrays is not None:
+            for ds in self._comp_dataarrays:
+                if ds.name[0] == '/':
+                    if ds.name[1:] == item:
+                        return ds
+                if ds.name == item:
+                    return ds
+        return object.__getattribute__(self, item)
 
     def __setitem__(self, key, value):
         try:
@@ -186,16 +192,15 @@ class SpecialDataset:
 
     @property
     def data_vars(self):
+        """returns the variables of the xr.Dataset"""
         return self._dset.data_vars
 
-    def _get_datasets(self, *args, names=None, standard_names=None):
+    def _get_datasets(self, standard_names=None, names=None):
         """get vector dataset by standard names or names. Either must be given"""
-        if standard_names is None and names is None and len(args) == 0:
-            raise ValueError('Either standard_names or names must be provided')
-        if args and standard_names is None:
-            standard_names = args
-        if standard_names and names:
-            raise ValueError('Either standard_names or names must be provided but not both')
+        if standard_names is None and names is None:
+            raise ValueError('Either "standard_names" or "names" must be provided')
+        if standard_names is not None and names is not None:
+            raise ValueError('Either "standard_names" or "names" must be provided but not both')
 
         if standard_names:
             list_of_component_datasets = []

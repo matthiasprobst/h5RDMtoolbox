@@ -102,11 +102,10 @@ class Device:
         """writes data to an hdf group. strings are written to attributes of the group,
         dictionary entries"""
         grp.attrs['manufacturer'] = self.manufacturer
-        from ..x2hdf import xr2hdf
         for coord in (self.x, self.y, self.z):
             if coord is not None:
                 coord.hdf.to_group(grp)
-        for k,v in self.additional_attributes.items():
+        for k, v in self.additional_attributes.items():
             grp.attrs[k] = v
 
 
@@ -382,6 +381,7 @@ H5FlowGroup._h5grp = H5FlowGroup
 H5FlowGroup._h5ds = H5FlowDataset
 
 
+@register_special_dataset("Vector", H5Group)
 class VectorDataset(SpecialDataset):
 
     @property

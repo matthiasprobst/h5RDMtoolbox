@@ -588,25 +588,26 @@ class H5Group(h5py.Group):
 
     def __getattr__(self, item):
         if config.natural_naming:
-            if item != '_id':  # needed if running pycharm-debug mode
-                try:
-                    if item in self:
-                        if isinstance(self[item], h5py.Group):
-                            return self._h5grp(self[item].id)
-                        else:
-                            return self._h5ds(self[item].id)
+            if item in self.__dict__:
+                return super().__getattribute__(item)
+            try:
+                if item in self:
+                    if isinstance(self[item], h5py.Group):
+                        return self._h5grp(self[item].id)
                     else:
-                        # try replacing underscores with spaces:
-                        _item = item.replace('_', ' ')
-                        if _item in self:
-                            if isinstance(self[_item], h5py.Group):
-                                return self.__class__(self[_item].id)
-                            else:
-                                return self._h5ds(self[_item].id)
+                        return self._h5ds(self[item].id)
+                else:
+                    # try replacing underscores with spaces:
+                    _item = item.replace('_', ' ')
+                    if _item in self:
+                        if isinstance(self[_item], h5py.Group):
+                            return self.__class__(self[_item].id)
                         else:
-                            return super().__getattribute__(item)
-                except AttributeError:
-                    raise AttributeError(item)
+                            return self._h5ds(self[_item].id)
+                    else:
+                        return super().__getattribute__(item)
+            except AttributeError:
+                raise AttributeError(item)
         else:
             return super().__getattribute__(item)
 

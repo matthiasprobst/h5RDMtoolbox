@@ -5,6 +5,7 @@ import xarray as xr
 
 from h5rdmtoolbox.conventions import StandardizedNameTable, StandardizedNameError
 from h5rdmtoolbox.h5wrapper import H5Flow
+from h5rdmtoolbox.h5wrapper.accessory import SpecialDataset
 
 
 class TestH5Flow(unittest.TestCase):
@@ -16,6 +17,28 @@ class TestH5Flow(unittest.TestCase):
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)
             self.assertEqual(h5.standard_name_table.name, 'Fluid_Standard_Name')
+
+    def test_VectorAccsessor(self):
+        with H5Flow() as h5:
+            h5.create_coordinates(x=np.linspace(0, 1, 20),
+                                  y=np.linspace(0, 0.5, 10),
+                                  z=np.linspace(-1, 1, 3),
+                                  coords_unit='mm')
+            h5.create_velocity_datasets(u=np.random.rand(3, 10, 20),
+                                        v=np.random.rand(3, 10, 20),
+                                        w=np.random.rand(3, 10, 20),
+                                        dim_scales=('z', 'y', 'x'),
+                                        units='mm/s')
+
+            vel = h5.Vector(names=('u', 'v', 'w'))[0:1, :, :]
+            u = vel.u
+            self.assertIsInstance(h5.Vector(names=('u', 'v', 'w')), SpecialDataset)
+            self.assertIsInstance(u, xr.DataArray)
+            self.assertEqual(u.shape, (1, 10, 20))
+            self.assertEqual(vel.v.shape, (1, 10, 20))
+            self.assertEqual(vel.v.name, 'v')
+            self.assertEqual(vel.w.shape, (1, 10, 20))
+            self.assertEqual(vel.w.name, 'w')
 
     def test_VelocityDataset(self):
         with H5Flow() as h5:
