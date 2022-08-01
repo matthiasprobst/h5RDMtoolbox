@@ -1,4 +1,12 @@
-# HDF5 Research Data Management Toolbox
+<div style="display:inline-block;vertical-align:bottom;">
+<img src="icon.svg" alt="img" width="82"/>
+</div>
+<div style="display:inline-block;">
+<h1>
+HDF5 Research Data <br>    Management Toolbox
+</h1>
+</div>
+
 
 *Note, that the repository is under current development!*
 
