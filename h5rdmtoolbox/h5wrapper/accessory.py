@@ -65,7 +65,7 @@ def _register_special_dataset(name, cls):
     return decorator
 
 
-def _register_special_property(cls):
+def _register_special_property(cls, overwrite=False):
     def decorator(accessor):
         """decorator"""
         if hasattr(accessor, 'name'):
@@ -73,8 +73,12 @@ def _register_special_property(cls):
         else:
             name = accessor.__name__
         if hasattr(cls, name):
-            raise AttributeError(f'Cannot register property {name} to {cls} because it has already a property with '
-                                 'this name.')
+            if overwrite:
+                print(f'Overwriting existing property {name}.')
+                delattr(cls, name)
+            else:
+                raise AttributeError(f'Cannot register property {name} to {cls} because it has already a property with '
+                                     'this name.')
         fget, fset, fdel, doc = None, None, None, None
         if hasattr(accessor, 'get'):
             fget = accessor.get
@@ -97,12 +101,12 @@ def register_special_dataset(name, cls: Union[H5Dataset, H5Group]):
     return _register_special_dataset(name, cls)  # grpcls --> e.g. H5FlowGroup
 
 
-def register_special_property(cls: Union[H5Dataset, H5Group]):
+def register_special_property(cls: Union[H5Dataset, H5Group], overwrite=False):
     """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
     also docstring is optional but strongly recommended!"""
     # if not isinstance(cls, (H5Dataset, H5Group)):
     #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
-    return _register_special_property(cls)
+    return _register_special_property(cls, overwrite)
 
 
 # sample class:
@@ -199,7 +203,7 @@ class SpecialDataset:
                 try:
                     list_of_component_datasets.append(self._grp.get_dataset_by_standard_name(sn, n=1))
                 except NameError:
-                    print(f'Could not find sandard_name {sn}')
+                    print(f'Cannot find standard_name {sn}')
             if len(list_of_component_datasets) == 0:
                 list_of_component_datasets = None
 

@@ -13,7 +13,6 @@ from pint_xarray import unit_registry as ureg
 
 from . import config
 from .accessory import SpecialDataset, register_special_dataset
-from .accessory import register_special_property
 from .h5file import H5File, H5Group, H5FileLayout, H5Dataset
 from .. import user_data_dir
 from ..conventions.custom import FluidStandardNameTable
@@ -83,24 +82,11 @@ class Device:
                     else:
                         coord = xr.DataArray(name=coord_name, data=coord[0], attrs=coord[1])
 
-    def to_hdf_group(self):
-        """writes data to an hdf group. strings are written to attributes of the group,
-        dictionary entries"""
-
-
-# register a device property:
-@register_special_property(H5Dataset)
-class DeviceProperty:
-    """Device Property"""
-    doc = 'device'
-    name = 'device'
-
-    def get(self):
-        """The device class referenced to this dataset"""
-        if DEVICE_ATTR_NAME not in self.attrs:
-            raise AttributeError(f'The dataset "{self.name}" has no attribute device, thus no reference to '
-                                 f'a device in the HDF5 file exists!')
-        device_grp = self.attrs[DEVICE_ATTR_NAME]
+    @staticmethod
+    def from_hdf_group(device_grp):
+        """Creates a Device object from an HDF5 group"""
+        name = device_grp.name.rsplit('/', 1)[1]
+        additional_attributes = dict(device_grp.attrs.items())
 
         coords = dict()
         for coord_name in ('x', 'y', 'z'):
@@ -110,13 +96,18 @@ class DeviceProperty:
             else:
                 coords[coord_name] = None
 
-        return Device(device_grp.name.rsplit('/', 1)[1], device_grp.attrs['manufacturer'],
-                      **coords)
+        return Device(name, additional_attributes.pop('manufacturer'), **coords, **additional_attributes)
 
-    def set(self, device: Union[str, h5py.Group, Device]):
-        """Assigning a device to a dataset"""
-        print('setting ', device)
-        # self.assign_device(device)
+    def to_hdf_group(self, grp: h5py.Group) -> h5py.Group:
+        """writes data to an hdf group. strings are written to attributes of the group,
+        dictionary entries"""
+        grp.attrs['manufacturer'] = self.manufacturer
+        from ..x2hdf import xr2hdf
+        for coord in (self.x, self.y, self.z):
+            if coord is not None:
+                coord.hdf.to_group(grp)
+        for k,v in self.additional_attributes.items():
+            grp.attrs[k] = v
 
 
 class H5FlowGroup(H5Group):
@@ -196,18 +187,19 @@ class H5FlowGroup(H5Group):
 class H5FlowDataset(H5Dataset):
     """HDF5 Dataset specifically for flow data"""
 
-    # @property
-    # def device(self):
-    #     """The device class referenced to this dataset"""
-    #     if DEVICE_ATTR_NAME not in self.attrs:
-    #         raise AttributeError(f'The dataset "{self.name}" has no attribute device, thus no reference to '
-    #                              f'a device in the HDF5 file exists!')
-    #     return Device(self.attrs[DEVICE_ATTR_NAME])
-    #
-    # @device.setter
-    # def device(self, device: Union[str, h5py.Group, Device]):
-    #     """Assigning a device to a dataset"""
-    #     self.assign_device(device)
+    @property
+    def device(self):
+        """The device class referenced to this dataset"""
+        if DEVICE_ATTR_NAME not in self.attrs:
+            raise AttributeError(f'The dataset "{self.name}" has no attribute device, thus no reference to '
+                                 f'a device in the HDF5 file exists!')
+        device_grp = self.attrs[DEVICE_ATTR_NAME]
+        return Device.from_hdf_group(device_grp)
+
+    @device.setter
+    def device(self, device: Union[str, h5py.Group, Device]):
+        """Assigning a device to a dataset"""
+        self.assign_device(device)
 
     def assign_device(self, device: Union[str, h5py.Group, Device], overwrite: bool = False):
         """Assigning a device to a dataset"""
@@ -223,7 +215,9 @@ class H5FlowDataset(H5Dataset):
             # setting the hdf goup reference
             self.attrs[DEVICE_ATTR_NAME] = self.rootparent[device.name]
         elif isinstance(device, Device):
-            self.attrs[DEVICE_ATTR_NAME] = device._grp
+            grp_name = self.rootparent[f'devices/{device.name}']
+            device_grp = device.to_hdf_group(grp_name)
+            self.attrs[DEVICE_ATTR_NAME] = device_grp
 
 
 class H5FlowLayout(H5FileLayout):

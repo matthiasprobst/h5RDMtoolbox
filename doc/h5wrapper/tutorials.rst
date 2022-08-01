@@ -10,5 +10,5 @@ Introduction into h5wrapper
     GettingStarted.ipynb
     H5Flow.ipynb
     H5PIV.ipynb
-    CreateNewWrapper.ipynb
+    InheritanceAndAccessors.ipynb
     H5PIVuncertainty.ipynb
