@@ -12,7 +12,7 @@ from . import config
 from . import pivutils
 from .accessory import register_special_dataset
 from .h5flow import DisplacementDataset, H5FlowGroup
-from .h5flow import H5Flow, H5FlowLayout
+from .h5flow import H5Flow, H5FlowLayout, H5FlowDataset
 from .h5flow import VectorDataset
 from .. import utils
 from ..conventions.custom import PIVStandardNameTable
@@ -112,6 +112,10 @@ class H5PIVLayout(H5FlowLayout):
 
 
 class H5PIVGroup(H5FlowGroup):
+    pass
+
+
+class H5PIVDatset(H5FlowDataset):
     pass
 
 
@@ -657,6 +661,10 @@ class H5PIV(H5Flow, H5PIVGroup):
         _, vtk_path = piv2hdf.vtk_utils.result_3D_to_vtk(
             data, target_filename=_vtk_filename)
         return vtk_path
+
+
+H5PIVGroup._h5grp = H5PIVGroup
+H5PIVGroup._h5ds = H5PIVDatset
 
 
 @register_special_dataset("DisplacementVector", H5PIVGroup)

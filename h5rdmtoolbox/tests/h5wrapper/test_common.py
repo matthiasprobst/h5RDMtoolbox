@@ -4,18 +4,18 @@ import unittest
 
 import h5py
 
-from h5rdmtoolbox.h5wrapper import H5File, H5Flow, H5PIV
-from h5rdmtoolbox.h5wrapper import config
-from h5rdmtoolbox.h5wrapper.h5file import H5Group, WrapperAttributeManager
+import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.h5wrapper.h5file import H5Group
+from h5rdmtoolbox.h5wrapper.h5file import WrapperAttributeManager
 from h5rdmtoolbox.h5wrapper.h5flow import H5FlowGroup
-from h5rdmtoolbox.conventions.identifier import StandardizedName
+from h5rdmtoolbox.h5wrapper.h5piv import H5PIVGroup
 
 
 class TestCommon(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.wrapper_classes = (H5File, H5Flow, H5PIV)
-        self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5FlowGroup)
+        self.wrapper_classes = (h5tbx.H5File, h5tbx.H5Flow, h5tbx.H5PIV)
+        self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5PIVGroup)
 
     def test_create_group(self):
         """testing the creation of groups"""
@@ -78,7 +78,7 @@ class TestCommon(unittest.TestCase):
 
                 self.assertEqual(ds.standard_name, None)
                 ds.standard_name = 'x_velocity'
-                self.assertIsInstance(ds.standard_name, StandardizedName)
+                self.assertIsInstance(ds.standard_name, h5tbx.conventions.StandardizedName)
                 self.assertIsInstance(ds.attrs['standard_name'], str)
                 self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
@@ -146,20 +146,20 @@ class TestCommon(unittest.TestCase):
             del h5.attrs['__wrcls__']
             filename = h5.hdf_filename
         obj = open_wrapper(filename)
-        self.assertIsInstance(obj, H5File)
+        self.assertIsInstance(obj, h5tbx.H5File)
 
     def test_create_dataset(self):
-        from h5rdmtoolbox.h5wrapper.h5file import UnitsError
+        from h5rdmtoolbox.conventions import UnitsError
         from h5rdmtoolbox.conventions import empty_standardized_name_table
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc(standard_name_table=empty_standardized_name_table) as h5:
                 self.assertEqual(h5.standard_name_table.name, empty_standardized_name_table.name)
-                config.require_units = True
+                h5tbx.h5wrapper.config.require_units = True
                 with self.assertRaises(UnitsError):
                     h5.create_dataset(name='x', standard_name='x_coordinate', data=1)
-                config.require_units = False
+                h5tbx.h5wrapper.config.require_units = False
                 h5.create_dataset(name='x', standard_name='x_coordinate', data=1, units=None)
-                config.require_units = True
+                h5tbx.h5wrapper.config.require_units = True
                 h5.create_dataset(name='x1', standard_name='x_coordinate', data=1, units='m')
                 h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
                 h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')

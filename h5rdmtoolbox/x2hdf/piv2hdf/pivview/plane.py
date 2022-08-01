@@ -27,7 +27,7 @@ from ....conventions.translations import pivview_name_to_standard_name, update_s
 from .. import vtk_utils
 from ..calc import compute_z_derivative_of_z_velocity
 from ..vtk_utils import result_3D_to_vtk
-from .... import __version__
+from ...._version import __version__
 
 from .core import PIV_FILE_TYPE_NAME
 

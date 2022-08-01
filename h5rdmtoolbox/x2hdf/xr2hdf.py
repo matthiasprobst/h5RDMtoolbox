@@ -59,8 +59,8 @@ class HDFArrayAccessor:
             if coord not in h5group:
                 _data = self._obj.coords[coord].values
                 if _data.ndim == 0:
-                    _ = kwargs.pop('compression_opts')
-                    _ = kwargs.pop('compression')
+                    _ = kwargs.pop('compression_opts', None)
+                    _ = kwargs.pop('compression', None)
                     cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
                                                  **kwargs)
                 else:

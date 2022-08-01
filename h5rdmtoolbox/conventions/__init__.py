@@ -19,6 +19,7 @@ NAME_IDENTIFIER_ATTR_NAME = 'standard_name'
 
 
 def set_loglevel(level):
+    """setting the log level of the sub-package conventions"""
     if isinstance(level, str):
         logger.setLevel(level.upper())
     else:

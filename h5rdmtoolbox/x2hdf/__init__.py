@@ -1,7 +1,7 @@
 from . import piv2hdf
-from .cfd.ansys.cfx2hdf import cfx2hdf
-
 from ._logger import logger, _file_handler, _stream_handler
+from .cfd.ansys.cfx2hdf import cfx2hdf
+from .piv2hdf.pivview import PIVSnapshot, PIVPlane, PIVMultiPlane
 
 
 def set_loglevel(level):
@@ -11,4 +11,5 @@ def set_loglevel(level):
     _stream_handler.setLevel(level.upper())
 
 
-__all__ = ['piv2hdf', 'set_loglevel', 'cfx2hdf']
+__all__ = ['piv2hdf', 'set_loglevel', 'cfx2hdf',
+           'PIVSnapshot', 'PIVPlane', 'PIVMultiPlane']
