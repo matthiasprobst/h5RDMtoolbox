@@ -533,13 +533,3 @@ class TestCore(unittest.TestCase):
             s = h5['signal'][:, :]
             print(h5['signal'].dims[0].keys())
 
-    def test_fft(self):
-        with H5File(mode='w', title='test file for fft') as h5:
-            f = 50  # Hz
-            omega = 2 * np.pi * f * ureg.Hz
-            h5.create_dataset('time', units='s', long_name='time signal', data=np.arange(0, 0.1, 0.001))
-            signal = np.sin(omega * h5.time[:].pint.quantify())
-            h5.create_dataset('signal', units='V', long_name='sinusoidal signal',
-                              data=signal.pint.dequantify(),
-                              attach_scale=h5.time)
-            print(h5)

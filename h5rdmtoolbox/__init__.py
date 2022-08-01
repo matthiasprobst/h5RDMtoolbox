@@ -48,7 +48,9 @@ def set_loglevel(level):
     conventions_set_loglevel(level)
 
 
-__all__ = ['__version__', '__author__', 'user_data_dir', 'conventions']
+from .h5wrapper import H5File, H5Flow, H5PIV
+
+__all__ = ['__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV']
 
 
 @atexit.register
