@@ -22,11 +22,12 @@ from h5py._objects import ObjectID
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
 
-from . import config
 from ._hdf_constants import H5_DIM_ATTRS
-from .html_repr import h5file_html_repr
+from .. import _repr
+from .. import config
 from .. import conventions
 from .. import utils
+from .._repr import h5file_html_repr
 from .._version import __version__
 from ..utils import user_data_dir
 from ..x2hdf import xr2hdf
@@ -412,9 +413,9 @@ class H5Dataset(h5py.Dataset):
                 has_dim = True
                 for iaxis in range(naxis):
                     if naxis > 1:
-                        dim_str += f'\n   [{_id}({iaxis})] {utils._make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f'\n   [{_id}({iaxis})] {utils.make_bold(d[iaxis].name)} {d[iaxis].shape}'
                     else:
-                        dim_str += f'\n   [{_id}] {utils._make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f'\n   [{_id}] {utils.make_bold(d[iaxis].name)} {d[iaxis].shape}'
                     dim_str += f'\n       long_name:     {d[iaxis].attrs.get("long_name")}'
                     dim_str += f'\n       standard_name: {d[iaxis].attrs.get("standard_name")}'
                     dim_str += f'\n       units:         {d[iaxis].attrs.get("units")}'
@@ -1471,311 +1472,8 @@ class H5Group(h5py.Group):
         return h5file_html_repr(self, config.html_max_string_length)
 
     def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
-        """
-        Generates string representation of the hdf5 file content (name, shape, units, long_name)
-
-        Parameters
-        ----------
-        ret : bool, optional
-            Whether to return the information string or
-            print it. Default is False, which prints the string
-        nspaces : int, optional
-            number of spaces used as indentation. Default is 0
-        grp_only : bool, optional=False
-            Only gets group information
-        hide_attributes : bool, optional=False
-            Hides attributes in output string.
-        color_code_verification: bool, optional=True
-
-        Returns
-        -------
-        out : str
-            Information string if asked
-
-        Notes
-        -----
-        Working under notebooks, explore() gives a greater representation, including attributes.
-        """
-
-        def apply_color(_str, flag=1):
-            if color_code_verification:
-                if flag:
-                    return utils._oktext(_str)
-                else:
-                    return utils._failtext(_str)
-            else:
-                return _str
-
-        sp_name, sp_shape, sp_unit, sp_desc = eval(
-            config.info_table_spacing)
-        # out = f"Group ({__class__.__name__}): {self.name}\n"
-        out = ''
-        spaces = ' ' * nspaces
-
-        if self.name == '/':  # only for root
-            if isinstance(self, h5py.Group):
-                out += f'> {self.__class__.__name__}: Group name: {self.name}.\n'
-            else:
-                out += f'> {self.__class__.__name__}: {self.filename}.\n'
-
-            # if isinstance(self, h5py.File):
-            #     nissues = self.check(silent=True)
-            #     if nissues > 0:
-            #         out += apply_color(f'> File has {nissues} issues.', 0)
-            #     else:
-            #         out += apply_color(f'> File has {nissues} issues.', 1)
-            #     out += '\n'
-
-        if not hide_attributes:
-            # write attributes:
-            for ak, av in self.attrs.items():
-                if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                    _ak = f'{ak}:'
-                    if isinstance(av, (h5py.Dataset, h5py.Group)):
-                        _av = av.name
-                    else:
-                        _av = f'{av}'
-                    if len(_av) > sp_desc:
-                        _av = f'{_av[0:sp_desc]}...'
-                    out += utils._make_italic(f'\n{spaces}a: {_ak:{sp_name}} {_av}')
-
-        grp_keys = [k for k in self.keys() if isinstance(self[k], h5py.Group)]
-        if not grp_only:
-            dataset_names = [k for k in self.keys(
-            ) if isinstance(self[k], h5py.Dataset)]
-            for dataset_name in dataset_names:
-                varname = utils._make_bold(os.path.basename(
-                    self._h5ds(self[dataset_name]).name))
-                shape = self[dataset_name].shape
-                units = self[dataset_name].units
-                if units is None:
-                    units = 'NA'
-                else:
-                    if units == ' ':
-                        units = '-'
-
-                out += f'\n{spaces}{varname:{sp_name}} {str(shape):<{sp_shape}}  {units:<{sp_unit}}'
-
-                if not hide_attributes:
-                    # write attributes:
-                    for ak, av in self[dataset_name].attrs.items():
-                        if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                            _ak = f'{ak}:'
-                            if isinstance(av, (h5py.Dataset, h5py.Group)):
-                                _av = av.name
-                            else:
-                                _av = f'{av}'
-                            if len(_av) > sp_desc:
-                                _av = f'{_av[0:sp_desc]}...'
-                            out += utils._make_italic(
-                                f'\n\t{spaces}a: {_ak:{sp_name}} {_av}')
-            out += '\n'
-        nspaces += 2
-        for k in grp_keys:
-            _grp_name = utils._make_italic(utils._make_bold(f'{spaces}/{k}'))
-            _grp_long_name = self[k].long_name
-            if grp_only:
-                if _grp_long_name is None:
-                    out += f'\n{_grp_name}'
-                else:
-                    out += f'\n{_grp_name}  ({self[k].long_name})'
-            else:
-                if _grp_long_name is None:
-                    out += f'{_grp_name}'
-                else:
-                    out += f'{_grp_name}  ({self[k].long_name})'
-
-            if isinstance(self, h5py.Group):
-                out += self[k].sdump(ret=True, nspaces=nspaces, grp_only=grp_only,
-                                     color_code_verification=color_code_verification,
-                                     hide_attributes=hide_attributes)
-            # else:
-            #     out += self[k].info(ret=True, nspaces=nspaces, grp_only=grp_only,
-            #                         color_code_verification=color_code_verification,
-            #                                         hide_attributes=hide_attributes)
-        if ret:
-            return out
-        else:
-            print(out)
-
-
-class H5FileLayout:
-    """class defining the static layout of the HDF5 file"""
-
-    def __init__(self, filename: Path):
-        self.filename = Path(filename)
-        if not self.filename.exists():
-            self.write()
-
-    @property
-    def File(self):
-        """Returns h5py.File"""
-        return h5py.File(self.filename, mode='r')
-
-    def _repr_html_(self):
-        preamble = f'<p>Layout File "{self.filename.stem}"</p>\n'
-        with h5py.File(self.filename, mode='r') as h5:
-            return h5file_html_repr(h5, max_attr_length=None, preamble=preamble,
-                                    build_debug_html_page=False)
-
-    def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
-        sp_name, sp_shape, sp_unit, sp_desc = eval(config.info_table_spacing)
-
-        with h5py.File(self.filename, mode='r') as h5:
-            out = f'Layout File "{self.filename.stem}"\n'
-            spaces = ' ' * nspaces
-
-            if not hide_attributes:
-                # write attributes:
-                for ak, av in h5.attrs.items():
-                    if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                        _ak = f'{ak}:'
-                        if isinstance(av, (h5py.Dataset, h5py.Group)):
-                            _av = av.name
-                        else:
-                            _av = f'{av}'
-                        if len(_av) > sp_desc:
-                            _av = f'{_av[0:sp_desc]}...'
-                        out += utils._make_italic(f'\n{spaces}a: {_ak:{sp_name}} {_av}')
-
-            grp_keys = [k for k in h5.keys() if isinstance(h5[k], h5py.Group)]
-            if not grp_only:
-                dataset_names = [k for k in h5.keys() if isinstance(h5[k], h5py.Dataset)]
-                for dataset_name in dataset_names:
-                    varname = utils._make_bold(os.path.basename(
-                        h5[dataset_name].name))
-                    # shape = h5[dataset_name].shape
-                    # units = h5[dataset_name].attrs.get('units')
-                    # if units is None:
-                    #     units = 'NA'
-                    # else:
-                    #     if units == ' ':
-                    #         units = '-'
-                    # out += f'\n{spaces}{varname:{sp_name}} {str(shape):<{sp_shape}}  {units:<{sp_unit}}'
-                    out += f'\n{spaces}{varname:{sp_name}} '
-
-                    if not hide_attributes:
-                        # write attributes:
-                        for ak, av in h5[dataset_name].attrs.items():
-                            if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                                _ak = f'{ak}:'
-                                if isinstance(av, (h5py.Dataset, h5py.Group)):
-                                    _av = av.name
-                                else:
-                                    _av = f'{av}'
-                                if len(_av) > sp_desc:
-                                    _av = f'{av[0:sp_desc]}...'
-                                out += utils._make_italic(
-                                    f'\n\t{spaces}a: {_ak:{sp_name}} {_av}')
-                out += '\n'
-            nspaces += 2
-            for k in grp_keys:
-                _grp_name = utils._make_italic(utils._make_bold(f'{spaces}/{k}'))
-                _grp_long_name = h5[k].long_name
-                if grp_only:
-                    if _grp_long_name is None:
-                        out += f'\n{_grp_name}'
-                    else:
-                        out += f'\n{_grp_name}  ({h5[k].long_name})'
-                else:
-                    if _grp_long_name is None:
-                        out += f'{_grp_name}'
-                    else:
-                        out += f'{_grp_name}  ({h5[k].long_name})'
-
-                out += h5[k].info(ret=True, nspaces=nspaces, grp_only=grp_only,
-                                  color_code_verification=color_code_verification,
-                                  hide_attributes=hide_attributes)
-            if ret:
-                return out
-            else:
-                print(out)
-
-    def dump(self, max_attr_length=None, **kwargs):
-        """dumps the layout to the screen (for jupyter notebooks)"""
-        build_debug_html_page = kwargs.pop('build_debug_html_page', False)
-        preamble = f'<p>Layout File "{self.filename.stem}"</p>\n'
-        with h5py.File(self.filename, mode='r') as h5:
-            display(HTML(h5file_html_repr(h5, max_attr_length, preamble=preamble,
-                                          build_debug_html_page=build_debug_html_page)))
-
-    def write(self):
-        """write the static layout file to user data dir"""
-        if not self.filename.parent.exists():
-            self.filename.parent.mkdir(parents=True)
-        logger.debug(
-            f'Layout file for class {self.__class__.__name__} is written to {self.filename}')
-        with h5py.File(self.filename, mode='w') as h5:
-            h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
-            h5.attrs['creation_time'] = '__time of file creation'
-            h5.attrs['modification_time'] = '__time of last file modification'
-
-    def check_dynamic(self, root_grp: h5py.Group, silent: bool = False) -> int:
-        return 0
-
-    def check_static(self, root_grp: h5py.Group, silent: bool = False):
-        return conventions.layout.layout_inspection(root_grp, self.filename, silent=silent)
-
-    def check(self, root_grp: Path, silent: bool = False) -> int:
-        """combined (static+dynamic) check
-
-        Parameters
-        ----------
-        root_grp: h5py.Group
-            HDF5 root group of the file to be inspected
-        silent: bool, optional=False
-            Control extra string output.
-
-        Returns
-        -------
-        n_issues: int
-            Number of issues
-        silent: bool, optional=False
-            Controlling verbose output to screen. If True issue information is printed,
-            which is especcially helpful.
-        """
-        if not isinstance(root_grp, h5py.Group):
-            raise TypeError(f'Expecting h5py.Group, not type {type(root_grp)}')
-        return self.check_static(root_grp, silent) + self.check_dynamic(root_grp, silent)
-
-    def write(self):
-        if not self.filename.parent.exists():
-            self.filename.parent.mkdir(parents=True)
-        logger.debug(
-            f'Layout file for class {self.__class__.__name__} is written to {self.filename}')
-        with h5py.File(self.filename, mode='w') as h5:
-            h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
-            h5.attrs['creation_time'] = '__time of file creation'
-            h5.attrs['modification_time'] = '__time of last file modification'
-        with h5py.File(self.filename, mode='r+') as h5:
-            h5.attrs['title'] = '__Description of file content'
-
-    @staticmethod
-    def __check_group__(group, silent: bool = False) -> int:
-        return 0
-
-    @staticmethod
-    def __check_dataset__(dataset, silent: bool = False) -> int:
-        # check if dataset has units, long_name or standard_name
-        nissues = 0
-        if 'units' not in dataset.attrs:
-            if not silent:
-                print(f' [ds] {dataset.name} : attribute "units" missing')
-            nissues += 1
-
-        if 'long_name' not in dataset.attrs and 'standard_name' not in dataset.attrs:
-            if not silent:
-                print(f' [ds] {dataset.name} : attribute "long_name" and "standard_name" missing. Either of it must '
-                      f'exist')
-            nissues += 1
-
-        return nissues
-
-    def check_dynamic(self, h5root: h5py.Group, silent: bool = False) -> int:
-        h5inspect = conventions.layout.H5Inspect(h5root, inspect_group=self.__check_group__,
-                                                 inspect_dataset=self.__check_dataset__, silent=silent)
-        h5root.visititems(h5inspect)
-        return h5inspect.nissues
+        """stng representation of group"""
+        return _repr.sdump(self, ret, nspaces, grp_only, hide_attributes, color_code_verification)
 
 
 class H5File(h5py.File, H5Group):
@@ -1783,7 +1481,7 @@ class H5File(h5py.File, H5Group):
     an issue be shown due to it.
     """
 
-    Layout: H5FileLayout = H5FileLayout(Path.joinpath(user_data_dir, f'layout/H5File.hdf'))
+    Layout: conventions.H5FileLayout = conventions.H5FileLayout(Path.joinpath(user_data_dir, f'layout/H5File.hdf'))
 
     @property
     def attrs(self):
