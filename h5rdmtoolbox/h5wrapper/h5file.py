@@ -467,7 +467,7 @@ class H5Dataset(h5py.Dataset):
 class H5Group(h5py.Group):
     """
     It enforces the usage of units
-    and standard_names for every dataset and informative meta data at
+    and standard_names for every dataset and informative metadata at
     root level (creation time etc).
 
      It provides and long_name for every group.

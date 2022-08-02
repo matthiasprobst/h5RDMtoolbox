@@ -7,8 +7,8 @@
 Overview
 ========
 
-The HDF5 Research DataManagement Toolbox (h5RDMtoolbox) supports the data creation, processing and sharing
-of data using the HDF5 file format while fullfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles.
+The HDF5 Research Data Management Toolbox (h5RDMtoolbox) supports the data creation, processing and sharing
+of data using the HDF5 file format while fulfilling the `FAIR priciples <https://www.nature.com/articles/sdata201618>`_.
 
 
 .. note::
@@ -76,3 +76,4 @@ You may install optional dependencies:
    :caption: Repository
 
    GitHub Repository <https://github.com/matthiasprobst/h5RDMtoolbox>
+

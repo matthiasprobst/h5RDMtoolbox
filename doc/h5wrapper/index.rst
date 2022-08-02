@@ -8,13 +8,13 @@
 Motivated by sustainable research data management, the package `h5wrapper` aims to integrate meta conventions
 during the data generation, processing and anlysing process while facilitating and streamlinig the work at the same
 time.
-This is done using so.called warpper-classes, which add funcitonality to the core interface library `h5py`. The
-jupyter notebooks wlak you through the usage and features.
+This is done using so-called wrapper-classes, which add funcitonality to the core interface library `h5py`. The
+jupyter notebooks walk you through the usage and features.
 
 
 .. note::
 
-   The wrapper-classes extend but don't limit the funcitonality of the `h5py` package. So users that are
+   The wrapper-classes extend but don't limit the functionality of the `h5py` package. So users that are
    familiar to the `h5py` package will find all featues but will be enforced to provide e.g. certain attributes
    to fulfill the requirements of a certain meta convention.
 
@@ -28,7 +28,7 @@ Wrapper files enhances the usability of HDF5files by
 
 and by
 
-  introduction of meta data conventions such as `standard_names`, `long_names` and layout definitions.
+  introduction of metadata conventions such as `standard_names`, `long_names` and layout definitions.
 
 All above enhances the FAIRness (FAIR=Findable+Accessible+Interoperable+re-usable) of HDF5 files.
 

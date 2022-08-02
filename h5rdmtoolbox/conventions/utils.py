@@ -20,7 +20,7 @@ def is_valid_email_address(email: str) -> bool:
 def dict2xml(filename, name: str, dictionary: Dict, metadata: Dict) -> Path:
     """writes standard_names dictionary into a xml in style of cf-standard-name-table
 
-    data must be a Tuple where first entry is the dictionary and the second one is meta data
+    data must be a Tuple where first entry is the dictionary and the second one is metadata
     """
 
     root = ET.Element(name)
