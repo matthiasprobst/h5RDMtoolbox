@@ -56,11 +56,13 @@ You may install optional dependencies:
 
 
 
+
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: Documentation
 
+    Getting Started <gettingstarted/index>
     Conventions <conventions/index>
     H5wrapper <h5wrapper/index>
     x2hdf <x2hdf/index>
