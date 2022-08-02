@@ -171,12 +171,6 @@ def piv_conversion(conversion_method):
                                 if k not in DIM_NAMES:
                                     for ic, c in enumerate(('z', 'y', 'x')):
                                         h5[k].dims[ic].attach_scale(h5[c])
-                # else:
-                #     for k in h5.keys():
-                #         if not isinstance(h5[k], h5py.Group):
-                #             if k not in DIM_NAMES:
-                #                 for ic, c in enumerate(DIM_NAMES):
-                #                     h5[k].dims[ic].attach_scale(h5[c])
 
                 # assign standard_names if available
                 for name, ds in h5.items():
