@@ -1,3 +1,5 @@
+"""H5PIV module: Wrapper for PIV data"""
+
 import json
 import logging
 import warnings
@@ -8,7 +10,7 @@ import h5py
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
-from . import config
+from .. import config
 from . import pivutils
 from .accessory import register_special_dataset
 from .h5flow import DisplacementDataset, H5FlowGroup
@@ -34,12 +36,12 @@ def _check_piv_software(software_name):
             for alias in av_software_alias:
                 if alias in software_name_lower:
                     return av_software_name
-        print(utils._failtext(f'{software_name} not in list of supported piv software. '
+        print(utils.failtext(f'{software_name} not in list of supported piv software. '
                               'Please check that there is no spelling mistake. '
                               'Otherwise, please open an issue for it.\n'
                               f'Supported software: {list(SUPPORTED_PIV_SOFTWARE.keys())}'))
     else:
-        logger.warning(utils._failtext('Software not set as attribute in File!'))
+        logger.warning(utils.failtext('Software not set as attribute in File!'))
     return False
 
 

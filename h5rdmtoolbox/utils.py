@@ -156,23 +156,28 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-def _make_italic(string):
+def make_italic(string):
+    """make string italic"""
     return f'\x1B[3m{string}\x1B[0m'
 
 
-def _make_bold(string):
+def make_bold(string):
+    """make string bold"""
     return f"{bcolors.BOLD}{string}{bcolors.ENDC}"
 
 
-def _warningtext(string):
+def warningtext(string):
+    """make string orange"""
     return f"{bcolors.WARNING}{string}{bcolors.ENDC}"
 
 
-def _failtext(string):
+def failtext(string):
+    """make string red"""
     return f"{bcolors.FAIL}{string}{bcolors.ENDC}"
 
 
-def _oktext(string):
+def oktext(string):
+    """make string green"""
     return f"{bcolors.OKGREEN}{string}{bcolors.ENDC}"
 
 

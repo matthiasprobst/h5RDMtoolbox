@@ -154,12 +154,12 @@ class TestCommon(unittest.TestCase):
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc(standard_name_table=empty_standardized_name_table) as h5:
                 self.assertEqual(h5.standard_name_table.name, empty_standardized_name_table.name)
-                h5tbx.h5wrapper.config.require_units = True
+                h5tbx.config.require_units = True
                 with self.assertRaises(UnitsError):
                     h5.create_dataset(name='x', standard_name='x_coordinate', data=1)
-                h5tbx.h5wrapper.config.require_units = False
+                h5tbx.config.require_units = False
                 h5.create_dataset(name='x', standard_name='x_coordinate', data=1, units=None)
-                h5tbx.h5wrapper.config.require_units = True
+                h5tbx.config.require_units = True
                 h5.create_dataset(name='x1', standard_name='x_coordinate', data=1, units='m')
                 h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
                 h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')

@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 from netCDF4 import Dataset as ncDataset
 
-from ...utils import _make_bold
+from ...utils import make_bold
 
 try:
     NCDF2PAR = Path(environ.get('ncdf2par'))
@@ -42,7 +42,7 @@ class PivViewParFile(ConfigParser):
     def __str__(self):
         out_str = ''
         for k in self.sections():
-            out_str += _make_bold(f'\n{k.strip(" ").strip("-").strip()}')
+            out_str += make_bold(f'\n{k.strip(" ").strip("-").strip()}')
             for item in self.items(k):
                 try:
                     out_str += f'\n\t{item[0]}: {eval(item[1])}'

@@ -7,11 +7,11 @@ import numpy as np
 import xarray
 import xarray as xr
 import yaml
-from pint_xarray import unit_registry as ureg
 
+from h5rdmtoolbox import config
 from h5rdmtoolbox import h5wrapper
 from h5rdmtoolbox.conventions.identifier import StandardizedNameError, StandardizedNameTable
-from h5rdmtoolbox.h5wrapper import H5File, config, set_loglevel
+from h5rdmtoolbox.h5wrapper import H5File, set_loglevel
 from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 
@@ -531,4 +531,3 @@ class TestCore(unittest.TestCase):
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
             print(h5['signal'].dims[0].keys())
-
