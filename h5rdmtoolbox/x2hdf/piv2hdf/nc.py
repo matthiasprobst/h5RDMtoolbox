@@ -2,7 +2,7 @@ import logging
 import os
 import pathlib
 import re
-from typing import Tuple, Union
+from typing import Tuple, Union, Dict
 
 import numpy as np
 import xarray as xr
@@ -40,7 +40,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                             compute_dwdz: bool = False,
                             build_coord_datasets: bool = True,
                             standardized_name_table: Union[StandardizedNameTable, None] = None) -> Tuple[
-    dict, dict, dict]:
+    Dict, Dict, Dict]:
     """
     Reads data and attributes from netCDF file. Results are stored in dictionary. Interpolation
     to fill "holes"/masked areas is applied if asked. Data arrays x, y, z and time are created.
