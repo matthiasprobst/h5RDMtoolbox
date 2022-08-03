@@ -14,7 +14,7 @@ from ..statistics import running_std, running_mean
 from .... import conventions
 from ...._version import __version__
 from ....conventions.data import DataSourceType, DataSource
-from ....conventions.translations import pivview_name_to_standard_name
+from ....conventions.translations import pivview_to_standardnames_dict
 
 logger = logging.getLogger('x2hdf')
 
@@ -182,8 +182,8 @@ def piv_conversion(conversion_method):
                 for name, ds in h5.items():
                     if isinstance(ds, h5py.Dataset):
                         if 'standard_name' not in ds.attrs:
-                            if name in pivview_name_to_standard_name:
-                                ds.attrs['standard_name'] = pivview_name_to_standard_name[name]
+                            if name in pivview_to_standardnames_dict:
+                                ds.attrs['standard_name'] = pivview_to_standardnames_dict[name]
         args[0].conversion_time = time.time() - conversion_starting_time
         return hdf_filename
 

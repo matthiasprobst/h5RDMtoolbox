@@ -151,11 +151,14 @@ class H5FileLayout:
         self.filename = Path(filename)
         if not self.filename.exists():
             self.write()
+        self._file = None
 
-    @property
-    def open(self):
-        """Returns h5py.File"""
-        return h5py.File(self.filename, mode='r')
+    def __enter__(self):
+        self._file = h5py.File(self.filename, mode='r')
+        return self._file
+
+    def __exit__(self, *args):
+        self._file.close()
 
     def _repr_html_(self):
         preamble = f'<p>Layout File "{self.filename.stem}"</p>\n'
