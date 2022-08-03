@@ -34,6 +34,35 @@ from .core import PIV_FILE_TYPE_NAME
 logger = logging.getLogger('x2hdf')
 
 
+class NCFilesCass:
+    """Helper Class to provide information about the nc files to the user through the Plane class"""
+
+    def __init__(self, files):
+        self._files = files
+        self._size = None
+
+    def __len__(self):
+        return len(self.files)
+
+    def __repr__(self):
+        return f'{len(self._files)} nc files -> total size: {self.size} Bytes ({round(self.size / 1000)} KB) '
+
+    def __str__(self):
+        return self.__repr__()
+
+    @property
+    def files(self) -> List:
+        """returns all file paths"""
+        return self._files
+
+    @property
+    def size(self) -> int:
+        """returns the size of all nc files in bytes"""
+        if self._size is None:
+            self._size = np.sum([nc.stat().st_size for nc in self._files])
+        return self._size
+
+
 class PIVPlane(core.PIVNCConverter):
     snapshots: List[PIVSnapshot]
     performance = {'snapshot_read': [], 'snapshot_write': []}
@@ -364,6 +393,11 @@ class PIVPlane(core.PIVNCConverter):
                     raise ValueError(f'Following key was not found in {self.name}: {e}')
 
         return h5grp
+
+    @property
+    def nc(self) -> NCFilesCass:
+        """returns object of NCFilesCass to provide information about ncetCDF4 files used for the plane"""
+        return NCFilesCass(self._found_nc_files)
 
 
 class MultiPlaneInputError(Exception):
@@ -1508,9 +1542,8 @@ class PIVMultiPlane(core.PIVNCConverter):
     def remove_nc_files(self):
         """Removes all nc files of all snapshots in all planes"""
         for p in self.planes:
-            for s in p.snapshots:
-                if s.hdf_filename.suffix == '.nc' and s.hdf_filename.exists():
-                    s.hdf_filename.unlink()
+            for nc_file in p._found_nc_files:
+                nc_file.unlink(missing_ok=True)
 
 
 def multiplane_from_average_dat_files(plane_folders: List[pathlib.Path], target: pathlib.Path) -> pathlib.Path:
