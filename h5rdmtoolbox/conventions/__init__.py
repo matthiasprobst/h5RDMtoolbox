@@ -8,11 +8,11 @@ are provided by this sub-packages (fluid and piv). As the projec is under develo
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
 
-from .layout import H5FileLayout
 from . import data, layout
 from ._logger import logger
 from .custom import PIVStandardNameTable, FluidStandardNameTable
-from .identifier import StandardizedNameTable, StandardizedNameError, StandardizedName, empty_standardized_name_table
+from .identifier import StandardizedNameTable, StandardizedNameError, StandardizedName, Empty_Standard_Name_Table
+from .layout import H5FileLayout
 from .longname import LongName
 from .utils import xml2dict, dict2xml, is_valid_email_address
 
@@ -35,7 +35,7 @@ class UnitsError(Exception):
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
 __all__ = ['layout', 'H5FileLayout', 'datetime_str', 'set_loglevel',
            'StandardizedNameTable', 'StandardizedNameError', 'StandardizedName',
-           'empty_standardized_name_table', 'LongName',
+           'Empty_Standard_Name_Table', 'LongName',
            'FluidStandardNameTable',
            'PIVStandardNameTable',
            'UnitsError']

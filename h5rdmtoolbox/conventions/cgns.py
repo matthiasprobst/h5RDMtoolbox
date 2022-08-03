@@ -6,6 +6,8 @@ this repository uses this convention
 from h5rdmtoolbox.conventions import StandardizedNameTable
 from h5rdmtoolbox.conventions.pivview import pivview_to_cgns_dict
 
+from .identifier import standard_name_table_to_xml
+
 cgns_standard_names_dict = {
     'Time': {'canonical_units': 's', 'description': 'physical time'},
     'VelocityX': {'canonical_units': 'm/s',
@@ -64,12 +66,4 @@ PIVCGNSStandardNameTable = StandardizedNameTable(name='CGNS_Standard_Name', tabl
                                                  valid_characters='[^a-zA-Z0-9_]',
                                                  translation_dict={'pivview': pivview_to_cgns_dict})
 
-if __name__ == '__main__':
-    """creating xml convention files in xml/folder which will be installed with the package.
-    So if something is changed here, update the version (also repo versioN), write the xml file and re-install the 
-    package"""
-    import pathlib
-
-    PIVCGNSStandardNameTable.to_xml(
-        pathlib.Path(__file__).parent / 'snxml' / f'fluid-v{PIVCGNSStandardNameTable.version_number}.xml',
-        parents=True)
+standard_name_table_to_xml(PIVCGNSStandardNameTable)

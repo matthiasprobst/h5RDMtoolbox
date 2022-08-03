@@ -22,7 +22,6 @@ from h5py._objects import ObjectID
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
 
-from ._hdf_constants import H5_DIM_ATTRS
 from .. import _repr
 from .. import config
 from .. import conventions
@@ -40,7 +39,9 @@ assert xr2hdf.__version__ == '0.1.0'
 
 ureg.default_format = 'C~'
 
-_SNC_LS = {}
+_SNT_CACHE = {}
+
+H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
 
 def get_rootparent(obj):
@@ -93,6 +94,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
     @with_phil
     def __getitem__(self, name):
+        # if name in self.__dict__:
+        #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         if isinstance(ret, str):
             if ret:
@@ -162,7 +165,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 raise RuntimeError(f'Could not set attribute due to: {e2}')
 
     def __repr__(self):
-        return self.__str__()
+        return super().__repr__()
 
     def __str__(self):
         outstr = ''
@@ -257,12 +260,23 @@ class H5Dataset(h5py.Dataset):
     @property
     def standard_name_table(self):
         """returns the standard name convention associated with the file instance"""
-        return _SNC_LS[self.file.id.id]
+        try:
+            return _SNT_CACHE[self.file.id.id]
+        except KeyError:
+            return conventions.Empty_Standard_Name_Table
+        # snt = self.rootparent.attrs.get('standard_name_table')
+        # if snt is None:
+        #     try:
+        #         return _SNT_CACHE[self.file.id.id]
+        #     except:
+        #         return conventions.empty_standardized_name_table
+        # return conventions.StandardizedNameTable.from_name(snt)
 
     @standard_name_table.setter
     def standard_name_table(self, convention: conventions.StandardizedNameTable):
         """returns the standard name convention associated with the file instance"""
-        _SNC_LS[self.id.id] = convention
+        self.rootparent.attrs.modify('standard_name_table', convention.versionname)
+        _SNT_CACHE[self.id.id] = convention
 
     @units.setter
     def units(self, units):
@@ -302,7 +316,7 @@ class H5Dataset(h5py.Dataset):
         Returns `None` if it does not exist."""
         attrs_string = self.attrs.get('standard_name')
         if attrs_string is None:
-            return None
+            return conventions.Empty_Standard_Name_Table
         return self.standard_name_table[attrs_string]
 
     @standard_name.setter
@@ -555,14 +569,16 @@ class H5Group(h5py.Group):
     @property
     def standard_name_table(self) -> conventions.StandardizedNameTable:
         """returns the standar name convention associated with the file instance"""
-        if self.file.id.id in _SNC_LS:
-            return _SNC_LS[self.file.id.id]
-        return None
+        try:
+            return _SNT_CACHE[self.file.id.id]
+        except KeyError:
+            return conventions.Empty_Standard_Name_Table
 
     @standard_name_table.setter
     def standard_name_table(self, convention: conventions.StandardizedNameTable):
-        """returns the standard name convention associated with the file instance"""
-        _SNC_LS[self.id.id] = convention
+        """sets the standard name convention as attribute and in 'SNT_CACHE'"""
+        self.rootparent.attrs.modify('standard_name_table', convention.versionname)
+        _SNT_CACHE[self.id.id] = convention
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
@@ -1530,11 +1546,6 @@ class H5File(h5py.File, H5Group):
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
-        _depr_long_name = kwds.pop('long_name', None)
-        if _depr_long_name is not None:
-            warnings.warn('Using long name when initializing a H5File is deprecated. Use title instead!',
-                          DeprecationWarning)
-            title = _depr_long_name
 
         now_time_str = utils.generate_time_str(datetime.datetime.now(), conventions.datetime_str)
         if name is None:
@@ -1583,15 +1594,48 @@ class H5File(h5py.File, H5Group):
             if title is not None:
                 self.attrs['title'] = title
 
-        if isinstance(standard_name_table, str):
-            snc = conventions.StandardizedNameTable.from_xml(standard_name_table)
-        elif isinstance(standard_name_table, conventions.StandardizedNameTable):
-            snc = standard_name_table
-        elif standard_name_table is None:
-            snc = conventions.empty_standardized_name_table
+        # snt stored in the file:
+        snt_attr = self.attrs.get('standard_name_table')
+
+        if snt_attr is None:
+            if isinstance(standard_name_table, str):
+                snt = conventions.StandardizedNameTable.from_xml(standard_name_table)
+            elif isinstance(standard_name_table, conventions.StandardizedNameTable):
+                snt = standard_name_table
+            elif standard_name_table is None:
+                # user has not passed a snt during initialization and no snt in attributes -> create empty
+                snt = conventions.Empty_Standard_Name_Table
+            else:
+                raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
         else:
-            raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
-        self.standard_name_table = snc
+            if standard_name_table is None:
+                # user has not passed a snt but the snt attribute has an entry. --> use this snt
+                snt = conventions.StandardizedNameTable.from_name(*self.attrs.get('standard_name_table').split('-v'))
+            else:
+                if isinstance(standard_name_table, str):
+                    snt = conventions.StandardizedNameTable.from_xml(standard_name_table)
+                elif isinstance(standard_name_table, conventions.StandardizedNameTable):
+                    snt = standard_name_table
+                else:
+                    raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
+
+                snt_attr_name, snt_attr_vn = snt_attr.split('-v')
+                cmp = conventions.StandardizedNameTable.from_name(snt_attr_name, int(snt_attr_vn))
+                if snt != cmp:
+                    raise conventions.identifier.StandardizedNameTableError(
+                        'Standardized name table registered in the file (attr "standard_name_table") '
+                        f'is not equal to the passed name table: {snt.versionname} <-> {cmp.versionname}')
+
+        if mode == 'r':
+            if not snt == conventions.Empty_Standard_Name_Table:
+                warnings.warn(
+                    'Unable to write standard name table to file. It will be effective anyhow but '
+                    'if the file is reloaded later the choice is forgotten.',
+                    conventions.identifier.StandardizedNameTableWarning
+                )
+            _SNT_CACHE[self.file.id.id] = snt
+        else:
+            self.standard_name_table = snt
 
     def __setitem__(self, name, obj):
         if isinstance(obj, xr.DataArray):

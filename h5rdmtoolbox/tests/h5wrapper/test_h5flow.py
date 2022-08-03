@@ -17,7 +17,8 @@ class TestH5Flow(unittest.TestCase):
         with H5Flow() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)
-            self.assertEqual(h5.standard_name_table.name, 'Fluid_Standard_Name')
+            self.assertEqual(h5.standard_name_table.name, 'fluid')
+            self.assertEqual(h5.standard_name_table.versionname, 'fluid-v1')
 
     def test_VectorAccsessor(self):
         with H5Flow() as h5:

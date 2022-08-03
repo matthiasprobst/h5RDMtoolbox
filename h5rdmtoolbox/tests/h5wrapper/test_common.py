@@ -76,7 +76,7 @@ class TestCommon(unittest.TestCase):
                 h5.non_existing_attribute = 1
                 print(h5.non_existing_attribute)
 
-                self.assertEqual(ds.standard_name, None)
+                self.assertEqual(ds.standard_name, h5tbx.conventions.Empty_Standard_Name_Table)
                 ds.standard_name = 'x_velocity'
                 self.assertIsInstance(ds.standard_name, h5tbx.conventions.StandardizedName)
                 self.assertIsInstance(ds.attrs['standard_name'], str)
@@ -150,10 +150,10 @@ class TestCommon(unittest.TestCase):
 
     def test_create_dataset(self):
         from h5rdmtoolbox.conventions import UnitsError
-        from h5rdmtoolbox.conventions import empty_standardized_name_table
+        from h5rdmtoolbox.conventions import Empty_Standard_Name_Table
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            with wc(standard_name_table=empty_standardized_name_table) as h5:
-                self.assertEqual(h5.standard_name_table.name, empty_standardized_name_table.name)
+            with wc(standard_name_table=Empty_Standard_Name_Table) as h5:
+                self.assertEqual(h5.standard_name_table.name, Empty_Standard_Name_Table.name)
                 h5tbx.config.require_units = True
                 with self.assertRaises(UnitsError):
                     h5.create_dataset(name='x', standard_name='x_coordinate', data=1)

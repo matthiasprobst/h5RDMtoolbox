@@ -49,7 +49,7 @@ class TestH5PIV(unittest.TestCase):
         with H5PIV() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)
-            self.assertEqual(h5.standard_name_table.name, 'PIV_Standard_Name')
+            self.assertEqual(h5.standard_name_table.name, 'piv')
 
     def test_UncertaintyDataset(self):
         with tutorial.get_H5PIV('vortex_snapshot', mode='r') as h5:

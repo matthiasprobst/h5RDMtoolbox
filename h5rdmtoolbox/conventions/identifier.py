@@ -29,6 +29,11 @@ STRICT = True
 CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
 
 
+class StandardizedNameTableWarning(Warning):
+    """StandardizedNameTableWarning"""
+    pass
+
+
 def equal_base_units(unit1, unit2):
     """returns if two units are equivalent"""
     base_unit1 = ureg(unit1).to_base_units().units.__format__(ureg.default_format)
@@ -70,6 +75,17 @@ class _StandardizedNameTable:
 
 
 class EmailError(ValueError):
+    pass
+
+
+def meta_from_xml(xml_filename):
+    from .utils import xml2dict
+    _dict, meta = xml2dict(xml_filename)
+    meta.update(dict(table_dict=_dict))
+    return meta
+
+
+class StandardizedNameTableError(Exception):
     pass
 
 
@@ -115,6 +131,10 @@ class StandardizedNameTable(_StandardizedNameTable):
     @property
     def names(self):
         return list(self._dict.keys())
+
+    @property
+    def versionname(self):
+        return f'{self._name}-v{self._version_number}'
 
     @property
     def contact(self):
@@ -175,6 +195,12 @@ class StandardizedNameTable(_StandardizedNameTable):
 
     def __contains__(self, item):
         return item in self._dict
+
+    def __eq__(self, other):
+        return self.versionname == other.versionname
+
+    def __neg__(self, other):
+        return not self.__eq__(other)
 
     def set(self, name: str, description: str, canonical_units: str):
         """Sets the value of a standardized name"""
@@ -252,9 +278,17 @@ class StandardizedNameTable(_StandardizedNameTable):
     @staticmethod
     def from_xml(xml_filename):
         """reads the table from an xml file"""
-        from .utils import xml2dict
-        _dict, meta = xml2dict(xml_filename)
-        meta.update(dict(table_dict=_dict))
+        meta = meta_from_xml(xml_filename)
+
+        return StandardizedNameTable(**meta)
+
+    @staticmethod
+    def from_name(name: str, version_number: int):
+        """reads the table from an xml file stored in this package"""
+        xml_filename = Path(__file__).parent / 'snxml' / f'{name}-v{version_number}.xml'
+        if not xml_filename.exists():
+            raise FileExistsError(f'Cannot find convention filename "{xml_filename}')
+        meta = meta_from_xml(xml_filename)
         return StandardizedNameTable(**meta)
 
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:
@@ -329,13 +363,13 @@ class StandardizedNameTable(_StandardizedNameTable):
         raise ValueError(f'Translation dictionary is empty!')
 
 
-empty_standardized_name_table = StandardizedNameTable(name='EmptyStandardizedNameTable',
-                                                      table_dict={},
-                                                      version_number=-1,
-                                                      institution=None,
-                                                      contact='none@none.none',
-                                                      last_modified=None,
-                                                      valid_characters='')
+Empty_Standard_Name_Table = StandardizedNameTable(name='EmptyStandardizedNameTable',
+                                                  table_dict={},
+                                                  version_number=0,
+                                                  institution=None,
+                                                  contact='none@none.none',
+                                                  last_modified=None,
+                                                  valid_characters='')
 
 
 class CFStandardNameTable(StandardizedNameTable):
@@ -364,3 +398,18 @@ class CGNSStandardNameTable(StandardizedNameTable):
                  valid_characters: str = '[^a-zA-Z0-9_]'):
         name = 'CGNS-convention'
         super().__init__(name, table_dict, version_number, institution, contact, last_modified, valid_characters)
+
+
+xml_dir = Path(__file__).parent / 'snxml'
+
+
+def standard_name_table_to_xml(snt: StandardizedNameTable, overwrite=False):
+    """writes standrad name table to package data"""
+    _xml_filename = xml_dir / f'{snt.name}-v{snt.version_number}.xml'
+    if overwrite:
+        return snt.to_xml(_xml_filename)
+    if not _xml_filename.exists():
+        snt.to_xml(_xml_filename)
+
+
+standard_name_table_to_xml(Empty_Standard_Name_Table)

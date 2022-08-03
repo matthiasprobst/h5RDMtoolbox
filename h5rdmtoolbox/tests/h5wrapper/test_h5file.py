@@ -26,7 +26,7 @@ class TestH5File(unittest.TestCase):
         self.assertEqual(H5File.Layout.filename.stem, 'H5File')
         with H5File() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
-            self.assertEqual(h5.standard_name_table.version_number, -1)
+            self.assertEqual(h5.standard_name_table.version_number, 0)
             self.assertEqual(h5.standard_name_table.name, 'EmptyStandardizedNameTable')
 
     def test_create_dataset(self):
@@ -222,7 +222,8 @@ class TestH5Dataset(unittest.TestCase):
 a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m\x1B[3m
-a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m
+a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m\x1b[3m
+a: standard_name_table:           EmptyStandardizedNameTable-v0\x1b[0m
 """
             self.assertEqual(sdump_str, _str)
         with H5File(mode='w') as h5:
@@ -237,7 +238,8 @@ a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m
 a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m\x1B[3m
-a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m
+a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m\x1b[3m
+a: standard_name_table:           EmptyStandardizedNameTable-v0\x1b[0m
 \x1B[1mtest\x1B[0m                   ()                            
 \x1B[3m\x1B[1m/grp\x1B[0m\x1B[0m
   \x1B[1mtest\x1B[0m                   ()                            
