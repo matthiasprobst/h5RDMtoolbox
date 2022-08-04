@@ -1,5 +1,6 @@
 """Testing common funcitonality across all wrapper classs"""
 
+import pathlib
 import unittest
 
 import h5py
@@ -100,6 +101,10 @@ class TestCommon(unittest.TestCase):
                 n_issuess = h5.check(silent=True)
                 self.assertIsInstance(n_issuess, int)
                 self.assertTrue(n_issuess > 0)
+
+        # undo change of layout:
+        h5tbx.H5File.Layout = h5tbx.conventions.H5FileLayout(
+            pathlib.Path.joinpath(h5tbx.user_data_dir, f'layout/H5File.hdf'))
 
     def test_properties(self):
         import datetime

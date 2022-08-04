@@ -13,9 +13,9 @@ import xarray as xr
 from pandas import read_csv
 from pint_xarray import unit_registry as ureg
 
-from .. import config
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5Dataset
+from .. import config
 from .. import conventions
 from ..utils import user_data_dir
 
@@ -257,7 +257,7 @@ class H5FlowDataset(H5Dataset):
 class H5FlowLayout(conventions.H5FileLayout):
     """Layout class for H5Flow wrapper class"""
 
-    def write(self)  -> Path:
+    def write(self) -> Path:
         """The layout file has the structure of a H5Flow file. This means
         it has the required attributes, datasets and groups that are required
         for a valid H5Flow file. For each application case this is of course
@@ -286,6 +286,7 @@ class H5FlowLayout(conventions.H5FileLayout):
             ds_t.attrs['units'] = 's'
             ds_t.attrs['__ndim__'] = (0, 1)
         return self.filename
+
 
 class H5Flow(H5File, H5FlowGroup):
     """H5Flow File wrapper class"""

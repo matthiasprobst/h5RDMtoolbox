@@ -1,53 +1,253 @@
 """H5PIV module: Wrapper for PIV data"""
 
-import json
 import logging
+import pathlib
 import warnings
+from abc import ABC
+from enum import Enum
 from pathlib import Path
-from typing import List, Callable
+from typing import Callable, Tuple
+from typing import Protocol, Any, Union, Dict, List
 
 import h5py
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
-from .. import config
 from . import pivutils
 from .accessory import register_special_dataset
 from .h5flow import DisplacementDataset, H5FlowGroup
 from .h5flow import H5Flow, H5FlowLayout, H5FlowDataset
 from .h5flow import VectorDataset
+from .. import config
 from .. import utils
 from ..conventions.custom import PIVStandardNameTable
-from ..x2hdf import piv2hdf
-from ..x2hdf.piv2hdf.par import PivViewParFile
+from ..x2hdf import piv
 
 logger = logging.getLogger(__package__)
 
-# software name (key) and alias for it (values)  (all lowercase!)
-SUPPORTED_PIV_SOFTWARE = {'pivview': ('pivtec pivview', 'pivview'), 'lavision': ('davis',)}
+
+def next_std(sum_of_x, sum_of_x_squared, n, xnew, ddof):
+    """computes the standard deviation after adding one more data point to an array.
+    Avoids computing the standard deviation from the beginning of the array by using
+    math, yeah :-)
+
+    Parameters
+    ----------
+    sum_of_x : float
+        The sum of the array without the new data point
+    sum_of_x_squared : float
+        The sum of the squared array without the new data point
+    n : int
+        Number of data points without the new data point
+    xnew : float
+        The new data point
+    ddof : int, optional=0
+        Means Delta Degrees of Freedom. See doc of numpy.std().
+    """
+    sum_of_x = sum_of_x + xnew
+    sum_of_x_squared = sum_of_x_squared + xnew ** 2
+    n = n + 1  # update n
+    return sum_of_x, sum_of_x_squared, np.sqrt(1 / (n - ddof) * (sum_of_x_squared - 1 / n * (sum_of_x) ** 2))
 
 
-def _check_piv_software(software_name):
-    """Returns the common name of the software if in SUPPORTED_PIV_SOFTWARE
-    otherwise returns False"""
-    if software_name is not None:
-        software_name_lower = software_name.lower()
-        for av_software_name, av_software_alias in SUPPORTED_PIV_SOFTWARE.items():
-            for alias in av_software_alias:
-                if alias in software_name_lower:
-                    return av_software_name
-        print(utils.failtext(f'{software_name} not in list of supported piv software. '
-                              'Please check that there is no spelling mistake. '
-                              'Otherwise, please open an issue for it.\n'
-                              f'Supported software: {list(SUPPORTED_PIV_SOFTWARE.keys())}'))
-    else:
-        logger.warning(utils.failtext('Software not set as attribute in File!'))
-    return False
+def next_mean(mu, n_mu, new_val):
+    """Computes the mean of an array after adding a new value to it
+
+    Parameters
+    ----------
+    mu : float
+        Mean value of the array before adding the new value
+    n_mu : int
+        Number of values in the array before adding the new value
+    new_val : float
+        The new value
+    """
+    return (mu * n_mu + new_val) / (n_mu + 1)
+
+
+def _transpose_and_reshape_input(x, axis):
+    return x.transpose([axis, *[ax for ax in range(x.ndim) if ax != axis]]).reshape(
+        (x.shape[axis], x.size // x.shape[axis]))
+
+
+def _transpose_and_reshape_back_to_original(x, orig_shape, axis):
+    ndim = len(orig_shape)
+    transpose_order = np.zeros(ndim).astype(int)
+    transpose_order[axis] = 0
+    k = 1
+    for j in range(ndim):
+        if j != axis:
+            transpose_order[j] = k
+            k += 1
+    return x.reshape([orig_shape[axis], *[orig_shape[ax] for ax in range(ndim) if ax != axis]]).transpose(
+        transpose_order)
+
+
+def running_mean(x: np.ndarray, axis: int = 0) -> np.ndarray:
+    """Computation of running mean"""
+    if axis == -1:
+        axis = x.ndim
+    _x = _transpose_and_reshape_input(x, axis)
+    xm = np.zeros_like(_x)
+    m = _x[0, :]
+    for i in range(1, _x.shape[0]):
+        m = next_mean(m, i, _x[i, :])
+        xm[i, :] = m
+    return _transpose_and_reshape_back_to_original(xm, x.shape, axis)
+
+
+def running_std(x: np.ndarray, axis: int, ddof: int = 0) -> np.ndarray:
+    """Computation of running standard deviation"""
+    if axis == -1:
+        axis = x.ndim
+    _x = _transpose_and_reshape_input(x, axis)
+    x2 = _x ** 2
+    std = np.zeros_like(_x)
+    sum_of_x = np.sum(_x[0:ddof + 1], axis=0)
+    sum_of_x_squared = np.sum(x2[0:ddof + 1], axis=0)
+    std[0:ddof + 1] = np.nan
+    for i in range(ddof + 1, _x.shape[0]):
+        sum_of_x, sum_of_x_squared, std[i, :] = next_std(sum_of_x, sum_of_x_squared, i, _x[i, :], ddof=ddof)
+    return _transpose_and_reshape_back_to_original(std, x.shape, axis)
+
+
+def running_relative_standard_deviation(x, axis, ddof=0):
+    """Computes the running relative standard deviation using the running
+    mean as normalization."""
+    return running_std(x, axis, ddof) / running_mean(x, axis)
+
+
+class PIVMethod(Enum):
+    """root attribute: data_source_type"""
+    single_pass = 1
+    multi_pass = 2
+    multi_grid = 3
+
+
+class PIVWindowFunction(Enum):
+    """PIV Correlation Filter window type"""
+    Uniform = 1
+    Tukey = 2  # Tapered cosine
+    Blackman = 3
+    Hann = 4
+    Hamming = 5
+    Cosine = 6
+    Gauss = 7
+    LFC1 = 8
+    LFC2 = 9
+    LFC3 = 10
+
+
+class PIVCorrelationMode(Enum):
+    CrossCorrelation = 1
+    PhaseOnlyCorrelation = 2
+    MQD = 3
+    DirectCossCorrelation = 4
+    ErrorCorrelationFunction = 5
+
+
+class PIVParamAdapter(Protocol):
+    """Adapter Interface class"""
+
+    def get(self, key: str, default: Any = None) -> Union[Any, None]:
+        """Return the value associated with the key"""
+        value = self.param_dict.get(key)
+        if not value:
+            return default
+        return value
+
+
+class PIVviewParameters:
+    __slots__ = "preprocessing", "processing", "validation", "conversion"
+    software_name = 'pivview'
+
+    def __init__(self, param_dict: Dict) -> None:
+        self.preprocessing = param_dict['---- PIV image pre-processing parameters ----']
+        self.processing = param_dict['---- PIV processing parameters ----']
+        self.validation = param_dict['---- PIV validation parameters ----']
+        self.conversion = param_dict['---- PIV conversion parameters ----']
+
+    def to_file(self, filename):
+        """Write parameter to file"""
+        raise NotImplementedError()
+
+    def get(self, key: str, default: Any = None) -> Union[Any, None]:
+        """Return the value associated with the key"""
+        if key == 'method':
+            return self.processing.get('View0_PIV_Eval_Method') + 1
+        elif key == 'window_function':
+            return self.processing.get('View0_PIV_Eval_CorrFilter_WindowType') + 1
+        elif key == 'final_window_size':
+            return self.processing.get('View0_PIV_Eval_SampleSize')
+        elif key == 'overlap':
+            return self.processing.get('View0_PIV_Eval_SampleStep')
+        elif key == 'correlation_mode':
+            return self.processing.get('View0_PIV_Eval_CorrelationMode') + 1
+        return default
+
+
+class PIVSoftware:
+    """PIV-Software class"""
+
+    def __init__(self, name, version, **kwargs):
+        self._name = name
+        if version is None:
+            self._version = None
+        else:
+            self._version = str(version)
+        self._attrs = kwargs
+
+    @property
+    def name(self) -> str:
+        """returns software name"""
+        return self._name
+
+    @property
+    def version(self) -> str:
+        """returns software version"""
+        return self._version
+
+    def __getitem__(self, item):
+        if item == 'name':
+            return self._name
+        if item == 'version':
+            return self._version
+        return self._attrs[item]
+
+    def to_dict(self) -> dict:
+        """exports the data to a dictionary"""
+        _dict = self._attrs.copy()
+        _dict.update(dict(name=self._name, version=self._version))
+        return _dict
+
+
+class PIVParameters:
+
+    def __init__(self, piv_parameter):
+        self.piv_parameter = piv_parameter
+
+    @property
+    def method(self):
+        return PIVMethod(self.piv_parameter.get('method'))
+
+    @property
+    def final_window_size(self):
+        return self.piv_parameter.get('final_window_size')
+
+    @property
+    def window_function(self) -> PIVWindowFunction:
+        """cross correlation filter window type"""
+        return PIVWindowFunction(self.piv_parameter.get('window_function'))
+
+    @property
+    def correlation_mode(self) -> PIVCorrelationMode:
+        return PIVCorrelationMode(self.piv_parameter.get('correlation_mode'))
 
 
 class H5PIVLayout(H5FlowLayout):
+    """Layout for PIV data"""
 
-    def write(self):
+    def write(self) -> pathlib.Path:
         """The layout file has the structure of a H5Flow file. This means
         it has the required attributes, datasets and groups that are required
         for a valid H5Flow file. For each application case this is of course
@@ -62,7 +262,7 @@ class H5PIVLayout(H5FlowLayout):
         /time  -> dim=(0, 1), s
         """
         super().write()
-        with h5py.File(self.layout_file, mode='r+') as h5:
+        with h5py.File(self.filename, mode='r+') as h5:
             # grsetup = h5.create_group(name='Setup')
             # grpeq = grsetup.create_group(name='Equipment')
             # grpeq.create_group('Camera')
@@ -112,28 +312,41 @@ class H5PIVLayout(H5FlowLayout):
             ds_vel.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx, nv)
             ds_vel.attrs['standard_name'] = 'y_velocity'
 
+        return self.filename
+
 
 class H5PIVGroup(H5FlowGroup):
+    """Group for H5PIV"""
     pass
 
 
 class H5PIVDatset(H5FlowDataset):
+    """Dataset for H5PIV"""
     pass
 
 
-class H5PIV(H5Flow, H5PIVGroup):
+class H5PIV(H5Flow, H5PIVGroup, ABC):
+    """H5PIV File class"""
     Layout: H5PIVLayout = H5FlowLayout(Path.joinpath(utils.user_data_dir, f'layout/H5PIV.hdf'))
 
     @property
-    def timesteps(self):
-        return self['x'].shape[1]
+    def ntimesteps(self):
+        """returns the number of timestpes"""
+        if 'time' in self:
+            return self['time'].size
+        raise KeyError(f'No dataset "time" in file. Cannot determine the number '
+                       f'of timesteps')
 
     @property
     def nplanes(self):
-        return self['x'].shape[0]
+        """returns the number of planes"""
+        if 'z' in self:
+            return self['z'].size
+        raise KeyError(f'No dataset "z"" in file. Cannot determine the number '
+                       f'of timesteps')
 
     @property
-    def extent(self):
+    def extent(self) -> Tuple[Tuple[float], Tuple[float]]:
         """
         Returns min and max coordinates of PIV volume
 
@@ -149,87 +362,70 @@ class H5PIV(H5Flow, H5PIVGroup):
         return tuple(_min), tuple(_max)
 
     @property
-    def software(self):
+    def software(self) -> Union[PIVSoftware, None]:
         """Returns attribute 'software'"""
         if 'software' in self.attrs:
-            return self.attrs.get('software')
+            _software = self.attrs.get('software')
         else:
-            return self.attrs['pivview_parameters'].get('software')
+            _software = self.attrs['pivview_parameters'].get('software')
+
+        if isinstance(_software, dict):
+            name = _software.pop('name', None)
+            if name is None:
+                warnings.warn(f'Software attribute cannot be interpreted: {name}')
+                return None
+            return PIVSoftware(name, _software.pop('version', None),
+                               **_software)
+        elif isinstance(_software, (tuple, list)):
+            return PIVSoftware(*_software)
+        # expecting a str
+        return PIVSoftware(_software, version=None)
 
     @software.setter
-    def software(self, software_name):
-        common_software_name = _check_piv_software(software_name)
-        if common_software_name:
-            if software_name is not None:
-                self.attrs['software'] = software_name
+    def software(self, software: Union[PIVSoftware, str], **kwargs):
+        if isinstance(software, str):
+            version = kwargs.pop('version', None)
+            _software = PIVSoftware(software, version=version, **kwargs)
+        elif isinstance(software, tuple):
+            if len(software) > 3:
+                _software = PIVSoftware(*software)
+            else:
+                raise ValueError('Only excepts tuples of length 2, e.g. ("softwarename", "version", extra_dict)')
         else:
-            raise ValueError(f'"{software_name}" is not an unknown software')
+            _software = software
+        self.attrs['software'] = _software.to_dict()
 
-    @property
-    def final_interrogation_window_size(self):
-        common_software_name = _check_piv_software(self.software)
-        if common_software_name == 'pivview':
-            if 'interrogation_window_size' in self.attrs:
-                return np.asarray(self.attrs['interrogation_window_size'])
-            elif 'ev_IS_size_x' in self.attrs:
-                return np.array([self.attrs['ev_IS_size_x'], self.attrs['ev_IS_size_y'], self.attrs['ev_IS_size_z']])
-            elif 'pivview_parameters' in self.attrs:
-                pivview_parameters = self.attrs['pivview_parameters']
+    def get_parameters(self, iz: int = None) -> PIVParameters:
+        """Retruns the PIVParameter class of the respective software (if identified)
 
-                if isinstance(pivview_parameters, str):
-                    pivview_parameters = json.loads(pivview_parameters)
-                return np.array([pivview_parameters['ev_IS_size_x'], pivview_parameters['ev_IS_size_y'],
-                                 pivview_parameters['ev_IS_size_z']])
+        if pivview is identified:
+            Returns an instance of PivViewParFle. It looks for the parameter dictionary depending on the
+            data structure:
+            - z-coordinate is 0D: It is a PIV plane and piv_parameter dictionary is stored in the root attributes
+            - z-coordinate is 1D: There is a piv_parameter group at root level with a parameter dictionary for each plane
 
-    @property
-    def final_window_size(self):
-        # alias for final_interrogation_window_size
-        return self.final_interrogation_window_size
+            As HDF files cannot store dictionares, the parameters are stred as a string-representation of a dictionary
+            (json.dumps()
+        """
+        software = self.software
 
-    @property
-    def window_size(self):
-        # alias for final_interrogation_window_size
-        return self.final_interrogation_window_size
+        def _get_parameter_dict():
+            if 'piv_parameters' in self.attrs:  # at root level --> valid for all z
+                return [self.attrs['piv_parameters'], ]
+            else:
+                plane_candidates = sorted(list([k for k in self.groups if 'plane' in k]))
+                return [plane_candidates.attrs['piv_parameters'] for pc in plane_candidates]
 
-    @property
-    def interrogation_window_overlap(self):
-        common_software_name = _check_piv_software(self.software)
-        if common_software_name == 'pivview':
-            if 'interrogation_window_overlap' in self.attrs:
-                return self.attrs['interrogation_window_overlap']
-            elif 'ev_multigrid_step_x' in self.attrs:
-                multigrid_wins = self.attrs['ev_multigrid_win_x'], self.attrs['ev_multigrid_win_y']
-                multigrid_steps = self.attrs['ev_multigrid_step_x'], self.attrs['ev_multigrid_step_y']
-                return multigrid_steps[0] / multigrid_wins[0], multigrid_steps[1] / multigrid_wins[1]
-            elif 'pivview_parameters' in self.attrs:
-                pivview_parameters = self.attrs['pivview_parameters']
-                if isinstance(pivview_parameters, str):  # str-dictionary
-                    pivview_parameters = json.loads(pivview_parameters)
-                multigrid_wins = pivview_parameters['ev_multigrid_win_x'], pivview_parameters['ev_multigrid_win_y']
-                multigrid_steps = pivview_parameters['ev_multigrid_step_x'], pivview_parameters['ev_multigrid_step_y']
-                return multigrid_steps[0] / multigrid_wins[0], multigrid_steps[1] / multigrid_wins[1]
+        piv_parameter_list = _get_parameter_dict()
+        if len(piv_parameter_list) > 1 and iz is None:
+            raise KeyError('You must specify the plane.')
+        else:
+            iz = 0
 
-    @property
-    def window_overlap(self):
-        """alias of interrogation_window_overlap"""
-        return self.interrogation_window_overlap
-
-    @property
-    def overlap(self):
-        """alias of interrogation_window_overlap"""
-        return self.interrogation_window_overlap
-
-    @property
-    def evaluation_method(self):
-        common_software_name = _check_piv_software(self.software)
-        if common_software_name == 'pivview':
-            if 'evaluation_method' in self.attrs:
-                return self.attrs['evaluation_method']
-            elif 'ev_method' in self.attrs:
-                return self.attrs['ev_method']
-            elif 'pivview_parameters' in self.attrs:
-                pivview_parameters = self.attrs['pivview_parameters']
-                return pivview_parameters['ev_method']
+        for key, value in AV_PIV_PARAMETER.items():
+            if software.name in key:
+                return PIVParameters(value(piv_parameter_list[iz]))
+        raise NotImplementedError(f'No PIV Parameter class for software {software.name}.')
 
     @property
     def resolution(self):
@@ -276,6 +472,7 @@ class H5PIV(H5Flow, H5PIVGroup):
         return res_xy, res_xyz
 
     def compute_uncertainty(self, displacement_dataset: VectorDataset, method: Callable, *args, **kwargs):
+        """computes the PIV uncertainty based on the displacement vector and method passed"""
         return displacement_dataset(method, *args, **kwargs)
 
     def special_inspect(self, silent: bool = False) -> int:
@@ -345,25 +542,6 @@ class H5PIV(H5Flow, H5PIVGroup):
     def get_piv_sample_step(self, iz: int = 0) -> List[int]:
         par = self.get_piv_parameters(iz)
         return eval(par['PIV processing parameters']['View0_PIV_Eval_SampleStep'])
-
-    def get_piv_parameters(self, iz=0) -> PivViewParFile:
-        """Returns an instance of PivViewParFle. It looks for the parameter dictionary depending on the
-        data structure:
-        - z-coordinate is 0D: It is a PIV plane and piv_parameter dictionary is stored in the root attributes
-        - z-coordinate is 1D: There is a piv_parameter group at root level with a parameter dictionary for each plane
-
-        As HDF files cannot store dictionares, the parameters are stred as a string-representation of a dictionary
-        (json.dumps()"""
-        piv_software = self.software
-        if 'pivview' in piv_software.lower():
-            par = PivViewParFile()
-            if 'piv_parameters' in self.attrs:
-                par.read_dict(self.attrs['piv_parameters'])
-            elif 'piv_parameters' in self:
-                par.read_dict(self['piv_parameters'].attrs[f'plane{iz}'])
-            return par
-        else:
-            raise NotImplementedError(f'H5PIV currently ony supports PivTec PIVview')
 
     def __init__(self, name=None, mode="r+", title=None, standard_name_table=None,
                  software=None, run_layout_check=False, **kwargs):
@@ -463,7 +641,7 @@ class H5PIV(H5Flow, H5PIVGroup):
         if name in self and not overwrite:
             # let h5py raise the error:
             self.create_dataset(name, shape=(1,))
-        dwdz = pivutils.compute_z_derivative_of_z_velocity(dudx[:].pint.quantify(), dvdy[:].pint.quantify())
+        dwdz = -dudx[:].pint.quantify() - dvdy[:].pint.quantify()
         ds = self.create_dataset(name=name, standard_name='z_derivative_of_z_velocity',
                                  long_name=long_name,
                                  data=dwdz, overwrite=overwrite)
@@ -659,8 +837,8 @@ class H5PIV(H5Flow, H5PIVGroup):
                 _vtk_filename = Path.joinpath(vtk_filename.parent, vtk_filename.stem)
             else:
                 _vtk_filename = vtk_filename
-        data = piv2hdf.vtk_utils.get_time_average_data_from_piv_case(self.filename)
-        _, vtk_path = piv2hdf.vtk_utils.result_3D_to_vtk(
+        data = piv.vtk_utils.get_time_average_data_from_piv_case(self.filename)
+        _, vtk_path = piv.vtk_utils.result_3D_to_vtk(
             data, target_filename=_vtk_filename)
         return vtk_path
 
@@ -674,3 +852,6 @@ class PIVDisplacementDataset(DisplacementDataset):
     def compute_uncertainty(self, method: Callable, *args, **kwargs):
         """computes the uncertainty using the passed method"""
         return method(self, *args, **kwargs)
+
+
+AV_PIV_PARAMETER = {'pivview': PIVviewParameters, }

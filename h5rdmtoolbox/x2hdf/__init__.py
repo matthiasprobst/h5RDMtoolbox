@@ -1,7 +1,7 @@
-from . import piv2hdf
+from . import piv
 from ._logger import logger, _file_handler, _stream_handler
 from .cfd.ansys.cfx2hdf import cfx2hdf
-from .piv2hdf.pivview import PIVSnapshot, PIVPlane, PIVMultiPlane
+from .piv.pivview import PIVSnapshot, PIVPlane, PIVMultiPlane
 
 
 def set_loglevel(level):
