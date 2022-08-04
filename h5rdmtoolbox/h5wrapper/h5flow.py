@@ -257,7 +257,7 @@ class H5FlowDataset(H5Dataset):
 class H5FlowLayout(conventions.H5FileLayout):
     """Layout class for H5Flow wrapper class"""
 
-    def write(self):
+    def write(self)  -> Path:
         """The layout file has the structure of a H5Flow file. This means
         it has the required attributes, datasets and groups that are required
         for a valid H5Flow file. For each application case this is of course
@@ -285,7 +285,7 @@ class H5FlowLayout(conventions.H5FileLayout):
             ds_z.attrs['standard_name'] = 'z_coordinate'
             ds_t.attrs['units'] = 's'
             ds_t.attrs['__ndim__'] = (0, 1)
-
+        return self.filename
 
 class H5Flow(H5File, H5FlowGroup):
     """H5Flow File wrapper class"""

@@ -217,7 +217,7 @@ def get_xr_dataset(name):
         return poiseuille2D(np.linspace(0, 4, 2), np.linspace(0, 4, 10), 2)
 
 
-def get_H5PIV(name, mode) -> pathlib.Path:
+def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
     """Returns the HDF filename of a tutoral case."""
     from .h5wrapper import H5PIV
     if name == 'minimal_flow':

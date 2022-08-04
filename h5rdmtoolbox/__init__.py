@@ -38,7 +38,6 @@ def clean_temp_data():
     """cleaning up the tmp directory"""
     if user_tmp_dir.exists():
         try:
-            print(user_tmp_dir)
             shutil.rmtree(user_tmp_dir)
         except RuntimeError as e:
             print(f'removing tmp folder "{user_tmp_dir}" failed due to "{e}". Best is you '

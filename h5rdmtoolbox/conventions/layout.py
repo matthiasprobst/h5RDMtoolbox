@@ -1,4 +1,5 @@
 import logging
+import pathlib
 from pathlib import Path
 
 import h5py
@@ -180,7 +181,7 @@ class H5FileLayout:
             display(HTML(_repr.h5file_html_repr(h5, max_attr_length, preamble=preamble,
                                                 build_debug_html_page=build_debug_html_page)))
 
-    def write(self):
+    def write(self) -> pathlib.Path:
         """write the static layout file to user data dir"""
         if not self.filename.parent.exists():
             self.filename.parent.mkdir(parents=True)
@@ -190,6 +191,7 @@ class H5FileLayout:
             h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
             h5.attrs['creation_time'] = '__time of file creation'
             h5.attrs['modification_time'] = '__time of last file modification'
+        return self.filename
 
     def check_dynamic(self, root_grp: h5py.Group, silent: bool = False) -> int:
         return 0
