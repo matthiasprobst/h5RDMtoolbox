@@ -20,7 +20,7 @@ logger = logging.getLogger('x2hdf')
 
 # use this name to store pivview parameters/config in HDF file (for snapshot and plane, an attribute name at root level
 # is created. A case file gets a group called as defined below and then creates "plane00", "plane01", ... attributes.
-PIV_PARAMTER_HDF_NAME = 'piv_parameters'
+PIV_PARAMTER_HDF_NAME = 'piv_parameter'
 
 DIM_NAMES = ('z', 'time', 'y', 'x', 'ix', 'iy')
 DIM_NAMES_TIMEAVERAGED = ('z', 'y', 'x', 'ix', 'iy')

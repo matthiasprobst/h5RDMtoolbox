@@ -139,11 +139,17 @@ class PIVSnapshot(core.PIVNCConverter):
                     else:
                         par = PivViewConfigFile()
                     par.read(self.parameter_file)
-                    main.attrs[core.PIV_PARAMTER_HDF_NAME] = json.dumps(par.to_dict())
+                    piv_param_grp = main.create_group('piv_parameter')
+                    par.to_hdf_group(piv_param_grp)
+                    # main.attrs[core.PIV_PARAMTER_HDF_NAME] = json.dumps(par.to_dict())
+                    piv_param_grp.attrs['dict'] = json.dumps(par.to_dict())
                 else:
                     par = PivViewConfigFile()
                     par.read_nc(self.name)
-                    main.attrs[core.PIV_PARAMTER_HDF_NAME] = json.dumps(par.to_dict())
+                    piv_param_grp = main.create_group('piv_parameter')
+                    par.to_hdf_group(piv_param_grp)
+                    # main.attrs[core.PIV_PARAMTER_HDF_NAME] = json.dumps(par.to_dict())
+                    piv_param_grp.attrs['dict'] = json.dumps(par.to_dict())
 
             for i, cname in enumerate(('x', 'y', 'ix', 'iy')):
                 ds = main.create_dataset(

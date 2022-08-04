@@ -217,28 +217,29 @@ class PIVPlane(core.PIVNCConverter):
                         core.copy_attributes(nc_variable_attr[cname], h5main[cname])
 
                 # init datasets with full shape:
-                for key in h5snapshot.keys():
-                    if key not in core.DIM_NAMES:
-                        _shape = (self.nt, self.ny, self.nx)
-                        _chunks = (1, self.ny, self.nx)
-                        ds = h5main.create_dataset(key,
-                                                   shape=_shape,
-                                                   maxshape=_shape,
-                                                   chunks=_chunks,
-                                                   compression=self.configuration['compression'],
-                                                   compression_opts=self.configuration['compression_opts'])
+                datasets = {k: v for k, v in h5snapshot.items() if
+                            isinstance(v, h5py.Dataset) and k not in core.DIM_NAMES}
+                for key in datasets.keys():
+                    _shape = (self.nt, self.ny, self.nx)
+                    _chunks = (1, self.ny, self.nx)
+                    ds = h5main.create_dataset(key,
+                                               shape=_shape,
+                                               maxshape=_shape,
+                                               chunks=_chunks,
+                                               compression=self.configuration['compression'],
+                                               compression_opts=self.configuration['compression_opts'])
 
-                        # copy variable attributes (only done once!)
-                        logger.debug(f'Copying attributes for dataset {key}')
-                        if key in h5snapshot.keys():
-                            core.copy_attributes(h5snapshot[key].attrs, ds)
+                    # copy variable attributes (only done once!)
+                    logger.debug(f'Copying attributes for dataset {key}')
+                    if key in h5snapshot.keys():
+                        core.copy_attributes(h5snapshot[key].attrs, ds)
 
-                        ds.dims[0].attach_scale(h5main['time'])
-                        ds.dims[1].attach_scale(h5main['y'])
-                        ds.dims[2].attach_scale(h5main['x'])
-                        ds.dims[1].attach_scale(h5main['iy'])
-                        ds.dims[2].attach_scale(h5main['ix'])
-                        ds.attrs['COORDINATES'] = ['z', ]
+                    ds.dims[0].attach_scale(h5main['time'])
+                    ds.dims[1].attach_scale(h5main['y'])
+                    ds.dims[2].attach_scale(h5main['x'])
+                    ds.dims[1].attach_scale(h5main['iy'])
+                    ds.dims[2].attach_scale(h5main['ix'])
+                    ds.attrs['COORDINATES'] = ['z', ]
 
     def _convert_serial(self):
         with h5py.File(self.hdf_filename, 'r+') as h5main:
@@ -265,30 +266,45 @@ class PIVPlane(core.PIVNCConverter):
                     # calculate timeAverages:
                     av_grp = h5main.create_group('timeAverages')
                     av_grp.attrs['long_name'] = 'Time averaged datasets.'
-                    for key in h5main.keys():
-                        if key not in core.DIM_NAMES:
-                            if key not in ('valid', 'piv_flags') and isinstance(h5main[key], h5py.Dataset):
-                                _shape = (self.ny, self.nx)
-                                _chunks = (self.ny, self.nx)
 
-                                av_ds = av_grp.create_dataset(name=key, shape=_shape, maxshape=_shape, chunks=_chunks,
-                                                              compression=self.configuration['compression'],
-                                                              compression_opts=self.configuration['compression_opts'])
-                                av_ds[:] = np.mean(h5main[key][...], axis=0)
+                    datasets = {k: v for k, v in h5main.items() if
+                                isinstance(v, h5py.Dataset) and k not in ('valid', 'piv_flags', *core.DIM_NAMES)}
+                    for key, value in datasets.items():
+                        _shape = (self.ny, self.nx)
+                        _chunks = (self.ny, self.nx)
 
-                                # attach_scale
-                                for ic, c in enumerate((('y', 'iy'), ('x', 'ix'))):
-                                    av_ds.dims[ic].attach_scale(h5main[c[0]])
-                                    av_ds.dims[ic].attach_scale(h5main[c[1]])
+                        av_ds = av_grp.create_dataset(name=key, shape=_shape, maxshape=_shape, chunks=_chunks,
+                                                      compression=self.configuration['compression'],
+                                                      compression_opts=self.configuration['compression_opts'])
+                        av_ds[:] = np.mean(value[...], axis=0)
 
-                                # copy attributes from first nc file
-                                av_ds.attrs[self.configuration['attrs_unit_name']] = h5main[key].attrs[
-                                    self.configuration['attrs_unit_name']
-                                ]
-                                if 'long_name' in h5main[key].attrs:
-                                    av_ds.attrs['long_name'] = h5main[key].attrs['long_name']
-                                if 'standard_name' in h5main[key].attrs:
-                                    av_ds.attrs['standard_name'] = h5main[key].attrs['standard_name']
+                        # attach_scale
+                        for ic, c in enumerate((('y', 'iy'), ('x', 'ix'))):
+                            av_ds.dims[ic].attach_scale(h5main[c[0]])
+                            av_ds.dims[ic].attach_scale(h5main[c[1]])
+
+                        # copy attributes from first nc file
+                        av_ds.attrs[self.configuration['attrs_unit_name']] = value.attrs[
+                            self.configuration['attrs_unit_name']
+                        ]
+                        if 'long_name' in value.attrs:
+                            av_ds.attrs['long_name'] = value.attrs['long_name']
+                        if 'standard_name' in value.attrs:
+                            av_ds.attrs['standard_name'] = value.attrs['standard_name']
+            # copy piv parameters
+
+            main_piv_parameter_grp = h5main.create_group('piv_parameter')
+            # the first snapshot file is created every other not
+            with h5py.File(self.snapshots[0].hdf_filename, 'r') as h5snapshot:
+                for src in h5snapshot['piv_parameter'].keys():
+                    pgrp = main_piv_parameter_grp.create_group(src)
+                    src = h5snapshot['piv_parameter'][src]
+                    for k, v in src.attrs.items():
+                        pgrp.attrs[k] = v
+                    for k, v in src.items():
+                        ds = pgrp.create_dataset(k, data=v[()])
+                        for ak, av in v.attrs.items():
+                            ds.attrs[ak] = av
 
     def _convert_parallel(self, nproc):
         raise NotImplementedError()
@@ -408,6 +424,21 @@ class MultiPlaneInputError(Exception):
         super().__init__(self.message)
 
 
+def copy_piv_parameter(src: h5py.Group, trg: h5py.Group):
+    """copies the iv parmeter group to another piv_parameter group"""
+    assert trg.name.rsplit('/', 1)[1] == 'piv_parameter'
+    for pname, pgrp in src.items():
+        for k, v in src.attrs.items():
+            trg.attrs[k] = v
+        trg_pgp = trg.create_group(pname)
+        for k, v in pgrp.attrs.items():
+            trg_pgp.attrs[k] = v
+        for k, v in pgrp.items():
+            ds = trg_pgp.create_dataset(k, data=v[()])
+            for ak, av in v.attrs.items():
+                ds.attrs[ak] = av
+
+
 def _generate_plane_group(iz, nz):
     return f'plane{iz:0{len(str(nz))}}'
 
@@ -494,7 +525,8 @@ def merge_multiple_plane_hdf_files(plane_hdf_files: List[pathlib.Path], target_f
 
             # copy piv parameters from first plane to attribute plane0 of group PIV_PARAMETER_HDF_NAME
             iz = 0
-            h5planegroups[iz].attrs[core.PIV_PARAMTER_HDF_NAME] = h5plane.attrs[core.PIV_PARAMTER_HDF_NAME]
+            copy_piv_parameter(h5plane['piv_parameter'], h5planegroups[iz].create_group('piv_parameter'))
+            # h5planegroups[iz].attrs[core.PIV_PARAMTER_HDF_NAME] = h5plane.attrs[core.PIV_PARAMTER_HDF_NAME]
             nx = h5plane['x'].size
             ny = h5plane['y'].size
 
@@ -538,7 +570,8 @@ def merge_multiple_plane_hdf_files(plane_hdf_files: List[pathlib.Path], target_f
 
                     # write pivview parameters to group
                     with h5py.File(plane_hdf, 'r') as h5plane:
-                        h5planegroups[iz].attrs[core.PIV_PARAMTER_HDF_NAME] = h5plane.attrs[core.PIV_PARAMTER_HDF_NAME]
+                        copy_piv_parameter(h5plane['piv_parameter'], h5planegroups[iz].create_group('piv_parameter'))
+                        # h5planegroups[iz].attrs[core.PIV_PARAMTER_HDF_NAME] = h5plane.attrs[core.PIV_PARAMTER_HDF_NAME]
 
                         h5case['z'][iz] = h5plane['z'][()]
 
@@ -800,30 +833,31 @@ class PIVMultiPlane(core.PIVNCConverter):
                     dst[0] = h5snapshot['time'][()]
 
                     # dataset for each plane individually:
-                    for k, v in h5snapshot.items():
-                        if k not in core.DIM_NAMES:
-                            _shape = (self.nt, self.ny, self.nx)
-                            _chunks = (1, self.ny, self.nx)
-                            ds = gr.create_dataset(
-                                name=k,
-                                shape=_shape,
-                                maxshape=_shape,
-                                chunks=_chunks,
-                                compression=self.configuration['compression'],
-                                compression_opts=self.configuration[
-                                    'compression_opts'])
+                    datasets = {k: v for k, v in h5snapshot.items() if
+                                isinstance(v, h5py.Dataset) and k not in core.DIM_NAMES}
+                    for k, v in datasets.items():
+                        _shape = (self.nt, self.ny, self.nx)
+                        _chunks = (1, self.ny, self.nx)
+                        ds = gr.create_dataset(
+                            name=k,
+                            shape=_shape,
+                            maxshape=_shape,
+                            chunks=_chunks,
+                            compression=self.configuration['compression'],
+                            compression_opts=self.configuration[
+                                'compression_opts'])
 
-                            ds[0, ...] = h5snapshot[k][...]
-                            ds.dims[0].attach_scale(dst)
-                            ds.dims[1].attach_scale(gr['y'])
-                            ds.dims[2].attach_scale(gr['x'])
-                            ds.dims[1].attach_scale(gr['iy'])
-                            ds.dims[2].attach_scale(gr['ix'])
-                            ds.attrs.modify('COORDINATES', ['z', ])
+                        ds[0, ...] = h5snapshot[k][...]
+                        ds.dims[0].attach_scale(dst)
+                        ds.dims[1].attach_scale(gr['y'])
+                        ds.dims[2].attach_scale(gr['x'])
+                        ds.dims[1].attach_scale(gr['iy'])
+                        ds.dims[2].attach_scale(gr['ix'])
+                        ds.attrs.modify('COORDINATES', ['z', ])
 
-                            for ak, av in h5snapshot[k].attrs.items():
-                                if ak not in ('DIMENSION_LIST', 'CLASS', 'NAME', 'REFERENCE_LIST', 'COORDINATES'):
-                                    ds.attrs.modify(ak, av)
+                        for ak, av in h5snapshot[k].attrs.items():
+                            if ak not in ('DIMENSION_LIST', 'CLASS', 'NAME', 'REFERENCE_LIST', 'COORDINATES'):
+                                ds.attrs.modify(ak, av)
 
     def _init_target_file(self):
         """Creates empty datasets with correct structure (based on first snapshot).
@@ -871,27 +905,29 @@ class PIVMultiPlane(core.PIVNCConverter):
                 dst[0] = h5snapshot['time'][()]
 
                 # init the dataset shapes for all datasets. time axis included as time is equal for all planes
-                for k, v in h5snapshot.items():
-                    if k not in core.DIM_NAMES:
-                        _shape = (self.nz, self.nt, self.ny, self.nx)
-                        _chunks = (1, 1, self.ny, self.nx)
-                        ds = h5main.create_dataset(name=k,
-                                                   shape=_shape,
-                                                   maxshape=_shape,
-                                                   chunks=_chunks,
-                                                   compression=self.configuration['compression'],
-                                                   compression_opts=self.configuration['compression_opts'])
-                        for ak, av in h5snapshot[k].attrs.items():
-                            if ak not in ('DIMENSION_LIST', 'CLASS', 'NAME', 'REFERENCE_LIST', 'COORDINATES'):
-                                ds.attrs[ak] = av
+                datasets = {k: v for k, v in h5snapshot.items() if
+                            isinstance(v, h5py.Dataset) and k not in core.DIM_NAMES}
+                for k, v in datasets.items():
+                    _shape = (self.nz, self.nt, self.ny, self.nx)
+                    _chunks = (1, 1, self.ny, self.nx)
+                    ds = h5main.create_dataset(name=k,
+                                               shape=_shape,
+                                               maxshape=_shape,
+                                               chunks=_chunks,
+                                               compression=self.configuration['compression'],
+                                               compression_opts=self.configuration['compression_opts'])
+                    for ak, av in h5snapshot[k].attrs.items():
+                        if ak not in ('DIMENSION_LIST', 'CLASS', 'NAME', 'REFERENCE_LIST', 'COORDINATES'):
+                            ds.attrs[ak] = av
 
             # open first snapshot of all planes (which are already converted)
             # and write x,y,z data:
             for iplane, _plane in enumerate(self.planes):
                 with h5py.File(_plane.snapshots[0].hdf_filename, 'r') as h5snapshot:
-                    for dsname, ds in h5snapshot.items():
-                        if dsname not in core.DIM_NAMES:
-                            h5main[dsname][iplane, 0, ...] = ds[:]
+                    datasets = {k: v for k, v in h5snapshot.items() if
+                                isinstance(v, h5py.Dataset) and k not in core.DIM_NAMES}
+                    for dsname, ds in datasets.items():
+                        h5main[dsname][iplane, 0, ...] = ds[:]
                     h5main['z'][iplane] = h5snapshot['z'][()]
 
     def _convert_serial_individual_plane(self):
@@ -1006,15 +1042,10 @@ class PIVMultiPlane(core.PIVNCConverter):
                                     av_ds[iplane, ...] = np.mean(planegrp[key][...], axis=0)
 
                 # at the end, write PIVview parameters/configuration of all planes in separate group
-
-                # piv_par_grp = h5main.create_group(
-                #     core.PIV_PARAMTER_HDF_NAME)  # group to store parameters or configuration.
-                # piv_par_grp.attrs['long_name'] = 'Group providing PIV evaluation settings for each plane'
                 for iz, _plane in enumerate(self.planes):
-                    grpname = f'plane{iz:0{len(str(self.nz))}}'
-                    # the first snapshot file is created every other not
+                    piv_param_grp = h5main[f'plane{iz:0{len(str(self.nz))}}'].create_group('piv_parameter')
                     with h5py.File(_plane.snapshots[0].hdf_filename, 'r') as h5plane:
-                        h5main[grpname].attrs[core.PIV_PARAMTER_HDF_NAME] = h5plane.attrs[core.PIV_PARAMTER_HDF_NAME]
+                        copy_piv_parameter(h5plane['piv_parameter'], piv_param_grp)
 
     def _convert_parallel(self):
         """Parallel conversion. Not implemented yet."""

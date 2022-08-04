@@ -91,7 +91,7 @@ class PivViewParFile(ConfigParser):
         self.header_line = read_header_line(filenames)
         super().read(filenames, encoding)
 
-    def to_hdf_group(self, target: h5py.Group) -> h5py.Group:
+    def to_hdf_group(self, target: h5py.Group, separate_into_groups: bool = True) -> h5py.Group:
         current_track_order = h5py.get_config().track_order
         h5py.get_config().track_order = True
         for section in self.sections():
@@ -103,19 +103,68 @@ class PivViewParFile(ConfigParser):
             else:
                 grpname = section
             if grpname:
-                if grpname not in target:
-                    g = target.create_group(grpname, track_order=True)
-                else:
-                    g = target[grpname]
-                for item, value in self.items(section):
-                    # print(section, item, value)
-                    if value:  # Add check for empty space after "=", if empty, a 0 wil be written as attribute
-                        if value[0] == '"':
-                            g.attrs[item] = value.strip('"')
+                param_dict = dict(self.items(section))
+                if param_dict:
+                    if separate_into_groups:
+                        if 'conversion' in grpname:
+                            short_grpname = 'conversion'
+                        elif 'pre-' in grpname:
+                            short_grpname = 'preprocessing'
+                        elif 'post-' in grpname:
+                            short_grpname = 'postprocessing'
+                        elif 'PIV processing' in grpname:
+                            short_grpname = 'processing'
+                        elif 'validation' in grpname:
+                            short_grpname = 'validation'
                         else:
-                            g.attrs[item] = eval(value)
+                            raise RuntimeError(f'Could not interprete section name {grpname}')
+                        if grpname not in target:
+                            g = target.create_group(short_grpname, track_order=True)
+                        else:
+                            g = target[grpname]
                     else:
-                        g.attrs[item] = 0
+                        g = target
+
+                    if grpname == 'PIV conversion parameters':
+                        length_conversion = param_dict.pop("View0_PIV_Conv_LengthConversion")
+                        ds = g.create_dataset('View0_PIV_Conv_LengthConversion', data=eval(length_conversion))
+                        length_conversion_units = param_dict.pop("View0_PIV_Conv_LengthConversionUnits").strip('"')
+                        ds.attrs['units'] = f'px/{length_conversion_units}'
+                        ds.attrs['standard_name'] = 'length_conversion'
+
+                        pulse_delay = param_dict.pop("View0_PIV_Conv_PulseDelay")
+                        ds = g.create_dataset('View0_PIV_Conv_PulseDelay', data=eval(pulse_delay))
+                        ds.attrs['units'] = param_dict.pop("View0_PIV_Conv_PulseDelayUnits").strip('"')
+                        ds.attrs['standard_name'] = 'pulse_delay'
+
+                    if grpname == 'PIV processing parameters':
+                        _value = param_dict.pop("View0_PIV_Eval_MultiGrid_SampleSize")
+                        ds = g.create_dataset('View0_PIV_Eval_MultiGrid_SampleSize', data=eval(_value))
+                        ds.attrs['units'] = 'px'
+                        ds.attrs['standard_name'] = 'final_interrogation_window_size'
+
+                        _value = param_dict.pop("View0_PIV_Eval_MultiGrid_SampleStep")
+                        ds = g.create_dataset('View0_PIV_Eval_MultiGrid_SampleStep', data=eval(_value))
+                        ds.attrs['units'] = 'px'
+                        ds.attrs['standard_name'] = 'final_interrogation_window_overlap'
+
+                    for item, value in param_dict.items():
+                        # print(section, item, value)
+                        if value:  # Add check for empty space after "=", if empty, a 0 wil be written as attribute
+                            if value[0] == '"':
+                                g.attrs[item] = value.strip('"')
+                            else:
+                                # evaluated_value = eval(value)
+                                # if isinstance(evaluated_value, (list, tuple)):
+                                #     ds = g.create_dataset(name=item, data=evaluated_value)
+                                #     ds.attrs['units'] = 'px'
+                                #     sn = pivview_to_standardnames_dict.get(item, None)
+                                #     if sn:
+                                #         ds.attrs['stanard_name'] = sn
+                                # else:
+                                g.attrs[item] = eval(value)
+                        else:
+                            g.attrs[item] = 0
         h5py.get_config().track_order = current_track_order
         return target
 
