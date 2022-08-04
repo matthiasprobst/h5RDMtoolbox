@@ -86,8 +86,18 @@ class TestCommon(unittest.TestCase):
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             self.assertTrue(wc.Layout.filename.exists())
             self.assertEqual(wc.Layout.filename.stem, wc.__name__)
+
+        with h5tbx.H5File() as h5:
+            h5.attrs['mandatory_attribute'] = 1
+            tmp_layout_filename = h5.hdf_filename
+        h5tbx.H5File.Layout = h5tbx.conventions.H5FileLayout(tmp_layout_filename)
+
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            self.assertTrue(wc.Layout.filename.exists())
+            if wc == h5tbx.H5File:
+                self.assertEqual(wc.Layout.filename, tmp_layout_filename)
             with wc() as h5:
-                n_issuess = h5.check()
+                n_issuess = h5.check(silent=True)
                 self.assertIsInstance(n_issuess, int)
                 self.assertTrue(n_issuess > 0)
 
@@ -113,7 +123,7 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.filesize.units, ureg.byte)
                 self.assertIsInstance(h5.hdf_filename, pathlib.Path)
 
-    def test_common_method(self):
+    def test_open_wrapper(self):
         from h5rdmtoolbox.utils import generate_temporary_filename
         from h5rdmtoolbox.h5wrapper import open_wrapper
         for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
