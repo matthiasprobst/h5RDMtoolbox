@@ -119,6 +119,14 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     else:
                         rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
                         return rootgrp.get(ret)
+                elif ret[0] == '(':
+                    if ret[-1] == ')':
+                        return eval(ret)
+                    return ret
+                elif ret[0] == '[':
+                    if ret[-1] == ']':
+                        return eval(ret)
+                    return ret
                 else:
                     return ret
             else:
