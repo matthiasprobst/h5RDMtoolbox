@@ -61,6 +61,12 @@ class PIVSnapshot(core.PIVNCConverter):
             # load parameter/config file from file if exists
             self.parameter_file = core.get_parameter_file_from_plane(self.name.parent)
 
+    def __repr__(self):
+        return f'PIVSnapshot. input filename: {self.name.name}, recording_time: {self.recording_time}'
+
+    def __str__(self):
+        return self.__repr__()
+
     @property
     def is_2d2c(self) -> bool:
         """returns whether the PIV data is 2D2C or not"""

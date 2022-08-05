@@ -58,7 +58,7 @@ You may install optional dependencies:
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
    :caption: Documentation
 

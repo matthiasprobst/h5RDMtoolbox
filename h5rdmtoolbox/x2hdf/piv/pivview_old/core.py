@@ -69,16 +69,16 @@ def scan_for_nc_files(folder_path: Path):
     return sorted(folder_path.glob('*.nc'))
 
 
-def scan_for_timeseries_nc_files(folder_path: Path) -> List[Path]:
+def scan_for_timeseries_nc_files(folder_path: Path, suffix:str) -> List[Path]:
     """
     Scans for nc files (extension '.nc') in folder. Omits all files that do not end with numeric character [0-9]
     or end with [0-9] and a single character.
     """
-    list_of_files = sorted(folder_path.glob('*[0-9]?.nc'))
+    list_of_files = sorted(folder_path.glob(f'*[0-9]?{suffix}'))
     if len(list_of_files) > 0:
         return list_of_files
     else:
-        return sorted(folder_path.glob('*[0-9].nc'))
+        return sorted(folder_path.glob(f'*[0-9]{suffix}'))
 
 
 class PIVConversionInputError(Exception):
@@ -185,26 +185,26 @@ def piv_conversion(conversion_method):
 
 
 class PIVConverter:
-    conversion_time: float = -1
-    name: Path  # path to file or folder
-    hdf_filename: Path = None  # target hdf filename
-    vtk_file_name: Path = None  # filename in case class was exported to vtk
-
-    # array shape info:
-    nz: int = 0  # number of data points in z-direction
-    nt: int = 0  # number of data points in time
-    ny: int = 0  # number of data points in y-direction
-    nx: int = 0  # number of data points in x-direction
-
-    # conversion settings to be used by a convert()-method:
-    configuration: dict
 
     @property
     def shape(self):
+        """shape of a PIV variable (not a coordinate!)"""
         return tuple([n for n in (self.nz, self.nt, self.ny, self.nx) if n > 0])
 
-    def __init__(self, name):
+    def __init__(self, name: Path, configuration: dict = None):
         self.name = Path(name)
+        self.conversion_time: float = -1
+        hdf_filename = None  # target hdf filename
+        vtk_file_name = None  # filename in case class was exported to vtk
+
+        # array shape info:
+        self.nz: int = 0  # number of data points in z-direction
+        self.nt: int = 0  # number of data points in time
+        self.ny: int = 0  # number of data points in y-direction
+        self.nx: int = 0  # number of data points in x-direction
+
+        # conversion settings to be used by a convert()-method:
+        self.configuration = configuration
 
     def convert(self, target_hdf_filename: Path = None, configuration: Union[Dict, Path, None] = None):
         """kind-of abstract class processing some things before actual conversion process that is individual

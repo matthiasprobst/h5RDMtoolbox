@@ -101,9 +101,9 @@ class H5InspectLayout:
         else:
             layout_dataset_attributes = dict(layout_dataset.attrs)
             if 'units' in layout_dataset_attributes:
-                target_units = target_group[layout_dataset.name].attrs['units']
+                target_units = target_group[layout_dataset.name].attrs.get('units')
                 required_units = layout_dataset_attributes['units']
-                if not equal_base_units(target_units, required_units):
+                if target_units is None or not equal_base_units(target_units, required_units):
                     if not self.silent:
                         print(
                             f'Units issue for dataset {layout_dataset.name}: Unequal base units: {target_units} <> {required_units}')
