@@ -1,22 +1,58 @@
-# import unittest
-#
-# import h5py
-# import numpy as np
-# import xarray as xr
-#
-# from h5rdmtoolbox import tutorial
-# from h5rdmtoolbox.conventions.data import DataSourceType, DataSource
-# from h5rdmtoolbox.conventions.translations import pivview_to_standardnames_dict
-# from h5rdmtoolbox.utils import generate_temporary_filename
-# from h5rdmtoolbox.x2hdf.piv.pivview_old import PIVMultiPlane
-# from h5rdmtoolbox.x2hdf.piv.pivview_old import PIVSnapshot
-# from h5rdmtoolbox.x2hdf.piv.pivview_old import plane
-# from h5rdmtoolbox.x2hdf.piv.pivview_old.core import InvalidZSourceError, PIV_FILE_TYPE_NAME
-# from h5rdmtoolbox.x2hdf.piv.pivview_old.snapshot import NotAFileError
-#
-#
-# class TestPIV2HDF(unittest.TestCase):
-#
+import unittest
+
+import numpy as np
+
+import h5rdmtoolbox as h5tbx
+
+
+class TestPIV2HDF(unittest.TestCase):
+
+    def test_parameter(self):
+        pivview_parameter_file = h5tbx.tutorial.PIVview.get_parameter_file()
+        par = h5tbx.x2hdf.piv.pivview.PIVviewParameterFile(pivview_parameter_file)
+        par.to_dict()
+
+        openpiv_parameter_file = h5tbx.tutorial.OpenPIV.get_parameter_file()
+        par = h5tbx.x2hdf.piv.openpiv.OpenPIVParameterFile(openpiv_parameter_file)
+        par.to_dict()
+
+    def test_openpiv_snapshot(self):
+        # get the test file:
+        openpiv_txt_file = h5tbx.tutorial.OpenPIV.get_snapshot_txt_file()
+        openpiv_par_file = h5tbx.tutorial.OpenPIV.get_parameter_file()
+
+        # init a openpiv-file instance:
+        openpiv_file = h5tbx.x2hdf.piv.openpiv.OpenPIVFile(openpiv_txt_file, parameter_filename=None) # None -> auto serach
+
+        openpiv_snapshot = h5tbx.x2hdf.PIVSnapshot(openpiv_file, recording_time=0.)
+        hdf_filename = openpiv_snapshot.to_hdf()
+
+    def test_pivview_snapshot(self):
+        pivview_nc_file = h5tbx.tutorial.PIVview.get_snapshot_nc_files()[0]
+        pivview_file = h5tbx.x2hdf.piv.pivview.PIVViewNcFile(pivview_nc_file, None)
+        snapshot_pivview = h5tbx.x2hdf.PIVSnapshot(pivview_file, recording_time=0.)
+        hdf_filename = snapshot_pivview.to_hdf()
+        with h5tbx.H5PIV(hdf_filename) as h5piv:
+            self.assertEqual(h5piv.check(), 0)
+
+    def test_multi_piv_unequal_nt(self):
+        plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()
+        plane_objs = [h5tbx.x2hdf.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.pivview.PIVViewNcFile) for d in
+                      plane_dirs]
+        mplane = h5tbx.x2hdf.PIVMultiPlane(plane_objs)
+        hdf_filename = mplane.to_hdf()
+        with h5tbx.H5PIV(hdf_filename) as h5piv:
+            self.assertEqual(h5piv.check(), 4)
+
+    def test_multi_piv_unequal_nt_force(self):
+        plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()
+        plane_objs = [h5tbx.x2hdf.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.pivview.PIVViewNcFile) for d in
+                      plane_dirs]
+        mplane = h5tbx.x2hdf.PIVMultiPlane(plane_objs)
+        hdf_filename = mplane.to_hdf(fill_time_vec_differences=True)
+        with h5tbx.H5PIV(hdf_filename, 'r') as h5piv:
+            self.assertEqual(np.isnan(h5piv.u[-1, -1, :, :].values).sum(), h5piv['x'].size * h5piv['y'].size)
+            self.assertEqual(h5piv.check(), 0)
 #     def setUp(self) -> None:
 #         self.file_ls = []
 #

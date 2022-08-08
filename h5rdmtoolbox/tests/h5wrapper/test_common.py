@@ -85,8 +85,8 @@ class TestCommon(unittest.TestCase):
 
     def test_Layout(self):
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            self.assertTrue(wc.Layout.filename.exists())
-            self.assertEqual(wc.Layout.filename.stem, wc.__name__)
+            self.assertTrue(wc.layout.filename.exists())
+            self.assertEqual(wc.layout.filename.stem, wc.__name__)
 
         with h5tbx.H5File() as h5:
             h5.attrs['mandatory_attribute'] = 1
@@ -94,9 +94,9 @@ class TestCommon(unittest.TestCase):
         h5tbx.H5File.Layout = h5tbx.conventions.H5FileLayout(tmp_layout_filename)
 
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            self.assertTrue(wc.Layout.filename.exists())
+            self.assertTrue(wc.layout.filename.exists())
             if wc == h5tbx.H5File:
-                self.assertEqual(wc.Layout.filename, tmp_layout_filename)
+                self.assertEqual(wc.layout.filename, tmp_layout_filename)
             with wc() as h5:
                 n_issuess = h5.check(silent=True)
                 self.assertIsInstance(n_issuess, int)

@@ -117,7 +117,7 @@ def sdump(h5grp, ret=False,
     nspaces += 2
     for k in grp_keys:
         _grp_name = utils.make_italic(utils.make_bold(f'{spaces}/{k}'))
-        _grp_long_name = h5grp[k].long_name
+        _grp_long_name = h5grp[k].get('long_name')
         if grp_only:
             if _grp_long_name is None:
                 out += f'\n{_grp_name}'
@@ -130,13 +130,9 @@ def sdump(h5grp, ret=False,
                 out += f'{_grp_name}  ({h5grp[k].long_name})'
 
         if isinstance(h5grp, h5py.Group):
-            out += h5grp[k].sdump(ret=True, nspaces=nspaces, grp_only=grp_only,
+            out += sdump(h5grp[k], ret=True, nspaces=nspaces, grp_only=grp_only,
                                   color_code_verification=color_code_verification,
                                   hide_attributes=hide_attributes)
-        # else:
-        #     out += h5grp[k].info(ret=True, nspaces=nspaces, grp_only=grp_only,
-        #                         color_code_verification=color_code_verification,
-        #                                         hide_attributes=hide_attributes)
     if ret:
         return out
     else:

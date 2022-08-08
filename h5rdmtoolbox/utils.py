@@ -70,14 +70,14 @@ def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     return _cleaned_str
 
 
-def generate_temporary_filename(prefix='tmp', suffix: str = None) -> pathlib.Path:
+def generate_temporary_filename(prefix='tmp', suffix: str = '') -> pathlib.Path:
     """generates a temporary filename in user tmp file directory
 
     Parameters
     ----------
     prefix: str, optional='tmp'
         prefix string to put in front of name
-    suffix: str, optional=None
+    suffix: str, optional=''
         suffix (including '.')
 
     Returns

@@ -51,4 +51,5 @@ publishes a widely accepted one.
     :glob:
 
     conventions
+    layouts
 

@@ -10,7 +10,6 @@ from netCDF4 import Dataset as ncDataset
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import Delaunay
 
-from .calc import compute_z_derivative_of_z_velocity
 from .utils import is_time
 from ...conventions import StandardizedNameTable
 
@@ -296,8 +295,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
             if compute_dwdz:
                 if 'dudx' in piv_data_array_dict.keys() and 'dvdy' in piv_data_array_dict.keys():
                     logger.info("Gradient \"dwdz\" calculated from continuity equation assuming incompressible flow!")
-                    piv_data_array_dict['dwdz'] = compute_z_derivative_of_z_velocity(piv_data_array_dict['dudx'],
-                                                                                     piv_data_array_dict['dvdy'])
+                    piv_data_array_dict['dwdz'] = -piv_data_array_dict['dudx'] - piv_data_array_dict['dvdy']
                     variable_attributes['dwdz'] = {'units': _gradient_unit}
                 else:
                     logger.error(

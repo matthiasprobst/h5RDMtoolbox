@@ -1,11 +1,8 @@
-# import abc
-# import json
-# import os.path
+import configparser
 import json
 import pathlib
 import subprocess
 import tempfile
-from configparser import ConfigParser
 from os import environ
 from pathlib import Path
 from typing import Union, Dict, Tuple
@@ -14,16 +11,7 @@ import h5py
 import numpy as np
 from netCDF4 import Dataset as ncDataset
 
-#
-#
-# import h5rdmtoolbox
-# import h5rdmtoolbox as h5tbx
-# from h5rdmtoolbox.x2hdf.piv._config import DEFAULT_CONFIGURATION
-# from h5rdmtoolbox.x2hdf.piv.nc import process_pivview_nc_data
-# from h5rdmtoolbox.x2hdf.piv.par import PivViewParFile, PivViewConfigFile
-# from h5rdmtoolbox.x2hdf.piv.pivview_old import core
-# from h5rdmtoolbox.x2hdf.piv.utils import PIVviewFlag
-from .interface import PIVFile
+from .interface import PIVFile, PIV_PARAMETER_GRP_NAME, PIVParameterInterface
 from .nc import process_pivview_nc_data
 from ...utils import make_bold
 
@@ -31,7 +19,7 @@ try:
     NCDF2PAR = Path(environ.get('ncdf2par'))
 except TypeError:
     NCDF2PAR = None
-PIV_PARAMTER_HDF_NAME = 'piv_parameter'
+
 PIVVIEW_SOFTWARE_NAME = 'pivview'
 
 DIM_NAMES = ('z', 'time', 'y', 'x', 'ix', 'iy')
@@ -66,12 +54,40 @@ def _is_nc_file(nc_filename: Path):
         return False
 
 
-def read_header_line(filenames: Path) -> str:
-    with open(filenames, 'r') as f:
-        return f.readline()
+class PIVviewParameterFile(PIVParameterInterface):
+    """Parameter file interface for PIVview"""
 
+    def __init__(self, filename):
+        super().__init__(filename)
+        _cfg = configparser.ConfigParser()
+        _cfg.read(filename)
+        self.param_dict = {}
+        for s in _cfg.sections():
+            self.param_dict[s.strip('-').strip(' ')] = dict(_cfg[s])
 
-class PivViewParFile(ConfigParser):
+    def save(self, filename: pathlib.Path):
+        """Save to original file format"""
+        _cfg = configparser.ConfigParser()
+        _cfg.read_dict(self.param_dict)
+        with open(filename, 'w') as f:
+            self._cfg.write(f)
+
+    def to_hdf(self, grp: h5py.Group) -> Dict:
+        """Convert to HDF group"""
+
+    def from_hdf(self, grp: h5py.Group) -> None:
+        """Read fro HDF group"""
+        pass
+
+    @staticmethod
+    def from_dir(dirname):
+        """reads parameter from dirname and returns instance of this class"""
+        pars = list(dirname.glob(f'*{PIVviewParameterFile.suffix}'))
+        if len(pars) != 1:
+            raise FileExistsError('Cannot find parameter file')
+        return PIVviewParameterFile(pars[0])
+
+class PivViewParFile(configparser.ConfigParser):
     filename: Path = None
     header_line: str = ''
     header: str or None = None
@@ -127,7 +143,9 @@ class PivViewParFile(ConfigParser):
         self.filename = filenames
         if _is_nc_file(filenames):
             return self.read_nc(filenames)
-        self.header_line = read_header_line(filenames)
+
+        with open(filenames, 'r') as f:
+            self.header_line = f.readline()
         super().read(filenames, encoding)
 
     def to_hdf_group(self, target: h5py.Group, separate_into_groups: bool = True) -> h5py.Group:
@@ -179,12 +197,12 @@ class PivViewParFile(ConfigParser):
                     if grpname == 'PIV processing parameters':
                         _value = param_dict.pop("View0_PIV_Eval_MultiGrid_SampleSize")
                         ds = g.create_dataset('View0_PIV_Eval_MultiGrid_SampleSize', data=eval(_value))
-                        ds.attrs['units'] = 'px'
+                        ds.attrs['units'] = 'pixel'
                         ds.attrs['standard_name'] = 'final_interrogation_window_size'
 
                         _value = param_dict.pop("View0_PIV_Eval_MultiGrid_SampleStep")
                         ds = g.create_dataset('View0_PIV_Eval_MultiGrid_SampleStep', data=eval(_value))
-                        ds.attrs['units'] = 'px'
+                        ds.attrs['units'] = 'pixel'
                         ds.attrs['standard_name'] = 'final_interrogation_window_overlap'
 
                     for item, value in param_dict.items():
@@ -196,7 +214,7 @@ class PivViewParFile(ConfigParser):
                                 # evaluated_value = eval(value)
                                 # if isinstance(evaluated_value, (list, tuple)):
                                 #     ds = g.create_dataset(name=item, data=evaluated_value)
-                                #     ds.attrs['units'] = 'px'
+                                #     ds.attrs['units'] = 'pixel'
                                 #     sn = pivview_to_standardnames_dict.get(item, None)
                                 #     if sn:
                                 #         ds.attrs['stanard_name'] = sn
@@ -391,16 +409,8 @@ class PivViewConfigFile(PivViewParFile):
                 self[section_name][ak] = self._to_str(av)
 
 
-class PIVFlag():
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self: int) -> str:
-        return self.value
-
-
-class PIVviewFlag(PIVFlag):
+class PIVviewFlag:
+    """PIV Flag class"""
     _hex_dict = {"inactive": "0x0", "active": "0x1", "masked": "0x2",
                  "noresult": "0x4", "disabled": "0x8", "filtered": "0x10",
                  "interpolated": "0x20", "replaced": "0x40", "manualedit": "0x80"}
@@ -408,7 +418,7 @@ class PIVviewFlag(PIVFlag):
     _dict_int = {k: int(v, 16) for k, v in _hex_dict.items()}
 
     def __init__(self, value: int) -> None:
-        super().__init__(value)
+        self.value = value
         self.flag_translation = {0: 'inactive',
                                  1: 'active',
                                  2: 'masked',
@@ -435,20 +445,18 @@ class PIVviewFlag(PIVFlag):
         raise RuntimeError(f'Cannot interpret flag value {self.value}')
 
 
-class PivViewNcFile(PIVFile):
+class PIVViewNcFile(PIVFile):
     """Interface class to a PIVview netCDF4 file"""
     suffix: str = '.nc'
+    parameter = PIVviewParameterFile
+    _parameter: PIVviewParameterFile = None
 
-    def __init__(self, filename: pathlib.Path):
-        _filename = pathlib.Path(filename)
-        if not filename.is_file:
-            raise TypeError(f'Snapshot file path is not a file: {_filename}.')
-        if filename.suffix != self.suffix:
-            raise NameError(f'Expecting a netCDF4 file, thus suffix .nc, not {_filename.suffix}')
-        self.filename = _filename
-        self._parameter_filename = self.parameter_filename
+    # def __init__(self, filename: pathlib.Path, parameter_filename: Union[None, pathlib.Path] = None):
+    #     super().__init__(filename, parameter_filename)
+    #     if self._parameter_filename is None:
+    #         self._parameter_filename = self.parameter_filename
 
-    def read_from_file(self, config, recording_time: float, build_coord_datasets=True) -> Tuple[Dict, Dict, Dict]:
+    def read(self, config, recording_time: float, build_coord_datasets=True) -> Tuple[Dict, Dict, Dict]:
         """reads and processes nc data"""
         masking = config['masking']
         interpolation = config['interpolation']
@@ -465,43 +473,43 @@ class PivViewNcFile(PIVFile):
         # nc_root_attr['filename'] = nc_root_attr.pop('long_name')
         return nc_data, nc_root_attr, nc_variable_attr
 
-    @property
-    def parameters(self) -> Union[PivViewParFile, PivViewConfigFile]:
-        """Return a PivViewParFile"""
-        if self._parameter_filename is None:
-            self._parameter_filename = self.parameter_filename
-        if self._parameter_filename.suffix == '.par':
-            parobj = PivViewParFile()
-        else:
-            parobj = PivViewConfigFile()
-        parobj.read(self._parameter_filename)
-        return parobj
+    # @property
+    # def parameters(self) -> Union[PivViewParFile, PivViewConfigFile]:
+    #     """Return a PivViewParFile"""
+    #     if self._parameter_filename is None:
+    #         self._parameter_filename = self.parameter_filename
+    #     if self._parameter_filename.suffix == '.par':
+    #         parobj = PivViewParFile()
+    #     else:
+    #         parobj = PivViewConfigFile()
+    #     parobj.read(self._parameter_filename)
+    #     return parobj
 
-    @property
-    def parameter_filename(self) -> pathlib.Path:
-        """Return a piv parameter filename (.par or .cfg)"""
-        working_dir = self.filename.parent
-        parameter_files = list(working_dir.glob('*.par'))
-        config_files = list(working_dir.glob('*.cfg'))
-        if len(parameter_files) == 1 and len(config_files) == 0:
-            return parameter_files[0]
-        if len(parameter_files) == 0 and len(config_files) == 1:
-            return config_files[0]
-        if len(parameter_files) == 0 and len(config_files) == 0:
-            raise FileExistsError(f'No parameter file found here: {self.filename.parent}')
-        if len(parameter_files) > 0 and len(config_files) > 0:
-            raise FileExistsError(f'Too many files: Parameter file and config file found here: {self.filename.parent}')
+    # @property
+    # def parameter_filename(self) -> pathlib.Path:
+    #     """Return a piv parameter filename (.par or .cfg)"""
+    #     working_dir = self.filename.parent
+    #     parameter_files = list(working_dir.glob('*.par'))
+    #     config_files = list(working_dir.glob('*.cfg'))
+    #     if len(parameter_files) == 1 and len(config_files) == 0:
+    #         return parameter_files[0]
+    #     if len(parameter_files) == 0 and len(config_files) == 1:
+    #         return config_files[0]
+    #     if len(parameter_files) == 0 and len(config_files) == 0:
+    #         raise FileExistsError(f'No parameter file found here: {self.filename.parent}')
+    #     if len(parameter_files) > 0 and len(config_files) > 0:
+    #         raise FileExistsError(f'Too many files: Parameter file and config file found here: {self.filename.parent}')
 
-    def write_parameters(self, param_grp: h5py.Group):
-        """writes piv parameters to an opened and existing param_grp"""
-        parobj = self.parameters
-        parobj.to_hdf_group(param_grp)
-        param_grp.attrs['dict'] = json.dumps(parobj.to_dict())
+    # def write_parameters(self, param_grp: h5py.Group):
+    #     """writes piv parameters to an opened and existing param_grp"""
+    #     parobj = self.parameters
+    #     parobj.to_hdf_group(param_grp)
+    #     param_grp.attrs['dict'] = json.dumps(parobj.to_dict())
 
     def to_hdf(self, hdf_filename: pathlib.Path,
                config: Dict, recording_time: float) -> pathlib.Path:
         """converts the snapshot into an HDF file"""
-        nc_data, nc_root_attr, nc_variable_attr = self.read_from_file(config, recording_time)
+        nc_data, nc_root_attr, nc_variable_attr = self.read(config, recording_time)
         ny, nx = nc_data['y'].size, nc_data['x'].size
         # building HDF file
         if hdf_filename is None:
@@ -514,7 +522,7 @@ class PivViewNcFile(PIVFile):
             main.attrs['title'] = 'piv snapshot data'
 
             # process piv_parameters. there must be a parameter file at the parent location
-            piv_param_grp = main.create_group('piv_parameter')
+            piv_param_grp = main.create_group(PIV_PARAMETER_GRP_NAME)
             self.write_parameters(piv_param_grp)
 
             for i, cname in enumerate(('x', 'y', 'ix', 'iy')):
@@ -560,31 +568,3 @@ class PivViewNcFile(PIVFile):
             main['piv_flags'].attrs['flag_translation'] = json.dumps(
                 {str(PIVviewFlag(u)): int(u) for u in unique_flags})
         return hdf_filename
-
-# snapshot2hdf = False
-# plane2hdf = False
-# case2hdf = True
-# if snapshot2hdf:
-#     nc_file = h5tbx.tutorial.PIVview.get_snapshot_nc_files()[0]
-#     snapshot = PIVSnapshot(PivViewNcFile(nc_file), 0.)
-#     snapshot_filename = snapshot.to_hdf('test.hdf', DEFAULT_CONFIGURATION)
-#     with h5tbx.H5PIV(snapshot_filename) as h5:
-#         print(h5.check())
-# if plane2hdf:
-#     plane_dir = h5tbx.tutorial.PIVview.get_plane_directory()
-#     plane = PIVPlane.from_plane_folder(plane_dir, recording_time_or_frequency=5.,
-#                                        cls=PivViewNcFile)
-#     plane_filename = plane.to_hdf('test.hdf', DEFAULT_CONFIGURATION)
-#     with h5tbx.H5PIV(plane_filename) as h5:
-#         print(h5.check())
-# if case2hdf:
-#     plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()[0:2]
-#     plane_objs = [PIVPlane.from_plane_folder(d, 5, PivViewNcFile) for d in plane_dirs]
-#     mplane = PIVMultiPlane(plane_objs)
-#     mplane_filename = mplane.to_hdf('mplane.hdf', DEFAULT_CONFIGURATION)
-#     with h5tbx.H5PIV(mplane_filename) as h5:
-#         print(h5.check())
-#         h5.u[0, 0, :, :].plot()
-#         import matplotlib.pyplot as plt
-#
-#         plt.show()

@@ -10,6 +10,7 @@ import numpy as np
 from ._config import DEFAULT_CONFIGURATION
 from ...utils import generate_temporary_filename
 
+PIV_PARAMETER_GRP_NAME = 'piv_parameters'
 
 def scan_for_timeseries_nc_files(folder_path: pathlib.Path, suffix: str) -> List[pathlib.Path]:
     """
@@ -23,22 +24,84 @@ def scan_for_timeseries_nc_files(folder_path: pathlib.Path, suffix: str) -> List
         return sorted(folder_path.glob(f'*[0-9]{suffix}'))
 
 
+class PIVParameterInterface(abc.ABC):
+    """Abstract PIV Parmeter Interface"""
+    __slots__ = 'param_dict'
+    suffix = '.par'
+
+    def __init__(self, filename):
+        self.filename = filename
+        self.param_dict = dict()
+
+    @staticmethod
+    @abc.abstractmethod
+    def from_dir(dirname):
+        """reads parameter from dirname"""
+
+    @abc.abstractmethod
+    def save(self, filename: pathlib.Path):
+        """Save to original file format"""
+
+    def to_dict(self) -> Dict:
+        """Convert to a ditionary"""
+        return self.param_dict
+
+    def to_hdf(self, grp: h5py.Group) -> h5py.Group:
+        """Recursively walk thorugh data dictionary and write content to HDF group"""
+
+        def _to_grp(_dict, _grp):
+            for k, v in _dict.items():
+                if isinstance(v, dict):
+                    _grp = _to_grp(v, _grp.create_group(k))
+                else:
+                    _grp.attrs[k] = v
+            return _grp
+
+        return _to_grp(self.param_dict, grp)
+
+
 class PIVFile(abc.ABC):
     """Basic Particle Image Velocimetry File"""
     suffix: str = ''
+    parameter = PIVParameterInterface
+
+    def __init__(self, filename: pathlib.Path, parameter_filename: Union[None, pathlib.Path] = None):
+        _filename = pathlib.Path(filename)
+        if not filename.is_file:
+            raise TypeError(f'Snapshot file path is not a file: {_filename}.')
+        if self.suffix != '':
+            if filename.suffix != self.suffix:
+                raise NameError(f'Expecting suffix {self.suffix}, not {_filename.suffix}')
+        self.filename = _filename
+        if parameter_filename is None:
+            self._parameter = self.parameter.from_dir(filename.parent)
+        else:
+            self._parameter = self.parameter(parameter_filename)
 
     @abc.abstractmethod
-    def read_from_file(self, config, recording_time: float, build_coord_datasets=True) -> Tuple[Dict, Dict, Dict]:
+    def read(self, config, recording_time: float, build_coord_datasets=True) -> Tuple[Dict, Dict, Dict]:
         """Read data from file.
         Except data, root_attr, variable_attr"""
         pass
 
-    @abc.abstractmethod
     def write_parameters(self, param_grp: h5py.Group):
         """Write piv parameters to an opened and existing param_grp"""
+        return self._parameter.to_hdf(param_grp)
+
+    @abc.abstractmethod
+    def to_hdf(self, hdf_filename: pathlib.Path, config: Dict, recording_time: float) -> pathlib.Path:
+        """converts the snapshot into an HDF file"""
 
 
-class PIVSnapshot:
+class PIVConverter(abc.ABC):
+    """Abstrct converter class"""
+
+    @abc.abstractmethod
+    def to_hdf(self, hdf_filename, config) -> pathlib.Path:
+        """conversion method"""
+
+
+class PIVSnapshot(PIVConverter):
     """Interface class"""
 
     def __init__(self, piv_file: PIVFile, recording_time: float):
@@ -60,11 +123,11 @@ class PIVSnapshot:
 
     @staticmethod
     def from_pivview(nc_filename: pathlib.Path, recording_time: float):
-        from .pivview import PivViewNcFile
-        return PIVSnapshot(PivViewNcFile(nc_filename), recording_time)
+        from .pivview import PIVViewNcFile
+        return PIVSnapshot(PIVViewNcFile(nc_filename), recording_time)
 
 
-class PIVPlane:
+class PIVPlane(PIVConverter):
     """Interface class"""
 
     __slots__ = 'list_of_piv_file', 'time_vector'
@@ -114,7 +177,7 @@ class PIVPlane:
         if hdf_filename is None:
             hdf_filename = self.list_of_piv_file[0].filename.parent / f'{self.list_of_piv_file[0].filename.parent}.hdf'
         # get data from first snapshot to prepare the HDF5 file
-        data, root_attr, variable_attr = self.list_of_piv_file[0].read_from_file(config, self.time_vector[0])
+        data, root_attr, variable_attr = self.list_of_piv_file[0].read(config, self.time_vector[0])
         mandatory_keys = ('x', 'y', 'z', 'ix', 'iy', 'u', 'v')
         for mkey in mandatory_keys:
             if mkey not in data.keys():
@@ -133,7 +196,7 @@ class PIVPlane:
             h5main.attrs['title'] = 'piv plane data'
             for ak, av in root_attr.items():
                 h5main.attrs[ak] = av
-            self.list_of_piv_file[0].write_parameters(h5main.create_group('piv_parameter'))
+            self.list_of_piv_file[0].write_parameters(h5main.create_group(PIV_PARAMETER_GRP_NAME))
             h5main.create_dataset('x', data=data['x'], maxshape=nx)
             h5main.create_dataset('ix', data=data['ix'], maxshape=nx)
             h5main.create_dataset('y', data=data['y'], maxshape=nx)
@@ -168,13 +231,13 @@ class PIVPlane:
 
             # write all other dataset to file:
             for (ifile, piv_file), t in zip(enumerate(self.list_of_piv_file[1:]), self.time_vector[1:]):
-                data, _, _ = piv_file.read_from_file(config, t)
+                data, _, _ = piv_file.read(config, t)
                 for varkey in dataset_keys:
                     h5main[varkey][ifile + 1, ...] = data[varkey][...]
         return hdf_filename
 
 
-class PIVMultiPlane:
+class PIVMultiPlane(PIVConverter):
     """Interface class"""
     __slots__ = 'list_of_piv_folder'
     plane_coord_order = ('z', 'time', 'y', 'x')
@@ -186,9 +249,19 @@ class PIVMultiPlane:
         self.list_of_piv_folder = list_of_piv_folder
 
     @staticmethod
-    def merge_planes(hdf_filenames: List[pathlib.Path], target_hdf_filename: pathlib.Path):
-        """merges multiple piv plane hdf files together"""
+    def merge_planes(hdf_filenames: List[pathlib.Path], target_hdf_filename: pathlib.Path,
+                     rtol=1.e-5, atol=1.e-8, fill_time_vec_differences: bool = False):
+        """merges multiple piv plane hdf files together
+
+        rtol: float=1.e-5
+            Relative tolerance used in np.allclose() to check if time vectors are equal
+        atol: float=1.e-8
+            Absolute tolerance used in np.allclose() to check if time vectors are equal
+        fill_time_vec_differences:bool=False
+            If time vectors have different length but are close, the datasets are filled with NaNs
+        """
         nt_list = []
+        t_list = []
         x_data = []
         y_data = []
         z_data = []
@@ -196,6 +269,7 @@ class PIVMultiPlane:
         for hdf_file in hdf_filenames:
             with h5py.File(hdf_file) as h5plane:
                 nt_list.append(h5plane['time'].size)
+                t_list.append(h5plane['time'][()])
                 x_data.append(h5plane['x'][:])
                 y_data.append(h5plane['y'][:])
                 z_data.append(h5plane['z'][()])
@@ -212,17 +286,35 @@ class PIVMultiPlane:
         if np.any([z_data[0] == z for z in z_data[1:]]):
             raise ValueError(f'z coordinates must be different in order to merge the planes: {z_data}')
 
-        if not np.all([nt_list[0] == nt for nt in nt_list[1:]]):
-            PIVMultiPlane._merge_planes_unequal_time_vectors(hdf_filenames, target_hdf_filename)
+        # now check if the time vectors have the same length.
+        equal_length = np.all([nt_list[0] == nt for nt in nt_list[1:]])
+
+        if not equal_length:
+            # you may want to force a merge:
+            if fill_time_vec_differences:
+                nt_min = min(nt_list)
+                if np.all([np.allclose(t_list[0][0:nt_min], t[0:nt_min], rtol=rtol, atol=atol) for t in t_list[1:]]):
+                    return PIVMultiPlane._merge_planes_equal_time_vectors(hdf_filenames, target_hdf_filename,
+                                                                          nt=max(nt_list))
+            return PIVMultiPlane._merge_planes_unequal_time_vectors(hdf_filenames, target_hdf_filename)
         else:
-            PIVMultiPlane._merge_planes_equal_time_vectors(hdf_filenames, target_hdf_filename)
+            # same length but still time vectors could be different
+            if np.all([np.allclose(t_list[0], t, rtol=rtol, atol=atol) for t in t_list[1:]]):
+                # identical time vectors
+                return PIVMultiPlane._merge_planes_equal_time_vectors(hdf_filenames, target_hdf_filename)
+            else:
+                # write datasets into separate planes
+                return PIVMultiPlane._merge_planes_unequal_time_vectors(hdf_filenames, target_hdf_filename)
+            # then if they do have the same length, they must have the same entries in order to merged the datasets
 
     @staticmethod
     def _merge_planes_equal_time_vectors(hdf_filenames: List[pathlib.Path],
-                                         target_hdf_filename: pathlib.Path):
+                                         target_hdf_filename: pathlib.Path,
+                                         nt: int = None):
         nz = len(hdf_filenames)
         with h5py.File(hdf_filenames[0]) as h5plane:
-            nt = h5plane['time'].size
+            if nt is None:
+                nt = h5plane['time'].size
             ny = h5plane['y'].size
             nx = h5plane['x'].size
             dim_names = [os.path.basename(d[0].name) for d in h5plane['u'].dims]
@@ -281,7 +373,6 @@ class PIVMultiPlane:
                         ds.dims[i].attach_scale(h5main['iy'])
 
             with h5py.File(hdf_filenames[0]) as h5plane:
-                ds_t[:] = h5plane['time'][:]
                 ds_x[:] = h5plane['x'][:]
                 ds_y[:] = h5plane['y'][:]
                 ds_ix[:] = h5plane['ix'][:]
@@ -301,14 +392,23 @@ class PIVMultiPlane:
 
             for iplane, plane_hdf_filename in enumerate(hdf_filenames):
                 with h5py.File(plane_hdf_filename) as h5plane:
+                    current_nt = h5plane['time'].size
+                    if current_nt == nt:
+                        ds_t[:] = h5plane['time'][:]
                     h5main['z'][iplane] = h5plane['z'][()]
                     for k in dataset_names:
                         ds = h5main[k]
                         if z_before_t:
-                            ds[iplane, ...] = h5plane[k][...]
+                            ds[iplane, 0:current_nt] = h5plane[k][0:current_nt, ...]
+                            if current_nt < nt:
+                                ds[iplane, current_nt:] = np.nan
                         else:
-                            for _it in range(nt):
-                                ds[iplane, _it, ...] = h5plane[k][_it, :, :]
+                            for _it in range(current_nt):
+                                ds[_it, iplane, ...] = h5plane[k][_it, :, :]
+                            if current_nt < nt:
+                                for _it in range(current_nt, nt):
+                                    ds[_it, iplane, ...] = np.nan
+
         return target_hdf_filename
 
     @staticmethod
@@ -338,7 +438,7 @@ class PIVMultiPlane:
                 plane_grps.append(plane_grp)
                 with h5py.File(hdf_file) as h5plane:
                     for objname in h5plane:
-                        if objname != 'piv_parameter':  # treat separately
+                        if objname != PIV_PARAMETER_GRP_NAME:  # treat separately
                             h5main.copy(h5plane[objname], plane_grp)
             for varkey in ('x', 'y', 'ix', 'iy'):
                 h5main.move(plane_grps[0][varkey].name, varkey)
@@ -365,8 +465,10 @@ class PIVMultiPlane:
                                     v.dims[i].attach_scale(plane_grp['time'])
                                 else:
                                     v.dims[i].attach_scale(h5main[d])
+        return target_hdf_filename
 
-    def to_hdf(self, hdf_filename: pathlib.Path = None, config: Dict = None) -> pathlib.Path:
+    def to_hdf(self, hdf_filename: pathlib.Path = None, config: Dict = None,
+               rtol=1.e-5, atol=1.e-8, fill_time_vec_differences: bool = False) -> pathlib.Path:
         """converts the snapshot into an HDF file"""
         if config is None:
             config = DEFAULT_CONFIGURATION
@@ -381,5 +483,5 @@ class PIVMultiPlane:
         # get data from first snapshot to prepare the HDF5 file
         plane_hdf_files = [plane.to_hdf(generate_temporary_filename(suffix='_plane.hdf'), config) for plane
                            in self.list_of_piv_folder]
-        self.merge_planes(plane_hdf_files, hdf_filename)
+        hdf_filename = self.merge_planes(plane_hdf_files, hdf_filename, rtol, atol, fill_time_vec_differences)
         return hdf_filename

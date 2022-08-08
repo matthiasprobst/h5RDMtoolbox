@@ -1,7 +1,6 @@
 """H5PIV module: Wrapper for PIV data"""
 
 import logging
-import pathlib
 import warnings
 from abc import ABC
 from enum import Enum
@@ -9,17 +8,14 @@ from pathlib import Path
 from typing import Callable, Tuple
 from typing import Protocol, Any, Union, Dict, List
 
-import h5py
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
 from . import pivutils
 from .accessory import register_special_dataset
-from .h5flow import DisplacementDataset, H5FlowGroup
-from .h5flow import H5Flow, H5FlowLayout, H5FlowDataset
-from .h5flow import VectorDataset
-from .. import config
-from .. import utils
+from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
+from .. import config, utils
+from ..conventions import layout as layoutconvention
 from ..conventions.custom import PIVStandardNameTable
 from ..x2hdf import piv
 
@@ -115,6 +111,75 @@ def running_relative_standard_deviation(x, axis, ddof=0):
     """Computes the running relative standard deviation using the running
     mean as normalization."""
     return running_std(x, axis, ddof) / running_mean(x, axis)
+
+
+H5Flow_layout_filename = Path.joinpath(utils.user_data_dir, f'layout/H5Flow.hdf')
+H5PIV_layout_filename = Path.joinpath(utils.user_data_dir, f'layout/H5PIV.hdf')
+
+
+def write_H5PIV_layout_file():
+    """Write the H5File layout to <user_dir>/layout"""
+    lay = layoutconvention.Layout.init_from(H5Flow_layout_filename, H5PIV_layout_filename)
+    with lay.File(mode='r+') as h5lay:
+        h5lay.attrs['title'] = '__The common name of the file that might ' \
+                               'better explain it by a short string'
+
+        # ds_vel = h5lay.create_dataset('x', shape=(1,))
+        for n in ('x', 'y', 'z'):
+            if n in h5lay:
+                del h5lay[n]
+        ds_x = h5lay.create_dataset('x.alt:re:plane[0-9]', shape=(1,))
+        ds_x.attrs['units'] = 'm'
+        ds_x.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
+        ds_x.attrs['standard_name'] = 'x_coordinate'
+
+        # ds_vel = h5lay.create_dataset('y', shape=(1,))
+        ds_y = h5lay.create_dataset('y.alt:re:plane[0-9]', shape=(1,))
+        ds_y.attrs['units'] = 'm'
+        ds_y.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
+        ds_y.attrs['standard_name'] = 'y_coordinate'
+
+        ds_z = h5lay.create_dataset('z.alt:re:plane[0-9]', shape=(1,))
+        ds_z = h5lay['z.alt:re:plane[0-9]']
+        ds_z.attrs['units'] = 'm'
+        ds_z.attrs['__ndim__'] = (0, 1)  # (nz, nt, ny, nx, nv)
+        ds_z.attrs['standard_name'] = 'z_coordinate'
+
+        ds_t = h5lay.create_dataset('time.alt:re:plane[0-9]', shape=(1,))
+        ds_t.attrs['units'] = 's'
+        # ds_t.attrs['__alternative_source_group__'] = 're:plane[0-9]'
+        ds_t.attrs['__ndim__'] = (0, 1)  # (nz, nt, ny, nx, nv)
+        ds_t.attrs['standard_name'] = 'time'
+
+        ds_ix = h5lay.create_dataset('ix', shape=(1,))
+        ds_iy = h5lay.create_dataset('iy', shape=(1,))
+
+        for ds, basename in zip((ds_ix, ds_iy), ('x', 'y')):
+            ds.attrs['units'] = 'pixel'
+            ds.attrs['__ndim__'] = 1
+            ds.attrs['standard_name'] = f'{basename}_pixel_coordinate'
+
+        ds_u = h5lay.create_dataset('u.alt:re:plane[0-9]', shape=(1,))
+        ds_u.attrs['units'] = 'm/s'
+        ds_u.attrs['__ndim__'] = (2, 3, 4)  # (nz, nt, ny, nx, nv)
+        ds_u.attrs['standard_name'] = 'x_velocity'
+
+        ds_v = h5lay.create_dataset('v.alt:re:plane[0-9]', shape=(1,))
+        ds_v.attrs['units'] = 'm/s'
+        ds_v.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx, nv)
+        ds_v.attrs['standard_name'] = 'y_velocity'
+
+        # piv parameters can be at root level or for each plane individually
+        pivpargrp = h5lay.create_group('piv_parameters')
+        pivpargrp.attrs['__alternative_source_group__'] = 're:plane[0-9]'
+        # pivpargrp.attrs['__check_isoptional__'] = True
+        # plane_grp = h5lay.create_group('re:plane[0-9]')
+        # plane_grp.attrs['__check_isoptional__'] = True
+        # plane_grp.create_group('piv_parameters')
+
+
+# if not H5Flow_layout_filename.exists():
+write_H5PIV_layout_file()
 
 
 class PIVMethod(Enum):
@@ -244,75 +309,75 @@ class PIVParameters:
         return PIVCorrelationMode(self.piv_parameter.get('correlation_mode'))
 
 
-class H5PIVLayout(H5FlowLayout):
-    """Layout for PIV data"""
-
-    def write(self) -> pathlib.Path:
-        """The layout file has the structure of a H5Flow file. This means
-        it has the required attributes, datasets and groups that are required
-        for a valid H5Flow file. For each application case this is of course
-        different. Such a file can be created and stored in the user directory
-        and will be used to check the completeness created H5Flow files
-
-        Dataset and group structure (attributes not shown):
-        /
-        /x     -> dim=(0, 1), m
-        /y     -> dim=(0, 1), m
-        /z     -> dim=(0, 1), m
-        /time  -> dim=(0, 1), s
-        """
-        super().write()
-        with h5py.File(self.filename, mode='r+') as h5:
-            # grsetup = h5.create_group(name='Setup')
-            # grpeq = grsetup.create_group(name='Equipment')
-            # grpeq.create_group('Camera')
-            # grpeq.create_group('Laser')
-            #
-            # _ = h5.create_group(name='Acquisition')
-            # h5.create_group(name='Acquisition/Raw')
-            # h5.create_group(name='Acquisition/Processed')
-            # h5.create_group(name='Acquisition/Calibration')
-
-            h5.attrs['title'] = '__The common name of the file that might ' \
-                                'better explain it by a short string'
-
-            # ds_vel = h5.create_dataset('x', shape=(1,))
-            ds_vel = h5['x']
-            ds_vel.attrs['units'] = 'm'
-            ds_vel.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
-            ds_vel.attrs['standard_name'] = 'x_coordinate'
-
-            # ds_vel = h5.create_dataset('y', shape=(1,))
-            ds_vel = h5['y']
-            ds_vel.attrs['units'] = 'm'
-            ds_vel.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
-            ds_vel.attrs['standard_name'] = 'y_coordinate'
-
-            ds_ix = h5.create_dataset('ix', shape=(1,))
-            ds_iy = h5.create_dataset('iy', shape=(1,))
-
-            for ds in (ds_ix, ds_iy):
-                ds.attrs['units'] = 'm'
-                ds.attrs['__ndim__'] = (0, 1)
-                ds_vel.attrs['standard_name'] = f'{ds_ix.name[1:]}_pixel_coordinate'
-
-            # ds_vel = h5.create_dataset('z', shape=(1,))
-            ds_vel = h5['z']
-            ds_vel.attrs['units'] = 'm'
-            ds_vel.attrs['__ndim__'] = (0, 1)  # (nz, nt, ny, nx, nv)
-            ds_vel.attrs['standard_name'] = 'z_coordinate'
-
-            ds_vel = h5.create_dataset('u', shape=(1,))
-            ds_vel.attrs['units'] = 'm/s'
-            ds_vel.attrs['__ndim__'] = (2, 3, 4)  # (nz, nt, ny, nx, nv)
-            ds_vel.attrs['standard_name'] = 'x_velocity'
-
-            ds_vel = h5.create_dataset('v', shape=(1,))
-            ds_vel.attrs['units'] = 'm/s'
-            ds_vel.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx, nv)
-            ds_vel.attrs['standard_name'] = 'y_velocity'
-
-        return self.filename
+# class H5PIVLayout(H5FlowLayout):
+#     """Layout for PIV data"""
+#
+#     def write(self) -> pathlib.Path:
+#         """The layout file has the structure of a H5Flow file. This means
+#         it has the required attributes, datasets and groups that are required
+#         for a valid H5Flow file. For each application case this is of course
+#         different. Such a file can be created and stored in the user directory
+#         and will be used to check the completeness created H5Flow files
+#
+#         Dataset and group structure (attributes not shown):
+#         /
+#         /x     -> dim=(0, 1), m
+#         /y     -> dim=(0, 1), m
+#         /z     -> dim=(0, 1), m
+#         /time  -> dim=(0, 1), s
+#         """
+#         super().write()
+#         with h5py.File(self.filename, mode='r+') as h5:
+#             # grsetup = h5.create_group(name='Setup')
+#             # grpeq = grsetup.create_group(name='Equipment')
+#             # grpeq.create_group('Camera')
+#             # grpeq.create_group('Laser')
+#             #
+#             # _ = h5.create_group(name='Acquisition')
+#             # h5.create_group(name='Acquisition/Raw')
+#             # h5.create_group(name='Acquisition/Processed')
+#             # h5.create_group(name='Acquisition/Calibration')
+#
+#             h5.attrs['title'] = '__The common name of the file that might ' \
+#                                 'better explain it by a short string'
+#
+#             # ds_vel = h5.create_dataset('x', shape=(1,))
+#             ds_vel = h5['x']
+#             ds_vel.attrs['units'] = 'm'
+#             ds_vel.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
+#             ds_vel.attrs['standard_name'] = 'x_coordinate'
+#
+#             # ds_vel = h5.create_dataset('y', shape=(1,))
+#             ds_vel = h5['y']
+#             ds_vel.attrs['units'] = 'm'
+#             ds_vel.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
+#             ds_vel.attrs['standard_name'] = 'y_coordinate'
+#
+#             ds_ix = h5.create_dataset('ix', shape=(1,))
+#             ds_iy = h5.create_dataset('iy', shape=(1,))
+#
+#             for ds in (ds_ix, ds_iy):
+#                 ds.attrs['units'] = 'm'
+#                 ds.attrs['__ndim__'] = (0, 1)
+#                 ds_vel.attrs['standard_name'] = f'{ds_ix.name[1:]}_pixel_coordinate'
+#
+#             # ds_vel = h5.create_dataset('z', shape=(1,))
+#             ds_vel = h5['z']
+#             ds_vel.attrs['units'] = 'm'
+#             ds_vel.attrs['__ndim__'] = (0, 1)  # (nz, nt, ny, nx, nv)
+#             ds_vel.attrs['standard_name'] = 'z_coordinate'
+#
+#             ds_vel = h5.create_dataset('u', shape=(1,))
+#             ds_vel.attrs['units'] = 'm/s'
+#             ds_vel.attrs['__ndim__'] = (2, 3, 4)  # (nz, nt, ny, nx, nv)
+#             ds_vel.attrs['standard_name'] = 'x_velocity'
+#
+#             ds_vel = h5.create_dataset('v', shape=(1,))
+#             ds_vel.attrs['units'] = 'm/s'
+#             ds_vel.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx, nv)
+#             ds_vel.attrs['standard_name'] = 'y_velocity'
+#
+#         return self.filename
 
 
 class H5PIVGroup(H5FlowGroup):
@@ -327,7 +392,7 @@ class H5PIVDatset(H5FlowDataset):
 
 class H5PIV(H5Flow, H5PIVGroup, ABC):
     """H5PIV File class"""
-    Layout: H5PIVLayout = H5FlowLayout(Path.joinpath(utils.user_data_dir, f'layout/H5PIV.hdf'))
+    layout: layoutconvention.Layout = layoutconvention.Layout(H5PIV_layout_filename)
 
     @property
     def ntimesteps(self):
@@ -848,7 +913,11 @@ H5PIVGroup._h5ds = H5PIVDatset
 
 
 @register_special_dataset("DisplacementVector", H5PIVGroup)
-class PIVDisplacementDataset(DisplacementDataset):
+class PIVDisplacementDataset(VectorDataset):
+    """Displacement vector class with xarray.Dataset-like behaviour.
+    Expecting the group to have datasets with standard names x_displacement and y_displacement"""
+    standard_names = ('x_displacement', 'y_displacement')
+
     def compute_uncertainty(self, method: Callable, *args, **kwargs):
         """computes the uncertainty using the passed method"""
         return method(self, *args, **kwargs)

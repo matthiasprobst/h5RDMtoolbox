@@ -218,6 +218,22 @@ class DatasetValues:
         return self.h5dataset.__setitem__(args, val)
 
 
+H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
+
+
+def write_H5File_layout_file():
+    """Write the H5File layout to <user_dir>/layout"""
+    lay = conventions.layout.Layout(H5File_layout_filename)
+    with lay.File(mode='w') as h5lay:
+        h5lay.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
+        h5lay.attrs['creation_time'] = '__time of file creation'
+        h5lay.attrs['modification_time'] = '__time of last file modification'
+
+
+# if not H5File_layout_filename.exists():
+write_H5File_layout_file()
+
+
 class H5Dataset(h5py.Dataset):
     """
     Subclass of h5py.Dataset implementing a model.
@@ -1115,7 +1131,7 @@ class H5Group(h5py.Group):
         _compression, _compression_opts = config.hdf_compression, config.hdf_compression_opts
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
-        units = kwargs.pop('units', 'px')
+        units = kwargs.pop('units', 'pixel')
         ds = None
 
         if isinstance(img_filename, (str, Path)):
@@ -1505,7 +1521,7 @@ class H5File(h5py.File, H5Group):
     an issue be shown due to it.
     """
 
-    Layout: conventions.H5FileLayout = conventions.H5FileLayout(Path.joinpath(user_data_dir, f'layout/H5File.hdf'))
+    layout: conventions.layout.Layout = conventions.layout.Layout(H5File_layout_filename)
 
     @property
     def attrs(self):
@@ -1651,8 +1667,9 @@ class H5File(h5py.File, H5Group):
         super().__setitem__(name, obj)
 
     def check(self, silent: bool = False) -> int:
-        """runs a complete check (static+dynamic) and returns number of issues"""
-        return self.Layout.check(self['/'], silent)
+        """Run layout check. This method may be overwritten to add conditional
+         checking."""
+        return self.layout.check(self['/'], silent)
 
     def special_inspect(self, silent: bool = False) -> int:
         """Optional special inspection, e.g. conditional checks."""

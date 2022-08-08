@@ -24,6 +24,12 @@ from .utils import testdir
 
 
 class PIVview:
+    """PIVview tutorial class"""
+
+    @staticmethod
+    def get_parameter_file() -> pathlib.Path:
+        """Return pivview parameter file"""
+        return testdir / 'PIV/piv_challenge1_E/piv_parameters.par'
 
     @staticmethod
     def get_plane_directory() -> pathlib.Path:
@@ -93,6 +99,16 @@ class PIVview:
     @staticmethod
     def get_reyn_file():
         return testdir.joinpath('PIV/piv_challenge1_E/reyn.dat')
+
+
+class OpenPIV:
+    @staticmethod
+    def get_snapshot_txt_file():
+        return testdir / f'PIV/openpiv/field_A000.txt'
+
+    @staticmethod
+    def get_parameter_file():
+        return testdir / f'PIV/openpiv/openpiv.par'
 
 
 def get_xr_dataset(name):
