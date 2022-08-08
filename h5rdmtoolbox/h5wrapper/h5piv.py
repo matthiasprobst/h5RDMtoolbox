@@ -392,7 +392,6 @@ class H5PIVDatset(H5FlowDataset):
 
 class H5PIV(H5Flow, H5PIVGroup, ABC):
     """H5PIV File class"""
-    layout: layoutconvention.Layout = layoutconvention.Layout(H5PIV_layout_filename)
 
     @property
     def ntimesteps(self):
@@ -609,6 +608,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         return eval(par['PIV processing parameters']['View0_PIV_Eval_SampleStep'])
 
     def __init__(self, name=None, mode="r+", title=None, standard_name_table=None,
+                 layout_filename: Path = H5PIV_layout_filename,
                  software=None, run_layout_check=False, **kwargs):
         """
         name : str, optional=None
@@ -636,7 +636,9 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         if standard_name_table is None:
             standard_name_table = PIVStandardNameTable
         super(H5PIV, self).__init__(name=name, mode=mode, title=title,
-                                    standard_name_table=standard_name_table, **kwargs)
+                                    standard_name_table=standard_name_table,
+                                    layout_filename=layout_filename,
+                                    **kwargs)
         if software is not None:
             if isinstance(software, str):
                 if mode in ('r+', 'w'):

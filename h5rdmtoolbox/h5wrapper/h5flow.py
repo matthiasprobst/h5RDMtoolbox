@@ -280,9 +280,10 @@ class H5FlowDataset(H5Dataset):
 
 class H5Flow(H5File, H5FlowGroup):
     """H5Flow File wrapper class"""
-    Layout: conventions.layout.Layout = conventions.layout.Layout(H5Flow_layout_filename)
+
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
+                 layout_filename: Path = H5Flow_layout_filename,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
@@ -290,6 +291,7 @@ class H5Flow(H5File, H5FlowGroup):
         if standard_name_table is None:
             standard_name_table = conventions.FluidStandardNameTable
         super().__init__(name, mode, title, standard_name_table,
+                         layout_filename,
                          driver, libver, userblock_size,
                          swmr, rdcc_nslots, rdcc_nbytes, rdcc_w0,
                          track_order, fs_strategy, fs_persist, fs_threshold,

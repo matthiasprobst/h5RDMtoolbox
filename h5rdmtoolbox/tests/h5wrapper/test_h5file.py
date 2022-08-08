@@ -120,11 +120,12 @@ class TestH5FileLayout(unittest.TestCase):
         """alternative groups"""
         lay = Layout('lay.hdf')
         with lay.File(mode='w') as h5:
-            h5.create_group('pivpar.alt:plane0')
+            h5.create_group('pivpar')
+            h5['pivpar'].attrs['__alternative_source_group__'] = 'plane0'
 
         with h5py.File('other.hdf', 'w') as other:
             lay.check(other)
-        self.assertEqual(lay.n_issues, 1)  # TODO this raises "plane0" missing but it should be "pivpar missing"
+        self.assertEqual(lay.n_issues, 1)
 
         with h5py.File('other.hdf', 'w') as other:
             other.create_group('pivpar')
@@ -170,8 +171,6 @@ class TestH5FileLayout(unittest.TestCase):
 class TestH5File(unittest.TestCase):
 
     def test_empty_convention(self):
-        self.assertTrue(H5File.layout.filename.exists())
-        self.assertEqual(H5File.layout.filename.stem, 'H5File')
         with H5File() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 0)
@@ -216,8 +215,6 @@ class TestH5File(unittest.TestCase):
             self.assertEqual(grp.long_name, 'a long name')
 
     def test_Layout(self):
-        self.assertTrue(H5File.layout.filename.exists())
-        self.assertEqual(H5File.layout.filename.stem, 'H5File')
         with H5File() as h5:
             h5.create_dataset('test', shape=(3,), long_name='daadw', units='')
             h5.create_dataset('testgrp/ds2', shape=(30,), long_name='daadw', units='')

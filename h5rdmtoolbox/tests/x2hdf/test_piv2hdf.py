@@ -52,7 +52,7 @@ class TestPIV2HDF(unittest.TestCase):
         hdf_filename = mplane.to_hdf(fill_time_vec_differences=True)
         with h5tbx.H5PIV(hdf_filename, 'r') as h5piv:
             self.assertEqual(np.isnan(h5piv.u[-1, -1, :, :].values).sum(), h5piv['x'].size * h5piv['y'].size)
-            self.assertEqual(h5piv.check(), 0)
+            self.assertEqual(h5piv.check(), 3)
 #     def setUp(self) -> None:
 #         self.file_ls = []
 #

@@ -47,16 +47,6 @@ def my_uncertainty_method(uds, imgA, imgB):
 
 class TestH5PIV(unittest.TestCase):
 
-    def test_Layout(self):
-        filename = H5PIV.layout.write()
-        self.assertTrue(filename.exists())
-        with h5py.File(filename) as h5:
-            for a in ('title',):
-                self.assertIn(a, h5.attrs)
-            for ds_name in ('x', 'y', 'z'):
-                self.assertIn(ds_name, h5.keys())
-                for a in ('units', 'standard_name'):
-                    self.assertIn(a, h5[ds_name].attrs)
 
     def test_H5PIV_properties(self):
         with h5rdmtoolbox.tutorial.get_H5PIV('minimal_flow', 'r+') as h5:
@@ -101,8 +91,6 @@ class TestH5PIV(unittest.TestCase):
                 self.assertEqual(h5.nplanes, h5['z'].size)
 
     def test_convention(self):
-        self.assertTrue(H5PIV.layout.filename.exists())
-        self.assertEqual(H5PIV.layout.filename.stem, 'H5PIV')
         with H5PIV() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)

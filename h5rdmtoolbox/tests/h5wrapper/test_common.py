@@ -1,6 +1,5 @@
 """Testing common funcitonality across all wrapper classs"""
 
-import pathlib
 import unittest
 
 import h5py
@@ -84,27 +83,15 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
     def test_Layout(self):
-        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            self.assertTrue(wc.layout.filename.exists())
-            self.assertEqual(wc.layout.filename.stem, wc.__name__)
 
         with h5tbx.H5File() as h5:
             h5.attrs['mandatory_attribute'] = 1
-            tmp_layout_filename = h5.hdf_filename
-        h5tbx.H5File.Layout = h5tbx.conventions.H5FileLayout(tmp_layout_filename)
 
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            self.assertTrue(wc.layout.filename.exists())
-            if wc == h5tbx.H5File:
-                self.assertEqual(wc.layout.filename, tmp_layout_filename)
             with wc() as h5:
                 n_issuess = h5.check(silent=True)
                 self.assertIsInstance(n_issuess, int)
                 self.assertTrue(n_issuess > 0)
-
-        # undo change of layout:
-        h5tbx.H5File.Layout = h5tbx.conventions.H5FileLayout(
-            pathlib.Path.joinpath(h5tbx.user_data_dir, f'layout/H5File.hdf'))
 
     def test_properties(self):
         import datetime

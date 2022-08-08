@@ -226,6 +226,7 @@ def write_H5File_layout_file():
     lay = conventions.layout.Layout(H5File_layout_filename)
     with lay.File(mode='w') as h5lay:
         h5lay.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
+        h5lay.attrs['title'] = '__file title'
         h5lay.attrs['creation_time'] = '__time of file creation'
         h5lay.attrs['modification_time'] = '__time of last file modification'
 
@@ -1521,7 +1522,9 @@ class H5File(h5py.File, H5Group):
     an issue be shown due to it.
     """
 
-    layout: conventions.layout.Layout = conventions.layout.Layout(H5File_layout_filename)
+    @property
+    def layout(self):
+        return conventions.layout.Layout(self.layout_filename)
 
     @property
     def attrs(self):
@@ -1566,6 +1569,7 @@ class H5File(h5py.File, H5Group):
         self.attrs.modify('title', title)
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
+                 layout_filename: Path = H5File_layout_filename,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
@@ -1660,6 +1664,8 @@ class H5File(h5py.File, H5Group):
             _SNT_CACHE[self.file.id.id] = snt
         else:
             self.standard_name_table = snt
+
+        self.layout_filename = layout_filename
 
     def __setitem__(self, name, obj):
         if isinstance(obj, xr.DataArray):
