@@ -20,7 +20,7 @@ except ImportError:
     raise ImportError('Package netCDF4 is not installed.')
 
 from .utils import generate_temporary_directory, generate_temporary_filename
-from .utils import testdir
+from ._user import testdir
 
 
 class PIVview:

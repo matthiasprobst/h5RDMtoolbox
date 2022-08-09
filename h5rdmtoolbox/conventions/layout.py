@@ -13,10 +13,10 @@ from IPython.display import HTML, display
 
 from .identifier import equal_base_units
 from .. import _repr
-from ..utils import user_data_dir
+from .._user import user_data_dir
 
 logger = logging.getLogger(__package__)
-T_Layout = TypeVar('Layout')
+T_H5Layout = TypeVar('H5Layout')
 assert pint_xarray.__version__ >= '0.2.1'
 
 
@@ -287,43 +287,44 @@ class LayoutGroup(h5py.Group):
         issues.append(check_attributes(self, other, silent))
         for obj_name, obj in self.items():
             if isinstance(obj, h5py.Dataset):
-                obj_name_alt_split = obj_name.split('.alt:')
-                if len(obj_name_alt_split) == 2:
-                    ds_name, alt_grp = obj_name_alt_split
+                alt_grp_name = obj.attrs.get('__alternative_source_group__')
+                if alt_grp_name:
+                    ds_name = obj_name
                     # first check if the dataset exist:
                     if ds_name in other:
                         issues.append(self[obj_name].check(other[ds_name], silent))
                     else:
                         # now check alternative:
                         # does the alternative group exist?
-                        alt_grp_re = alt_grp.split('re:')
-                        if len(alt_grp_re) == 2:
+                        if alt_grp_name.startswith('re:'):
                             for other_grp_name, other_grp in other.items():
                                 if isinstance(other_grp, h5py.Group):
-                                    if re.match(alt_grp_re[1], other_grp_name):
+                                    if re.match(alt_grp_name[3:], other_grp_name):
                                         if ds_name in other_grp:
                                             issues.append(self[obj_name].check(other_grp[ds_name], silent))
                                         else:
-                                            issues.append({'path': os.path.join(other.name, alt_grp, ds_name),
+                                            issues.append({'path': os.path.join(other.name, alt_grp_name, ds_name),
                                                            'obj_type': 'dataset',
                                                            'issue': 'missing'})
                                             if not silent:
                                                 print(f'Dataset name {ds_name} missing in '
-                                                      f'{os.path.join(other.name, alt_grp, ds_name)}.')
+                                                      f'{os.path.join(other.name, alt_grp_name, ds_name)}.')
 
                         else:
-                            if alt_grp in other.keys():
-                                if ds_name in other[alt_grp]:
-                                    issues.append(self[obj_name].check(other[alt_grp][ds_name], silent))
+                            if alt_grp_name in other.keys():
+                                if ds_name in other[alt_grp_name]:
+                                    issues.append(self[obj_name].check(other[alt_grp_name][ds_name], silent))
                                 else:
-                                    issues.append({'path': os.path.join(other, alt_grp, ds_name), 'obj_type': 'dataset',
-                                                   'issue': 'missing'})
+                                    issues.append(
+                                        {'path': os.path.join(other, alt_grp_name, ds_name), 'obj_type': 'dataset',
+                                         'issue': 'missing'})
                                     if not silent:
-                                        print(f'Dataset name {ds_name} missing in {os.path.join(other, alt_grp, ds_name)}.')
+                                        print(
+                                            f'Dataset name {ds_name} missing in {os.path.join(other, alt_grp_name, ds_name)}.')
                             else:
-                                issues.append({'path': alt_grp, 'obj_type': 'group', 'issue': 'missing'})
+                                issues.append({'path': alt_grp_name, 'obj_type': 'group', 'issue': 'missing'})
                                 if not silent:
-                                    print(f'Group name {alt_grp} missing in {self.name}.')
+                                    print(f'Group name {alt_grp_name} missing in {self.name}.')
 
                 else:
                     if obj_name in other:
@@ -350,7 +351,8 @@ class LayoutGroup(h5py.Group):
                                         if re.match(alt_grp_name, other_grp_name):
                                             if obj_basename in other_grp:
                                                 n_found += 1
-                                                issues.append(LayoutGroup(obj.id).check(other_grp[obj_basename], silent))
+                                                issues.append(
+                                                    LayoutGroup(obj.id).check(other_grp[obj_basename], silent))
 
                                 if n_found == 0 and not obj.attrs.get('__check_isoptional__', False):
                                     if not silent:
@@ -427,8 +429,8 @@ class H5FileLayout(h5py.File, LayoutGroup):
         pass
 
 
-class Layout:
-    """class defining the static layout of the HDF5 file"""
+class H5Layout:
+    """HDF5 Layout interface class"""
 
     @property
     def n_issues(self):
@@ -439,13 +441,17 @@ class Layout:
         return f'<H5FileLayout with {self.n_issues} issues>'
 
     def __str__(self) -> str:
+        return f'<H5FileLayout with {self.n_issues} issues>'
+
+    def report(self) -> None:
+        """Print issue report"""
         out = f'H5FileLayout issue report ({self.n_issues} issues)\n-------------------'
         for issue in self._issues_list:
             if issue['obj_type'] == 'attribute':
                 out += f'\n{issue["path"]}.{issue["name"]}: -> {issue["issue"]}'
             else:
                 out += f'\n{issue["path"]}: -> {issue["issue"]}'
-        return out
+        print(out)
 
     def __init__(self, filename: Path):
         self.filename = Path(filename)
@@ -456,10 +462,10 @@ class Layout:
                 pass
 
     @staticmethod
-    def init_from(src_filename: Path, filename: Path) -> T_Layout:
-        """Copy src filename and return Layout object with filename"""
+    def init_from(src_filename: Path, filename: Path) -> T_H5Layout:
+        """Copy src filename and return H5Layout object with filename"""
         shutil.copy2(src_filename, filename)
-        return Layout(filename)
+        return H5Layout(filename)
 
     def File(self, mode='r'):
         self._file = H5FileLayout(self.filename, mode=mode)
@@ -490,12 +496,11 @@ class Layout:
         with h5py.File(self.filename, mode='w') as h5:
             h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
             h5.attrs['creation_time'] = '__time of file creation'
-            h5.attrs['modification_time'] = '__time of last file modification'
         return self.filename
 
-    def check(self, grp: h5py.Group, silent: bool = False,
+    def check(self, grp: h5py.Group, silent: bool = True,
               recursive: bool = True) -> int:
-        """combined (static+dynamic) check
+        """Run layout check.
 
         Parameters
         ----------
@@ -530,10 +535,10 @@ class Layout:
         # return self.check_static(grp, silent) + self.check_dynamic(root_grp, silent)
 
 
-def save_layout(layout: Layout, name=None, parent=None):
+def save_layout(layout: H5Layout, name=None, parent=None):
     """Save the layout HDF file in a specific location"""
-    if not isinstance(layout, Layout):
-        raise TypeError(f'Expecting type Layout but got {type(layout)}')
+    if not isinstance(layout, H5Layout):
+        raise TypeError(f'Expecting type H5Layout but got {type(layout)}')
     if name is None:
         name = f'{layout.__name__}.hdf'
     if parent is None:

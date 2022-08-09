@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from os import environ
 from pathlib import Path
-from typing import Union, Dict, Tuple
+from typing import Dict, Tuple
 
 import h5py
 import numpy as np
@@ -13,7 +13,7 @@ from netCDF4 import Dataset as ncDataset
 
 from .interface import PIVFile, PIV_PARAMETER_GRP_NAME, PIVParameterInterface
 from .nc import process_pivview_nc_data
-from ...utils import make_bold
+from ..._repr import make_bold
 
 try:
     NCDF2PAR = Path(environ.get('ncdf2par'))
@@ -72,8 +72,8 @@ class PIVviewParameterFile(PIVParameterInterface):
         with open(filename, 'w') as f:
             self._cfg.write(f)
 
-    def to_hdf(self, grp: h5py.Group) -> Dict:
-        """Convert to HDF group"""
+    # def to_hdf(self, grp: h5py.Group) -> Dict:
+    #     """Convert to HDF group"""
 
     def from_hdf(self, grp: h5py.Group) -> None:
         """Read fro HDF group"""
@@ -86,6 +86,7 @@ class PIVviewParameterFile(PIVParameterInterface):
         if len(pars) != 1:
             raise FileExistsError('Cannot find parameter file')
         return PIVviewParameterFile(pars[0])
+
 
 class PivViewParFile(configparser.ConfigParser):
     filename: Path = None

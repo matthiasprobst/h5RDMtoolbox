@@ -1,6 +1,7 @@
 import abc
 import os
 import pathlib
+from datetime import datetime
 from typing import List, Union, Dict
 from typing import Tuple
 
@@ -8,9 +9,11 @@ import h5py
 import numpy as np
 
 from ._config import DEFAULT_CONFIGURATION
+from ...conventions.identifier import CF_DATETIME_STR
 from ...utils import generate_temporary_filename
 
 PIV_PARAMETER_GRP_NAME = 'piv_parameters'
+
 
 def scan_for_timeseries_nc_files(folder_path: pathlib.Path, suffix: str) -> List[pathlib.Path]:
     """
@@ -22,6 +25,22 @@ def scan_for_timeseries_nc_files(folder_path: pathlib.Path, suffix: str) -> List
         return list_of_files
     else:
         return sorted(folder_path.glob(f'*[0-9]{suffix}'))
+
+
+def copy_piv_parameter_group(src: h5py.Group, trg: h5py.Group) -> None:
+    """copies the piv parameters to the new group"""
+
+    def _to_grp(_src, _trg):
+        for k, v in _src.items():
+            if isinstance(v, h5py.Group):
+                obj = _trg.create_group(k)
+                _to_grp(v, obj)
+            else:
+                obj = _trg.create_dataset(k, data=v[()])
+            for ak, av in v.attrs.items():
+                obj.attrs[ak] = av
+
+    _to_grp(src, trg)
 
 
 class PIVParameterInterface(abc.ABC):
@@ -347,6 +366,8 @@ class PIVMultiPlane(PIVConverter):
 
         with h5py.File(target_hdf_filename, 'w') as h5main:
             # h5main.attrs['software'] = PIVMultiPlane.software_name
+            now = datetime.now()
+            h5main.attrs['creation_time'] = now.strftime(CF_DATETIME_STR)
             h5main.attrs['title'] = 'piv snapshot data'
             ds_x = h5main.create_dataset('x', shape=(nx,))
             ds_x.make_scale()
@@ -408,6 +429,10 @@ class PIVMultiPlane(PIVConverter):
                             if current_nt < nt:
                                 for _it in range(current_nt, nt):
                                     ds[_it, iplane, ...] = np.nan
+                    # write piv parameter group
+                    plane_grp = h5main.create_group(f'plane{iplane:0{len(str(nz))}}')
+                    plane_grp.create_group(PIV_PARAMETER_GRP_NAME)
+                    copy_piv_parameter_group(h5plane[PIV_PARAMETER_GRP_NAME], plane_grp)
 
         return target_hdf_filename
 
@@ -440,6 +465,8 @@ class PIVMultiPlane(PIVConverter):
                     for objname in h5plane:
                         if objname != PIV_PARAMETER_GRP_NAME:  # treat separately
                             h5main.copy(h5plane[objname], plane_grp)
+                        else:
+                            copy_piv_parameter_group(h5plane[PIV_PARAMETER_GRP_NAME], plane_grp.create_group(PIV_PARAMETER_GRP_NAME))
             for varkey in ('x', 'y', 'ix', 'iy'):
                 h5main.move(plane_grps[0][varkey].name, varkey)
                 ds = h5main[varkey]
@@ -451,7 +478,7 @@ class PIVMultiPlane(PIVConverter):
                     del plane_grp[varkey]
 
             for plane_grp in plane_grps[1:]:
-                del plane_grp['z']
+                #del plane_grp['z']
                 for k, v in plane_grp.items():
                     if isinstance(v, h5py.Dataset):
                         for ak in ('DIMENSION_LIST',):

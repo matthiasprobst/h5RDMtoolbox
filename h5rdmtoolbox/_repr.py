@@ -6,7 +6,7 @@ import h5py
 import pkg_resources
 from numpy import ndarray
 
-from . import config, utils
+from . import config
 
 IGNORE_ATTRS = ('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'h5wrapper/static/style.css').decode("utf8")
@@ -21,6 +21,43 @@ https://jsfiddle.net/tay08cn9/4/ (xarray package)
 """
 
 SDUMP_TABLE_SPACING = 30, 20, 8, 30
+
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+def make_italic(string):
+    """make string italic"""
+    return f'\x1B[3m{string}\x1B[0m'
+
+
+def make_bold(string):
+    """make string bold"""
+    return f"{bcolors.BOLD}{string}{bcolors.ENDC}"
+
+
+def warningtext(string):
+    """make string orange"""
+    return f"{bcolors.WARNING}{string}{bcolors.ENDC}"
+
+
+def failtext(string):
+    """make string red"""
+    return f"{bcolors.FAIL}{string}{bcolors.ENDC}"
+
+
+def oktext(string):
+    """make string green"""
+    return f"{bcolors.OKGREEN}{string}{bcolors.ENDC}"
 
 
 def sdump(h5grp, ret=False,
@@ -79,7 +116,7 @@ def sdump(h5grp, ret=False,
                     _av = f'{av}'
                 if len(_av) > sp_desc:
                     _av = f'{_av[0:sp_desc]}...'
-                out += utils.make_italic(f'\n{spaces}a: {_ak:{sp_name}} {_av}')
+                out += make_italic(f'\n{spaces}a: {_ak:{sp_name}} {_av}')
 
     grp_keys = [k for k in h5grp.keys() if isinstance(h5grp[k], h5py.Group)]
     if not grp_only:
@@ -87,7 +124,7 @@ def sdump(h5grp, ret=False,
         ) if isinstance(h5grp[k], h5py.Dataset)]
         for dataset_name in dataset_names:
             # varname = utils._make_bold(os.path.basename(h5grp._h5ds(h5grp[dataset_name]).name))
-            varname = utils.make_bold(os.path.basename(h5grp[dataset_name].name))
+            varname = make_bold(os.path.basename(h5grp[dataset_name].name))
             if is_layout:
                 out += f'\n{spaces}{varname:{sp_name}} '
             else:
@@ -112,11 +149,11 @@ def sdump(h5grp, ret=False,
                             _av = f'{av}'
                         if len(_av) > sp_desc:
                             _av = f'{_av[0:sp_desc]}...'
-                        out += utils.make_italic(f'\n\t{spaces}a: {_ak:{sp_name}} {_av}')
+                        out += make_italic(f'\n\t{spaces}a: {_ak:{sp_name}} {_av}')
         out += '\n'
     nspaces += 2
     for k in grp_keys:
-        _grp_name = utils.make_italic(utils.make_bold(f'{spaces}/{k}'))
+        _grp_name = make_italic(make_bold(f'{spaces}/{k}'))
         _grp_long_name = h5grp[k].get('long_name')
         if grp_only:
             if _grp_long_name is None:
@@ -131,8 +168,8 @@ def sdump(h5grp, ret=False,
 
         if isinstance(h5grp, h5py.Group):
             out += sdump(h5grp[k], ret=True, nspaces=nspaces, grp_only=grp_only,
-                                  color_code_verification=color_code_verification,
-                                  hide_attributes=hide_attributes)
+                         color_code_verification=color_code_verification,
+                         hide_attributes=hide_attributes)
     if ret:
         return out
     else:

@@ -14,7 +14,7 @@ from pint_xarray import unit_registry as ureg
 from . import pivutils
 from .accessory import register_special_dataset
 from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
-from .. import config, utils
+from .. import config, _user
 from ..conventions import layout as layoutconvention
 from ..conventions.custom import PIVStandardNameTable
 from ..x2hdf import piv
@@ -113,13 +113,13 @@ def running_relative_standard_deviation(x, axis, ddof=0):
     return running_std(x, axis, ddof) / running_mean(x, axis)
 
 
-H5Flow_layout_filename = Path.joinpath(utils.user_data_dir, f'layout/H5Flow.hdf')
-H5PIV_layout_filename = Path.joinpath(utils.user_data_dir, f'layout/H5PIV.hdf')
+H5Flow_layout_filename = Path.joinpath(_user.user_data_dir, f'layout/H5Flow.hdf')
+H5PIV_layout_filename = Path.joinpath(_user.user_data_dir, f'layout/H5PIV.hdf')
 
 
 def write_H5PIV_layout_file():
     """Write the H5File layout to <user_dir>/layout"""
-    lay = layoutconvention.Layout.init_from(H5Flow_layout_filename, H5PIV_layout_filename)
+    lay = layoutconvention.H5Layout.init_from(H5Flow_layout_filename, H5PIV_layout_filename)
     with lay.File(mode='r+') as h5lay:
         h5lay.attrs['title'] = '__The common name of the file that might ' \
                                'better explain it by a short string'
@@ -128,26 +128,30 @@ def write_H5PIV_layout_file():
         for n in ('x', 'y', 'z'):
             if n in h5lay:
                 del h5lay[n]
-        ds_x = h5lay.create_dataset('x.alt:re:plane[0-9]', shape=(1,))
+        ds_x = h5lay.create_dataset('x', shape=(1,))
         ds_x.attrs['units'] = 'm'
+        ds_x.attrs['__alternative_source_group__'] = 're:plane[0-9]'
         ds_x.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
         ds_x.attrs['standard_name'] = 'x_coordinate'
 
         # ds_vel = h5lay.create_dataset('y', shape=(1,))
-        ds_y = h5lay.create_dataset('y.alt:re:plane[0-9]', shape=(1,))
+        ds_y = h5lay.create_dataset('y', shape=(1,))
         ds_y.attrs['units'] = 'm'
+        ds_y.attrs['__alternative_source_group__'] = 're:plane[0-9]'
         ds_y.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
         ds_y.attrs['standard_name'] = 'y_coordinate'
 
-        ds_z = h5lay.create_dataset('z.alt:re:plane[0-9]', shape=(1,))
-        ds_z = h5lay['z.alt:re:plane[0-9]']
+        ds_z = h5lay.create_dataset('z', shape=(1,))
         ds_z.attrs['units'] = 'm'
+        ds_z.attrs['__alternative_source_group__'] = 're:plane[0-9]'
         ds_z.attrs['__ndim__'] = (0, 1)  # (nz, nt, ny, nx, nv)
         ds_z.attrs['standard_name'] = 'z_coordinate'
 
-        ds_t = h5lay.create_dataset('time.alt:re:plane[0-9]', shape=(1,))
+        if 'time' in h5lay:
+            del h5lay['time']
+        ds_t = h5lay.create_dataset('time', shape=(1,))
         ds_t.attrs['units'] = 's'
-        # ds_t.attrs['__alternative_source_group__'] = 're:plane[0-9]'
+        ds_t.attrs['__alternative_source_group__'] = 're:plane[0-9]'
         ds_t.attrs['__ndim__'] = (0, 1)  # (nz, nt, ny, nx, nv)
         ds_t.attrs['standard_name'] = 'time'
 
@@ -156,26 +160,25 @@ def write_H5PIV_layout_file():
 
         for ds, basename in zip((ds_ix, ds_iy), ('x', 'y')):
             ds.attrs['units'] = 'pixel'
+            ds.attrs['__alternative_source_group__'] = 're:plane[0-9]'
             ds.attrs['__ndim__'] = 1
             ds.attrs['standard_name'] = f'{basename}_pixel_coordinate'
 
-        ds_u = h5lay.create_dataset('u.alt:re:plane[0-9]', shape=(1,))
+        ds_u = h5lay.create_dataset('u', shape=(1,))
         ds_u.attrs['units'] = 'm/s'
+        ds_u.attrs['__alternative_source_group__'] = 're:plane[0-9]'
         ds_u.attrs['__ndim__'] = (2, 3, 4)  # (nz, nt, ny, nx, nv)
         ds_u.attrs['standard_name'] = 'x_velocity'
 
-        ds_v = h5lay.create_dataset('v.alt:re:plane[0-9]', shape=(1,))
+        ds_v = h5lay.create_dataset('v', shape=(1,))
         ds_v.attrs['units'] = 'm/s'
+        ds_v.attrs['__alternative_source_group__'] = 're:plane[0-9]'
         ds_v.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx, nv)
         ds_v.attrs['standard_name'] = 'y_velocity'
 
         # piv parameters can be at root level or for each plane individually
         pivpargrp = h5lay.create_group('piv_parameters')
         pivpargrp.attrs['__alternative_source_group__'] = 're:plane[0-9]'
-        # pivpargrp.attrs['__check_isoptional__'] = True
-        # plane_grp = h5lay.create_group('re:plane[0-9]')
-        # plane_grp.attrs['__check_isoptional__'] = True
-        # plane_grp.create_group('piv_parameters')
 
 
 # if not H5Flow_layout_filename.exists():
@@ -310,7 +313,7 @@ class PIVParameters:
 
 
 # class H5PIVLayout(H5FlowLayout):
-#     """Layout for PIV data"""
+#     """H5Layout for PIV data"""
 #
 #     def write(self) -> pathlib.Path:
 #         """The layout file has the structure of a H5Flow file. This means

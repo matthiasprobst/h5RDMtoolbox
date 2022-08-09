@@ -25,7 +25,8 @@ def set_loglevel(level):
 
 
 from .h5wrapper import H5File, H5Flow, H5PIV, open_wrapper
-from .utils import generate_temporary_filename, generate_temporary_directory, user_data_dir, user_tmp_dir
+from .utils import generate_temporary_filename, generate_temporary_directory
+from ._user import user_data_dir, user_tmp_dir
 from ._version import __version__
 from . import tutorial
 

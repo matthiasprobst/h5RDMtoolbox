@@ -16,7 +16,7 @@ from pint_xarray import unit_registry as ureg
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5Dataset
 from .. import config, conventions
-from ..utils import user_data_dir
+from .._user import user_data_dir
 
 # from ..conventions.custom import FluidStandardNameTable
 
@@ -30,7 +30,7 @@ H5Flow_layout_filename = Path.joinpath(user_data_dir, f'layout/H5Flow.hdf')
 
 def write_H5Flow_layout_file():
     """Write the H5File layout to <user_dir>/layout"""
-    lay = conventions.layout.Layout.init_from(H5File_layout_filename, H5Flow_layout_filename)
+    lay = conventions.layout.H5Layout.init_from(H5File_layout_filename, H5Flow_layout_filename)
     with lay.File(mode='r+') as h5lay:
         ds_x = h5lay.create_dataset('x', shape=(1,))
         ds_y = h5lay.create_dataset('y', shape=(1,))
@@ -280,7 +280,6 @@ class H5FlowDataset(H5Dataset):
 
 class H5Flow(H5File, H5FlowGroup):
     """H5Flow File wrapper class"""
-
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
                  layout_filename: Path = H5Flow_layout_filename,

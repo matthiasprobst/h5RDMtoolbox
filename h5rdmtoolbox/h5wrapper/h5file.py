@@ -27,8 +27,8 @@ from .. import config
 from .. import conventions
 from .. import utils
 from .._repr import h5file_html_repr
+from .._user import user_data_dir
 from .._version import __version__
-from ..utils import user_data_dir
 from ..x2hdf import xr2hdf
 
 logger = logging.getLogger(__package__)
@@ -223,12 +223,11 @@ H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
 
 def write_H5File_layout_file():
     """Write the H5File layout to <user_dir>/layout"""
-    lay = conventions.layout.Layout(H5File_layout_filename)
+    lay = conventions.layout.H5Layout(H5File_layout_filename)
     with lay.File(mode='w') as h5lay:
         h5lay.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
         h5lay.attrs['title'] = '__file title'
         h5lay.attrs['creation_time'] = '__time of file creation'
-        h5lay.attrs['modification_time'] = '__time of last file modification'
 
 
 # if not H5File_layout_filename.exists():
@@ -1524,7 +1523,7 @@ class H5File(h5py.File, H5Group):
 
     @property
     def layout(self):
-        return conventions.layout.Layout(self.layout_filename)
+        return self._layout
 
     @property
     def attrs(self):
@@ -1615,7 +1614,6 @@ class H5File(h5py.File, H5Group):
         if self.mode != 'r':
             if 'creation_time' not in self.attrs:
                 self.attrs['creation_time'] = now_time_str
-            self.attrs['modification_time'] = now_time_str
             self.attrs['__h5rdmtoolbox_version__'] = __version__
             self.attrs['__wrcls__'] = self.__class__.__name__
 
@@ -1666,16 +1664,17 @@ class H5File(h5py.File, H5Group):
             self.standard_name_table = snt
 
         self.layout_filename = layout_filename
+        self._layout = conventions.layout.H5Layout(self.layout_filename)
 
     def __setitem__(self, name, obj):
         if isinstance(obj, xr.DataArray):
             return obj.hdf.to_group(self, name)
         super().__setitem__(name, obj)
 
-    def check(self, silent: bool = False) -> int:
+    def check(self, grp='/', silent: bool = True) -> int:
         """Run layout check. This method may be overwritten to add conditional
          checking."""
-        return self.layout.check(self['/'], silent)
+        return self.layout.check(self[grp], silent)
 
     def special_inspect(self, silent: bool = False) -> int:
         """Optional special inspection, e.g. conditional checks."""
