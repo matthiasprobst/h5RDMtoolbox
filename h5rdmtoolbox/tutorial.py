@@ -20,10 +20,16 @@ except ImportError:
     raise ImportError('Package netCDF4 is not installed.')
 
 from .utils import generate_temporary_directory, generate_temporary_filename
-from .utils import testdir
+from ._user import testdir
 
 
 class PIVview:
+    """PIVview tutorial class"""
+
+    @staticmethod
+    def get_parameter_file() -> pathlib.Path:
+        """Return pivview parameter file"""
+        return testdir / 'PIV/piv_challenge1_E/piv_parameters.par'
 
     @staticmethod
     def get_plane_directory() -> pathlib.Path:
@@ -93,6 +99,16 @@ class PIVview:
     @staticmethod
     def get_reyn_file():
         return testdir.joinpath('PIV/piv_challenge1_E/reyn.dat')
+
+
+class OpenPIV:
+    @staticmethod
+    def get_snapshot_txt_file():
+        return testdir / f'PIV/openpiv/field_A000.txt'
+
+    @staticmethod
+    def get_parameter_file():
+        return testdir / f'PIV/openpiv/openpiv.par'
 
 
 def get_xr_dataset(name):
@@ -217,7 +233,7 @@ def get_xr_dataset(name):
         return poiseuille2D(np.linspace(0, 4, 2), np.linspace(0, 4, 10), 2)
 
 
-def get_H5PIV(name, mode) -> pathlib.Path:
+def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
     """Returns the HDF filename of a tutoral case."""
     from .h5wrapper import H5PIV
     if name == 'minimal_flow':

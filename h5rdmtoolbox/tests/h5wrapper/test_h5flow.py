@@ -12,8 +12,6 @@ from h5rdmtoolbox.h5wrapper.h5flow import Device
 class TestH5Flow(unittest.TestCase):
 
     def test_convention(self):
-        self.assertTrue(H5Flow.Layout.filename.exists())
-        self.assertEqual(H5Flow.Layout.filename.stem, 'H5Flow')
         with H5Flow() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)
@@ -53,10 +51,7 @@ class TestH5Flow(unittest.TestCase):
             vel.compute_magnitude()
 
     def test_Layout(self):
-        self.assertTrue(H5Flow.Layout.filename.exists())
-        self.assertEqual(H5Flow.Layout.filename.stem, 'H5Flow')
-        H5Flow.Layout.write()
-        H5Flow.Layout.sdump()
+
         with H5Flow() as h5:
             n_issuess = h5.check()
             self.assertEqual(n_issuess, 5)

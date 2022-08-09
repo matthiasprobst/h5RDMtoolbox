@@ -20,10 +20,10 @@ def build_all_layoutfiles():
     """builds layout files of all wrapper classes in the user directory"""
     all_wrapperclasses = (H5File, H5Flow, H5PIV)
     for wrapperclass in all_wrapperclasses:
-        wrapperclass.Layout.write()
+        wrapperclass.layout.write()
 
 
-build_all_layoutfiles()
+#build_all_layoutfiles()
 
 
 def open_wrapper(filename, mode='r', **kwargs):

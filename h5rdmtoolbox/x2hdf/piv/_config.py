@@ -12,6 +12,8 @@ from ...conventions.custom import PIVStandardNameTable
 
 DEFAULT_CONVENTION = PIVStandardNameTable
 
+from ... import config as h5tbx_config
+
 DEFAULT_CONFIGURATION = {
     'interpolation': False,
     'apply_mask': True,
@@ -20,21 +22,21 @@ DEFAULT_CONFIGURATION = {
     'z_source': 'coord_min',
     'datetime_str': datetime_str,
     'attrs_unit_name': 'units',
-    'compression': 'gzip',
-    'compression_opts': 5,
+    'compression': h5tbx_config.hdf_compression,
+    'compression_opts': h5tbx_config.hdf_compression_opts,
     'take_min_nt': True,  # False will fill datasets up with np.NA
     'standardized_name_table': DEFAULT_CONVENTION,  # convention to use for PIV variables
-    'timeAverages': {'compute': True,
+    'timeAverages': {'compute': False,
                      'use_nc': False},  # reads avg.nc, reyn.nc and rms.nc if available
     'post': {
-        'compute': True,
+        'compute': False,
         'grpname': 'post',
         'grpdesc': 'Post processing data',
-        'running_mean': {'compute': True,
+        'running_mean': {'compute': False,
                          'grpname': 'running_mean',
                          'grpdesc': 'Running mean',
                          'dataset_names': ['u', 'v', ]},
-        'running_std': {'compute': True,
+        'running_std': {'compute': False,
                         'grpname': 'running_std',
                         'grpdesc': 'Running standard deviation',
                         'dataset_names': ['u', 'v', ]},

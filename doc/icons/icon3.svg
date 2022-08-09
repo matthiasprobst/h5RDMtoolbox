@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="15.875mm"
+   height="18.65225mm"
+   viewBox="0 0 15.875 18.65225"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   sodipodi:docname="icon3.svg"
+   inkscape:export-filename="C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\icon.png"
+   inkscape:export-xdpi="100"
+   inkscape:export-ydpi="100"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="5.7157127"
+     inkscape:cx="79.867556"
+     inkscape:cy="31.579614"
+     inkscape:window-width="1920"
+     inkscape:window-height="991"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid857"
+       originx="-2.6458333"
+       originy="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient4646">
+      <stop
+         style="stop-color:#0000b5;stop-opacity:1"
+         offset="0"
+         id="stop4642" />
+      <stop
+         style="stop-color:#a00000;stop-opacity:1"
+         offset="1"
+         id="stop4644" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4646"
+       id="linearGradient5285"
+       gradientUnits="userSpaceOnUse"
+       x1="3.96875"
+       y1="0"
+       x2="17.197916"
+       y2="19.84375"
+       spreadMethod="pad"
+       gradientTransform="scale(1,0.93995596)" />
+  </defs>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-2.6458333)">
+    <path
+       style="mix-blend-mode:normal;fill:url(#linearGradient5285);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.256517px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 2.6458333,4.9739336 10.583333,0 l 7.9375,4.9739336 v 8.7043834 l -7.9375,4.973934 -7.9374997,-4.973934 z"
+       id="path1698"
+       sodipodi:nodetypes="ccccccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="4.1661468"
+       y="13.470543"
+       id="text6744"><tspan
+         sodipodi:role="line"
+         id="tspan6742"
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
+         x="4.1661468"
+         y="13.470543">h</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.93889px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="8.9598713"
+       y="6.3171287"
+       id="text6744-5"><tspan
+         sodipodi:role="line"
+         id="tspan6742-2"
+         style="font-size:4.93889px;fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
+         x="8.9598713"
+         y="6.3171287">5</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.88056px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="10.365529"
+       y="13.436542"
+       id="text6744-5-9"><tspan
+         sodipodi:role="line"
+         id="tspan6742-2-0"
+         style="font-size:3.88056px;fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
+         x="10.365529"
+         y="13.436542">tbx</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.8085px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.263296"
+       x="10.259964"
+       y="10.211435"
+       id="text6744-5-9-1"
+       transform="scale(0.99513726,1.0048865)"><tspan
+         sodipodi:role="line"
+         id="tspan6742-2-0-9"
+         style="font-size:2.8085px;fill:#ffffff;fill-opacity:1;stroke-width:0.263296"
+         x="10.259964"
+         y="10.211435">RDM</tspan></text>
+  </g>
+</svg>

@@ -13,17 +13,41 @@ import xarray as xr
 from pandas import read_csv
 from pint_xarray import unit_registry as ureg
 
-from .. import config
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5Dataset
-from .. import conventions
-from ..utils import user_data_dir
+from .. import config, conventions
+from .._user import user_data_dir
 
 # from ..conventions.custom import FluidStandardNameTable
 
 logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
 DEVICE_ATTR_NAME = 'device'
+
+H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
+H5Flow_layout_filename = Path.joinpath(user_data_dir, f'layout/H5Flow.hdf')
+
+
+def write_H5Flow_layout_file():
+    """Write the H5File layout to <user_dir>/layout"""
+    lay = conventions.layout.H5Layout.init_from(H5File_layout_filename, H5Flow_layout_filename)
+    with lay.File(mode='r+') as h5lay:
+        ds_x = h5lay.create_dataset('x', shape=(1,))
+        ds_y = h5lay.create_dataset('y', shape=(1,))
+        ds_z = h5lay.create_dataset('z', shape=(1,))
+        ds_t = h5lay.create_dataset('time', shape=(1,))
+        for ds in (ds_x, ds_y, ds_z):
+            ds.attrs['__ndim__'] = (0, 1)
+            ds.attrs['units'] = 'm'
+        ds_x.attrs['standard_name'] = 'x_coordinate'
+        ds_y.attrs['standard_name'] = 'y_coordinate'
+        ds_z.attrs['standard_name'] = 'z_coordinate'
+        ds_t.attrs['units'] = 's'
+        ds_t.attrs['__ndim__'] = (0, 1)
+
+
+# if not H5Flow_layout_filename.exists():
+write_H5Flow_layout_file()
 
 
 class VectorDataset:
@@ -254,44 +278,11 @@ class H5FlowDataset(H5Dataset):
             self.attrs[DEVICE_ATTR_NAME] = device_grp
 
 
-class H5FlowLayout(conventions.H5FileLayout):
-    """Layout class for H5Flow wrapper class"""
-
-    def write(self):
-        """The layout file has the structure of a H5Flow file. This means
-        it has the required attributes, datasets and groups that are required
-        for a valid H5Flow file. For each application case this is of course
-        different. Such a file can be created and stored in the user directory
-        and will be used to check the completeness created H5Flow files
-
-        Dataset and group structure (attributes not shown):
-        /
-        /x     -> dim=(0, 1), m
-        /y     -> dim=(0, 1), m
-        /z     -> dim=(0, 1), m
-        /time  -> dim=(0, 1), s
-        """
-        super().write()
-        with h5py.File(self.filename, mode='r+') as h5:
-            ds_x = h5.create_dataset('x', shape=(1,))
-            ds_y = h5.create_dataset('y', shape=(1,))
-            ds_z = h5.create_dataset('z', shape=(1,))
-            ds_t = h5.create_dataset('time', shape=(1,))
-            for ds in (ds_x, ds_y, ds_z):
-                ds.attrs['__ndim__'] = (0, 1)
-                ds.attrs['units'] = 'm'
-            ds_x.attrs['standard_name'] = 'x_coordinate'
-            ds_y.attrs['standard_name'] = 'y_coordinate'
-            ds_z.attrs['standard_name'] = 'z_coordinate'
-            ds_t.attrs['units'] = 's'
-            ds_t.attrs['__ndim__'] = (0, 1)
-
-
 class H5Flow(H5File, H5FlowGroup):
     """H5Flow File wrapper class"""
-    Layout: H5FlowLayout = H5FlowLayout(Path.joinpath(user_data_dir, f'layout/H5Flow.hdf'))
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
+                 layout_filename: Path = H5Flow_layout_filename,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
@@ -299,6 +290,7 @@ class H5Flow(H5File, H5FlowGroup):
         if standard_name_table is None:
             standard_name_table = conventions.FluidStandardNameTable
         super().__init__(name, mode, title, standard_name_table,
+                         layout_filename,
                          driver, libver, userblock_size,
                          swmr, rdcc_nslots, rdcc_nbytes, rdcc_w0,
                          track_order, fs_strategy, fs_persist, fs_threshold,
@@ -454,13 +446,6 @@ class VectorDataset(SpecialDataset):
                     self['magnitude'].attrs['standard_name'] = 'magnitude_of_velocity'
                 elif all(['displacement' in c for c in component_standard_names]):
                     self['magnitude'].attrs['standard_name'] = 'magnitude_of_displacement'
-
-
-@register_special_dataset("DisplacementVector", H5Group)
-class DisplacementDataset(VectorDataset):
-    """Displacement vector class with xarray.Dataset-like behaviour.
-    Expecting the group to have datasets with standard names x_displacement and y_displacement"""
-    standard_names = ('x_displacement', 'y_displacement')
 
 
 @register_special_dataset("VelocityVector", H5Group)

@@ -4,7 +4,7 @@
 *Note, that the repository is under current development!*
 
 The "HDF5 Research Data Management Toolbox" (h5rdmtoolbox) supports the data creation, processing and sharing 
-of data using the HDF5 file format while fullfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles.
+of data using the HDF5 file format while fulfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles.
 The core idea is to make use of the popular file format HDF5. So-called wrapper-classes serve as 
 interfaces between the file and the user and implement naming conventions, layout-defintions and 
 provide helpful methods that facilitate processing and visualization. Special wrapper-classes can be written using class 

@@ -27,8 +27,8 @@ from .. import config
 from .. import conventions
 from .. import utils
 from .._repr import h5file_html_repr
+from .._user import user_data_dir
 from .._version import __version__
-from ..utils import user_data_dir
 from ..x2hdf import xr2hdf
 
 logger = logging.getLogger(__package__)
@@ -119,6 +119,14 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     else:
                         rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
                         return rootgrp.get(ret)
+                elif ret[0] == '(':
+                    if ret[-1] == ')':
+                        return eval(ret)
+                    return ret
+                elif ret[0] == '[':
+                    if ret[-1] == ']':
+                        return eval(ret)
+                    return ret
                 else:
                     return ret
             else:
@@ -208,6 +216,22 @@ class DatasetValues:
 
     def __setitem__(self, args, val):
         return self.h5dataset.__setitem__(args, val)
+
+
+H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
+
+
+def write_H5File_layout_file():
+    """Write the H5File layout to <user_dir>/layout"""
+    lay = conventions.layout.H5Layout(H5File_layout_filename)
+    with lay.File(mode='w') as h5lay:
+        h5lay.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
+        h5lay.attrs['title'] = '__file title'
+        h5lay.attrs['creation_time'] = '__time of file creation'
+
+
+# if not H5File_layout_filename.exists():
+write_H5File_layout_file()
 
 
 class H5Dataset(h5py.Dataset):
@@ -482,7 +506,7 @@ class H5Dataset(h5py.Dataset):
 class H5Group(h5py.Group):
     """
     It enforces the usage of units
-    and standard_names for every dataset and informative meta data at
+    and standard_names for every dataset and informative metadata at
     root level (creation time etc).
 
      It provides and long_name for every group.
@@ -1107,7 +1131,7 @@ class H5Group(h5py.Group):
         _compression, _compression_opts = config.hdf_compression, config.hdf_compression_opts
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
-        units = kwargs.pop('units', 'px')
+        units = kwargs.pop('units', 'pixel')
         ds = None
 
         if isinstance(img_filename, (str, Path)):
@@ -1497,7 +1521,9 @@ class H5File(h5py.File, H5Group):
     an issue be shown due to it.
     """
 
-    Layout: conventions.H5FileLayout = conventions.H5FileLayout(Path.joinpath(user_data_dir, f'layout/H5File.hdf'))
+    @property
+    def layout(self):
+        return self._layout
 
     @property
     def attrs(self):
@@ -1542,6 +1568,7 @@ class H5File(h5py.File, H5Group):
         self.attrs.modify('title', title)
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
+                 layout_filename: Path = H5File_layout_filename,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
@@ -1587,7 +1614,6 @@ class H5File(h5py.File, H5Group):
         if self.mode != 'r':
             if 'creation_time' not in self.attrs:
                 self.attrs['creation_time'] = now_time_str
-            self.attrs['modification_time'] = now_time_str
             self.attrs['__h5rdmtoolbox_version__'] = __version__
             self.attrs['__wrcls__'] = self.__class__.__name__
 
@@ -1637,14 +1663,18 @@ class H5File(h5py.File, H5Group):
         else:
             self.standard_name_table = snt
 
+        self.layout_filename = layout_filename
+        self._layout = conventions.layout.H5Layout(self.layout_filename)
+
     def __setitem__(self, name, obj):
         if isinstance(obj, xr.DataArray):
             return obj.hdf.to_group(self, name)
         super().__setitem__(name, obj)
 
-    def check(self, silent: bool = False) -> int:
-        """runs a complete check (static+dynamic) and returns number of issues"""
-        return self.Layout.check(self['/'], silent)
+    def check(self, grp='/', silent: bool = True) -> int:
+        """Run layout check. This method may be overwritten to add conditional
+         checking."""
+        return self.layout.check(self[grp], silent)
 
     def special_inspect(self, silent: bool = False) -> int:
         """Optional special inspection, e.g. conditional checks."""
