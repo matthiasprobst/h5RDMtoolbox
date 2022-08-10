@@ -6,7 +6,10 @@ import h5py
 import xarray as xr
 from IPython.display import HTML, display
 
-from .h5file import H5Dataset, H5Group
+from typing import TypeVar
+
+T_H5Dataset = TypeVar('T_H5Dataset')
+T_H5Group = TypeVar('T_H5Group')
 
 
 class SpecialDatasetRegistrationWarning(Warning):
@@ -64,14 +67,15 @@ def _register_special_dataset(name, cls):
 
     return decorator
 
-
+USER_PROPERTIES = []
 def _register_special_property(cls, overwrite=False):
     def decorator(accessor):
         """decorator"""
-        if hasattr(accessor, 'name'):
-            name = accessor.name
+        if hasattr(accessor, '__propname__'):
+            name = accessor.__propname__
         else:
             name = accessor.__name__
+        USER_PROPERTIES.append(name)
         if hasattr(cls, name):
             if overwrite:
                 print(f'Overwriting existing property {name}.')
@@ -94,14 +98,14 @@ def _register_special_property(cls, overwrite=False):
     return decorator
 
 
-def register_special_dataset(name, cls: Union[H5Dataset, H5Group]):
+def register_special_dataset(name, cls: Union[T_H5Dataset, T_H5Group]):
     """registers a special dataset to a wrapper class"""
     # if not isinstance(cls, (H5Dataset, H5Group)):
     #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
     return _register_special_dataset(name, cls)  # grpcls --> e.g. H5FlowGroup
 
 
-def register_special_property(cls: Union[H5Dataset, H5Group], overwrite=False):
+def register_special_property(cls: Union[T_H5Dataset, T_H5Group], overwrite=False):
     """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
     also docstring is optional but strongly recommended!"""
     # if not isinstance(cls, (H5Dataset, H5Group)):
