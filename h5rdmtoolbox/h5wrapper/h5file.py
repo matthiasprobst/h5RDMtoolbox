@@ -31,6 +31,7 @@ from .._user import user_data_dir
 from .._version import __version__
 from ..x2hdf import xr2hdf
 
+
 logger = logging.getLogger(__package__)
 
 # the following two lines are needed, otherwise automating formatting of the code will remove pint and xarray2hdf accessors
@@ -321,35 +322,35 @@ class H5Dataset(h5py.Dataset):
 
         self.attrs.modify('units', _units)
 
-    @property
-    def long_name(self):
-        """Returns the attribute long_name. Returns None if it does not exist."""
-        return self.attrs.get('long_name')
+    # @property
+    # def long_name(self):
+    #     """Returns the attribute long_name. Returns None if it does not exist."""
+    #     return self.attrs.get('long_name')
+    #
+    # @long_name.setter
+    # def long_name(self, long_name):
+    #     """Writes attribute long_name if passed string is not None"""
+    #     if long_name:
+    #         self.attrs.modify('long_name', long_name)
+    #     else:
+    #         raise TypeError('long_name must not be type None.')
 
-    @long_name.setter
-    def long_name(self, long_name):
-        """Writes attribute long_name if passed string is not None"""
-        if long_name:
-            self.attrs.modify('long_name', long_name)
-        else:
-            raise TypeError('long_name must not be type None.')
-
-    @property
-    def standard_name(self) -> Union[str, None]:
-        """Returns the standardized name of the dataset. The attribute name is `standard_name`.
-        Returns `None` if it does not exist."""
-        attrs_string = self.attrs.get('standard_name')
-        if attrs_string is None:
-            return conventions.Empty_Standard_Name_Table
-        return self.standard_name_table[attrs_string]
-
-    @standard_name.setter
-    def standard_name(self, new_standard_name):
-        """Writes attribute standard_name if passed string is not None.
-        The rules for the standard_name is checked before writing to file."""
-        if new_standard_name:
-            if self.standard_name_table.check_name(new_standard_name):
-                self.attrs['standard_name'] = new_standard_name
+    # @property
+    # def standard_name(self) -> Union[str, None]:
+    #     """Returns the standardized name of the dataset. The attribute name is `standard_name`.
+    #     Returns `None` if it does not exist."""
+    #     attrs_string = self.attrs.get('standard_name')
+    #     if attrs_string is None:
+    #         return conventions.Empty_Standard_Name_Table
+    #     return self.standard_name_table[attrs_string]
+    #
+    # @standard_name.setter
+    # def standard_name(self, new_standard_name):
+    #     """Writes attribute standard_name if passed string is not None.
+    #     The rules for the standard_name is checked before writing to file."""
+    #     if new_standard_name:
+    #         if self.standard_name_table.check_name(new_standard_name):
+    #             self.attrs['standard_name'] = new_standard_name
 
     def __setitem__(self, key, value):
         if isinstance(value, xr.DataArray):
@@ -565,18 +566,18 @@ class H5Group(h5py.Group):
         """returns list of the group's groups"""
         return [v for v in self.values() if isinstance(v, h5py.Group)]
 
-    @property
-    def long_name(self):
-        """Returns the attribute long_name. Returns None if it does not exist."""
-        return self.attrs.get('long_name')
-
-    @long_name.setter
-    def long_name(self, long_name):
-        """Writes attribute long_name if passed string is not None"""
-        if long_name:
-            self.attrs.modify('long_name', long_name)
-        else:
-            raise TypeError('long_name must not be type None.')
+    # @property
+    # def long_name(self):
+    #     """Returns the attribute long_name. Returns None if it does not exist."""
+    #     return self.attrs.get('long_name')
+    #
+    # @long_name.setter
+    # def long_name(self, long_name):
+    #     """Writes attribute long_name if passed string is not None"""
+    #     if long_name:
+    #         self.attrs.modify('long_name', long_name)
+    #     else:
+    #         raise TypeError('long_name must not be type None.')
 
     @property
     def data_source_type(self) -> conventions.data.DataSourceType:
@@ -649,6 +650,9 @@ class H5Group(h5py.Group):
                 raise AttributeError(item)
         else:
             return super().__getattribute__(item)
+
+    # def __setattr__(self, key, value):
+    #     super().__setattr__(key, value)
 
     def __str__(self):
         return self.sdump(ret=True)
@@ -1780,3 +1784,8 @@ H5Dataset._h5ds = H5Dataset
 
 H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
+
+
+
+from . import attrs
+attrs.long_name

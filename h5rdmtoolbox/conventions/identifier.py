@@ -65,6 +65,15 @@ class StandardizedName:
     def __str__(self):
         return self.name
 
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.name == other
+        else:
+            return any([self.name != other.name,
+                        self.description != other.description,
+                        self.canonical_units != other.canonical_units,
+                        self.convention != other.convention])
+
     def check(self):
         """Run the name check of the convention."""
         self.convention.check_name(self.name)
