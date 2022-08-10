@@ -7,13 +7,15 @@ import numpy as np
 try:
     from pyevtk.hl import gridToVTK
 except ImportError:
-    ImportError('Package pyevtk not installed.')
+    ImportError('Package pyevtk not installed. Either install it '
+                'separately or install the repository with pip install h5RDMtolbox [options]')
 
 try:
     import vtk
     from vtk.util.numpy_support import numpy_to_vtk
 except ImportError:
-    ImportError('Package vtk not installed.')
+    ImportError('Package vtk not installed. Either install it '
+                'separately or install the repository with pip install h5RDMtolbox [piv]')
 
 
 def get_time_average_data_from_piv_case(hdf_input: Path or h5py.Group) -> Dict:

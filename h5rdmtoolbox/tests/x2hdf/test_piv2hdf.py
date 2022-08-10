@@ -22,33 +22,34 @@ class TestPIV2HDF(unittest.TestCase):
         openpiv_par_file = h5tbx.tutorial.OpenPIV.get_parameter_file()
 
         # init a openpiv-file instance:
-        openpiv_file = h5tbx.x2hdf.piv.openpiv.OpenPIVFile(openpiv_txt_file, parameter_filename=None) # None -> auto serach
+        # None -> auto serach
+        openpiv_file = h5tbx.x2hdf.piv.openpiv.OpenPIVFile(openpiv_txt_file, parameter_filename=None)
 
-        openpiv_snapshot = h5tbx.x2hdf.PIVSnapshot(openpiv_file, recording_time=0.)
+        openpiv_snapshot = h5tbx.x2hdf.piv.PIVSnapshot(openpiv_file, recording_time=0.)
         hdf_filename = openpiv_snapshot.to_hdf()
 
     def test_pivview_snapshot(self):
         pivview_nc_file = h5tbx.tutorial.PIVview.get_snapshot_nc_files()[0]
-        pivview_file = h5tbx.x2hdf.piv.pivview.PIVViewNcFile(pivview_nc_file, None)
-        snapshot_pivview = h5tbx.x2hdf.PIVSnapshot(pivview_file, recording_time=0.)
+        pivview_file = h5tbx.x2hdf.piv.PIVViewNcFile(pivview_nc_file, None)
+        snapshot_pivview = h5tbx.x2hdf.piv.PIVSnapshot(pivview_file, recording_time=0.)
         hdf_filename = snapshot_pivview.to_hdf()
         with h5tbx.H5PIV(hdf_filename) as h5piv:
             self.assertEqual(h5piv.check(), 0)
 
     def test_multi_piv_unequal_nt(self):
         plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()
-        plane_objs = [h5tbx.x2hdf.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.pivview.PIVViewNcFile) for d in
+        plane_objs = [h5tbx.x2hdf.piv.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.piv.PIVViewNcFile) for d in
                       plane_dirs]
-        mplane = h5tbx.x2hdf.PIVMultiPlane(plane_objs)
+        mplane = h5tbx.x2hdf.piv.PIVMultiPlane(plane_objs)
         hdf_filename = mplane.to_hdf()
         with h5tbx.H5PIV(hdf_filename) as h5piv:
             self.assertEqual(h5piv.check(silent=False), 0)
 
     def test_multi_piv_unequal_nt_force(self):
         plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()
-        plane_objs = [h5tbx.x2hdf.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.pivview.PIVViewNcFile) for d in
+        plane_objs = [h5tbx.x2hdf.piv.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.piv.PIVViewNcFile) for d in
                       plane_dirs]
-        mplane = h5tbx.x2hdf.PIVMultiPlane(plane_objs)
+        mplane = h5tbx.x2hdf.piv.PIVMultiPlane(plane_objs)
         hdf_filename = mplane.to_hdf(fill_time_vec_differences=True)
         with h5tbx.H5PIV(hdf_filename, 'r') as h5piv:
             self.assertEqual(np.isnan(h5piv.u[-1, -1, :, :].values).sum(), h5piv['x'].size * h5piv['y'].size)

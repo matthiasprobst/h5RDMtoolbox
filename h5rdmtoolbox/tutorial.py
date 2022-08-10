@@ -14,13 +14,8 @@ from typing import Tuple
 import numpy as np
 import xarray as xr
 
-try:
-    from netCDF4 import Dataset as ncDataset
-except ImportError:
-    raise ImportError('Package netCDF4 is not installed.')
-
-from .utils import generate_temporary_directory, generate_temporary_filename
 from ._user import testdir
+from .utils import generate_temporary_directory, generate_temporary_filename
 
 
 class PIVview:
@@ -40,6 +35,11 @@ class PIVview:
     def get_multiplane_directories() -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
         """Copies the piv_challenge1_E data to three directories in the tmp directory
         Two planes have three nc files, one plane has 2 nc files only"""
+        try:
+            from netCDF4 import Dataset as ncDataset
+        except ImportError:
+            raise ImportError('Package netCDF4 is not installed. Either install it '
+                              'separately or install the repository with pip install h5RDMtolbox [piv]')
 
         def _set_z_in_nc(nc_filename, z_val):
             with ncDataset(nc_filename, 'r+') as nc:

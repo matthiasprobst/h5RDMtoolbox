@@ -3,11 +3,15 @@ import os
 from re import sub as re_sub
 
 import numpy as np
-import vtk
+
 from cv2 import imread as cv2imread
 from pco_tools import pco_reader as pco
 from psutil import virtual_memory
-
+try:
+    import vtk
+except ImportError:
+    ImportError('Package vtk not installed. Either install it '
+                'separately or install the repository with pip install h5RDMtolbox [piv]')
 
 def _root_attribute_json_dumps(_dict):
     class NumpyEncoder(json.JSONEncoder):

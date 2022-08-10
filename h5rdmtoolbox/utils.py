@@ -1,19 +1,14 @@
 import pathlib
-import sys
 from datetime import datetime
-from itertools import count
 from re import sub as re_sub
 
-import appdirs
 from cv2 import imread as cv2_imread
 from dateutil.tz import tzlocal
 from h5py import File
-from pco_tools import pco_reader as pco
-
-from ._version import __version__
-from .conventions import datetime_str
 
 from . import _user
+from ._version import __version__
+from .conventions import datetime_str
 
 
 def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
@@ -138,6 +133,11 @@ def load_img(img_filepath: pathlib.Path):
         raise FileExistsError(f'Image "{img_filepath}" not found.')
 
     if img_filepath.suffix == '.b16':
+        try:
+            from pco_tools import pco_reader as pco
+        except ImportError:
+            ImportError('Cannot read the b16 image because pco_tools is not installed. Either install it '
+                        'separately or install the repository with pip install h5RDMtolbox [b16]')
         return pco.load(str(img_filepath))
 
     return cv2_imread(str(img_filepath), -1)
