@@ -6,13 +6,21 @@ from typing import Tuple, Union, Dict
 
 import numpy as np
 import xarray as xr
-from netCDF4 import Dataset as ncDataset
-from scipy.interpolate import LinearNDInterpolator
-from scipy.spatial import Delaunay
 
 from .utils import is_time
 from ...conventions import StandardizedNameTable
 
+try:
+    from scipy.interpolate import LinearNDInterpolator
+    from scipy.spatial import Delaunay
+except ImportError:
+    raise ImportError('Package scipy is not installed. Either install it '
+                      'separately or install the repository with pip install h5RDMtolbox [piv]')
+try:
+    from netCDF4 import Dataset as ncDataset
+except ImportError:
+    raise ImportError('Package netCDF4 is not installed. Either install it '
+                      'separately or install the repository with pip install h5RDMtolbox [piv]')
 logger = logging.getLogger('x2hdf')
 
 

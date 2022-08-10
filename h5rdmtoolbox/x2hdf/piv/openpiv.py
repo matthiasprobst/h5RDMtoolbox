@@ -22,15 +22,16 @@ class OpenPIVParameterFile(PIVParameterInterface):
 
     def __init__(self, filename):
         super().__init__(filename)
-        _cfg = ConfigParser()
-        _cfg.read(filename)
-        self.param_dict = {}
-        if len(list(_cfg.sections())) == 1:
-            for s in _cfg.sections():
-                self.param_dict = dict(_cfg[s])
-        else:
-            for s in _cfg.sections():
-                self.param_dict[s.strip('-').strip(' ')] = dict(_cfg[s])
+        if filename is not None:
+            _cfg = ConfigParser()
+            _cfg.read(filename)
+            self.param_dict = {}
+            if len(list(_cfg.sections())) == 1:
+                for s in _cfg.sections():
+                    self.param_dict = dict(_cfg[s])
+            else:
+                for s in _cfg.sections():
+                    self.param_dict[s.strip('-').strip(' ')] = dict(_cfg[s])
 
     @staticmethod
     def from_dir(dirname):
@@ -91,7 +92,7 @@ class OpenPIVParameterFile(PIVParameterInterface):
 
 class OpenPIVFile(PIVFile, ABC):
     """Open PIV File interface class"""
-    suffix: str = ''  # any
+    suffix: str = None  # any suffix possible
     parameter = OpenPIVParameterFile
     _parameter: OpenPIVParameterFile = None
 

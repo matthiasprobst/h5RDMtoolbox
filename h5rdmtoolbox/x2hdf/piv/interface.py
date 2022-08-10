@@ -88,9 +88,10 @@ class PIVFile(abc.ABC):
         _filename = pathlib.Path(filename)
         if not filename.is_file:
             raise TypeError(f'Snapshot file path is not a file: {_filename}.')
-        if self.suffix != '':
-            if filename.suffix != self.suffix:
-                raise NameError(f'Expecting suffix {self.suffix}, not {_filename.suffix}')
+        if self.suffix is not None:
+            if self.suffix != '':
+                if filename.suffix != self.suffix:
+                    raise NameError(f'Expecting suffix {self.suffix}, not {_filename.suffix}')
         self.filename = _filename
         if parameter_filename is None:
             self._parameter = self.parameter.from_dir(filename.parent)

@@ -9,11 +9,16 @@ from typing import Dict, Tuple
 
 import h5py
 import numpy as np
-from netCDF4 import Dataset as ncDataset
 
 from .interface import PIVFile, PIV_PARAMETER_GRP_NAME, PIVParameterInterface
 from .nc import process_pivview_nc_data
 from ..._repr import make_bold
+
+try:
+    from netCDF4 import Dataset as ncDataset
+except ImportError:
+    raise ImportError('Package netCDF4 is not installed. Either install it '
+                      'separately or install the repository with pip install h5RDMtolbox [piv]')
 
 try:
     NCDF2PAR = Path(environ.get('ncdf2par'))
