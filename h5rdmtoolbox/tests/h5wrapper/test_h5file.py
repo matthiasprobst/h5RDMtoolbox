@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 import xarray as xr
 import yaml
+from pint_xarray import unit_registry as ureg
 
 from h5rdmtoolbox import config
 from h5rdmtoolbox import h5wrapper
@@ -17,6 +18,8 @@ from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 
 logger = logging.getLogger('h5rdmtoolbox.h5wrapper')
 set_loglevel('error')
+
+ureg.default_format = 'C~'
 
 
 class TestH5FileLayout(unittest.TestCase):
@@ -216,28 +219,6 @@ class TestH5File(unittest.TestCase):
             self.assertEqual(grp.attrs['long_name'], 'a long name')
             self.assertEqual(grp.long_name, 'a long name')
 
-    def test_standardized_atts(self):
-        with H5File() as h5:
-            ds = h5.create_dataset('ds', shape=(1,), units='', standard_name='x_coordinate')
-            ds.attrs['standard_name'] = 'x_coordinate'
-
-            self.assertEqual(h5.long_name, None)
-            h5.long_name = 'hello'
-            self.assertEqual(h5.long_name, 'hello')
-            self.assertEqual(h5.attrs['long_name'], 'hello')
-
-            with self.assertRaises(RuntimeError):
-                h5.standard_name = 'qew'
-            self.assertTrue(ds.standard_name == 'x_coordinate')
-            self.assertEqual(ds.standard_name, 'x_coordinate')
-
-            with self.assertRaises(ValueError):
-                h5.long_name = '123hello'
-            ds = h5.create_dataset('ds2', shape=(1,), units='', standard_name='awdadw')
-            ds.attrs['long_name'] = 'dddd'
-            self.assertEqual(ds.long_name, 'dddd')
-            self.assertEqual(ds.attrs['long_name'], 'dddd')
-
     def test_Layout(self):
         with H5File() as h5:
             h5.create_dataset('test', shape=(3,), long_name='daadw', units='')
@@ -356,19 +337,19 @@ class TestH5Dataset(unittest.TestCase):
     def test_to_unit(self):
         with H5File(mode='w') as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
-            self.assertEqual(dset.units, 'degC')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
             dset.to_units('K')
-            self.assertEqual(dset.units, 'K')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
             self.assertEqual(float(dset[()].values), 293)
 
             dset = h5.create_dataset('temp2', units='degC',
                                      long_name='temperature dataset', data=[20, 30])
-            self.assertEqual(dset.units, 'degC')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values[0]), 20)
             self.assertEqual(float(dset[()].values[1]), 30)
             dset.to_units('K')
-            self.assertEqual(dset.units, 'K')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
             self.assertEqual(float(dset[()].values[0]), 293)
             self.assertEqual(float(dset[()].values[1]), 303)
 

@@ -11,13 +11,13 @@ class TestCnventions(unittest.TestCase):
 
     def test_pivview(self):
         with H5PIV(mode='w') as h5:
-            ds = h5.create_dataset('u', shape=(), long_name='x_velocity', units='')
+            ds = h5.create_dataset('u', shape=(), long_name='x_velocity', units='m/s')
             self.assertFalse('standard_name' in ds.attrs)
             translations.update(ds, pivview_to_standardnames_dict)
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
         with H5PIV(mode='w') as h5:
-            ds = h5.create_dataset('u', shape=(), long_name='x_velocity', units='')
+            ds = h5.create_dataset('u', shape=(), long_name='x_velocity', units='m/s')
             self.assertFalse('standard_name' in ds.attrs)
             translations.update_standard_names(h5)
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')

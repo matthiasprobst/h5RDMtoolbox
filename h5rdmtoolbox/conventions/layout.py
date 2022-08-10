@@ -8,6 +8,7 @@ from typing import Union, Dict, List, TypeVar
 
 import h5py
 import numpy as np
+# noinspection PyUnresolvedReferences
 import pint_xarray
 from IPython.display import HTML, display
 
@@ -17,7 +18,6 @@ from .._user import user_data_dir
 
 logger = logging.getLogger(__package__)
 T_H5Layout = TypeVar('H5Layout')
-assert pint_xarray.__version__ >= '0.2.1'
 
 
 class H5Inspect:

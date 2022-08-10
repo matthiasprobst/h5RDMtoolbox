@@ -33,14 +33,13 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.attrs['an_attr'], 'a_string')
                 h5.attrs['mean'] = 1.2
                 self.assertEqual(h5.attrs['mean'], 1.2)
-                with self.assertRaises(AttributeError):
-                    h5.attrs['standard_name'] = 'a_string'
+                h5.attrs['standard_name'] = 'a_string'
 
                 with self.assertRaises(KeyError):
                     h5.attrs['non_existing_attribute']
 
                 # dataset attibutes
-                ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='')
+                ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='m/s')
                 ds.attrs['an_attr'] = 'a_string'
                 self.assertEqual(ds.attrs['an_attr'], 'a_string')
                 ds.attrs['mean'] = 1.2
@@ -76,7 +75,7 @@ class TestCommon(unittest.TestCase):
                 h5.non_existing_attribute = 1
                 print(h5.non_existing_attribute)
 
-                self.assertEqual(ds.standard_name, h5tbx.conventions.Empty_Standard_Name_Table)
+                # self.assertEqual(ds.standard_name, h5tbx.conventions.Empty_Standard_Name_Table)
                 ds.standard_name = 'x_velocity'
                 self.assertIsInstance(ds.standard_name, h5tbx.conventions.StandardizedName)
                 self.assertIsInstance(ds.attrs['standard_name'], str)

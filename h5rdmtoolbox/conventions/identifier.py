@@ -62,6 +62,9 @@ class StandardizedName:
     canonical_units: Union[str, None]
     convention: _NameIdentifierConvention
 
+    def __format__(self, spec):
+        return self.name.__format__(spec)
+
     def __str__(self):
         return self.name
 

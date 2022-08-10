@@ -11,17 +11,17 @@ from typing import Union
 
 import h5py
 import numpy as np
-import pint
+# noinspection PyUnresolvedReferences
 import pint_xarray
 import xarray as xr
 import yaml
 from IPython.display import HTML, display
-from h5py import h5i
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
 
+from .accessory import USER_PROPERTIES
 from .. import _repr
 from .. import config
 from .. import conventions
@@ -29,14 +29,10 @@ from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_data_dir
 from .._version import __version__
+# noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
 
-
 logger = logging.getLogger(__package__)
-
-# the following two lines are needed, otherwise automating formatting of the code will remove pint and xarray2hdf accessors
-assert pint_xarray.__version__ >= '0.2.1'
-assert xr2hdf.__version__ == '0.1.0'
 
 ureg.default_format = 'C~'
 
@@ -88,10 +84,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
     the name (string) is identified as a dataset or group, then this object is returned.
     """
 
-    def __init__(self, parent, identifier_convention: conventions.StandardizedNameTable):
+    def __init__(self, parent):  # , identifier_convention: conventions.StandardizedNameTable):
         """ Private constructor."""
         super().__init__(parent)
-        self.identifier_convention = identifier_convention  # standard_name_convention
+        self._parent = parent
+        # self.identifier_convention = identifier_convention  # standard_name_convention
 
     @with_phil
     def __getitem__(self, name):
@@ -143,16 +140,22 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
+        print(name, ' --> ', value)
+        if name == '_parent':
+            return
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
-        if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
-            if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
-                raise AttributeError(f'Attribute name {name} is reserverd '
-                                     'for dataset only.')
-            if h5i.get_type(self._id) == h5i.DATASET:
-                # check for standardized data-name identifiers
-                self.identifier_convention.check_name(value, strict=conventions.identifier.STRICT)
-
+        # if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
+        #     if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
+        #         raise AttributeError(f'Attribute name {name} is reserverd '
+        #                              'for dataset only.')
+        #     if h5i.get_type(self._id) == h5i.DATASET:
+        #         # check for standardized data-name identifiers
+        #         self.identifier_convention.check_name(value, strict=conventions.identifier.STRICT)
+        if name in USER_PROPERTIES:
+            if hasattr(self._parent, name):
+                setattr(self._parent, name, value)
+                return
         if isinstance(value, dict):
             # some value might be changed to a string first, like h5py objects
             for k, v in value.items():
@@ -197,7 +200,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if key == 'identifier_convention':
+        if key in ('_parent',):
             super().__setattr__(key, value)
             return
         if not isinstance(value, ObjectID):
@@ -249,7 +252,7 @@ class H5Dataset(h5py.Dataset):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return WrapperAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self)
 
     @property
     def rootparent(self):
@@ -277,10 +280,10 @@ class H5Dataset(h5py.Dataset):
         """avoiding using xarray"""
         return DatasetValues(self)
 
-    @property
-    def units(self):
-        """Returns the attribute units. Returns None if it does not exist."""
-        return self.attrs.get('units')
+    # @property
+    # def units(self):
+    #     """Returns the attribute units. Returns None if it does not exist."""
+    #     return self.attrs.get('units')
 
     @property
     def standard_name_table(self):
@@ -303,24 +306,24 @@ class H5Dataset(h5py.Dataset):
         self.rootparent.attrs.modify('standard_name_table', convention.versionname)
         _SNT_CACHE[self.id.id] = convention
 
-    @units.setter
-    def units(self, units):
-        """Sets the attribute units to attribute 'units'
-        default unit registry format of pint is used."""
-        if units:
-            if isinstance(units, str):
-                _units = ureg.Unit(units).__format__(ureg.default_format)
-            elif isinstance(units, pint.Unit):
-                _units = units.__format__(ureg.default_format)
-            else:
-                raise TypeError(f'Unit must be a string or pint.Unit but not {type(units)}')
-        else:
-            _units = units
-        standard_name = self.attrs.get('standard_name')
-        if standard_name:
-            self.standard_name_table.check_units(standard_name, _units)
-
-        self.attrs.modify('units', _units)
+    # @units.setter
+    # def units(self, units):
+    #     """Sets the attribute units to attribute 'units'
+    #     default unit registry format of pint is used."""
+    #     if units:
+    #         if isinstance(units, str):
+    #             _units = ureg.Unit(units).__format__(ureg.default_format)
+    #         elif isinstance(units, pint.Unit):
+    #             _units = units.__format__(ureg.default_format)
+    #         else:
+    #             raise TypeError(f'Unit must be a string or pint.Unit but not {type(units)}')
+    #     else:
+    #         _units = units
+    #     standard_name = self.attrs.get('standard_name')
+    #     if standard_name:
+    #         self.standard_name_table.check_units(standard_name, _units)
+    #
+    #     self.attrs.create('units', _units)
 
     # @property
     # def long_name(self):
@@ -533,7 +536,7 @@ class H5Group(h5py.Group):
     def attrs(self):
         """Calls the wrapper attibute manager"""
         with phil:
-            return WrapperAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self)
 
     @property
     def rootparent(self):
@@ -1534,7 +1537,7 @@ class H5File(h5py.File, H5Group):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return WrapperAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self)
 
     @property
     def version(self):
@@ -1785,7 +1788,6 @@ H5Dataset._h5ds = H5Dataset
 H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
 
-
-
-from . import attrs
-attrs.long_name
+# import accessors
+# noinspection PyUnresolvedReferences
+from .standardized_attributes import long_name, standard_name, units

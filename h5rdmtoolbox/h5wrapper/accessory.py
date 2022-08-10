@@ -67,7 +67,7 @@ def _register_special_dataset(name, cls):
 
     return decorator
 
-
+USER_PROPERTIES = []
 def _register_special_property(cls, overwrite=False):
     def decorator(accessor):
         """decorator"""
@@ -75,6 +75,7 @@ def _register_special_property(cls, overwrite=False):
             name = accessor.__propname__
         else:
             name = accessor.__name__
+        USER_PROPERTIES.append(name)
         if hasattr(cls, name):
             if overwrite:
                 print(f'Overwriting existing property {name}.')
