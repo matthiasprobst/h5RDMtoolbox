@@ -79,6 +79,7 @@ class PIVParameterInterface(abc.ABC):
                 else:
                     _rgrp.attrs[k] = v
             return _rgrp
+
         grp.attrs['param_dict'] = json.dumps(self.param_dict)
         return _to_grp(self.param_dict, grp)
 
@@ -284,6 +285,7 @@ class PIVMultiPlane(PIVConverter):
         fill_time_vec_differences:bool=False
             If time vectors have different length but are close, the datasets are filled with NaNs
         """
+        software_list = []
         nt_list = []
         t_list = []
         x_data = []
@@ -292,6 +294,10 @@ class PIVMultiPlane(PIVConverter):
         dim_names = []
         for hdf_file in hdf_filenames:
             with h5py.File(hdf_file) as h5plane:
+                try:
+                    software_list.append(h5plane.attrs['software'])
+                except AttributeError:
+                    pass
                 nt_list.append(h5plane['time'].size)
                 t_list.append(h5plane['time'][()])
                 x_data.append(h5plane['x'][:])
@@ -302,6 +308,9 @@ class PIVMultiPlane(PIVConverter):
             raise RuntimeError('Inconsistent dimension names. All planes must have same dimension names'
                                'for all datasets.')
         # check compliance of planes:
+        if len(software_list) > 1:
+            if not np.all([software_list[0] == s for s in software_list[1:]]):
+                raise ValueError('Plane have different software names registered')
         # they only can be merged if x and y data is equal but z is different:
         if not np.all([np.array_equal(x_data[0], x) for x in x_data[1:]]):
             raise ValueError('x coordinates of planes are differnt. Cannot merge.')
@@ -313,28 +322,34 @@ class PIVMultiPlane(PIVConverter):
         # now check if the time vectors have the same length.
         equal_length = np.all([nt_list[0] == nt for nt in nt_list[1:]])
 
-        if not equal_length:
-            # you may want to force a merge:
-            if fill_time_vec_differences:
-                nt_min = min(nt_list)
-                if np.all([np.allclose(t_list[0][0:nt_min], t[0:nt_min], rtol=rtol, atol=atol) for t in t_list[1:]]):
-                    return PIVMultiPlane._merge_planes_equal_time_vectors(hdf_filenames, target_hdf_filename,
-                                                                          nt=max(nt_list))
-            return PIVMultiPlane._merge_planes_unequal_time_vectors(hdf_filenames, target_hdf_filename)
-        else:
-            # same length but still time vectors could be different
-            if np.all([np.allclose(t_list[0], t, rtol=rtol, atol=atol) for t in t_list[1:]]):
-                # identical time vectors
-                return PIVMultiPlane._merge_planes_equal_time_vectors(hdf_filenames, target_hdf_filename)
+        with h5py.File(target_hdf_filename, 'w') as h5main:
+            h5main.attrs['software'] = software_list[0]
+
+            if not equal_length:
+                # you may want to force a merge:
+                if fill_time_vec_differences:
+                    nt_min = min(nt_list)
+                    if np.all(
+                            [np.allclose(t_list[0][0:nt_min], t[0:nt_min], rtol=rtol, atol=atol) for t in t_list[1:]]):
+                        PIVMultiPlane._merge_planes_equal_time_vectors(h5main, hdf_filenames, nt=max(nt_list))
+                        return target_hdf_filename
+                PIVMultiPlane._merge_planes_unequal_time_vectors(h5main, hdf_filenames)
+                return target_hdf_filename
             else:
-                # write datasets into separate planes
-                return PIVMultiPlane._merge_planes_unequal_time_vectors(hdf_filenames, target_hdf_filename)
-            # then if they do have the same length, they must have the same entries in order to merged the datasets
+                # same length but still time vectors could be different
+                if np.all([np.allclose(t_list[0], t, rtol=rtol, atol=atol) for t in t_list[1:]]):
+                    # identical time vectors
+                    PIVMultiPlane._merge_planes_equal_time_vectors(h5main, hdf_filenames)
+                    return target_hdf_filename
+                else:
+                    # write datasets into separate planes
+                    PIVMultiPlane._merge_planes_unequal_time_vectors(h5main, hdf_filenames)
+                    return target_hdf_filename
+                # then if they do have the same length, they must have the same entries in order to merged the datasets
 
     @staticmethod
-    def _merge_planes_equal_time_vectors(hdf_filenames: List[pathlib.Path],
-                                         target_hdf_filename: pathlib.Path,
-                                         nt: int = None):
+    def _merge_planes_equal_time_vectors(h5main: h5py.File, hdf_filenames: List[pathlib.Path],
+                                         nt: int = None) -> None:
         nz = len(hdf_filenames)
         with h5py.File(hdf_filenames[0]) as h5plane:
             if nt is None:
@@ -369,81 +384,79 @@ class PIVMultiPlane(PIVConverter):
             compression = h5plane['u'].compression
             compression_opts = h5plane['u'].compression_opts
 
-        with h5py.File(target_hdf_filename, 'w') as h5main:
-            # h5main.attrs['software'] = PIVMultiPlane.software_name
-            now = datetime.now()
-            h5main.attrs['creation_time'] = now.strftime(CF_DATETIME_STR)
-            h5main.attrs['title'] = 'piv snapshot data'
-            ds_x = h5main.create_dataset('x', shape=(nx,))
-            ds_x.make_scale()
-            ds_y = h5main.create_dataset('y', shape=(ny,))
-            ds_y.make_scale()
-            ds_ix = h5main.create_dataset('ix', shape=(nx,))
-            ds_ix.make_scale()
-            ds_iy = h5main.create_dataset('iy', shape=(ny,))
-            ds_iy.make_scale()
-            ds_z = h5main.create_dataset('z', shape=(nz,))
-            ds_z.make_scale()
-            ds_t = h5main.create_dataset('time', shape=(nt,))
-            ds_t.make_scale()
+        # h5main.attrs['software'] = PIVMultiPlane.software_name
+        now = datetime.now()
+        h5main.attrs['creation_time'] = now.strftime(CF_DATETIME_STR)
+        h5main.attrs['title'] = 'piv snapshot data'
+        ds_x = h5main.create_dataset('x', shape=(nx,))
+        ds_x.make_scale()
+        ds_y = h5main.create_dataset('y', shape=(ny,))
+        ds_y.make_scale()
+        ds_ix = h5main.create_dataset('ix', shape=(nx,))
+        ds_ix.make_scale()
+        ds_iy = h5main.create_dataset('iy', shape=(ny,))
+        ds_iy.make_scale()
+        ds_z = h5main.create_dataset('z', shape=(nz,))
+        ds_z.make_scale()
+        ds_t = h5main.create_dataset('time', shape=(nt,))
+        ds_t.make_scale()
+        for ds_name in dataset_names:
+            ds = h5main.create_dataset(ds_name, shape=ds_shape,
+                                       chunks=ds_chunk,
+                                       compression=compression,
+                                       compression_opts=compression_opts)
+            for i, n in enumerate(plane_coord_order):
+                ds.dims[i].attach_scale(h5main[n])
+                if n == 'x':
+                    ds.dims[i].attach_scale(h5main['ix'])
+                if n == 'y':
+                    ds.dims[i].attach_scale(h5main['iy'])
+
+        with h5py.File(hdf_filenames[0]) as h5plane:
+            ds_x[:] = h5plane['x'][:]
+            ds_y[:] = h5plane['y'][:]
+            ds_ix[:] = h5plane['ix'][:]
+            ds_iy[:] = h5plane['iy'][:]
+
             for ds_name in dataset_names:
-                ds = h5main.create_dataset(ds_name, shape=ds_shape,
-                                           chunks=ds_chunk,
-                                           compression=compression,
-                                           compression_opts=compression_opts)
-                for i, n in enumerate(plane_coord_order):
-                    ds.dims[i].attach_scale(h5main[n])
-                    if n == 'x':
-                        ds.dims[i].attach_scale(h5main['ix'])
-                    if n == 'y':
-                        ds.dims[i].attach_scale(h5main['iy'])
+                for ak, av in h5plane[ds_name].attrs.items():
+                    if not ak.isupper():
+                        h5main[ds_name].attrs[ak] = av
 
-            with h5py.File(hdf_filenames[0]) as h5plane:
-                ds_x[:] = h5plane['x'][:]
-                ds_y[:] = h5plane['y'][:]
-                ds_ix[:] = h5plane['ix'][:]
-                ds_iy[:] = h5plane['iy'][:]
+            for n in ('x', 'y', 'ix', 'iy', 'z', 'time'):
+                for ak, av in h5plane[n].attrs.items():
+                    if not ak.isupper():
+                        h5main[n].attrs[ak] = av
 
-                for ds_name in dataset_names:
-                    for ak, av in h5plane[ds_name].attrs.items():
-                        if not ak.isupper():
-                            h5main[ds_name].attrs[ak] = av
+        z_before_t = iz < it
 
-                for n in ('x', 'y', 'ix', 'iy', 'z', 'time'):
-                    for ak, av in h5plane[n].attrs.items():
-                        if not ak.isupper():
-                            h5main[n].attrs[ak] = av
+        for iplane, plane_hdf_filename in enumerate(hdf_filenames):
+            with h5py.File(plane_hdf_filename) as h5plane:
+                current_nt = h5plane['time'].size
+                if current_nt == nt:
+                    ds_t[:] = h5plane['time'][:]
+                h5main['z'][iplane] = h5plane['z'][()]
+                for k in dataset_names:
+                    ds = h5main[k]
+                    if z_before_t:
+                        ds[iplane, 0:current_nt] = h5plane[k][0:current_nt, ...]
+                        if current_nt < nt:
+                            ds[iplane, current_nt:] = np.nan
+                    else:
+                        for _it in range(current_nt):
+                            ds[_it, iplane, ...] = h5plane[k][_it, :, :]
+                        if current_nt < nt:
+                            for _it in range(current_nt, nt):
+                                ds[_it, iplane, ...] = np.nan
+                # write piv parameter group
+                plane_grp = h5main.create_group(f'plane{iplane:0{len(str(nz))}}')
+                trg_grp = plane_grp.create_group(PIV_PARAMETER_GRP_NAME)
+                copy_piv_parameter_group(h5plane[PIV_PARAMETER_GRP_NAME], trg_grp)
 
-            z_before_t = iz < it
-
-            for iplane, plane_hdf_filename in enumerate(hdf_filenames):
-                with h5py.File(plane_hdf_filename) as h5plane:
-                    current_nt = h5plane['time'].size
-                    if current_nt == nt:
-                        ds_t[:] = h5plane['time'][:]
-                    h5main['z'][iplane] = h5plane['z'][()]
-                    for k in dataset_names:
-                        ds = h5main[k]
-                        if z_before_t:
-                            ds[iplane, 0:current_nt] = h5plane[k][0:current_nt, ...]
-                            if current_nt < nt:
-                                ds[iplane, current_nt:] = np.nan
-                        else:
-                            for _it in range(current_nt):
-                                ds[_it, iplane, ...] = h5plane[k][_it, :, :]
-                            if current_nt < nt:
-                                for _it in range(current_nt, nt):
-                                    ds[_it, iplane, ...] = np.nan
-                    # write piv parameter group
-                    plane_grp = h5main.create_group(f'plane{iplane:0{len(str(nz))}}')
-                    plane_grp.create_group(PIV_PARAMETER_GRP_NAME)
-                    copy_piv_parameter_group(h5plane[PIV_PARAMETER_GRP_NAME], plane_grp)
-
-        return target_hdf_filename
+        return h5main
 
     @staticmethod
-    def _merge_planes_unequal_time_vectors(hdf_filenames: List[pathlib.Path],
-                                           target_hdf_filename: pathlib.Path):
+    def _merge_planes_unequal_time_vectors(h5main: h5py.File, hdf_filenames: List[pathlib.Path]) -> None:
         """merges multiple hdf files that have different time vectors lengths or entries"""
         nt_list = []
         x_data = []
@@ -460,44 +473,44 @@ class PIVMultiPlane(PIVConverter):
                 dim_names.append([d[0].name for d in h5plane['u'].dims])
         # different time steps --> put data in individual groups
         plane_grps = []
-        with h5py.File(target_hdf_filename, 'w') as h5main:
-            # h5main.attrs['software'] = PIVVIEW_SOFTWARE_NAME
-            h5main.attrs['title'] = 'piv snapshot data'
-            for iz, hdf_file in enumerate(hdf_filenames):
-                plane_grp = h5main.create_group(f'plane{iz:0{len(str(nz))}}')
-                plane_grps.append(plane_grp)
-                with h5py.File(hdf_file) as h5plane:
-                    for objname in h5plane:
-                        if objname != PIV_PARAMETER_GRP_NAME:  # treat separately
-                            h5main.copy(h5plane[objname], plane_grp)
-                        else:
-                            copy_piv_parameter_group(h5plane[PIV_PARAMETER_GRP_NAME], plane_grp.create_group(PIV_PARAMETER_GRP_NAME))
-            for varkey in ('x', 'y', 'ix', 'iy'):
-                h5main.move(plane_grps[0][varkey].name, varkey)
-                ds = h5main[varkey]
-                for ak in ds.attrs.keys():
-                    if ak.isupper():
-                        del ds.attrs[ak]
-                ds.make_scale()
-                for plane_grp in plane_grps[1:]:
-                    del plane_grp[varkey]
 
+        # h5main.attrs['software'] = PIVVIEW_SOFTWARE_NAME
+        h5main.attrs['title'] = 'piv snapshot data'
+        for iz, hdf_file in enumerate(hdf_filenames):
+            plane_grp = h5main.create_group(f'plane{iz:0{len(str(nz))}}')
+            plane_grps.append(plane_grp)
+            with h5py.File(hdf_file) as h5plane:
+                for objname in h5plane:
+                    if objname != PIV_PARAMETER_GRP_NAME:  # treat separately
+                        h5main.copy(h5plane[objname], plane_grp)
+                    else:
+                        copy_piv_parameter_group(h5plane[PIV_PARAMETER_GRP_NAME],
+                                                 plane_grp.create_group(PIV_PARAMETER_GRP_NAME))
+        for varkey in ('x', 'y', 'ix', 'iy'):
+            h5main.move(plane_grps[0][varkey].name, varkey)
+            ds = h5main[varkey]
+            for ak in ds.attrs.keys():
+                if ak.isupper():
+                    del ds.attrs[ak]
+            ds.make_scale()
             for plane_grp in plane_grps[1:]:
-                #del plane_grp['z']
-                for k, v in plane_grp.items():
-                    if isinstance(v, h5py.Dataset):
-                        for ak in ('DIMENSION_LIST',):
-                            try:
-                                del v.attrs[ak]
-                            except KeyError:
-                                pass
-                        if v.ndim > 1:
-                            for i, d in enumerate(dim_names[0]):
-                                if 'time' in d and 'time' in plane_grp:
-                                    v.dims[i].attach_scale(plane_grp['time'])
-                                else:
-                                    v.dims[i].attach_scale(h5main[d])
-        return target_hdf_filename
+                del plane_grp[varkey]
+
+        for plane_grp in plane_grps[1:]:
+            # del plane_grp['z']
+            for k, v in plane_grp.items():
+                if isinstance(v, h5py.Dataset):
+                    for ak in ('DIMENSION_LIST',):
+                        try:
+                            del v.attrs[ak]
+                        except KeyError:
+                            pass
+                    if v.ndim > 1:
+                        for i, d in enumerate(dim_names[0]):
+                            if 'time' in d and 'time' in plane_grp:
+                                v.dims[i].attach_scale(plane_grp['time'])
+                            else:
+                                v.dims[i].attach_scale(h5main[d])
 
     def to_hdf(self, hdf_filename: pathlib.Path = None, config: Dict = None,
                rtol=1.e-5, atol=1.e-8, fill_time_vec_differences: bool = False) -> pathlib.Path:

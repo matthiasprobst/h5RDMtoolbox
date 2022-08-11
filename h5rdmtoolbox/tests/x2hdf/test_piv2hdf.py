@@ -63,6 +63,7 @@ class TestPIV2HDF(unittest.TestCase):
         with h5tbx.H5PIV(hdf_filename, 'r') as h5piv:
             self.assertEqual(np.isnan(h5piv.u[-1, -1, :, :].values).sum(), h5piv['x'].size * h5piv['y'].size)
             self.assertEqual(h5piv.check(silent=False), 0)
+            h5piv.get_parameters(0)
 #     def setUp(self) -> None:
 #         self.file_ls = []
 #

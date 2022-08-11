@@ -290,7 +290,10 @@ class PIVSoftware:
     """PIV-Software class"""
 
     def __init__(self, name, version, **kwargs):
-        self._name = name
+        if name is None:
+            self._name = 'unknown'
+        else:
+            self._name = name
         if version is None:
             self._version = None
         else:
@@ -463,10 +466,11 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
     @property
     def software(self) -> Union[PIVSoftware, None]:
         """Returns attribute 'software'"""
+        _software = None
         if 'software' in self.attrs:
             _software = self.attrs.get('software')
         else:
-            _software = self.attrs['pivview_parameters'].get('software')
+            raise AttributeError('Cannot determine the software. Expecting it to be an attribute of the root group!')
 
         if isinstance(_software, dict):
             name = _software.pop('name', None)
@@ -494,7 +498,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             _software = software
         self.attrs['software'] = _software.to_dict()
 
-    def get_parameters(self, iz: int = None) -> PIVParameters:
+    def get_parameters(self, iz: int = None, software=None) -> PIVParameters:
         """Retruns the PIVParameter class of the respective software (if identified)
 
         if pivview is identified:
@@ -506,21 +510,24 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             As HDF files cannot store dictionares, the parameters are stred as a string-representation of a dictionary
             (json.dumps()
         """
-        software = self.software
+        if software is None:
+            software = self.software
+        if isinstance(software, str):
+            software = PIVSoftware(software, None)
 
         def _get_parameter_dict():
             if 'piv_parameters' in self:  # at root level --> valid for all z
                 return [self['piv_parameters'].attrs['param_dict'], ]
             else:
-                plane_candidates = sorted(list([k for k in self.groups if 'plane' in k]))
-                if not plane_candidates:
+                plane_name_candidates = sorted(list([k.name for k in self.groups if 'plane' in k.name]))
+                if len(plane_name_candidates) == 0:
                     try:
                         piv_par_attr = self.attrs['piv_parameters']
                     except AttributeError:
                         raise AttributeError(f'Could not determine piv_parameters. Not in in attributes, '
                                              f'no group "piv_parameters" exists or "plane*"...')
                     return [piv_par_attr, ]
-                return [pc.attrs['param_dict'] for pc in plane_candidates]
+                return [self[pc]['piv_parameters'].attrs['param_dict'] for pc in plane_name_candidates]
 
         piv_parameter_list = _get_parameter_dict()
         if len(piv_parameter_list) > 1 and iz is None:
@@ -531,7 +538,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         for key, value in AV_PIV_PARAMETER.items():
             if software.name.lower() in key or key in software.name.lower():
                 return PIVParameters(value(piv_parameter_list[iz]))
-        raise NotImplementedError(f'No PIV Parameter class for software {software.name}.')
+        raise NotImplementedError(f'No PIV Parameter class for software "{software.name}".')
 
     @property
     def resolution(self):

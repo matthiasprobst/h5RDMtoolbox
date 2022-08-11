@@ -1,9 +1,9 @@
 import unittest
 
-import h5py
 import numpy as np
 import xarray as xr
 
+import h5rdmtoolbox as h5tbx
 import h5rdmtoolbox.tutorial
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import StandardizedNameTable
@@ -46,7 +46,6 @@ def my_uncertainty_method(uds, imgA, imgB):
 
 
 class TestH5PIV(unittest.TestCase):
-
 
     def test_H5PIV_properties(self):
         with h5rdmtoolbox.tutorial.get_H5PIV('minimal_flow', 'r+') as h5:
@@ -101,6 +100,20 @@ class TestH5PIV(unittest.TestCase):
             h5.DisplacementVector[:, :].compute_uncertainty(my_uncertainty_method, None, None)
 
     def test_piv_parameters(self):
+        piv_folder = h5tbx.tutorial.PIVview.get_plane_directory()
+        plane = h5tbx.x2hdf.piv.PIVPlane.from_plane_folder(piv_folder, 5, h5tbx.x2hdf.piv.pivview.PIVViewNcFile)
+        hdf_filename = plane.to_hdf()
+        with h5tbx.H5PIV(hdf_filename, 'r') as h5:
+            piv_param = h5.get_parameters()
+        self.assertIsInstance(piv_param, PIVParameters)
+        self.assertIsInstance(piv_param.method, PIVMethod)
+        self.assertIsInstance(piv_param.final_window_size, list)
+        self.assertIsInstance(piv_param.correlation_mode, h5piv.PIVCorrelationMode)
+        self.assertIsInstance(piv_param.window_function, h5piv.PIVWindowFunction)
+        self.assertIsInstance(piv_param.window_function, h5piv.PIVWindowFunction)
+        self.assertEqual(piv_param.window_function, h5piv.PIVWindowFunction.Uniform)
+
+    def test_piv_parameters2(self):
         with tutorial.get_H5PIV('vortex_snapshot') as h5:
             piv_param = h5.get_parameters()
 

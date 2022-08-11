@@ -140,7 +140,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
-        print(name, ' --> ', value)
         if name == '_parent':
             return
         if not isinstance(name, str):
