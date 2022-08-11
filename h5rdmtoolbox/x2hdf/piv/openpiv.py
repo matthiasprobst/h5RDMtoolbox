@@ -11,7 +11,7 @@ from .interface import PIVFile, PIVParameterInterface, PIV_PARAMETER_GRP_NAME
 try:
     from openpiv import windef
 except ImportError:
-    print('Could not import openpiv. Not installed.')
+    raise ImportError('Could not import openpiv. Not installed.')
 OpenPIVSetting = TypeVar('OpenPIVSetting')
 
 OPENPIV_SOFTWARE_NAME = 'openpiv'
@@ -100,7 +100,7 @@ class OpenPIVFile(PIVFile, ABC):
         """Read data from file."""
         px_mm_scale = float(self._parameter.param_dict['scaling_factor'])  # px/mm
 
-        data = pd.read_table(self.filename)
+        data = pd.read_csv(self.filename, delimiter='\t', na_values='     nan')
         _ix = data["# x"].to_numpy()
         _iy = data["y"].to_numpy()
 
