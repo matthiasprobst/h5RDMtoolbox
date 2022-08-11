@@ -9,3 +9,4 @@ html_max_string_length = 40  # used for HTML representation of strings (.dump())
 mpl_style = 'h5rdmtoolbox'
 xarray_unit_repr_in_plots = '/'
 require_units = True  # datasets require units
+ureg_format = 'C~'

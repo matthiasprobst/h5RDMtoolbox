@@ -19,7 +19,7 @@ from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 logger = logging.getLogger('h5rdmtoolbox.h5wrapper')
 set_loglevel('error')
 
-ureg.default_format = 'C~'
+ureg.default_format = config.ureg_format
 
 
 class TestH5FileLayout(unittest.TestCase):
@@ -365,20 +365,17 @@ class TestH5Dataset(unittest.TestCase):
     def test_sdump(self):
         with H5File(mode='w') as h5:
             h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
-            h5.attrs['modification_time'] = '2022-07-19T17:01:41Z+0200'
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
 a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
-a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m\x1B[3m
-a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m\x1b[3m
-a: standard_name_table:           EmptyStandardizedNameTable-v0\x1b[0m
+a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 """
             self.assertEqual(sdump_str, _str)
         with H5File(mode='w') as h5:
             h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
-            h5.attrs['modification_time'] = '2022-07-19T17:01:41Z+0200'
             h5.create_dataset('test', shape=(), long_name='a long name', units='')
             grp = h5.create_group('grp')
             grp.create_dataset('test', shape=(), long_name='a long name', units='')
@@ -386,10 +383,9 @@ a: standard_name_table:           EmptyStandardizedNameTable-v0\x1b[0m
             _str = """> H5File: Group name: /.
 \x1B[3m
 a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
-a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m\x1B[3m
-a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m\x1b[3m
-a: standard_name_table:           EmptyStandardizedNameTable-v0\x1b[0m
+a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 \x1B[1mtest\x1B[0m                   ()                            
 \x1B[3m\x1B[1m/grp\x1B[0m\x1B[0m
   \x1B[1mtest\x1B[0m                   ()                            

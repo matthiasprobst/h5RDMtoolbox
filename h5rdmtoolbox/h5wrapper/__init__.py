@@ -7,6 +7,7 @@ from ._logger import logger, _file_handler, _stream_handler
 from .h5file import H5File
 from .h5flow import H5Flow
 from .h5piv import H5PIV
+from .accessory import register_special_property, register_special_dataset
 
 
 def set_loglevel(level):

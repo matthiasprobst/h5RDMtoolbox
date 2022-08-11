@@ -29,12 +29,13 @@ from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_data_dir
 from .._version import __version__
+from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME
 # noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
 
 logger = logging.getLogger(__package__)
 
-ureg.default_format = 'C~'
+ureg.default_format = config.ureg_format
 
 _SNT_CACHE = {}
 
@@ -279,11 +280,6 @@ class H5Dataset(h5py.Dataset):
         """avoiding using xarray"""
         return DatasetValues(self)
 
-    # @property
-    # def units(self):
-    #     """Returns the attribute units. Returns None if it does not exist."""
-    #     return self.attrs.get('units')
-
     @property
     def standard_name_table(self):
         """returns the standard name convention associated with the file instance"""
@@ -291,7 +287,7 @@ class H5Dataset(h5py.Dataset):
             return _SNT_CACHE[self.file.id.id]
         except KeyError:
             return conventions.Empty_Standard_Name_Table
-        # snt = self.rootparent.attrs.get('standard_name_table')
+        # snt = self.rootparent.attrs.get(STD_NAME_TABLE_ATTR_NAME)
         # if snt is None:
         #     try:
         #         return _SNT_CACHE[self.file.id.id]
@@ -302,57 +298,8 @@ class H5Dataset(h5py.Dataset):
     @standard_name_table.setter
     def standard_name_table(self, convention: conventions.StandardizedNameTable):
         """returns the standard name convention associated with the file instance"""
-        self.rootparent.attrs.modify('standard_name_table', convention.versionname)
+        self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
         _SNT_CACHE[self.id.id] = convention
-
-    # @units.setter
-    # def units(self, units):
-    #     """Sets the attribute units to attribute 'units'
-    #     default unit registry format of pint is used."""
-    #     if units:
-    #         if isinstance(units, str):
-    #             _units = ureg.Unit(units).__format__(ureg.default_format)
-    #         elif isinstance(units, pint.Unit):
-    #             _units = units.__format__(ureg.default_format)
-    #         else:
-    #             raise TypeError(f'Unit must be a string or pint.Unit but not {type(units)}')
-    #     else:
-    #         _units = units
-    #     standard_name = self.attrs.get('standard_name')
-    #     if standard_name:
-    #         self.standard_name_table.check_units(standard_name, _units)
-    #
-    #     self.attrs.create('units', _units)
-
-    # @property
-    # def long_name(self):
-    #     """Returns the attribute long_name. Returns None if it does not exist."""
-    #     return self.attrs.get('long_name')
-    #
-    # @long_name.setter
-    # def long_name(self, long_name):
-    #     """Writes attribute long_name if passed string is not None"""
-    #     if long_name:
-    #         self.attrs.modify('long_name', long_name)
-    #     else:
-    #         raise TypeError('long_name must not be type None.')
-
-    # @property
-    # def standard_name(self) -> Union[str, None]:
-    #     """Returns the standardized name of the dataset. The attribute name is `standard_name`.
-    #     Returns `None` if it does not exist."""
-    #     attrs_string = self.attrs.get('standard_name')
-    #     if attrs_string is None:
-    #         return conventions.Empty_Standard_Name_Table
-    #     return self.standard_name_table[attrs_string]
-    #
-    # @standard_name.setter
-    # def standard_name(self, new_standard_name):
-    #     """Writes attribute standard_name if passed string is not None.
-    #     The rules for the standard_name is checked before writing to file."""
-    #     if new_standard_name:
-    #         if self.standard_name_table.check_name(new_standard_name):
-    #             self.attrs['standard_name'] = new_standard_name
 
     def __setitem__(self, key, value):
         if isinstance(value, xr.DataArray):
@@ -474,10 +421,10 @@ class H5Dataset(h5py.Dataset):
 
         super().__init__(_id)
 
-    def to_units(self, units):
+    def to_units(self, new_units: str):
         """Changes the physical unit of the dataset using pint_xarray.
         Loads to full dataset into RAM!"""
-        self[()] = self[()].pint.quantify().pint.to(units).pint.dequantify()
+        self[()] = self[()].pint.quantify().pint.to(new_units).pint.dequantify()
 
     def rename(self, newname):
         """renames the dataset. Note this may be a process that kills your RAM"""
@@ -604,7 +551,7 @@ class H5Group(h5py.Group):
     @standard_name_table.setter
     def standard_name_table(self, convention: conventions.StandardizedNameTable):
         """sets the standard name convention as attribute and in 'SNT_CACHE'"""
-        self.rootparent.attrs.modify('standard_name_table', convention.versionname)
+        self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
         _SNT_CACHE[self.id.id] = convention
 
     def __init__(self, _id):
@@ -1523,9 +1470,8 @@ class H5Group(h5py.Group):
 
 
 class H5File(h5py.File, H5Group):
-    """H5File requires title as root attribute. It is not enforced but if not set
-    an issue be shown due to it.
-    """
+    """Main wrapper around h5py.File with additional methods. Integrates naming and layout
+    conventions. All features from h5py packages are preserved."""
 
     @property
     def layout(self):
@@ -1533,8 +1479,7 @@ class H5File(h5py.File, H5Group):
 
     @property
     def attrs(self):
-        """Exact copy of parent class:
-        Attributes attached to this object """
+        """Returns an attribute manager that is inherited from h5py's attribute manager"""
         with phil:
             return WrapperAttributeManager(self)
 
@@ -1563,15 +1508,15 @@ class H5File(h5py.File, H5Group):
         _bytes = os.path.getsize(self.filename)
         return _bytes * ureg.byte
 
-    @property
-    def title(self) -> Union[str, None]:
-        """Returns the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
-        return self.attrs.get('title')
-
-    @title.setter
-    def title(self, title):
-        """Sets the title of the file"""
-        self.attrs.modify('title', title)
+    # @property
+    # def title(self) -> Union[str, None]:
+    #     """Returns the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
+    #     return self.attrs.get('title')
+    #
+    # @title.setter
+    # def title(self, title):
+    #     """Sets the title of the file"""
+    #     self.attrs.modify('title', title)
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
                  layout_filename: Path = H5File_layout_filename,
@@ -1627,7 +1572,7 @@ class H5File(h5py.File, H5Group):
                 self.attrs['title'] = title
 
         # snt stored in the file:
-        snt_attr = self.attrs.get('standard_name_table')
+        snt_attr = self.attrs.get(STD_NAME_TABLE_ATTR_NAME)
 
         if snt_attr is None:
             if isinstance(standard_name_table, str):
@@ -1642,7 +1587,7 @@ class H5File(h5py.File, H5Group):
         else:
             if standard_name_table is None:
                 # user has not passed a snt but the snt attribute has an entry. --> use this snt
-                snt = conventions.StandardizedNameTable.from_name(*self.attrs.get('standard_name_table').split('-v'))
+                snt = conventions.StandardizedNameTable.from_name(*self.attrs.get(STD_NAME_TABLE_ATTR_NAME).split('-v'))
             else:
                 if isinstance(standard_name_table, str):
                     snt = conventions.StandardizedNameTable.from_xml(standard_name_table)
@@ -1789,4 +1734,4 @@ H5Group._h5ds = H5Dataset
 
 # import accessors
 # noinspection PyUnresolvedReferences
-from .standardized_attributes import long_name, standard_name, units
+from .standardized_attributes import long_name, standard_name, units, title

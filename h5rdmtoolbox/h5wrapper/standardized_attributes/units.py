@@ -1,10 +1,11 @@
 import pint
 from pint_xarray import unit_registry as ureg
 
-from ..h5file import H5Dataset
 from ..accessory import register_special_property
+from ..h5file import H5Dataset
+from ... import config
 
-ureg.default_format = 'C~'
+ureg.default_format = config.ureg_format
 
 
 @register_special_property(H5Dataset)
