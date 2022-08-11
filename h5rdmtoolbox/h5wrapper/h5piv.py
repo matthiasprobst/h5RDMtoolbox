@@ -1,5 +1,5 @@
 """H5PIV module: Wrapper for PIV data"""
-
+import configparser
 import logging
 import warnings
 from abc import ABC
@@ -226,31 +226,63 @@ class PIVParamAdapter(Protocol):
 
 
 class PIVviewParameters:
-    __slots__ = "preprocessing", "processing", "validation", "conversion"
+    """PIVview Parameter class"""
+    __slots__ = "preprocessing", "processing", "validation", "conversion", "param_dict"
     software_name = 'pivview'
 
     def __init__(self, param_dict: Dict) -> None:
-        self.preprocessing = param_dict['---- PIV image pre-processing parameters ----']
-        self.processing = param_dict['---- PIV processing parameters ----']
-        self.validation = param_dict['---- PIV validation parameters ----']
-        self.conversion = param_dict['---- PIV conversion parameters ----']
+        self.param_dict = param_dict
+        for k, v in param_dict.items():
+            if 'PIV image pre-processing parameters' in k:
+                self.preprocessing = v
+            elif 'PIV processing parameters' in k:
+                self.processing = v
+            elif 'PIV validation parameters' in k:
+                self.validation = v
+            elif 'PIV conversion parameters' in k:
+                self.conversion = v
+
+    #
+    # @property
+    # def processing(self):
+    #     for k, v in self.param_dict.items():
+    #         if 'PIV processing parameters' in k:
+    #             return v
 
     def to_file(self, filename):
         """Write parameter to file"""
-        raise NotImplementedError()
+        cfg = configparser.ConfigParser()
+        with open(filename, 'w') as f:
+            cfg.write(self.param_dict)
 
     def get(self, key: str, default: Any = None) -> Union[Any, None]:
         """Return the value associated with the key"""
+        # TODO this lower() or not is not nice... has pivview a problem with getting lowercase parameter values though?
         if key == 'method':
-            return self.processing.get('View0_PIV_Eval_Method') + 1
+            if 'View0_PIV_Eval_Method' in self.processing:
+                return PIVMethod(self.processing.get('View0_PIV_Eval_Method') + 1)
+            else:
+                return PIVMethod(self.processing.get('View0_PIV_Eval_Method'.lower()) + 1)
         elif key == 'window_function':
-            return self.processing.get('View0_PIV_Eval_CorrFilter_WindowType') + 1
+            if 'View0_PIV_Eval_CorrFilter_WindowType' in self.processing:
+                return PIVWindowFunction(self.processing.get('View0_PIV_Eval_CorrFilter_WindowType') + 1)
+            else:
+                return PIVWindowFunction(self.processing.get('View0_PIV_Eval_CorrFilter_WindowType'.lower()) + 1)
         elif key == 'final_window_size':
-            return self.processing.get('View0_PIV_Eval_SampleSize')
+            if 'View0_PIV_Eval_SampleSize' in self.processing:
+                return self.processing.get('View0_PIV_Eval_SampleSize')
+            else:
+                return self.processing.get('View0_PIV_Eval_SampleSize'.lower())
         elif key == 'overlap':
-            return self.processing.get('View0_PIV_Eval_SampleStep')
+            if 'View0_PIV_Eval_SampleStep' in self.processing:
+                return self.processing.get('View0_PIV_Eval_SampleStep')
+            else:
+                return self.processing.get('View0_PIV_Eval_SampleStep'.lower())
         elif key == 'correlation_mode':
-            return self.processing.get('View0_PIV_Eval_CorrelationMode') + 1
+            if 'View0_PIV_Eval_CorrelationMode' in self.processing:
+                return PIVCorrelationMode(self.processing.get('View0_PIV_Eval_CorrelationMode') + 1)
+            else:
+                return PIVCorrelationMode(self.processing.get('View0_PIV_Eval_CorrelationMode'.lower()) + 1)
         return default
 
 
@@ -296,7 +328,7 @@ class PIVParameters:
 
     @property
     def method(self):
-        return PIVMethod(self.piv_parameter.get('method'))
+        return self.piv_parameter.get('method')
 
     @property
     def final_window_size(self):
@@ -305,11 +337,11 @@ class PIVParameters:
     @property
     def window_function(self) -> PIVWindowFunction:
         """cross correlation filter window type"""
-        return PIVWindowFunction(self.piv_parameter.get('window_function'))
+        return self.piv_parameter.get('window_function')
 
     @property
     def correlation_mode(self) -> PIVCorrelationMode:
-        return PIVCorrelationMode(self.piv_parameter.get('correlation_mode'))
+        return self.piv_parameter.get('correlation_mode')
 
 
 # class H5PIVLayout(H5FlowLayout):
@@ -477,11 +509,18 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         software = self.software
 
         def _get_parameter_dict():
-            if 'piv_parameters' in self.attrs:  # at root level --> valid for all z
-                return [self.attrs['piv_parameters'], ]
+            if 'piv_parameters' in self:  # at root level --> valid for all z
+                return [self['piv_parameters'].attrs['param_dict'], ]
             else:
                 plane_candidates = sorted(list([k for k in self.groups if 'plane' in k]))
-                return [plane_candidates.attrs['piv_parameters'] for pc in plane_candidates]
+                if not plane_candidates:
+                    try:
+                        piv_par_attr = self.attrs['piv_parameters']
+                    except AttributeError:
+                        raise AttributeError(f'Could not determine piv_parameters. Not in in attributes, '
+                                             f'no group "piv_parameters" exists or "plane*"...')
+                    return [piv_par_attr, ]
+                return [pc.attrs['param_dict'] for pc in plane_candidates]
 
         piv_parameter_list = _get_parameter_dict()
         if len(piv_parameter_list) > 1 and iz is None:

@@ -68,7 +68,7 @@ class PIVviewParameterFile(PIVParameterInterface):
         _cfg.read(filename)
         self.param_dict = {}
         for s in _cfg.sections():
-            self.param_dict[s.strip('-').strip(' ')] = dict(_cfg[s])
+            self.param_dict[s.strip('-').strip(' ')] = {k: eval(v) for k, v in dict(_cfg[s]).items()}
 
     def save(self, filename: pathlib.Path):
         """Save to original file format"""
@@ -91,6 +91,7 @@ class PIVviewParameterFile(PIVParameterInterface):
         if len(pars) != 1:
             raise FileExistsError('Cannot find parameter file')
         return PIVviewParameterFile(pars[0])
+
 
 
 class PivViewParFile(configparser.ConfigParser):

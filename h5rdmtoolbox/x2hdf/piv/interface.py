@@ -1,4 +1,5 @@
 import abc
+import json
 import os
 import pathlib
 from datetime import datetime
@@ -31,6 +32,8 @@ def copy_piv_parameter_group(src: h5py.Group, trg: h5py.Group) -> None:
     """copies the piv parameters to the new group"""
 
     def _to_grp(_src, _trg):
+        for ak, av in _src.attrs.items():
+            _trg.attrs[ak] = av
         for k, v in _src.items():
             if isinstance(v, h5py.Group):
                 obj = _trg.create_group(k)
@@ -68,14 +71,15 @@ class PIVParameterInterface(abc.ABC):
     def to_hdf(self, grp: h5py.Group) -> h5py.Group:
         """Recursively walk thorugh data dictionary and write content to HDF group"""
 
-        def _to_grp(_dict, _grp):
+        def _to_grp(_dict, _rgrp):
             for k, v in _dict.items():
                 if isinstance(v, dict):
-                    _grp = _to_grp(v, _grp.create_group(k))
+                    if v:  # only if there is data...
+                        _grp = _to_grp(v, _rgrp.create_group(k))
                 else:
-                    _grp.attrs[k] = v
-            return _grp
-
+                    _rgrp.attrs[k] = v
+            return _rgrp
+        grp.attrs['param_dict'] = json.dumps(self.param_dict)
         return _to_grp(self.param_dict, grp)
 
 

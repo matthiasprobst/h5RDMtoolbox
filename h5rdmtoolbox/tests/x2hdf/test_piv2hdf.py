@@ -36,6 +36,15 @@ class TestPIV2HDF(unittest.TestCase):
         with h5tbx.H5PIV(hdf_filename) as h5piv:
             self.assertEqual(h5piv.check(), 0)
 
+    def test_multi_piv_equal_nt(self):
+        plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()[0:2]
+        plane_objs = [h5tbx.x2hdf.piv.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.piv.PIVViewNcFile) for d in
+                      plane_dirs]
+        mplane = h5tbx.x2hdf.piv.PIVMultiPlane(plane_objs)
+        hdf_filename = mplane.to_hdf()
+        with h5tbx.H5PIV(hdf_filename) as h5piv:
+            self.assertEqual(h5piv.check(silent=False), 0)
+
     def test_multi_piv_unequal_nt(self):
         plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()
         plane_objs = [h5tbx.x2hdf.piv.PIVPlane.from_plane_folder(d, 5, h5tbx.x2hdf.piv.PIVViewNcFile) for d in

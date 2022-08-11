@@ -277,8 +277,8 @@ class TestH5File(unittest.TestCase):
             # self.assertEqual(h5.attrs['ds'], dset)
             # self.assertIsInstance(h5.attrs['ds'], H5Dataset)
 
-            dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
-            self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
+            dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}}
+            self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
 
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):

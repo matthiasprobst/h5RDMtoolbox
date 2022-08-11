@@ -8,10 +8,6 @@ import pandas as pd
 
 from .interface import PIVFile, PIVParameterInterface, PIV_PARAMETER_GRP_NAME
 
-try:
-    from openpiv import windef
-except ImportError:
-    raise ImportError('Could not import openpiv. Not installed.')
 OpenPIVSetting = TypeVar('OpenPIVSetting')
 
 OPENPIV_SOFTWARE_NAME = 'openpiv'
