@@ -102,12 +102,16 @@ class PIVview:
 
 
 class OpenPIV:
+    """OpenPIV tutorial class"""
+
     @staticmethod
     def get_snapshot_txt_file():
-        return testdir / f'PIV/openpiv/field_A000.txt'
+        """Return snapshot piv result from ILA vortex"""
+        return testdir / f'PIV/openpiv/vortex.txt'
 
     @staticmethod
     def get_parameter_file():
+        """Return openpiv parameters as file"""
         return testdir / f'PIV/openpiv/openpiv.par'
 
 
