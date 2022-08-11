@@ -3,7 +3,7 @@
 
 .. |h5wrappericon| image:: ../icons/icon_h5wrapper.svg
   :width: 30
-  :alt: Alternative text
+  :alt:
 
 Motivated by sustainable research data management, the package `h5wrapper` aims to integrate meta conventions
 during the data generation, processing and anlysing process while facilitating and streamlinig the work at the same
@@ -37,8 +37,9 @@ All above enhances the FAIRness (FAIR=Findable+Accessible+Interoperable+re-usabl
     :maxdepth: 2
     :hidden:
 
-    GettingStarted.ipynb
-    H5Flow.ipynb
-    H5PIV.ipynb
+    Basics.ipynb
+    NaturalNaming.ipynb
+    SpecializedWrappers.ipynb
+    SpecialAttributes.ipynb
     InheritanceAndAccessors.ipynb
 

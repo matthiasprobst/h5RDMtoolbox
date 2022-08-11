@@ -3,7 +3,6 @@ This is work in progress and as long as there is no official version provided by
 this repository uses this convention
 """
 
-import pathlib
 from h5rdmtoolbox.conventions.identifier import StandardizedNameTable
 
 FluidStandardNameTable = StandardizedNameTable('fluid',
@@ -86,7 +85,8 @@ FluidStandardNameTable = StandardizedNameTable('fluid',
                                                },
                                                version_number=1, contact='matthias.probst@kit.edu',
                                                institution='Karlsruhe Institute of Technology',
-                                               valid_characters='[^a-zA-Z0-9_]')
+                                               valid_characters='[^a-zA-Z0-9_]',
+                                               pattern='^[0-9 ].*')
 piv_name_table_dict = FluidStandardNameTable._dict.copy()
 piv_name_table_dict.update({'x_pixel_coordinate': {'canonical_units': 'pixel', 'description': None},
                             'y_pixel_coordinate': {'canonical_units': 'pixel', 'description': None},
@@ -104,6 +104,7 @@ PIVStandardNameTable = StandardizedNameTable(name='piv', table_dict=piv_name_tab
                                              version_number=1, contact='matthias.probst@kit.edu',
                                              institution='Karlsruhe Institute of Technology',
                                              valid_characters='[^a-zA-Z0-9_]',
+                                             pattern='^[0-9 ].*',
                                              translation_dict={'pivview': pivview_to_standardnames_dict})
 from .identifier import standard_name_table_to_xml
 

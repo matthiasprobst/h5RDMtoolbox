@@ -11,10 +11,10 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from re import sub as re_sub
 from typing import Union, Dict
 
 import pandas as pd
@@ -97,8 +97,6 @@ def meta_from_xml(xml_filename):
     return meta
 
 
-
-
 class StandardizedNameTableError(Exception):
     pass
 
@@ -109,10 +107,12 @@ class StandardizedNameTable(_StandardizedNameTable):
     def __init__(self, name: str, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '', translation_dict: dict = None):
+                 valid_characters: str = '', pattern: str = '',
+                 translation_dict: dict = None):
         self._name = name
         self._version_number = version_number
         self._valid_characters = valid_characters
+        self._pattern = pattern
         self._institution = institution
         self.contact = contact
         if last_modified is None:
@@ -161,6 +161,10 @@ class StandardizedNameTable(_StandardizedNameTable):
     @property
     def valid_characters(self):
         return self._valid_characters
+
+    @property
+    def pattern(self):
+        return self._pattern
 
     @property
     def laset_modified(self):
@@ -345,8 +349,12 @@ class StandardizedNameTable(_StandardizedNameTable):
         if name[-1] == ' ':
             raise StandardizedNameError(f'Name must not end with a space!')
 
-        if re_sub(self.valid_characters, '', name) != name:
+        if re.sub(self.valid_characters, '', name) != name:
             raise StandardizedNameError(f'Invalid special characters in name "{name}": Only "_" is allowed.')
+
+        if self.pattern != '' and self.pattern is not None:
+            if re.match(self.pattern, name):
+                raise StandardizedNameError(f'Name must not start with a number!')
 
         if strict:
             if self._dict:
@@ -392,9 +400,11 @@ class CFStandardNameTable(StandardizedNameTable):
     def __init__(self, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '[^a-zA-Z0-9_]'):
+                 valid_characters: str = '[^a-zA-Z0-9_]',
+                 pattern: str = '^[0-9 ].*'):
         name = 'CF-convention'
-        super().__init__(name, table_dict, version_number, institution, contact, last_modified, valid_characters)
+        super().__init__(name, table_dict, version_number, institution,
+                         contact, last_modified, valid_characters, pattern)
 
     def check_name(self, name, strict=False) -> bool:
         """In addtion to check of base class, lowercase is checked first"""
@@ -409,9 +419,11 @@ class CGNSStandardNameTable(StandardizedNameTable):
     def __init__(self, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '[^a-zA-Z0-9_]'):
+                 valid_characters: str = '[^a-zA-Z0-9_]',
+                 pattern: str = '^[0-9 ].*'):
         name = 'CGNS-convention'
-        super().__init__(name, table_dict, version_number, institution, contact, last_modified, valid_characters)
+        super().__init__(name, table_dict, version_number, institution,
+                         contact, last_modified, valid_characters, pattern)
 
 
 xml_dir = Path(__file__).parent / 'snxml'
