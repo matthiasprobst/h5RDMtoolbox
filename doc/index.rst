@@ -35,13 +35,13 @@ Install from source from github:
 
 .. code:: sh
 
-   python3.8 -m pip install git+https://git.scc.kit.edu/da4323/h5RDMtoolbox.git
+   python3.8 -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
 
 Clone and install from source:
 
 .. code:: sh
 
-   git clone https://git.scc.kit.edu/da4323/h5RDMtoolbox.git
+   git clone https://github.com/matthiasprobst/h5RDMtoolbox
    python3.8 -m pip install h5RDMtoolbox/
 
 You may install optional dependencies:
