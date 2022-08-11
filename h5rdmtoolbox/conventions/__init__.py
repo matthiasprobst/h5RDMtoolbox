@@ -16,8 +16,6 @@ from .layout import H5Layout
 from .longname import LongName
 from .utils import xml2dict, dict2xml, is_valid_email_address
 
-NAME_IDENTIFIER_ATTR_NAME = 'standard_name'
-
 
 def set_loglevel(level):
     """setting the log level of the sub-package conventions"""

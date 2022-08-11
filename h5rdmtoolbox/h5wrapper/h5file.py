@@ -11,6 +11,7 @@ from typing import Union
 
 import h5py
 import numpy as np
+import pint
 # noinspection PyUnresolvedReferences
 import pint_xarray
 import xarray as xr
@@ -29,7 +30,7 @@ from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_data_dir
 from .._version import __version__
-from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME
+from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME, NAME_IDENTIFIER_ATTR_NAME, UNITS_ATTR_NAME
 # noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
 
@@ -145,13 +146,41 @@ class WrapperAttributeManager(h5py.AttributeManager):
             return
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
-        # if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
-        #     if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
-        #         raise AttributeError(f'Attribute name {name} is reserverd '
-        #                              'for dataset only.')
-        #     if h5i.get_type(self._id) == h5i.DATASET:
-        #         # check for standardized data-name identifiers
-        #         self.identifier_convention.check_name(value, strict=conventions.identifier.STRICT)
+        if name == NAME_IDENTIFIER_ATTR_NAME:
+            if value is None:
+                raise ValueError(f'{NAME_IDENTIFIER_ATTR_NAME} cannot be None')
+            if not isinstance(self._parent, h5py.Dataset):
+                raise AttributeError(f'Attribute name {name} is reserverd '
+                                     'for dataset only.')
+            # check for standardized data-name identifiers
+            snt = self._parent.standard_name_table
+            if snt.check_name(value, strict=conventions.identifier.STRICT):
+                units = self.get('units', None)
+                if units:
+                    snt.check_units(value, units)
+                self.create(NAME_IDENTIFIER_ATTR_NAME, data=value)
+            return
+        elif name == 'long_name':
+            ln = conventions.longname.LongName(value)
+            self.create('long_name', ln.__str__())
+            return
+        elif name == UNITS_ATTR_NAME:
+            if value:
+                if isinstance(value, str):
+                    _value = ureg.Unit(value).__format__(ureg.default_format)
+                elif isinstance(value, pint.Unit):
+                    _value = value.__format__(ureg.default_format)
+                else:
+                    raise TypeError(f'Unit must be a string or pint.Unit but not {type(value)}')
+            else:
+                _value = value
+            standard_name = self.get('standard_name')
+            if standard_name:
+                self._parent.standard_name_table.check_units(standard_name, _value)
+
+            self.create('units', value)
+            return
+
         if name in USER_PROPERTIES:
             if hasattr(self._parent, name):
                 setattr(self._parent, name, value)
@@ -300,6 +329,45 @@ class H5Dataset(h5py.Dataset):
         """returns the standard name convention associated with the file instance"""
         self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
         _SNT_CACHE[self.id.id] = convention
+
+    @property
+    def units(self):
+        """Returns the attribute units. Returns None if it does not exist."""
+        return self.attrs.get('units')
+
+    @units.setter
+    def units(self, units):
+        """Sets the attribute units to attribute 'units'
+        default unit registry format of pint is used."""
+        self.attrs['units'] = units
+
+    @property
+    def long_name(self):
+        """Returns the attribute long_name. Returns None if it does not exist."""
+        return self.attrs.get('long_name')
+
+    @long_name.setter
+    def long_name(self, new_long_name):
+        """Writes attribute long_name if passed string is not None"""
+        if new_long_name:
+            self.attrs['long_name'] = new_long_name
+        else:
+            raise TypeError('long_name must not be type None.')
+
+    @property
+    def standard_name(self) -> Union[str, None]:
+        """Returns the standardized name of the dataset. The attribute name is `standard_name`.
+        Returns `None` if it does not exist."""
+        attrs_string = self.attrs.get(NAME_IDENTIFIER_ATTR_NAME)
+        if attrs_string is None:
+            return None
+        return self.standard_name_table[attrs_string]
+
+    @standard_name.setter
+    def standard_name(self, new_standard_name):
+        """Writes attribute standard_name if passed string is not None.
+        The rules for the standard_name is checked before writing to file."""
+        self.attrs['standard_name'] = new_standard_name
 
     def __setitem__(self, key, value):
         if isinstance(value, xr.DataArray):
@@ -515,18 +583,18 @@ class H5Group(h5py.Group):
         """returns list of the group's groups"""
         return [v for v in self.values() if isinstance(v, h5py.Group)]
 
-    # @property
-    # def long_name(self):
-    #     """Returns the attribute long_name. Returns None if it does not exist."""
-    #     return self.attrs.get('long_name')
-    #
-    # @long_name.setter
-    # def long_name(self, long_name):
-    #     """Writes attribute long_name if passed string is not None"""
-    #     if long_name:
-    #         self.attrs.modify('long_name', long_name)
-    #     else:
-    #         raise TypeError('long_name must not be type None.')
+    @property
+    def long_name(self):
+        """Returns the attribute long_name. Returns None if it does not exist."""
+        return self.attrs.get('long_name')
+
+    @long_name.setter
+    def long_name(self, new_long_name):
+        """Writes attribute long_name if passed string is not None"""
+        if new_long_name:
+            self.attrs['long_name'] = new_long_name
+        else:
+            raise TypeError('long_name must not be type None.')
 
     @property
     def data_source_type(self) -> conventions.data.DataSourceType:
@@ -1734,4 +1802,4 @@ H5Group._h5ds = H5Dataset
 
 # import accessors
 # noinspection PyUnresolvedReferences
-from .standardized_attributes import long_name, standard_name, units, title
+from .standardized_attributes import title

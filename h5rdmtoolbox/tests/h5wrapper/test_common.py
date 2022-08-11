@@ -33,13 +33,26 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.attrs['an_attr'], 'a_string')
                 h5.attrs['mean'] = 1.2
                 self.assertEqual(h5.attrs['mean'], 1.2)
-                h5.attrs['standard_name'] = 'a_string'
+                with self.assertRaises(AttributeError):
+                    h5.attrs['standard_name'] = 'a_string'
+                with self.assertRaises(ValueError):
+                    h5.attrs['long_name'] = '1alongname'
+                with self.assertRaises(ValueError):
+                    h5.attrs['long_name'] = ' 1alongname'
+                with self.assertRaises(ValueError):
+                    h5.attrs['long_name'] = '1alongname '
 
                 with self.assertRaises(KeyError):
                     h5.attrs['non_existing_attribute']
 
                 # dataset attibutes
                 ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='m/s')
+                with self.assertRaises(ValueError):
+                    ds.attrs['long_name'] = '1alongname'
+                with self.assertRaises(ValueError):
+                    ds.attrs['long_name'] = ' 1alongname'
+                with self.assertRaises(ValueError):
+                    ds.attrs['long_name'] = '1alongname '
                 ds.attrs['an_attr'] = 'a_string'
                 self.assertEqual(ds.attrs['an_attr'], 'a_string')
                 ds.attrs['mean'] = 1.2
