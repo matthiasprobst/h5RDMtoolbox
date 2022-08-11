@@ -490,7 +490,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             iz = 0
 
         for key, value in AV_PIV_PARAMETER.items():
-            if software.name in key:
+            if software.name.lower() in key or key in software.name.lower():
                 return PIVParameters(value(piv_parameter_list[iz]))
         raise NotImplementedError(f'No PIV Parameter class for software {software.name}.')
 
