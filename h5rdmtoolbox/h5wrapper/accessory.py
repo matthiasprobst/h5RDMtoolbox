@@ -1,12 +1,11 @@
 import warnings
 from typing import List, Tuple
+from typing import TypeVar
 from typing import Union
 
 import h5py
 import xarray as xr
 from IPython.display import HTML, display
-
-from typing import TypeVar
 
 T_H5Dataset = TypeVar('T_H5Dataset')
 T_H5Group = TypeVar('T_H5Group')
@@ -67,7 +66,10 @@ def _register_special_dataset(name, cls):
 
     return decorator
 
+
 USER_PROPERTIES = []
+
+
 def _register_special_property(cls, overwrite=False):
     def decorator(accessor):
         """decorator"""
@@ -181,7 +183,7 @@ class SpecialDataset:
         if item in self.__dict__:
             return object.__getattribute__(item)
         if self._dset is not None:
-            return self._dset[item]
+            return self._dset.__getattribute__(item)
         if self._comp_dataarrays is not None:
             for ds in self._comp_dataarrays:
                 if ds.name[0] == '/':
