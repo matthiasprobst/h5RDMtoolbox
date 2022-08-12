@@ -2,24 +2,157 @@
  "cells": [
   {
    "cell_type": "markdown",
-   "id": "15c7b0e2-0f1c-44f9-8ad4-661ea0f63c02",
+   "id": "91c4ae4d-2b0e-4de5-b759-4c9fc9d072b1",
    "metadata": {},
    "source": [
-    "# New Wrapper Class\n",
+    "# Extension\n",
+    "\n",
+    "The wrapper class functionalities can be extended using composition or inheritance.\n",
+    "\n",
+    "## Composition\n",
+    "\n",
+    "### Registration of properties\n",
+    "To facilitate and speed up certain tasks and workflows, it might be usefull to have additional properties. Let's assume we want to store a username as an attribute in the HDF5 file. Let's further assume that a user name has a firstname and a surname and both must start with a capitalized letter. To catch possible errerneous input by the user, we would need an additional method, e.g. \"set_username\" or a property \"username\" of `H5File`.<br>**Two** possible ways to achieve this: **inheritance or composition**. The quick and recommended way to add a new class property is to use composition by \"registering\" the property. Like this we don't have to rewrite (inherite at least) the API but only simply write the porperty class.<br>\n",
+    "Let's first write a property class \"username\". It needs **three methods**: `get`, `set` and `delete`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "a1cbc998-a747-4370-b362-d04c4d6508be",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-08-12T13:55:10.916174Z",
+     "iopub.status.busy": "2022-08-12T13:55:10.916174Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.392243Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.392243Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import h5rdmtoolbox as h5tbx"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "98270fc1-d0d1-4d46-99d0-76691da2ad64",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-08-12T13:55:12.396329Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.392243Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.407957Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.407957Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "@h5tbx.h5wrapper.register_special_property(h5tbx.H5File, overwrite=True)\n",
+    "class username:\n",
+    "    \n",
+    "    def get(self):\n",
+    "        _username = self.attrs.get('username', None)\n",
+    "        if _username is not None:\n",
+    "            return _username\n",
+    "        raise AttributeError('No user found')\n",
+    "        \n",
+    "    def set(self, _username):\n",
+    "        \"\"\"Write the user name to HDF attribute of naming convention is matched\"\"\"\n",
+    "        _username_split = _username.split(' ')\n",
+    "        if not len(_username_split) == 2:\n",
+    "            raise ValueError(f'User name must have first name and surname spearated by a space, but got: {_username}')\n",
+    "        if _username_split[0][0].islower() or _username_split[0][0].islower():\n",
+    "            raise ValueError(f'Names must have capitalized first letters, but got: {_username}')\n",
+    "        self.attrs.create('username', _username)\n",
+    "        \n",
+    "    def delete(self):\n",
+    "        _username = self.attrs.get('username', None)\n",
+    "        if _username:\n",
+    "            print(f\"deleting '{_username}'\")\n",
+    "            self.attrs.__delitem__('username')\n",
+    "        else:\n",
+    "            raise AttributeError('No user to be deleted')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d8659f46-13f3-40db-9218-5cb6ad5c9034",
+   "metadata": {},
+   "source": [
+    "Some words about above lines:\n",
+    "- `@h5tbx.h5wrapper.register_special_property(h5tbx.H5File)`: registering the below class (only) to the class `H5File`\n",
+    "- don't use existing property names. An error will be raised anyhow. You may however pass `overwrite=True` in the registration method. Be careful though!\n",
+    "- provide `set` and optionally also `get` and `delete`. The method `get` makes sense though, while `delete` is not really needed most of the times.\n",
+    "\n",
+    "Let's check if it worked out:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "40fb961f-159d-4331-9a66-cf0b3ea6abae",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-08-12T13:55:12.407957Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.407957Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.426378Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.426378Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Names must have capitalized first letters, but got: adam Username\n",
+      "The user name is:  Adam Username\n",
+      "deleting 'Adam Username'\n",
+      "No user to be deleted\n"
+     ]
+    }
+   ],
+   "source": [
+    "with h5tbx.H5File() as h5file:\n",
+    "    try:\n",
+    "        h5file.username = 'adam Username'\n",
+    "    except ValueError as e:\n",
+    "        print(e)\n",
+    "    h5file.username = 'Adam Username'\n",
+    "    print('The user name is: ', h5file.attrs['username'])\n",
+    "    \n",
+    "    del h5file.username\n",
+    "    try:\n",
+    "        del h5file.username\n",
+    "    except AttributeError as e:\n",
+    "        print(e)\n",
+    "        \n",
+    "    h5file.attrs['username'] = 'lower lower'"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b144ceb1-f9e0-4a24-943a-004aa917e829",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "## Inheritance \n",
+    "\n",
+    "### New Wrapper Class\n",
     "\n",
     "The main wrapper class around a HDF5 file in this package is `H5File` which uses the wrapper class `H5Group` for `h5py.Group` and `H5Dataset` for wrapping `h5py.Dataset`"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 1,
-   "id": "56805966-cb74-445f-9bf4-a93806899160",
+   "execution_count": 4,
+   "id": "2a9e583e-b5a9-4c41-9f44-37be82808b46",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:44.042206Z",
-     "iopub.status.busy": "2022-08-12T13:19:44.042206Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.818787Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.818787Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.426378Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.426378Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.446440Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.446440Z"
     }
    },
    "outputs": [],
@@ -30,14 +163,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 2,
-   "id": "9141f325-37f5-4857-a831-d28694401785",
+   "execution_count": 5,
+   "id": "238bccd4-b623-42e0-b4e7-5bb8cd61e42f",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.818787Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.818787Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.834841Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.834841Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.446440Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.446440Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.465867Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.465867Z"
     }
    },
    "outputs": [],
@@ -54,7 +187,7 @@
   },
   {
    "cell_type": "markdown",
-   "id": "3af13489-c4e3-46c4-a8df-dcc6bac31d90",
+   "id": "02178fd3-2319-4382-941d-487545b77721",
    "metadata": {},
    "source": [
     "Next we create a group class with a special method, hat returns all datasets of that group. Also the `create_dataset` method is overwritten. Take care to return `MyDataset` at the end of the method, otherwise dataset class of the parent class is taken."
@@ -62,14 +195,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 3,
-   "id": "b8f2255a-2d41-47bc-9231-f5e8746e22a3",
+   "execution_count": 6,
+   "id": "ae1b660a-c370-4e29-9467-64d1272a3daa",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.834841Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.834841Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.850512Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.850512Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.465867Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.465867Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.486108Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.486108Z"
     }
    },
    "outputs": [],
@@ -94,7 +227,7 @@
   },
   {
    "cell_type": "markdown",
-   "id": "30add8fc-608a-4d00-8972-97a7d411d1c6",
+   "id": "09e135e0-ce76-4c77-90eb-8ec7fe811f40",
    "metadata": {},
    "source": [
     "The main file wrapper inherites from `H5File` (\"root\" parent was `h5py.File`) and the new group class. Next, we have set the group and dataset class again, since some methods in the file wrapper class will need that information when returning instances of those classes (e.g. dataset or group creation). Finally we define a new method which sets the user name to the root attributes:"
@@ -102,14 +235,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 4,
-   "id": "25d3aa40-f303-46de-bd10-aef335b78427",
+   "execution_count": 7,
+   "id": "21bcc1fe-1fbc-49f8-942f-14b7b87f08bf",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.850512Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.850512Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.866128Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.866128Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.486108Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.486108Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.506010Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.506010Z"
     }
    },
    "outputs": [],
@@ -122,7 +255,7 @@
   },
   {
    "cell_type": "markdown",
-   "id": "1323ffa4-e8af-4dac-9d8a-f4248eeb3fac",
+   "id": "f764f4ba-2339-41d6-b57a-b6e2197e24e1",
    "metadata": {},
    "source": [
     "register the dataset and group class in all classes. This is needed, so all return objects are of the newly defined types"
@@ -130,14 +263,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 5,
-   "id": "e76a3499-b6d2-42f4-b56e-1f04537ef840",
+   "execution_count": 8,
+   "id": "bb4c50eb-4cf7-4a26-8b88-0c2185c681fb",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.866128Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.866128Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.881762Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.881762Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.506010Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.506010Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.525975Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.525975Z"
     }
    },
    "outputs": [],
@@ -151,14 +284,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 6,
-   "id": "69af921f-03e8-4c8d-a08f-122472551ce6",
+   "execution_count": 9,
+   "id": "bc3a2495-9167-4d4d-8c45-6280a5951b36",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.881762Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.881762Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.897481Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.897395Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.525975Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.525975Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.546271Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.546094Z"
     }
    },
    "outputs": [],
@@ -168,14 +301,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 7,
-   "id": "b91e4b80-65f2-4f21-994e-c0edfed59608",
+   "execution_count": 10,
+   "id": "b3b00f9f-5801-4c3e-b92a-db12d883b8cf",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.897481Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.897481Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.913128Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.913128Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.546271Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.546271Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.565828Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.565828Z"
     }
    },
    "outputs": [
@@ -185,7 +318,7 @@
        "__main__.MyWrapper"
       ]
      },
-     "execution_count": 7,
+     "execution_count": 10,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -196,14 +329,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 8,
-   "id": "95bf3100-bb07-441a-a868-309b0ac9aef2",
+   "execution_count": 11,
+   "id": "7d729bbe-89eb-46af-8cee-d46e700356a5",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.913128Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.913128Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.930688Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.930688Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.565828Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.565828Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.586381Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.586381Z"
     }
    },
    "outputs": [],
@@ -213,14 +346,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 9,
-   "id": "3ba35edf-01dd-4515-a391-60a7f74f745b",
+   "execution_count": 12,
+   "id": "70fe8adc-884e-48ed-aed2-98092654befc",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.930688Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.930688Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.946416Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.946416Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.586381Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.586381Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.606152Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.606152Z"
     }
    },
    "outputs": [
@@ -230,7 +363,7 @@
        "__main__.MyGroup"
       ]
      },
-     "execution_count": 9,
+     "execution_count": 12,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -241,14 +374,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 10,
-   "id": "352c04bd-febe-438f-aca3-07ced3e2eff7",
+   "execution_count": 13,
+   "id": "c94cf1b1-6d2b-4aeb-8bfd-6fd3ad453ec8",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.946416Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.946416Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.961970Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.961970Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.606152Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.606152Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.626226Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.626072Z"
     }
    },
    "outputs": [],
@@ -258,14 +391,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 11,
-   "id": "84f79b60-7a7d-41cc-804d-b3aee800d55e",
+   "execution_count": 14,
+   "id": "0d95e9ab-2b86-4041-8b58-aab672df3ed3",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.961970Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.961970Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.977702Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.977702Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.626226Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.626226Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.646474Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.646314Z"
     }
    },
    "outputs": [
@@ -275,7 +408,7 @@
        "__main__.MyGroup"
       ]
      },
-     "execution_count": 11,
+     "execution_count": 14,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -286,14 +419,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 12,
-   "id": "27815724-5671-4229-868e-5e5a82213012",
+   "execution_count": 15,
+   "id": "ff52f8fe-f255-4fcb-a5cf-af54f97597e1",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.977702Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.977702Z",
-     "iopub.status.idle": "2022-08-12T13:19:45.993244Z",
-     "shell.execute_reply": "2022-08-12T13:19:45.993244Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.646474Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.646474Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.666232Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.666232Z"
     }
    },
    "outputs": [],
@@ -303,14 +436,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 13,
-   "id": "2e6f82e1-008d-41fe-b6a3-92d3ee29f6ee",
+   "execution_count": 16,
+   "id": "ed1414f5-9d42-4997-87d5-6e701afa615d",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:45.993244Z",
-     "iopub.status.busy": "2022-08-12T13:19:45.993244Z",
-     "iopub.status.idle": "2022-08-12T13:19:46.008875Z",
-     "shell.execute_reply": "2022-08-12T13:19:46.008875Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.666232Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.666232Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.686287Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.686287Z"
     }
    },
    "outputs": [
@@ -323,7 +456,7 @@
        "user       test user"
       ]
      },
-     "execution_count": 13,
+     "execution_count": 16,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -334,14 +467,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 14,
-   "id": "3bb4bdff-08a4-49d8-811b-a7b59f87960b",
+   "execution_count": 17,
+   "id": "c84d0e04-07cf-4f9a-b65c-e6d58fb8c17a",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:46.008875Z",
-     "iopub.status.busy": "2022-08-12T13:19:46.008875Z",
-     "iopub.status.idle": "2022-08-12T13:19:46.024507Z",
-     "shell.execute_reply": "2022-08-12T13:19:46.024507Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.686287Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.686287Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.706190Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.706190Z"
     }
    },
    "outputs": [
@@ -351,7 +484,7 @@
        "__main__.MyDataset"
       ]
      },
-     "execution_count": 14,
+     "execution_count": 17,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -362,7 +495,7 @@
   },
   {
    "cell_type": "markdown",
-   "id": "f83c9df4-918c-4867-932c-2502e241f1e0",
+   "id": "f45aec6e-0afe-41d6-bd1b-b06c9cac14de",
    "metadata": {},
    "source": [
     "## Accessors"
@@ -370,14 +503,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 15,
-   "id": "7db61f68-d569-4419-b8cd-9f4985cf79b8",
+   "execution_count": 18,
+   "id": "09ab355e-612f-482e-8248-7067639c5973",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:46.024507Z",
-     "iopub.status.busy": "2022-08-12T13:19:46.024507Z",
-     "iopub.status.idle": "2022-08-12T13:19:46.040558Z",
-     "shell.execute_reply": "2022-08-12T13:19:46.040558Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.706190Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.706190Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.726327Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.726327Z"
     }
    },
    "outputs": [],
@@ -387,14 +520,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 16,
-   "id": "d81d0a38-b005-4703-aa62-f0b78f6665d8",
+   "execution_count": 19,
+   "id": "74f6c450-2f36-44a9-89fc-1f6f348580d4",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:46.040558Z",
-     "iopub.status.busy": "2022-08-12T13:19:46.040558Z",
-     "iopub.status.idle": "2022-08-12T13:19:46.056302Z",
-     "shell.execute_reply": "2022-08-12T13:19:46.056302Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.726327Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.726327Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.746037Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.746037Z"
     }
    },
    "outputs": [],
@@ -419,14 +552,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 17,
-   "id": "c724a25f-6a82-4ead-b3f7-a0e7ea1f806c",
+   "execution_count": 20,
+   "id": "a1782a3e-6c4c-487f-b7d7-3ce08ec41675",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:46.056302Z",
-     "iopub.status.busy": "2022-08-12T13:19:46.056302Z",
-     "iopub.status.idle": "2022-08-12T13:19:46.071937Z",
-     "shell.execute_reply": "2022-08-12T13:19:46.071937Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.746037Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.746037Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.766330Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.766330Z"
     }
    },
    "outputs": [
@@ -434,7 +567,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "<__main__.InfoProperty object at 0x000001CF928F24C0>\n",
+      "<__main__.InfoProperty object at 0x000001B2A48213D0>\n",
       "NoName\n"
      ]
     }
@@ -448,14 +581,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 18,
-   "id": "25a7bb69-36f2-46c8-9a7c-ab722a1e6bb3",
+   "execution_count": 21,
+   "id": "1b922cc1-b4aa-46ff-b037-9082a9504a46",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:46.074239Z",
-     "iopub.status.busy": "2022-08-12T13:19:46.074239Z",
-     "iopub.status.idle": "2022-08-12T13:19:46.089963Z",
-     "shell.execute_reply": "2022-08-12T13:19:46.089963Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.766330Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.766330Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.786534Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.786534Z"
     }
    },
    "outputs": [],
@@ -475,14 +608,14 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 19,
-   "id": "7ddd1be6-78b5-4913-88c3-04eac82e600c",
+   "execution_count": 22,
+   "id": "13bbaf6f-b912-4a41-bd3c-46c2afdb8a5b",
    "metadata": {
     "execution": {
-     "iopub.execute_input": "2022-08-12T13:19:46.089963Z",
-     "iopub.status.busy": "2022-08-12T13:19:46.089963Z",
-     "iopub.status.idle": "2022-08-12T13:19:46.121240Z",
-     "shell.execute_reply": "2022-08-12T13:19:46.121240Z"
+     "iopub.execute_input": "2022-08-12T13:55:12.786534Z",
+     "iopub.status.busy": "2022-08-12T13:55:12.786534Z",
+     "iopub.status.idle": "2022-08-12T13:55:12.806542Z",
+     "shell.execute_reply": "2022-08-12T13:55:12.806542Z"
     }
    },
    "outputs": [
@@ -490,7 +623,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "<__main__.InfoProperty object at 0x000001CF928F24F0>\n",
+      "<__main__.InfoProperty object at 0x000001B28550C940>\n",
       "NoName\n",
       "First User\n",
       "Second User\n"
@@ -698,25 +831,25 @@
        "    background-color: rgba(3, 169, 244, .2);\r\n",
        "    cursor: pointer;\r\n",
        "}</style></head>\n",
-       "<p>tmp2.hdf</p>\n",
+       "<p>tmp10.hdf</p>\n",
        "<p>Check resuted in 1 issues.</p>\n",
        "\n",
        "<div class='h5tb-warp'>\n",
        "\n",
        "          <ul style=\"list-style-type: none;\" class=\"h5grp-sections\">\n",
        "                <li>\n",
-       "                    <input id=\"group-ds-/-3801336300\" type=\"checkbox\" checked>\n",
-       "                    <label style=\"font-weight: bold\" for=\"group-ds-/-3801336300\">\n",
+       "                    <input id=\"group-ds-/-3656393400\" type=\"checkbox\" checked>\n",
+       "                    <label style=\"font-weight: bold\" for=\"group-ds-/-3656393400\">\n",
        "                    /<span>(1)</span></label>\n",
        "              \n",
        "\n",
-       "                <ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style: italic\">__h5rdmtoolbox_version__ : 0.1.0</li><li style=\"list-style-type: none; font-style: italic\">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style=\"list-style-type: none; font-style: italic\">__wrcls__ : H5File</li><li style=\"list-style-type: none; font-style: italic\">creation_time : 2022-08-12T15:19:46Z</li>\n",
+       "                <ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style: italic\">__h5rdmtoolbox_version__ : 0.1.0</li><li style=\"list-style-type: none; font-style: italic\">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style=\"list-style-type: none; font-style: italic\">__wrcls__ : H5File</li><li style=\"list-style-type: none; font-style: italic\">creation_time : 2022-08-12T15:55:12Z</li>\n",
        "                </ul>\n",
        "\n",
-       "                <ul id=\"ds-1-/test-3802582200\" class=\"h5tb-var-list\">\n",
-       "                <input id=\"ds-2-/test-3802585000\" class=\"h5tb-varname-in\" type=\"checkbox\">\n",
+       "                <ul id=\"ds-1-/test-3657824400\" class=\"h5tb-var-list\">\n",
+       "                <input id=\"ds-2-/test-3657827000\" class=\"h5tb-varname-in\" type=\"checkbox\">\n",
        "                <label class='h5tb-varname' \n",
-       "                    for=\"ds-2-/test-3802585000\">test</label>\n",
+       "                    for=\"ds-2-/test-3657827000\">test</label>\n",
        "                <span class=\"h5tb-dims\">(2,)</span>  [\n",
        "                <span class=\"h5tb-unit\">-</span>]\n",
        "<ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style:\n",
@@ -754,15 +887,7 @@
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "4e76b065-481b-4686-8740-b672259c974b",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "d8cec4c7-bdb4-484b-83f9-8e4019826c46",
+   "id": "661ea984-edcd-4b30-afa2-916f57f23951",
    "metadata": {},
    "outputs": [],
    "source": []

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Special Attributes &#8212; h5RDMtoolbox  documentation</title>
+    <title>Visualization &#8212; h5RDMtoolbox  documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -36,6 +36,8 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Extensions" href="Extensions.html" />
+    <link rel="prev" title="Special I/O" href="SpecialIO.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -87,7 +89,7 @@
   Documentation
  </span>
 </p>
-<ul class="nav bd-sidenav">
+<ul class="current nav bd-sidenav">
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../gettingstarted/index.html">
    Getting Started
@@ -132,16 +134,16 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
+ <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="index.html">
    H5wrapper
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
   <label for="toctree-checkbox-3">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul>
+  <ul class="current">
    <li class="toctree-l2">
     <a class="reference internal" href="CreateFile.html">
      Create a HDF file
@@ -177,8 +179,8 @@
      Special I/O
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="Visualization.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      Visualization
     </a>
    </li>
@@ -336,7 +338,7 @@ title="Source repository"
       </li>
       
       <li>
-        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fh5wrapper/SpecialAttributes.html&body=Your%20issue%20content%20here."
+        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fh5wrapper/Visualization.html&body=Your%20issue%20content%20here."
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -364,7 +366,7 @@ title="Open an issue"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/h5wrapper/SpecialAttributes.ipynb.txt"
+        <a href="../_sources/h5wrapper/Visualization.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -413,7 +415,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Special Attributes</h1>
+                <h1>Visualization</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -681,26 +683,66 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="Special-Attributes">
-<h1>Special Attributes<a class="headerlink" href="#Special-Attributes" title="Permalink to this headline">#</a></h1>
+<section id="Visualization">
+<h1>Visualization<a class="headerlink" href="#Visualization" title="Permalink to this headline">#</a></h1>
+<p>As the return value of a sliced dataset is a <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> instead of a <code class="docutils literal notranslate"><span class="pre">numpy.ndarray</span></code> plotting features of <code class="docutils literal notranslate"><span class="pre">xarray</span></code> is used. For more information about <code class="docutils literal notranslate"><span class="pre">xarray</span></code> see <a class="reference external" href="https://docs.xarray.dev/en/stable/">https://docs.xarray.dev/en/stable/</a></p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 </pre></div>
 </div>
 </div>
-<p>Groups:</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">sensor_grp</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;pressure_sensor&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;my sensor&#39;</span><span class="p">,</span> <span class="n">manufacturer</span><span class="o">=</span><span class="s1">&#39;best_company_ever&#39;</span><span class="p">))</span>
-    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;Pa&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;pressure&#39;</span><span class="p">)</span>
-    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;sensor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sensor_grp</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;mm&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">dsy</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;mm&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="n">attach_scales</span><span class="o">=</span><span class="p">(</span><span class="n">dsy</span><span class="p">,</span> <span class="n">dsx</span><span class="p">))</span>
+
+    <span class="c1"># some plotting</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">contourf</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">hist</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/h5wrapper_Visualization_2_0.png" src="../_images/h5wrapper_Visualization_2_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/h5wrapper_Visualization_2_1.png" src="../_images/h5wrapper_Visualization_2_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/h5wrapper_Visualization_2_2.png" src="../_images/h5wrapper_Visualization_2_2.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/h5wrapper_Visualization_2_3.png" src="../_images/h5wrapper_Visualization_2_3.png" />
 </div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -721,6 +763,20 @@ div.rendered_html tbody tr:hover {
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
+    <a class='left-prev' id="prev-link" href="SpecialIO.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">Special I/O</p>
+        </div>
+    </a>
+    <a class='right-next' id="next-link" href="Extensions.html" title="next page">
+    <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Extensions</p>
+    </div>
+    <i class="fas fa-angle-right"></i>
+    </a>
 </div>
             </footer>
         </div>

@@ -36,8 +36,8 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Special Attributes" href="SpecialAttributes.html" />
-    <link rel="prev" title="Natural Naming" href="NaturalNaming.html" />
+    <link rel="next" title="x2hdf: Conversion of specifc data to HDF" href="../x2hdf/index.html" />
+    <link rel="prev" title="Extensions" href="Extensions.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -145,8 +145,23 @@
   </label>
   <ul class="current">
    <li class="toctree-l2">
-    <a class="reference internal" href="Basics.html">
-     Basics
+    <a class="reference internal" href="CreateFile.html">
+     Create a HDF file
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="DatasetCreation.html">
+     Dataset creation
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="DatasetSlicing.html">
+     Dataset slicing
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="GroupCreation.html">
+     Group creation
     </a>
    </li>
    <li class="toctree-l2">
@@ -154,19 +169,29 @@
      Natural Naming
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="Conventions.html">
+     (Naming) Conventions
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="SpecialIO.html">
+     Special I/O
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="Visualization.html">
+     Visualization
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="Extensions.html">
+     Extensions
+    </a>
+   </li>
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
      Specialized Wrappers
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="InheritanceAndAccessors.html">
-     New Wrapper Class
     </a>
    </li>
   </ul>
@@ -762,7 +787,7 @@ div.rendered_html tbody tr:hover {
 <section id="Specialized-Wrappers">
 <h1>Specialized Wrappers<a class="headerlink" href="#Specialized-Wrappers" title="Permalink to this headline">#</a></h1>
 <p>By inheriting the main wrapper class <code class="docutils literal notranslate"><span class="pre">H5File</span></code> domain-specific functionality can be added. Although properties can be registered, it can be worth the effort of inheriting the class to permanently add features to it.</p>
-<p>The package provides two such class: - <code class="docutils literal notranslate"><span class="pre">H5Flow</span></code> and - <code class="docutils literal notranslate"><span class="pre">h5PIV</span></code></p>
+<p>The package provides two such class: - <code class="docutils literal notranslate"><span class="pre">H5Flow</span></code> and - <code class="docutils literal notranslate"><span class="pre">H5PIV</span></code></p>
 <hr class="docutils" />
 <section id="H5Flow">
 <h2>H5Flow<a class="headerlink" href="#H5Flow" title="Permalink to this headline">#</a></h2>
@@ -4253,17 +4278,17 @@ input.h5tb-varname-in:checked + label:before {
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="NaturalNaming.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="Extensions.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Natural Naming</p>
+            <p class="prev-next-title">Extensions</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="SpecialAttributes.html" title="next page">
+    <a class='right-next' id="next-link" href="../x2hdf/index.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Special Attributes</p>
+        <p class="prev-next-title">x2hdf: Conversion of specifc data to HDF</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

@@ -34,7 +34,7 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Basics" href="Basics.html" />
+    <link rel="next" title="Create a HDF file" href="CreateFile.html" />
     <link rel="prev" title="Layouts" href="../conventions/layouts.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -143,8 +143,23 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="Basics.html">
-     Basics
+    <a class="reference internal" href="CreateFile.html">
+     Create a HDF file
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="DatasetCreation.html">
+     Dataset creation
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="DatasetSlicing.html">
+     Dataset slicing
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="GroupCreation.html">
+     Group creation
     </a>
    </li>
    <li class="toctree-l2">
@@ -153,18 +168,28 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="Conventions.html">
+     (Naming) Conventions
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="SpecialIO.html">
+     Special I/O
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="Visualization.html">
+     Visualization
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="Extensions.html">
+     Extensions
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="SpecializedWrappers.html">
      Specialized Wrappers
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="InheritanceAndAccessors.html">
-     New Wrapper Class
     </a>
    </li>
   </ul>
@@ -413,6 +438,15 @@ jupyter notebooks walk you through the usage and features.</p>
 familiar to the <cite>h5py</cite> package will find all featues but will be enforced to provide e.g. certain attributes
 to fulfill the requirements of a certain meta convention.</p>
 </div>
+<dl class="simple">
+<dt>The package <cite>h5wrapper</cite> adds additional functionalities to the core HDF5-interface, which is implemented in the package <cite>h5py</cite> (<a class="reference external" href="https://docs.h5py.org/en/stable/">https://docs.h5py.org/en/stable/</a>). This is done by providing so-calle wrapper classes. They</dt><dd><ul class="simple">
+<li><p>facilitate and streamline the work with HDF5 files and</p></li>
+<li><p>integrate meta-conventions and file-layout specifications.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Besides high-level methods that enhances the usability, naming <cite>conventions</cite>, the usage of <cite>units</cite> and the defintion of so-called <cite>layouts</cite> are a core feature. They are motivated by the FAIR principles of sustainable data management.</p>
+<p>This notebook will guide through the high-level methods and the mentioned concepts.</p>
 <p>The package <cite>h5wrapper</cite> provides classes that ar inherited from the interface classes of <cite>h5py</cite>. They are
 wrapper-classes as they streamline the work with HDF5 files and provide additional functionality to them.</p>
 <p>Wrapper files enhances the usability of HDF5files by</p>
@@ -444,10 +478,10 @@ xarray classes instead of numpy arrays</p>
             <p class="prev-next-title">Layouts</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="Basics.html" title="next page">
+    <a class='right-next' id="next-link" href="CreateFile.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Basics</p>
+        <p class="prev-next-title">Create a HDF file</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

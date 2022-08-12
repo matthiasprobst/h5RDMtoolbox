@@ -1655,7 +1655,8 @@ class H5File(h5py.File, H5Group):
         else:
             if standard_name_table is None:
                 # user has not passed a snt but the snt attribute has an entry. --> use this snt
-                snt = conventions.StandardizedNameTable.from_name_and_version(*self.attrs.get(STD_NAME_TABLE_ATTR_NAME).split('-v'))
+                snt = conventions.StandardizedNameTable.from_name_and_version(
+                    *self.attrs.get(STD_NAME_TABLE_ATTR_NAME).split('-v'))
             else:
                 if isinstance(standard_name_table, str):
                     snt = conventions.StandardizedNameTable.from_xml(standard_name_table)
@@ -1673,7 +1674,7 @@ class H5File(h5py.File, H5Group):
 
         if mode == 'r':
             if not snt == conventions.Empty_Standard_Name_Table:
-                warnings.warn(
+                logger.debug(
                     'Unable to write standard name table to file. It will be effective anyhow but '
                     'if the file is reloaded later the choice is forgotten.',
                     conventions.identifier.StandardizedNameTableWarning

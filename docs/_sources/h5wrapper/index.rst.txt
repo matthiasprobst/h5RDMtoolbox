@@ -18,6 +18,14 @@ jupyter notebooks walk you through the usage and features.
    familiar to the `h5py` package will find all featues but will be enforced to provide e.g. certain attributes
    to fulfill the requirements of a certain meta convention.
 
+The package `h5wrapper` adds additional functionalities to the core HDF5-interface, which is implemented in the package `h5py` (https://docs.h5py.org/en/stable/). This is done by providing so-calle wrapper classes. They
+ - facilitate and streamline the work with HDF5 files and
+ - integrate meta-conventions and file-layout specifications.
+
+Besides high-level methods that enhances the usability, naming `conventions`, the usage of `units` and the defintion of so-called `layouts` are a core feature. They are motivated by the FAIR principles of sustainable data management.
+
+This notebook will guide through the high-level methods and the mentioned concepts.
+
 The package `h5wrapper` provides classes that ar inherited from the interface classes of `h5py`. They are
 wrapper-classes as they streamline the work with HDF5 files and provide additional functionality to them.
 
@@ -37,9 +45,15 @@ All above enhances the FAIRness (FAIR=Findable+Accessible+Interoperable+re-usabl
     :maxdepth: 2
     :hidden:
 
-    Basics.ipynb
+    CreateFile.ipynb
+    DatasetCreation.ipynb
+    DatasetSlicing.ipynb
+    GroupCreation.ipynb
     NaturalNaming.ipynb
+    Conventions.ipynb
+    SpecialIO.ipynb
+    Visualization.ipynb
+    Extensions.ipynb
+    SpecializedAttributes.ipynb
     SpecializedWrappers.ipynb
-    SpecialAttributes.ipynb
-    InheritanceAndAccessors.ipynb
 
