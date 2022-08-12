@@ -1,5 +1,5 @@
 
-<h1 text-align: center;><img src="icon.svg" alt="logo" width="40"/> HDF5 Research Data Management Toolbox</h1>
+<h1 text-align: center;><img src="docs/icons/icon4.svg" alt="" width="40"/> HDF5 Research Data Management Toolbox</h1>
 
 *Note, that the repository is under current development!*
 
@@ -20,7 +20,7 @@ sub-package can be found:
   - `x2hdf`: package facilitating conversion processes to meet the layout requirements defined in `h5wrapperpy`
   - `h5database`: Practical and easy searching in multiple HDF5 files
 
-The sub-packages are described in detail in the [documentation](./doc/_build/index.html). 
+The sub-packages are described in detail in the [documentation](https://matthiasprobst.github.io/h5RDMtoolbox/). 
 `Jupyter Notebooks` as tutorials are provided in the respective documentation folder (/doc/<sub-package>).
 
 
