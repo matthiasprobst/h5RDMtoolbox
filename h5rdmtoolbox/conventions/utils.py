@@ -57,16 +57,4 @@ def xml_to_html_table_view(xml_filename, html_filename=None):
         f.writelines(lines)
 
 
-def xml2dict(xml_filename: Path) -> Tuple[dict, dict]:
-    """reads an xml convention xml file and returns data and meta dictionaries"""
-    tree = ET.parse(xml_filename)
-    root = tree.getroot()
-    standard_names = {}
-    meta = {'name': root.tag, 'version_number': int(root.find('version_number').text),
-            'contact': root.find('contact').text,
-            'institution': root.find('institution').text, 'last_modified': root.find('last_modified').text}
-    for child in root.iter('entry'):
-        standard_names[child.attrib['id']] = {}
-        for c in child:
-            standard_names[child.attrib['id']][c.tag] = c.text
-    return standard_names, meta
+

@@ -183,7 +183,7 @@ class SpecialDataset:
         if item in self.__dict__:
             return object.__getattribute__(item)
         if self._dset is not None:
-            return self._dset.__getattribute__(item)
+            return self._dset.__getattr__(item)
         if self._comp_dataarrays is not None:
             for ds in self._comp_dataarrays:
                 if ds.name[0] == '/':

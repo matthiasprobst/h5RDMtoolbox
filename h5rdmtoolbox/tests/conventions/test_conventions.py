@@ -59,10 +59,10 @@ class TestCnventions(unittest.TestCase):
                                       contact='a.b@dummy.com',
                                       institution='dummyexample')
 
-        snt = StandardizedNameTable.from_name('fluid', 1)
+        snt = StandardizedNameTable.from_name_and_version('fluid', 1)
         self.assertIsInstance(snt, StandardizedNameTable)
 
-        fluid = StandardizedNameTable.from_name('fluid', 1)
+        fluid = StandardizedNameTable.from_name_and_version('fluid', 1)
         empty = Empty_Standard_Name_Table
         with h5tbx.H5File() as h5:
             h5.standard_name_table = Empty_Standard_Name_Table

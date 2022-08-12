@@ -3,8 +3,7 @@ import json
 import os
 import pathlib
 from datetime import datetime
-from typing import List, Union, Dict
-from typing import Tuple
+from typing import List, Union, Dict, Tuple
 
 import h5py
 import numpy as np
@@ -142,12 +141,21 @@ class PIVSnapshot(PIVConverter):
         else:
             if not isinstance(config, Dict):
                 raise TypeError(f'Configuration must a dictionary, not {type(config)}')
+
+        if 'standardized_name_table' in config:
+            from ...conventions.identifier import StandardizedNameTable
+            if not isinstance(config['standardized_name_table'], StandardizedNameTable):
+                config['standardized_name_table'] = StandardizedNameTable.from_name_and_version(
+                    *config['standardized_name_table'].split('-v')
+                )
+
         if hdf_filename is None:
             hdf_filename = self.piv_file.filename.parent / f'{self.piv_file.filename.stem}.hdf'
         return self.piv_file.to_hdf(hdf_filename, config, self.recording_time)
 
     @staticmethod
     def from_pivview(nc_filename: pathlib.Path, recording_time: float):
+        """Read from a pivview file"""
         from .pivview import PIVViewNcFile
         return PIVSnapshot(PIVViewNcFile(nc_filename), recording_time)
 
@@ -199,6 +207,14 @@ class PIVPlane(PIVConverter):
         else:
             if not isinstance(config, Dict):
                 raise TypeError(f'Configuration must a dictionary, not {type(config)}')
+
+        if 'standardized_name_table' in config:
+            from ...conventions.identifier import StandardizedNameTable
+            if not isinstance(config['standardized_name_table'], StandardizedNameTable):
+                config['standardized_name_table'] = StandardizedNameTable.from_name_and_version(
+                    *config['standardized_name_table'].split('-v')
+                )
+
         if hdf_filename is None:
             hdf_filename = self.list_of_piv_file[0].filename.parent / f'{self.list_of_piv_file[0].filename.parent}.hdf'
         # get data from first snapshot to prepare the HDF5 file
@@ -349,7 +365,7 @@ class PIVMultiPlane(PIVConverter):
 
     @staticmethod
     def _merge_planes_equal_time_vectors(h5main: h5py.File, hdf_filenames: List[pathlib.Path],
-                                         nt: int = None) -> None:
+                                         nt: int = None) -> h5py.File:
         nz = len(hdf_filenames)
         with h5py.File(hdf_filenames[0]) as h5plane:
             if nt is None:

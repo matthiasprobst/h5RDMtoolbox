@@ -1,15 +1,21 @@
 """h5rdtoolbox repository"""
 
-name = 'h5rdmtoolbox'
-__author__ = 'Matthias Probst'
-
 import atexit
 import shutil
 
 from . import conventions
+from . import tutorial
+from ._user import user_data_dir, user_tmp_dir
+from ._version import __version__
+from .h5wrapper import H5File, H5Flow, H5PIV, open_wrapper
+from .utils import generate_temporary_filename, generate_temporary_directory
 
-
+name = 'h5rdmtoolbox'
+__author__ = 'Matthias Probst'
 # from .convention.time import datetime_str
+
+__all__ = ['__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV', 'open_wrapper',
+           'generate_temporary_filename', 'generate_temporary_directory', 'tutorial']
 
 
 def set_loglevel(level):
@@ -24,14 +30,35 @@ def set_loglevel(level):
     conventions_set_loglevel(level)
 
 
-from .h5wrapper import H5File, H5Flow, H5PIV, open_wrapper
-from .utils import generate_temporary_filename, generate_temporary_directory
-from ._user import user_data_dir, user_tmp_dir
-from ._version import __version__
-from . import tutorial
+def check():
+    """Run file check"""
+    import argparse
+    parser = argparse.ArgumentParser(description='PIV uncertainty estimation with CNN')
+    parser.add_argument("filename", help="Filename to run check on.",
+                        type=str)
+    # parser.add_argument('-l', '--layout',
+    #                     type=bool,
+    #                     nargs='?',
+    #                     default=False,
+    #                     help='Run layout check.')
+    # parser.add_argument('-n', '--names',
+    #                     type=bool,
+    #                     nargs='?',
+    #                     default=False,
+    #                     help='Run name check.')
+    parser.add_argument('-d', '--dump',
+                        type=bool,
+                        nargs='?',
+                        default=False,
+                        help='Dumps the content to screen.')
 
-__all__ = ['__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV', 'open_wrapper',
-           'generate_temporary_filename', 'generate_temporary_directory', 'tutorial']
+    args = parser.parse_args()
+
+    if not args.layout and not args.names:
+        with open_wrapper(args.filename) as h5:
+            h5.check(silent=False)
+            if args.dump is None:
+                h5.sdump()
 
 
 @atexit.register

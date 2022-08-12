@@ -14,7 +14,7 @@ from .custom import PIVStandardNameTable, FluidStandardNameTable
 from .identifier import StandardizedNameTable, StandardizedNameError, StandardizedName, Empty_Standard_Name_Table
 from .layout import H5Layout
 from .longname import LongName
-from .utils import xml2dict, dict2xml, is_valid_email_address
+from .utils import dict2xml, is_valid_email_address
 
 
 def set_loglevel(level):

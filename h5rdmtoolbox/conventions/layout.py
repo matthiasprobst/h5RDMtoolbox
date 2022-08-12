@@ -4,7 +4,7 @@ import pathlib
 import re
 import shutil
 from pathlib import Path
-from typing import Union, Dict, List, TypeVar
+from typing import Union, Dict, List
 
 import h5py
 import numpy as np
@@ -14,140 +14,8 @@ from IPython.display import HTML, display
 
 from .identifier import equal_base_units
 from .. import _repr
-from .._user import user_data_dir
 
 logger = logging.getLogger(__package__)
-T_H5Layout = TypeVar('H5Layout')
-
-
-class H5Inspect:
-    """Inspection class"""
-
-    def __init__(self, h5_root_group, inspect_group, inspect_dataset, silent=False, ignore_names=None):
-        if ignore_names is None:
-            self.ignore_names = []
-        else:
-            self.ignore_names = ignore_names
-        self.names = []
-        self.silent = silent
-        self.root = h5_root_group
-        self.nissues = 0
-        self.inspect_group = inspect_group
-        self.inspect_dataset = inspect_dataset
-        self.inspect_group(self.root)
-
-    def __call__(self, name, h5obj):
-        self.names.append(h5obj.name)
-        if h5obj.name not in self.ignore_names:
-            if isinstance(h5obj, h5py.Dataset):
-                self.inspect_dataset(h5obj)
-            else:
-                self.inspect_group(h5obj)
-
-
-class H5InspectLayout:
-    """HDF5 Inspection class for layouts"""
-
-    def __init__(self, h5_root_group, h5_root_layout_group, silent=False, ignore_names=None):
-        if ignore_names is None:
-            self.ignore_names = []
-        else:
-            self.ignore_names = ignore_names
-        self.names = []
-        self.silent = silent
-        self.root = h5_root_group
-        self.root_layout = h5_root_layout_group
-        self.nissues = 0
-        self.inspect_group(self.root, h5_root_layout_group)
-
-    def __call__(self, name, h5obj):
-        self.names.append(h5obj.name)
-        if isinstance(h5obj, h5py.Dataset):
-            self.inspect_dataset(self.root, h5obj)
-        else:
-            self.inspect_dataset(self.root, h5obj)
-
-    def inspect_group(self, targetgrp, layoutgrp):
-        """inspects a group"""
-        if not self.silent:
-            print(f'inspecting group {targetgrp.name}')
-        layout_group_attributes = dict(layoutgrp.attrs)
-        # if layoutgrp.name == '/':
-        #     if 'title' not in layout_group_attributes:
-        #         layout_group_attributes['title'] = '__title'
-        for kl, vl in layout_group_attributes.items():
-            if len(kl) >= 2:
-                if kl[0:2] == '__':  # attribute name starts with __ --> special meaning
-                    pass
-                else:
-                    if kl not in targetgrp.attrs:
-                        if not self.silent:
-                            print(f' [gr] {targetgrp.name}: attribute "{kl}" missing')
-                        self.nissues += 1
-                    else:
-                        if len(vl) >= 2:
-                            if vl[0:2] == '__':  # value starts with __ -> dont compare value. attribute must only exist
-                                pass
-                            else:
-                                if vl != targetgrp.attrs[kl]:
-                                    if not self.silent:
-                                        print(f' > attribute "{kl}" has the wrong value: "{targetgrp.attrs[kl]}" '
-                                              f'instead of "{vl}"')
-                                    self.nissues += 1
-
-    def inspect_dataset(self, target_group, layout_dataset):
-        """inspects a dataset"""
-        if not self.silent:
-            print(f'inspecting dataset {layout_dataset.name}')
-        if layout_dataset.name not in target_group:
-            if not self.silent:
-                print(f' [ds] {layout_dataset.name}: missing')
-            self.nissues += 1
-        else:
-            layout_dataset_attributes = dict(layout_dataset.attrs)
-            if 'units' in layout_dataset_attributes:
-                target_units = target_group[layout_dataset.name].attrs.get('units')
-                required_units = layout_dataset_attributes['units']
-                if target_units is None or not equal_base_units(target_units, required_units):
-                    if not self.silent:
-                        print(
-                            f'Units issue for dataset {layout_dataset.name}: Unequal base units: {target_units} <> {required_units}')
-                    self.nissues += 1
-
-            else:
-                layout_dataset_attributes['units'] = '__units'
-            if 'long_name' not in layout_dataset_attributes and 'standard_name' not in layout_dataset_attributes:
-                if 'long_name' not in target_group[layout_dataset.name].attrs and 'standard_name' not in \
-                        target_group[layout_dataset.name].attrs:
-                    if not self.silent:
-                        print(f'Dataset "{layout_dataset.name}" has neither the attribute '
-                              f'"long_name" nor "standard_name"')
-                    self.nissues += 1
-
-            for kl, vl in layout_dataset.attrs.items():
-                if kl == '__shape__':
-                    if target_group[layout_dataset.name].shape != vl:
-                        if not self.silent:
-                            print(f' [ds] {layout_dataset.name}: wrong dataset shape: '
-                                  f'{target_group[layout_dataset.name].shape} instead of: {vl}.')
-                        self.nissues += 1
-                elif kl == '__ndim__':
-                    if isinstance(vl, np.ndarray):
-                        _ndim = list(vl)
-                    elif not isinstance(vl, (list, tuple)):
-                        _ndim = (vl,)
-                    else:
-                        _ndim = vl
-                    if target_group[layout_dataset.name].ndim not in _ndim:
-                        if not self.silent:
-                            print(f' [ds] {layout_dataset.name}: wrong dataset dimension: '
-                                  f'{target_group[layout_dataset.name].ndim} instead of: {vl}.')
-                        self.nissues += 1
-                elif kl[0:2] != '__':
-                    if kl not in target_group[layout_dataset.name].attrs:
-                        if not self.silent:
-                            print(f' [ds] {layout_dataset.name}: attribute "{kl}" missing')
-                        self.nissues += 1
 
 
 def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
@@ -320,7 +188,8 @@ class LayoutGroup(h5py.Group):
                                          'issue': 'missing'})
                                     if not silent:
                                         print(
-                                            f'Dataset name {ds_name} missing in {os.path.join(other, alt_grp_name, ds_name)}.')
+                                            f'Dataset name {ds_name} missing in '
+                                            f'{os.path.join(other, alt_grp_name, ds_name)}.')
                             else:
                                 issues.append({'path': alt_grp_name, 'obj_type': 'group', 'issue': 'missing'})
                                 if not silent:
@@ -462,7 +331,7 @@ class H5Layout:
                 pass
 
     @staticmethod
-    def init_from(src_filename: Path, filename: Path) -> T_H5Layout:
+    def init_from(src_filename: Path, filename: Path) -> 'H5Layout':
         """Copy src filename and return H5Layout object with filename"""
         shutil.copy2(src_filename, filename)
         return H5Layout(filename)
@@ -533,40 +402,3 @@ class H5Layout:
         return self.n_issues
 
         # return self.check_static(grp, silent) + self.check_dynamic(root_grp, silent)
-
-
-def save_layout(layout: H5Layout, name=None, parent=None):
-    """Save the layout HDF file in a specific location"""
-    if not isinstance(layout, H5Layout):
-        raise TypeError(f'Expecting type H5Layout but got {type(layout)}')
-    if name is None:
-        name = f'{layout.__name__}.hdf'
-    if parent is None:
-        parent = user_data_dir / 'layout'
-    Path.joinpath(parent, name)
-
-
-def layout_inspection(h5root: h5py.Group, layout_file: Path, silent: bool = False) -> int:
-    """compares layout content with passed root
-
-    Parameters
-    ----------
-    h5root: h5py.File
-        Root group of the HDF5 file
-    layout_file: Path
-        File path to layout file
-    silent: bool, optional=False
-        Whether to print out verbose test or not
-    """
-
-    if not silent:
-        print('\nFile layout inspection')
-        print('------------')
-
-    with h5py.File(layout_file) as h5layout:
-        # check root attributes
-        h5inspect = H5InspectLayout(h5root, h5layout, silent)
-        h5layout.visititems(h5inspect)
-        if not silent:
-            print(f' --> {h5inspect.nissues} issue(s) found during layout inspection')
-    return h5inspect.nissues

@@ -89,6 +89,10 @@ class TestH5PIV(unittest.TestCase):
             with self.assertRaises(KeyError):
                 self.assertEqual(h5.nplanes, h5['z'].size)
 
+    def test_VelocityDataset(self):
+        with tutorial.get_H5PIV('vortex_snapshot', mode='r') as h5:
+            h5.VelocityVector[:, :]
+
     def test_convention(self):
         with H5PIV() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)

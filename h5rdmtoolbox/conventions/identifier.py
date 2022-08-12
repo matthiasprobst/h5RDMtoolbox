@@ -12,10 +12,12 @@ Examples for naming tables:
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
 import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Union, Dict
+from typing import Tuple, Dict
+from typing import Union
 
 import pandas as pd
 from IPython.display import display, HTML
@@ -90,9 +92,23 @@ class EmailError(ValueError):
     pass
 
 
+def xmlconvention2dict(xml_filename: Path) -> Tuple[dict, dict]:
+    """reads an xml convention xml file and returns data and meta dictionaries"""
+    tree = ET.parse(xml_filename)
+    root = tree.getroot()
+    standard_names = {}
+    meta = {'name': root.tag, 'version_number': int(root.find('version_number').text),
+            'contact': root.find('contact').text,
+            'institution': root.find('institution').text, 'last_modified': root.find('last_modified').text}
+    for child in root.iter('entry'):
+        standard_names[child.attrib['id']] = {}
+        for c in child:
+            standard_names[child.attrib['id']][c.tag] = c.text
+    return standard_names, meta
+
+
 def meta_from_xml(xml_filename):
-    from .utils import xml2dict
-    _dict, meta = xml2dict(xml_filename)
+    _dict, meta = xmlconvention2dict(xml_filename)
     meta.update(dict(table_dict=_dict))
     return meta
 
@@ -128,7 +144,7 @@ class StandardizedNameTable(_StandardizedNameTable):
             raise TypeError(f'Unexpected input type: {type(table_dict)}. Expecting '
                             f'StandardizedNameTable or dict.')
         if not self.has_valid_structure():
-            raise KeyError(f'Invalid dictionary structure. Each entry must contain "desciption" and '
+            raise KeyError(f'Invalid dictionary structure. Each entry must contain "description" and '
                            '"canonical units"')
 
         if translation_dict:
@@ -194,7 +210,7 @@ class StandardizedNameTable(_StandardizedNameTable):
             name = self.__class__.__name__
         else:
             name = self._name
-        if self._version_number:
+        if self._version_number is None:
             version = 'None'
         else:
             version = self._version_number
@@ -301,12 +317,30 @@ class StandardizedNameTable(_StandardizedNameTable):
         return StandardizedNameTable(**meta)
 
     @staticmethod
-    def from_name(name: str, version_number: int):
+    def from_versionname(version_name: str):
+        """reads the table from an xml file stored in this package"""
+        # xml_filename = Path(__file__).parent / 'snxml' / f'{version_name}.xml'
+        # if not xml_filename.exists():
+        #     raise FileExistsError(f'Cannot find convention filename "{xml_filename}')
+        # meta = meta_from_xml(xml_filename)
+        # meta.update({'version_number': int(version_name.split('-v')[1])})
+        # translation_xml = xml_filename.parent / 'translation' / xml_filename.name
+        # if translation_xml.exists():
+        #     translation_dict = xmlconvention2dict(translation_xml)[0]
+        #     meta.update(dict(translation_dict=translation_dict))
+        return StandardizedNameTable.from_name_and_version(*version_name.split('-v'))
+
+    @staticmethod
+    def from_name_and_version(name: str, version_number: int):
         """reads the table from an xml file stored in this package"""
         xml_filename = Path(__file__).parent / 'snxml' / f'{name}-v{version_number}.xml'
         if not xml_filename.exists():
             raise FileExistsError(f'Cannot find convention filename "{xml_filename}')
         meta = meta_from_xml(xml_filename)
+        translation_xml = xml_filename.parent / 'translation' / xml_filename.name
+        if translation_xml.exists():
+            translation_dict = xmlconvention2dict(translation_xml)[0]
+            meta.update(dict(translation_dict=translation_dict))
         return StandardizedNameTable(**meta)
 
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:

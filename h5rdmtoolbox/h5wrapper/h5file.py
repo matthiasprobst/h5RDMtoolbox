@@ -1655,7 +1655,7 @@ class H5File(h5py.File, H5Group):
         else:
             if standard_name_table is None:
                 # user has not passed a snt but the snt attribute has an entry. --> use this snt
-                snt = conventions.StandardizedNameTable.from_name(*self.attrs.get(STD_NAME_TABLE_ATTR_NAME).split('-v'))
+                snt = conventions.StandardizedNameTable.from_name_and_version(*self.attrs.get(STD_NAME_TABLE_ATTR_NAME).split('-v'))
             else:
                 if isinstance(standard_name_table, str):
                     snt = conventions.StandardizedNameTable.from_xml(standard_name_table)
@@ -1665,7 +1665,7 @@ class H5File(h5py.File, H5Group):
                     raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
 
                 snt_attr_name, snt_attr_vn = snt_attr.split('-v')
-                cmp = conventions.StandardizedNameTable.from_name(snt_attr_name, int(snt_attr_vn))
+                cmp = conventions.StandardizedNameTable.from_name_and_version(snt_attr_name, int(snt_attr_vn))
                 if snt != cmp:
                     raise conventions.identifier.StandardizedNameTableError(
                         'Standardized name table registered in the file (attr "standard_name_table") '
