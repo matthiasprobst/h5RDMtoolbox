@@ -1,3 +1,4 @@
+import logging
 import os
 import pathlib
 import shutil
@@ -8,9 +9,11 @@ from . import SESSIONS_DIR, PATHLIKE, AnsysInstallation
 from .cmd import call_cmd
 from .utils import change_suffix
 
+logger = logging.getLogger('x2hdf')
+
 
 def importccl(cfx_filename: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
-              ansys_version: str = AnsysInstallation.version) -> pathlib.Path:
+              ansys_version: str = AnsysInstallation().version) -> pathlib.Path:
     """imports a .ccl file into a .cfx file"""
     if ccl_filename is None:
         ccl_filename = change_suffix(cfx_filename, '.ccl')
@@ -37,7 +40,7 @@ def importccl(cfx_filename: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None
 
 
 def cfx2def(cfx_filename: PATHLIKE, def_filename: Union[PATHLIKE, None] = None,
-            ansys_version: str = AnsysInstallation.version) -> pathlib.Path:
+            ansys_version: str = AnsysInstallation().version) -> pathlib.Path:
     if def_filename is None:
         def_filename = cfx_filename.parent.joinpath(f'{cfx_filename.stem}.def')
 
@@ -51,7 +54,7 @@ def cfx2def(cfx_filename: PATHLIKE, def_filename: Union[PATHLIKE, None] = None,
 
 
 def change_timestep_and_write_def(cfx_filename: PATHLIKE, def_filename: PATHLIKE, timestep: float,
-                                  ansys_version: str = AnsysInstallation.version):
+                                  ansys_version: str = AnsysInstallation().version):
     """changes timestep in *.cfx fil and writes solver file *.def"""
     _orig_session_filename = SESSIONS_DIR.joinpath('change_timestep_and_write_def.pre')
     _tmp_session_filename = copy_session_file_to_tmp(_orig_session_filename)
@@ -63,7 +66,7 @@ def change_timestep_and_write_def(cfx_filename: PATHLIKE, def_filename: PATHLIKE
 
 
 def change_timestep(cfx_filename: PATHLIKE, timestep: float,
-                    ansys_version: str = AnsysInstallation.version):
+                    ansys_version: str = AnsysInstallation().version):
     """changes timestep in *.cfx file. DOES NOT WRITE THE *.DEF FILE!"""
     _orig_session_filename = SESSIONS_DIR.joinpath('change_timestep.pre')
     _tmp_session_filename = copy_session_file_to_tmp(_orig_session_filename)
@@ -128,16 +131,16 @@ def play_session(session_file: PATHLIKE,
                  cfx5pre: Union[PATHLIKE, None] = None,
                  wait: bool = True) -> None:
     """
-    Runs AnsysInstallation.cfx5pre session file
+    Runs AnsysInstallation().cfx5pre session file
 
     Parameters
     ----------
-    AnsysInstallation.cfx5pre : Union[str, bytes, os.PathLike, pathlib.Path], optional
-        path to AnsysInstallation.cfx5pre exe.
+    AnsysInstallation().cfx5pre : Union[str, bytes, os.PathLike, pathlib.Path], optional
+        path to AnsysInstallation().cfx5pre exe.
         Default takes from config file
     """
     if cfx5pre is None:
-        _cfx5path = AnsysInstallation.cfx5pre
+        _cfx5path = AnsysInstallation().cfx5pre
     else:
         _cfx5path = pathlib.Path(cfx5pre)
 
