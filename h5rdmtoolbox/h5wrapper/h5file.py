@@ -1687,6 +1687,7 @@ class H5File(h5py.File, H5Group):
 
         self.layout_filename = layout_filename
         self._layout = conventions.layout.H5Layout(self.layout_filename)
+        self._layout.check(self, silent=True, recursive=True)
 
     def __setitem__(self, name, obj):
         if isinstance(obj, xr.DataArray):

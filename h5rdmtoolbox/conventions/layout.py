@@ -28,6 +28,8 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
         if ak == '__shape__':
             _shape = tuple(av)
             if otherobj.shape != _shape:
+                if not silent:
+                    print(f'Wrong shape of dataset {obj.name}: {_shape} != {otherobj.shape}')
                 issues.append({'path': obj.name,
                                'obj_type': 'dataset',
                                'name': ak,
@@ -77,6 +79,8 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
         keys = ak.split('.alt:')
         if len(keys) > 1:
             if not any([k in otherobj.attrs for k in keys]):
+                if not silent:
+                    print(f'Neither of the attribute {", ".join(keys)} exist in {otherobj.name}')
                 issues.append(
                     {'path': obj.name, 'obj_type': 'attribute', 'name': ' or '.join(keys), 'issue': 'missing'})
             continue
@@ -84,7 +88,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
         if ak.startswith('__'):
             continue  # other special meaning
 
-        try:
+        if ak in otherobj.attrs:
             other_av = otherobj.attrs[ak]
             # attribute name exits
             # now check value
@@ -93,7 +97,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
                     issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': ak, 'issue': 'unequal'})
                     if not silent:
                         print(f'Attribute value issue for {obj.name}: {av} != {other_av}')
-        except KeyError:
+        else:
             if not silent:
                 print(f'Attribute {ak} missing in group {obj.name}')
             issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': ak, 'issue': 'missing'})
