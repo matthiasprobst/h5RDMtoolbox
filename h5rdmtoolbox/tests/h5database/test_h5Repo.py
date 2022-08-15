@@ -25,7 +25,7 @@ class H5TestClass(H5File):
 
     @property
     def vfr(self):
-        """returns volume flow_utils rate"""
+        """Return volume flow_utils rate"""
         return self['operation_point/vfr'][:]
 
 

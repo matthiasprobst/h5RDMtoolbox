@@ -261,7 +261,7 @@ class CFXCase(CFXFile):
 
     @property
     def latest(self, refresh=False):
-        """Returns the latest .cfx file"""
+        """Return the latest .cfx file"""
         return self.res_files.latest
 
     def refresh(self):

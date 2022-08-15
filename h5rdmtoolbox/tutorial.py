@@ -28,7 +28,7 @@ class PIVview:
 
     @staticmethod
     def get_plane_directory() -> pathlib.Path:
-        """Returns the path to the respective example PIV plane"""
+        """Return the path to the respective example PIV plane"""
         return testdir / 'PIV/piv_challenge1_E/'
 
     @staticmethod
@@ -85,7 +85,7 @@ class PIVview:
 
     @staticmethod
     def get_snapshot_nc_files():
-        """returns a list of sorted nc files"""
+        """Return a list of sorted nc files"""
         return sorted((testdir / f'PIV/piv_challenge1_E/').glob('E00A*.nc'))
 
     @staticmethod
@@ -238,7 +238,7 @@ def get_xr_dataset(name):
 
 
 def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
-    """Returns the HDF filename of a tutoral case."""
+    """Return the HDF filename of a tutoral case."""
     from .h5wrapper import H5PIV
     if name == 'minimal_flow':
         fname = testdir / 'minimal_flow.hdf'

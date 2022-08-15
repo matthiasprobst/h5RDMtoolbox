@@ -300,7 +300,7 @@ class PivViewParFile(configparser.ConfigParser):
 
     @staticmethod
     def _to_str(value):
-        """returns string representation of a value"""
+        """Return string representation of a value"""
         if isinstance(value, str):
             return f'"{value}"'
         if isinstance(value, tuple):

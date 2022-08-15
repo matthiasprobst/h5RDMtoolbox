@@ -30,7 +30,7 @@ class units:
         self.attrs.create('units', _units)
 
     def get(self):
-        """Returns the standardized name of the dataset. The attribute name is `standard_name`.
+        """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
         return self.attrs.get('units', None)
 

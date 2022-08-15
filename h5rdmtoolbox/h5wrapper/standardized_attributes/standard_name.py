@@ -23,7 +23,7 @@ class standard_name:
                 self.attrs.create('standard_name', new_standard_name)
 
     def get(self):
-        """Returns the standardized name of the dataset. The attribute name is `standard_name`.
+        """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
         val = self.attrs.get('standard_name', None)
         if val is None:

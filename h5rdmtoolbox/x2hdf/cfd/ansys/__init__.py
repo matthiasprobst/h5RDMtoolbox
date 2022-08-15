@@ -33,7 +33,7 @@ class AnsysInstallation:
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
 
     def get_exe(self, name_exe):
-        """Returns the path to name_exe, where name_exe is e.g. cfx5pre"""
+        """Return the path to name_exe, where name_exe is e.g. cfx5pre"""
         _path = os.environ.get(name_exe)
         if _path is None:
             raise CFXExeNotFound(f'Exe {name_exe} not found. Not registered as environment variable. You may register '

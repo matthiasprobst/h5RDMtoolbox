@@ -402,7 +402,6 @@ class PIVMultiPlane(PIVConverter):
 
         # h5main.attrs['software'] = PIVMultiPlane.software_name
         now = datetime.now()
-        h5main.attrs['creation_time'] = now.strftime(CF_DATETIME_STR)
         h5main.attrs['title'] = 'piv snapshot data'
         ds_x = h5main.create_dataset('x', shape=(nx,))
         ds_x.make_scale()

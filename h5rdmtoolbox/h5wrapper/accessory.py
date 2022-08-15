@@ -206,7 +206,7 @@ class SpecialDataset:
 
     @property
     def data_vars(self):
-        """returns the variables of the xr.Dataset"""
+        """Return the variables of the xr.Dataset"""
         return self._dset.data_vars
 
     def _get_datasets(self, standard_names=None, names=None):

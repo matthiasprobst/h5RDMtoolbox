@@ -120,7 +120,6 @@ def touch_tmp_hdf5_file(touch=True) -> pathlib.Path:
     if touch:
         with File(hdf_filepath, "w") as h5touch:
             h5touch.attrs['__h5rdmtoolbox_version__'] = __version__
-            h5touch.attrs['creation_time'] = datetime.now().strftime(datetime_str)
     return hdf_filepath
 
 

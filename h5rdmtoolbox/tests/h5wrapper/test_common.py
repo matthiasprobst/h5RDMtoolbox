@@ -1,6 +1,7 @@
 """Testing common funcitonality across all wrapper classs"""
 
 import unittest
+from datetime import datetime
 
 import h5py
 
@@ -16,6 +17,12 @@ class TestCommon(unittest.TestCase):
     def setUp(self) -> None:
         self.wrapper_classes = (h5tbx.H5File, h5tbx.H5Flow, h5tbx.H5PIV)
         self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5PIVGroup)
+
+    def test_file_times(self):
+        for wc in self.wrapper_classes:
+            with wc() as h5:
+                now = datetime.now().astimezone().strftime(h5tbx.conventions.datetime_str)
+                self.assertEqual(h5.creation_time, now)
 
     def test_create_group(self):
         """testing the creation of groups"""
