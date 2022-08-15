@@ -471,9 +471,9 @@ class H5Dataset(h5py.Dataset):
                 has_dim = True
                 for iaxis in range(naxis):
                     if naxis > 1:
-                        dim_str += f'\n   [{_id}({iaxis})] {utils.make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f'\n   [{_id}({iaxis})] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
                     else:
-                        dim_str += f'\n   [{_id}] {utils.make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f'\n   [{_id}] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
                     dim_str += f'\n       long_name:     {d[iaxis].attrs.get("long_name")}'
                     dim_str += f'\n       standard_name: {d[iaxis].attrs.get("standard_name")}'
                     dim_str += f'\n       units:         {d[iaxis].attrs.get("units")}'
