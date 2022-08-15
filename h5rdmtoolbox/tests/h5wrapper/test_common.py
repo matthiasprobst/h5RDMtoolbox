@@ -21,8 +21,9 @@ class TestCommon(unittest.TestCase):
     def test_file_times(self):
         for wc in self.wrapper_classes:
             with wc() as h5:
-                now = datetime.now().astimezone().strftime(h5tbx.conventions.datetime_str)
-                self.assertEqual(h5.creation_time, now)
+                now = datetime.now().astimezone()
+                file_now = h5.creation_time
+                self.assertTrue(abs((file_now-now).total_seconds()) < 0.1)
 
     def test_create_group(self):
         """testing the creation of groups"""

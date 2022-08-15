@@ -619,10 +619,10 @@ class TestH5Group(unittest.TestCase):
         with H5File(tmpfile, mode='r') as h5:
             n = h5.check(silent=False)
             # missing at root level:
-            # title, creation_date
+            # title
             # missing at dataset:
             # units, long_name or standard_name
-            self.assertEqual(n, 2)
+            self.assertEqual(n, 1)
 
         tmpfile = touch_tmp_hdf5_file()
         with h5py.File(tmpfile, mode='w') as h5:
@@ -630,7 +630,7 @@ class TestH5Group(unittest.TestCase):
             h5.create_dataset(name='test', data=1)
         with H5File(tmpfile, mode='r') as h5:
             n = h5.check()
-            self.assertEqual(n, 1)
+            self.assertEqual(n, 0)
         return
 
         tmpfile = touch_tmp_hdf5_file()

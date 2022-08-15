@@ -1575,14 +1575,18 @@ class H5File(h5py.File, H5Group):
     def modification_time(self) -> datetime:
         """Return creation time from file"""
         return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
-                                      tz=timezone.utc).astimezone().strftime(datetime_str)
+                                      tz=timezone.utc).astimezone()
+        # return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
+        #                               tz=timezone.utc).astimezone().strftime(datetime_str)
 
     @property
     def creation_time(self) -> datetime:
         """Return creation time from file"""
         self.hdf_filename.stat().st_ctime
         return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
-                                      tz=timezone.utc).astimezone().strftime(datetime_str)
+                                      tz=timezone.utc).astimezone()
+        # return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
+        #                               tz=timezone.utc).astimezone().strftime(datetime_str)
         # from dateutil import parser
         # return parser.parse(self.attrs.get('creation_time'))
 

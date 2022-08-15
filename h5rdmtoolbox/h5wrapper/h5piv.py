@@ -11,7 +11,6 @@ from typing import Protocol, Any, Union, Dict, List
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
-from . import pivutils
 from .accessory import register_special_dataset
 from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config, _user
@@ -763,42 +762,42 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
                                  data=dwdz, overwrite=overwrite)
         return ds
 
-    def compute_vdp(self, name='vdp', flag_valid=1, flag_masked=(2, 10),
-                    overwrite=False):
-        """creates vdp for each xy coordinate for all it and iz
-        Parameters
-        ----------
-        name : str
-            Name to use for dataset
-        flag_valid : int, optional=1
-            flag defining a valid vector
-        flag_masked : tuple
-            Flags defining masked out vectors
-        overwrite : bool, optional=False
-            Whether to overwrite an existing dataset with given name
-
-        Returns
-        -------
-        ds : Dataset
-            created dataset
-
-        """
-        piv_flags = self['piv_flags'][:, :, :, :]
-        nz, nt = piv_flags.shape[0], piv_flags.shape[1]
-        vdp_data = np.zeros(shape=(nz, nt, 1, 1))
-        for iz in range(nz):
-            for it in range(nt):
-                vdp_data[iz, it, 0, 0] = pivutils.vdp(piv_flags=piv_flags[iz, it, :, :], flag_valid=flag_valid,
-                                                      flag_masked=flag_masked, abs=False)
-        description = 'valid detection probability'
-        comment = 'The absolute or relative number of valid vectors of the result array without taking masked ' \
-                  f'entries into account. The following flags were used for processing. Valid={flag_valid}, ' \
-                  f'masked={flag_masked}. Calculation used: n_valid = (n_nonmasked-n_invalid)/n_nonmasked. ' \
-                  f'Flag translation was performed with current version ({self.version}) and PIV software {self.software}.'
-        ds = self.create_dataset(name=name, data=vdp_data, units=' ', overwrite=overwrite,
-                                 long_name=description, attrs={'comment': comment},
-                                 attach_scale=('z', 'time'))
-        return ds
+    # def compute_vdp(self, name='vdp', flag_valid=1, flag_masked=(2, 10),
+    #                 overwrite=False):
+    #     """creates vdp for each xy coordinate for all it and iz
+    #     Parameters
+    #     ----------
+    #     name : str
+    #         Name to use for dataset
+    #     flag_valid : int, optional=1
+    #         flag defining a valid vector
+    #     flag_masked : tuple
+    #         Flags defining masked out vectors
+    #     overwrite : bool, optional=False
+    #         Whether to overwrite an existing dataset with given name
+    #
+    #     Returns
+    #     -------
+    #     ds : Dataset
+    #         created dataset
+    #
+    #     """
+    #     piv_flags = self['piv_flags'][:, :, :, :]
+    #     nz, nt = piv_flags.shape[0], piv_flags.shape[1]
+    #     vdp_data = np.zeros(shape=(nz, nt, 1, 1))
+    #     for iz in range(nz):
+    #         for it in range(nt):
+    #             vdp_data[iz, it, 0, 0] = pivutils.vdp(piv_flags=piv_flags[iz, it, :, :], flag_valid=flag_valid,
+    #                                                   flag_masked=flag_masked, abs=False)
+    #     description = 'valid detection probability'
+    #     comment = 'The absolute or relative number of valid vectors of the result array without taking masked ' \
+    #               f'entries into account. The following flags were used for processing. Valid={flag_valid}, ' \
+    #               f'masked={flag_masked}. Calculation used: n_valid = (n_nonmasked-n_invalid)/n_nonmasked. ' \
+    #               f'Flag translation was performed with current version ({self.version}) and PIV software {self.software}.'
+    #     ds = self.create_dataset(name=name, data=vdp_data, units=' ', overwrite=overwrite,
+    #                              long_name=description, attrs={'comment': comment},
+    #                              attach_scale=('z', 'time'))
+    #     return ds
 
     def _compute_running_statistics(self, method, grp_name, grp_long_name, dataset, dataset_long_name, overwrite,
                                     **kwargs):
