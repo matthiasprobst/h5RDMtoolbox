@@ -286,6 +286,10 @@ class H5Dataset(h5py.Dataset):
             return WrapperAttributeManager(self)
 
     @property
+    def parent(self):
+        return self._h5grp(super().parent)
+
+    @property
     def rootparent(self):
         """Returns the root group instance."""
 
@@ -304,7 +308,7 @@ class H5Dataset(h5py.Dataset):
             search(parent)
             return found
 
-        return get_root(self.parent)
+        return self._h5grp(get_root(super().parent))
 
     @property
     def values(self):
@@ -1486,9 +1490,11 @@ class H5Group(h5py.Group):
         return names
 
     def get_datasets_by_attribute(self, attribute_name, attribute_value=None, recursive=True):
+        """Return datasets that have key-value-attribute pari. Calls `get_by_attribute`"""
         return self.get_by_attribute(attribute_name, attribute_value, 'dataset', recursive)
 
     def get_groups_by_attribute(self, attribute_name, attribute_value=None, recursive=True):
+        """Return groups that have key-value-attribute pari. Calls `get_by_attribute`"""
         return self.get_by_attribute(attribute_name, attribute_value, 'group', recursive)
 
     def _get_obj_names(self, obj_type, recursive):
