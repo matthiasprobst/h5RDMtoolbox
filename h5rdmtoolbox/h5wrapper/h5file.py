@@ -241,6 +241,13 @@ class WrapperAttributeManager(h5py.AttributeManager):
             return
         super().__setattr__(key, value)
 
+    def rename(self, key, new_name):
+        """Rename an existing attribute"""
+        tmp_val = self[key]
+        self[new_name] = tmp_val
+        assert tmp_val == self[new_name]
+        del self[key]
+
 
 class DatasetValues:
     """helper class to work around xarray"""
