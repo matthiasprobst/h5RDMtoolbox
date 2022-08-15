@@ -435,6 +435,11 @@ title="Print to PDF"
    Write an individual layout
   </a>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Relative-checking">
+   Relative checking
+  </a>
+ </li>
 </ul>
 
     </nav>
@@ -462,6 +467,11 @@ title="Print to PDF"
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Write-an-individual-layout">
    Write an individual layout
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Relative-checking">
+   Relative checking
   </a>
  </li>
 </ul>
@@ -742,14 +752,14 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-<p>The already implemented wrapper classes like e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code> or <code class="docutils literal notranslate"><span class="pre">H5Flow</span></code> are already associated with layouts:</p>
+<p>The already implemented wrapper classes like e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code> or <code class="docutils literal notranslate"><span class="pre">H5Flow</span></code> are already associated with layouts and we can called it directly from <code class="docutils literal notranslate"><span class="pre">H5File</span></code> as it is a property of the class:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">lay</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">layout</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">lay</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">lay</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -980,8 +990,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3798229200" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3798229200">
+                    <input id="group-ds-/-5369206700" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-5369206700">
                     /<span>(0)</span></label>
 
 
@@ -998,14 +1008,22 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5py</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># create an HDF5 file with the package h5py:</span>
+<span class="kn">import</span> <span class="nn">h5py</span>
 <span class="n">filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
 <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">):</span>
     <span class="k">pass</span>
 
+<span class="c1">#open with h5tbx and perform a check:</span>
 <span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;run check&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">run check again - different call&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">],</span> <span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">repr of layout:&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1014,6 +1032,15 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
+run check
+Attribute creation_time missing in group /
+Attribute title missing in group /
+
+run check again - different call
+Attribute creation_time missing in group /
+Attribute title missing in group /
+
+repr of layout:
 &lt;H5FileLayout with 2 issues&gt;
 </pre></div></div>
 </div>
@@ -1025,8 +1052,8 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.hdf&#39;</span><span class="p">)</span>
-<span class="n">mylayout</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">H5Layout</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.hdf&#39;</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">hdf_layout_filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.hdf&#39;</span><span class="p">)</span>
+<span class="n">mylayout</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">H5Layout</span><span class="p">(</span><span class="n">hdf_layout_filename</span><span class="p">)</span>
 <span class="n">mylayout</span>
 </pre></div>
 </div>
@@ -1235,14 +1262,14 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>H5FileLayout File "tmp82"</p>
+<p>H5FileLayout File "tmp1344"</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3830766300" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3830766300">
+                    <input id="group-ds-/-5436702400" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-5436702400">
                     /<span>(0)</span></label>
 
 
@@ -1261,8 +1288,10 @@ input.h5tb-varname-in:checked + label:before {
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">mylayout</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
     <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span>  <span class="c1"># shape does not matter here, but has to be passed</span>
+    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;__ndim__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;standard_name.alt:long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
     <span class="n">dsy</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span>  <span class="c1"># shape does not matter here, but has to be passed</span>
+    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;__shape__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="p">)</span>
     <span class="n">dsy</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;standard_name.alt:long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;meta&#39;</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;meta/other&#39;</span><span class="p">)</span>
@@ -1474,37 +1503,37 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>H5FileLayout File "tmp82"</p>
+<p>H5FileLayout File "tmp1344"</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3845367500" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3845367500">
+                    <input id="group-ds-/-5447887700" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-5447887700">
                     /<span>(3)</span></label>
 
 
                 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">title : __any</li>
                 </ul>
 
-                <ul id="ds-1-/x-3846846700" class="h5tb-var-list">
-                <input id="ds-2-/x-3846849600" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-5449177200" class="h5tb-var-list">
+                <input id="ds-2-/x-5449179800" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-3846849600">x</label>
+                    for="ds-2-/x-5449179800">x</label>
                 <span class="h5tb-dims">(1,)</span>  [
                 <span class="h5tb-unit">N.A.</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__ndim__ : 1</li><li style="list-style-type: none; font-style: italic">__shape__ : [20]</li><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
 
                 </ul>
 
              </ul>
 
 
-                <ul id="ds-1-/y-3847037200" class="h5tb-var-list">
-                <input id="ds-2-/y-3847039700" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/y-5449548100" class="h5tb-var-list">
+                <input id="ds-2-/y-5449550800" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/y-3847039700">y</label>
+                    for="ds-2-/y-5449550800">y</label>
                 <span class="h5tb-dims">(1,)</span>  [
                 <span class="h5tb-unit">N.A.</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
@@ -1516,8 +1545,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/meta-3847134800" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta-3847134800">
+                    <input id="group-ds-/meta-5449640900" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/meta-5449640900">
                     meta<span>(1)</span></label>
 
 
@@ -1526,8 +1555,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/meta/other-3847268700" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta/other-3847268700">
+                    <input id="group-ds-/meta/other-5449753200" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/meta/other-5449753200">
                     other<span>(0)</span></label>
 
 
@@ -1541,13 +1570,12 @@ input.h5tb-varname-in:checked + label:before {
 </ul>
 </div></div>
 </div>
-<p>Now let’s create an example HDF5 file and check if the layout is ok or if there are issues:</p>
+<p>Now let’s create an example HDF5 file:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">test_filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
-
 <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;my test file&#39;</span>
     <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
@@ -1557,298 +1585,25 @@ input.h5tb-varname-in:checked + label:before {
 </pre></div>
 </div>
 </div>
-<p>We use <code class="docutils literal notranslate"><span class="pre">check()</span></code> and pass the opened hdf5 group to check for any issues. We already know, taht the group “meta” and “meta/other” are missing, as well the attribute “standard_name” or “long_name” for dataset “y”. Note, that missing group “other” will not raise an issue because “meta” raised one before.</p>
+<p>We use <code class="docutils literal notranslate"><span class="pre">check()</span></code> and pass the opened hdf5 group to check for any issues:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">mylayout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">mylayout</span><span class="p">)</span>
-<span class="n">mylayout</span>
+    <span class="n">mylayout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;H5FileLayout with 2 issues&gt;
+Group name &#34;meta&#34; missing in /.
 </pre></div></div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<head><style>/*
-CSS inspired by xarray: https://github.com/pydata/xarray
-*/
-.h5tb-header > div,
-.h5tb-header > ul {
-    display: inline;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.h5tb-dataarray-cls,
-.h5tb-dataarray-name {
-    margin-left: 2px;
-    margin-right: 10px;
-}
-
-.h5tb-dataarray-name {
-    color: #000;
-}
-
-.h5grp-sections {
-    list-style: none;
-    padding: 3px;
-    margin: 0;
-}
-
-.h5grp-sections input {
-    display: none;
-}
-
-.h5grp-sections label {
-    display: inline;
-}
-
-.h5grp-sections > li > input + label > span {
-    display: inline;
-    margin-left: 4px;
-}
-
-.h5grp-sections > li > input:checked + label > span {
-    display: none;
-}
-
-.h5grp-sections input:enabled + label {
-    cursor: pointer;
-}
-
-.h5grp-sections input:not(.h5tb-values-in) ~ ul {
-    display: none;
-}
-
-.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
-    display: block;
-}
-
-.h5grp-sections > li > input + label {
-    width: 140px;
-    color: #555;
-    font-weight: 500;
-    padding: 4px 0 2px 0;
-}
-
-
-.h5grp-sections > li > input + label:before {
-    display: inline-block;
-    content: '+';
-    font-size: 11px;
-    width: 15px;
-    text-align: center;
-}
-
-.h5grp-sections > li > input:disabled + label:before {
-    color: #777;
-}
-
-.h5grp-sections > li > input:checked + label:before {
-    content: '-';
-}
-
-.h5tb-dim-list {
-    display: inline-block !important;
-    list-style: none;
-    padding: 0;
-}
-
-.h5tb-dim-list li {
-    display: inline-block;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-dim-list:before {
-    content: '(';
-}
-
-.h5tb-dim-list:after {
-    content: ')';
-}
-
-.h5tb-dim-list li:not(:last-child):after {
-    content: ',';
-}
-
-.h5tb-has-index {
-    text-decoration: underline;
-}
-
-.h5tb-var-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-var-list > li {
-    background-color: #fcfcfc;
-    overflow: hidden;
-}
-
-.h5tb-var-list > li:nth-child(odd) {
-    background-color: #efefef;
-}
-
-.h5tb-var-list li:hover {
-    background-color: rgba(3, 169, 244, .2);
-}
-
-.h5tb-var-list li > span {
-    display: inline-block;
-}
-
-input.h5tb-varname-in + label {
-    width: 140px;
-    padding-left: 0;
-    font-weight: bold;
-}
-
-.h5tb-dataset {
-    width: 100px;
-}
-
-.h5tb-attributevalue {
-    width: 100px;
-    text-align: left;
-    color: #888;
-    white-space: nowrap;
-    font-size: 12px;
-}
-
-input.h5tb-varname-in + label:before {
-    content: ' ';
-    display: inline-block;
-    font-size: 11px;
-    width: 15px;
-    padding-left: 2px;
-    padding-right: 2px;
-    text-align: center;
-    color: #aaa;
-    text-decoration: none !important;
-}
-
-input.h5tb-varname-in:enabled + label:hover:before {
-    color: #000;
-}
-
-input.h5tb-varname-in:checked + label:before {
-    color: #ccc;
-}
-
-.h5tb-dims {
-    width: 280px;
-    white-space: nowrap;
-}
-
-
-.h5tb-unit {
-    width: 96px;
-    white-space: nowrap;
-    padding-right: 2px;
-    text-align: right;
-    color: #555;
-    font-style: italic;
-}
-
-.h5tb-attr-list {
-    list-style: none;
-    background-color: #fff;
-    padding-bottom: 6px;
-    color: #555;
-}
-
-.h5tb-attr-list li,
-.h5tb-attr-list li:hover {
-    background-color: #fff;
-}
-
-.h5tb-dim-highlight {
-    background-color: rgba(3, 169, 244, .2);
-    cursor: pointer;
-}</style></head>
-<p>H5FileLayout File "tmp82"</p>
-
-<div class='h5tb-warp'>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/-3889790500" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3889790500">
-                    /<span>(3)</span></label>
-
-
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">title : __any</li>
-                </ul>
-
-                <ul id="ds-1-/x-3890491600" class="h5tb-var-list">
-                <input id="ds-2-/x-3890494500" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/x-3890494500">x</label>
-                <span class="h5tb-dims">(1,)</span>  [
-                <span class="h5tb-unit">N.A.</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
-
-                </ul>
-
-             </ul>
-
-
-                <ul id="ds-1-/y-3890649000" class="h5tb-var-list">
-                <input id="ds-2-/y-3890651500" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/y-3890651500">y</label>
-                <span class="h5tb-dims">(1,)</span>  [
-                <span class="h5tb-unit">N.A.</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
-
-                </ul>
-
-             </ul>
-
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/meta-3890739100" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta-3890739100">
-                    meta<span>(1)</span></label>
-
-
-                <ul class="h5tb-attr-list">
-                </ul>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/meta/other-3890858300" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta/other-3890858300">
-                    other<span>(0)</span></label>
-
-
-                <ul class="h5tb-attr-list">
-                </ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</div></div>
-</div>
-<p>But what exactly is missing? Either change the parameter <code class="docutils literal notranslate"><span class="pre">silent=True</span></code> to <code class="docutils literal notranslate"><span class="pre">silent=False</span></code> ot run <code class="docutils literal notranslate"><span class="pre">report()</span></code></p>
+<p>We get 3 issues as stated in the printouts above. If we suppress the print statements by <code class="docutils literal notranslate"><span class="pre">silent=True</span></code>, then we can get a similar output by calling <code class="docutils literal notranslate"><span class="pre">.report()</span></code>:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
@@ -1862,13 +1617,17 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-H5FileLayout issue report (2 issues)
+H5FileLayout issue report (3 issues)
 -------------------
 /meta: -&gt; missing
+/x: -&gt; wrong shape: (3,) != (20,)
 /y.standard_name or long_name: -&gt; missing
 </pre></div></div>
 </div>
-<p>Note, that we can enter the check-process at any level. However, no check is performed above that group, in this case the group “meta” which we add before we run a check again beginning from that group level:</p>
+</section>
+<section id="Relative-checking">
+<h2>Relative checking<a class="headerlink" href="#Relative-checking" title="Permalink to this headline">#</a></h2>
+<p>By callng <code class="docutils literal notranslate"><span class="pre">.check()</span></code> from the layout object, we can change the entry point by passing other HDF groups than the root group, e.g. we could start from the group “meta”:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
@@ -1888,7 +1647,7 @@ H5FileLayout issue report (2 issues)
 &lt;H5FileLayout with 1 issues&gt;
 </pre></div></div>
 </div>
-<p>Only checking the specified group requires to pass <code class="docutils literal notranslate"><span class="pre">recursive=False</span></code>:</p>
+<p>Also we can specify, whether we want to run the check on all subgropups or only stay at the entry level. Such an recursive search can be suppressed by passing <code class="docutils literal notranslate"><span class="pre">recursive=False</span></code>:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
@@ -1904,16 +1663,8 @@ H5FileLayout issue report (2 issues)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;H5FileLayout with 1 issues&gt;
+&lt;H5FileLayout with 2 issues&gt;
 </pre></div></div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
 </div>
 </section>
 </section>
