@@ -73,7 +73,8 @@ class StandardizedName:
     convention: _NameIdentifierConvention
 
     def __post_init__(self):
-        self.canonical_units = ureg.Unit(_units_power_fix(self.canonical_units))
+        if self.canonical_units:
+            self.canonical_units = ureg.Unit(_units_power_fix(self.canonical_units))
 
     def __format__(self, spec):
         return self.name.__format__(spec)
@@ -141,7 +142,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         self._valid_characters = valid_characters
         self._pattern = pattern
         self._institution = institution
-        self._contact = contact
+        self.contact = contact
         self._xml_filename = None
         if last_modified is None:
             now = datetime.now()
@@ -414,7 +415,7 @@ class StandardizedNameTable(_StandardizedNameTable):
     def check_units(self, name, units) -> bool:
         """Raises an error if units is wrong. """
         self.check_name(name, strict=True)  # will raise an error if name not in self._dict
-        if self._dict:
+        if name in self._dict:
             if not equal_base_units(_units_power_fix(self._dict[name]['canonical_units']), units):
                 raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
                                             f'"{units}" != "{self[name].canonical_units}"')

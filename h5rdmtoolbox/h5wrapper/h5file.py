@@ -155,9 +155,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
             # check for standardized data-name identifiers
             snt = self._parent.standard_name_table
             if snt.check_name(value, strict=conventions.identifier.STRICT):
-                units = self.get('units', None)
-                if units:
-                    snt.check_units(value, units)
+                if value in snt._dict and conventions.identifier.STRICT:
+                    # check units only if strict==True because it needs to be in the standard name table
+                    units = self.get('units', None)
+                    if units:
+                        snt.check_units(value, units)
                 self.create(NAME_IDENTIFIER_ATTR_NAME, data=value)
             return
         elif name == 'long_name':
