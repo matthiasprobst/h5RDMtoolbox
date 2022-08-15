@@ -1,11 +1,20 @@
 Conventions
 ===========
 
-Conventions in the context of this repository guide and control the user during
-dataset creation and exploring. Some scientific domain have standardized names for
+In order to interpret data it must come with auxiliary data, so-called metadata. A definition of
+it is regulated in conventions. In the context of this repository, we distinguish naming conventions and
+layout definitions. While naming conventions like e.g. the CF Metadata Convention (http://cfconventions.org/)
+define the dataset attributes and allowed syntax, to describe a comprehensive dscription of a data set, layouts
+define the expected structure of an HDF5 file. The latter is needed because HDF5 files allow an hierarchical
+organization (groups, subgroups, ...). In sum, both concepts guide and control the user
+during data creation but also exploring and comparison.
+
+Standardized Names
+------------------
+Some scientific domain have standardized names for
 physical properties. To fulfill interoperability, findability as well as re-usability
 each dataset **must** be assigned with the attribute `long_name` or `standard_name`. This
-choice is adopted from the CF Metadata Conventions (http://cfconventions.org/), which is
+choice is adopted from the CF Metadata Conventions , which is
 also used in the `xarray` package.
 
 long_name

@@ -424,6 +424,11 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#standardized-names">
+   Standardized Names
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#standardized-name-table">
    Standardized Name Table
   </a>
@@ -453,6 +458,11 @@ title="Print to PDF"
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#standardized-names">
+   Standardized Names
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#standardized-name-table">
    Standardized Name Table
   </a>
@@ -474,11 +484,19 @@ title="Print to PDF"
                 
   <section id="conventions">
 <h1>Conventions<a class="headerlink" href="#conventions" title="Permalink to this headline">#</a></h1>
-<p>Conventions in the context of this repository guide and control the user during
-dataset creation and exploring. Some scientific domain have standardized names for
+<p>In order to interpret data it must come with auxiliary data, so-called metadata. A definition of
+it is regulated in conventions. In the context of this repository, we distinguish naming conventions and
+layout definitions. While naming conventions like e.g. the CF Metadata Convention (<a class="reference external" href="http://cfconventions.org/">http://cfconventions.org/</a>)
+define the dataset attributes and allowed syntax, to describe a comprehensive dscription of a data set, layouts
+define the expected structure of an HDF5 file. The latter is needed because HDF5 files allow an hierarchical
+organization (groups, subgroups, …). In sum, both concepts guide and control the user
+during data creation but also exploring and comparison.</p>
+<section id="standardized-names">
+<h2>Standardized Names<a class="headerlink" href="#standardized-names" title="Permalink to this headline">#</a></h2>
+<p>Some scientific domain have standardized names for
 physical properties. To fulfill interoperability, findability as well as re-usability
 each dataset <strong>must</strong> be assigned with the attribute <cite>long_name</cite> or <cite>standard_name</cite>. This
-choice is adopted from the CF Metadata Conventions (<a class="reference external" href="http://cfconventions.org/">http://cfconventions.org/</a>), which is
+choice is adopted from the CF Metadata Conventions , which is
 also used in the <cite>xarray</cite> package.</p>
 <dl class="simple">
 <dt>long_name</dt><dd><p>A human-readable string.</p>
@@ -492,6 +510,7 @@ In addition to this an additional attribute is required, namely <cite>units</cit
 data, each dataset may have a physical unit, e.g. [m] or no unit (thus dimensionless).</p>
 <p>If <cite>standard_name</cite> is provided in the dataset creation method and a standard name table is
 provided, too, then <cite>units</cite> is verified by that table.</p>
+</section>
 <section id="standardized-name-table">
 <h2>Standardized Name Table<a class="headerlink" href="#standardized-name-table" title="Permalink to this headline">#</a></h2>
 <p>A standardized name table again is motivated by the CF Metadata Convention. It is a table

@@ -435,15 +435,21 @@ automated exploration and analysis.</p>
 </dd>
 <dt id="term-long_name">long_name<a class="headerlink" href="#term-long_name" title="Permalink to this term">#</a></dt><dd><p>A human-readable string. Attribute of a dataset. Must be given if <strong>standard_name</strong> is not set.</p>
 </dd>
+<dt id="term-Standardized-name-table">Standardized name table<a class="headerlink" href="#term-Standardized-name-table" title="Permalink to this term">#</a></dt><dd><p>A XML document, with tablular content, which contains the standard name and (at least) a description and a
+canonical unit for a it. The respective python class <cite>StandardizedNameTable</cite> is linked to an HDF5 file and
+can performe consistensy checks (checks syntax, name and unit).</p>
+</dd>
 <dt id="term-standard_name">standard_name<a class="headerlink" href="#term-standard_name" title="Permalink to this term">#</a></dt><dd><p>A string respecting more or less strict rules defined by a community and defined in a name table.
 Attribute of a dataset. Must be given if <strong>long_name</strong> is not set.</p>
 </dd>
 <dt id="term-units">units<a class="headerlink" href="#term-units" title="Permalink to this term">#</a></dt><dd><p>Attribute of a dataset describing the physical units of the dataset. Dimensionless datasets
 have units=’’</p>
 </dd>
-<dt id="term-standardized-name-table">standardized name table<a class="headerlink" href="#term-standardized-name-table" title="Permalink to this term">#</a></dt><dd><p>Also <strong>standard name table</strong>, a table which holds all names, descriptions and units of a onvention.
-A wrapper-class uses it when <strong>standard_name</strong> and <strong>units</strong> are provided during dataset creation
-and when the content of a file is checked.</p>
+<dt id="term-Layout">Layout<a class="headerlink" href="#term-Layout" title="Permalink to this term">#</a></dt><dd><p>A layout defines the structure of an HDF5 file. It may define exact content, e.g. attribute name and value or
+define expected dataset dimensions or shape. Also some limited conditional layout definition is possible, e.g.
+that dataset may be in another group if the expected does not exist. Layout definitions are attached to a wrapper
+HDF file and epeciall assists during data collection as it defines the final content of a file which was prior
+defined by a community or project.</p>
 </dd>
 </dl>
 <dl class="citation">
