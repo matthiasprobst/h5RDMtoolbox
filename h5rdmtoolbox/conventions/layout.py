@@ -368,7 +368,6 @@ class H5Layout:
             f'H5FileLayout file for class {self.__class__.__name__} is written to {self.filename}')
         with h5py.File(self.filename, mode='w') as h5:
             h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
-            h5.attrs['creation_time'] = '__time of file creation'
         return self.filename
 
     def check(self, grp: h5py.Group, silent: bool = True,

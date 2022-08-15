@@ -14,7 +14,7 @@
 #
 #
 # def get_plane_directory(name: str) -> pathlib.Path:
-#     """Returns the path to the respective example PIV plane"""
+#     """Return the path to the respective example PIV plane"""
 #     _av = ('piv_challenge',)
 #     if name.lower() not in _av:
 #         raise ValueError(f'Plane name {name} not in list of available names: {_av}')

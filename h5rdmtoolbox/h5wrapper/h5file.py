@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import warnings
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict
 from typing import List
@@ -30,6 +31,7 @@ from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_data_dir
 from .._version import __version__
+from ..conventions import datetime_str
 from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME, NAME_IDENTIFIER_ATTR_NAME, UNITS_ATTR_NAME
 # noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
@@ -44,7 +46,7 @@ H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATE
 
 
 def get_rootparent(obj):
-    """Returns the root group instance."""
+    """Return the root group instance."""
 
     def get_root(parent):
         global found
@@ -262,7 +264,6 @@ def write_H5File_layout_file():
     with lay.File(mode='w') as h5lay:
         h5lay.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
         h5lay.attrs['title'] = '__file title'
-        h5lay.attrs['creation_time'] = '__time of file creation'
 
 
 # if not H5File_layout_filename.exists():
@@ -291,7 +292,7 @@ class H5Dataset(h5py.Dataset):
 
     @property
     def rootparent(self):
-        """Returns the root group instance."""
+        """Return the root group instance."""
 
         def get_root(parent):
             global found
@@ -317,7 +318,7 @@ class H5Dataset(h5py.Dataset):
 
     @property
     def standard_name_table(self):
-        """returns the standard name convention associated with the file instance"""
+        """Return the standard name convention associated with the file instance"""
         try:
             return _SNT_CACHE[self.file.id.id]
         except KeyError:
@@ -332,13 +333,13 @@ class H5Dataset(h5py.Dataset):
 
     @standard_name_table.setter
     def standard_name_table(self, convention: conventions.StandardizedNameTable):
-        """returns the standard name convention associated with the file instance"""
+        """Return the standard name convention associated with the file instance"""
         self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
         _SNT_CACHE[self.id.id] = convention
 
     @property
     def units(self):
-        """Returns the attribute units. Returns None if it does not exist."""
+        """Return the attribute units. Returns None if it does not exist."""
         return self.attrs.get('units')
 
     @units.setter
@@ -349,7 +350,7 @@ class H5Dataset(h5py.Dataset):
 
     @property
     def long_name(self):
-        """Returns the attribute long_name. Returns None if it does not exist."""
+        """Return the attribute long_name. Returns None if it does not exist."""
         return self.attrs.get('long_name')
 
     @long_name.setter
@@ -362,7 +363,7 @@ class H5Dataset(h5py.Dataset):
 
     @property
     def standard_name(self) -> Union[str, None]:
-        """Returns the standardized name of the dataset. The attribute name is `standard_name`.
+        """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
         attrs_string = self.attrs.get(NAME_IDENTIFIER_ATTR_NAME)
         if attrs_string is None:
@@ -383,7 +384,7 @@ class H5Dataset(h5py.Dataset):
             super().__setitem__(key, value)
 
     def __getitem__(self, args, new_dtype=None, nparray=False) -> xr.DataArray:
-        """Returns sliced HDF dataset as xr.DataArray.
+        """Return sliced HDF dataset as xr.DataArray.
         By passing nparray=True the return array is forced
         to be of type np.array and the super method of
         __getitem__ is called. Alternatively, call .values[:,...]"""
@@ -543,9 +544,8 @@ class H5Group(h5py.Group):
     * ...
 
     Automatic generation of root attributes:
-    (a) creation_time: Date time when file was created. Default format see meta_standard.time.datetime_str
-    (b) modification_time: Date time when file was used in mode ('r+' or 'a')
-    (c) h5wrapper_version: version of this package
+    - __h5rdmtoolbox_version__: version of this package
+    - __wrcls__ h5wrapper class indication
 
     providing additional features through
     specific properties such as units and long_name or through special or
@@ -560,7 +560,7 @@ class H5Group(h5py.Group):
 
     @property
     def rootparent(self):
-        """Returns the root group instance."""
+        """Return the root group instance."""
 
         def get_root(parent):
             global found
@@ -581,17 +581,17 @@ class H5Group(h5py.Group):
 
     @property
     def datasets(self) -> List[h5py.Dataset]:
-        """returns list of the group's datasets"""
+        """Return list of the group's datasets"""
         return [v for k, v in self.items() if isinstance(v, h5py.Dataset)]
 
     @property
     def groups(self):
-        """returns list of the group's groups"""
+        """Return list of the group's groups"""
         return [v for v in self.values() if isinstance(v, h5py.Group)]
 
     @property
     def long_name(self):
-        """Returns the attribute long_name. Returns None if it does not exist."""
+        """Return the attribute long_name. Returns None if it does not exist."""
         return self.attrs.get('long_name')
 
     @long_name.setter
@@ -604,7 +604,7 @@ class H5Group(h5py.Group):
 
     @property
     def data_source_type(self) -> conventions.data.DataSourceType:
-        """returns data source type as DataSourceType"""
+        """Return data source type as DataSourceType"""
         ds_value = self.attrs.get(conventions.data.DataSourceType.get_attr_name())
         if ds_value is None:
             return conventions.data.DataSourceType.none
@@ -616,7 +616,7 @@ class H5Group(h5py.Group):
 
     @property
     def standard_name_table(self) -> conventions.StandardizedNameTable:
-        """returns the standar name convention associated with the file instance"""
+        """Return the standar name convention associated with the file instance"""
         try:
             return _SNT_CACHE[self.file.id.id]
         except KeyError:
@@ -985,7 +985,7 @@ class H5Group(h5py.Group):
         return self._h5ds(ds.id)
 
     def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:
-        """Returns the dataset with a specific standard_name within the current group.
+        """Return the dataset with a specific standard_name within the current group.
         Raises error if multiple datasets are found!
         To recursive scan through all datasets, use
         get_by_attribute('standard_name', <your_value>, 'ds').
@@ -1411,7 +1411,7 @@ class H5Group(h5py.Group):
 
     def get_by_attribute(self, attribute_name, attribute_value=None,
                          h5type=None, recursive=True):
-        """returns the object(s) (dataset or group) with a certain attribute name
+        """Return the object(s) (dataset or group) with a certain attribute name
         and if specified a specific value.
         Via h5type it can be filtered for only datasets or groups
 
@@ -1498,7 +1498,7 @@ class H5Group(h5py.Group):
         return self.get_by_attribute(attribute_name, attribute_value, 'group', recursive)
 
     def _get_obj_names(self, obj_type, recursive):
-        """returns all names of specified object type
+        """Return all names of specified object type
         in this group and if recursive==True also
         all below"""
         _names = []
@@ -1513,12 +1513,12 @@ class H5Group(h5py.Group):
         return [g for g in self.keys() if isinstance(self[g], obj_type)]
 
     def get_group_names(self, recursive=True):
-        """returns all group names in this group and if recursive==True also
+        """Return all group names in this group and if recursive==True also
         all below"""
         return self._get_obj_names(h5py.Group, recursive)
 
     def get_dataset_names(self, recursive=True):
-        """returns all dataset names in this group and if recursive==True also
+        """Return all dataset names in this group and if recursive==True also
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
@@ -1555,20 +1555,29 @@ class H5File(h5py.File, H5Group):
 
     @property
     def attrs(self):
-        """Returns an attribute manager that is inherited from h5py's attribute manager"""
+        """Return an attribute manager that is inherited from h5py's attribute manager"""
         with phil:
             return WrapperAttributeManager(self)
 
     @property
     def version(self):
-        """returns version stored in file"""
+        """Return version stored in file"""
         return self.attrs.get('__h5rdmtoolbox_version__')
 
     @property
-    def creation_time(self) -> datetime.datetime:
-        """returns creation time from file"""
-        from dateutil import parser
-        return parser.parse(self.attrs.get('creation_time'))
+    def modification_time(self) -> datetime:
+        """Return creation time from file"""
+        return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
+                                      tz=timezone.utc).astimezone().strftime(datetime_str)
+
+    @property
+    def creation_time(self) -> datetime:
+        """Return creation time from file"""
+        self.hdf_filename.stat().st_ctime
+        return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
+                                      tz=timezone.utc).astimezone().strftime(datetime_str)
+        # from dateutil import parser
+        # return parser.parse(self.attrs.get('creation_time'))
 
     @property
     def filesize(self):
@@ -1586,7 +1595,7 @@ class H5File(h5py.File, H5Group):
 
     # @property
     # def title(self) -> Union[str, None]:
-    #     """Returns the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
+    #     """Return the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
     #     return self.attrs.get('title')
     #
     # @title.setter
@@ -1601,7 +1610,7 @@ class H5File(h5py.File, H5Group):
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
 
-        now_time_str = utils.generate_time_str(datetime.datetime.now(), conventions.datetime_str)
+        now_time_str = utils.generate_time_str(datetime.now(), conventions.datetime_str)
         if name is None:
             logger.debug("An empty H5File class is initialized")
             name = utils.touch_tmp_hdf5_file()
@@ -1639,8 +1648,6 @@ class H5File(h5py.File, H5Group):
 
         # update file creation/modification times and h5wrapper version
         if self.mode != 'r':
-            if 'creation_time' not in self.attrs:
-                self.attrs['creation_time'] = now_time_str
             self.attrs['__h5rdmtoolbox_version__'] = __version__
             self.attrs['__wrcls__'] = self.__class__.__name__
 

@@ -45,7 +45,7 @@ class StandardizedNameTableWarning(Warning):
 
 
 def equal_base_units(unit1, unit2):
-    """returns if two units are equivalent"""
+    """Return if two units are equivalent"""
     base_unit1 = ureg(unit1).to_base_units().units.__format__(ureg.default_format)
     base_unit2 = ureg(unit2).to_base_units().units.__format__(ureg.default_format)
     return base_unit1 == base_unit2
@@ -209,7 +209,7 @@ class StandardizedNameTable(_StandardizedNameTable):
 
     @property
     def has_translation_dictionary(self):
-        """returns whether the table is associated with a translation dict"""
+        """Return whether the table is associated with a translation dict"""
         return len(self._translation_dict) > 0
 
     @contact.setter
@@ -314,7 +314,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         return True
 
     def copy(self):
-        """returns a copy of the object"""
+        """Return a copy of the object"""
         return StandardizedNameTable(self._dict)
 
     def update(self, data: Union[Dict, _StandardizedNameTable]):
