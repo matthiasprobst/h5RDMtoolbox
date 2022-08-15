@@ -69,9 +69,6 @@ class TestCnventions(unittest.TestCase):
         with h5tbx.H5File(standard_name_table=fluid) as h5:
             pass
 
-        with self.assertWarns(h5tbx.conventions.identifier.StandardizedNameTableWarning):
-            with h5tbx.H5File(h5.hdf_filename, standard_name_table=fluid) as h5:
-                pass
         with self.assertRaises(h5tbx.conventions.identifier.StandardizedNameTableError):
             with h5tbx.H5File(h5.hdf_filename, standard_name_table=empty) as h5:
                 pass

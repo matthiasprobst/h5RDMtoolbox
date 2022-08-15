@@ -31,6 +31,14 @@ STRICT = True
 CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
 
 
+def _units_power_fix(_str: str):
+    """Fixes strings like 'm s-1' to 'm s^-1'"""
+    s = re.search('[a-zA-Z][+|-]', _str)
+    if s:
+        return _str[0:s.span()[0] + 1] + '^' + _str[s.span()[1] - 1:]
+    return _str
+
+
 class StandardizedNameTableWarning(Warning):
     """StandardizedNameTableWarning"""
     pass
@@ -63,6 +71,10 @@ class StandardizedName:
     description: Union[str, None]
     canonical_units: Union[str, None]
     convention: _NameIdentifierConvention
+
+    def __post_init__(self):
+        if self.canonical_units:
+            self.canonical_units = ureg.Unit(_units_power_fix(self.canonical_units))
 
     def __format__(self, spec):
         return self.name.__format__(spec)
@@ -131,6 +143,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         self._pattern = pattern
         self._institution = institution
         self.contact = contact
+        self._xml_filename = None
         if last_modified is None:
             now = datetime.now()
             self._last_modified = now.strftime(CF_DATETIME_STR)
@@ -256,14 +269,14 @@ class StandardizedNameTable(_StandardizedNameTable):
             if canonical_units:
                 self._dict[name]['canonical_units'] = canonical_units
 
-    def get_table(self, sort_by: str = 'name') -> str:
+    def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
         """string representation of the convention in form of a table"""
         if self._name is None:
             name = self.__class__.__name__
         else:
             name = self._name
-        if self._version:
-            version = self._version
+        if self._version_number:
+            version = self._version_number
         else:
             version = 'None'
         df = pd.DataFrame(self._dict).T
@@ -273,19 +286,20 @@ class StandardizedNameTable(_StandardizedNameTable):
             sorted_df = df.sort_values('canonical_units')
         else:
             sorted_df = df
-        return f"{name} (version: {version})\n{tabulate(sorted_df, headers='keys', tablefmt='psql')}"
+        _table = tabulate(sorted_df, headers='keys', tablefmt='psql', maxcolwidths=maxcolwidths)
+        return f"{name} (version: {version})\n{_table}"
 
-    def sdump(self, sort_by: str = 'name') -> None:
+    def sdump(self, sort_by: str = 'name', maxcolwidths=None) -> None:
         """Dumps (prints) the content as string"""
-        print(self.get_table(sort_by=sort_by))
+        print(self.get_table(sort_by=sort_by, maxcolwidths=maxcolwidths))
 
-    def dump(self, sort_by: str = 'name'):
+    def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
         df = pd.DataFrame(self._dict).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
-            display(HTML(df.sort_index().to_html()))
+            display(HTML(df.sort_index().to_html(**kwargs)))
         elif sort_by.lower() in ('units', 'unit', 'canoncial_units'):
-            display(HTML(df.sort_values('canonical_units').to_html()))
+            display(HTML(df.sort_values('canonical_units').to_html(**kwargs)))
         else:
             raise ValueError(f'Invalid value for sortby: {sort_by}')
 
@@ -313,8 +327,9 @@ class StandardizedNameTable(_StandardizedNameTable):
     def from_xml(xml_filename):
         """reads the table from an xml file"""
         meta = meta_from_xml(xml_filename)
-
-        return StandardizedNameTable(**meta)
+        snt = StandardizedNameTable(**meta)
+        snt._xml_filename = xml_filename
+        return snt
 
     @staticmethod
     def from_versionname(version_name: str):
@@ -398,13 +413,12 @@ class StandardizedNameTable(_StandardizedNameTable):
         return True
 
     def check_units(self, name, units) -> bool:
-        """Raises an error if units is wrong"""
-        self.check_name(name, strict=STRICT)  # will raise an error if name not in self._dict
-        if self._dict:
-            if STRICT:
-                if not equal_base_units(self._dict[name]['canonical_units'], units):
-                    raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
-                                                f'"{units}" != "{self[name].canonical_units}"')
+        """Raises an error if units is wrong. """
+        self.check_name(name, strict=True)  # will raise an error if name not in self._dict
+        if name in self._dict:
+            if not equal_base_units(_units_power_fix(self._dict[name]['canonical_units']), units):
+                raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
+                                            f'"{units}" != "{self[name].canonical_units}"')
         return True
 
     def translate(self, name: str, source: str) -> Union[str, None]:
