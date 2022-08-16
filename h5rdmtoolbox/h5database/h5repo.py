@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import time
 from os import walk
+from typing import List
 
 import h5py
 import pandas as pd
@@ -105,11 +106,11 @@ def build_repo_toc(repo_dir='', toc_filename=None, wrapperpy_class=None, rec=Tru
     return toc_filename
 
 
-def get_external_filenames_from_h5_file(h5filename):
+def get_external_filenames_from_h5_file(h5filename) -> List[pathlib.Path]:
     with h5py.File(h5filename, 'r') as h5:
         filenames = list()
         for k in h5.keys():
-            filenames.append(h5[k].file.filename)
+            filenames.append(pathlib.Path(h5[k].file.filename))
         return filenames
 
 
@@ -187,8 +188,20 @@ class H5repo:
     def _repr_html_(self):
         from IPython.display import display
         data = dict()
-        data['File name'] = [os.path.basename(fname) for fname in self.filenames]
-        data['Folder path'] = [os.path.dirname(fname) for fname in self.filenames]
+        data['File name'] = [fname.name for fname in self.filenames]
+        data['Folder path'] = [fname.parent for fname in self.filenames]
+        df = pd.DataFrame(data)
+        pd.set_option('display.max_colwidth', None)
+        return display(df)
+
+    def dump(self, full_path=False):
+        from IPython.display import display
+        data = dict()
+        data['File name'] = [fname.name for fname in self.filenames]
+        if full_path:
+            data['Folder path'] = [fname.parent for fname in self.filenames]
+        else:
+            data['Folder path'] = [fname.parent.name for fname in self.filenames]
         df = pd.DataFrame(data)
         pd.set_option('display.max_colwidth', None)
         return display(df)
