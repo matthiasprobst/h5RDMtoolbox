@@ -67,8 +67,9 @@ def set_loglevel(level):
 
 
 from .h5repo import H5repo
+from .files import H5Files
 
 if not user_yaml_filename.exists():
     write_default_user_yaml_file(silent=False)
 
-__all__ = ['config', 'user_config_dir', 'set_loglevel']
+__all__ = ['config', 'user_config_dir', 'set_loglevel', 'H5Files']

@@ -11,7 +11,6 @@ from typing import Protocol, Any, Union, Dict, List
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
-from . import pivutils
 from .accessory import register_special_dataset
 from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config, _user

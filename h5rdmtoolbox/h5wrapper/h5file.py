@@ -415,7 +415,7 @@ class H5Dataset(h5py.Dataset):
 
                 # remember the first dimension name for all axis:
                 dims_names = [Path(d[0].name).stem if len(
-                    d) > 0 else 'None' for d in self.dims]
+                    d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
 
                 coords = {}
                 used_dims = []
@@ -462,7 +462,6 @@ class H5Dataset(h5py.Dataset):
                         coords.update({_name: xr.DataArray(name=_name, dims=(),
                                                            data=_data,
                                                            attrs=pop_hdf_attributes(self.parent[c].attrs))})
-
                 return xr.DataArray(name=Path(self.name).stem, data=arr, dims=used_dims,
                                     coords=coords, attrs=attrs)
             return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
