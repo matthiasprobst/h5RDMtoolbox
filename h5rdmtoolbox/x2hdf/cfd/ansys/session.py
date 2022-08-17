@@ -5,11 +5,14 @@ import shutil
 import tempfile
 from typing import Union
 
-from . import SESSIONS_DIR, PATHLIKE, AnsysInstallation
+from . import PATHLIKE, AnsysInstallation
+from . import logger
 from .cmd import call_cmd
 from .utils import change_suffix
 
 logger = logging.getLogger('x2hdf')
+
+SESSIONS_DIR = pathlib.Path(__file__).parent.joinpath('session_files')
 
 
 def importccl(cfx_filename: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
@@ -131,7 +134,11 @@ def play_session(session_file: PATHLIKE,
                  cfx5pre: Union[PATHLIKE, None] = None,
                  wait: bool = True) -> None:
     """
+<<<<<<< HEAD
     Runs AnsysInstallation().cfx5pre session file
+=======
+    Runs cfx5pre session file
+>>>>>>> dev-cfx2hdf
 
     Parameters
     ----------

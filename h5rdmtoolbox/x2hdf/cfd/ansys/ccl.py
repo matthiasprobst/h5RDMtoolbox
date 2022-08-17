@@ -163,7 +163,6 @@ class CCLGroup:
             subg.create_h5_group(g, overwrite=overwrite)
 
 
-
 INTENDATION_STEP = 2
 
 
@@ -256,7 +255,6 @@ def _list_of_instances_by_keyword_substring(filename, root_group, substring, cla
     return instances
 
 
-
 def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
              cfx5pre: pathlib.Path = None, overwrite: bool = True,
              verbose=False) -> pathlib.Path:
@@ -313,7 +311,7 @@ def _generate_from_res_or_cfx(res_cfx_filename: PATHLIKE,
     if overwrite and ccl_filename.exists():
         ccl_filename.unlink()
     if res_cfx_filename.suffix == '.cfx':
-        session_filename = os.path.join(SESSIONS_DIR, 'cfx2ccl.pre')
+        session_filename = os.path.join(session.SESSIONS_DIR, 'cfx2ccl.pre')
     else:
         raise ValueError(f'Could not determine "session_filename"')
 

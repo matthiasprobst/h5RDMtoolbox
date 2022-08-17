@@ -11,13 +11,39 @@ from h5rdmtoolbox.h5wrapper.h5flow import Device
 
 class TestH5Flow(unittest.TestCase):
 
+    def test_standardized_atts(self):
+        with H5Flow() as h5:
+            ds = h5.create_dataset('ds', shape=(1,), units='m',
+                                   standard_name='y_coordinate')
+            ds.attrs['standard_name'] = 'x_coordinate'
+            with self.assertRaises(StandardizedNameError):
+                ds.attrs['standard_name'] = 'x_velocity'
+            ds.standard_name = 'x_coordinate'
+            self.assertEqual(ds.attrs['standard_name'], 'x_coordinate')
+
+            # self.assertEqual(h5.long_name, None)
+            # h5.long_name = 'hello'
+            # self.assertEqual(h5.long_name, 'hello')
+            # self.assertEqual(h5.attrs['long_name'], 'hello')
+            #
+            # with self.assertRaises(RuntimeError):
+            #     h5.standard_name = 'qew'
+            # self.assertTrue(ds.standard_name == 'x_coordinate')
+            # self.assertEqual(ds.standard_name, 'x_coordinate')
+            #
+            # with self.assertRaises(ValueError):
+            #     h5.long_name = '123hello'
+            # ds = h5.create_dataset('ds2', shape=(1,), units='', standard_name='awdadw')
+            # ds.attrs['long_name'] = 'dddd'
+            # self.assertEqual(ds.long_name, 'dddd')
+            # self.assertEqual(ds.attrs['long_name'], 'dddd')
+
     def test_convention(self):
-        self.assertTrue(H5Flow.Layout.filename.exists())
-        self.assertEqual(H5Flow.Layout.filename.stem, 'H5Flow')
         with H5Flow() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)
-            self.assertEqual(h5.standard_name_table.name, 'Fluid_Standard_Name')
+            self.assertEqual(h5.standard_name_table.name, 'fluid')
+            self.assertEqual(h5.standard_name_table.versionname, 'fluid-v1')
 
     def test_VectorAccsessor(self):
         with H5Flow() as h5:
@@ -52,10 +78,6 @@ class TestH5Flow(unittest.TestCase):
             vel.compute_magnitude()
 
     def test_Layout(self):
-        self.assertTrue(H5Flow.Layout.filename.exists())
-        self.assertEqual(H5Flow.Layout.filename.stem, 'H5Flow')
-        H5Flow.Layout.write()
-        H5Flow.Layout.sdump()
         with H5Flow() as h5:
             n_issuess = h5.check()
             self.assertEqual(n_issuess, 5)
@@ -90,7 +112,10 @@ class TestH5Flow(unittest.TestCase):
             self.assertEqual(n_issuess, 3)
 
             # use [kg] for units. must be NOT accepted:
-            h5['x'].attrs['units'] = 'kg'
+            with self.assertRaises(StandardizedNameError):
+                h5['x'].attrs['units'] = 'kg'
+            # workaround:
+            h5['x'].attrs.create('units', 'kg')
             n_issuess = h5.check()
             self.assertEqual(n_issuess, 4)
 

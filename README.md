@@ -1,10 +1,10 @@
 
-<h1 text-align: center;><img src="icon.svg" alt="logo" width="40"/> HDF5 Research Data Management Toolbox</h1>
+<h1 text-align: center;><img src="docs/icons/icon4.svg" alt="" width="40"/> HDF5 Research Data Management Toolbox</h1>
 
 *Note, that the repository is under current development!*
 
 The "HDF5 Research Data Management Toolbox" (h5rdmtoolbox) supports the data creation, processing and sharing 
-of data using the HDF5 file format while fullfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles.
+of data using the HDF5 file format while fulfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles.
 The core idea is to make use of the popular file format HDF5. So-called wrapper-classes serve as 
 interfaces between the file and the user and implement naming conventions, layout-defintions and 
 provide helpful methods that facilitate processing and visualization. Special wrapper-classes can be written using class 
@@ -20,7 +20,7 @@ sub-package can be found:
   - `x2hdf`: package facilitating conversion processes to meet the layout requirements defined in `h5wrapperpy`
   - `h5database`: Practical and easy searching in multiple HDF5 files
 
-The sub-packages are described in detail in the [documentation](./doc/_build/index.html). 
+The sub-packages are described in detail in the [documentation](https://matthiasprobst.github.io/h5RDMtoolbox/). 
 `Jupyter Notebooks` as tutorials are provided in the respective documentation folder (/doc/<sub-package>).
 
 

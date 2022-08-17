@@ -11,11 +11,13 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
+import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from re import sub as re_sub
-from typing import Union, Dict
+from typing import Tuple, Dict
+from typing import Union
 
 import pandas as pd
 from IPython.display import display, HTML
@@ -29,8 +31,21 @@ STRICT = True
 CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
 
 
+def _units_power_fix(_str: str):
+    """Fixes strings like 'm s-1' to 'm s^-1'"""
+    s = re.search('[a-zA-Z][+|-]', _str)
+    if s:
+        return _str[0:s.span()[0] + 1] + '^' + _str[s.span()[1] - 1:]
+    return _str
+
+
+class StandardizedNameTableWarning(Warning):
+    """StandardizedNameTableWarning"""
+    pass
+
+
 def equal_base_units(unit1, unit2):
-    """returns if two units are equivalent"""
+    """Return if two units are equivalent"""
     base_unit1 = ureg(unit1).to_base_units().units.__format__(ureg.default_format)
     base_unit2 = ureg(unit2).to_base_units().units.__format__(ureg.default_format)
     return base_unit1 == base_unit2
@@ -57,8 +72,24 @@ class StandardizedName:
     canonical_units: Union[str, None]
     convention: _NameIdentifierConvention
 
+    def __post_init__(self):
+        if self.canonical_units:
+            self.canonical_units = ureg.Unit(_units_power_fix(self.canonical_units))
+
+    def __format__(self, spec):
+        return self.name.__format__(spec)
+
     def __str__(self):
         return self.name
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.name == other
+        else:
+            return any([self.name != other.name,
+                        self.description != other.description,
+                        self.canonical_units != other.canonical_units,
+                        self.convention != other.convention])
 
     def check(self):
         """Run the name check of the convention."""
@@ -73,18 +104,46 @@ class EmailError(ValueError):
     pass
 
 
+def xmlconvention2dict(xml_filename: Path) -> Tuple[dict, dict]:
+    """reads an xml convention xml file and returns data and meta dictionaries"""
+    tree = ET.parse(xml_filename)
+    root = tree.getroot()
+    standard_names = {}
+    meta = {'name': root.tag, 'version_number': int(root.find('version_number').text),
+            'contact': root.find('contact').text,
+            'institution': root.find('institution').text, 'last_modified': root.find('last_modified').text}
+    for child in root.iter('entry'):
+        standard_names[child.attrib['id']] = {}
+        for c in child:
+            standard_names[child.attrib['id']][c.tag] = c.text
+    return standard_names, meta
+
+
+def meta_from_xml(xml_filename):
+    _dict, meta = xmlconvention2dict(xml_filename)
+    meta.update(dict(table_dict=_dict))
+    return meta
+
+
+class StandardizedNameTableError(Exception):
+    pass
+
+
 class StandardizedNameTable(_StandardizedNameTable):
     """Base class of Standardized Name Tables"""
 
     def __init__(self, name: str, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '', translation_dict: dict = None):
+                 valid_characters: str = '', pattern: str = '',
+                 translation_dict: dict = None):
         self._name = name
         self._version_number = version_number
         self._valid_characters = valid_characters
+        self._pattern = pattern
         self._institution = institution
         self.contact = contact
+        self._xml_filename = None
         if last_modified is None:
             now = datetime.now()
             self._last_modified = now.strftime(CF_DATETIME_STR)
@@ -98,7 +157,7 @@ class StandardizedNameTable(_StandardizedNameTable):
             raise TypeError(f'Unexpected input type: {type(table_dict)}. Expecting '
                             f'StandardizedNameTable or dict.')
         if not self.has_valid_structure():
-            raise KeyError(f'Invalid dictionary structure. Each entry must contain "desciption" and '
+            raise KeyError(f'Invalid dictionary structure. Each entry must contain "description" and '
                            '"canonical units"')
 
         if translation_dict:
@@ -117,6 +176,10 @@ class StandardizedNameTable(_StandardizedNameTable):
         return list(self._dict.keys())
 
     @property
+    def versionname(self):
+        return f'{self._name}-v{self._version_number}'
+
+    @property
     def contact(self):
         return self._contact
 
@@ -127,6 +190,10 @@ class StandardizedNameTable(_StandardizedNameTable):
     @property
     def valid_characters(self):
         return self._valid_characters
+
+    @property
+    def pattern(self):
+        return self._pattern
 
     @property
     def laset_modified(self):
@@ -142,7 +209,7 @@ class StandardizedNameTable(_StandardizedNameTable):
 
     @property
     def has_translation_dictionary(self):
-        """returns whether the table is associated with a translation dict"""
+        """Return whether the table is associated with a translation dict"""
         return len(self._translation_dict) > 0
 
     @contact.setter
@@ -156,7 +223,7 @@ class StandardizedNameTable(_StandardizedNameTable):
             name = self.__class__.__name__
         else:
             name = self._name
-        if self._version_number:
+        if self._version_number is None:
             version = 'None'
         else:
             version = self._version_number
@@ -175,6 +242,12 @@ class StandardizedNameTable(_StandardizedNameTable):
 
     def __contains__(self, item):
         return item in self._dict
+
+    def __eq__(self, other):
+        return self.versionname == other.versionname
+
+    def __neg__(self, other):
+        return not self.__eq__(other)
 
     def set(self, name: str, description: str, canonical_units: str):
         """Sets the value of a standardized name"""
@@ -196,14 +269,14 @@ class StandardizedNameTable(_StandardizedNameTable):
             if canonical_units:
                 self._dict[name]['canonical_units'] = canonical_units
 
-    def get_table(self, sort_by: str = 'name') -> str:
+    def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
         """string representation of the convention in form of a table"""
         if self._name is None:
             name = self.__class__.__name__
         else:
             name = self._name
-        if self._version:
-            version = self._version
+        if self._version_number:
+            version = self._version_number
         else:
             version = 'None'
         df = pd.DataFrame(self._dict).T
@@ -213,19 +286,20 @@ class StandardizedNameTable(_StandardizedNameTable):
             sorted_df = df.sort_values('canonical_units')
         else:
             sorted_df = df
-        return f"{name} (version: {version})\n{tabulate(sorted_df, headers='keys', tablefmt='psql')}"
+        _table = tabulate(sorted_df, headers='keys', tablefmt='psql', maxcolwidths=maxcolwidths)
+        return f"{name} (version: {version})\n{_table}"
 
-    def sdump(self, sort_by: str = 'name') -> None:
+    def sdump(self, sort_by: str = 'name', maxcolwidths=None) -> None:
         """Dumps (prints) the content as string"""
-        print(self.get_table(sort_by=sort_by))
+        print(self.get_table(sort_by=sort_by, maxcolwidths=maxcolwidths))
 
-    def dump(self, sort_by: str = 'name'):
+    def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
         df = pd.DataFrame(self._dict).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
-            display(HTML(df.sort_index().to_html()))
+            display(HTML(df.sort_index().to_html(**kwargs)))
         elif sort_by.lower() in ('units', 'unit', 'canoncial_units'):
-            display(HTML(df.sort_values('canonical_units').to_html()))
+            display(HTML(df.sort_values('canonical_units').to_html(**kwargs)))
         else:
             raise ValueError(f'Invalid value for sortby: {sort_by}')
 
@@ -240,7 +314,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         return True
 
     def copy(self):
-        """returns a copy of the object"""
+        """Return a copy of the object"""
         return StandardizedNameTable(self._dict)
 
     def update(self, data: Union[Dict, _StandardizedNameTable]):
@@ -252,9 +326,36 @@ class StandardizedNameTable(_StandardizedNameTable):
     @staticmethod
     def from_xml(xml_filename):
         """reads the table from an xml file"""
-        from .utils import xml2dict
-        _dict, meta = xml2dict(xml_filename)
-        meta.update(dict(table_dict=_dict))
+        meta = meta_from_xml(xml_filename)
+        snt = StandardizedNameTable(**meta)
+        snt._xml_filename = xml_filename
+        return snt
+
+    @staticmethod
+    def from_versionname(version_name: str):
+        """reads the table from an xml file stored in this package"""
+        # xml_filename = Path(__file__).parent / 'snxml' / f'{version_name}.xml'
+        # if not xml_filename.exists():
+        #     raise FileExistsError(f'Cannot find convention filename "{xml_filename}')
+        # meta = meta_from_xml(xml_filename)
+        # meta.update({'version_number': int(version_name.split('-v')[1])})
+        # translation_xml = xml_filename.parent / 'translation' / xml_filename.name
+        # if translation_xml.exists():
+        #     translation_dict = xmlconvention2dict(translation_xml)[0]
+        #     meta.update(dict(translation_dict=translation_dict))
+        return StandardizedNameTable.from_name_and_version(*version_name.split('-v'))
+
+    @staticmethod
+    def from_name_and_version(name: str, version_number: int):
+        """reads the table from an xml file stored in this package"""
+        xml_filename = Path(__file__).parent / 'snxml' / f'{name}-v{version_number}.xml'
+        if not xml_filename.exists():
+            raise FileExistsError(f'Cannot find convention filename "{xml_filename}')
+        meta = meta_from_xml(xml_filename)
+        translation_xml = xml_filename.parent / 'translation' / xml_filename.name
+        if translation_xml.exists():
+            translation_dict = xmlconvention2dict(translation_xml)[0]
+            meta.update(dict(translation_dict=translation_dict))
         return StandardizedNameTable(**meta)
 
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:
@@ -297,8 +398,12 @@ class StandardizedNameTable(_StandardizedNameTable):
         if name[-1] == ' ':
             raise StandardizedNameError(f'Name must not end with a space!')
 
-        if re_sub(self.valid_characters, '', name) != name:
+        if re.sub(self.valid_characters, '', name) != name:
             raise StandardizedNameError(f'Invalid special characters in name "{name}": Only "_" is allowed.')
+
+        if self.pattern != '' and self.pattern is not None:
+            if re.match(self.pattern, name):
+                raise StandardizedNameError(f'Name must not start with a number!')
 
         if strict:
             if self._dict:
@@ -308,13 +413,12 @@ class StandardizedNameTable(_StandardizedNameTable):
         return True
 
     def check_units(self, name, units) -> bool:
-        """Raises an error if units is wrong"""
-        self.check_name(name, strict=STRICT)  # will raise an error if name not in self._dict
-        if self._dict:
-            if STRICT:
-                if not equal_base_units(self._dict[name]['canonical_units'], units):
-                    raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
-                                                f'"{units}" != "{self[name].canonical_units}"')
+        """Raises an error if units is wrong. """
+        self.check_name(name, strict=True)  # will raise an error if name not in self._dict
+        if name in self._dict:
+            if not equal_base_units(_units_power_fix(self._dict[name]['canonical_units']), units):
+                raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
+                                            f'"{units}" != "{self[name].canonical_units}"')
         return True
 
     def translate(self, name: str, source: str) -> Union[str, None]:
@@ -329,13 +433,13 @@ class StandardizedNameTable(_StandardizedNameTable):
         raise ValueError(f'Translation dictionary is empty!')
 
 
-empty_standardized_name_table = StandardizedNameTable(name='EmptyStandardizedNameTable',
-                                                      table_dict={},
-                                                      version_number=-1,
-                                                      institution=None,
-                                                      contact='none@none.none',
-                                                      last_modified=None,
-                                                      valid_characters='')
+Empty_Standard_Name_Table = StandardizedNameTable(name='EmptyStandardizedNameTable',
+                                                  table_dict={},
+                                                  version_number=0,
+                                                  institution=None,
+                                                  contact='none@none.none',
+                                                  last_modified=None,
+                                                  valid_characters='')
 
 
 class CFStandardNameTable(StandardizedNameTable):
@@ -344,9 +448,11 @@ class CFStandardNameTable(StandardizedNameTable):
     def __init__(self, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '[^a-zA-Z0-9_]'):
+                 valid_characters: str = '[^a-zA-Z0-9_]',
+                 pattern: str = '^[0-9 ].*'):
         name = 'CF-convention'
-        super().__init__(name, table_dict, version_number, institution, contact, last_modified, valid_characters)
+        super().__init__(name, table_dict, version_number, institution,
+                         contact, last_modified, valid_characters, pattern)
 
     def check_name(self, name, strict=False) -> bool:
         """In addtion to check of base class, lowercase is checked first"""
@@ -361,6 +467,23 @@ class CGNSStandardNameTable(StandardizedNameTable):
     def __init__(self, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '[^a-zA-Z0-9_]'):
+                 valid_characters: str = '[^a-zA-Z0-9_]',
+                 pattern: str = '^[0-9 ].*'):
         name = 'CGNS-convention'
-        super().__init__(name, table_dict, version_number, institution, contact, last_modified, valid_characters)
+        super().__init__(name, table_dict, version_number, institution,
+                         contact, last_modified, valid_characters, pattern)
+
+
+xml_dir = Path(__file__).parent / 'snxml'
+
+
+def standard_name_table_to_xml(snt: StandardizedNameTable, overwrite=False):
+    """writes standrad name table to package data"""
+    _xml_filename = xml_dir / f'{snt.name}-v{snt.version_number}.xml'
+    if overwrite:
+        return snt.to_xml(_xml_filename)
+    if not _xml_filename.exists():
+        snt.to_xml(_xml_filename)
+
+
+standard_name_table_to_xml(Empty_Standard_Name_Table)

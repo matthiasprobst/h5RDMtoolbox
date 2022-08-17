@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import warnings
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict
 from typing import List
@@ -12,38 +13,39 @@ from typing import Union
 import h5py
 import numpy as np
 import pint
+# noinspection PyUnresolvedReferences
 import pint_xarray
 import xarray as xr
 import yaml
 from IPython.display import HTML, display
-from h5py import h5i
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
 
-from . import config
-from ._hdf_constants import H5_DIM_ATTRS
-from .html_repr import h5file_html_repr
+from .accessory import USER_PROPERTIES
+from .. import _repr
+from .. import config
 from .. import conventions
 from .. import utils
+from .._repr import h5file_html_repr
+from .._user import user_data_dir
 from .._version import __version__
-from ..utils import user_data_dir
+from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME, NAME_IDENTIFIER_ATTR_NAME, UNITS_ATTR_NAME
+# noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
 
 logger = logging.getLogger(__package__)
 
-# the following two lines are needed, otherwise automating formatting of the code will remove pint and xarray2hdf accessors
-assert pint_xarray.__version__ >= '0.2.1'
-assert xr2hdf.__version__ == '0.1.0'
+ureg.default_format = config.ureg_format
 
-ureg.default_format = 'C~'
+_SNT_CACHE = {}
 
-_SNC_LS = {}
+H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
 
 def get_rootparent(obj):
-    """Returns the root group instance."""
+    """Return the root group instance."""
 
     def get_root(parent):
         global found
@@ -85,13 +87,16 @@ class WrapperAttributeManager(h5py.AttributeManager):
     the name (string) is identified as a dataset or group, then this object is returned.
     """
 
-    def __init__(self, parent, identifier_convention: conventions.StandardizedNameTable):
+    def __init__(self, parent):  # , identifier_convention: conventions.StandardizedNameTable):
         """ Private constructor."""
         super().__init__(parent)
-        self.identifier_convention = identifier_convention  # standard_name_convention
+        self._parent = parent
+        # self.identifier_convention = identifier_convention  # standard_name_convention
 
     @with_phil
     def __getitem__(self, name):
+        # if name in self.__dict__:
+        #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         if isinstance(ret, str):
             if ret:
@@ -115,6 +120,14 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     else:
                         rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
                         return rootgrp.get(ret)
+                elif ret[0] == '(':
+                    if ret[-1] == ')':
+                        return eval(ret)
+                    return ret
+                elif ret[0] == '[':
+                    if ret[-1] == ']':
+                        return eval(ret)
+                    return ret
                 else:
                     return ret
             else:
@@ -130,16 +143,51 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
+        if name == '_parent':
+            return
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
-        if name == conventions.NAME_IDENTIFIER_ATTR_NAME:
-            if h5i.get_type(self._id) in (h5i.GROUP, h5i.FILE):
+        if name == NAME_IDENTIFIER_ATTR_NAME:
+            if value is None:
+                raise ValueError(f'{NAME_IDENTIFIER_ATTR_NAME} cannot be None')
+            if not isinstance(self._parent, h5py.Dataset):
                 raise AttributeError(f'Attribute name {name} is reserverd '
                                      'for dataset only.')
-            if h5i.get_type(self._id) == h5i.DATASET:
-                # check for standardized data-name identifiers
-                self.identifier_convention.check_name(value, strict=conventions.identifier.STRICT)
+            # check for standardized data-name identifiers
+            snt = self._parent.standard_name_table
+            if snt.check_name(value, strict=conventions.identifier.STRICT):
+                if value in snt._dict and conventions.identifier.STRICT:
+                    # check units only if strict==True because it needs to be in the standard name table
+                    units = self.get('units', None)
+                    if units:
+                        snt.check_units(value, units)
+                self.create(NAME_IDENTIFIER_ATTR_NAME, data=value)
+            return
+        elif name == 'long_name':
+            ln = conventions.longname.LongName(value)
+            self.create('long_name', ln.__str__())
+            return
+        elif name == UNITS_ATTR_NAME:
+            if value:
+                if isinstance(value, str):
+                    _value = ureg.Unit(value).__format__(ureg.default_format)
+                elif isinstance(value, pint.Unit):
+                    _value = value.__format__(ureg.default_format)
+                else:
+                    raise TypeError(f'Unit must be a string or pint.Unit but not {type(value)}')
+            else:
+                _value = value
+            standard_name = self.get('standard_name')
+            if standard_name:
+                self._parent.standard_name_table.check_units(standard_name, _value)
 
+            self.create('units', value)
+            return
+
+        if name in USER_PROPERTIES:
+            if hasattr(self._parent, name):
+                setattr(self._parent, name, value)
+                return
         if isinstance(value, dict):
             # some value might be changed to a string first, like h5py objects
             for k, v in value.items():
@@ -161,7 +209,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 raise RuntimeError(f'Could not set attribute due to: {e2}')
 
     def __repr__(self):
-        return self.__str__()
+        return super().__repr__()
 
     def __str__(self):
         outstr = ''
@@ -184,13 +232,20 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if key == 'identifier_convention':
+        if key in ('_parent',):
             super().__setattr__(key, value)
             return
         if not isinstance(value, ObjectID):
             self.__setitem__(key, value)
             return
         super().__setattr__(key, value)
+
+    def rename(self, key, new_name):
+        """Rename an existing attribute"""
+        tmp_val = self[key]
+        self[new_name] = tmp_val
+        assert tmp_val == self[new_name]
+        del self[key]
 
 
 class DatasetValues:
@@ -204,6 +259,21 @@ class DatasetValues:
 
     def __setitem__(self, args, val):
         return self.h5dataset.__setitem__(args, val)
+
+
+H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
+
+
+def write_H5File_layout_file():
+    """Write the H5File layout to <user_dir>/layout"""
+    lay = conventions.layout.H5Layout(H5File_layout_filename)
+    with lay.File(mode='w') as h5lay:
+        h5lay.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
+        h5lay.attrs['title'] = '__file title'
+
+
+# if not H5File_layout_filename.exists():
+write_H5File_layout_file()
 
 
 class H5Dataset(h5py.Dataset):
@@ -220,11 +290,15 @@ class H5Dataset(h5py.Dataset):
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
-            return WrapperAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self)
+
+    @property
+    def parent(self):
+        return self._h5grp(super().parent)
 
     @property
     def rootparent(self):
-        """Returns the root group instance."""
+        """Return the root group instance."""
 
         def get_root(parent):
             global found
@@ -241,7 +315,7 @@ class H5Dataset(h5py.Dataset):
             search(parent)
             return found
 
-        return get_root(self.parent)
+        return self._h5grp(get_root(super().parent))
 
     @property
     def values(self):
@@ -249,57 +323,55 @@ class H5Dataset(h5py.Dataset):
         return DatasetValues(self)
 
     @property
-    def units(self):
-        """Returns the attribute units. Returns None if it does not exist."""
-        return self.attrs.get('units')
-
-    @property
     def standard_name_table(self):
-        """returns the standard name convention associated with the file instance"""
-        return _SNC_LS[self.file.id.id]
+        """Return the standard name convention associated with the file instance"""
+        try:
+            return _SNT_CACHE[self.file.id.id]
+        except KeyError:
+            return conventions.Empty_Standard_Name_Table
+        # snt = self.rootparent.attrs.get(STD_NAME_TABLE_ATTR_NAME)
+        # if snt is None:
+        #     try:
+        #         return _SNT_CACHE[self.file.id.id]
+        #     except:
+        #         return conventions.empty_standardized_name_table
+        # return conventions.StandardizedNameTable.from_name(snt)
 
     @standard_name_table.setter
     def standard_name_table(self, convention: conventions.StandardizedNameTable):
-        """returns the standard name convention associated with the file instance"""
-        _SNC_LS[self.id.id] = convention
+        """Return the standard name convention associated with the file instance"""
+        self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
+        _SNT_CACHE[self.id.id] = convention
+
+    @property
+    def units(self):
+        """Return the attribute units. Returns None if it does not exist."""
+        return self.attrs.get('units')
 
     @units.setter
     def units(self, units):
         """Sets the attribute units to attribute 'units'
         default unit registry format of pint is used."""
-        if units:
-            if isinstance(units, str):
-                _units = ureg.Unit(units).__format__(ureg.default_format)
-            elif isinstance(units, pint.Unit):
-                _units = units.__format__(ureg.default_format)
-            else:
-                raise TypeError(f'Unit must be a string or pint.Unit but not {type(units)}')
-        else:
-            _units = units
-        standard_name = self.attrs.get('standard_name')
-        if standard_name:
-            self.standard_name_table.check_units(standard_name, _units)
-
-        self.attrs.modify('units', _units)
+        self.attrs['units'] = units
 
     @property
     def long_name(self):
-        """Returns the attribute long_name. Returns None if it does not exist."""
+        """Return the attribute long_name. Returns None if it does not exist."""
         return self.attrs.get('long_name')
 
     @long_name.setter
-    def long_name(self, long_name):
+    def long_name(self, new_long_name):
         """Writes attribute long_name if passed string is not None"""
-        if long_name:
-            self.attrs.modify('long_name', long_name)
+        if new_long_name:
+            self.attrs['long_name'] = new_long_name
         else:
             raise TypeError('long_name must not be type None.')
 
     @property
     def standard_name(self) -> Union[str, None]:
-        """Returns the standardized name of the dataset. The attribute name is `standard_name`.
+        """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
-        attrs_string = self.attrs.get('standard_name')
+        attrs_string = self.attrs.get(NAME_IDENTIFIER_ATTR_NAME)
         if attrs_string is None:
             return None
         return self.standard_name_table[attrs_string]
@@ -308,9 +380,7 @@ class H5Dataset(h5py.Dataset):
     def standard_name(self, new_standard_name):
         """Writes attribute standard_name if passed string is not None.
         The rules for the standard_name is checked before writing to file."""
-        if new_standard_name:
-            if self.standard_name_table.check_name(new_standard_name):
-                self.attrs['standard_name'] = new_standard_name
+        self.attrs['standard_name'] = new_standard_name
 
     def __setitem__(self, key, value):
         if isinstance(value, xr.DataArray):
@@ -320,7 +390,7 @@ class H5Dataset(h5py.Dataset):
             super().__setitem__(key, value)
 
     def __getitem__(self, args, new_dtype=None, nparray=False) -> xr.DataArray:
-        """Returns sliced HDF dataset as xr.DataArray.
+        """Return sliced HDF dataset as xr.DataArray.
         By passing nparray=True the return array is forced
         to be of type np.array and the super method of
         __getitem__ is called. Alternatively, call .values[:,...]"""
@@ -412,9 +482,9 @@ class H5Dataset(h5py.Dataset):
                 has_dim = True
                 for iaxis in range(naxis):
                     if naxis > 1:
-                        dim_str += f'\n   [{_id}({iaxis})] {utils._make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f'\n   [{_id}({iaxis})] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
                     else:
-                        dim_str += f'\n   [{_id}] {utils._make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                        dim_str += f'\n   [{_id}] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
                     dim_str += f'\n       long_name:     {d[iaxis].attrs.get("long_name")}'
                     dim_str += f'\n       standard_name: {d[iaxis].attrs.get("standard_name")}'
                     dim_str += f'\n       units:         {d[iaxis].attrs.get("units")}'
@@ -432,10 +502,10 @@ class H5Dataset(h5py.Dataset):
 
         super().__init__(_id)
 
-    def to_units(self, units):
+    def to_units(self, new_units: str):
         """Changes the physical unit of the dataset using pint_xarray.
         Loads to full dataset into RAM!"""
-        self[()] = self[()].pint.quantify().pint.to(units).pint.dequantify()
+        self[()] = self[()].pint.quantify().pint.to(new_units).pint.dequantify()
 
     def rename(self, newname):
         """renames the dataset. Note this may be a process that kills your RAM"""
@@ -467,7 +537,7 @@ class H5Dataset(h5py.Dataset):
 class H5Group(h5py.Group):
     """
     It enforces the usage of units
-    and standard_names for every dataset and informative meta data at
+    and standard_names for every dataset and informative metadata at
     root level (creation time etc).
 
      It provides and long_name for every group.
@@ -480,9 +550,8 @@ class H5Group(h5py.Group):
     * ...
 
     Automatic generation of root attributes:
-    (a) creation_time: Date time when file was created. Default format see meta_standard.time.datetime_str
-    (b) modification_time: Date time when file was used in mode ('r+' or 'a')
-    (c) h5wrapper_version: version of this package
+    - __h5rdmtoolbox_version__: version of this package
+    - __wrcls__ h5wrapper class indication
 
     providing additional features through
     specific properties such as units and long_name or through special or
@@ -493,11 +562,11 @@ class H5Group(h5py.Group):
     def attrs(self):
         """Calls the wrapper attibute manager"""
         with phil:
-            return WrapperAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self)
 
     @property
     def rootparent(self):
-        """Returns the root group instance."""
+        """Return the root group instance."""
 
         def get_root(parent):
             global found
@@ -518,30 +587,30 @@ class H5Group(h5py.Group):
 
     @property
     def datasets(self) -> List[h5py.Dataset]:
-        """returns list of the group's datasets"""
+        """Return list of the group's datasets"""
         return [v for k, v in self.items() if isinstance(v, h5py.Dataset)]
 
     @property
     def groups(self):
-        """returns list of the group's groups"""
+        """Return list of the group's groups"""
         return [v for v in self.values() if isinstance(v, h5py.Group)]
 
     @property
     def long_name(self):
-        """Returns the attribute long_name. Returns None if it does not exist."""
+        """Return the attribute long_name. Returns None if it does not exist."""
         return self.attrs.get('long_name')
 
     @long_name.setter
-    def long_name(self, long_name):
+    def long_name(self, new_long_name):
         """Writes attribute long_name if passed string is not None"""
-        if long_name:
-            self.attrs.modify('long_name', long_name)
+        if new_long_name:
+            self.attrs['long_name'] = new_long_name
         else:
             raise TypeError('long_name must not be type None.')
 
     @property
     def data_source_type(self) -> conventions.data.DataSourceType:
-        """returns data source type as DataSourceType"""
+        """Return data source type as DataSourceType"""
         ds_value = self.attrs.get(conventions.data.DataSourceType.get_attr_name())
         if ds_value is None:
             return conventions.data.DataSourceType.none
@@ -553,15 +622,17 @@ class H5Group(h5py.Group):
 
     @property
     def standard_name_table(self) -> conventions.StandardizedNameTable:
-        """returns the standar name convention associated with the file instance"""
-        if self.file.id.id in _SNC_LS:
-            return _SNC_LS[self.file.id.id]
-        return None
+        """Return the standar name convention associated with the file instance"""
+        try:
+            return _SNT_CACHE[self.file.id.id]
+        except KeyError:
+            return conventions.Empty_Standard_Name_Table
 
     @standard_name_table.setter
     def standard_name_table(self, convention: conventions.StandardizedNameTable):
-        """returns the standard name convention associated with the file instance"""
-        _SNC_LS[self.id.id] = convention
+        """sets the standard name convention as attribute and in 'SNT_CACHE'"""
+        self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
+        _SNT_CACHE[self.id.id] = convention
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
@@ -608,6 +679,9 @@ class H5Group(h5py.Group):
                 raise AttributeError(item)
         else:
             return super().__getattribute__(item)
+
+    # def __setattr__(self, key, value):
+    #     super().__setattr__(key, value)
 
     def __str__(self):
         return self.sdump(ret=True)
@@ -917,7 +991,7 @@ class H5Group(h5py.Group):
         return self._h5ds(ds.id)
 
     def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:
-        """Returns the dataset with a specific standard_name within the current group.
+        """Return the dataset with a specific standard_name within the current group.
         Raises error if multiple datasets are found!
         To recursive scan through all datasets, use
         get_by_attribute('standard_name', <your_value>, 'ds').
@@ -1090,7 +1164,7 @@ class H5Group(h5py.Group):
         _compression, _compression_opts = config.hdf_compression, config.hdf_compression_opts
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
-        units = kwargs.pop('units', 'px')
+        units = kwargs.pop('units', 'pixel')
         ds = None
 
         if isinstance(img_filename, (str, Path)):
@@ -1343,7 +1417,7 @@ class H5Group(h5py.Group):
 
     def get_by_attribute(self, attribute_name, attribute_value=None,
                          h5type=None, recursive=True):
-        """returns the object(s) (dataset or group) with a certain attribute name
+        """Return the object(s) (dataset or group) with a certain attribute name
         and if specified a specific value.
         Via h5type it can be filtered for only datasets or groups
 
@@ -1422,13 +1496,15 @@ class H5Group(h5py.Group):
         return names
 
     def get_datasets_by_attribute(self, attribute_name, attribute_value=None, recursive=True):
+        """Return datasets that have key-value-attribute pari. Calls `get_by_attribute`"""
         return self.get_by_attribute(attribute_name, attribute_value, 'dataset', recursive)
 
     def get_groups_by_attribute(self, attribute_name, attribute_value=None, recursive=True):
+        """Return groups that have key-value-attribute pari. Calls `get_by_attribute`"""
         return self.get_by_attribute(attribute_name, attribute_value, 'group', recursive)
 
     def _get_obj_names(self, obj_type, recursive):
-        """returns all names of specified object type
+        """Return all names of specified object type
         in this group and if recursive==True also
         all below"""
         _names = []
@@ -1443,12 +1519,12 @@ class H5Group(h5py.Group):
         return [g for g in self.keys() if isinstance(self[g], obj_type)]
 
     def get_group_names(self, recursive=True):
-        """returns all group names in this group and if recursive==True also
+        """Return all group names in this group and if recursive==True also
         all below"""
         return self._get_obj_names(h5py.Group, recursive)
 
     def get_dataset_names(self, recursive=True):
-        """returns all dataset names in this group and if recursive==True also
+        """Return all dataset names in this group and if recursive==True also
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
@@ -1471,337 +1547,46 @@ class H5Group(h5py.Group):
         return h5file_html_repr(self, config.html_max_string_length)
 
     def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
-        """
-        Generates string representation of the hdf5 file content (name, shape, units, long_name)
-
-        Parameters
-        ----------
-        ret : bool, optional
-            Whether to return the information string or
-            print it. Default is False, which prints the string
-        nspaces : int, optional
-            number of spaces used as indentation. Default is 0
-        grp_only : bool, optional=False
-            Only gets group information
-        hide_attributes : bool, optional=False
-            Hides attributes in output string.
-        color_code_verification: bool, optional=True
-
-        Returns
-        -------
-        out : str
-            Information string if asked
-
-        Notes
-        -----
-        Working under notebooks, explore() gives a greater representation, including attributes.
-        """
-
-        def apply_color(_str, flag=1):
-            if color_code_verification:
-                if flag:
-                    return utils._oktext(_str)
-                else:
-                    return utils._failtext(_str)
-            else:
-                return _str
-
-        sp_name, sp_shape, sp_unit, sp_desc = eval(
-            config.info_table_spacing)
-        # out = f"Group ({__class__.__name__}): {self.name}\n"
-        out = ''
-        spaces = ' ' * nspaces
-
-        if self.name == '/':  # only for root
-            if isinstance(self, h5py.Group):
-                out += f'> {self.__class__.__name__}: Group name: {self.name}.\n'
-            else:
-                out += f'> {self.__class__.__name__}: {self.filename}.\n'
-
-            # if isinstance(self, h5py.File):
-            #     nissues = self.check(silent=True)
-            #     if nissues > 0:
-            #         out += apply_color(f'> File has {nissues} issues.', 0)
-            #     else:
-            #         out += apply_color(f'> File has {nissues} issues.', 1)
-            #     out += '\n'
-
-        if not hide_attributes:
-            # write attributes:
-            for ak, av in self.attrs.items():
-                if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                    _ak = f'{ak}:'
-                    if isinstance(av, (h5py.Dataset, h5py.Group)):
-                        _av = av.name
-                    else:
-                        _av = f'{av}'
-                    if len(_av) > sp_desc:
-                        _av = f'{_av[0:sp_desc]}...'
-                    out += utils._make_italic(f'\n{spaces}a: {_ak:{sp_name}} {_av}')
-
-        grp_keys = [k for k in self.keys() if isinstance(self[k], h5py.Group)]
-        if not grp_only:
-            dataset_names = [k for k in self.keys(
-            ) if isinstance(self[k], h5py.Dataset)]
-            for dataset_name in dataset_names:
-                varname = utils._make_bold(os.path.basename(
-                    self._h5ds(self[dataset_name]).name))
-                shape = self[dataset_name].shape
-                units = self[dataset_name].units
-                if units is None:
-                    units = 'NA'
-                else:
-                    if units == ' ':
-                        units = '-'
-
-                out += f'\n{spaces}{varname:{sp_name}} {str(shape):<{sp_shape}}  {units:<{sp_unit}}'
-
-                if not hide_attributes:
-                    # write attributes:
-                    for ak, av in self[dataset_name].attrs.items():
-                        if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                            _ak = f'{ak}:'
-                            if isinstance(av, (h5py.Dataset, h5py.Group)):
-                                _av = av.name
-                            else:
-                                _av = f'{av}'
-                            if len(_av) > sp_desc:
-                                _av = f'{_av[0:sp_desc]}...'
-                            out += utils._make_italic(
-                                f'\n\t{spaces}a: {_ak:{sp_name}} {_av}')
-            out += '\n'
-        nspaces += 2
-        for k in grp_keys:
-            _grp_name = utils._make_italic(utils._make_bold(f'{spaces}/{k}'))
-            _grp_long_name = self[k].long_name
-            if grp_only:
-                if _grp_long_name is None:
-                    out += f'\n{_grp_name}'
-                else:
-                    out += f'\n{_grp_name}  ({self[k].long_name})'
-            else:
-                if _grp_long_name is None:
-                    out += f'{_grp_name}'
-                else:
-                    out += f'{_grp_name}  ({self[k].long_name})'
-
-            if isinstance(self, h5py.Group):
-                out += self[k].sdump(ret=True, nspaces=nspaces, grp_only=grp_only,
-                                     color_code_verification=color_code_verification,
-                                     hide_attributes=hide_attributes)
-            # else:
-            #     out += self[k].info(ret=True, nspaces=nspaces, grp_only=grp_only,
-            #                         color_code_verification=color_code_verification,
-            #                                         hide_attributes=hide_attributes)
-        if ret:
-            return out
-        else:
-            print(out)
-
-
-class H5FileLayout:
-    """class defining the static layout of the HDF5 file"""
-
-    def __init__(self, filename: Path):
-        self.filename = Path(filename)
-        if not self.filename.exists():
-            self.write()
-
-    @property
-    def File(self):
-        """Returns h5py.File"""
-        return h5py.File(self.filename, mode='r')
-
-    def _repr_html_(self):
-        preamble = f'<p>Layout File "{self.filename.stem}"</p>\n'
-        with h5py.File(self.filename, mode='r') as h5:
-            return h5file_html_repr(h5, max_attr_length=None, preamble=preamble,
-                                    build_debug_html_page=False)
-
-    def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
-        sp_name, sp_shape, sp_unit, sp_desc = eval(config.info_table_spacing)
-
-        with h5py.File(self.filename, mode='r') as h5:
-            out = f'Layout File "{self.filename.stem}"\n'
-            spaces = ' ' * nspaces
-
-            if not hide_attributes:
-                # write attributes:
-                for ak, av in h5.attrs.items():
-                    if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                        _ak = f'{ak}:'
-                        if isinstance(av, (h5py.Dataset, h5py.Group)):
-                            _av = av.name
-                        else:
-                            _av = f'{av}'
-                        if len(_av) > sp_desc:
-                            _av = f'{_av[0:sp_desc]}...'
-                        out += utils._make_italic(f'\n{spaces}a: {_ak:{sp_name}} {_av}')
-
-            grp_keys = [k for k in h5.keys() if isinstance(h5[k], h5py.Group)]
-            if not grp_only:
-                dataset_names = [k for k in h5.keys() if isinstance(h5[k], h5py.Dataset)]
-                for dataset_name in dataset_names:
-                    varname = utils._make_bold(os.path.basename(
-                        h5[dataset_name].name))
-                    # shape = h5[dataset_name].shape
-                    # units = h5[dataset_name].attrs.get('units')
-                    # if units is None:
-                    #     units = 'NA'
-                    # else:
-                    #     if units == ' ':
-                    #         units = '-'
-                    # out += f'\n{spaces}{varname:{sp_name}} {str(shape):<{sp_shape}}  {units:<{sp_unit}}'
-                    out += f'\n{spaces}{varname:{sp_name}} '
-
-                    if not hide_attributes:
-                        # write attributes:
-                        for ak, av in h5[dataset_name].attrs.items():
-                            if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                                _ak = f'{ak}:'
-                                if isinstance(av, (h5py.Dataset, h5py.Group)):
-                                    _av = av.name
-                                else:
-                                    _av = f'{av}'
-                                if len(_av) > sp_desc:
-                                    _av = f'{av[0:sp_desc]}...'
-                                out += utils._make_italic(
-                                    f'\n\t{spaces}a: {_ak:{sp_name}} {_av}')
-                out += '\n'
-            nspaces += 2
-            for k in grp_keys:
-                _grp_name = utils._make_italic(utils._make_bold(f'{spaces}/{k}'))
-                _grp_long_name = h5[k].long_name
-                if grp_only:
-                    if _grp_long_name is None:
-                        out += f'\n{_grp_name}'
-                    else:
-                        out += f'\n{_grp_name}  ({h5[k].long_name})'
-                else:
-                    if _grp_long_name is None:
-                        out += f'{_grp_name}'
-                    else:
-                        out += f'{_grp_name}  ({h5[k].long_name})'
-
-                out += h5[k].info(ret=True, nspaces=nspaces, grp_only=grp_only,
-                                  color_code_verification=color_code_verification,
-                                  hide_attributes=hide_attributes)
-            if ret:
-                return out
-            else:
-                print(out)
-
-    def dump(self, max_attr_length=None, **kwargs):
-        """dumps the layout to the screen (for jupyter notebooks)"""
-        build_debug_html_page = kwargs.pop('build_debug_html_page', False)
-        preamble = f'<p>Layout File "{self.filename.stem}"</p>\n'
-        with h5py.File(self.filename, mode='r') as h5:
-            display(HTML(h5file_html_repr(h5, max_attr_length, preamble=preamble,
-                                          build_debug_html_page=build_debug_html_page)))
-
-    def write(self):
-        """write the static layout file to user data dir"""
-        if not self.filename.parent.exists():
-            self.filename.parent.mkdir(parents=True)
-        logger.debug(
-            f'Layout file for class {self.__class__.__name__} is written to {self.filename}')
-        with h5py.File(self.filename, mode='w') as h5:
-            h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
-            h5.attrs['creation_time'] = '__time of file creation'
-            h5.attrs['modification_time'] = '__time of last file modification'
-
-    def check_dynamic(self, root_grp: h5py.Group, silent: bool = False) -> int:
-        return 0
-
-    def check_static(self, root_grp: h5py.Group, silent: bool = False):
-        return conventions.layout.layout_inspection(root_grp, self.filename, silent=silent)
-
-    def check(self, root_grp: Path, silent: bool = False) -> int:
-        """combined (static+dynamic) check
-
-        Parameters
-        ----------
-        root_grp: h5py.Group
-            HDF5 root group of the file to be inspected
-        silent: bool, optional=False
-            Control extra string output.
-
-        Returns
-        -------
-        n_issues: int
-            Number of issues
-        silent: bool, optional=False
-            Controlling verbose output to screen. If True issue information is printed,
-            which is especcially helpful.
-        """
-        if not isinstance(root_grp, h5py.Group):
-            raise TypeError(f'Expecting h5py.Group, not type {type(root_grp)}')
-        return self.check_static(root_grp, silent) + self.check_dynamic(root_grp, silent)
-
-    def write(self):
-        if not self.filename.parent.exists():
-            self.filename.parent.mkdir(parents=True)
-        logger.debug(
-            f'Layout file for class {self.__class__.__name__} is written to {self.filename}')
-        with h5py.File(self.filename, mode='w') as h5:
-            h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
-            h5.attrs['creation_time'] = '__time of file creation'
-            h5.attrs['modification_time'] = '__time of last file modification'
-        with h5py.File(self.filename, mode='r+') as h5:
-            h5.attrs['title'] = '__Description of file content'
-
-    @staticmethod
-    def __check_group__(group, silent: bool = False) -> int:
-        return 0
-
-    @staticmethod
-    def __check_dataset__(dataset, silent: bool = False) -> int:
-        # check if dataset has units, long_name or standard_name
-        nissues = 0
-        if 'units' not in dataset.attrs:
-            if not silent:
-                print(f' [ds] {dataset.name} : attribute "units" missing')
-            nissues += 1
-
-        if 'long_name' not in dataset.attrs and 'standard_name' not in dataset.attrs:
-            if not silent:
-                print(f' [ds] {dataset.name} : attribute "long_name" and "standard_name" missing. Either of it must '
-                      f'exist')
-            nissues += 1
-
-        return nissues
-
-    def check_dynamic(self, h5root: h5py.Group, silent: bool = False) -> int:
-        h5inspect = conventions.layout.H5Inspect(h5root, inspect_group=self.__check_group__,
-                                                 inspect_dataset=self.__check_dataset__, silent=silent)
-        h5root.visititems(h5inspect)
-        return h5inspect.nissues
+        """stng representation of group"""
+        return _repr.sdump(self, ret, nspaces, grp_only, hide_attributes, color_code_verification)
 
 
 class H5File(h5py.File, H5Group):
-    """H5File requires title as root attribute. It is not enforced but if not set
-    an issue be shown due to it.
-    """
+    """Main wrapper around h5py.File with additional methods. Integrates naming and layout
+    conventions. All features from h5py packages are preserved."""
 
-    Layout: H5FileLayout = H5FileLayout(Path.joinpath(user_data_dir, f'layout/H5File.hdf'))
+    @property
+    def layout(self):
+        return self._layout
 
     @property
     def attrs(self):
-        """Exact copy of parent class:
-        Attributes attached to this object """
+        """Return an attribute manager that is inherited from h5py's attribute manager"""
         with phil:
-            return WrapperAttributeManager(self, self.standard_name_table)
+            return WrapperAttributeManager(self)
 
     @property
     def version(self):
-        """returns version stored in file"""
+        """Return version stored in file"""
         return self.attrs.get('__h5rdmtoolbox_version__')
 
     @property
-    def creation_time(self) -> datetime.datetime:
-        """returns creation time from file"""
-        from dateutil import parser
-        return parser.parse(self.attrs.get('creation_time'))
+    def modification_time(self) -> datetime:
+        """Return creation time from file"""
+        return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
+                                      tz=timezone.utc).astimezone()
+        # return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
+        #                               tz=timezone.utc).astimezone().strftime(datetime_str)
+
+    @property
+    def creation_time(self) -> datetime:
+        """Return creation time from file"""
+        return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
+                                      tz=timezone.utc).astimezone()
+        # return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
+        #                               tz=timezone.utc).astimezone().strftime(datetime_str)
+        # from dateutil import parser
+        # return parser.parse(self.attrs.get('creation_time'))
 
     @property
     def filesize(self):
@@ -1817,28 +1602,24 @@ class H5File(h5py.File, H5Group):
         _bytes = os.path.getsize(self.filename)
         return _bytes * ureg.byte
 
-    @property
-    def title(self) -> Union[str, None]:
-        """Returns the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
-        return self.attrs.get('title')
-
-    @title.setter
-    def title(self, title):
-        """Sets the title of the file"""
-        self.attrs.modify('title', title)
+    # @property
+    # def title(self) -> Union[str, None]:
+    #     """Return the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
+    #     return self.attrs.get('title')
+    #
+    # @title.setter
+    # def title(self, title):
+    #     """Sets the title of the file"""
+    #     self.attrs.modify('title', title)
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
+                 layout_filename: Path = H5File_layout_filename,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
-        _depr_long_name = kwds.pop('long_name', None)
-        if _depr_long_name is not None:
-            warnings.warn('Using long name when initializing a H5File is deprecated. Use title instead!',
-                          DeprecationWarning)
-            title = _depr_long_name
 
-        now_time_str = utils.generate_time_str(datetime.datetime.now(), conventions.datetime_str)
+        now_time_str = utils.generate_time_str(datetime.now(), conventions.datetime_str)
         if name is None:
             logger.debug("An empty H5File class is initialized")
             name = utils.touch_tmp_hdf5_file()
@@ -1876,33 +1657,69 @@ class H5File(h5py.File, H5Group):
 
         # update file creation/modification times and h5wrapper version
         if self.mode != 'r':
-            if 'creation_time' not in self.attrs:
-                self.attrs['creation_time'] = now_time_str
-            self.attrs['modification_time'] = now_time_str
             self.attrs['__h5rdmtoolbox_version__'] = __version__
             self.attrs['__wrcls__'] = self.__class__.__name__
 
             if title is not None:
                 self.attrs['title'] = title
 
-        if isinstance(standard_name_table, str):
-            snc = conventions.StandardizedNameTable.from_xml(standard_name_table)
-        elif isinstance(standard_name_table, conventions.StandardizedNameTable):
-            snc = standard_name_table
-        elif standard_name_table is None:
-            snc = conventions.empty_standardized_name_table
+        # snt stored in the file:
+        snt_attr = self.attrs.get(STD_NAME_TABLE_ATTR_NAME)
+
+        if snt_attr is None:
+            if isinstance(standard_name_table, str):
+                snt = conventions.StandardizedNameTable.from_xml(standard_name_table)
+            elif isinstance(standard_name_table, conventions.StandardizedNameTable):
+                snt = standard_name_table
+            elif standard_name_table is None:
+                # user has not passed a snt during initialization and no snt in attributes -> create empty
+                snt = conventions.Empty_Standard_Name_Table
+            else:
+                raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
         else:
-            raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
-        self.standard_name_table = snc
+            if standard_name_table is None:
+                # user has not passed a snt but the snt attribute has an entry. --> use this snt
+                snt = conventions.StandardizedNameTable.from_name_and_version(
+                    *self.attrs.get(STD_NAME_TABLE_ATTR_NAME).split('-v'))
+            else:
+                if isinstance(standard_name_table, str):
+                    snt = conventions.StandardizedNameTable.from_xml(standard_name_table)
+                elif isinstance(standard_name_table, conventions.StandardizedNameTable):
+                    snt = standard_name_table
+                else:
+                    raise TypeError(f'Unexpected type for standard_name_table: {type(standard_name_table)}')
+
+                snt_attr_name, snt_attr_vn = snt_attr.split('-v')
+                cmp = conventions.StandardizedNameTable.from_name_and_version(snt_attr_name, int(snt_attr_vn))
+                if snt != cmp:
+                    raise conventions.identifier.StandardizedNameTableError(
+                        'Standardized name table registered in the file (attr "standard_name_table") '
+                        f'is not equal to the passed name table: {snt.versionname} <-> {cmp.versionname}')
+
+        if mode == 'r':
+            if not snt == conventions.Empty_Standard_Name_Table:
+                logger.debug(
+                    'Unable to write standard name table to file. It will be effective anyhow but '
+                    'if the file is reloaded later the choice is forgotten.',
+                    conventions.identifier.StandardizedNameTableWarning
+                )
+            _SNT_CACHE[self.file.id.id] = snt
+        else:
+            self.standard_name_table = snt
+
+        self.layout_filename = layout_filename
+        self._layout = conventions.layout.H5Layout(self.layout_filename)
+        self._layout.check(self, silent=True, recursive=True)
 
     def __setitem__(self, name, obj):
         if isinstance(obj, xr.DataArray):
             return obj.hdf.to_group(self, name)
         super().__setitem__(name, obj)
 
-    def check(self, silent: bool = False) -> int:
-        """runs a complete check (static+dynamic) and returns number of issues"""
-        return self.Layout.check(self['/'], silent)
+    def check(self, grp='/', silent: bool = True) -> int:
+        """Run layout check. This method may be overwritten to add conditional
+         checking."""
+        return self.layout.check(self[grp], silent)
 
     def special_inspect(self, silent: bool = False) -> int:
         """Optional special inspection, e.g. conditional checks."""
@@ -2008,3 +1825,7 @@ H5Dataset._h5ds = H5Dataset
 
 H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
+
+# import accessors
+# noinspection PyUnresolvedReferences
+from .standardized_attributes import title

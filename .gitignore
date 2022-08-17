@@ -9,6 +9,8 @@
 *-checkpoint.ipynb*
 *.nc
 *.hdf
+*.tiff
+*.par
 
 # build
 *.egg*
@@ -35,17 +37,7 @@ tests/
 *.ipynb_checkpoints*
 
 # docs
-#docs/Makefile
-#docs/make.bat
-doc/_build*
-docs/build
-docs/doctrees
-docs/source/_static
-docs/source/_templates
-docs_bak
-*.tiff
-*.par
-docs_bak
+docs/_build/
 
 # pytest
 .coverage

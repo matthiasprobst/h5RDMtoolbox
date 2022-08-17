@@ -4,29 +4,181 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-import xarray
 import xarray as xr
 import yaml
 from pint_xarray import unit_registry as ureg
 
+from h5rdmtoolbox import config
 from h5rdmtoolbox import h5wrapper
 from h5rdmtoolbox.conventions.identifier import StandardizedNameError, StandardizedNameTable
-from h5rdmtoolbox.h5wrapper import H5File, config, set_loglevel
+from h5rdmtoolbox.conventions.layout import H5Layout
+from h5rdmtoolbox.h5wrapper import H5File, set_loglevel
 from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 
 logger = logging.getLogger('h5rdmtoolbox.h5wrapper')
 set_loglevel('error')
 
+ureg.default_format = config.ureg_format
+
+
+class TestH5FileLayout(unittest.TestCase):
+
+    def test_layout(self):
+        lay = H5Layout('lay.hdf')
+        with lay.File(mode='w') as h5:
+            grp = h5.create_group('grp')
+            grp.attrs['__check_isoptional__'] = True
+        with h5py.File('other.hdf', 'w') as other:
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+        with lay.File(mode='w') as h5:
+            grp = h5.create_group('grp')
+        with h5py.File('other.hdf', 'w') as other:
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 1)
+        self.assertDictEqual(lay._issues_list[0], {'path': '/grp', 'obj_type': 'group', 'issue': 'missing'})
+
+    def test_layout_regrex(self):
+        lay = H5Layout('lay.hdf')
+        with lay.File(mode='w') as h5:
+            grp = h5.create_group('re:plane[0-9]')
+            subgrp = grp.create_group('subgroup')
+            # grp.attrs['__check_isoptional__'] = False
+
+        with h5py.File('other.hdf', 'w') as other:
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 1)
+
+        with h5py.File('other.hdf', 'w') as other:
+            other.create_group('plane0')
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 1)
+
+        with lay.File(mode='w') as h5:
+            grp = h5.create_group('re:plane[0-9]')
+            grp.attrs['__check_isoptional__'] = True
+            subgrp = grp.create_group('subgroup')  # mandatory if plane[0-9] exists
+
+        with h5py.File('other.hdf', 'w') as other:
+            # plane[0-9] doe does not exist. as it is optional no issues found
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+    def test_layout_altgrp1(self):
+        lay = H5Layout('lay.hdf')
+        with lay.File(mode='w') as h5:
+            # ds = h5.create_dataset('u.alt:re:plane[0-9]', shape=1)
+            ds = h5.create_dataset('u', shape=1)
+            ds.attrs['__alternative_source_group__'] = 'plane0'
+
+        with h5py.File('other.hdf', 'w') as other:
+            ds = other.create_dataset('u', shape=1)
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+    def test_layout_altgrp2(self):
+        lay = H5Layout('lay.hdf')
+        with lay.File(mode='w') as h5:
+            ds = h5.create_dataset('u', shape=1)
+            ds.attrs['__alternative_source_group__'] = 'plane0'
+
+        with h5py.File('other.hdf', 'w') as other:
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 1)
+
+        with h5py.File('other.hdf', 'w') as other:
+            other.create_dataset('plane0/u', shape=1)
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+        with h5py.File('other.hdf', 'w') as other:
+            ds = other.create_dataset('plane1/u', shape=1)
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 1)
+
+    def test_layout_altgrp3(self):
+        lay = H5Layout('lay.hdf')
+        with lay.File(mode='w') as h5:
+            ds = h5.create_dataset('u', shape=1)
+            ds.attrs['__alternative_source_group__'] = 're:plane[0-9]'
+
+        with h5py.File('other.hdf', 'w') as other:
+            ds = other.create_dataset('u', shape=1)
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+        with h5py.File('other.hdf', 'w') as other:
+            ds = other.create_dataset('plane0/u', shape=1)
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+        with h5py.File('other.hdf', 'w') as other:
+            ds = other.create_dataset('plane0/u', shape=1)
+            ds = other.create_dataset('plane1/u', shape=1)
+            ds = other.create_dataset('plane1297/u', shape=1)
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+    def test_layout_altgrp4(self):
+        """alternative groups"""
+        lay = H5Layout('lay.hdf')
+        with lay.File(mode='w') as h5:
+            h5.create_group('pivpar')
+            h5['pivpar'].attrs['__alternative_source_group__'] = 'plane0'
+
+        with h5py.File('other.hdf', 'w') as other:
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 1)
+
+        with h5py.File('other.hdf', 'w') as other:
+            other.create_group('pivpar')
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+        with h5py.File('other.hdf', 'w') as other:
+            other.create_group('plane0/pivpar')
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+
+    def test_layout_altgrp5(self):
+        """alternative groups"""
+        lay = H5Layout('lay.hdf')
+        with lay.File(mode='w') as h5:
+            gr = h5.create_group('pivpar')
+            gr.attrs['__alternative_source_group__'] = 're:plane[0-9]'
+            gr.attrs['important'] = 'attribute'
+
+        # with h5py.File('other.hdf', 'w') as other:
+        #     lay.check(other)
+        # self.assertEqual(lay.n_issues, 1)
+        #
+        with h5py.File('other.hdf', 'w') as other:
+            gr = other.create_group('pivpar')
+            gr.attrs['important'] = 'attribute'
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 0)
+        #
+        with h5py.File('other.hdf', 'w') as other:
+            gr = other.create_group('plane0/pivpar')
+            gr.attrs['important'] = 'attribute'
+            other.create_group('plane1/pivpar')
+            lay.check(other)
+        self.assertEqual(lay.n_issues, 1)
+
+        # with h5py.File('other.hdf', 'w') as other:
+        #     other.create_group('plane000/pivpar')
+        #     lay.check(other)
+        # self.assertEqual(lay.n_issues, 0)
+
 
 class TestH5File(unittest.TestCase):
 
     def test_empty_convention(self):
-        self.assertTrue(H5File.Layout.filename.exists())
-        self.assertEqual(H5File.Layout.filename.stem, 'H5File')
         with H5File() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
-            self.assertEqual(h5.standard_name_table.version_number, -1)
+            self.assertEqual(h5.standard_name_table.version_number, 0)
             self.assertEqual(h5.standard_name_table.name, 'EmptyStandardizedNameTable')
 
     def test_create_dataset(self):
@@ -68,8 +220,6 @@ class TestH5File(unittest.TestCase):
             self.assertEqual(grp.long_name, 'a long name')
 
     def test_Layout(self):
-        self.assertTrue(H5File.Layout.filename.exists())
-        self.assertEqual(H5File.Layout.filename.stem, 'H5File')
         with H5File() as h5:
             h5.create_dataset('test', shape=(3,), long_name='daadw', units='')
             h5.create_dataset('testgrp/ds2', shape=(30,), long_name='daadw', units='')
@@ -127,8 +277,8 @@ class TestH5File(unittest.TestCase):
             # self.assertEqual(h5.attrs['ds'], dset)
             # self.assertIsInstance(h5.attrs['ds'], H5Dataset)
 
-            dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
-            self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
+            dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}}
+            self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
 
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):
@@ -187,19 +337,19 @@ class TestH5Dataset(unittest.TestCase):
     def test_to_unit(self):
         with H5File(mode='w') as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
-            self.assertEqual(dset.units, 'degC')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
             dset.to_units('K')
-            self.assertEqual(dset.units, 'K')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
             self.assertEqual(float(dset[()].values), 293)
 
             dset = h5.create_dataset('temp2', units='degC',
                                      long_name='temperature dataset', data=[20, 30])
-            self.assertEqual(dset.units, 'degC')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values[0]), 20)
             self.assertEqual(float(dset[()].values[1]), 30)
             dset.to_units('K')
-            self.assertEqual(dset.units, 'K')
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
             self.assertEqual(float(dset[()].values[0]), 293)
             self.assertEqual(float(dset[()].values[1]), 303)
 
@@ -215,19 +365,17 @@ class TestH5Dataset(unittest.TestCase):
     def test_sdump(self):
         with H5File(mode='w') as h5:
             h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
-            h5.attrs['modification_time'] = '2022-07-19T17:01:41Z+0200'
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
 a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
-a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m\x1B[3m
-a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m
+a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 """
             self.assertEqual(sdump_str, _str)
         with H5File(mode='w') as h5:
             h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
-            h5.attrs['modification_time'] = '2022-07-19T17:01:41Z+0200'
             h5.create_dataset('test', shape=(), long_name='a long name', units='')
             grp = h5.create_group('grp')
             grp.create_dataset('test', shape=(), long_name='a long name', units='')
@@ -235,9 +383,9 @@ a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m
             _str = """> H5File: Group name: /.
 \x1B[3m
 a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
-a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m\x1B[3m
-a: modification_time:             2022-07-19T17:01:41Z+0200\x1B[0m
+a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 \x1B[1mtest\x1B[0m                   ()                            
 \x1B[3m\x1B[1m/grp\x1B[0m\x1B[0m
   \x1B[1mtest\x1B[0m                   ()                            
@@ -336,7 +484,7 @@ class TestH5Group(unittest.TestCase):
             self.assertEqual(ds.units, 'm/s')
 
             ds[:] = np.random.rand(2, 3)
-            self.assertTrue(isinstance(ds[:], xarray.DataArray))
+            self.assertTrue(isinstance(ds[:], xr.DataArray))
             self.assertTrue(isinstance(ds.values[:], np.ndarray))
             h5.create_dataset('grp/test', shape=(1,),
                               long_name='a long name', units='')
@@ -363,49 +511,49 @@ class TestH5Group(unittest.TestCase):
     def test_create_dataset_from_xarray(self):
         config.natural_naming = True
         with H5File(mode='w') as h5:
-            z = xarray.DataArray(name='z', data=-1,
-                                 attrs=dict(units='m', standard_name='z_coordinate'))
-            x = xarray.DataArray(name='x', data=[1, 2, 3], dims='x',
-                                 attrs=dict(units='m', standard_name='x_coordinate'))
-            u = xarray.DataArray(name='u', data=[1, 1, 1], coords={'x': x, 'z': z}, dims=('x',),
-                                 attrs={'units': 'm/s', 'long_name': 'x-velocity'})
+            z = xr.DataArray(name='z', data=-1,
+                             attrs=dict(units='m', standard_name='z_coordinate'))
+            x = xr.DataArray(name='x', data=[1, 2, 3], dims='x',
+                             attrs=dict(units='m', standard_name='x_coordinate'))
+            u = xr.DataArray(name='u', data=[1, 1, 1], coords={'x': x, 'z': z}, dims=('x',),
+                             attrs={'units': 'm/s', 'long_name': 'x-velocity'})
 
             h5.create_dataset('u', data=u)
             u = h5.u[:]
             self.assertTrue('COORDINATES' not in u.attrs)
             self.assertTrue('COORDINATES' in h5['u'].attrs)
 
-            time = xarray.DataArray(dims='time', data=np.linspace(0, 1, 5),
-                                    attrs={'standard_name': 'time', 'units': 's'})
-            h5['xr_data'] = xarray.DataArray(dims='time',
-                                             data=np.random.rand(5, ),
-                                             coords={'time': time},
-                                             attrs={'long_name': 'xr data', 'units': 's'})
+            time = xr.DataArray(dims='time', data=np.linspace(0, 1, 5),
+                                attrs={'standard_name': 'time', 'units': 's'})
+            h5['xr_data'] = xr.DataArray(dims='time',
+                                         data=np.random.rand(5, ),
+                                         coords={'time': time},
+                                         attrs={'long_name': 'xr data', 'units': 's'})
             self.assertEqual(h5['xr_data'].shape, (5,))
             self.assertIn('time', h5)
             self.assertEqual(h5.xr_data.dims[0][0], h5['time'])
 
             with self.assertRaises(ValueError):
-                h5['xr_data2'] = xarray.DataArray(dims='time',
-                                                  data=np.random.rand(5, ),
-                                                  coords={'time': np.linspace(0, 2, 5)})
-            h5['xr_data2'] = xarray.DataArray(dims='time',
+                h5['xr_data2'] = xr.DataArray(dims='time',
                                               data=np.random.rand(5, ),
-                                              coords={'time': time},
-                                              attrs={'long_name': 'xr data with same time coord', 'units': 's'})
+                                              coords={'time': np.linspace(0, 2, 5)})
+            h5['xr_data2'] = xr.DataArray(dims='time',
+                                          data=np.random.rand(5, ),
+                                          coords={'time': time},
+                                          attrs={'long_name': 'xr data with same time coord', 'units': 's'})
             self.assertIn('long_name', h5['xr_data2'].attrs)
 
-            xrtime2 = xarray.DataArray(dims='time2', data=np.linspace(0, 3, 5),
-                                       attrs={'standard_name': 'time', 'units': 's'})
-            ds = h5.create_dataset('xr_data3', data=xarray.DataArray(dims='time2',
-                                                                     data=np.random.rand(5, ),
-                                                                     coords={'time2': xrtime2},
-                                                                     attrs={'standard_name': 'time', 'units': 's'}))
+            xrtime2 = xr.DataArray(dims='time2', data=np.linspace(0, 3, 5),
+                                   attrs={'standard_name': 'time', 'units': 's'})
+            ds = h5.create_dataset('xr_data3', data=xr.DataArray(dims='time2',
+                                                                 data=np.random.rand(5, ),
+                                                                 coords={'time2': xrtime2},
+                                                                 attrs={'standard_name': 'time', 'units': 's'}))
             with self.assertRaises(ValueError):
                 # dataset "time" already exists
-                h5.create_dataset('xr_data4', data=xarray.DataArray(dims='time',
-                                                                    data=np.random.rand(5, ),
-                                                                    coords={'time': xrtime2}))
+                h5.create_dataset('xr_data4', data=xr.DataArray(dims='time',
+                                                                data=np.random.rand(5, ),
+                                                                coords={'time': xrtime2}))
 
     def test_from_yaml_to_hdf(self):
         dictionary = {
@@ -471,10 +619,10 @@ class TestH5Group(unittest.TestCase):
         with H5File(tmpfile, mode='r') as h5:
             n = h5.check(silent=False)
             # missing at root level:
-            # title, creation_date, modification_date
+            # title
             # missing at dataset:
             # units, long_name or standard_name
-            self.assertEqual(n, 3)
+            self.assertEqual(n, 1)
 
         tmpfile = touch_tmp_hdf5_file()
         with h5py.File(tmpfile, mode='w') as h5:
@@ -482,7 +630,8 @@ class TestH5Group(unittest.TestCase):
             h5.create_dataset(name='test', data=1)
         with H5File(tmpfile, mode='r') as h5:
             n = h5.check()
-            self.assertEqual(n, 2)
+            self.assertEqual(n, 0)
+        return
 
         tmpfile = touch_tmp_hdf5_file()
         with h5py.File(tmpfile, mode='w') as h5:
@@ -490,7 +639,7 @@ class TestH5Group(unittest.TestCase):
 
         with H5File(tmpfile, mode='r') as h5:
             n = h5.check(silent=False)
-            self.assertEqual(n, 3)
+            self.assertEqual(n, 2)
 
 
 class TestCore(unittest.TestCase):
@@ -531,4 +680,3 @@ class TestCore(unittest.TestCase):
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
             print(h5['signal'].dims[0].keys())
-

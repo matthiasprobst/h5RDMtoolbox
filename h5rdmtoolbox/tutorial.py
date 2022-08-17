@@ -14,26 +14,32 @@ from typing import Tuple
 import numpy as np
 import xarray as xr
 
-try:
-    from netCDF4 import Dataset as ncDataset
-except ImportError:
-    raise ImportError('Package netCDF4 is not installed.')
-
+from ._user import testdir
 from .utils import generate_temporary_directory, generate_temporary_filename
-from .utils import testdir
 
 
 class PIVview:
+    """PIVview tutorial class"""
+
+    @staticmethod
+    def get_parameter_file() -> pathlib.Path:
+        """Return pivview parameter file"""
+        return testdir / 'PIV/piv_challenge1_E/piv_parameters.par'
 
     @staticmethod
     def get_plane_directory() -> pathlib.Path:
-        """Returns the path to the respective example PIV plane"""
+        """Return the path to the respective example PIV plane"""
         return testdir / 'PIV/piv_challenge1_E/'
 
     @staticmethod
     def get_multiplane_directories() -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
         """Copies the piv_challenge1_E data to three directories in the tmp directory
         Two planes have three nc files, one plane has 2 nc files only"""
+        try:
+            from netCDF4 import Dataset as ncDataset
+        except ImportError:
+            raise ImportError('Package netCDF4 is not installed. Either install it '
+                              'separately or install the repository with pip install h5RDMtolbox [piv]')
 
         def _set_z_in_nc(nc_filename, z_val):
             with ncDataset(nc_filename, 'r+') as nc:
@@ -79,7 +85,7 @@ class PIVview:
 
     @staticmethod
     def get_snapshot_nc_files():
-        """returns a list of sorted nc files"""
+        """Return a list of sorted nc files"""
         return sorted((testdir / f'PIV/piv_challenge1_E/').glob('E00A*.nc'))
 
     @staticmethod
@@ -93,6 +99,20 @@ class PIVview:
     @staticmethod
     def get_reyn_file():
         return testdir.joinpath('PIV/piv_challenge1_E/reyn.dat')
+
+
+class OpenPIV:
+    """OpenPIV tutorial class"""
+
+    @staticmethod
+    def get_snapshot_txt_file():
+        """Return snapshot piv result from ILA vortex"""
+        return testdir / f'PIV/openpiv/vortex.txt'
+
+    @staticmethod
+    def get_parameter_file():
+        """Return openpiv parameters as file"""
+        return testdir / f'PIV/openpiv/openpiv.par'
 
 
 def get_xr_dataset(name):
@@ -217,8 +237,8 @@ def get_xr_dataset(name):
         return poiseuille2D(np.linspace(0, 4, 2), np.linspace(0, 4, 10), 2)
 
 
-def get_H5PIV(name, mode) -> pathlib.Path:
-    """Returns the HDF filename of a tutoral case."""
+def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
+    """Return the HDF filename of a tutoral case."""
     from .h5wrapper import H5PIV
     if name == 'minimal_flow':
         fname = testdir / 'minimal_flow.hdf'
@@ -254,3 +274,20 @@ def get_H5PIV(name, mode) -> pathlib.Path:
         return H5PIV(tmp_fname, mode=mode)
     else:
         raise NameError(f'Invalid name')
+
+
+class Conventions:
+    """Tutorial methods for package conventions"""
+
+    def fetch_cf_standard_name_table():
+        """download cf-standard-name-table"""
+        from h5rdmtoolbox.conventions.identifier import CFStandardNameTable
+        try:
+            import pooch
+        except ImportError:
+            raise ImportError(f'Package "pooch" is needed to download the file cf-standard-name-table.xml')
+        file_path = pooch.retrieve(
+            url="https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml",
+            known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4',
+        )
+        return CFStandardNameTable.from_xml(file_path)

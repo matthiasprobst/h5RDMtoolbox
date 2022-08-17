@@ -1,12 +1,14 @@
 import warnings
 from typing import List, Tuple
+from typing import TypeVar
 from typing import Union
 
 import h5py
 import xarray as xr
 from IPython.display import HTML, display
 
-from .h5file import H5Dataset, H5Group
+T_H5Dataset = TypeVar('T_H5Dataset')
+T_H5Group = TypeVar('T_H5Group')
 
 
 class SpecialDatasetRegistrationWarning(Warning):
@@ -49,29 +51,38 @@ class _CachedAccessor:
         return accessor_obj
 
 
-def _register_special_dataset(name, cls):
+def _register_special_dataset(name, cls, overwrite):
     def decorator(accessor):
         """decorator"""
         if hasattr(cls, name):
-            warnings.warn(
-                f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
-                "overriding a preexisting attribute with the same name.",
-                SpecialDatasetRegistrationWarning,
-                stacklevel=2,
-            )
+            if overwrite:
+                pass
+                # warnings.warn(
+                #     f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
+                #     "overriding a preexisting attribute with the same name.",
+                #     SpecialDatasetRegistrationWarning,
+                #     stacklevel=2,
+                # )
+            else:
+                raise RuntimeError(f'Cannot register the accessor {accessor!r} under name {name!r} '
+                                   f'because it already exists and overwrite is set to {overwrite}')
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
 
     return decorator
 
 
+USER_PROPERTIES = []
+
+
 def _register_special_property(cls, overwrite=False):
     def decorator(accessor):
         """decorator"""
-        if hasattr(accessor, 'name'):
-            name = accessor.name
+        if hasattr(accessor, '__propname__'):
+            name = accessor.__propname__
         else:
             name = accessor.__name__
+        USER_PROPERTIES.append(name)
         if hasattr(cls, name):
             if overwrite:
                 print(f'Overwriting existing property {name}.')
@@ -94,14 +105,14 @@ def _register_special_property(cls, overwrite=False):
     return decorator
 
 
-def register_special_dataset(name, cls: Union[H5Dataset, H5Group]):
+def register_special_dataset(name, cls: Union[T_H5Dataset, T_H5Group], overwrite=False):
     """registers a special dataset to a wrapper class"""
     # if not isinstance(cls, (H5Dataset, H5Group)):
     #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
-    return _register_special_dataset(name, cls)  # grpcls --> e.g. H5FlowGroup
+    return _register_special_dataset(name, cls, overwrite)  # grpcls --> e.g. H5FlowGroup
 
 
-def register_special_property(cls: Union[H5Dataset, H5Group], overwrite=False):
+def register_special_property(cls: Union[T_H5Dataset, T_H5Group], overwrite=False):
     """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
     also docstring is optional but strongly recommended!"""
     # if not isinstance(cls, (H5Dataset, H5Group)):
@@ -177,7 +188,7 @@ class SpecialDataset:
         if item in self.__dict__:
             return object.__getattribute__(item)
         if self._dset is not None:
-            return self._dset[item]
+            return self._dset.__getattr__(item)
         if self._comp_dataarrays is not None:
             for ds in self._comp_dataarrays:
                 if ds.name[0] == '/':
@@ -195,7 +206,7 @@ class SpecialDataset:
 
     @property
     def data_vars(self):
-        """returns the variables of the xr.Dataset"""
+        """Return the variables of the xr.Dataset"""
         return self._dset.data_vars
 
     def _get_datasets(self, standard_names=None, names=None):

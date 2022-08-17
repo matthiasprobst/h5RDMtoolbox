@@ -6,13 +6,13 @@ from typing import List, Dict, Union
 
 import dotenv
 import h5py
+import numpy as np
 import pandas as pd
 import xarray as xr
-from numpy.typing import ArrayLike
-from ....conventions.translations import cfx_to_standard_name
 
 from . import session, PATHLIKE, ccl, CFX_DOTENV_FILENAME, mon
 from .utils import change_suffix
+from ....conventions.translations import cfx_to_standard_name
 
 logger = logging.getLogger(__package__)
 dotenv.load_dotenv(CFX_DOTENV_FILENAME)
@@ -89,7 +89,7 @@ def process_monitor_string(monitor_str: str):
         return {'group': group, 'name': name, 'units': _units[:-1], 'coords': coords}
 
 
-def _str_to_UserPoint(input_str: str, data: ArrayLike) -> Union[MonitorUserPoint, MonitorUserExpression]:
+def _str_to_UserPoint(input_str: str, data: np.ndarray) -> Union[MonitorUserPoint, MonitorUserExpression]:
     """extracts info from a user point string and returns a MonitorUserPoint class"""
     monitor_pt_str_dict = process_monitor_string(input_str)
     coords = monitor_pt_str_dict.pop('coords')
@@ -403,7 +403,7 @@ class CFXCase(CFXFile):
 
     @property
     def latest(self, refresh=False):
-        """Returns the latest .cfx file"""
+        """Return the latest .cfx file"""
         return self.res_files.latest
 
     # def refresh(self):

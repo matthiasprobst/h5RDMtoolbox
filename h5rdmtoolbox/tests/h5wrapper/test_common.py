@@ -1,6 +1,7 @@
 """Testing common funcitonality across all wrapper classs"""
 
 import unittest
+from datetime import datetime
 
 import h5py
 
@@ -16,6 +17,13 @@ class TestCommon(unittest.TestCase):
     def setUp(self) -> None:
         self.wrapper_classes = (h5tbx.H5File, h5tbx.H5Flow, h5tbx.H5PIV)
         self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5PIVGroup)
+
+    def test_file_times(self):
+        for wc in self.wrapper_classes:
+            with wc() as h5:
+                now = datetime.now().astimezone()
+                file_now = h5.creation_time
+                self.assertTrue(abs((file_now-now).total_seconds()) < 0.1)
 
     def test_create_group(self):
         """testing the creation of groups"""
@@ -35,12 +43,24 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.attrs['mean'], 1.2)
                 with self.assertRaises(AttributeError):
                     h5.attrs['standard_name'] = 'a_string'
+                with self.assertRaises(ValueError):
+                    h5.attrs['long_name'] = '1alongname'
+                with self.assertRaises(ValueError):
+                    h5.attrs['long_name'] = ' 1alongname'
+                with self.assertRaises(ValueError):
+                    h5.attrs['long_name'] = '1alongname '
 
                 with self.assertRaises(KeyError):
                     h5.attrs['non_existing_attribute']
 
                 # dataset attibutes
-                ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='')
+                ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='m/s')
+                with self.assertRaises(ValueError):
+                    ds.attrs['long_name'] = '1alongname'
+                with self.assertRaises(ValueError):
+                    ds.attrs['long_name'] = ' 1alongname'
+                with self.assertRaises(ValueError):
+                    ds.attrs['long_name'] = '1alongname '
                 ds.attrs['an_attr'] = 'a_string'
                 self.assertEqual(ds.attrs['an_attr'], 'a_string')
                 ds.attrs['mean'] = 1.2
@@ -76,18 +96,20 @@ class TestCommon(unittest.TestCase):
                 h5.non_existing_attribute = 1
                 print(h5.non_existing_attribute)
 
-                self.assertEqual(ds.standard_name, None)
+                # self.assertEqual(ds.standard_name, h5tbx.conventions.Empty_Standard_Name_Table)
                 ds.standard_name = 'x_velocity'
                 self.assertIsInstance(ds.standard_name, h5tbx.conventions.StandardizedName)
                 self.assertIsInstance(ds.attrs['standard_name'], str)
                 self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
     def test_Layout(self):
+
+        with h5tbx.H5File() as h5:
+            h5.attrs['mandatory_attribute'] = 1
+
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            self.assertTrue(wc.Layout.filename.exists())
-            self.assertEqual(wc.Layout.filename.stem, wc.__name__)
             with wc() as h5:
-                n_issuess = h5.check()
+                n_issuess = h5.check(silent=True)
                 self.assertIsInstance(n_issuess, int)
                 self.assertTrue(n_issuess > 0)
 
@@ -113,7 +135,7 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.filesize.units, ureg.byte)
                 self.assertIsInstance(h5.hdf_filename, pathlib.Path)
 
-    def test_common_method(self):
+    def test_open_wrapper(self):
         from h5rdmtoolbox.utils import generate_temporary_filename
         from h5rdmtoolbox.h5wrapper import open_wrapper
         for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
@@ -150,16 +172,16 @@ class TestCommon(unittest.TestCase):
 
     def test_create_dataset(self):
         from h5rdmtoolbox.conventions import UnitsError
-        from h5rdmtoolbox.conventions import empty_standardized_name_table
+        from h5rdmtoolbox.conventions import Empty_Standard_Name_Table
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            with wc(standard_name_table=empty_standardized_name_table) as h5:
-                self.assertEqual(h5.standard_name_table.name, empty_standardized_name_table.name)
-                h5tbx.h5wrapper.config.require_units = True
+            with wc(standard_name_table=Empty_Standard_Name_Table) as h5:
+                self.assertEqual(h5.standard_name_table.name, Empty_Standard_Name_Table.name)
+                h5tbx.config.require_units = True
                 with self.assertRaises(UnitsError):
                     h5.create_dataset(name='x', standard_name='x_coordinate', data=1)
-                h5tbx.h5wrapper.config.require_units = False
+                h5tbx.config.require_units = False
                 h5.create_dataset(name='x', standard_name='x_coordinate', data=1, units=None)
-                h5tbx.h5wrapper.config.require_units = True
+                h5tbx.config.require_units = True
                 h5.create_dataset(name='x1', standard_name='x_coordinate', data=1, units='m')
                 h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
                 h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')

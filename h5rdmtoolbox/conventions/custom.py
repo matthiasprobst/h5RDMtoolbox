@@ -5,7 +5,7 @@ this repository uses this convention
 
 from h5rdmtoolbox.conventions.identifier import StandardizedNameTable
 
-FluidStandardNameTable = StandardizedNameTable('Fluid_Standard_Name',
+FluidStandardNameTable = StandardizedNameTable('fluid',
                                                table_dict={
                                                    'time': {'canonical_units': 's', 'description': 'physical time'},
                                                    'x_velocity': {'canonical_units': 'm/s',
@@ -85,7 +85,8 @@ FluidStandardNameTable = StandardizedNameTable('Fluid_Standard_Name',
                                                },
                                                version_number=1, contact='matthias.probst@kit.edu',
                                                institution='Karlsruhe Institute of Technology',
-                                               valid_characters='[^a-zA-Z0-9_]')
+                                               valid_characters='[^a-zA-Z0-9_]',
+                                               pattern='^[0-9 ].*')
 piv_name_table_dict = FluidStandardNameTable._dict.copy()
 piv_name_table_dict.update({'x_pixel_coordinate': {'canonical_units': 'pixel', 'description': None},
                             'y_pixel_coordinate': {'canonical_units': 'pixel', 'description': None},
@@ -97,22 +98,15 @@ piv_name_table_dict.update({'x_pixel_coordinate': {'canonical_units': 'pixel', '
                             'y_displacement_of_peak3': {'canonical_units': '', 'description': None},
                             })
 
-from h5rdmtoolbox.conventions.pivview import pivview_to_standardnames_dict
+from h5rdmtoolbox.conventions.translations import pivview_to_standardnames_dict
 
-PIVStandardNameTable = StandardizedNameTable(name='PIV_Standard_Name', table_dict=piv_name_table_dict,
+PIVStandardNameTable = StandardizedNameTable(name='piv', table_dict=piv_name_table_dict,
                                              version_number=1, contact='matthias.probst@kit.edu',
                                              institution='Karlsruhe Institute of Technology',
                                              valid_characters='[^a-zA-Z0-9_]',
+                                             pattern='^[0-9 ].*',
                                              translation_dict={'pivview': pivview_to_standardnames_dict})
+from .identifier import standard_name_table_to_xml
 
-if __name__ == '__main__':
-    """creating xml convention files in xml/folder which will be installed with the package.
-    So if something is changed here, update the version (also repo versioN), write the xml file and re-install the 
-    package"""
-    import pathlib
-
-    FluidStandardNameTable.to_xml(
-        pathlib.Path(__file__).parent / 'snxml' / f'fluid-v{FluidStandardNameTable.version_number}.xml',
-        parents=True)
-    PIVStandardNameTable.to_xml(
-        pathlib.Path(__file__).parent / 'snxml' / f'piv-v{PIVStandardNameTable.version_number}.xml')
+standard_name_table_to_xml(FluidStandardNameTable)
+standard_name_table_to_xml(PIVStandardNameTable)

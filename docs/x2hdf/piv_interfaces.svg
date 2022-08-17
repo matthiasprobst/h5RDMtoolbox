@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="486.73846mm"
+   height="122.11873mm"
+   viewBox="0 0 486.73846 122.11873"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   sodipodi:docname="piv_interfaces.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="0.35723204"
+     inkscape:cx="502.47452"
+     inkscape:cy="107.77309"
+     inkscape:window-width="1920"
+     inkscape:window-height="991"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="TriangleOutL"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="TriangleOutL"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.8)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path37607" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="TriangleOutL-5"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="TriangleOutL"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.8)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path37607-7" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="TriangleOutL-4"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="TriangleOutL"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.8)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path37607-3" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-99.113445,79.556474)">
+    <rect
+       style="fill:#d1d1d1;fill-opacity:1;stroke:#000000;stroke-width:1.0927;stroke-linecap:round"
+       id="rect846-3-1-0"
+       width="99.703766"
+       height="108.23222"
+       x="198.86783"
+       y="-66.216316"
+       ry="11.214909" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.701433;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect35726"
+       width="46.114243"
+       height="22.763885"
+       x="228.8905"
+       y="-79.205757"
+       ry="6.0802374" />
+    <rect
+       style="fill:#2d429c;fill-opacity:1;stroke:#000000;stroke-width:0.628934;stroke-linecap:round"
+       id="rect846"
+       width="132.21213"
+       height="27.040052"
+       x="305.33408"
+       y="-58.097679"
+       ry="5.1463265" />
+    <rect
+       style="fill:#2d429c;fill-opacity:1;stroke:#000000;stroke-width:0.628934;stroke-linecap:round"
+       id="rect846-2"
+       width="132.21213"
+       height="27.040052"
+       x="453.32532"
+       y="-31.602686"
+       ry="5.1463265" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="309.96631"
+       y="-40.874413"
+       id="text1400"><tspan
+         sodipodi:role="line"
+         id="tspan1398"
+         style="stroke-width:0.264583"
+         x="309.96631"
+         y="-40.874413">PIV Snapshot(PIVFile)</tspan></text>
+    <rect
+       style="fill:#2d429c;fill-opacity:1;stroke:#000000;stroke-width:0.485253;stroke-linecap:round"
+       id="rect846-3"
+       width="78.288467"
+       height="27.183733"
+       x="99.356071"
+       y="-26.609598"
+       ry="5.1736722" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="104.06017"
+       y="-9.3144846"
+       id="text1400-5"><tspan
+         sodipodi:role="line"
+         id="tspan1398-4"
+         style="stroke-width:0.264583"
+         x="104.06017"
+         y="-9.3144846">PIVFile(ABC)</tspan></text>
+    <rect
+       style="fill:#349c2d;fill-opacity:1;stroke:#000000;stroke-width:0.503064;stroke-linecap:round"
+       id="rect846-3-1"
+       width="84.195847"
+       height="27.165922"
+       x="204.0222"
+       y="-42.562618"
+       ry="5.1702828" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="208.71739"
+       y="-25.276413"
+       id="text1400-5-9"><tspan
+         sodipodi:role="line"
+         id="tspan1398-4-9"
+         style="stroke-width:0.264583"
+         x="208.71739"
+         y="-25.276413">PIVviewNCFile</tspan></text>
+    <rect
+       style="fill:#349c2d;fill-opacity:1;stroke:#000000;stroke-width:0.469102;stroke-linecap:round"
+       id="rect846-3-1-2"
+       width="73.120087"
+       height="27.199884"
+       x="212.09326"
+       y="1.5905819"
+       ry="5.1767464" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="216.80544"
+       y="18.89377"
+       id="text1400-5-9-5"><tspan
+         sodipodi:role="line"
+         id="tspan1398-4-9-9"
+         style="stroke-width:0.264583"
+         x="216.80544"
+         y="18.89377">OpenPIVFile</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleOutL)"
+       d="M 203.29333,-26.855826 180.80884,-15.5491"
+       id="path4182"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleOutL-4)"
+       d="m 286.73418,-28.155097 19.36215,-12.764346"
+       id="path4182-2"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleOutL-5)"
+       d="M 212.11386,14.061861 180.74159,-9.4418871"
+       id="path4182-80"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="251.2646"
+       y="-70.513115"
+       id="text9176"><tspan
+         sodipodi:role="line"
+         style="font-size:7.05556px;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke-width:0.264583"
+         x="251.2646"
+         y="-70.513115"
+         id="tspan9612">interface</tspan><tspan
+         sodipodi:role="line"
+         style="font-size:7.05556px;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke-width:0.264583"
+         x="251.2646"
+         y="-61.693665"
+         id="tspan9616">(user code)</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect35726-6"
+       width="45.039703"
+       height="20.948698"
+       x="116.70622"
+       y="-44.396378"
+       ry="5.5954003" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="139.60419"
+       y="-35.315193"
+       id="text9176-9"><tspan
+         sodipodi:role="line"
+         style="font-size:7.05556px;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke-width:0.264583"
+         x="139.60419"
+         y="-35.315193"
+         id="tspan9616-8">abstract </tspan><tspan
+         sodipodi:role="line"
+         style="font-size:7.05556px;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke-width:0.264583"
+         x="139.60419"
+         y="-26.495743"
+         id="tspan38875">class</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.665;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect35726-9"
+       width="45.039703"
+       height="20.948698"
+       x="350.75113"
+       y="-77.355232"
+       ry="5.5954003" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="355.04932"
+       y="-68.274048"
+       id="text9176-6"><tspan
+         sodipodi:role="line"
+         style="font-size:7.05556px;fill:#000000;fill-opacity:1;stroke-width:0.264583"
+         x="355.04932"
+         y="-68.274048"
+         id="tspan9616-5">Converter</tspan><tspan
+         sodipodi:role="line"
+         style="font-size:7.05556px;fill:#000000;fill-opacity:1;stroke-width:0.264583"
+         x="355.04932"
+         y="-59.454597"
+         id="tspan38462">Interface</tspan></text>
+    <rect
+       style="fill:#2d429c;fill-opacity:1;stroke:#000000;stroke-width:0.629874;stroke-linecap:round"
+       id="rect846-9"
+       width="132.21213"
+       height="27.120987"
+       x="305.33408"
+       y="-31.057629"
+       ry="5.1617298" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="310.00677"
+       y="-13.793892"
+       id="text1400-1"><tspan
+         sodipodi:role="line"
+         id="tspan1398-6"
+         style="stroke-width:0.264583"
+         x="310.00677"
+         y="-13.793892">PIVPlane(List[PIVFile]])</tspan></text>
+    <rect
+       style="fill:#2d429c;fill-opacity:1;stroke:#000000;stroke-width:0.629097;stroke-linecap:round"
+       id="rect846-9-1"
+       width="132.21213"
+       height="27.054113"
+       x="305.33408"
+       y="-3.9366374"
+       ry="5.1490026" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="324.04568"
+       y="6.2575002"
+       id="text1400-1-7"><tspan
+         sodipodi:role="line"
+         id="tspan1398-6-4"
+         style="stroke-width:0.264583"
+         x="324.04568"
+         y="6.2575002">PIVMultiPlane</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="324.04568"
+         y="19.486626"
+         id="tspan35308">(List[List[PIVFile]])</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="488.69449"
+       y="-13.638767"
+       id="text45917"><tspan
+         sodipodi:role="line"
+         id="tspan45915"
+         style="stroke-width:0.264583"
+         x="488.69449"
+         y="-13.638767">to_hdf()</tspan></text>
+  </g>
+</svg>

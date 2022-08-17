@@ -1,37 +1,14 @@
 import pathlib
-import sys
 from datetime import datetime
-from itertools import count
 from re import sub as re_sub
 
-import appdirs
 from cv2 import imread as cv2_imread
 from dateutil.tz import tzlocal
 from h5py import File
-from pco_tools import pco_reader as pco
 
+from . import _user
 from ._version import __version__
-
-user_data_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
-sys.path.insert(0, str(user_data_dir.absolute()))
-
-user_config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
-if not user_config_dir.exists():
-    user_config_dir.mkdir(parents=True)
-user_config_filename = user_config_dir / 'h5rdmtoolbox.yaml'
-
-# tmp folder name is individual for every call of the package:
-_dircounter = count()
-_root_tmp_dir = user_data_dir / 'tmp'
-user_tmp_dir = _root_tmp_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
-
-if not user_tmp_dir.exists():
-    user_tmp_dir.mkdir(parents=True)
-
-testdir = pathlib.Path(__file__).parent / 'tests/data'
-
-_filecounter = count()
-_dircounter = count()
+from .conventions import datetime_str
 
 
 def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
@@ -70,14 +47,14 @@ def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     return _cleaned_str
 
 
-def generate_temporary_filename(prefix='tmp', suffix: str = None) -> pathlib.Path:
+def generate_temporary_filename(prefix='tmp', suffix: str = '') -> pathlib.Path:
     """generates a temporary filename in user tmp file directory
 
     Parameters
     ----------
     prefix: str, optional='tmp'
         prefix string to put in front of name
-    suffix: str, optional=None
+    suffix: str, optional=''
         suffix (including '.')
 
     Returns
@@ -85,9 +62,9 @@ def generate_temporary_filename(prefix='tmp', suffix: str = None) -> pathlib.Pat
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _filename = user_tmp_dir / f"{prefix}{next(_filecounter)}{suffix}"
+    _filename = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}{suffix}"
     while _filename.exists():
-        _filename = user_tmp_dir / f"{prefix}{next(_filecounter)}{suffix}"
+        _filename = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}{suffix}"
     return _filename
 
 
@@ -104,7 +81,9 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir = user_tmp_dir / f"{prefix}{next(_filecounter)}"
+    _dir = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}"
+    while _dir.exists():
+        _dir = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}"
     _dir.mkdir(parents=True)
     return _dir
 
@@ -144,38 +123,6 @@ def touch_tmp_hdf5_file(touch=True) -> pathlib.Path:
     return hdf_filepath
 
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
-def _make_italic(string):
-    return f'\x1B[3m{string}\x1B[0m'
-
-
-def _make_bold(string):
-    return f"{bcolors.BOLD}{string}{bcolors.ENDC}"
-
-
-def _warningtext(string):
-    return f"{bcolors.WARNING}{string}{bcolors.ENDC}"
-
-
-def _failtext(string):
-    return f"{bcolors.FAIL}{string}{bcolors.ENDC}"
-
-
-def _oktext(string):
-    return f"{bcolors.OKGREEN}{string}{bcolors.ENDC}"
-
-
 def load_img(img_filepath: pathlib.Path):
     """
     loads b16 or other file format
@@ -185,6 +132,11 @@ def load_img(img_filepath: pathlib.Path):
         raise FileExistsError(f'Image "{img_filepath}" not found.')
 
     if img_filepath.suffix == '.b16':
+        try:
+            from pco_tools import pco_reader as pco
+        except ImportError:
+            ImportError('Cannot read the b16 image because pco_tools is not installed. Either install it '
+                        'separately or install the repository with pip install h5RDMtolbox [b16]')
         return pco.load(str(img_filepath))
 
     return cv2_imread(str(img_filepath), -1)
