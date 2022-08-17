@@ -13,9 +13,9 @@ from ...conventions import StandardizedNameTable
 try:
     from scipy.interpolate import LinearNDInterpolator
     from scipy.spatial import Delaunay
-except ImportError:
+except ImportError as e:
     raise ImportError('Package scipy is not installed. Either install it '
-                      'separately or install the repository with pip install h5RDMtolbox [piv]')
+                      f'separately or install the repository with pip install h5RDMtolbox [piv]: {e}')
 try:
     from netCDF4 import Dataset as ncDataset
 except ImportError:
