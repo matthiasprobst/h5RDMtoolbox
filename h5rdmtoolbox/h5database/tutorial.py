@@ -3,7 +3,6 @@ import os
 import numpy as np
 
 from h5rdmtoolbox.h5wrapper import H5File
-from h5rdmtoolbox.utils import generate_temporary_filename, generate_temporary_directory
 
 
 def build_test_repo(repo_dir, n_files: int = 100):
@@ -53,7 +52,7 @@ def build_test_repo(repo_dir, n_files: int = 100):
 
                 _vfr_vec = np.random.rand(100) - 0.5 + vfr
                 ds = op.create_dataset('vfr',
-                                       attrs={'units': 'm3/s', 'long_name': 'volume flow_utils rate'},
+                                       attrs={'units': 'm^3/s', 'long_name': 'volume flow_utils rate'},
                                        data=_vfr_vec)
                 ds.attrs['mean'] = np.mean(_vfr_vec)
                 ds.attrs['std'] = np.std(_vfr_vec)

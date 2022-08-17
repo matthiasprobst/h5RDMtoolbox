@@ -1,9 +1,14 @@
 import warnings
 from typing import List, Tuple
+from typing import TypeVar
+from typing import Union
 
 import h5py
 import xarray as xr
 from IPython.display import HTML, display
+
+T_H5Dataset = TypeVar('T_H5Dataset')
+T_H5Group = TypeVar('T_H5Group')
 
 
 class SpecialDatasetRegistrationWarning(Warning):
@@ -46,25 +51,73 @@ class _CachedAccessor:
         return accessor_obj
 
 
-def _register_special_dataset(name, cls):
+def _register_special_dataset(name, cls, overwrite):
     def decorator(accessor):
         """decorator"""
         if hasattr(cls, name):
-            warnings.warn(
-                f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
-                "overriding a preexisting attribute with the same name.",
-                SpecialDatasetRegistrationWarning,
-                stacklevel=2,
-            )
-        # print(f'Registering {name} in class {cls.__name__}')
+            if overwrite:
+                pass
+                # warnings.warn(
+                #     f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
+                #     "overriding a preexisting attribute with the same name.",
+                #     SpecialDatasetRegistrationWarning,
+                #     stacklevel=2,
+                # )
+            else:
+                raise RuntimeError(f'Cannot register the accessor {accessor!r} under name {name!r} '
+                                   f'because it already exists and overwrite is set to {overwrite}')
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
 
     return decorator
 
 
-def register_special_dataset(name, grpcls):
-    return _register_special_dataset(name, grpcls)  # grpcls --> e.g. H5FlowGroup
+USER_PROPERTIES = []
+
+
+def _register_special_property(cls, overwrite=False):
+    def decorator(accessor):
+        """decorator"""
+        if hasattr(accessor, '__propname__'):
+            name = accessor.__propname__
+        else:
+            name = accessor.__name__
+        USER_PROPERTIES.append(name)
+        if hasattr(cls, name):
+            if overwrite:
+                print(f'Overwriting existing property {name}.')
+                delattr(cls, name)
+            else:
+                raise AttributeError(f'Cannot register property {name} to {cls} because it has already a property with '
+                                     'this name.')
+        fget, fset, fdel, doc = None, None, None, None
+        if hasattr(accessor, 'get'):
+            fget = accessor.get
+        if hasattr(accessor, 'set'):
+            fset = accessor.set
+        if hasattr(accessor, 'delete'):
+            fdel = accessor.delete
+        if hasattr(accessor, 'doc'):
+            doc = accessor.doc
+        setattr(cls, name, property(fget, fset, fdel, doc))
+        return accessor
+
+    return decorator
+
+
+def register_special_dataset(name, cls: Union[T_H5Dataset, T_H5Group], overwrite=False):
+    """registers a special dataset to a wrapper class"""
+    # if not isinstance(cls, (H5Dataset, H5Group)):
+    #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
+    return _register_special_dataset(name, cls, overwrite)  # grpcls --> e.g. H5FlowGroup
+
+
+def register_special_property(cls: Union[T_H5Dataset, T_H5Group], overwrite=False):
+    """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
+    also docstring is optional but strongly recommended!"""
+    # if not isinstance(cls, (H5Dataset, H5Group)):
+    #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
+    return _register_special_property(cls, overwrite)
 
 
 # sample class:
@@ -80,25 +133,32 @@ class SpecialDataset:
             self._attrs = {}
         else:
             self._attrs = attrs
-        self._comp_dataarrays = comp_names
-        if comp_names is None:
-            self._comp_dataarrays = self._get_datasets(*self.standard_names)
         self._dset = None
+        if comp_names is None:
+            if len(self.standard_names) == 0:
+                self._comp_dataarrays = None
+            else:
+                self._comp_dataarrays = self._get_datasets(self.standard_names)
+        else:
+            self._comp_dataarrays = comp_names
 
     def __contains__(self, item):
         return item in self._dset
 
-    def __call__(self, *args, names=None, standard_names=None):
-        _comp_dataarrays = self._get_datasets(args, names, standard_names)
-        SpecialDataset(self._grp, _comp_dataarrays)
+    def __call__(self, standard_names=None, names=None):
+        _comp_dataarrays = self._get_datasets(standard_names=standard_names, names=names)
+        return self.__class__(self._grp, _comp_dataarrays)
 
     def _repr_html_(self):
         return display(HTML(self._dset._repr_html_()))
 
     def __repr__(self):
-        if self._grp.name is None:
-            return f'SpecialDataset of group "{self._grp_name}" (closed)\n' + self._dset.__repr__()
-        return f'SpecialDataset of group "{self._grp_name}"\n' + self._dset.__repr__()
+        if self._dset is None:
+            if self._grp.name is None:
+                return f'SpecialDataset of group "{self._grp_name}" (closed)\n' + self._dset.__repr__()
+            if self._dset is None:
+                return f'SpecialDataset of group "{self._grp_name}"\n' + self._dset.__repr__()
+        return self._dset.__repr__()
 
     def __str__(self):
         if self._grp.name is None:
@@ -125,16 +185,18 @@ class SpecialDataset:
         return self
 
     def __getattr__(self, item):
-        try:
-            return self._dset[item]
-        except AttributeError as e:
-            pass
-        try:
-            return object.__getattribute__(self, item)
-        except AttributeError as e2:
-            raise AttributeError(e2)
-        raise AttributeError(e)
-        # if name not in {"__dict__", "__setstate__"}:
+        if item in self.__dict__:
+            return object.__getattribute__(item)
+        if self._dset is not None:
+            return self._dset.__getattr__(item)
+        if self._comp_dataarrays is not None:
+            for ds in self._comp_dataarrays:
+                if ds.name[0] == '/':
+                    if ds.name[1:] == item:
+                        return ds
+                if ds.name == item:
+                    return ds
+        return object.__getattribute__(self, item)
 
     def __setitem__(self, key, value):
         try:
@@ -144,16 +206,15 @@ class SpecialDataset:
 
     @property
     def data_vars(self):
+        """Return the variables of the xr.Dataset"""
         return self._dset.data_vars
 
-    def _get_datasets(self, *args, names=None, standard_names=None):
+    def _get_datasets(self, standard_names=None, names=None):
         """get vector dataset by standard names or names. Either must be given"""
-        if standard_names is None and names is None and len(args) == 0:
-            raise ValueError('Either standard_names or names must be provided')
-        if args and standard_names is None:
-            standard_names = args
-        if standard_names and names:
-            raise ValueError('Either standard_names or names must be provided but not both')
+        if standard_names is None and names is None:
+            raise ValueError('Either "standard_names" or "names" must be provided')
+        if standard_names is not None and names is not None:
+            raise ValueError('Either "standard_names" or "names" must be provided but not both')
 
         if standard_names:
             list_of_component_datasets = []
@@ -161,7 +222,7 @@ class SpecialDataset:
                 try:
                     list_of_component_datasets.append(self._grp.get_dataset_by_standard_name(sn, n=1))
                 except NameError:
-                    print(f'Could not find sandard_name {sn}')
+                    print(f'Cannot find standard_name {sn}')
             if len(list_of_component_datasets) == 0:
                 list_of_component_datasets = None
 

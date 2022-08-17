@@ -1,6 +1,11 @@
+"""H5Flow module: Wrapper for fluid dynamics data"""
+
 import logging
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple, List, Union
+from typing import Dict
+from typing import Tuple, List
+from typing import Union
 
 import h5py
 import numpy as np
@@ -8,140 +13,41 @@ import xarray as xr
 from pandas import read_csv
 from pint_xarray import unit_registry as ureg
 
-from . import config
 from .accessory import SpecialDataset, register_special_dataset
-from .h5file import H5File, H5Group, H5FileLayout
-from .. import user_data_dir
-from ..conventions.standard_names import FluidConvention
+from .h5file import H5File, H5Group, H5Dataset
+from .. import config, conventions
+from .._user import user_data_dir
+
+# from ..conventions.custom import FluidStandardNameTable
 
 logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
+DEVICE_ATTR_NAME = 'device'
+
+H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
+H5Flow_layout_filename = Path.joinpath(user_data_dir, f'layout/H5Flow.hdf')
 
 
-#
-# def _find_time_scale(ds):
-#     i_time = None
-#     for i, d in enumerate(ds.dims):
-#         for j in range(len(d)):
-#             if d[j].attrs.get('standard_name') == 'time':
-#                 i_time = (i, j)
-#                 break
-#         if i_time is not None:
-#             break
-#     if i_time is None:
-#         raise ValueError(f'Dataset with standard name "time" not found as attached scales. '
-#                          f'Cannot determine axis along which to compute reynolds stresses.')
-#     return i_time
+def write_H5Flow_layout_file():
+    """Write the H5File layout to <user_dir>/layout"""
+    lay = conventions.layout.H5Layout.init_from(H5File_layout_filename, H5Flow_layout_filename)
+    with lay.File(mode='r+') as h5lay:
+        ds_x = h5lay.create_dataset('x', shape=(1,))
+        ds_y = h5lay.create_dataset('y', shape=(1,))
+        ds_z = h5lay.create_dataset('z', shape=(1,))
+        ds_t = h5lay.create_dataset('time', shape=(1,))
+        for ds in (ds_x, ds_y, ds_z):
+            ds.attrs['__ndim__'] = (0, 1)
+            ds.attrs['units'] = 'm'
+        ds_x.attrs['standard_name'] = 'x_coordinate'
+        ds_y.attrs['standard_name'] = 'y_coordinate'
+        ds_z.attrs['standard_name'] = 'z_coordinate'
+        ds_t.attrs['units'] = 's'
+        ds_t.attrs['__ndim__'] = (0, 1)
 
 
-# def _get_reyn(obj):
-#     return _build_xarray_dataset([obj[n] for n in ('uu', 'uv', 'uw', 'vv', 'vw', 'ww')], 'reynolds stresses')
-#
-# def _build_xarray_dataset(names, long_name):
-#     xrds = xr.merge([n[:] for n in names])
-#     xrds.attrs['long_name'] = long_name
-#     return xrds
-
-
-class XRVectorDataset(xr.Dataset):
-    __slots__ = ()
-
-    def get_by_sn(self, standard_name: str, on_multiple='list'):
-        """Returns the dataset corresponding to the standard_name.
-        If none is found None is returned.
-        If 1 is found, the dataset is returned
-        If multiples are found list or error is raise, depending on parameter on_multiple"""
-        candidates = []
-        for v in self.values():
-            if 'standard_name' in v.attrs:
-                if standard_name == v.attrs['standard_name']:
-                    candidates.append(v)
-        if len(candidates) == 0:
-            return None
-        if len(candidates) == 1:
-            return candidates[0]
-        if on_multiple == 'list':
-            return candidates
-        if on_multiple == 'error':
-            raise ValueError(f'Multiple datasets found with standard name {standard_name}')
-
-    @property
-    def vector_vars(self):
-        _vector_datasets = [(self[dv].attrs.get('vector_component'), dv) for dv in self.data_vars if
-                            'vector_component' in self[dv].attrs]
-        # sort and return
-        _vector_datasets.sort()
-        return tuple([v[1] for v in _vector_datasets])
-
-    def compute_magnitude(self, standard_name=None):
-        """Computes the magnitude of the vector."""
-        mag2 = None
-        for ids, comp in enumerate(self.vector_vars):
-            if mag2 is None:
-                if comp in self:
-                    mag2 = self[comp].pint.quantify() ** 2
-            else:
-                if comp in self:
-                    mag2 += self[comp].pint.quantify() ** 2
-        mag = np.sqrt(mag2).pint.dequantify(format=ureg.default_format)
-        self['magnitude'] = mag
-        self['magnitude'].attrs = mag.attrs
-        if standard_name is None:
-            # trying to determine a new standard name
-            # TODO: compute new standard_name from standard_names of components: magnitude_of_[common_standard_name]
-            component_standard_names = [self[comp].attrs.get('standard_name') for comp in self.vector_vars]
-            if all(['velocity' in c for c in component_standard_names]):
-                self['magnitude'].attrs['standard_name'] = 'magnitude_of_velocity'
-
-
-class XRVelocityDataset(XRVectorDataset):
-    """subclass of xr.Dataset to enable typical computation tasks for
-    velocity data such as computation of tke, reyn, vorticity, ...
-
-    Velocity components are u, v, w (not all must exist!). Those
-    names are fixed.
-    """
-    __slots__ = ()
-
-    def tke(self):
-        raise NotImplementedError()
-
-    def reyn(self):
-        raise NotImplementedError()
-
-    def vorticity(self):
-        raise NotImplementedError()
-
-    def compute_rotational_speed(self, rot_speed: float, suffix='_rot',
-                                 rot_axis='z', rot_center=(0, 0)) -> None:
-        """Computes and adds the rotational speed based on rot_speed [1/s] and the
-        coordinates of the dataset. Center of rotation per default is (0, 0, 0) and
-        axis of rotation is z. Direction of rotation is controlled by the sign of
-        rot_speed. Created rotational speed data arrays have units [m/s]"""
-        if not rot_axis.lower() == 'z':
-            # TODO implement different rotation axes
-            raise NotImplementedError('Rotation axis different than z is not implemented yet.')
-        if rot_center != (0, 0):
-            # TODO implement different rotation center
-            raise NotImplementedError('Rotation center different than (0, 0) is not implemented yet.')
-
-        # Code for currently available axis/rotation options:
-        # turning whatever unit into [m]:
-        xx, yy = np.meshgrid(self.x.values, self.y.values)
-        x = xr.DataArray(name='x', dims=('y', 'x'),
-                         data=xx).pint.quantify(self.x.attrs['units'])
-        y = xr.DataArray(name='y', dims=('y', 'x'),
-                         data=yy).pint.quantify(self.y.attrs['units'])
-        r = np.sqrt(x.pint.to('m') ** 2 + y.pint.to('m') ** 2)
-        omega = 2 * np.pi * rot_speed / ureg.s
-        alpha = np.arctan2(y, x)
-        v = omega * r * np.cos(alpha)
-        u = -omega * r * np.sin(alpha)
-        u = u.assign_coords({'x': self.x, 'y': self.y})
-        v = v.assign_coords({'x': self.x, 'y': self.y})
-        self[f'magnitude{suffix}'] = np.sqrt(u ** 2 + v ** 2).pint.dequantify(format=ureg.default_format)
-        self[f'u{suffix}'] = u.pint.dequantify(format=ureg.default_format)
-        self[f'v{suffix}'] = v.pint.dequantify(format=ureg.default_format)
+# if not H5Flow_layout_filename.exists():
+write_H5Flow_layout_file()
 
 
 class VectorDataset:
@@ -177,10 +83,93 @@ class VectorDataset:
             return self.xrcls(xrds)
 
 
+@dataclass(repr=False)
+class Device:
+    """Device Class. Expected use: A dataset has the attbute DEVICE_ATTR_NAME which s a
+    referrs to a group entry in the HDF5 file."""
+
+    name: str
+    manufacturer: str = ''
+    x: Union[xr.DataArray, Tuple[Union[float, int, np.ndarray], Union[str, Dict]]] = None
+    y: Union[xr.DataArray, Tuple[Union[float, int, np.ndarray], Union[str, Dict]]] = None
+    z: Union[xr.DataArray, Tuple[Union[float, int, np.ndarray], Union[str, Dict]]] = None
+    additional_attributes: Dict = None
+
+    def __repr__(self):
+        return f'Device "{self.name}" from "{self.manufacturer}" @({self.x.data}, {self.y.data}, {self.z.data})' \
+               f' [{self.x.units}])'
+
+    def __post_init__(self):
+        if self.additional_attributes is None:
+            self.additional_attributes = {}
+
+        def process_coord(coord, coord_name):
+            """helper function to interprete coordinate data"""
+            if coord is None:
+                return None
+
+            if isinstance(coord, xr.DataArray):
+                return coord
+
+            if isinstance(coord, tuple):
+                if isinstance(coord[1], str):
+                    return xr.DataArray(name=coord_name, data=coord[0], attrs=dict(units=coord[1]))
+                else:
+                    return xr.DataArray(name=coord_name, data=coord[0], attrs=coord[1])
+
+        self.x = process_coord(self.x, 'x')
+        self.y = process_coord(self.y, 'y')
+        self.z = process_coord(self.z, 'z')
+
+    @staticmethod
+    def from_hdf_group(device_grp):
+        """Creates a Device object from an HDF5 group"""
+        name = device_grp.name.rsplit('/', 1)[1]
+        additional_attributes = dict(device_grp.attrs.items())
+
+        coords = dict()
+        for coord_name in ('x', 'y', 'z'):
+            if coord_name in device_grp:
+                coords[coord_name] = xr.DataArray(name=coord_name, data=device_grp[coord_name][()],
+                                                  attrs=device_grp[coord_name].attrs.items())
+            else:
+                coords[coord_name] = None
+
+        return Device(name, additional_attributes.pop('manufacturer'), **coords, **additional_attributes)
+
+    def to_hdf_group(self, grp: h5py.Group) -> h5py.Group:
+        """writes data to an hdf group. strings are written to attributes of the group,
+        dictionary entries"""
+        device_grp = grp.create_group(self.name)
+        device_grp.attrs['manufacturer'] = self.manufacturer
+        for coord in (self.x, self.y, self.z):
+            if coord is not None:
+                coord.hdf.to_group(device_grp)
+        for k, v in self.additional_attributes.items():
+            device_grp.attrs[k] = v
+
+        return device_grp
+
+
 class H5FlowGroup(H5Group):
-    """HDF5 Group for specifically for flow data"""
+    """HDF5 Group specifically for flow data"""
+
+    def create_dataset(self, *args, **kwargs):
+        """Advanced dataset creation allowing for parameter device to pass during
+        dataset creation"""
+        attrs = kwargs.get('attrs', None)
+        if attrs is None:
+            _device = None
+        else:
+            _device = attrs.pop('device', None)
+        device = kwargs.pop('device', _device)
+        ds = super().create_dataset(*args, **kwargs)
+        if device is not None:
+            ds.attrs[DEVICE_ATTR_NAME] = device
+        return ds
 
     def create_coordinates(self, x, y, z=0, time=0, coords_unit='m', time_unit='s'):
+        """creating coordinate datasets"""
         for ds_name in ('x', 'y', 'z', 'time'):
             if ds_name in self:
                 raise ValueError(f'Cannot create coordinates, because {ds_name} already exists '
@@ -251,47 +240,57 @@ class H5FlowGroup(H5Group):
         return datasets
 
 
-class H5FlowLayout(H5FileLayout):
+class H5FlowDataset(H5Dataset):
+    """HDF5 Dataset specifically for flow data"""
 
-    def write(self):
-        """The layout file has the structure of a H5Flow file. This means
-        it has the required attributes, datasets and groups that are required
-        for a valid H5Flow file. For each application case this is of course
-        different. Such a file can be created and stored in the user directory
-        and will be used to check the completeness created H5Flow files
+    @property
+    def device(self):
+        """The device class referenced to this dataset"""
+        if DEVICE_ATTR_NAME not in self.attrs:
+            raise AttributeError(f'The dataset "{self.name}" has no attribute device, thus no reference to '
+                                 f'a device in the HDF5 file exists!')
+        device_grp = self.attrs[DEVICE_ATTR_NAME]
+        return Device.from_hdf_group(device_grp)
 
-        Dataset and group structure (attributes not shown):
-        /
-        /x     -> dim=(0, 1), m
-        /y     -> dim=(0, 1), m
-        /z     -> dim=(0, 1), m
-        /time  -> dim=(0, 1), s
-        """
-        super().write()
-        with h5py.File(self.filename, mode='r+') as h5:
-            ds_x = h5.create_dataset('x', shape=(1,))
-            ds_y = h5.create_dataset('y', shape=(1,))
-            ds_z = h5.create_dataset('z', shape=(1,))
-            ds_t = h5.create_dataset('time', shape=(1,))
-            for ds in (ds_x, ds_y, ds_z, ds_t):
-                ds.attrs['__ndim__'] = (0, 1)
-                ds.attrs['units'] = 'm'
-            ds_x.attrs['standard_name'] = 'x_coordinate'
-            ds_y.attrs['standard_name'] = 'y_coordinate'
-            ds_z.attrs['standard_name'] = 'z_coordinate'
+    @device.setter
+    def device(self, device: Union[str, h5py.Group, Device]):
+        """Assigning a device to a dataset"""
+        self.assign_device(device)
+
+    def assign_device(self, device: Union[str, h5py.Group, Device]):
+        """Assigning a device to a dataset"""
+        if isinstance(device, str):
+            if device in self:
+                # setting the hdf goup reference
+                self.attrs[DEVICE_ATTR_NAME] = self[device]
+            elif device in self.rootparent:
+                self.attrs[DEVICE_ATTR_NAME] = self.rootparent[device]
+            else:
+                raise AttributeError(f'No "device" found in hdf file found')
+        elif isinstance(device, h5py.Group):
+            # setting the hdf goup reference
+            self.attrs[DEVICE_ATTR_NAME] = self.rootparent[device.name]
+        elif isinstance(device, Device):
+            if 'devices/' not in self.rootparent:
+                self.rootparent.create_group('devices')
+            grp_name = self.rootparent['devices']
+            device_grp = device.to_hdf_group(grp_name)
+            self.attrs[DEVICE_ATTR_NAME] = device_grp
 
 
 class H5Flow(H5File, H5FlowGroup):
-    Layout: H5FlowLayout = H5FlowLayout(Path.joinpath(user_data_dir, f'layout/H5Flow.hdf'))
+    """H5Flow File wrapper class"""
 
-    def __init__(self, name: Path = None, mode='r', title=None, sn_convention=None,
+    def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
+                 layout_filename: Path = H5Flow_layout_filename,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
-        if sn_convention is None:
-            sn_convention = FluidConvention
-        super().__init__(name, mode, title, sn_convention,
+        if standard_name_table is None:
+            standard_name_table = conventions.FluidStandardNameTable
+        super().__init__(name, mode, title, standard_name_table,
+                         layout_filename,
                          driver, libver, userblock_size,
                          swmr, rdcc_nslots, rdcc_nbytes, rdcc_w0,
                          track_order, fs_strategy, fs_persist, fs_threshold,
@@ -408,12 +407,16 @@ class H5Flow(H5File, H5FlowGroup):
 
 
 H5FlowGroup._h5grp = H5FlowGroup
+H5FlowGroup._h5ds = H5FlowDataset
 
 
+@register_special_dataset("Vector", H5Group)
 class VectorDataset(SpecialDataset):
+    """Vector class with xarray.Dataset-like behaviour"""
 
     @property
-    def vector_vars(self):
+    def vector_vars(self) -> Tuple:
+        """Return the vector component variables"""
         _vector_datasets = [(self._dset[dv].attrs.get('vector_component'), dv) for dv in self._dset.data_vars if
                             'vector_component' in self._dset[dv].attrs]
         # sort and return
@@ -445,22 +448,11 @@ class VectorDataset(SpecialDataset):
                     self['magnitude'].attrs['standard_name'] = 'magnitude_of_displacement'
 
 
-@register_special_dataset("DisplacementVector", H5Group)
-class DisplacementDataset(VectorDataset):
-    standard_names = ('x_displacement', 'y_displacement')
-
-
 @register_special_dataset("VelocityVector", H5Group)
 class VelocityDataset(VectorDataset):
+    """Velocity vector class with xarray.Dataset-like behaviour.
+    Expecting the group to have datasets with standard names x_velocity and y_velocity"""
     standard_names = ('x_velocity', 'y_velocity')
-
-    @property
-    def vector_vars(self):
-        _vector_datasets = [(self._dset[dv].attrs.get('vector_component'), dv) for dv in self._dset.data_vars if
-                            'vector_component' in self._dset[dv].attrs]
-        # sort and return
-        _vector_datasets.sort()
-        return tuple([v[1] for v in _vector_datasets])
 
     def compute_magnitude(self, standard_name=None):
         """Computes the magnitude of the vector."""

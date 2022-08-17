@@ -1,18 +1,14 @@
+import pathlib
 from datetime import datetime
-from itertools import count
-from pathlib import Path
 from re import sub as re_sub
 
 from cv2 import imread as cv2_imread
 from dateutil.tz import tzlocal
 from h5py import File
-from pco_tools import pco_reader as pco
 
-from . import __version__
-from . import user_tmp_dir
-
-_filecounter = count()
-_dircounter = count()
+from . import _user
+from ._version import __version__
+from .conventions import datetime_str
 
 
 def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
@@ -51,28 +47,28 @@ def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     return _cleaned_str
 
 
-def generate_temporary_filename(prefix='tmp', suffix: str = None) -> Path:
+def generate_temporary_filename(prefix='tmp', suffix: str = '') -> pathlib.Path:
     """generates a temporary filename in user tmp file directory
 
     Parameters
     ----------
     prefix: str, optional='tmp'
         prefix string to put in front of name
-    suffix: str, optional=None
+    suffix: str, optional=''
         suffix (including '.')
 
     Returns
     -------
-    tmp_filename: Path
+    tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _filename = user_tmp_dir / f"{prefix}{next(_filecounter)}{suffix}"
+    _filename = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}{suffix}"
     while _filename.exists():
-        _filename = user_tmp_dir / f"{prefix}{next(_filecounter)}{suffix}"
+        _filename = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}{suffix}"
     return _filename
 
 
-def generate_temporary_directory(prefix='tmp') -> Path:
+def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     """generates a temporary directory in user tmp file directory
 
     Parameters
@@ -82,10 +78,12 @@ def generate_temporary_directory(prefix='tmp') -> Path:
 
     Returns
     -------
-    tmp_filename: Path
+    tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir = user_tmp_dir / f"{prefix}{next(_filecounter)}"
+    _dir = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}"
+    while _dir.exists():
+        _dir = _user.user_tmp_dir / f"{prefix}{next(_user._filecounter)}"
     _dir.mkdir(parents=True)
     return _dir
 
@@ -103,7 +101,7 @@ def generate_time_str(dtime: datetime, fmt: str) -> str:
         raise ValueError(f'Invalid formatting string. Can only handle one %z formatter')
 
 
-def touch_tmp_hdf5_file(touch=True) -> Path:
+def touch_tmp_hdf5_file(touch=True) -> pathlib.Path:
     """
     Generates a file path in directory h5wrapperclasses/.tmp
     with filename dsXXXX.hdf where XXXX is more or less a
@@ -112,7 +110,7 @@ def touch_tmp_hdf5_file(touch=True) -> Path:
 
     Returns
     --------
-    hdf_filepath: Path
+    hdf_filepath: pathlib.Path
         file path to created hdf5 file
     touch : bool, optional=True
         touches the file
@@ -125,47 +123,20 @@ def touch_tmp_hdf5_file(touch=True) -> Path:
     return hdf_filepath
 
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
-def _make_italic(string):
-    return f'\x1B[3m{string}\x1B[0m'
-
-
-def _make_bold(string):
-    return f"{bcolors.BOLD}{string}{bcolors.ENDC}"
-
-
-def _warningtext(string):
-    return f"{bcolors.WARNING}{string}{bcolors.ENDC}"
-
-
-def _failtext(string):
-    return f"{bcolors.FAIL}{string}{bcolors.ENDC}"
-
-
-def _oktext(string):
-    return f"{bcolors.OKGREEN}{string}{bcolors.ENDC}"
-
-
-def load_img(img_filepath: Path):
+def load_img(img_filepath: pathlib.Path):
     """
     loads b16 or other file format
     """
-    img_filepath = Path(img_filepath)
+    img_filepath = pathlib.Path(img_filepath)
     if not img_filepath.exists():
         raise FileExistsError(f'Image "{img_filepath}" not found.')
 
     if img_filepath.suffix == '.b16':
+        try:
+            from pco_tools import pco_reader as pco
+        except ImportError:
+            ImportError('Cannot read the b16 image because pco_tools is not installed. Either install it '
+                        'separately or install the repository with pip install h5RDMtolbox [b16]')
         return pco.load(str(img_filepath))
 
     return cv2_imread(str(img_filepath), -1)

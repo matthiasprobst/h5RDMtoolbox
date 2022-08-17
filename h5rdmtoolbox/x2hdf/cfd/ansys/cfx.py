@@ -4,9 +4,9 @@ import pathlib
 from typing import List, Dict, Union
 
 import dotenv
+import numpy as np
 import pandas as pd
 import xarray as xr
-from numpy.typing import ArrayLike
 
 from . import session, PATHLIKE, ccl, CFX_DOTENV_FILENAME, mon
 from .utils import change_suffix
@@ -43,6 +43,7 @@ class CFXResFilename:
 class CFXOUTFile(CFXResFilename):
     suffix = '.out'
 
+
 class MonitorObject:
 
     def __init__(self, expression_value: str, coord_frame: str = 'Coord 0'):
@@ -73,10 +74,10 @@ def process_monitor_string(monitor_str: str):
                 groups.pop(igrp)
             elif "y=" in grp:
                 coords['y'] = float(grp.split('=')[1].strip('"'))
-                groups.pop(igrp - len(coords)+1)
+                groups.pop(igrp - len(coords) + 1)
             elif "z=" in grp:
                 coords['z'] = float(grp.split('=')[1].strip('"'))
-                groups.pop(igrp - len(coords)+1)
+                groups.pop(igrp - len(coords) + 1)
 
         group = '/'.join(groups)
         name, _units = _split[-1].split(' [')
@@ -84,7 +85,8 @@ def process_monitor_string(monitor_str: str):
             _units = ''
         return {'group': group, 'name': name, 'units': _units[:-1], 'coords': coords}
 
-def _str_to_UserPoint(input_str: str, data: ArrayLike) -> Union[MonitorUserPoint, MonitorUserExpression]:
+
+def _str_to_UserPoint(input_str: str, data: np.ndarray) -> Union[MonitorUserPoint, MonitorUserExpression]:
     """extracts info from a user point string and returns a MonitorUserPoint class"""
     monitor_pt_str_dict = process_monitor_string(input_str)
     coords = monitor_pt_str_dict.pop('coords')
@@ -104,7 +106,6 @@ class MonitorDataFrame(pd.DataFrame):
         return {up.attrs['name']: up for up in user_point_list if up is not None}
 
 
-
 class CFXFile:
     """Base wrapper class around a generic Ansys CFX file"""
 
@@ -118,6 +119,7 @@ class CFXFile:
             self.aux_dir = self.working_dir.joinpath(AUXDIRNAME)
         if not self.aux_dir.exists():
             self.aux_dir.mkdir(parents=True)
+
 
 class MonitorData(CFXFile):
 
@@ -209,6 +211,7 @@ class CFXResFile(CFXFile):
     def out_data(self):
         return OutFile(self.filename, self.filename)
 
+
 class CFXResFiles:
 
     def __init__(self, filenames: List[PATHLIKE], def_filename: PATHLIKE, sort: bool = True):
@@ -258,7 +261,7 @@ class CFXCase(CFXFile):
 
     @property
     def latest(self, refresh=False):
-        """Returns the latest .cfx file"""
+        """Return the latest .cfx file"""
         return self.res_files.latest
 
     def refresh(self):

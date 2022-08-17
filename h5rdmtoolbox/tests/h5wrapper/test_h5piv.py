@@ -3,9 +3,13 @@ import unittest
 import numpy as np
 import xarray as xr
 
+import h5rdmtoolbox as h5tbx
+import h5rdmtoolbox.tutorial
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.standard_names import StandardNameConvention
+from h5rdmtoolbox.conventions import StandardizedNameTable
 from h5rdmtoolbox.h5wrapper import H5PIV
+from h5rdmtoolbox.h5wrapper import h5piv
+from h5rdmtoolbox.h5wrapper.h5piv import PIVParameters, PIVMethod
 
 
 def my_uncertainty_method(uds, imgA, imgB):
@@ -43,14 +47,92 @@ def my_uncertainty_method(uds, imgA, imgB):
 
 class TestH5PIV(unittest.TestCase):
 
+    def test_H5PIV_properties(self):
+        with h5rdmtoolbox.tutorial.get_H5PIV('minimal_flow', 'r+') as h5:
+            del h5['u']
+            h5.create_dataset('u', shape=h5['v'].shape,
+                              units='m/s', standard_name='x_velocity')
+
+            self.assertIsInstance(h5.software, h5piv.PIVSoftware)
+            self.assertEqual(h5.software.name, 'PIVTec PIVview')
+            self.assertEqual(h5.software.version, None)
+
+            h5.software = h5piv.PIVSoftware('test', 3.4,
+                                            extra='test')
+            self.assertIsInstance(h5.software, h5piv.PIVSoftware)
+            self.assertEqual(h5.software.name, 'test')
+            self.assertEqual(h5.software.version, '3.4')
+            self.assertEqual(h5.software['extra'], 'test')
+            self.assertEqual(h5.software['name'], 'test')
+            self.assertEqual(h5.software['version'], '3.4')
+
+            h5.attrs['software'] = ('PIVview', 3.4)
+            self.assertIsInstance(h5.software, h5piv.PIVSoftware)
+            self.assertEqual(h5.software.name, 'PIVview')
+            self.assertEqual(h5.software.version, '3.4')
+
+            h5.software = h5piv.PIVSoftware('PIVTec PIVview', 999)
+
+            _min, _max = h5.extent
+            self.assertTupleEqual(_min, (min(h5['x'][:]),
+                                         min(h5['y'][:]),
+                                         min(h5['z'][:])))
+            self.assertTupleEqual(_max, (max(h5['x'][:]),
+                                         max(h5['y'][:]),
+                                         max(h5['z'][:])))
+            self.assertEqual(h5.ntimesteps, h5['time'].size)
+            self.assertEqual(h5.nplanes, h5['z'].size)
+            del h5['time']
+            del h5['z']
+            with self.assertRaises(KeyError):
+                self.assertEqual(h5.ntimesteps, h5['time'].size)
+            with self.assertRaises(KeyError):
+                self.assertEqual(h5.nplanes, h5['z'].size)
+
+    def test_vdp(self):
+        with h5tbx.tutorial.get_H5PIV('vortex_snapshot', 'r+') as h5:
+            if 'flag_translation' in h5['piv_flags'].attrs:
+                h5['piv_flags'].attrs.rename('flag_translation', 'flag_meanings')
+            h5['piv_flags'].compute_vdp()
+
+    def test_VelocityDataset(self):
+        with tutorial.get_H5PIV('vortex_snapshot', mode='r') as h5:
+            h5.VelocityVector[:, :]
+
     def test_convention(self):
-        self.assertTrue(H5PIV.Layout.filename.exists())
-        self.assertEqual(H5PIV.Layout.filename.stem, 'H5PIV')
         with H5PIV() as h5:
-            self.assertIsInstance(h5.sn_convention, StandardNameConvention)
-            self.assertEqual(h5.sn_convention.version, 1)
-            self.assertEqual(h5.sn_convention.name, 'PIV_Standard_Name')
+            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
+            self.assertEqual(h5.standard_name_table.version_number, 1)
+            self.assertEqual(h5.standard_name_table.name, 'piv')
 
     def test_UncertaintyDataset(self):
         with tutorial.get_H5PIV('vortex_snapshot', mode='r') as h5:
             h5.DisplacementVector[:, :].compute_uncertainty(my_uncertainty_method, None, None)
+
+    def test_piv_parameters(self):
+        piv_folder = h5tbx.tutorial.PIVview.get_plane_directory()
+        plane = h5tbx.x2hdf.piv.PIVPlane.from_plane_folder(piv_folder, 5, h5tbx.x2hdf.piv.pivview.PIVViewNcFile)
+        hdf_filename = plane.to_hdf()
+        with h5tbx.H5PIV(hdf_filename, 'r') as h5:
+            piv_param = h5.get_parameters()
+        self.assertIsInstance(piv_param, PIVParameters)
+        self.assertIsInstance(piv_param.method, PIVMethod)
+        self.assertIsInstance(piv_param.final_window_size, list)
+        self.assertIsInstance(piv_param.correlation_mode, h5piv.PIVCorrelationMode)
+        self.assertIsInstance(piv_param.window_function, h5piv.PIVWindowFunction)
+        self.assertIsInstance(piv_param.window_function, h5piv.PIVWindowFunction)
+        self.assertEqual(piv_param.window_function, h5piv.PIVWindowFunction.Uniform)
+
+    def test_piv_parameters2(self):
+        with tutorial.get_H5PIV('vortex_snapshot') as h5:
+            piv_param = h5.get_parameters()
+
+        self.assertIsInstance(piv_param, PIVParameters)
+        self.assertIsInstance(piv_param.method, PIVMethod)
+        self.assertIsInstance(piv_param.final_window_size, list)
+        self.assertIsInstance(piv_param.correlation_mode, h5piv.PIVCorrelationMode)
+        self.assertIsInstance(piv_param.window_function, h5piv.PIVWindowFunction)
+        self.assertIsInstance(piv_param.window_function, h5piv.PIVWindowFunction)
+        self.assertEqual(piv_param.window_function, h5piv.PIVWindowFunction.Gauss)
+        # TODO:
+        # self.assertIsInstance(piv_param.final_effective_window_size, PIVMethod)  # compute from final window size

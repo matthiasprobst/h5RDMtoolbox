@@ -9,10 +9,7 @@ import dotenv
 import h5py
 import numpy as np
 
-from . import CFX_DOTENV_FILENAME
-from . import PATHLIKE
-from . import session
-from . import CFX5PRE, CFX5CMDS
+from . import session, AnsysInstallation, PATHLIKE, CFX_DOTENV_FILENAME
 from .cmd import call_cmd
 from .session import cfx2def
 from .utils import change_suffix
@@ -166,7 +163,6 @@ class CCLGroup:
             subg.create_h5_group(g, overwrite=overwrite)
 
 
-
 INTENDATION_STEP = 2
 
 
@@ -259,7 +255,6 @@ def _list_of_instances_by_keyword_substring(filename, root_group, substring, cla
     return instances
 
 
-
 def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
              cfx5pre: pathlib.Path = None, overwrite: bool = True) -> pathlib.Path:
     """
@@ -296,7 +291,7 @@ def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
         # build def file and then call _generate_from_def
         # this is the safe way!
         if cfx5pre is None:
-            cfx5pre = CFX5PRE
+            cfx5pre = AnsysInstallation.cfx5pre
 
         def_filename = cfx2def(input_file)
         return _generate_from_def(def_filename, ccl_filename, overwrite)
@@ -308,7 +303,7 @@ def _generate_from_res_or_cfx(res_cfx_filename: PATHLIKE,
     if overwrite and ccl_filename.exists():
         ccl_filename.unlink()
     if res_cfx_filename.suffix == '.cfx':
-        session_filename = os.path.join(SESSIONS_DIR, 'cfx2ccl.pre')
+        session_filename = os.path.join(session.SESSIONS_DIR, 'cfx2ccl.pre')
     else:
         raise ValueError(f'Could not determine "session_filename"')
 
@@ -329,7 +324,7 @@ def _generate_from_def(def_filename: PATHLIKE,
     """generates a ccl file from a def file"""
     if ccl_filename.exists() and overwrite:
         ccl_filename.unlink()
-    cmd = f'"{CFX5CMDS}" -read -def "{def_filename}" -text "{ccl_filename}"'
+    cmd = f'"{AnsysInstallation.cfx5cmds}" -read -def "{def_filename}" -text "{ccl_filename}"'
     call_cmd(cmd, wait=True)
 
     if not ccl_filename.exists():

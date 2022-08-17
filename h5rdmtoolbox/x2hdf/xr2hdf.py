@@ -23,6 +23,7 @@ class HDFArrayAccessor:
         overwrite: bool, optional=False
             Whether to overwrite an existing dataset with that name
         """
+        h5group = h5py.Group(h5group.id)
         if not self._obj.name and name is None:
             raise AttributeError(f'Data Array has no name and no name is passed as function parameter.')
         if self._obj.name and name is None:
@@ -39,10 +40,10 @@ class HDFArrayAccessor:
             if coord in h5group:  # coordinate already exists:
                 _raise = False
                 if h5group[coord].ndim == 0:
-                    if float(h5group[coord][()].values) != float(self._obj.coords[coord].values[()]):
+                    if float(h5group[coord][()]) != float(self._obj.coords[coord][()]):
                         _raise = True
                 else:
-                    if not np.array_equal(h5group[coord][()].values, self._obj.coords[coord].values):
+                    if not np.array_equal(h5group[coord][()], self._obj.coords[coord]):
                         _raise = True
                 if _raise:
                     raise ValueError(f'The xarray coordinate "{coord}" exists already '
@@ -56,9 +57,17 @@ class HDFArrayAccessor:
 
         for coord in self._obj.coords:
             if coord not in h5group:
-                cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
-                                             attrs=self._obj.coords[coord].attrs,
-                                             **kwargs)
+                _data = self._obj.coords[coord].values
+                if _data.ndim == 0:
+                    _ = kwargs.pop('compression_opts', None)
+                    _ = kwargs.pop('compression', None)
+                    cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
+                                                 **kwargs)
+                else:
+                    cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
+                                                 **kwargs)
+                for k, v in self._obj.coords[coord].attrs.items():
+                    cds.attrs[k] = v
                 cds.make_scale()
 
             if 'REFERENCE_LIST' not in h5group[coord].attrs:
@@ -68,7 +77,10 @@ class HDFArrayAccessor:
                 coordinates_0dim.append(coord)  # will be written to attribute "COORDINATES"
             else:
                 attach_scales.append(coord)
-        dset = h5group.create_dataset(name, data=self._obj.data, attrs=ds_attrs)
+
+        dset = h5group.create_dataset(name, data=self._obj.data)
+        for k, v in ds_attrs.items():
+            dset.attrs[k] = v
 
         # TODO check that there are "intermediate" coords like ix(x), iy(y)
         for i, s in enumerate(self._obj.dims):
