@@ -16,8 +16,10 @@ SESSIONS_DIR = pathlib.Path(__file__).parent.joinpath('session_files')
 
 
 def importccl(cfx_filename: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
-              ansys_version: str = AnsysInstallation().version) -> pathlib.Path:
+              ansys_version: str = None) -> pathlib.Path:
     """imports a .ccl file into a .cfx file"""
+    if ansys_version is None:
+        ansys_version = AnsysInstallation().version
     if ccl_filename is None:
         ccl_filename = change_suffix(cfx_filename, '.ccl')
     cfx_filename = pathlib.Path(cfx_filename)
@@ -43,7 +45,9 @@ def importccl(cfx_filename: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None
 
 
 def cfx2def(cfx_filename: PATHLIKE, def_filename: Union[PATHLIKE, None] = None,
-            ansys_version: str = AnsysInstallation().version) -> pathlib.Path:
+            ansys_version: str = None) -> pathlib.Path:
+    if ansys_version is None:
+        ansys_version = AnsysInstallation().version
     if def_filename is None:
         def_filename = cfx_filename.parent.joinpath(f'{cfx_filename.stem}.def')
 
@@ -57,8 +61,10 @@ def cfx2def(cfx_filename: PATHLIKE, def_filename: Union[PATHLIKE, None] = None,
 
 
 def change_timestep_and_write_def(cfx_filename: PATHLIKE, def_filename: PATHLIKE, timestep: float,
-                                  ansys_version: str = AnsysInstallation().version):
+                                  ansys_version: str = None):
     """changes timestep in *.cfx fil and writes solver file *.def"""
+    if ansys_version is None:
+        ansys_version = AnsysInstallation().version
     _orig_session_filename = SESSIONS_DIR.joinpath('change_timestep_and_write_def.pre')
     _tmp_session_filename = copy_session_file_to_tmp(_orig_session_filename)
     replace_in_file(_tmp_session_filename, '__cfxfilename__', str(cfx_filename))
@@ -69,8 +75,10 @@ def change_timestep_and_write_def(cfx_filename: PATHLIKE, def_filename: PATHLIKE
 
 
 def change_timestep(cfx_filename: PATHLIKE, timestep: float,
-                    ansys_version: str = AnsysInstallation().version):
+                    ansys_version: str = None):
     """changes timestep in *.cfx file. DOES NOT WRITE THE *.DEF FILE!"""
+    if ansys_version is None:
+        ansys_version = AnsysInstallation().version
     _orig_session_filename = SESSIONS_DIR.joinpath('change_timestep.pre')
     _tmp_session_filename = copy_session_file_to_tmp(_orig_session_filename)
     replace_in_file(_tmp_session_filename, '__cfxfilename__', str(cfx_filename))
