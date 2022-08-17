@@ -639,7 +639,7 @@ class TestH5Group(unittest.TestCase):
 
         with H5File(tmpfile, mode='r') as h5:
             n = h5.check(silent=False)
-            self.assertEqual(n, 3)
+            self.assertEqual(n, 2)
 
 
 class TestCore(unittest.TestCase):

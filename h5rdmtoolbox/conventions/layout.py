@@ -53,7 +53,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
 
         elif ak == 'exact_units':
             other_units = otherobj.attrs.get('units')
-            if other_units:
+            if other_units is not None:
                 if av != otherobj.attrs[ak]:
                     if not silent:
                         print(f'Exact units check failed for {obj.name}: {av} != {other_units}')
@@ -66,7 +66,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
 
         elif ak in ('units', 'baseunits'):
             other_units = otherobj.attrs.get('units')
-            if other_units:
+            if other_units is not None:
                 if not equal_base_units(av, otherobj.attrs[ak]):
                     if not silent:
                         print(f'Base-units check failed for {obj.name}: {av} != {other_units}')
@@ -203,9 +203,10 @@ class LayoutGroup(h5py.Group):
                     if obj_name in other:
                         issues.append(self[obj_name].check(other[obj_name], silent))
                     else:
-                        issues.append({'path': obj.name, 'obj_type': 'dataset', 'issue': 'missing'})
-                        if not silent:
-                            print(f'Dataset name {obj_name} missing in {self.name}.')
+                        if '__optional__' not in obj.attrs:
+                            issues.append({'path': obj.name, 'obj_type': 'dataset', 'issue': 'missing'})
+                            if not silent:
+                                print(f'Dataset name {obj_name} missing in {self.name}.')
             else:
                 if recursive:
                     alt_grp_name = obj.attrs.get('__alternative_source_group__')
