@@ -28,6 +28,8 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
         if ak == '__shape__':
             _shape = tuple(av)
             if otherobj.shape != _shape:
+                if not silent:
+                    print(f'Wrong shape of dataset {obj.name}: {_shape} != {otherobj.shape}')
                 issues.append({'path': obj.name,
                                'obj_type': 'dataset',
                                'name': ak,
@@ -51,7 +53,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
 
         elif ak == 'exact_units':
             other_units = otherobj.attrs.get('units')
-            if other_units:
+            if other_units is not None:
                 if av != otherobj.attrs[ak]:
                     if not silent:
                         print(f'Exact units check failed for {obj.name}: {av} != {other_units}')
@@ -64,7 +66,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
 
         elif ak in ('units', 'baseunits'):
             other_units = otherobj.attrs.get('units')
-            if other_units:
+            if other_units is not None:
                 if not equal_base_units(av, otherobj.attrs[ak]):
                     if not silent:
                         print(f'Base-units check failed for {obj.name}: {av} != {other_units}')
@@ -77,6 +79,8 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
         keys = ak.split('.alt:')
         if len(keys) > 1:
             if not any([k in otherobj.attrs for k in keys]):
+                if not silent:
+                    print(f'Neither of the attribute {", ".join(keys)} exist in {otherobj.name}')
                 issues.append(
                     {'path': obj.name, 'obj_type': 'attribute', 'name': ' or '.join(keys), 'issue': 'missing'})
             continue
@@ -84,7 +88,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
         if ak.startswith('__'):
             continue  # other special meaning
 
-        try:
+        if ak in otherobj.attrs:
             other_av = otherobj.attrs[ak]
             # attribute name exits
             # now check value
@@ -93,7 +97,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
                     issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': ak, 'issue': 'unequal'})
                     if not silent:
                         print(f'Attribute value issue for {obj.name}: {av} != {other_av}')
-        except KeyError:
+        else:
             if not silent:
                 print(f'Attribute {ak} missing in group {obj.name}')
             issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': ak, 'issue': 'missing'})
@@ -199,9 +203,10 @@ class LayoutGroup(h5py.Group):
                     if obj_name in other:
                         issues.append(self[obj_name].check(other[obj_name], silent))
                     else:
-                        issues.append({'path': obj.name, 'obj_type': 'dataset', 'issue': 'missing'})
-                        if not silent:
-                            print(f'Dataset name {obj_name} missing in {self.name}.')
+                        if '__optional__' not in obj.attrs:
+                            issues.append({'path': obj.name, 'obj_type': 'dataset', 'issue': 'missing'})
+                            if not silent:
+                                print(f'Dataset name {obj_name} missing in {self.name}.')
             else:
                 if recursive:
                     alt_grp_name = obj.attrs.get('__alternative_source_group__')
@@ -364,7 +369,6 @@ class H5Layout:
             f'H5FileLayout file for class {self.__class__.__name__} is written to {self.filename}')
         with h5py.File(self.filename, mode='w') as h5:
             h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
-            h5.attrs['creation_time'] = '__time of file creation'
         return self.filename
 
     def check(self, grp: h5py.Group, silent: bool = True,

@@ -11,7 +11,6 @@ from typing import Protocol, Any, Union, Dict, List
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
-from . import pivutils
 from .accessory import register_special_dataset
 from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config, _user
@@ -113,6 +112,76 @@ def running_relative_standard_deviation(x, axis, ddof=0):
     return running_std(x, axis, ddof) / running_mean(x, axis)
 
 
+def vdp(piv_flags, flag_masked, flag_valid=None, flag_invalid=None, abs=False):
+    """
+    Calculates the valid detection probability (vdp) by counting the entries in arr==flag.
+    Typically, flag_valid should be passed. The inverse approach is also possible by passing
+    flag(s) that define invalid vectors. Either must be given.
+
+    Parameters
+    ----------
+    piv_flags : array_like
+        Array containing flags. For PivVIEW the variable is called in fact "piv_flags"
+    flag_masked : int or tuple
+        Flag specifying masked vectors.
+    flag_valid : int or tuple, optional
+        Number that indicates a valid vector. Default is None. This or flag_invalid
+        must be given.
+    flag_invalid : int or tuple, optional
+        Number that indicates an invalid vector. Default is None. This or flag_valid
+        must be given.
+    abs : bool, default=False
+        Returns absolute number of invalid vectors
+
+    Returns
+    -------
+    n_valid : float
+        Absolute or relative number of valid vectors for input array, depending
+        on input parameter abs.
+    """
+    n_tot = piv_flags.size
+
+    if isinstance(flag_invalid, int):
+        flag_invalid = (flag_invalid,)
+
+    if isinstance(flag_valid, int):
+        flag_valid = (flag_valid,)
+
+    if isinstance(flag_masked, int):
+        flag_masked = (flag_masked,)
+
+    n_masked = 0
+    for fmasked in flag_masked:
+        masked = piv_flags == fmasked
+        n_masked += np.sum(masked)
+
+    n_active = n_tot - n_masked
+
+    if flag_valid is not None:
+        n_valid = 0
+        for fvalid in flag_valid:
+            invalid = piv_flags == fvalid
+            n_valid += np.sum(invalid)
+
+    elif flag_invalid is not None:
+        n_invalid = 0
+        for finvalid in flag_invalid:
+            invalid = piv_flags == finvalid
+            n_invalid += np.sum(invalid)
+        n_valid = n_active - n_invalid
+    else:
+        raise ValueError('You must provide flags for either valid or invalid '
+                         'vectors!')
+
+    if not abs:
+        n_valid = n_valid / n_active  # relative number of valid vectors
+
+    logger.debug(f'From {n_tot} vectors, {n_active} are active, {n_masked} are masked, '
+                 f'{n_valid} are valid vectors.')
+
+    return n_valid
+
+
 H5Flow_layout_filename = Path.joinpath(_user.user_data_dir, f'layout/H5Flow.hdf')
 H5PIV_layout_filename = Path.joinpath(_user.user_data_dir, f'layout/H5PIV.hdf')
 
@@ -173,8 +242,21 @@ def write_H5PIV_layout_file():
         ds_v = h5lay.create_dataset('v', shape=(1,))
         ds_v.attrs['units'] = 'm/s'
         ds_v.attrs['__alternative_source_group__'] = 're:plane[0-9]'
-        ds_v.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx, nv)
+        ds_v.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx)
         ds_v.attrs['standard_name'] = 'y_velocity'
+
+        ds_v = h5lay.create_dataset('w', shape=(1,))
+        ds_v.attrs['units'] = 'm/s'
+        ds_v.attrs['__optional__'] = True  # thus only check if exists
+        ds_v.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx)
+        ds_v.attrs['standard_name'] = 'y_velocity'
+
+        ds_flag = h5lay.create_dataset('piv_flags', shape=(1,))
+        ds_flag.attrs['units'] = ''
+        ds_flag.attrs['__alternative_source_group__'] = 're:plane[0-9]'
+        ds_flag.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx)
+        ds_flag.attrs['standard_name'] = 'piv_flag'
+        ds_flag.attrs['flag_meaning'] = '__str_or_str-dict'
 
         # piv parameters can be at root level or for each plane individually
         pivpargrp = h5lay.create_group('piv_parameters')
@@ -302,12 +384,12 @@ class PIVSoftware:
 
     @property
     def name(self) -> str:
-        """returns software name"""
+        """Return software name"""
         return self._name
 
     @property
     def version(self) -> str:
-        """returns software version"""
+        """Return software version"""
         return self._version
 
     def __getitem__(self, item):
@@ -347,77 +429,6 @@ class PIVParameters:
         return self.piv_parameter.get('correlation_mode')
 
 
-# class H5PIVLayout(H5FlowLayout):
-#     """H5Layout for PIV data"""
-#
-#     def write(self) -> pathlib.Path:
-#         """The layout file has the structure of a H5Flow file. This means
-#         it has the required attributes, datasets and groups that are required
-#         for a valid H5Flow file. For each application case this is of course
-#         different. Such a file can be created and stored in the user directory
-#         and will be used to check the completeness created H5Flow files
-#
-#         Dataset and group structure (attributes not shown):
-#         /
-#         /x     -> dim=(0, 1), m
-#         /y     -> dim=(0, 1), m
-#         /z     -> dim=(0, 1), m
-#         /time  -> dim=(0, 1), s
-#         """
-#         super().write()
-#         with h5py.File(self.filename, mode='r+') as h5:
-#             # grsetup = h5.create_group(name='Setup')
-#             # grpeq = grsetup.create_group(name='Equipment')
-#             # grpeq.create_group('Camera')
-#             # grpeq.create_group('Laser')
-#             #
-#             # _ = h5.create_group(name='Acquisition')
-#             # h5.create_group(name='Acquisition/Raw')
-#             # h5.create_group(name='Acquisition/Processed')
-#             # h5.create_group(name='Acquisition/Calibration')
-#
-#             h5.attrs['title'] = '__The common name of the file that might ' \
-#                                 'better explain it by a short string'
-#
-#             # ds_vel = h5.create_dataset('x', shape=(1,))
-#             ds_vel = h5['x']
-#             ds_vel.attrs['units'] = 'm'
-#             ds_vel.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
-#             ds_vel.attrs['standard_name'] = 'x_coordinate'
-#
-#             # ds_vel = h5.create_dataset('y', shape=(1,))
-#             ds_vel = h5['y']
-#             ds_vel.attrs['units'] = 'm'
-#             ds_vel.attrs['__ndim__'] = 1  # (nz, nt, ny, nx, nv)
-#             ds_vel.attrs['standard_name'] = 'y_coordinate'
-#
-#             ds_ix = h5.create_dataset('ix', shape=(1,))
-#             ds_iy = h5.create_dataset('iy', shape=(1,))
-#
-#             for ds in (ds_ix, ds_iy):
-#                 ds.attrs['units'] = 'm'
-#                 ds.attrs['__ndim__'] = (0, 1)
-#                 ds_vel.attrs['standard_name'] = f'{ds_ix.name[1:]}_pixel_coordinate'
-#
-#             # ds_vel = h5.create_dataset('z', shape=(1,))
-#             ds_vel = h5['z']
-#             ds_vel.attrs['units'] = 'm'
-#             ds_vel.attrs['__ndim__'] = (0, 1)  # (nz, nt, ny, nx, nv)
-#             ds_vel.attrs['standard_name'] = 'z_coordinate'
-#
-#             ds_vel = h5.create_dataset('u', shape=(1,))
-#             ds_vel.attrs['units'] = 'm/s'
-#             ds_vel.attrs['__ndim__'] = (2, 3, 4)  # (nz, nt, ny, nx, nv)
-#             ds_vel.attrs['standard_name'] = 'x_velocity'
-#
-#             ds_vel = h5.create_dataset('v', shape=(1,))
-#             ds_vel.attrs['units'] = 'm/s'
-#             ds_vel.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx, nv)
-#             ds_vel.attrs['standard_name'] = 'y_velocity'
-#
-#         return self.filename
-
-
 class H5PIVGroup(H5FlowGroup):
     """Group for H5PIV"""
     pass
@@ -425,7 +436,96 @@ class H5PIVGroup(H5FlowGroup):
 
 class H5PIVDatset(H5FlowDataset):
     """Dataset for H5PIV"""
-    pass
+
+    def compute_vdp(self, name='post/vdp', flag_valid=1,
+                    flag_masked=(2, 10),
+                    overwrite=False):
+        """creates vdp for each xy coordinate for all it and iz
+        Parameters
+        ----------
+        name : str
+            Name to use for dataset
+        flag_valid : int, optional=1
+            flag defining a valid vector
+        flag_masked : tuple
+            Flags defining masked out vectors
+        overwrite : bool, optional=False
+            Whether to overwrite an existing dataset with given name
+
+        Returns
+        -------
+        ds : Dataset
+            created dataset
+
+        """
+        piv_flags_ds_candidates = self.parent.get_dataset_by_standard_name('piv_flag')
+        if piv_flags_ds_candidates is None:
+            raise AttributeError(f'Require dataset with standard_name "piv_flag" but cannot locate in '
+                                 f'group {self.parent.name}.')
+
+        flag_meanings = self.attrs.get('flag_meanings', None)
+        if flag_meanings is None:
+            raise AttributeError('No attribute "flag_meaning", which is needed to interpret the data')
+        if isinstance(flag_meanings, str):
+            flag_values = self.attrs.get('flag_values', None)
+            if flag_values is None:
+                raise AttributeError('No attribute "flag_values", which is needed to interpret the data')
+            if ',' in flag_meanings:
+                sep = ','
+            else:
+                sep = ' '
+            flag_meanings = flag_meanings.split(sep)
+            if len(flag_values) != len(flag_meanings.strip(sep)):
+                raise RuntimeError('Flag eanings and values must have same length')
+            flag_dict = {v: n.strip() for v, n in zip(flag_values, flag_meanings)}
+        else:
+            flag_dict = flag_meanings
+
+        comment = 'The absolute or relative number of valid vectors of the result array without taking masked ' \
+                  f'entries into account. The following flags were used for processing. Valid={flag_valid}, ' \
+                  f'masked={flag_masked}. Calculation used: n_valid = (n_nonmasked-n_invalid)/n_nonmasked. '
+
+        if self.ndim == 2:
+            ds = self.parent.create_dataset(name=name, shape=(1,),
+                                            units=' ', overwrite=overwrite,
+                                            long_name='valid detection probability',
+                                            attrs={'description': comment})
+            self.attrs['COORDINATE'] = self.parent['u'].attrs['COORDINATES']
+            ds[()] = vdp(piv_flags=self[:, :],
+                         flag_valid=flag_valid,
+                         flag_masked=flag_masked, abs=False)
+        elif self.ndim == 3:
+            # TODO find out if it is time or z and at which axis! for now hard coded:
+            # if self.dims[0][0].attrs['standard_name'] == 'z_coordinate':
+            ds = self.parent.create_dataset(name=name, shape=(self.shape[0],),
+                                            compression=config.hdf_compression,
+                                            compression_opts=config.hdf_compression_opts,
+                                            units=' ', overwrite=overwrite,
+                                            long_name='valid detection probability',
+                                            attrs={'description': comment},
+                                            attach_scales=self.dims[0][0])
+            for i in range(self.shape[0]):
+                ds[i] = vdp(piv_flags=self[i, :, :],
+                            flag_valid=flag_valid,
+                            flag_masked=flag_masked, abs=False)
+        elif self.ndim == 4:
+            # TODO find out if it is time or z and at which axis! for now hard coded:
+            # if self.dims[0][0].attrs['standard_name'] == 'z_coordinate':
+            ds = self.parent.create_dataset(name=name, shape=(self.shape[0], self.shape[1]),
+                                            compression=config.hdf_compression,
+                                            compression_opts=config.hdf_compression_opts,
+                                            units=' ', overwrite=overwrite,
+                                            long_name='valid detection probability',
+                                            attrs={'description': comment},
+                                            attach_scales=(self.dims[0][0], self.dims[1][0]))
+            for i in range(self.shape[0]):
+                for j in range(self.shape[1]):
+                    ds[i, j] = vdp(piv_flags=self[i, j, :, :],
+                                   flag_valid=flag_valid,
+                                   flag_masked=flag_masked, abs=False)
+        else:
+            raise RuntimeError(f'Unexpected shape of dataset: {self.shape}')
+        return ds
 
 
 class H5PIV(H5Flow, H5PIVGroup, ABC):
@@ -433,7 +533,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
 
     @property
     def ntimesteps(self):
-        """returns the number of timestpes"""
+        """Return the number of timestpes"""
         if 'time' in self:
             return self['time'].size
         raise KeyError(f'No dataset "time" in file. Cannot determine the number '
@@ -441,7 +541,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
 
     @property
     def nplanes(self):
-        """returns the number of planes"""
+        """Return the number of planes"""
         if 'z' in self:
             return self['z'].size
         raise KeyError(f'No dataset "z"" in file. Cannot determine the number '
@@ -465,7 +565,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
 
     @property
     def software(self) -> Union[PIVSoftware, None]:
-        """Returns attribute 'software'"""
+        """Return attribute 'software'"""
         _software = None
         if 'software' in self.attrs:
             _software = self.attrs.get('software')
@@ -606,7 +706,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         return n_issues
 
     def get_conversion_factor(self):
-        """returns conversion factor in [pix/physical_unit]"""
+        """Return conversion factor in [pix/physical_unit]"""
         dx = self['x'][0, 0, 0, :].max() - self['x'][0, 0, 0, :].min()
         dy = self['y'][0, 0, :, 0].max() - self['y'][0, 0, :, 0].min()
         par = self.get_piv_parameters()
@@ -709,7 +809,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             raise AttributeError(f'HDF file has no attribute {config.piv_file_type_attr_name}')
 
     # def is_multiplane(self):
-    #     """returns """
+    #     """Return """
     #     if config.piv_file_type_attr_name in self:
     #         return self.attrs[config.piv_file_type_attr_name] == config.piv_file_types['multi_plane']
     #     else:
@@ -761,43 +861,6 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         ds = self.create_dataset(name=name, standard_name='z_derivative_of_z_velocity',
                                  long_name=long_name,
                                  data=dwdz, overwrite=overwrite)
-        return ds
-
-    def compute_vdp(self, name='vdp', flag_valid=1, flag_masked=(2, 10),
-                    overwrite=False):
-        """creates vdp for each xy coordinate for all it and iz
-        Parameters
-        ----------
-        name : str
-            Name to use for dataset
-        flag_valid : int, optional=1
-            flag defining a valid vector
-        flag_masked : tuple
-            Flags defining masked out vectors
-        overwrite : bool, optional=False
-            Whether to overwrite an existing dataset with given name
-
-        Returns
-        -------
-        ds : Dataset
-            created dataset
-
-        """
-        piv_flags = self['piv_flags'][:, :, :, :]
-        nz, nt = piv_flags.shape[0], piv_flags.shape[1]
-        vdp_data = np.zeros(shape=(nz, nt, 1, 1))
-        for iz in range(nz):
-            for it in range(nt):
-                vdp_data[iz, it, 0, 0] = pivutils.vdp(piv_flags=piv_flags[iz, it, :, :], flag_valid=flag_valid,
-                                                      flag_masked=flag_masked, abs=False)
-        description = 'valid detection probability'
-        comment = 'The absolute or relative number of valid vectors of the result array without taking masked ' \
-                  f'entries into account. The following flags were used for processing. Valid={flag_valid}, ' \
-                  f'masked={flag_masked}. Calculation used: n_valid = (n_nonmasked-n_invalid)/n_nonmasked. ' \
-                  f'Flag translation was performed with current version ({self.version}) and PIV software {self.software}.'
-        ds = self.create_dataset(name=name, data=vdp_data, units=' ', overwrite=overwrite,
-                                 long_name=description, attrs={'comment': comment},
-                                 attach_scale=('z', 'time'))
         return ds
 
     def _compute_running_statistics(self, method, grp_name, grp_long_name, dataset, dataset_long_name, overwrite,
@@ -878,7 +941,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             dataset_desc = f'Running mean of {dataset}'
         else:
             dataset_desc = f'Running mean of {dataset.name}'
-        return self._compute_running_statistics(pivutils.running_mean,
+        return self._compute_running_statistics(running_mean,
                                                 grp_name='post/running_mean',
                                                 grp_long_name=grp_desc,
                                                 dataset=dataset,
@@ -909,7 +972,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             dataset_desc = f'Running standard deviation of {dataset}'
         else:
             dataset_desc = f'Running standard deviation of {dataset.name}'
-        return self._compute_running_statistics(pivutils.running_std,
+        return self._compute_running_statistics(running_std,
                                                 grp_name='post/running_std',
                                                 grp_long_name=grp_desc,
                                                 dataset=dataset,
@@ -919,7 +982,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
                                                 axis=1)
 
     def get_image_files(self, iz, it, split_image, cam_rel_dir='../Cam1', img_suffix='.b16'):
-        """Returns the file path corresponding to snapshot it in plane iz.
+        """Return the file path corresponding to snapshot it in plane iz.
         For this, the root attribute plane_directory (for snapshot and planes) or
         plane_directories (for cases) respectively must be available. At this stage
         it is assumed, that the relative location of the image folder is at ../Cam1.

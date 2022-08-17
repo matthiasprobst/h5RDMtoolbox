@@ -272,9 +272,25 @@ class PIVPlane(PIVConverter):
 
             # write all other dataset to file:
             for (ifile, piv_file), t in zip(enumerate(self.list_of_piv_file[1:]), self.time_vector[1:]):
-                data, _, _ = piv_file.read(config, t)
+                data, _, variable_attr = piv_file.read(config, t)
                 for varkey in dataset_keys:
                     h5main[varkey][ifile + 1, ...] = data[varkey][...]
+
+                # pivvie hack: flag meaning might be different for each plane because not all planes
+                # have the same flag values and only those that appear are added to the dict
+                if 'piv_flags' in variable_attr.keys():
+                    try:
+                        flag_meaning_plane = variable_attr['piv_flags']['flag_meaning']
+                        try:
+                            flag_meaning_main = h5main['piv_flags'].attrs['flag_meaning']
+                            flag_meaning_main_dict = json.loads(flag_meaning_main)
+                            flag_meaning_plane_dict = json.loads(flag_meaning_plane)
+                            flag_meaning_main_dict.update(flag_meaning_plane_dict)
+                            h5main[varkey].attrs['flag_meaning'] = json.dumps(flag_meaning_main_dict)
+                        except KeyError:
+                            pass
+                    except KeyError:
+                        pass
         return hdf_filename
 
 
@@ -401,8 +417,7 @@ class PIVMultiPlane(PIVConverter):
             compression_opts = h5plane['u'].compression_opts
 
         # h5main.attrs['software'] = PIVMultiPlane.software_name
-        now = datetime.now()
-        h5main.attrs['creation_time'] = now.strftime(CF_DATETIME_STR)
+        # now = datetime.now()
         h5main.attrs['title'] = 'piv snapshot data'
         ds_x = h5main.create_dataset('x', shape=(nx,))
         ds_x.make_scale()

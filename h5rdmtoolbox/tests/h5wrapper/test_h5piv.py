@@ -89,6 +89,12 @@ class TestH5PIV(unittest.TestCase):
             with self.assertRaises(KeyError):
                 self.assertEqual(h5.nplanes, h5['z'].size)
 
+    def test_vdp(self):
+        with h5tbx.tutorial.get_H5PIV('vortex_snapshot', 'r+') as h5:
+            if 'flag_translation' in h5['piv_flags'].attrs:
+                h5['piv_flags'].attrs.rename('flag_translation', 'flag_meanings')
+            h5['piv_flags'].compute_vdp()
+
     def test_VelocityDataset(self):
         with tutorial.get_H5PIV('vortex_snapshot', mode='r') as h5:
             h5.VelocityVector[:, :]

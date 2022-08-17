@@ -416,7 +416,7 @@ class VectorDataset(SpecialDataset):
 
     @property
     def vector_vars(self) -> Tuple:
-        """returns the vector component variables"""
+        """Return the vector component variables"""
         _vector_datasets = [(self._dset[dv].attrs.get('vector_component'), dv) for dv in self._dset.data_vars if
                             'vector_component' in self._dset[dv].attrs]
         # sort and return

@@ -1,6 +1,7 @@
 """h5rdtoolbox repository"""
 
 import atexit
+import pathlib
 import shutil
 
 from . import conventions
@@ -64,9 +65,30 @@ def check():
 @atexit.register
 def clean_temp_data():
     """cleaning up the tmp directory"""
+    from ._user import _root_tmp_dir
+    failed_dirs = []
+    failed_dirs_file = _root_tmp_dir / 'failed.txt'
     if user_tmp_dir.exists():
         try:
             shutil.rmtree(user_tmp_dir)
         except RuntimeError as e:
+            failed_dirs.append(user_tmp_dir)
             print(f'removing tmp folder "{user_tmp_dir}" failed due to "{e}". Best is you '
                   f'manually delete the directory.')
+        finally:
+            lines = []
+            if failed_dirs_file.exists():
+                with open(failed_dirs_file, 'r') as f:
+                    lines = f.readlines()
+                    for l in lines:
+                        try:
+                            shutil.rmtree(l)
+                        except RuntimeError:
+                            failed_dirs.append(l)
+
+            if lines or failed_dirs:
+                with open(failed_dirs_file, 'w') as f:
+                    for fd in failed_dirs:
+                        f.writelines(f'{fd}\n')
+            else:
+                failed_dirs_file.unlink(missing_ok=True)
