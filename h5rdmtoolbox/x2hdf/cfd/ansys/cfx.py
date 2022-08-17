@@ -82,7 +82,7 @@ def process_monitor_string(monitor_str: str):
                 coords['z'] = float(grp.split('=')[1].strip('"'))
                 groups.pop(igrp - len(coords) + 1)
 
-        group = '/'.join(groups)
+        group = '/'.join([g for g in groups if g])
         name, _units = _split[-1].split(' [')
         if _units == ']':
             _units = ''
@@ -353,7 +353,17 @@ class CFXCase(CFXFile):
                             for k, v in monitor_data.items():
                                 if k not in scale_monitor_names:
                                     meta_dict = process_monitor_string(k)
-                                    ds = grp.create_dataset(name=f'{meta_dict["group"]}/{meta_dict["name"]}', data=v)
+
+                                    if meta_dict["group"] in grp:
+                                        name = f'{meta_dict["group"]}_{meta_dict["name"]}'
+                                    else:
+                                        name = f'{meta_dict["group"]}/{meta_dict["name"]}'
+                                    try:
+                                        ds = grp.create_dataset(name=name, data=v)
+                                    except RuntimeError as e:
+                                        raise RuntimeError(f'Could not create {name} after processing {k} '
+                                                           f'due to: "{e}"')
+
                                     try:
                                         ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
                                     except KeyError:
