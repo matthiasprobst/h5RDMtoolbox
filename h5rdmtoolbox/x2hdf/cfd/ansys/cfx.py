@@ -322,7 +322,7 @@ class CFXCase(CFXFile):
                     ccl_filename = ccl.generate(self._cfx_case.filename, verbose=verbose)
                     elapsed_time = time.perf_counter() - st
                     if verbose:
-                        print(f'Conversion tool {elapsed_time} s')
+                        print(f'Conversion took {elapsed_time} s')
                     ccl.CCLTextFile(ccl_filename).to_hdf(self._filename)
 
                     if len(self._cfx_case) == 0:
@@ -377,6 +377,7 @@ class CFXCase(CFXFile):
                                                 ds.attrs['long_name'] = kc
                                             # NOTE: ASSUMING [m] is the default units but TODO check in CCL file what the base unit is!
                                             dsc.attrs['units'] = 'm'
+                return self._filename
 
         return HDFFileInterface(change_suffix(self.filename, '.hdf'), self)
 

@@ -279,6 +279,7 @@ def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
 class Conventions:
     """Tutorial methods for package conventions"""
 
+    @staticmethod
     def fetch_cf_standard_name_table():
         """download cf-standard-name-table"""
         from h5rdmtoolbox.conventions.identifier import CFStandardNameTable
@@ -291,3 +292,9 @@ class Conventions:
             known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4',
         )
         return CFStandardNameTable.from_xml(file_path)
+
+
+class CFX:
+    @staticmethod
+    def get_cfx_filename():
+        return testdir / f'CFD/AnsysCFX/channel_plus_cyl.cfx'

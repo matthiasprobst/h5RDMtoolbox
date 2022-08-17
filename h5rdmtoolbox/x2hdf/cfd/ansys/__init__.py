@@ -8,6 +8,7 @@ import dotenv
 from .utils import ansys_version_from_inst_dir
 from ...._user import user_config_dir
 
+
 logger = logging.getLogger('cfdtoolkit')
 
 PATHLIKE = Union[str, bytes, os.PathLike, pathlib.Path]
