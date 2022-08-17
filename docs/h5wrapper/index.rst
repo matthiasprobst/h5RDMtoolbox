@@ -54,6 +54,6 @@ All above enhances the FAIRness (FAIR=Findable+Accessible+Interoperable+re-usabl
     SpecialIO.ipynb
     Visualization.ipynb
     Extensions.ipynb
-    SpecializedAttributes.ipynb
+    SpecialAttributes.ipynb
     SpecializedWrappers.ipynb
 
