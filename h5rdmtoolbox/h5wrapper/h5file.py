@@ -126,7 +126,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     return ret
                 elif ret[0] == '[':
                     if ret[-1] == ']':
-                        return eval(ret)
+                        try:
+                            return eval(ret)
+                        except NameError:
+                            return ret
                     return ret
                 else:
                     return ret
