@@ -4,10 +4,12 @@ import shutil
 import tempfile
 from typing import Union
 
-from . import SESSIONS_DIR, PATHLIKE, AnsysInstallation
+from . import PATHLIKE, AnsysInstallation
 from . import logger
 from .cmd import call_cmd
 from .utils import change_suffix
+
+SESSIONS_DIR = pathlib.Path(__file__).parent.joinpath('session_files')
 
 
 def importccl(cfx_filename: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
