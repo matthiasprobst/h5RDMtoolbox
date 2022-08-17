@@ -93,7 +93,6 @@ class PIVviewParameterFile(PIVParameterInterface):
         return PIVviewParameterFile(pars[0])
 
 
-
 class PivViewParFile(configparser.ConfigParser):
     filename: Path = None
     header_line: str = ''
@@ -426,11 +425,11 @@ class PIVviewFlag:
 
     def __init__(self, value: int) -> None:
         self.value = value
-        self.flag_translation = {0: 'inactive',
-                                 1: 'active',
-                                 2: 'masked',
-                                 4: 'noresult',
-                                 8: 'disabed'}
+        self.flag_meaning = {0: 'inactive',
+                             1: 'active',
+                             2: 'masked',
+                             4: 'noresult',
+                             8: 'disabed'}
 
     def __str__(self) -> str:
 
@@ -572,6 +571,6 @@ class PIVViewNcFile(PIVFile):
                                 ds.attrs[attr_key] = attr_val
             # pivflags explanation:
             unique_flags = np.unique(main['piv_flags'][:])
-            main['piv_flags'].attrs['flag_translation'] = json.dumps(
+            main['piv_flags'].attrs['flag_meaning'] = json.dumps(
                 {str(PIVviewFlag(u)): int(u) for u in unique_flags})
         return hdf_filename
