@@ -178,8 +178,15 @@ class H5repo:
         if isinstance(key, int):
             return SingleResult(self.filenames[key], wrapperpy_class=self.wrapperpy_class)
         elif isinstance(key, slice):
+            _start = key.start
+            _stop = key.stop
+            _step = key.step
+            if key.stop is None:
+                _stop = len(self.filenames)
+            if key.step is None:
+                _step = 1
             return [SingleResult(self.filenames[key], wrapperpy_class=self.wrapperpy_class) for key in
-                    range(len(self.filenames))]
+                    range(_start, _stop, _step)]
 
     def __repr__(self):
         elapsed_time_ms = int(self.elapsed_time * 1000)
