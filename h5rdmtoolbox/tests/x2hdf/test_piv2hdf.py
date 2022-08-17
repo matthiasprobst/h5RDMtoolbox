@@ -36,7 +36,7 @@ class TestPIV2HDF(unittest.TestCase):
         snapshot_pivview = x2hdf.piv.PIVSnapshot(pivview_file, recording_time=0.)
         hdf_filename = snapshot_pivview.to_hdf()
         with h5tbx.H5PIV(hdf_filename) as h5piv:
-            self.assertEqual(h5piv.check(), 0)
+            self.assertEqual(h5piv.check(silent=False), 0)
 
     def test_multi_piv_equal_nt(self):
         plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()[0:2]

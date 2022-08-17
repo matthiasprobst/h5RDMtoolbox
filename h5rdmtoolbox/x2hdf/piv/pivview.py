@@ -477,6 +477,9 @@ class PIVViewNcFile(PIVFile):
                                                                           standardized_name_table=config[
                                                                               'standardized_name_table'])
         # nc_root_attr['filename'] = nc_root_attr.pop('long_name')
+        unique_flags = np.unique(nc_data['piv_flags'][:])
+        nc_variable_attr['piv_flags']['flag_meaning'] = json.dumps(
+            {str(PIVviewFlag(u)): int(u) for u in unique_flags})
         return nc_data, nc_root_attr, nc_variable_attr
 
     # @property
@@ -569,8 +572,8 @@ class PIVViewNcFile(PIVFile):
                         for attr_key, attr_val in nc_variable_attr[k].items():
                             if attr_key not in IGNORE_ATTRS:
                                 ds.attrs[attr_key] = attr_val
-            # pivflags explanation:
-            unique_flags = np.unique(main['piv_flags'][:])
-            main['piv_flags'].attrs['flag_meaning'] = json.dumps(
-                {str(PIVviewFlag(u)): int(u) for u in unique_flags})
+            # # pivflags explanation:
+            # unique_flags = np.unique(main['piv_flags'][:])
+            # main['piv_flags'].attrs['flag_meaning'] = json.dumps(
+            #     {str(PIVviewFlag(u)): int(u) for u in unique_flags})
         return hdf_filename

@@ -251,12 +251,12 @@ def write_H5PIV_layout_file():
         ds_v.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx)
         ds_v.attrs['standard_name'] = 'y_velocity'
 
-        ds_v = h5lay.create_dataset('piv_flags', shape=(1,))
-        ds_v.attrs['units'] = ''
-        ds_v.attrs['__alternative_source_group__'] = 're:plane[0-9]'
-        ds_v.attrs['__ndim__'] = (0, 1, 2)  # 4: (nz, nt, ny, nx)
-        ds_v.attrs['standard_name'] = 'piv_flags'
-        ds_v.attrs['flag_meanings'] = '__str_or_str-dict'
+        ds_flag = h5lay.create_dataset('piv_flags', shape=(1,))
+        ds_flag.attrs['units'] = ''
+        ds_flag.attrs['__alternative_source_group__'] = 're:plane[0-9]'
+        ds_flag.attrs['__ndim__'] = (2, 3, 4)  # 4: (nz, nt, ny, nx)
+        ds_flag.attrs['standard_name'] = 'piv_flag'
+        ds_flag.attrs['flag_meaning'] = '__str_or_str-dict'
 
         # piv parameters can be at root level or for each plane individually
         pivpargrp = h5lay.create_group('piv_parameters')
