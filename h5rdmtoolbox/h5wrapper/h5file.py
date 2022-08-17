@@ -31,7 +31,6 @@ from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_data_dir
 from .._version import __version__
-from ..conventions import datetime_str
 from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME, NAME_IDENTIFIER_ATTR_NAME, UNITS_ATTR_NAME
 # noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
@@ -1575,14 +1574,17 @@ class H5File(h5py.File, H5Group):
     def modification_time(self) -> datetime:
         """Return creation time from file"""
         return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
-                                      tz=timezone.utc).astimezone().strftime(datetime_str)
+                                      tz=timezone.utc).astimezone()
+        # return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
+        #                               tz=timezone.utc).astimezone().strftime(datetime_str)
 
     @property
     def creation_time(self) -> datetime:
         """Return creation time from file"""
-        self.hdf_filename.stat().st_ctime
         return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
-                                      tz=timezone.utc).astimezone().strftime(datetime_str)
+                                      tz=timezone.utc).astimezone()
+        # return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
+        #                               tz=timezone.utc).astimezone().strftime(datetime_str)
         # from dateutil import parser
         # return parser.parse(self.attrs.get('creation_time'))
 

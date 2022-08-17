@@ -91,4 +91,4 @@ def clean_temp_data():
                     for fd in failed_dirs:
                         f.writelines(f'{fd}\n')
             else:
-                failed_dirs_file.unlink()
+                failed_dirs_file.unlink(missing_ok=True)
