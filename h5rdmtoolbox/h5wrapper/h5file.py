@@ -1618,7 +1618,6 @@ class H5File(h5py.File, H5Group):
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
 
-        now_time_str = utils.generate_time_str(datetime.now(), conventions.datetime_str)
         if name is None:
             logger.debug("An empty H5File class is initialized")
             name = utils.touch_tmp_hdf5_file()

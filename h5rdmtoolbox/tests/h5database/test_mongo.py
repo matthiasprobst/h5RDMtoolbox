@@ -60,6 +60,7 @@ class TestH5Repo(unittest.TestCase):
         # plt.show()
 
     def test_insert_group(self):
+        self.collection.drop()
         with H5File() as h5:
             h5.attrs['rootatr'] = 1
             h5.attrs['str'] = 'test'
@@ -74,6 +75,18 @@ class TestH5Repo(unittest.TestCase):
             self.collection.drop()
             h5.mongo.insert(self.collection)
 
+            self.assertEqual(self.collection.count_documents({}))
+
             res = self.collection.find()
             for r in res:
                 print(r)
+
+    def test_insert_group2(self):
+        self.collection.drop()
+        import h5rdmtoolbox as h5tbx
+        from h5rdmtoolbox import tutorial
+
+        repo_filenames = tutorial.Database.generate_test_files()
+        for fname in repo_filenames:
+            with h5tbx.H5File(fname) as h5:
+                h5.mongo.insert(collection=self.collection, recursive=True)

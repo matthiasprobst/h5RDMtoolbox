@@ -4,7 +4,6 @@ import atexit
 import shutil
 
 from . import conventions
-from . import tutorial
 from ._user import user_data_dir, user_tmp_dir
 from ._version import __version__
 from .h5wrapper import H5File, H5Flow, H5PIV, open_wrapper
@@ -15,7 +14,7 @@ __author__ = 'Matthias Probst'
 # from .convention.time import datetime_str
 
 __all__ = ['__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV', 'open_wrapper',
-           'generate_temporary_filename', 'generate_temporary_directory', 'tutorial']
+           'generate_temporary_filename', 'generate_temporary_directory']
 
 
 def set_loglevel(level):

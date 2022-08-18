@@ -181,6 +181,8 @@ class H5repo:
             _start = key.start
             _stop = key.stop
             _step = key.step
+            if key.start is None:
+                _start = 0
             if key.stop is None:
                 _stop = len(self.filenames)
             if key.step is None:
