@@ -1,4 +1,5 @@
 import warnings
+from typing import Dict
 from typing import List
 
 import h5py
@@ -7,6 +8,25 @@ import pymongo.collection
 
 from ..h5wrapper.accessory import register_special_dataset
 from ..h5wrapper.h5file import H5Dataset, H5Group
+
+
+def make_dict_mongo_compatible(dictionary: Dict):
+    """Make the values of a dictionary compatible with mongo DB"""
+    for ak, av in dictionary.items():
+        if isinstance(av, (int, float, str)):
+            pass
+        elif isinstance(av, dict):
+            dictionary[ak] = make_dict_mongo_compatible(av)
+        else:
+            try:
+                if np.issubdtype(av, np.floating):
+                    dictionary[ak] = float(av)
+                else:
+                    dictionary[ak] = int(av)
+            except Exception as e:
+                warnings.warn(f'Could not determine/convert type. Try to continue with type {type(av)} of {av}. '
+                              f'Original error: {e}')
+    return dictionary
 
 
 def type2mongo(value: any) -> any:
@@ -33,16 +53,31 @@ class MongoGroupAccessor:
         self._h5grp = h5grp
 
     def insert(self, collection: pymongo.collection.Collection, recursive: bool = False,
-               include_dataset: bool = True, ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
+               include_dataset: bool = True,
+               flatten_tree: bool = True,
+               ignore_attrs: List[str] = None,
+               ignore_upper_attr_name: bool = False) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
+
+        if not flatten_tree:
+            tree = self._h5grp.get_tree(recursive=recursive,
+                                        ignore_attrs=ignore_attrs,
+                                        ignore_upper_attr_name=ignore_upper_attr_name)
+            collection.insert_one(make_dict_mongo_compatible(tree))
+            return collection
+
         if ignore_attrs is None:
             ignore_attrs = []
 
         grp = self._h5grp
         post = {"filename": str(grp.file.filename), "path": grp.name, 'hdfobj': 'group'}
+
         for ak, av in grp.attrs.items():
             if ak not in ignore_attrs:
-                if not ak.isupper():
+                if ignore_upper_attr_name:
+                    if not ak.isupper():
+                        post[ak] = type2mongo(av)
+                else:
                     post[ak] = type2mongo(av)
         collection.insert_one(post)
 
@@ -130,16 +165,17 @@ class MongoDatasetAccessor:
                         if ak == 'COORDINATES':
                             if isinstance(av, (np.ndarray, list)):
                                 for c in av:
-                                    post[c] = float(ds.parent[c][()])
+                                    post[c[1:]] = float(ds.parent[c][()])
                             else:
-                                post[av] = float(ds.parent[av][()])
+                                post[av[1:]] = float(ds.parent[av][()])
                         else:
                             if not ak.isupper():
                                 post[ak] = av
                 collection.insert_one(post)
             return collection
         else:
-            raise ValueError(f'Only accepts axis==0 in this developmet stage')
+            raise NotImplementedError('This method is under heavy construction. Currently, '
+                                      'only accepts axis==0 in this developmet stage.')
 
 # def write_to_db(filename, collection):
 #     """Insert a dataset into a pymongo collection"""

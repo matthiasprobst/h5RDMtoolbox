@@ -306,6 +306,19 @@ class TestH5File(unittest.TestCase):
             groups = h5.groups
             self.assertEqual(groups, [])
 
+    def test_tree_structure(self):
+        with H5File() as h5:
+            h5.attrs['one'] = 1
+            h5.attrs['two'] = 2
+            h5.create_dataset('rootds', shape=(2, 40, 3), units='', long_name='long name',
+                              standard_name='a_standard_name')
+            grp = h5.create_group('grp', attrs={'description': 'group description'})
+            grp.create_dataset('grpds', shape=(2, 40, 3), units='', long_name='long name',
+                              standard_name='a_standard_name')
+            tree = h5.get_tree_structure()
+            from pprint import pprint
+            pprint(tree)
+
 
 class TestH5Dataset(unittest.TestCase):
     """

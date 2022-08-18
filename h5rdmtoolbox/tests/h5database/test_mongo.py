@@ -6,6 +6,7 @@ import numpy as np
 import pymongo.collection
 from pymongo import MongoClient
 
+import h5rdmtoolbox as h5tbx
 import h5rdmtoolbox.h5database as h5db
 from h5rdmtoolbox import H5File
 # noinspection PyUnresolvedReferences
@@ -35,7 +36,28 @@ class TestH5Repo(unittest.TestCase):
 
         self.collection = collection
 
+    def test_tree_to_mongo(self):
+        from h5rdmtoolbox.h5database.mongo import make_dict_mongo_compatible
+        self.collection.drop()
+
+        usernames = ('Allen', 'Mike', 'Ellen', 'Alliot')
+        company = ('bikeCompany', 'shoeCompany', 'bikeCompany', 'shoeCompany')
+        filenames = []
+        for i, (username, company) in enumerate(zip(usernames, company)):
+            with h5tbx.H5File(h5tbx.generate_temporary_filename(), 'w') as h5:
+                filenames.append(h5.hdf_filename)
+                h5.attrs['username'] = username
+                h5.attrs['company'] = company
+                h5.attrs['meta'] = {'day': 'monday', 'iday': 0}
+                g = h5.create_group('idgroup')
+                g.attrs['id'] = i
+
+        with h5tbx.H5File(filenames[0]) as h5:
+            tree = h5.get_tree_structure(True)
+        self.collection.insert_one(make_dict_mongo_compatible(tree))
+
     def test_insert_dataset(self):
+        self.collection.drop()
         with H5File() as h5:
             h5.create_dataset('z', data=2, dtype=int,
                               units='', long_name='z_coordinate')
@@ -51,7 +73,8 @@ class TestH5Repo(unittest.TestCase):
 
         res = self.collection.find()
         for r in res:
-            for k in ('filename', 'path', 'shape', 'ndim', 'slice', '/index', '/z', 'long_name', 'units'):
+            print(r)
+            for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'z', 'long_name', 'units'):
                 self.assertIn(k, r.keys())
 
         # arr = read_many_from_database(res)
@@ -75,7 +98,7 @@ class TestH5Repo(unittest.TestCase):
             self.collection.drop()
             h5.mongo.insert(self.collection)
 
-            self.assertEqual(self.collection.count_documents({}))
+            self.assertEqual(self.collection.count_documents({}), 2)
 
             res = self.collection.find()
             for r in res:
