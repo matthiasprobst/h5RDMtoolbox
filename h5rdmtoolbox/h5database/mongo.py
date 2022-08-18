@@ -1,4 +1,6 @@
+import pathlib
 import warnings
+from datetime import datetime, timezone
 from typing import Dict
 from typing import List
 
@@ -8,6 +10,11 @@ import pymongo.collection
 
 from ..h5wrapper.accessory import register_special_dataset
 from ..h5wrapper.h5file import H5Dataset, H5Group
+
+
+def get_file_creation_time(filename: str) -> datetime:
+    """Return the creation time of the passed filename"""
+    return datetime.fromtimestamp(pathlib.Path(filename).stat().st_ctime, tz=timezone.utc)
 
 
 def make_dict_mongo_compatible(dictionary: Dict):
@@ -60,9 +67,11 @@ class MongoGroupAccessor:
         """Insert HDF group into collection"""
 
         if not flatten_tree:
-            tree = self._h5grp.get_tree(recursive=recursive,
-                                        ignore_attrs=ignore_attrs,
-                                        ignore_upper_attr_name=ignore_upper_attr_name)
+            tree = self._h5grp.get_tree_structure(recursive=recursive,
+                                                  ignore_attrs=ignore_attrs,
+                                                  ignore_upper_attr_name=ignore_upper_attr_name)
+            tree["file_creation_time"] = get_file_creation_time(self._h5grp.file.filename)
+            tree["document_last_modified"] = datetime.utcnow()  # last modified
             collection.insert_one(make_dict_mongo_compatible(tree))
             return collection
 
@@ -70,7 +79,10 @@ class MongoGroupAccessor:
             ignore_attrs = []
 
         grp = self._h5grp
-        post = {"filename": str(grp.file.filename), "path": grp.name, 'hdfobj': 'group'}
+        post = {"filename": str(grp.file.filename),
+                "file_creation_time": get_file_creation_time(self._h5grp.file.filename),
+                "document_last_modified": datetime.utcnow(),  # last modified
+                "path": grp.name, 'hdfobj': 'group'}
 
         for ak, av in grp.attrs.items():
             if ak not in ignore_attrs:
@@ -122,6 +134,8 @@ class MongoDatasetAccessor:
 
         if axis is None:
             post = {"filename": str(ds.file.filename), "path": ds.name,
+                    "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
+                    "document_last_modified": datetime.now(),  # last modified
                     "shape": ds.shape,
                     "ndim": ds.ndim,
                     'hdfobj': 'dataset'}
@@ -144,6 +158,8 @@ class MongoDatasetAccessor:
             for i in range(ds.shape[axis]):
 
                 post = {"filename": str(ds.file.filename), "path": ds.name[1:],  # name without /
+                        "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
+                        "document_last_modified": datetime.utcnow(),  # last modified
                         "shape": ds.shape,
                         "ndim": ds.ndim,
                         'hdfobj': 'dataset',
@@ -176,20 +192,3 @@ class MongoDatasetAccessor:
         else:
             raise NotImplementedError('This method is under heavy construction. Currently, '
                                       'only accepts axis==0 in this developmet stage.')
-
-# def write_to_db(filename, collection):
-#     """Insert a dataset into a pymongo collection"""
-#     img_meta_dicts = []
-#
-#     import h5py
-#     with h5py.File(filename, 'r') as h5:
-#         for iimg in range(ds.shape[0]):
-#             post = {"filename": str(filename),
-#                     "image_dataset_path": "/image",
-#                     "nparticles": int(h5['nparticles'][iimg]),
-#                     "slice": ((iimg, iimg+1, 1),
-#                               (0, None, 1),
-#                               (0, None, 1))
-#                    }
-#             collection.insert_one(post)
-#     # db.list_collection_names()

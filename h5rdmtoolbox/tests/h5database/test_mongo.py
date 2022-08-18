@@ -1,3 +1,4 @@
+import datetime
 import pathlib
 import unittest
 from typing import List
@@ -72,10 +73,15 @@ class TestH5Repo(unittest.TestCase):
             h5.images.mongo.insert(axis=0, collection=self.collection)
 
         res = self.collection.find()
+
+        now = datetime.datetime.utcnow()
+
         for r in res:
-            print(r)
             for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'z', 'long_name', 'units'):
                 self.assertIn(k, r.keys())
+
+            self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
+            self.assertTrue((now - r['document_last_modified']).total_seconds() < 0.1)
 
         # arr = read_many_from_database(res)
         # print(arr[0].plot())
@@ -99,10 +105,10 @@ class TestH5Repo(unittest.TestCase):
             h5.mongo.insert(self.collection)
 
             self.assertEqual(self.collection.count_documents({}), 2)
-
-            res = self.collection.find()
-            for r in res:
-                print(r)
+            now = datetime.datetime.utcnow()
+            for r in self.collection.find({}):
+                self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
+                self.assertTrue((now - r['document_last_modified']).total_seconds() < 0.1)
 
     def test_insert_group2(self):
         self.collection.drop()
@@ -113,3 +119,7 @@ class TestH5Repo(unittest.TestCase):
         for fname in repo_filenames:
             with h5tbx.H5File(fname) as h5:
                 h5.mongo.insert(collection=self.collection, recursive=True)
+        now = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
+        for r in self.collection.find({}):
+            self.assertTrue((now - r['file_creation_time']).total_seconds() < 20)
+            self.assertTrue((now - r['document_last_modified']).total_seconds() < 20)

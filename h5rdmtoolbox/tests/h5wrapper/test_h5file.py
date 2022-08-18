@@ -381,7 +381,7 @@ class TestH5Dataset(unittest.TestCase):
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      0.1.3\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
@@ -395,7 +395,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      0.1.3\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
