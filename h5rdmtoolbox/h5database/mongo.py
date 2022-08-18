@@ -28,8 +28,7 @@ class MongoGroupAccessor:
         self._h5grp = h5grp
 
     def insert(self, collection: pymongo.collection.Collection, recursive: bool = False,
-               include_dataset: bool = True, interpret_dict_attr: bool = True,
-               ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
+               include_dataset: bool = True, ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
         if ignore_attrs is None:
             ignore_attrs = []
@@ -39,11 +38,7 @@ class MongoGroupAccessor:
         for ak, av in grp.attrs.items():
             if ak not in ignore_attrs:
                 if not ak.isupper():
-                    if isinstance(av, dict):
-                        for _ak, _av in av.items():
-                            post[_ak] = _av
-                    else:
-                        post[ak] = type2mongo(av)
+                    post[ak] = type2mongo(av)
         collection.insert_one(post)
 
         if recursive:
