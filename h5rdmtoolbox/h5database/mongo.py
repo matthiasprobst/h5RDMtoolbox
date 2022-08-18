@@ -1,3 +1,4 @@
+import warnings
 from typing import List
 
 import h5py
@@ -13,10 +14,14 @@ def type2mongo(value: any) -> any:
     if isinstance(value, (int, float, str)):
         return value
 
-    if np.issubdtype(value, np.floating):
-        return float(value)
-    else:
-        return int(value)
+    try:
+        if np.issubdtype(value, np.floating):
+            return float(value)
+        else:
+            return int(value)
+    except RuntimeError as e:
+        warnings.warn(f'Could not determine/convert type. Try to continue with type {type(value)} '
+                      f'Original error: {e}')
     return value
 
 
@@ -114,6 +119,9 @@ class MongoDatasetAccessor:
                 if len(ds.dims[axis]) > 0:
                     for iscale in range(len(ds.dims[axis])):
                         dim = ds.dims[axis][iscale]
+                        if dim.ndim != 1:
+                            warnings.warn(f'Dimension scale dataset must be 1D, not {dim.ndim}D. Skipping')
+                            continue
                         scale = dim[i]
                         post[dim.name[1:]] = type2mongo(scale)
 
