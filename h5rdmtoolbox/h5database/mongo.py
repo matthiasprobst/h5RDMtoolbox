@@ -1,3 +1,4 @@
+import json
 from typing import List
 
 import h5py
@@ -27,7 +28,7 @@ class MongoGroupAccessor:
         self._h5grp = h5grp
 
     def insert(self, collection: pymongo.collection.Collection, recursive: bool = False,
-               include_dataset: bool = True,
+               include_dataset: bool = True, interpret_dict_attr: bool = True,
                ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
         if ignore_attrs is None:
@@ -38,7 +39,11 @@ class MongoGroupAccessor:
         for ak, av in grp.attrs.items():
             if ak not in ignore_attrs:
                 if not ak.isupper():
-                    post[ak] = type2mongo(av)
+                    if isinstance(av, dict):
+                        for _ak, _av in av.items():
+                            post[_ak] = _av
+                    else:
+                        post[ak] = type2mongo(av)
         collection.insert_one(post)
 
         if recursive:
