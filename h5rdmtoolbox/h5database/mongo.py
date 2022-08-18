@@ -1,4 +1,3 @@
-import json
 from typing import List
 
 import h5py
@@ -11,12 +10,13 @@ from ..h5wrapper.h5file import H5Dataset, H5Group
 
 def type2mongo(value: any) -> any:
     """Convert numpy dtypes to int/float/list/..."""
-    if isinstance(value, np.int_):
-        return int(value)
-    if isinstance(value, np.float_):
+    if isinstance(value, (int, float, str)):
+        return value
+
+    if np.issubdtype(value, np.floating):
         return float(value)
-    if isinstance(value, np.ndarray):
-        return list(value)
+    else:
+        return int(value)
     return value
 
 
@@ -101,9 +101,9 @@ class MongoDatasetAccessor:
             return collection
 
         if axis == 0:
-            for i in range(ds.shape[0]):
+            for i in range(ds.shape[axis]):
 
-                post = {"filename": str(ds.file.filename), "path": ds.name,
+                post = {"filename": str(ds.file.filename), "path": ds.name[1:],  # name without /
                         "shape": ds.shape,
                         "ndim": ds.ndim,
                         'hdfobj': 'dataset',
@@ -115,10 +115,7 @@ class MongoDatasetAccessor:
                     for iscale in range(len(ds.dims[axis])):
                         dim = ds.dims[axis][iscale]
                         scale = dim[i]
-                        if isinstance(scale, int):
-                            post[dim.name] = int(scale)
-                        else:
-                            post[dim.name] = float(scale)
+                        post[dim.name[1:]] = type2mongo(scale)
 
                 for ak, av in ds.attrs.items():
                     if ak not in ignore_attrs:
@@ -132,7 +129,7 @@ class MongoDatasetAccessor:
                             if not ak.isupper():
                                 post[ak] = av
                 collection.insert_one(post)
-                return collection
+            return collection
         else:
             raise ValueError(f'Only accepts axis==0 in this developmet stage')
 
