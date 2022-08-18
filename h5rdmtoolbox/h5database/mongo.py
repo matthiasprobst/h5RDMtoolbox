@@ -11,7 +11,7 @@ from ..h5wrapper.h5file import H5Dataset, H5Group
 
 def type2mongo(value: any) -> any:
     """Convert numpy dtypes to int/float/list/..."""
-    if isinstance(value, (int, float, str)):
+    if isinstance(value, (int, float, str, dict)):
         return value
 
     try:
@@ -19,8 +19,8 @@ def type2mongo(value: any) -> any:
             return float(value)
         else:
             return int(value)
-    except RuntimeError as e:
-        warnings.warn(f'Could not determine/convert type. Try to continue with type {type(value)} '
+    except Exception as e:
+        warnings.warn(f'Could not determine/convert type. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')
     return value
 
