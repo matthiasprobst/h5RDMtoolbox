@@ -414,7 +414,7 @@ class H5Dataset(h5py.Dataset):
 
                 # remember the first dimension name for all axis:
                 dims_names = [Path(d[0].name).stem if len(
-                    d) > 0 else 'None' for d in self.dims]
+                    d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
 
                 coords = {}
                 used_dims = []
@@ -461,7 +461,6 @@ class H5Dataset(h5py.Dataset):
                         coords.update({_name: xr.DataArray(name=_name, dims=(),
                                                            data=_data,
                                                            attrs=pop_hdf_attributes(self.parent[c].attrs))})
-
                 return xr.DataArray(name=Path(self.name).stem, data=arr, dims=used_dims,
                                     coords=coords, attrs=attrs)
             return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
@@ -685,6 +684,28 @@ class H5Group(h5py.Group):
 
     def __str__(self):
         return self.sdump(ret=True)
+
+    def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None,
+                     ignore_upper_attr_name: bool = False):
+        """Return the tree (attributes, names, shapes) of the group and subgroups"""
+        if ignore_attrs is None:
+            ignore_attrs = []
+        tree = {ak: av for ak, av in self.attrs.items()}
+        for k, v in self.items():
+            if isinstance(v, h5py.Dataset):
+                ds_dict = {'shape': v.shape}
+                for ak, av in v.attrs.items():
+                    if ak not in ignore_attrs:
+                        if ignore_upper_attr_name:
+                            if not ak.isupper():
+                                ds_dict[ak] = av
+                        else:
+                            ds_dict[ak] = av
+                tree[k] = ds_dict
+            else:
+                if recursive:
+                    tree[k] = v.get_tree_structure(recursive)
+        return tree
 
     def create_group(self, name, long_name=None, overwrite=None,
                      attrs=None, track_order=None):
@@ -1619,7 +1640,6 @@ class H5File(h5py.File, H5Group):
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
 
-        now_time_str = utils.generate_time_str(datetime.now(), conventions.datetime_str)
         if name is None:
             logger.debug("An empty H5File class is initialized")
             name = utils.touch_tmp_hdf5_file()
