@@ -2,8 +2,6 @@ import h5py
 import numpy as np
 import xarray as xr
 
-__version__ = '0.1.0'
-
 
 @xr.register_dataarray_accessor("hdf")
 class HDFArrayAccessor:
