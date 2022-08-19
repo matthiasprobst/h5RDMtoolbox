@@ -10,11 +10,11 @@ from h5rdmtoolbox.h5database import h5repo
 from h5rdmtoolbox.h5database.filter_classes import *
 from h5rdmtoolbox.h5database.filter_classes import Entry
 from h5rdmtoolbox.h5database.h5repo import H5repo
-from h5rdmtoolbox.h5database.tutorial import build_test_repo
 from h5rdmtoolbox.h5wrapper import H5File
 from h5rdmtoolbox.h5wrapper import set_loglevel
 from h5rdmtoolbox.utils import generate_temporary_directory
 from h5rdmtoolbox.utils import generate_temporary_filename
+from h5rdmtoolbox import tutorial
 
 h5database.use(Path(__file__).parent.joinpath('test_h5database.yaml'))
 
@@ -39,7 +39,7 @@ class TestH5Repo(unittest.TestCase):
         if datapath.is_dir():
             rmtree(h5database.config['datapath'])
         self.n_test_files = 100
-        build_test_repo(datapath, self.n_test_files)
+        tutorial.Database.build_test_repo(datapath, self.n_test_files)
         repo_filename = h5repo.build_repo_toc(datapath)
         self.repo_filename = repo_filename
 

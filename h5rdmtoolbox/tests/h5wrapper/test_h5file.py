@@ -306,6 +306,19 @@ class TestH5File(unittest.TestCase):
             groups = h5.groups
             self.assertEqual(groups, [])
 
+    def test_tree_structure(self):
+        with H5File() as h5:
+            h5.attrs['one'] = 1
+            h5.attrs['two'] = 2
+            h5.create_dataset('rootds', shape=(2, 40, 3), units='', long_name='long name',
+                              standard_name='a_standard_name')
+            grp = h5.create_group('grp', attrs={'description': 'group description'})
+            grp.create_dataset('grpds', shape=(2, 40, 3), units='', long_name='long name',
+                              standard_name='a_standard_name')
+            tree = h5.get_tree_structure()
+            from pprint import pprint
+            pprint(tree)
+
 
 class TestH5Dataset(unittest.TestCase):
     """
@@ -368,7 +381,7 @@ class TestH5Dataset(unittest.TestCase):
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      0.1.3\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
@@ -382,7 +395,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.0\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      0.1.3\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m

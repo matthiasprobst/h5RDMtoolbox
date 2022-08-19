@@ -16,7 +16,6 @@ from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config, _user
 from ..conventions import layout as layoutconvention
 from ..conventions.custom import PIVStandardNameTable
-from ..x2hdf import piv
 
 logger = logging.getLogger(__package__)
 
@@ -1005,6 +1004,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
 
     def to_vtk(self, vtk_filename: Path = None) -> Path:
         """generates a vtk file with time-averaged data"""
+        from ..x2hdf.piv import vtk_utils
         if 'timeAverages' not in self:
             raise ValueError('The group "timeAverages" does not exist. Cannot write VTK file!')
         filename = Path(self.filename)
@@ -1016,8 +1016,8 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
                 _vtk_filename = Path.joinpath(vtk_filename.parent, vtk_filename.stem)
             else:
                 _vtk_filename = vtk_filename
-        data = piv.vtk_utils.get_time_average_data_from_piv_case(self.filename)
-        _, vtk_path = piv.vtk_utils.result_3D_to_vtk(
+        data = vtk_utils.get_time_average_data_from_piv_case(self.filename)
+        _, vtk_path = vtk_utils.result_3D_to_vtk(
             data, target_filename=_vtk_filename)
         return vtk_path
 
