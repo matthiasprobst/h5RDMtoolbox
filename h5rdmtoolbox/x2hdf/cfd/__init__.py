@@ -4,7 +4,20 @@ import pathlib
 from .ansys.cfx import CFXCase
 
 
-def cfx2hdf(cfx_filename: pathlib.Path):
+def cfx2hdf(cfx_filename: pathlib.Path) -> pathlib.Path:
+    """Convert a CFX case into a HDF. This includes only meta data, monitor and user point data
+    and no solution field data!
+
+    Parameters
+    ----------
+    cfx_filename: pathlib.Path
+        The filename of the CFX case
+
+    Returns
+    -------
+    cfx_filename: pathlib.Path
+        The generated HDF5 filename of the CFX case
+    """
     cfx_case = CFXCase(cfx_filename)
     return cfx_case.hdf.generate(True)
 
