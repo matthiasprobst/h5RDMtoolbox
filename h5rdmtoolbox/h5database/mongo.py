@@ -38,7 +38,7 @@ def make_dict_mongo_compatible(dictionary: Dict):
 
 def type2mongo(value: any) -> any:
     """Convert numpy dtypes to int/float/list/..."""
-    if isinstance(value, (int, float, str, dict)):
+    if isinstance(value, (int, float, str, dict, datetime)):
         return value
 
     try:
@@ -71,7 +71,7 @@ class MongoGroupAccessor:
                                                   ignore_attrs=ignore_attrs,
                                                   ignore_upper_attr_name=ignore_upper_attr_name)
             tree["file_creation_time"] = get_file_creation_time(self._h5grp.file.filename)
-            tree["document_last_modified"] = datetime.utcnow()  # last modified
+            # tree["document_last_modified"] = datetime.utcnow()  # last modified
             collection.insert_one(make_dict_mongo_compatible(tree))
             return collection
 
@@ -81,7 +81,7 @@ class MongoGroupAccessor:
         grp = self._h5grp
         post = {"filename": str(grp.file.filename),
                 "file_creation_time": get_file_creation_time(self._h5grp.file.filename),
-                "document_last_modified": datetime.utcnow(),  # last modified
+                # "document_last_modified": datetime.utcnow(),  # last modified
                 "path": grp.name, 'hdfobj': 'group'}
 
         for ak, av in grp.attrs.items():
@@ -135,7 +135,7 @@ class MongoDatasetAccessor:
         if axis is None:
             post = {"filename": str(ds.file.filename), "path": ds.name,
                     "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
-                    "document_last_modified": datetime.now(),  # last modified
+                    # "document_last_modified": datetime.now(),  # last modified
                     "shape": ds.shape,
                     "ndim": ds.ndim,
                     'hdfobj': 'dataset'}
@@ -159,7 +159,7 @@ class MongoDatasetAccessor:
 
                 post = {"filename": str(ds.file.filename), "path": ds.name[1:],  # name without /
                         "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
-                        "document_last_modified": datetime.utcnow(),  # last modified
+                        # "document_last_modified": datetime.utcnow(),  # last modified
                         "shape": ds.shape,
                         "ndim": ds.ndim,
                         'hdfobj': 'dataset',
