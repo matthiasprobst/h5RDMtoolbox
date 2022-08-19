@@ -32,6 +32,7 @@ class AnsysInstallation:
     cfx5cmds: pathlib.Path = None
     cfx5mondata: pathlib.Path = None
     cfx5solve: pathlib.Path = None
+    inst_dir: pathlib.Path = None
 
     def __post_init__(self):
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
@@ -42,6 +43,7 @@ class AnsysInstallation:
         self.inst_dir = self.installation_directory
 
     def set_installation_directory(self, inst_dir):
+        """Set the installation directory and at the same time the executables."""
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         inst_dir = pathlib.Path(inst_dir)
         if not inst_dir.is_dir():
@@ -49,7 +51,7 @@ class AnsysInstallation:
         if not inst_dir.exists():
             raise FileNotFoundError(inst_dir)
         self.inst_dir = inst_dir
-        for name in ('cfxpre', 'cfx5cmds', 'cfx5mondata', 'cfx5solve'):
+        for name in ('cfx5pre', 'cfx5cmds', 'cfx5mondata', 'cfx5solve'):
             self.set(name, self.inst_dir / name)
 
     @property
@@ -68,24 +70,21 @@ class AnsysInstallation:
 
     @installation_directory.setter
     def installation_directory(self, inst_dir):
-        dotenv.load_dotenv(CFX_DOTENV_FILENAME)
-        inst_dir = pathlib.Path(inst_dir)
-        if not inst_dir.is_dir():
-            raise NotADirectoryError()
-        if not inst_dir.exists():
-            raise FileNotFoundError(inst_dir)
-        self.inst_dir = inst_dir
-        for name in ('cfx5pre', 'cfx5cmds', 'cfx5mondata', 'cfx5solve'):
-            self.set(name, inst_dir / name)
+        self.set_installation_directory(inst_dir)
 
     def set(self, name_exe, exe_path):
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         exe_path = pathlib.Path(exe_path)
+        if os.name == 'nt':
+            if exe_path.suffix != '.exe':
+                exe_path = pathlib.Path(str(exe_path) + '.exe')
+
         if not exe_path.exists():
             raise FileNotFoundError(exe_path)
         if not CFX_DOTENV_FILENAME.exists():
             with open(CFX_DOTENV_FILENAME, 'w'):
                 pass
+
         dotenv.set_key(CFX_DOTENV_FILENAME, name_exe, str(exe_path))
 
     @staticmethod
@@ -101,26 +100,3 @@ class AnsysInstallation:
     def version(self):
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         return ansys_version_from_inst_dir(self.get('cfx5pre'))
-
-# if CFX_DOTENV_FILENAME.exists():
-#     from dotenv import load_dotenv
-#
-#     load_dotenv(CFX_DOTENV_FILENAME)
-#
-# _cfx5pre = os.environ.get("cfx5pre")
-# if _cfx5pre is None:
-#     raise CFXExeNotFound(f'Exe cfx5pre not found. Not registered as environment variable. You may register '
-#                          'a variable permanently in your bashrc or here create a dotenv-file here: '
-#                          f'{CFX_DOTENV_FILENAME}')
-# _cfx5cmds = os.environ.get("cfx5cmds")
-# if _cfx5cmds is None:
-#     raise FileNotFoundError(f'cfx5cmds not found. Not registered as environment variable')
-# _cfx5mondata = os.environ.get("cfx5mondata")
-# if _cfx5mondata is None:
-#     raise FileNotFoundError(f'cfx5mondata not found. Not registered as environment variable')
-# CFX5PRE = pathlib.Path(_cfx5pre)
-# CFX5CMDS = pathlib.Path(_cfx5cmds)
-# CFX5MONDATA = pathlib.Path(_cfx5mondata)
-# ANSYSVERSION = ansys_version_from_inst_dir(CFX5PRE)
-#
-# dotenv.load_dotenv(CFX_DOTENV_FILENAME)
