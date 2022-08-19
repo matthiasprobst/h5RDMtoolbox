@@ -34,7 +34,7 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="H5Database" href="example.html" />
+    <link rel="next" title="Serverless HDF Database" href="Serverless.html" />
     <link rel="prev" title="Introduction" href="../x2hdf/piv2hdf.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -227,8 +227,13 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="example.html">
-     H5Database
+    <a class="reference internal" href="Serverless.html">
+     Serverless HDF Database
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="h5mongo.html">
+     H5mongo
     </a>
    </li>
   </ul>
@@ -432,10 +437,17 @@ title="Print to PDF"
                 
   <section id="h5database">
 <h1>h5database<a class="headerlink" href="#h5database" title="Permalink to this headline">#</a></h1>
-<p>Introduction into h5database</p>
+<p>Introduction into h5database.</p>
+<p>Three concepts are provided in the scope of this sub-package:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">H5repo</span></code>: Using external HDF5 links. A HDF5 file serves as a “table of content” to link to files within a classic file system</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">H5Files</span></code>: Allows to open multiple files at the same time and brwose through them</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">h5mongo</span></code>: Using pymongo (mongodb) to mirrow meta data of hdf files</p></li>
+</ul>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="example.html">H5Database</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Serverless.html">Serverless HDF Database</a></li>
+<li class="toctree-l1"><a class="reference internal" href="h5mongo.html">H5mongo</a></li>
 </ul>
 </div>
 </section>
@@ -455,10 +467,10 @@ title="Print to PDF"
             <p class="prev-next-title">Introduction</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="example.html" title="next page">
+    <a class='right-next' id="next-link" href="Serverless.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">H5Database</p>
+        <p class="prev-next-title">Serverless HDF Database</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>
