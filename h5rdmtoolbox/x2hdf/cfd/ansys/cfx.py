@@ -355,14 +355,21 @@ class CFXCase(CFXFile):
                                     meta_dict = process_monitor_string(k)
 
                                     if meta_dict["group"] in grp:
-                                        name = f'{meta_dict["group"]}_{meta_dict["name"]}'
-                                    else:
-                                        name = f'{meta_dict["group"]}/{meta_dict["name"]}'
+                                        if meta_dict["name"] in grp[meta_dict["group"]]:
+                                            raise NameError(f'Name "{meta_dict["name"]}" already exists in "{grp[meta_dict["group"]].name}"')
+                                    #     name = f'{meta_dict["group"]}_{meta_dict["name"]}'
+                                    # else:
+                                    name = f'{meta_dict["group"]}/{meta_dict["name"]}'
                                     try:
                                         ds = grp.create_dataset(name=name, data=v)
-                                    except RuntimeError as e:
-                                        raise RuntimeError(f'Could not create {name} after processing {k} '
-                                                           f'due to: "{e}"')
+                                    except Exception as e:
+                                        # workaround when don't know what to do...:
+                                        old_name = name
+                                        _name_split = old_name.rsplit('/', 1)
+                                        name = f'{_name_split[0]}_{_name_split[1]}'
+                                        ds = grp.create_dataset(name=name, data=v)
+                                        # raise Exception(f'Could not create {name} after processing {k} '
+                                        #                    f'due to: "{e}"')
 
                                     try:
                                         ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
@@ -377,7 +384,17 @@ class CFXCase(CFXFile):
                                     if meta_dict['coords']:
                                         ds.attrs['COORDINATES'] = list(meta_dict['coords'].keys())
                                         for kc, vc in meta_dict['coords'].items():
-                                            dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
+                                            if kc in grp[meta_dict["group"]]:
+                                                if vc == grp[meta_dict["group"]][kc][()]:
+                                                    pass
+                                                else:
+                                                    # run into error:
+                                                    try:
+                                                        dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
+                                                    except ValueError:
+                                                        raise ValueError(f'Cannot create dataset {kc} in group {grp[meta_dict["group"]]}')
+                                            else:
+                                                dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
 
                                             try:
                                                 ds.attrs['standard_name'] = cfx_to_standard_name[kc]
