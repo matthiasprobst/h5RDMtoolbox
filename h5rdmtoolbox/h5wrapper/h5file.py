@@ -696,14 +696,15 @@ class H5Group(h5py.Group):
         tree = {ak: av for ak, av in self.attrs.items()}
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
-                ds_dict = {'shape': v.shape}
+                ds_dict = {'shape': v.shape, 'ndim': v.ndim}
                 for ak, av in v.attrs.items():
-                    if ak not in ignore_attrs:
-                        if ignore_upper_attr_name:
-                            if not ak.isupper():
+                    if ak not in H5_DIM_ATTRS:
+                        if ak not in ignore_attrs:
+                            if ignore_upper_attr_name:
+                                if not ak.isupper():
+                                    ds_dict[ak] = av
+                            else:
                                 ds_dict[ak] = av
-                        else:
-                            ds_dict[ak] = av
                 tree[k] = ds_dict
             else:
                 if recursive:

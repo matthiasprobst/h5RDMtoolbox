@@ -8,7 +8,6 @@ from h5py import File
 
 from . import _user
 from ._version import __version__
-from .conventions import datetime_str
 
 
 def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):

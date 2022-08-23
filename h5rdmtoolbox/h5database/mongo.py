@@ -7,9 +7,12 @@ from typing import List
 import h5py
 import numpy as np
 import pymongo.collection
+from pymongo.errors import InvalidDocument
 
 from ..h5wrapper.accessory import register_special_dataset
 from ..h5wrapper.h5file import H5Dataset, H5Group
+
+H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
 
 def get_file_creation_time(filename: str) -> datetime:
@@ -20,10 +23,12 @@ def get_file_creation_time(filename: str) -> datetime:
 def make_dict_mongo_compatible(dictionary: Dict):
     """Make the values of a dictionary compatible with mongo DB"""
     for ak, av in dictionary.items():
-        if isinstance(av, (int, float, str)):
+        if isinstance(av, (int, float, str, list, tuple, datetime)):
             pass
         elif isinstance(av, dict):
             dictionary[ak] = make_dict_mongo_compatible(av)
+        elif av is None:
+            dictionary[ak] = None
         else:
             try:
                 if np.issubdtype(av, np.floating):
@@ -31,23 +36,25 @@ def make_dict_mongo_compatible(dictionary: Dict):
                 else:
                     dictionary[ak] = int(av)
             except Exception as e:
-                warnings.warn(f'Could not determine/convert type. Try to continue with type {type(av)} of {av}. '
-                              f'Original error: {e}')
+                warnings.warn(
+                    f'Could not determine/convert type of {ak}. Try to continue with type {type(av)} of {av}. '
+                    f'Original error: {e}')
     return dictionary
 
 
 def type2mongo(value: any) -> any:
     """Convert numpy dtypes to int/float/list/..."""
-    if isinstance(value, (int, float, str, dict, datetime)):
+    if isinstance(value, (int, float, str, dict, list, tuple, datetime)):
         return value
-
+    elif value is None:
+        return None
     try:
         if np.issubdtype(value, np.floating):
             return float(value)
         else:
             return int(value)
     except Exception as e:
-        warnings.warn(f'Could not determine/convert type. Try to continue with type {type(value)} of {value}. '
+        warnings.warn(f'Could not determine/convert {value}. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')
     return value
 
@@ -63,7 +70,7 @@ class MongoGroupAccessor:
                include_dataset: bool = True,
                flatten_tree: bool = True,
                ignore_attrs: List[str] = None,
-               ignore_upper_attr_name: bool = False) -> pymongo.collection.Collection:
+               ignore_upper_attr_name: bool = True) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
 
         if not flatten_tree:
@@ -71,8 +78,12 @@ class MongoGroupAccessor:
                                                   ignore_attrs=ignore_attrs,
                                                   ignore_upper_attr_name=ignore_upper_attr_name)
             tree["file_creation_time"] = get_file_creation_time(self._h5grp.file.filename)
-            # tree["document_last_modified"] = datetime.utcnow()  # last modified
-            collection.insert_one(make_dict_mongo_compatible(tree))
+            tree["filename"] = self._h5grp.file.filename
+            try:
+                collection.insert_one(make_dict_mongo_compatible(tree))
+            except InvalidDocument as e:
+                raise InvalidDocument(
+                    f'Could not insert dict: \n{make_dict_mongo_compatible(tree)}\nOriginal error: {e}')
             return collection
 
         if ignore_attrs is None:
@@ -81,16 +92,16 @@ class MongoGroupAccessor:
         grp = self._h5grp
         post = {"filename": str(grp.file.filename),
                 "file_creation_time": get_file_creation_time(self._h5grp.file.filename),
-                # "document_last_modified": datetime.utcnow(),  # last modified
                 "path": grp.name, 'hdfobj': 'group'}
 
         for ak, av in grp.attrs.items():
-            if ak not in ignore_attrs:
-                if ignore_upper_attr_name:
-                    if not ak.isupper():
+            if ak not in H5_DIM_ATTRS:
+                if ak not in ignore_attrs:
+                    if ignore_upper_attr_name:
+                        if not ak.isupper():
+                            post[ak] = type2mongo(av)
+                    else:
                         post[ak] = type2mongo(av)
-                else:
-                    post[ak] = type2mongo(av)
         collection.insert_one(post)
 
         if recursive:
@@ -141,16 +152,17 @@ class MongoDatasetAccessor:
                     'hdfobj': 'dataset'}
 
             for ak, av in ds.attrs.items():
-                if ak not in ignore_attrs:
-                    if ak == 'COORDINATES':
-                        if isinstance(av, (np.ndarray, list)):
-                            for c in av:
-                                post[c] = float(ds.parent[c][()])
+                if ak not in H5_DIM_ATTRS:
+                    if ak not in ignore_attrs:
+                        if ak == 'COORDINATES':
+                            if isinstance(av, (np.ndarray, list)):
+                                for c in av:
+                                    post[c] = float(ds.parent[c][()])
+                            else:
+                                post[av] = float(ds.parent[av][()])
                         else:
-                            post[av] = float(ds.parent[av][()])
-                    else:
-                        if not ak.isupper():
-                            post[ak] = av
+                            if not ak.isupper():
+                                post[ak] = av
             collection.insert_one(post)
             return collection
 
@@ -159,7 +171,6 @@ class MongoDatasetAccessor:
 
                 post = {"filename": str(ds.file.filename), "path": ds.name[1:],  # name without /
                         "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
-                        # "document_last_modified": datetime.utcnow(),  # last modified
                         "shape": ds.shape,
                         "ndim": ds.ndim,
                         'hdfobj': 'dataset',
@@ -177,16 +188,17 @@ class MongoDatasetAccessor:
                         post[dim.name[1:]] = type2mongo(scale)
 
                 for ak, av in ds.attrs.items():
-                    if ak not in ignore_attrs:
-                        if ak == 'COORDINATES':
-                            if isinstance(av, (np.ndarray, list)):
-                                for c in av:
-                                    post[c[1:]] = float(ds.parent[c][()])
+                    if ak not in H5_DIM_ATTRS:
+                        if ak not in ignore_attrs:
+                            if ak == 'COORDINATES':
+                                if isinstance(av, (np.ndarray, list)):
+                                    for c in av:
+                                        post[c[1:]] = float(ds.parent[c][()])
+                                else:
+                                    post[av[1:]] = float(ds.parent[av][()])
                             else:
-                                post[av[1:]] = float(ds.parent[av][()])
-                        else:
-                            if not ak.isupper():
-                                post[ak] = av
+                                if not ak.isupper():
+                                    post[ak] = av
                 collection.insert_one(post)
             return collection
         else:
