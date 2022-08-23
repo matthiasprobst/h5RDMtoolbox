@@ -2,7 +2,6 @@ import pathlib
 from datetime import datetime
 from re import sub as re_sub
 
-from cv2 import imread as cv2_imread
 from dateutil.tz import tzlocal
 from h5py import File
 
@@ -137,5 +136,5 @@ def load_img(img_filepath: pathlib.Path):
             ImportError('Cannot read the b16 image because pco_tools is not installed. Either install it '
                         'separately or install the repository with pip install h5RDMtolbox [b16]')
         return pco.load(str(img_filepath))
-
+    from cv2 import imread as cv2_imread
     return cv2_imread(str(img_filepath), -1)

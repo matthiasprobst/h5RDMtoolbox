@@ -51,12 +51,14 @@ class TestH5Repo(unittest.TestCase):
                 h5.attrs['username'] = username
                 h5.attrs['company'] = company
                 h5.attrs['meta'] = {'day': 'monday', 'iday': 0}
-                h5.create_dataset('ds_at_root', data=np.random.random((2, 10, 8)))
+                h5.create_dataset('ds_at_root', data=np.random.random((2, 10, 8)), units='',
+                                  long_name='ds_at_root')
                 h5['ds_at_root'].make_scale()
                 g = h5.create_group('idgroup')
-                g.create_dataset('ds_at_subgroup', data=np.random.random((2, 10, 13)))
-                g.dims[0].attach_scale(h5['ds_at_root'])
-                g.attrs['id'] = i
+                ds = g.create_dataset('ds_at_subgroup', data=np.random.random((2, 10, 13)), units='',
+                                 long_name='ds_at_subgroup')
+                ds.dims[0].attach_scale(h5['ds_at_root'])
+                ds.attrs['id'] = i
 
         with h5tbx.H5File(filenames[0]) as h5:
             tree = h5.get_tree_structure(True)
@@ -82,8 +84,9 @@ class TestH5Repo(unittest.TestCase):
         now = datetime.datetime.utcnow()
 
         for r in res:
-            for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'z', 'long_name', 'units'):
-                self.assertIn(k, r.keys())
+            if r['name'] == 'images':
+                for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'z', 'long_name', 'units'):
+                    self.assertIn(k, r.keys())
 
             self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
 

@@ -688,8 +688,7 @@ class H5Group(h5py.Group):
     def __str__(self):
         return self.sdump(ret=True)
 
-    def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None,
-                     ignore_upper_attr_name: bool = False):
+    def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
             ignore_attrs = []
@@ -700,11 +699,7 @@ class H5Group(h5py.Group):
                 for ak, av in v.attrs.items():
                     if ak not in H5_DIM_ATTRS:
                         if ak not in ignore_attrs:
-                            if ignore_upper_attr_name:
-                                if not ak.isupper():
-                                    ds_dict[ak] = av
-                            else:
-                                ds_dict[ak] = av
+                            ds_dict[ak] = av
                 tree[k] = ds_dict
             else:
                 if recursive:

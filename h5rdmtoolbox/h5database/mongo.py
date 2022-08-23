@@ -1,3 +1,4 @@
+import os
 import pathlib
 import warnings
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ from pymongo.errors import InvalidDocument
 from ..h5wrapper.accessory import register_special_dataset
 from ..h5wrapper.h5file import H5Dataset, H5Group
 
-H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
+H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST')
 
 
 def get_file_creation_time(filename: str) -> datetime:
@@ -69,14 +70,12 @@ class MongoGroupAccessor:
     def insert(self, collection: pymongo.collection.Collection, recursive: bool = False,
                include_dataset: bool = True,
                flatten_tree: bool = True,
-               ignore_attrs: List[str] = None,
-               ignore_upper_attr_name: bool = True) -> pymongo.collection.Collection:
+               ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
 
         if not flatten_tree:
             tree = self._h5grp.get_tree_structure(recursive=recursive,
-                                                  ignore_attrs=ignore_attrs,
-                                                  ignore_upper_attr_name=ignore_upper_attr_name)
+                                                  ignore_attrs=ignore_attrs)
             tree["file_creation_time"] = get_file_creation_time(self._h5grp.file.filename)
             tree["filename"] = self._h5grp.file.filename
             try:
@@ -92,16 +91,13 @@ class MongoGroupAccessor:
         grp = self._h5grp
         post = {"filename": str(grp.file.filename),
                 "file_creation_time": get_file_creation_time(self._h5grp.file.filename),
+                "name": os.path.basename(grp.name),
                 "path": grp.name, 'hdfobj': 'group'}
 
         for ak, av in grp.attrs.items():
             if ak not in H5_DIM_ATTRS:
                 if ak not in ignore_attrs:
-                    if ignore_upper_attr_name:
-                        if not ak.isupper():
-                            post[ak] = type2mongo(av)
-                    else:
-                        post[ak] = type2mongo(av)
+                    post[ak] = type2mongo(av)
         collection.insert_one(post)
 
         if recursive:
@@ -144,7 +140,9 @@ class MongoDatasetAccessor:
         ds = self._h5ds
 
         if axis is None:
-            post = {"filename": str(ds.file.filename), "path": ds.name,
+            post = {"filename": str(ds.file.filename),
+                    "path": ds.name,
+                    "name": os.path.basename(ds.name),
                     "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
                     # "document_last_modified": datetime.now(),  # last modified
                     "shape": ds.shape,
@@ -161,15 +159,15 @@ class MongoDatasetAccessor:
                             else:
                                 post[av] = float(ds.parent[av][()])
                         else:
-                            if not ak.isupper():
-                                post[ak] = av
+                            post[ak] = av
             collection.insert_one(post)
             return collection
 
         if axis == 0:
             for i in range(ds.shape[axis]):
 
-                post = {"filename": str(ds.file.filename), "path": ds.name[1:],  # name without /
+                post = {"filename": str(ds.file.filename), "path": ds.name,  # name without /
+                        "name": os.path.basename(ds.name),
                         "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
                         "shape": ds.shape,
                         "ndim": ds.ndim,
@@ -197,8 +195,7 @@ class MongoDatasetAccessor:
                                 else:
                                     post[av[1:]] = float(ds.parent[av][()])
                             else:
-                                if not ak.isupper():
-                                    post[ak] = av
+                                post[ak] = av
                 collection.insert_one(post)
             return collection
         else:
