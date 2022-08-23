@@ -241,6 +241,11 @@
   </ul>
  </li>
  <li class="toctree-l1">
+  <a class="reference internal" href="../howto/howto.html">
+   HowTo
+  </a>
+ </li>
+ <li class="toctree-l1">
   <a class="reference internal" href="../glossary/index.html">
    Glossary
   </a>
@@ -762,7 +767,7 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-<p>The already implemented wrapper classes like e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code> or <code class="docutils literal notranslate"><span class="pre">H5Flow</span></code> are already associated with layouts and we can called it directly from <code class="docutils literal notranslate"><span class="pre">H5File</span></code> as it is a property of the class:</p>
+<p>The already implemented wrapper classes like e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code> or <code class="docutils literal notranslate"><span class="pre">H5Flow</span></code> are already associated with pre-defined layouts that come with the package and we can called it directly from <code class="docutils literal notranslate"><span class="pre">H5File</span></code> as it is a property of the class:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
@@ -778,10 +783,11 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;H5FileLayout with 0 issues&gt;
+&lt;H5FileLayout with 1 issues&gt;
 </pre></div></div>
 </div>
-<p>As a <code class="docutils literal notranslate"><span class="pre">layout</span></code> is a HDF file itself, it has similar features like wrapper files, e.g. we can get a nice html representation of the content. Like this we can see what is required to have in any file written with <code class="docutils literal notranslate"><span class="pre">H5File</span></code>:</p>
+<p>As a <code class="docutils literal notranslate"><span class="pre">layout</span></code> is a HDF file itself, it has similar features like wrapper files, e.g. we can get a nice html representation of the content. Like this we can see what is required to have in any file written with <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.</p>
+<p>Doing so, we directly see, that the layout <strong>requires to have two attributes</strong>, namely <code class="docutils literal notranslate"><span class="pre">__h5rdmtoobox_version__</span></code> and a <code class="docutils literal notranslate"><span class="pre">title</span></code>:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -1000,12 +1006,12 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-5369206700" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-5369206700">
+                    <input id="group-ds-/-2727842200" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2727842200">
                     /<span>(0)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : __version of this package</li><li style="list-style-type: none; font-style: italic">creation_time : __time of file creation</li><li style="list-style-type: none; font-style: italic">title : __file title</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : __version of this package</li><li style="list-style-type: none; font-style: italic">title : __file title</li>
                 </ul>
 </li>
 </ul>
@@ -1043,15 +1049,13 @@ input.h5tb-varname-in:checked + label:before {
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 run check
-Attribute creation_time missing in group /
 Attribute title missing in group /
 
 run check again - different call
-Attribute creation_time missing in group /
 Attribute title missing in group /
 
 repr of layout:
-&lt;H5FileLayout with 2 issues&gt;
+&lt;H5FileLayout with 1 issues&gt;
 </pre></div></div>
 </div>
 </section>
@@ -1272,14 +1276,14 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>H5FileLayout File "tmp1344"</p>
+<p>H5FileLayout File "tmp2"</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-5436702400" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-5436702400">
+                    <input id="group-ds-/-2759108400" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2759108400">
                     /<span>(0)</span></label>
 
 
@@ -1513,24 +1517,24 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>H5FileLayout File "tmp1344"</p>
+<p>H5FileLayout File "tmp2"</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-5447887700" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-5447887700">
+                    <input id="group-ds-/-2775502500" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2775502500">
                     /<span>(3)</span></label>
 
 
                 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">title : __any</li>
                 </ul>
 
-                <ul id="ds-1-/x-5449177200" class="h5tb-var-list">
-                <input id="ds-2-/x-5449179800" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-2776857900" class="h5tb-var-list">
+                <input id="ds-2-/x-2776862200" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-5449179800">x</label>
+                    for="ds-2-/x-2776862200">x</label>
                 <span class="h5tb-dims">(1,)</span>  [
                 <span class="h5tb-unit">N.A.</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__ndim__ : 1</li><li style="list-style-type: none; font-style: italic">__shape__ : [20]</li><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
@@ -1540,10 +1544,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/y-5449548100" class="h5tb-var-list">
-                <input id="ds-2-/y-5449550800" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/y-2777348800" class="h5tb-var-list">
+                <input id="ds-2-/y-2777351500" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/y-5449550800">y</label>
+                    for="ds-2-/y-2777351500">y</label>
                 <span class="h5tb-dims">(1,)</span>  [
                 <span class="h5tb-unit">N.A.</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
@@ -1555,8 +1559,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/meta-5449640900" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta-5449640900">
+                    <input id="group-ds-/meta-2777460200" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/meta-2777460200">
                     meta<span>(1)</span></label>
 
 
@@ -1565,8 +1569,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/meta/other-5449753200" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta/other-5449753200">
+                    <input id="group-ds-/meta/other-2777622800" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/meta/other-2777622800">
                     other<span>(0)</span></label>
 
 
@@ -1611,6 +1615,8 @@ input.h5tb-varname-in:checked + label:before {
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Group name &#34;meta&#34; missing in /.
+Wrong shape of dataset /x: (20,) != (3,)
+Neither of the attribute standard_name, long_name exist in /y
 </pre></div></div>
 </div>
 <p>We get 3 issues as stated in the printouts above. If we suppress the print statements by <code class="docutils literal notranslate"><span class="pre">silent=True</span></code>, then we can get a similar output by calling <code class="docutils literal notranslate"><span class="pre">.report()</span></code>:</p>

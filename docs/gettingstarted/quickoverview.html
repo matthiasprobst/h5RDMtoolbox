@@ -241,6 +241,11 @@
   </ul>
  </li>
  <li class="toctree-l1">
+  <a class="reference internal" href="../howto/howto.html">
+   HowTo
+  </a>
+ </li>
+ <li class="toctree-l1">
   <a class="reference internal" href="../glossary/index.html">
    Glossary
   </a>
@@ -868,12 +873,13 @@ tmp0.hdf
 </section>
 <section id="Natural-Naming">
 <h2>Natural Naming<a class="headerlink" href="#Natural-Naming" title="Permalink to this headline">#</a></h2>
-<p>Until here we used the conventional way of addressing variables and groups in a dictionary-like style. <code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> allows to use “natural naming” which means that we can address those objects as if they were attributes:</p>
+<p>Until here we used the conventional way of addressing variables and groups in a dictionary-like style. <code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> allows to use “natural naming” which means that we can address those objects as if they were attributes. Make sure <code class="docutils literal notranslate"><span class="pre">h5tbx.config.natural_naming</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code> (the default):</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">signal_filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">natural_naming</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">signal_filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">signal</span><span class="p">[:]</span>
     <span class="n">grp</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">mygroup</span>
 </pre></div>
@@ -1104,18 +1110,18 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3927731000" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3927731000">
+                    <input id="group-ds-/-3853167700" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-3853167700">
                     /<span>(3)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.0</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li><li style="list-style-type: none; font-style: italic">creation_time : 2022-08-12T15:19:27Z+0200</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.3</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                <ul id="ds-1-/signal-3928610400" class="h5tb-var-list">
-                <input id="ds-2-/signal-3928612600" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/signal-3854028700" class="h5tb-var-list">
+                <input id="ds-2-/signal-3854030800" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/signal-3928612600">signal</label>
+                    for="ds-2-/signal-3854030800">signal</label>
                 <span class="h5tb-dims">(time: 101)</span>  [
                 <span class="h5tb-unit">V</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : my signal</li>
@@ -1125,10 +1131,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/time-3928867100" class="h5tb-var-list">
-                <input id="ds-2-/time-3928869200" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/time-3854275300" class="h5tb-var-list">
+                <input id="ds-2-/time-3854277400" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/time-3928869200">time</label>
+                    for="ds-2-/time-3854277400">time</label>
                 <span class="h5tb-dims">(101,)</span>  [
                 <span class="h5tb-unit">s</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : time</li>
@@ -1140,8 +1146,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/mygroup-3929112600" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/mygroup-3929112600">
+                    <input id="group-ds-/mygroup-3854529800" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/mygroup-3854529800">
                     mygroup<span>(0)</span></label>
 
 
@@ -1162,10 +1168,9 @@ input.h5tb-varname-in:checked + label:before {
 
 &gt; H5File: Group name: /.
 
-a: __h5rdmtoolbox_version__:      0.1.0
+a: __h5rdmtoolbox_version__:      0.1.3
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0
 a: __wrcls__:                     H5File
-a: creation_time:                 2022-08-12T15:19:27Z+0200
 <span class="ansi-bold">signal</span>                 (101,)                V
 <span class="ansi-bold">time</span>                   (101,)                s
 <span class="ansi-bold">/mygroup</span>

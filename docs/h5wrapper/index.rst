@@ -8,7 +8,7 @@
 Motivated by sustainable research data management, the package `h5wrapper` aims to integrate meta conventions
 during the data generation, processing and anlysing process while facilitating and streamlinig the work at the same
 time.
-This is done using so-called wrapper-classes, which add funcitonality to the core interface library `h5py`. The
+This is done using so-called wrapper-classes, which add functionality to the core interface library `h5py`. The
 jupyter notebooks walk you through the usage and features.
 
 
@@ -49,6 +49,7 @@ All above enhances the FAIRness (FAIR=Findable+Accessible+Interoperable+re-usabl
     DatasetCreation.ipynb
     DatasetSlicing.ipynb
     GroupCreation.ipynb
+    FileExploration.ipynb
     NaturalNaming.ipynb
     Conventions.ipynb
     SpecialIO.ipynb

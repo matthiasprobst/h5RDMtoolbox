@@ -67,6 +67,7 @@ You may install optional dependencies:
     H5wrapper <h5wrapper/index>
     x2hdf <x2hdf/index>
     H5Database <h5database/index>
+    HowTo <howto/howto.ipynb>
     Glossary <glossary/index>
     References <references>
 
