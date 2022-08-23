@@ -40,11 +40,12 @@
    ]
   },
   {
-   "cell_type": "code",
-   "execution_count": null,
+   "cell_type": "markdown",
    "metadata": {},
-   "outputs": [],
-   "source": []
+   "source": [
+    "## ... avoid having to provide `units` and `long_name` or `standard_name` during dataset creation\n",
+    "This cannot be avoided as we believe these are minimal auxiliary information (meta data) required with every dataset. If unitless, pass `units=' '` and if you are not using any naming standard provide `long_name` which is just a description of your dataset and should be easy to think of."
+   ]
   }
  ],
  "metadata": {

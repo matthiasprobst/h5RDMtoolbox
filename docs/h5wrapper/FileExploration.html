@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Special Attributes &#8212; h5RDMtoolbox  documentation</title>
+    <title>File exploration &#8212; h5RDMtoolbox  documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -36,8 +36,8 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Specialized Wrappers" href="SpecializedWrappers.html" />
-    <link rel="prev" title="Extensions" href="Extensions.html" />
+    <link rel="next" title="Natural Naming" href="NaturalNaming.html" />
+    <link rel="prev" title="Group creation" href="GroupCreation.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -164,8 +164,8 @@
      Group creation
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="FileExploration.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      File exploration
     </a>
    </li>
@@ -194,8 +194,8 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
+   <li class="toctree-l2">
+    <a class="reference internal" href="SpecialAttributes.html">
      Special Attributes
     </a>
    </li>
@@ -358,7 +358,7 @@ title="Source repository"
       </li>
       
       <li>
-        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fh5wrapper/SpecialAttributes.html&body=Your%20issue%20content%20here."
+        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fh5wrapper/FileExploration.html&body=Your%20issue%20content%20here."
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -386,7 +386,7 @@ title="Open an issue"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/h5wrapper/SpecialAttributes.ipynb.txt"
+        <a href="../_sources/h5wrapper/FileExploration.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -435,7 +435,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Special Attributes</h1>
+                <h1>File exploration</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -703,8 +703,9 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="Special-Attributes">
-<h1>Special Attributes<a class="headerlink" href="#Special-Attributes" title="Permalink to this headline">#</a></h1>
+<section id="File-exploration">
+<h1>File exploration<a class="headerlink" href="#File-exploration" title="Permalink to this headline">#</a></h1>
+<p>To find data quickly or to collect certain objects the <code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> provides helpful methods:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -713,17 +714,111 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-<p>Groups:</p>
+<p>As always, let’s build a HDF5 file from scratch:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">sensor_grp</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;pressure_sensor&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;my sensor&#39;</span><span class="p">,</span> <span class="n">manufacturer</span><span class="o">=</span><span class="s1">&#39;best_company_ever&#39;</span><span class="p">))</span>
-    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;Pa&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;pressure&#39;</span><span class="p">)</span>
-    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;sensor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sensor_grp</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;grp_1&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;grp_2&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;my other group&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">one</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">two</span><span class="o">=</span><span class="s1">&#39;a second attr&#39;</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;ds_1&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 1&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;ds_2&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 2&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;gr_1/ds_1&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 2&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<p>To get all groups in a current level, call <code class="docutils literal notranslate"><span class="pre">get_groups()</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_groups</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;HDF5 group &#34;/gr_1&#34; (1 members)&gt;, &lt;HDF5 group &#34;/grp_1&#34; (0 members)&gt;, &lt;HDF5 group &#34;/grp_2&#34; (0 members)&gt;]
+</pre></div></div>
+</div>
+<p>To get all groups with a specific pattern, provide a pattern string (uses package <code class="docutils literal notranslate"><span class="pre">re</span></code>):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_groups</span><span class="p">(</span><span class="s1">&#39;^grp_[0-9]$&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;HDF5 group &#34;/grp_1&#34; (0 members)&gt;, &lt;HDF5 group &#34;/grp_2&#34; (0 members)&gt;]
+</pre></div></div>
+</div>
+<p>Exact same thing work with datasets:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_datasets</span><span class="p">(</span><span class="s1">&#39;^ds_[0-9]$&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
+</pre></div></div>
+</div>
+<p>You can find datasets or groups by searching for specific attributes:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_by_attribute</span><span class="p">(</span><span class="s1">&#39;long_name&#39;</span><span class="p">,</span> <span class="s1">&#39;dataset 1&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_by_attribute</span><span class="p">(</span><span class="s1">&#39;long_name&#39;</span><span class="p">,</span> <span class="s1">&#39;dataset 2&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">h5type</span><span class="o">=</span><span class="s1">&#39;dataset&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
+[&lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
+</pre></div></div>
+</div>
+<p>If you specify the object type or directly call the respective method, you only get those objects returned:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_datasets_by_attribute</span><span class="p">(</span><span class="s1">&#39;long_name&#39;</span><span class="p">,</span> <span class="s1">&#39;dataset 2&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
+</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
@@ -743,17 +838,17 @@ div.rendered_html tbody tr:hover {
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="Extensions.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="GroupCreation.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Extensions</p>
+            <p class="prev-next-title">Group creation</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="SpecializedWrappers.html" title="next page">
+    <a class='right-next' id="next-link" href="NaturalNaming.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Specialized Wrappers</p>
+        <p class="prev-next-title">Natural Naming</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

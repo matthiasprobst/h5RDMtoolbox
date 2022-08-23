@@ -165,6 +165,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="../h5wrapper/FileExploration.html">
+     File exploration
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="../h5wrapper/NaturalNaming.html">
      Natural Naming
     </a>
@@ -456,6 +461,31 @@ title="Print to PDF"
    </code>
    ?
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#…-avoid-having-to-provide-units-and-long_name-or-standard_name-during-dataset-creation">
+     … avoid having to provide
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       units
+      </span>
+     </code>
+     and
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       long_name
+      </span>
+     </code>
+     or
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       standard_name
+      </span>
+     </code>
+     during dataset creation
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -492,6 +522,31 @@ title="Print to PDF"
    </code>
    ?
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#…-avoid-having-to-provide-units-and-long_name-or-standard_name-during-dataset-creation">
+     … avoid having to provide
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       units
+      </span>
+     </code>
+     and
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       long_name
+      </span>
+     </code>
+     or
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       standard_name
+      </span>
+     </code>
+     during dataset creation
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -792,14 +847,10 @@ div.rendered_html tbody tr:hover {
 &lt;class &#39;numpy.ndarray&#39;&gt;
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
-</div>
+<section id="…-avoid-having-to-provide-units-and-long_name-or-standard_name-during-dataset-creation">
+<h3>… avoid having to provide <code class="docutils literal notranslate"><span class="pre">units</span></code> and <code class="docutils literal notranslate"><span class="pre">long_name</span></code> or <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> during dataset creation<a class="headerlink" href="#…-avoid-having-to-provide-units-and-long_name-or-standard_name-during-dataset-creation" title="Permalink to this headline">#</a></h3>
+<p>This cannot be avoided as we believe these are minimal auxiliary information (meta data) required with every dataset. If unitless, pass <code class="docutils literal notranslate"><span class="pre">units='</span> <span class="pre">'</span></code> and if you are not using any naming standard provide <code class="docutils literal notranslate"><span class="pre">long_name</span></code> which is just a description of your dataset and should be easy to think of.</p>
+</section>
 </section>
 </section>
 
