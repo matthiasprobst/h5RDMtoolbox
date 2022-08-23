@@ -389,13 +389,14 @@ class H5Dataset(h5py.Dataset):
         else:
             super().__setitem__(key, value)
 
-    def __getitem__(self, args, new_dtype=None, nparray=False) -> xr.DataArray:
-        """Return sliced HDF dataset as xr.DataArray.
-        By passing nparray=True the return array is forced
-        to be of type np.array and the super method of
-        __getitem__ is called. Alternatively, call .values[:,...]"""
+    def __getitem__(self, args, new_dtype=None, nparray=False) -> Union[xr.DataArray, np.ndarray]:
+        """Return sliced HDF dataset. If global setting `return_xarray`
+        is set to True, a `xr.DataArray` is returned, otherwise the default
+        behaviour of the h5p-package is used and a np.ndarray is returend.
+        Note, that even if `return_xarray` is True, there is another way to
+        receive  numpy array. This is by calling .values[:] on the dataset."""
         args = args if isinstance(args, tuple) else (args,)
-        if nparray:
+        if not config.return_xarray or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
         if Ellipsis in args:
             warnings.warn(
@@ -584,15 +585,27 @@ class H5Group(h5py.Group):
 
         return get_root(self.parent)
 
-    @property
-    def datasets(self) -> List[h5py.Dataset]:
-        """Return list of the group's datasets"""
-        return [v for k, v in self.items() if isinstance(v, h5py.Dataset)]
+    def get_datasets(self, pattern=None) -> List[h5py.Dataset]:
+        """Return list of datasets in the current group.
+        If pattern is None, all groups are returned.
+        If pattern is not None a regrex-match is performed
+        on the basenames of the datasets."""
+        dsets = [v for k, v in self.items() if isinstance(v, h5py.Dataset)]
+        if pattern is None:
+            return dsets
+        import re
+        return [ds for ds in dsets if re.search(pattern, os.path.basename(ds.name))]
 
-    @property
-    def groups(self):
-        """Return list of the group's groups"""
-        return [v for v in self.values() if isinstance(v, h5py.Group)]
+    def get_groups(self, pattern=None) -> List[h5py.Group]:
+        """Return list of groups in the current group.
+        If pattern is None, all groups are returned.
+        If pattern is not None a regrex-match is performed
+        on the basenames of the groups."""
+        grps = [v for v in self.values() if isinstance(v, h5py.Group)]
+        if pattern is None:
+            return grps
+        import re
+        return [grp for grp in grps if re.search(pattern, os.path.basename(grp.name))]
 
     @property
     def long_name(self):
@@ -686,7 +699,7 @@ class H5Group(h5py.Group):
         return self.sdump(ret=True)
 
     def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None,
-                     ignore_upper_attr_name: bool = False):
+                           ignore_upper_attr_name: bool = False):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
             ignore_attrs = []
@@ -1437,7 +1450,7 @@ class H5Group(h5py.Group):
                             f'Could not write attribute {ak} to {objname} due to {e}')
 
     def get_by_attribute(self, attribute_name, attribute_value=None,
-                         h5type=None, recursive=True):
+                         h5type=None, recursive=True) -> List[Union[h5py.Dataset, h5py.Group]]:
         """Return the object(s) (dataset or group) with a certain attribute name
         and if specified a specific value.
         Via h5type it can be filtered for only datasets or groups
@@ -1458,8 +1471,8 @@ class H5Group(h5py.Group):
 
         Returns
         ------
-        names: List[str]
-            List of dataset and/or group names
+        names: List[h5py.Dataset|h5py.Group]
+            List of dataset and/or group objects
         """
         names = []
 
@@ -1467,27 +1480,27 @@ class H5Group(h5py.Group):
             if isinstance(node, h5py.Group):
                 if attribute_name in node.attrs:
                     if attribute_value is None:
-                        names.append(name)
+                        names.append(node)
                     else:
                         if node.attrs[attribute_name] == attribute_value:
-                            names.append(name)
+                            names.append(node)
 
         def _get_ds(name, node):
             if isinstance(node, h5py.Dataset):
                 if attribute_name in node.attrs:
                     if attribute_value is None:
-                        names.append(name)
+                        names.append(node)
                     else:
                         if node.attrs[attribute_name] == attribute_value:
-                            names.append(name)
+                            names.append(node)
 
         def _get_ds_grp(name, node):
             if attribute_name in node.attrs:
                 if attribute_value is None:
-                    names.append(name)
+                    names.append(node)
                 else:
                     if node.attrs[attribute_name] == attribute_value:
-                        names.append(name)
+                        names.append(node)
 
         if recursive:
             if h5type is None:
@@ -1516,11 +1529,13 @@ class H5Group(h5py.Group):
                                 names.append(ds)
         return names
 
-    def get_datasets_by_attribute(self, attribute_name, attribute_value=None, recursive=True):
+    def get_datasets_by_attribute(self, attribute_name, attribute_value=None,
+                                  recursive=True) -> List[h5py.Dataset]:
         """Return datasets that have key-value-attribute pari. Calls `get_by_attribute`"""
         return self.get_by_attribute(attribute_name, attribute_value, 'dataset', recursive)
 
-    def get_groups_by_attribute(self, attribute_name, attribute_value=None, recursive=True):
+    def get_groups_by_attribute(self, attribute_name, attribute_value=None,
+                                recursive=True) -> List[h5py.Group]:
         """Return groups that have key-value-attribute pari. Calls `get_by_attribute`"""
         return self.get_by_attribute(attribute_name, attribute_value, 'group', recursive)
 
@@ -1573,8 +1588,10 @@ class H5Group(h5py.Group):
 
 
 class H5File(h5py.File, H5Group):
-    """Main wrapper around h5py.File with additional methods. Integrates naming and layout
-    conventions. All features from h5py packages are preserved."""
+    """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
+    It enables additional features and adds new methods streamlining the work with
+    HDF5 files and incorporates usage of so-called naming-conventions and layouts.
+    All features from h5py packages are preserved."""
 
     @property
     def layout(self):

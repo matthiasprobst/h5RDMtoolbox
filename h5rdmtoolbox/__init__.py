@@ -11,10 +11,9 @@ from .utils import generate_temporary_filename, generate_temporary_directory
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
-# from .convention.time import datetime_str
 
-__all__ = ['__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV', 'open_wrapper',
-           'generate_temporary_filename', 'generate_temporary_directory']
+
+# from .convention.time import datetime_str
 
 
 def set_loglevel(level):
@@ -90,3 +89,10 @@ def clean_temp_data():
                         f.writelines(f'{fd}\n')
             else:
                 failed_dirs_file.unlink(missing_ok=True)
+
+
+from . import tutorial
+
+__all__ = ['tutorial', '__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV',
+           'open_wrapper',
+           'generate_temporary_filename', 'generate_temporary_directory']

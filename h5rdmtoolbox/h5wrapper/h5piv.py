@@ -618,7 +618,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             if 'piv_parameters' in self:  # at root level --> valid for all z
                 return [self['piv_parameters'].attrs['param_dict'], ]
             else:
-                plane_name_candidates = sorted(list([k.name for k in self.groups if 'plane' in k.name]))
+                plane_name_candidates = sorted(list([k.name for k in self.get_groups('^plane')]))
                 if len(plane_name_candidates) == 0:
                     try:
                         piv_par_attr = self.attrs['piv_parameters']

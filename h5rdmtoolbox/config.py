@@ -1,5 +1,6 @@
 """config file for h5wrapper classes"""
 
+return_xarray = True
 advanced_shape_repr = True
 NA_unit = 'N.A.'
 natural_naming = True,

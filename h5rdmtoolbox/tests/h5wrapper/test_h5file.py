@@ -303,8 +303,22 @@ class TestH5File(unittest.TestCase):
 
     def test_groups(self):
         with H5File() as h5:
-            groups = h5.groups
+            groups = h5.get_groups()
             self.assertEqual(groups, [])
+            h5.create_group('grp_1', attrs=dict(a=1))
+            h5.create_group('grp_2', attrs=dict(a=1))
+            h5.create_group('grpXYZ', attrs=dict(b=2))
+            h5.create_group('mygrp_2')
+            groups = h5.get_groups()
+            self.assertEqual(groups, [h5['grpXYZ'], h5['grp_1'], h5['grp_2'], h5['mygrp_2']])
+            groups = h5.get_groups('^grp_[0-9]$')
+            self.assertEqual(groups, [h5['grp_1'], h5['grp_2']])
+            self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=True))
+
+            h5.create_group('grpXYZ/grp123', attrs=dict(a=1))
+            self.assertEqual([h5['grpXYZ/grp123'], h5['grp_1'], h5['grp_2'], ],
+                             h5.get_by_attribute('a', 1, recursive=True))
+            self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=False))
 
     def test_tree_structure(self):
         with H5File() as h5:
@@ -314,7 +328,7 @@ class TestH5File(unittest.TestCase):
                               standard_name='a_standard_name')
             grp = h5.create_group('grp', attrs={'description': 'group description'})
             grp.create_dataset('grpds', shape=(2, 40, 3), units='', long_name='long name',
-                              standard_name='a_standard_name')
+                               standard_name='a_standard_name')
             tree = h5.get_tree_structure()
             from pprint import pprint
             pprint(tree)
@@ -381,7 +395,7 @@ class TestH5Dataset(unittest.TestCase):
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.3\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      0.1.4\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
@@ -395,7 +409,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             sdump_str = h5.sdump(ret=True)
             _str = """> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.3\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      0.1.4\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
@@ -594,18 +608,18 @@ class TestH5Group(unittest.TestCase):
             h5.create_dataset('test', data=2, units='m',
                               long_name='a long name')
             l = h5.get_datasets_by_attribute('long_name')
-            self.assertEqual(l, ['test'])
+            self.assertEqual(l, [h5['test'], ])
             h5.create_dataset('grp/test', data=2, units='m',
                               long_name='a long name 2')
             l = h5.get_datasets_by_attribute('long_name')
-            self.assertEqual(l, ['grp/test', 'test'])
+            self.assertEqual(l, [h5['grp/test'], h5['test']])
             l = h5.get_datasets_by_attribute('long_name',
                                              'a long name')
-            self.assertEqual(l, ['test', ])
+            self.assertEqual(l, [h5['test'], ])
 
             h5['grp'].long_name = 'grp1'
             r = h5.get_groups_by_attribute('long_name')
-            self.assertEqual(r, ['grp'])
+            self.assertEqual(r, [h5['grp'], ])
 
     def test_get_group_names(self):
         with H5File(mode='w') as h5:

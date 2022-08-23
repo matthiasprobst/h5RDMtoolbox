@@ -10,6 +10,7 @@ from h5rdmtoolbox.conventions import StandardizedNameTable
 from h5rdmtoolbox.h5wrapper import H5PIV
 from h5rdmtoolbox.h5wrapper import h5piv
 from h5rdmtoolbox.h5wrapper.h5piv import PIVParameters, PIVMethod
+from h5rdmtoolbox.x2hdf.piv import PIVPlane
 
 
 def my_uncertainty_method(uds, imgA, imgB):
@@ -111,7 +112,7 @@ class TestH5PIV(unittest.TestCase):
 
     def test_piv_parameters(self):
         piv_folder = h5tbx.tutorial.PIVview.get_plane_directory()
-        plane = h5tbx.x2hdf.piv.PIVPlane.from_plane_folder(piv_folder, 5, h5tbx.x2hdf.piv.pivview.PIVViewNcFile)
+        plane = PIVPlane.from_plane_folder(piv_folder, 5, h5tbx.x2hdf.piv.pivview.PIVViewNcFile)
         hdf_filename = plane.to_hdf()
         with h5tbx.H5PIV(hdf_filename, 'r') as h5:
             piv_param = h5.get_parameters()
