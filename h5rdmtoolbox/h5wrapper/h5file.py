@@ -126,7 +126,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     return ret
                 elif ret[0] == '[':
                     if ret[-1] == ']':
-                        return eval(ret)
+                        try:
+                            return eval(ret)
+                        except NameError:
+                            return ret
                     return ret
                 else:
                     return ret
@@ -692,27 +695,20 @@ class H5Group(h5py.Group):
         else:
             return super().__getattribute__(item)
 
-    # def __setattr__(self, key, value):
-    #     super().__setattr__(key, value)
-
     def __str__(self):
         return self.sdump(ret=True)
 
-    def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None,
-                           ignore_upper_attr_name: bool = False):
+    def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
             ignore_attrs = []
         tree = {ak: av for ak, av in self.attrs.items()}
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
-                ds_dict = {'shape': v.shape}
+                ds_dict = {'shape': v.shape, 'ndim': v.ndim}
                 for ak, av in v.attrs.items():
-                    if ak not in ignore_attrs:
-                        if ignore_upper_attr_name:
-                            if not ak.isupper():
-                                ds_dict[ak] = av
-                        else:
+                    if ak not in H5_DIM_ATTRS:
+                        if ak not in ignore_attrs:
                             ds_dict[ak] = av
                 tree[k] = ds_dict
             else:

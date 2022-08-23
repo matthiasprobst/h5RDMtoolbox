@@ -31,7 +31,7 @@ Thumbs.db
 
 # testdata
 #testdata
-tests/
+h5rdmtoolbox/tests/data
 
 # jupyter
 *.ipynb_checkpoints*

@@ -2,6 +2,14 @@ from pathlib import Path
 
 import h5py
 
+cfx_to_standard_name = {'accumulated timestep': 'accumulated_timestep',
+                        'current timestep': 'current_timestep',
+                        'time': 'time',
+                        'x': 'x_coordinate',
+                        'y': 'y_coordinate',
+                        'z': 'z_coordinate',
+                        }
+
 pivview_to_standardnames_dict = {'time': 'time',
                                  'u': 'x_velocity',
                                  'v': 'y_velocity',

@@ -163,7 +163,6 @@ class CCLGroup:
             subg.create_h5_group(g, overwrite=overwrite)
 
 
-
 INTENDATION_STEP = 2
 
 
@@ -256,9 +255,9 @@ def _list_of_instances_by_keyword_substring(filename, root_group, substring, cla
     return instances
 
 
-
 def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
-             cfx5pre: pathlib.Path = None, overwrite: bool = True) -> pathlib.Path:
+             cfx5pre: pathlib.Path = None, overwrite: bool = True,
+             verbose=False) -> pathlib.Path:
     """
     Converts a .res, .cfx or .def file into a ccl file.
     If no `ccl_filename` is provided the input filename is
@@ -293,10 +292,17 @@ def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
         # build def file and then call _generate_from_def
         # this is the safe way!
         if cfx5pre is None:
-            cfx5pre = AnsysInstallation.cfx5pre
+            cfx5pre = AnsysInstallation().cfx5pre
 
+        if verbose:
+            if input_file.suffix == '.cfx':
+                print(f'generating ccl file from .cfx file: {input_file}')
+            else:
+                print(f'generating ccl file from .res file: {input_file}')
         def_filename = cfx2def(input_file)
         return _generate_from_def(def_filename, ccl_filename, overwrite)
+    if verbose:
+        print(f'generating ccl file from def file: {input_file}')
     return _generate_from_def(input_file, ccl_filename, overwrite)
 
 
@@ -305,7 +311,7 @@ def _generate_from_res_or_cfx(res_cfx_filename: PATHLIKE,
     if overwrite and ccl_filename.exists():
         ccl_filename.unlink()
     if res_cfx_filename.suffix == '.cfx':
-        session_filename = os.path.join(SESSIONS_DIR, 'cfx2ccl.pre')
+        session_filename = os.path.join(session.SESSIONS_DIR, 'cfx2ccl.pre')
     else:
         raise ValueError(f'Could not determine "session_filename"')
 
@@ -326,7 +332,7 @@ def _generate_from_def(def_filename: PATHLIKE,
     """generates a ccl file from a def file"""
     if ccl_filename.exists() and overwrite:
         ccl_filename.unlink()
-    cmd = f'"{AnsysInstallation.cfx5cmds}" -read -def "{def_filename}" -text "{ccl_filename}"'
+    cmd = f'"{AnsysInstallation().cfx5cmds}" -read -def "{def_filename}" -text "{ccl_filename}"'
     call_cmd(cmd, wait=True)
 
     if not ccl_filename.exists():

@@ -24,7 +24,7 @@ def generate_userpoints_file(target: Path) -> Path:
     # target file is either *.res file or a dictionary *.dir in case simulation is still running
     basedir = target_filename.parent
     out_filename = Path.joinpath(basedir, "userpoints.csv")
-    cmd = f'{AnsysInstallation.cfx5mondata} -{target_filename.suffix[1:]} %{target_filename} -out %{out_filename}' \
+    cmd = f'{AnsysInstallation().cfx5mondata} -{target_filename.suffix[1:]} %{target_filename} -out %{out_filename}' \
           f' -nocoeffloops -varrule "CATEGORY = USER POINT"'
     if not out_filename.exists():
         raise RuntimeError(f'Failed running bash script "{cmd}"')
@@ -69,10 +69,10 @@ def get_monitor_data_by_category(target: Path, category: MonitorCategory = Monit
         _units = '-units'
 
     if category.value:  # ==1 ==ALL
-        cmd = f'"{AnsysInstallation.cfx5mondata}" -{target_filename.suffix[1:]} "{target_filename}" -out' \
+        cmd = f'"{AnsysInstallation().cfx5mondata}" -{target_filename.suffix[1:]} "{target_filename}" -out' \
               f' "{out_filename}" {_units}'
     else:
-        cmd = f'"{AnsysInstallation.cfx5mondata}" -{target_filename.suffix[1:]} "{target_filename}" ' \
+        cmd = f'"{AnsysInstallation().cfx5mondata}" -{target_filename.suffix[1:]} "{target_filename}" ' \
               f'-varrule "CATEGORY = {str(category).replace("_", " ")}" -out {out_filename} {_units}'
 
     logger.info(f'Generating user points file from "{target_filename.name}"')

@@ -10,8 +10,10 @@ from pymongo import MongoClient
 import h5rdmtoolbox as h5tbx
 import h5rdmtoolbox.h5database as h5db
 from h5rdmtoolbox import H5File
+from h5rdmtoolbox import tutorial
 # noinspection PyUnresolvedReferences
 from h5rdmtoolbox.h5database import mongo
+from h5rdmtoolbox.h5database.mongo import make_dict_mongo_compatible
 
 
 def read_many_from_database(db_entry: pymongo.collection.Cursor) -> List[any]:
@@ -38,10 +40,9 @@ class TestH5Repo(unittest.TestCase):
         self.collection = collection
 
     def test_tree_to_mongo(self):
-        from h5rdmtoolbox.h5database.mongo import make_dict_mongo_compatible
         self.collection.drop()
 
-        usernames = ('Allen', 'Mike', 'Ellen', 'Alliot')
+        usernames = ('Allen', 'Mike', 'Ellen', 'Elliot')
         company = ('bikeCompany', 'shoeCompany', 'bikeCompany', 'shoeCompany')
         filenames = []
         for i, (username, company) in enumerate(zip(usernames, company)):
@@ -50,8 +51,14 @@ class TestH5Repo(unittest.TestCase):
                 h5.attrs['username'] = username
                 h5.attrs['company'] = company
                 h5.attrs['meta'] = {'day': 'monday', 'iday': 0}
+                h5.create_dataset('ds_at_root', data=np.random.random((2, 10, 8)), units='',
+                                  long_name='ds_at_root')
+                h5['ds_at_root'].make_scale()
                 g = h5.create_group('idgroup')
-                g.attrs['id'] = i
+                ds = g.create_dataset('ds_at_subgroup', data=np.random.random((2, 10, 13)), units='',
+                                 long_name='ds_at_subgroup')
+                ds.dims[0].attach_scale(h5['ds_at_root'])
+                ds.attrs['id'] = i
 
         with h5tbx.H5File(filenames[0]) as h5:
             tree = h5.get_tree_structure(True)
@@ -77,16 +84,11 @@ class TestH5Repo(unittest.TestCase):
         now = datetime.datetime.utcnow()
 
         for r in res:
-            for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'z', 'long_name', 'units'):
-                self.assertIn(k, r.keys())
+            if r['name'] == 'images':
+                for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'z', 'long_name', 'units'):
+                    self.assertIn(k, r.keys())
 
             self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
-            # self.assertTrue((now - r['document_last_modified']).total_seconds() < 0.1)
-
-        # arr = read_many_from_database(res)
-        # print(arr[0].plot())
-        # import matplotlib.pyplot as plt
-        # plt.show()
 
     def test_insert_group(self):
         self.collection.drop()
@@ -108,18 +110,14 @@ class TestH5Repo(unittest.TestCase):
             now = datetime.datetime.utcnow()
             for r in self.collection.find({}):
                 self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
-                # self.assertTrue((now - r['document_last_modified']).total_seconds() < 0.1)
 
-    def test_insert_group2(self):
+    def test_insert_group_flatten(self):
         self.collection.drop()
-        import h5rdmtoolbox as h5tbx
-        from h5rdmtoolbox import tutorial
 
         repo_filenames = tutorial.Database.generate_test_files()
         for fname in repo_filenames:
             with h5tbx.H5File(fname) as h5:
-                h5.mongo.insert(collection=self.collection, recursive=True)
+                h5.mongo.insert(collection=self.collection, recursive=True, flatten_tree=True)
         now = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
         for r in self.collection.find({}):
             self.assertTrue((now - r['file_creation_time']).total_seconds() < 20)
-            # self.assertTrue((now - r['document_last_modified']).total_seconds() < 20)

@@ -287,6 +287,12 @@ class Conventions:
         return CFStandardNameTable.from_xml(file_path)
 
 
+class CFX:
+    @staticmethod
+    def get_cfx_filename():
+        return testdir / f'CFD/AnsysCFX/channel_plus_cyl.cfx'
+
+
 class Database:
     """Database tutorial data interface class"""
 
