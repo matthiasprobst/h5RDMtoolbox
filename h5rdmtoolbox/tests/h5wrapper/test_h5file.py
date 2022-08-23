@@ -8,6 +8,7 @@ import xarray as xr
 import yaml
 from pint_xarray import unit_registry as ureg
 
+from h5rdmtoolbox import __version__
 from h5rdmtoolbox import config
 from h5rdmtoolbox import h5wrapper
 from h5rdmtoolbox.conventions.identifier import StandardizedNameError, StandardizedNameTable
@@ -280,6 +281,22 @@ class TestH5File(unittest.TestCase):
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
 
+    def test_attrs_find(self):
+        with H5File(mode='w') as h5:
+            h5.attrs['one'] = 1
+            g = h5.create_group('grp')
+            g.attrs['one'] = 1
+            h5.attrs['two'] = 2
+            h5.attrs['three'] = 3
+            h5.create_dataset('ds', shape=(3,), units='', long_name='long name', attrs=dict(one=1))
+
+            self.assertEqual(h5['/ds'], h5.find_one({'one': 1}))
+            self.assertEqual([h5['/ds'], h5['grp']], h5.find({'one': 1}))
+            self.assertEqual(h5['grp'], h5.find_one({'$group': 'grp'}))
+            self.assertEqual([h5['grp'], ], h5.find({'$group': 'grp'}))
+            self.assertEqual(h5['ds'], h5.find_one({'$dataset': 'ds'}))
+            self.assertEqual([h5['ds'], ], h5.find({'$dataset': 'ds'}))
+
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):
             with H5File(mode='w', standard_name_table='wrong file name'):
@@ -393,9 +410,9 @@ class TestH5Dataset(unittest.TestCase):
         with H5File(mode='w') as h5:
             h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
             sdump_str = h5.sdump(ret=True)
-            _str = """> H5File: Group name: /.
+            _str = f"""> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.5\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      {__version__}\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
@@ -407,9 +424,9 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             grp = h5.create_group('grp')
             grp.create_dataset('test', shape=(), long_name='a long name', units='')
             sdump_str = h5.sdump(ret=True)
-            _str = """> H5File: Group name: /.
+            _str = f"""> H5File: Group name: /.
 \x1B[3m
-a: __h5rdmtoolbox_version__:      0.1.5\x1B[0m\x1B[3m
+a: __h5rdmtoolbox_version__:      {__version__}\x1B[0m\x1B[3m
 a: __standard_name_table__:       EmptyStandardizedNameTable-v0\x1B[0m\x1B[3m
 a: __wrcls__:                     H5File\x1B[0m\x1B[3m
 a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m

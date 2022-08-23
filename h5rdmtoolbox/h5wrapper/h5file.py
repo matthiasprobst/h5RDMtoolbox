@@ -93,6 +93,26 @@ class WrapperAttributeManager(h5py.AttributeManager):
         self._parent = parent
         # self.identifier_convention = identifier_convention  # standard_name_convention
 
+    def find_one(self, name, value=None, rec=True, h5type=None) -> Union[h5py.Group, h5py.Dataset]:
+        """Search for one (!) attribute with name `name`.
+        If `value` not None, then value is verified for
+        the found value. First match is returend. Recursive
+        search is enabled by default. With h5type the search
+        can be limited to dataset or groups only. Default
+        is to search in both objects."""
+        from ..h5database.files import find_attributes
+        return find_attributes(self._parent, name, value, rec, h5type, find_one=True)
+
+    def find(self, name, value=None, rec=True, h5type=None) -> List[Union[h5py.Group, h5py.Dataset]]:
+        """Search for attributes (multiple!) with name `name`.
+        If `value` not None, then value is verified for
+        the found value. First match is returend. Recursive
+        search is enabled by default. With h5type the search
+        can be limited to dataset or groups only. Default
+        is to search in both objects."""
+        from ..h5database.files import find_attributes
+        return find_attributes(self._parent, name, value, rec, h5type, find_one=False)
+
     @with_phil
     def __getitem__(self, name):
         # if name in self.__dict__:
@@ -1019,6 +1039,34 @@ class H5Group(h5py.Group):
                                                  f'to exist!')
 
         return self._h5ds(ds.id)
+
+    def find_one(self, flt: Union[Dict, str], rec: bool = True):
+        """See find()"""
+        from ..h5database import files
+        return files.find(self, flt, recursive=rec, h5type=None, find_one=True)
+
+    def find(self, flt: Union[Dict, str], rec: bool = True):
+        """
+        Examples for filter parameters:
+        filter = {'long_name': 'any objects long name'} --> searches in attribtues only
+        filter = {'$name': 'dataset name'}  --> searches in goups and datasets
+        filter = {'$dataset': 'dataset name'}  --> searches in datasets only
+        filter = {'$group': 'dataset name'}  --> searches in groups only
+        filter = {'$attribute': {'standard_name': 'x_velocity'}} --> searches in attribtues "standard_name" only
+
+        Parameters
+        ----------
+        flt: Dict
+            Filter request
+        rec: bool, optional
+            Recursive search. Default is True
+
+        Returns
+        -------
+        h5obj: h5py.Dataset | h5py.Group
+        """
+        from ..h5database import files
+        return files.find(self, flt, recursive=rec, h5type=None, find_one=False)
 
     def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:
         """Return the dataset with a specific standard_name within the current group.
