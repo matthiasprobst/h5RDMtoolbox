@@ -423,12 +423,57 @@ title="Print to PDF"
     </ul>
   </div>
 </div>
+<label for="__page-toc"
+  class="headerbtn headerbtn-page-toc"
+  
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-list"></i>
+  </span>
+
+</label>
 
     </div>
 </div>
 
 <!-- Table of contents -->
 <div class="col-md-3 bd-toc show noprint">
+    <div class="tocsection onthispage pt-5 pb-3">
+        <i class="fas fa-list"></i> Contents
+    </div>
+    <nav id="bd-toc-nav" aria-label="Page">
+        <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Find">
+   Find
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-all-groups/datasets-in-a-level-(or-recursive-through-the-file):">
+     Find all groups/datasets in a level (or recursive through the file):
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-one-specific-group/dataset:">
+     Find
+     <strong>
+      one
+     </strong>
+     specific group/dataset:
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-based-on-attributes:">
+     Find based on attributes:
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </nav>
 </div>
     </div>
     <div class="article row">
@@ -440,6 +485,40 @@ title="Print to PDF"
                 <div id="print-main-content">
                     <div id="jb-print-toc">
                         
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Find">
+   Find
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-all-groups/datasets-in-a-level-(or-recursive-through-the-file):">
+     Find all groups/datasets in a level (or recursive through the file):
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-one-specific-group/dataset:">
+     Find
+     <strong>
+      one
+     </strong>
+     specific group/dataset:
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-based-on-attributes:">
+     Find based on attributes:
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -705,7 +784,7 @@ div.rendered_html tbody tr:hover {
 </style>
 <section id="File-exploration">
 <h1>File exploration<a class="headerlink" href="#File-exploration" title="Permalink to this headline">#</a></h1>
-<p>To find data quickly or to collect certain objects the <code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> provides helpful methods:</p>
+<p>To find data quickly or to collect certain objects the <code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> provides helpful methods. It follows mainly the <code class="docutils literal notranslate"><span class="pre">pymong</span></code>-syntax.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -722,19 +801,28 @@ div.rendered_html tbody tr:hover {
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;grp_1&#39;</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;grp_2&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;my other group&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">one</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">two</span><span class="o">=</span><span class="s1">&#39;a second attr&#39;</span><span class="p">))</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;ds_1&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 1&#39;</span><span class="p">)</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;ds_2&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 2&#39;</span><span class="p">)</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;gr_1/ds_1&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 2&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;ds_1&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 1&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="mf">1.5</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;ds_2&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 2&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;gr_1/ds_1&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dataset 2&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="mf">1.5</span><span class="p">))</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span>
 </pre></div>
 </div>
 </div>
-<p>To get all groups in a current level, call <code class="docutils literal notranslate"><span class="pre">get_groups()</span></code>:</p>
+<section id="Find">
+<h2>Find<a class="headerlink" href="#Find" title="Permalink to this headline">#</a></h2>
+<p>Syntax follows <code class="docutils literal notranslate"><span class="pre">pymongo</span></code>-syntax but not all queries may be implemented. Currently available: \<span class="math notranslate nohighlight">\(gt, \\\)</span>gte, \<span class="math notranslate nohighlight">\(lt, \\\)</span>lte, \$regex</p>
+<p>You can decide to find only one appearance (<code class="docutils literal notranslate"><span class="pre">find_one</span></code>) or to find all (<code class="docutils literal notranslate"><span class="pre">find</span></code>).</p>
+<section id="Find-all-groups/datasets-in-a-level-(or-recursive-through-the-file):">
+<h3>Find all groups/datasets in a level (or recursive through the file):<a class="headerlink" href="#Find-all-groups/datasets-in-a-level-(or-recursive-through-the-file):" title="Permalink to this headline">#</a></h3>
+<p>Use key “\<span class="math notranslate nohighlight">\(group&quot; or &quot;\\\)</span>dataset”. If the value is an empty string, all groups/datasets are returned:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_groups</span><span class="p">())</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$group&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$dataset&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -744,15 +832,20 @@ div.rendered_html tbody tr:hover {
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 [&lt;HDF5 group &#34;/gr_1&#34; (1 members)&gt;, &lt;HDF5 group &#34;/grp_1&#34; (0 members)&gt;, &lt;HDF5 group &#34;/grp_2&#34; (0 members)&gt;]
+[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
 </pre></div></div>
 </div>
-<p>To get all groups with a specific pattern, provide a pattern string (uses package <code class="docutils literal notranslate"><span class="pre">re</span></code>):</p>
+</section>
+<section id="Find-one-specific-group/dataset:">
+<h3>Find <strong>one</strong> specific group/dataset:<a class="headerlink" href="#Find-one-specific-group/dataset:" title="Permalink to this headline">#</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_groups</span><span class="p">(</span><span class="s1">&#39;^grp_[0-9]$&#39;</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$group&#39;</span><span class="p">:</span> <span class="s1">&#39;grp_1&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$dataset&#39;</span><span class="p">:</span> <span class="s1">&#39;ds_1&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -761,16 +854,19 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&lt;HDF5 group &#34;/grp_1&#34; (0 members)&gt;, &lt;HDF5 group &#34;/grp_2&#34; (0 members)&gt;]
+[&lt;HDF5 group &#34;/grp_1&#34; (0 members)&gt;]
+[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
 </pre></div></div>
 </div>
-<p>Exact same thing work with datasets:</p>
+<p>using <strong>regex</strong>:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_datasets</span><span class="p">(</span><span class="s1">&#39;^ds_[0-9]$&#39;</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$group&#39;</span><span class="p">:</span> <span class="s1">&#39;grp_1&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$dataset&#39;</span><span class="p">:</span> <span class="s1">&#39;ds_1&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -779,17 +875,19 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
+[&lt;HDF5 group &#34;/grp_1&#34; (0 members)&gt;]
+[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
 </pre></div></div>
 </div>
-<p>You can find datasets or groups by searching for specific attributes:</p>
+</section>
+<section id="Find-based-on-attributes:">
+<h3>Find based on attributes:<a class="headerlink" href="#Find-based-on-attributes:" title="Permalink to this headline">#</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_by_attribute</span><span class="p">(</span><span class="s1">&#39;long_name&#39;</span><span class="p">,</span> <span class="s1">&#39;dataset 1&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_by_attribute</span><span class="p">(</span><span class="s1">&#39;long_name&#39;</span><span class="p">,</span> <span class="s1">&#39;dataset 2&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">h5type</span><span class="o">=</span><span class="s1">&#39;dataset&#39;</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;long_name&#39;</span><span class="p">:</span> <span class="s1">&#39;dataset 1&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -799,16 +897,14 @@ div.rendered_html tbody tr:hover {
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 [&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
-[&lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
 </pre></div></div>
 </div>
-<p>If you specify the object type or directly call the respective method, you only get those objects returned:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">get_datasets_by_attribute</span><span class="p">(</span><span class="s1">&#39;long_name&#39;</span><span class="p">,</span> <span class="s1">&#39;dataset 2&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;long_name&#39;</span><span class="p">:</span> <span class="s1">&#39;dataset 1&#39;</span><span class="p">},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -817,7 +913,24 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
+[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mf">1.</span><span class="p">}},</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_2&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;, &lt;HDF5 dataset &#34;ds_1&#34;: shape (2, 4), type &#34;&lt;f4&#34;&gt;]
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -828,6 +941,8 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
+</section>
+</section>
 </section>
 
 
