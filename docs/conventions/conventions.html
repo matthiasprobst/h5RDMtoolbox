@@ -776,7 +776,7 @@ div.rendered_html tbody tr:hover {
 <p>Most basically, a name identifier should be defined as an attribute of every dataset in an HDF file. A popular one is “standard_name” as used by the climate and forecast community. It e.g. does not allow space in standard names and must be lower case. Furthermore, the construction of it is defined in online documentations and naming tables (standard name tables) provide standard names currently excepted by the community. This packages adopts this concept by introducing standardized name tables
 (class <code class="docutils literal notranslate"><span class="pre">StandardzedNameTable</span></code>) which allows flexible usage of such name definitions.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
@@ -785,7 +785,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <p>Whenever a dataset is written and the parameter “standard_name” is set, it is verified against the standard name convention/table associated with the wrapper class. If the constant <code class="docutils literal notranslate"><span class="pre">STRICT</span></code> is set to True (default), the name is looked-up in the table and, if not found, the dataset cannot be written. To allow standard names, that fulfill the spelling requirements but are not yet listed in the table, set <code class="docutils literal notranslate"><span class="pre">STRICT</span></code> to False:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">identifier</span><span class="o">.</span><span class="n">STRICT</span> <span class="o">=</span> <span class="kc">False</span>
@@ -797,7 +797,7 @@ div.rendered_html tbody tr:hover {
 <p>A standardized name table is a XML document, which contains (at least) a description and a canonical unit for a standarized name. We’ll build one from scratch first and then have a look into already implemented ones:</p>
 <p>Call <code class="docutils literal notranslate"><span class="pre">StandardizedNameTable</span></code> from the sub-package <code class="docutils literal notranslate"><span class="pre">conventions</span></code> and provide a <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">version</span></code>, <code class="docutils literal notranslate"><span class="pre">table_dict</span></code>, <code class="docutils literal notranslate"><span class="pre">contact</span></code> and and <code class="docutils literal notranslate"><span class="pre">insitution</span></code>:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sc</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameTable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Test_SNC&#39;</span><span class="p">,</span> <span class="n">table_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">version_number</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">contact</span><span class="o">=</span><span class="s1">&#39;contact@python.com&#39;</span><span class="p">,</span> <span class="n">institution</span><span class="o">=</span><span class="s1">&#39;my_institution&#39;</span><span class="p">)</span>
@@ -806,7 +806,7 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -816,7 +816,7 @@ Test_SNC (version number: 1)
 </div>
 <p>We have built an empty convention (no table content). Lets add content. We can do this by creating a dictionary first…</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tabledict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">canonical_units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;velocity is a vector quantity.&#39;</span><span class="p">)}</span>
@@ -825,7 +825,7 @@ Test_SNC (version number: 1)
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -836,7 +836,7 @@ Test_SNC (version number: 1)
 </div>
 <p>… and add it to the object by calling <code class="docutils literal notranslate"><span class="pre">update()</span></code>:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">tabledict</span><span class="p">)</span>
@@ -867,52 +867,32 @@ Test_SNC (version number: 1)
 </div>
 <p>New entries cann be assigned by using <code class="docutils literal notranslate"><span class="pre">set</span></code> or <code class="docutils literal notranslate"><span class="pre">modified</span></code> depending on whether the entry already exists or not:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">canonical_units</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;physical time&#39;</span><span class="p">)</span>
 <span class="n">sc</span><span class="o">.</span><span class="n">modify</span><span class="p">(</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">,</span> <span class="n">canonical_units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;velocity is a vector quantity. x indicates the component in y-axis direction&#39;</span><span class="p">)</span>
 <span class="n">sc</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;y_velocity&#39;</span><span class="p">,</span> <span class="n">canonical_units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;velocity is a vector quantity. y indicates the component in y-axis direction&#39;</span><span class="p">)</span>
 <span class="n">sc</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;z_velocity&#39;</span><span class="p">,</span> <span class="n">canonical_units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;velocity is a vector quantity. z indicates the component in z-axis direction&#39;</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">sdump</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area rendered_html docutils container">
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>canonical_units</th>
-      <th>description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>time</th>
-      <td>s</td>
-      <td>physical time</td>
-    </tr>
-    <tr>
-      <th>x_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. x indicates the component in y-axis direction</td>
-    </tr>
-    <tr>
-      <th>y_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. y indicates the component in y-axis direction</td>
-    </tr>
-    <tr>
-      <th>z_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. z indicates the component in z-axis direction</td>
-    </tr>
-  </tbody>
-</table></div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test_SNC (version: 1)
++------------+-------------------+------------------------------------------------------------------------------+
+|            | canonical_units   | description                                                                  |
+|------------+-------------------+------------------------------------------------------------------------------|
+| time       | s                 | physical time                                                                |
+| x_velocity | m/s               | velocity is a vector quantity. x indicates the component in y-axis direction |
+| y_velocity | m/s               | velocity is a vector quantity. y indicates the component in y-axis direction |
+| z_velocity | m/s               | velocity is a vector quantity. z indicates the component in z-axis direction |
++------------+-------------------+------------------------------------------------------------------------------+
+</pre></div></div>
 </div>
 </section>
 <section id="Writing-Standard-Name-Convention-to-XML">
@@ -933,7 +913,7 @@ Test_SNC (version number: 1)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-WindowsPath(&#39;C:/Users/da4323/AppData/Local/h5rdmtoolbox/h5rdmtoolbox/tmp/tmp16/tmp0.xml&#39;)
+WindowsPath(&#39;C:/Users/da4323/AppData/Local/h5rdmtoolbox/h5rdmtoolbox/tmp/tmp26/tmp0.xml&#39;)
 </pre></div></div>
 </div>
 </section>

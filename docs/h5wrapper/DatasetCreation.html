@@ -841,9 +841,18 @@ Unit of standard name &#34;x_coordinate&#34; not as expected: &#34;kg&#34; != &#
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_coordinate&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mf">20.1</span><span class="p">,</span> <span class="mf">18.5</span><span class="p">,</span> <span class="mf">24.7</span><span class="p">],</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;degC&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;temperature&#39;</span><span class="p">,</span> <span class="n">attach_scale</span><span class="o">=</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># note, that you can access the dimension scale using attribute-style-syntax</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;HDF5 dataset &#34;x&#34;: shape (3,), type &#34;&lt;i4&#34;&gt;
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -1048,25 +1057,25 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp21.hdf</p>
+<p>tmp4.hdf</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3647286100" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3647286100">
+                    <input id="group-ds-/-2900238300" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2900238300">
                     /<span>(2)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.0</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li><li style="list-style-type: none; font-style: italic">creation_time : 2022-08-12T16:11:10Z</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.6</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                <ul id="ds-1-/t-3648052200" class="h5tb-var-list">
-                <input id="ds-2-/t-3648054700" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/t-2901159900" class="h5tb-var-list">
+                <input id="ds-2-/t-2901163000" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/t-3648054700">t</label>
+                    for="ds-2-/t-2901163000">t</label>
                 <span class="h5tb-dims">(x: 3)</span>  [
                 <span class="h5tb-unit">degC</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1077,10 +1086,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/x-3648300900" class="h5tb-var-list">
-                <input id="ds-2-/x-3648303400" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-2901497400" class="h5tb-var-list">
+                <input id="ds-2-/x-2901500000" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-3648303400">x</label>
+                    for="ds-2-/x-2901500000">x</label>
                 <span class="h5tb-dims">(3,)</span>  [
                 <span class="h5tb-unit">m</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1323,25 +1332,25 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp22.hdf</p>
+<p>tmp5.hdf</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3670692300" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3670692300">
+                    <input id="group-ds-/-2927331300" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2927331300">
                     /<span>(3)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.0</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li><li style="list-style-type: none; font-style: italic">creation_time : 2022-08-12T16:11:10Z</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.6</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                <ul id="ds-1-/temperature-3671916000" class="h5tb-var-list">
-                <input id="ds-2-/temperature-3671918300" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/temperature-2928190600" class="h5tb-var-list">
+                <input id="ds-2-/temperature-2928192700" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/temperature-3671918300">temperature</label>
+                    for="ds-2-/temperature-2928192700">temperature</label>
                 <span class="h5tb-dims">(y: 3, x: 2)</span>  [
                 <span class="h5tb-unit">m/s</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : a long name</li>
@@ -1351,10 +1360,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/x-3672179000" class="h5tb-var-list">
-                <input id="ds-2-/x-3672181500" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-2928403300" class="h5tb-var-list">
+                <input id="ds-2-/x-2928405400" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-3672181500">x</label>
+                    for="ds-2-/x-2928405400">x</label>
                 <span class="h5tb-dims">(2,)</span>  [
                 <span class="h5tb-unit">N.A.</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1365,10 +1374,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/y-3672548800" class="h5tb-var-list">
-                <input id="ds-2-/y-3672551000" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/y-2928701400" class="h5tb-var-list">
+                <input id="ds-2-/y-2928703600" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/y-3672551000">y</label>
+                    for="ds-2-/y-2928703600">y</label>
                 <span class="h5tb-dims">(3,)</span>  [
                 <span class="h5tb-unit">m</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:

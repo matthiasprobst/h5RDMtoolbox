@@ -54,6 +54,28 @@
   },
   {
    "cell_type": "markdown",
+   "id": "da9cda49-6eb6-4a6c-bcda-fb90110e92ad",
+   "metadata": {},
+   "source": [
+    "## Basenames\n",
+    "Sometimes it is useful to get the basename instead of the name of an HDF5 object. The name is equal to the path while the basename is the name of the dataset or group. `basename` is a property of datasets and groups:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "58d3616e-052c-43e1-9769-3dff328a9acb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print('name             basename')\n",
+    "    print(h5.gr_1.name, '      --> ', h5.gr_1.basename)\n",
+    "    print(h5.gr_1.ds_1.name, ' --> ', h5.gr_1.ds_1.basename)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
    "id": "42e3e8bd-851d-4092-825e-ac87e216983e",
    "metadata": {},
    "source": [

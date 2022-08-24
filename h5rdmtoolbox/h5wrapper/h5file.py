@@ -341,6 +341,10 @@ class H5Dataset(h5py.Dataset):
         return self._h5grp(get_root(super().parent))
 
     @property
+    def basename(self):
+        return os.path.basename(self.name)
+
+    @property
     def values(self):
         """avoiding using xarray"""
         return DatasetValues(self)
@@ -404,6 +408,15 @@ class H5Dataset(h5py.Dataset):
         """Writes attribute standard_name if passed string is not None.
         The rules for the standard_name is checked before writing to file."""
         self.attrs['standard_name'] = new_standard_name
+
+    def __getattr__(self, item):
+        if item not in self.__dict__:
+            for d in self.dims:
+                if len(d) > 0:
+                    for i in range(len(d)):
+                        if item == os.path.basename(d[i].name):
+                            return d[i]
+        return super().__getattr__(item)
 
     def __setitem__(self, key, value):
         if isinstance(value, xr.DataArray):
@@ -607,6 +620,10 @@ class H5Group(h5py.Group):
             return found
 
         return get_root(self.parent)
+
+    @property
+    def basename(self):
+        return os.path.basename(self.name)
 
     def get_datasets(self, pattern=None) -> List[h5py.Dataset]:
         """Return list of datasets in the current group.
