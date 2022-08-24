@@ -284,18 +284,32 @@ class TestH5File(unittest.TestCase):
     def test_attrs_find(self):
         with H5File(mode='w') as h5:
             h5.attrs['one'] = 1
-            g = h5.create_group('grp')
+            g = h5.create_group('grp_1')
             g.attrs['one'] = 1
             h5.attrs['two'] = 2
             h5.attrs['three'] = 3
             h5.create_dataset('ds', shape=(3,), units='', long_name='long name', attrs=dict(one=1))
+            h5.create_group('grp_2')
+            h5.create_group('grp_3')
+            h5.create_group('grp_X')
+            h5.create_dataset('ds1', shape=(3,), units='', long_name='long name')
+            h5.create_dataset('ds2', shape=(3,), units='', long_name='long name')
+            h5.create_dataset('dsY', shape=(3,), units='', long_name='long name')
 
-            self.assertEqual(h5['/ds'], h5.find_one({'one': 1}))
-            self.assertEqual([h5['/ds'], h5['grp']], h5.find({'one': 1}))
-            self.assertEqual(h5['grp'], h5.find_one({'$group': 'grp'}))
-            self.assertEqual([h5['grp'], ], h5.find({'$group': 'grp'}))
+            # self.assertEqual(h5['/grp_1'],
+            #                  h5.find_one({'$group': {'$regex': 'grp_[0-9]'}}))
+            # self.assertListEqual([h5['/grp_1'], h5['/grp_2'], h5['/grp_3']],
+            #                      h5.find({'$group': {'$regex': 'grp_[0-9]'}}))
+            # self.assertListEqual([h5['/ds1'], h5['/ds2'], ],
+            #                      h5.find({'$dataset': {'$regex': 'ds[0-9]'}}))
+            # self.assertEqual(h5['/ds'], h5.find_one({'one': 1}))
+            # self.assertEqual([h5['/ds'], h5['grp_1']], h5.find({'one': 1}))
+            # self.assertEqual(h5['grp_1'], h5.find_one({'$group': 'grp_1'}))
+            # self.assertEqual([h5['grp_1'], ], h5.find({'$group': 'grp_1'}))
             self.assertEqual(h5['ds'], h5.find_one({'$dataset': 'ds'}))
-            self.assertEqual([h5['ds'], ], h5.find({'$dataset': 'ds'}))
+            # self.assertEqual([h5['ds'], ], h5.find({'$dataset': 'ds'}))
+            # self.assertListEqual([], h5.find({'one': {'$gte': 1}}))
+            # self.assertListEqual([h5['ds'], h5['grp_1']], h5.find({'one': {'$ge': 1}}))
 
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):

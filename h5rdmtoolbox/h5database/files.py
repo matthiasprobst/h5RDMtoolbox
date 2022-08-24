@@ -1,19 +1,18 @@
 import pathlib
-from typing import Union, Any, Dict
+import re
+from typing import Union, Any, Dict, Callable
 
 import h5py
 
 from ..h5wrapper import open_wrapper
 
-names = []
 
-
-def find_obj_by_name(root, dsname, recursive, h5obj):
+def find_obj_by_name(root, objname, recursive, h5obj, cmp: Callable):
     found_objs = []
 
     def _get_ds(name, node):
         if isinstance(node, h5obj):
-            if name == dsname:
+            if cmp(name, objname):
                 found_objs.append(node)
 
     if recursive:
@@ -21,33 +20,33 @@ def find_obj_by_name(root, dsname, recursive, h5obj):
         return found_objs
 
     if isinstance(root, h5obj):
-        if dsname == root.name:
+        if cmp(root.name, objname):
             found_objs.append(root)
         return found_objs
 
     for k, v in root.items():
         if isinstance(v, h5py.Dataset):
-            if dsname == k:
+            if cmp(k, objname):
                 found_objs.append(v)
     return found_objs
 
 
-def find_one_obj_by_name(root, dsname, recursive, h5obj):
+def find_one_obj_by_name(root, objname, recursive, h5obj, cmp: Callable):
     def _get_ds(name, node):
         if isinstance(node, h5obj):
-            if name == dsname:
+            if cmp(name, objname):
                 return node
 
     if recursive:
         return root.visititems(_get_ds)
     if isinstance(root, h5obj):
-        if dsname == root.name:
+        if cmp(root.name, objname):
             return root
         else:
             return None
     for k, v in root.items():
         if isinstance(v, h5obj):
-            if dsname == k:
+            if cmp(k, objname):
                 return v
     return None
 
@@ -57,8 +56,10 @@ def find_attributes(h5obj: Union[h5py.Group, h5py.Dataset],
                     attribute_value: Any,
                     recursive: bool,
                     h5type: Union[str, None],
-                    find_one: bool):
+                    find_one: bool,
+                    cmp: Callable):
     """Find one or many attibute(s) recursively (or not) starting from a group or dataset"""
+    names = []
 
     def _get_grp(name, node):
         if isinstance(node, h5py.Group):
@@ -68,7 +69,7 @@ def find_attributes(h5obj: Union[h5py.Group, h5py.Dataset],
                         return node
                     names.append(node)
                 else:
-                    if node.attrs[attribute_name] == attribute_value:
+                    if cmp(node.attrs[attribute_name], attribute_value):
                         if find_one:
                             return node
                         names.append(node)
@@ -93,7 +94,7 @@ def find_attributes(h5obj: Union[h5py.Group, h5py.Dataset],
                     return node
                 names.append(node)
             else:
-                if node.attrs[attribute_name] == attribute_value:
+                if cmp(node.attrs[attribute_name], attribute_value):
                     if find_one:
                         return node
                     names.append(node)
@@ -109,25 +110,65 @@ def find_attributes(h5obj: Union[h5py.Group, h5py.Dataset],
         if h5type is None:
             for ds in h5obj.values():
                 if attribute_name in ds.attrs:
-                    if ds.attrs[attribute_name] == attribute_value:
+                    if cmp(ds.attrs[attribute_name], attribute_value):
                         names.append(ds)
         elif h5type.lower() in ('dataset', 'ds'):
             for ds in h5obj.values():
                 if isinstance(ds, h5py.Dataset):
                     if attribute_name in ds.attrs:
-                        if ds.attrs[attribute_name] == attribute_value:
+                        if cmp(ds.attrs[attribute_name], attribute_value):
                             names.append(ds)
         elif h5type.lower() in ('group', 'grp', 'gr'):
             for ds in h5obj.values():
                 if isinstance(ds, h5py.Group):
                     if attribute_name in ds.attrs:
-                        if ds.attrs[attribute_name] == attribute_value:
+                        if cmp(ds.attrs[attribute_name], attribute_value):
                             names.append(ds)
     if find_one:
         return res
     return names
 
 
+# implementation similar to pymongo:
+# https://www.mongodb.com/docs/manual/reference/operator/query/
+
+def _eq(a, b):
+    return a == b
+
+
+def _any_str(a, b):
+    return True
+
+
+def _gt(a, b):
+    return a > b
+
+
+def _gte(a, b):
+    return a >= b
+
+
+def _lt(a, b):
+    return a < b
+
+
+def _lte(a, b):
+    return a <= b
+
+
+def _regex(inputstr, pattern):
+    return re.search(pattern, inputstr)
+
+
+_cmp = {'$eq': _eq,
+        '$gt': _gt,
+        '$gte': _gte,
+        '$lt': _lt,
+        '$lte': _lte,
+        '$regex': _regex}
+
+_h5type = {'$dataset': h5py.Dataset,
+           '$group': h5py.Group}
 def find(h5obj: Union[h5py.Group, h5py.Dataset], flt, recursive: bool,
          h5type: Union[str, None],
          find_one: bool):
@@ -138,15 +179,33 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset], flt, recursive: bool,
         raise NotImplementedError('Currently it is only allowed to filter for one condition')
     for k, v in flt.items():
         if k[0] == '$':
-            if k == '$dataset':
+            if isinstance(v, dict):
+                if len(v) != 1:
+                    raise NotImplementedError('Currently it is only allowed to filter for one condition')
                 if find_one:
-                    return find_one_obj_by_name(h5obj, v, recursive, h5py.Dataset)
-                return find_obj_by_name(h5obj, v, recursive, h5py.Dataset)
-            elif k == '$group':
-                if find_one:
-                    return find_one_obj_by_name(h5obj, v, recursive, h5py.Group)
-                return find_obj_by_name(h5obj, v, recursive, h5py.Group)
-        return find_attributes(h5obj, k, v, recursive=recursive, h5type=h5type, find_one=find_one)
+                    for _condition, _value in v.items():
+                        return find_one_obj_by_name(h5obj, _value, recursive, _h5type[k], cmp=_cmp[_condition])
+                for _condition, _value in v.items():
+                    return find_obj_by_name(h5obj, _value, recursive, _h5type[k], cmp=_cmp[_condition])
+            if not isinstance(v, (str, dict)):
+                raise TypeError(f'Value must be of type str or dict not {type(v)}')
+            if find_one:
+                if v == '':
+                    return find_one_obj_by_name(h5obj, v, recursive, _h5type[k], cmp=_any_str)
+                return find_one_obj_by_name(h5obj, v, recursive, _h5type[k], cmp=_eq)
+            if v == '':
+                return find_obj_by_name(h5obj, v, recursive, _h5type[k], cmp=_any_str)
+            return find_obj_by_name(h5obj, v, recursive, _h5type[k], cmp=_eq)
+        if isinstance(v, dict):
+            if len(v) != 1:
+                raise NotImplementedError('Currently it is only allowed to filter for one condition')
+            # e.g. {'$gte': 1}
+            # e.g. {'$regex': '^hallo[0-9]$'}
+            for kcmp, vcmp in v.items():
+                return find_attributes(h5obj, k, vcmp, recursive=recursive, h5type=h5type, find_one=find_one,
+                                       cmp=_cmp[kcmp])
+        return find_attributes(h5obj, k, v, recursive=recursive, h5type=h5type, find_one=find_one,
+                               cmp=_eq)
 
 
 class H5Files:
