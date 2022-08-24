@@ -7,7 +7,7 @@
    "source": [
     "# File exploration\n",
     "\n",
-    "To find data quickly or to collect certain objects the `h5RDMtoolbox` provides helpful methods. It follows mainly the `pymong`-syntax."
+    "To find data quickly or to collect certain objects the `h5RDMtoolbox` provides helpful methods. It follows mainly the `pymongo`-syntax."
    ]
   },
   {
@@ -41,10 +41,14 @@
    "source": [
     "with h5tbx.H5File() as h5:\n",
     "    h5.create_group('grp_1')\n",
-    "    h5.create_group('grp_2', long_name='my other group', attrs=dict(one=2, two='a second attr'))\n",
-    "    h5.create_dataset('ds_1', shape=(2, 4), units='', long_name='dataset 1', attrs=dict(mean=1.5))\n",
-    "    h5.create_dataset('ds_2', shape=(2, 4), units='', long_name='dataset 2', attrs=dict(mean=2.0))\n",
-    "    h5.create_dataset('gr_1/ds_1', shape=(2, 4), units='', long_name='dataset 2', attrs=dict(mean=1.5))\n",
+    "    h5.create_group('grp_2', long_name='my other group',\n",
+    "                    attrs=dict(one=2, two='a second attr'))\n",
+    "    h5.create_dataset('ds_1', shape=(2, 4), units='', long_name='dataset 1',\n",
+    "                      attrs=dict(mean=1.5))\n",
+    "    h5.create_dataset('ds_2', shape=(2, 4), units='', long_name='dataset 2',\n",
+    "                      attrs=dict(mean=2.0))\n",
+    "    h5.create_dataset('gr_1/ds_1', shape=(2, 4), units='', long_name='dataset 2',\n",
+    "                      attrs=dict(mean=1.5))\n",
     "    filename = h5.hdf_filename"
    ]
   },
@@ -55,7 +59,7 @@
    "source": [
     "## Find\n",
     "Syntax follows `pymongo`-syntax but not all queries may be implemented. Currently available:<br>\n",
-    "\\\\$gt, \\\\$gte, \\\\$lt, \\\\$lte, \\\\$regex\n",
+    "$\\$$gt, $\\$$gte, $\\$$lt, $\\$$lte, $\\$$regex\n",
     "\n",
     "You can decide to find only one appearance (`find_one`) or to find all (`find`)."
    ]
@@ -66,7 +70,7 @@
    "metadata": {},
    "source": [
     "### Find all groups/datasets in a level (or recursive through the file):\n",
-    "Use key \"\\\\$group\" or \"\\\\$dataset\". If the value is an empty string, all groups/datasets are returned:"
+    "Use key \"$\\$$group\" or \"$\\$$dataset\". If the value is an empty string, all groups/datasets are returned:"
    ]
   },
   {
@@ -108,20 +112,22 @@
    "id": "065600e9-68b4-43f6-93ee-1e179d549d1b",
    "metadata": {},
    "source": [
-    "using **regex**:"
+    "To use **regex** the value must be dict itself with key `$regex`:"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": null,
    "id": "c7b77acb-9a7d-4cf1-9f51-cbbe7bdaeea7",
-   "metadata": {},
+   "metadata": {
+    "tags": []
+   },
    "outputs": [],
    "source": [
     "with h5tbx.H5File(filename) as h5:\n",
-    "    print(h5.find({'$group': 'grp_1'}, rec=True))\n",
+    "    print(h5.find({'$group': {'$regex': 'grp_[0-9]'}}, rec=True))\n",
     "with h5tbx.H5File(filename) as h5:\n",
-    "    print(h5.find({'$dataset': 'ds_1'}, rec=True))"
+    "    print(h5.find({'$dataset': {'$regex': 'ds_[0-9]'}}, rec=True))"
    ]
   },
   {
