@@ -124,19 +124,23 @@ def sdump(h5grp, ret=False,
         ) if isinstance(h5grp[k], h5py.Dataset)]
         for dataset_name in dataset_names:
             # varname = utils._make_bold(os.path.basename(h5grp._h5ds(h5grp[dataset_name]).name))
-            varname = make_bold(os.path.basename(h5grp[dataset_name].name))
+            ds = h5grp[dataset_name]
+            varname = make_bold(os.path.basename(ds.name))
             if is_layout:
                 out += f'\n{spaces}{varname:{sp_name}} '
             else:
-                shape = h5grp[dataset_name].shape
-                units = h5grp[dataset_name].units
-                if units is None:
-                    units = 'NA'
+                shape = ds.shape
+                if ds.dtype.char == 'S':
+                    pass
                 else:
-                    if units == ' ':
-                        units = '-'
+                    units = h5grp[dataset_name].units
+                    if units is None:
+                        units = 'NA'
+                    else:
+                        if units == ' ':
+                            units = '-'
 
-                out += f'\n{spaces}{varname:{sp_name}} {str(shape):<{sp_shape}}  {units:<{sp_unit}}'
+                    out += f'\n{spaces}{varname:{sp_name}} {str(shape):<{sp_shape}}  {units:<{sp_unit}}'
 
             if not hide_attributes:
                 # write attributes:
@@ -268,12 +272,15 @@ def _group_repr_html(h5group, max_attr_length: Union[int, None], collapsed: bool
 
 def _html_repr_dataset(h5dataset, max_attr_length: Union[int, None],
                        _ignore_attrs=IGNORE_ATTRS):
-    if 'units' in h5dataset.attrs:
-        _unit = h5dataset.attrs['units']
-        if _unit in ('', ' '):
-            _unit = '-'
+    if h5dataset.dtype.char == 'S':
+        pass
     else:
-        _unit = 'N.A.'
+        if 'units' in h5dataset.attrs:
+            _unit = h5dataset.attrs['units']
+            if _unit in ('', ' '):
+                _unit = '-'
+        else:
+            _unit = 'N.A.'
 
     ds_name = os.path.basename(h5dataset.name)
     ds_dirname = os.path.dirname(h5dataset.name)
@@ -307,13 +314,29 @@ def _html_repr_dataset(h5dataset, max_attr_length: Union[int, None],
 
     _id1 = f'ds-1-{h5dataset.name}-{perf_counter_ns().__str__()}'
     _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
-    _html_pre = f"""\n
-                <ul id="{_id1}" class="h5tb-var-list">
-                <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname' 
-                    for="{_id2}">{ds_name}</label>
-                <span class="h5tb-dims">{_shape_repr}</span>  [
-                <span class="h5tb-unit">{_unit}</span>]"""
+    if h5dataset.dtype.char == 'S':
+        if h5dataset.ndim == 0:
+            _html_pre = f"""\n
+                        <ul id="{_id1}" class="h5tb-var-list">
+                        <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                        <label class='h5tb-varname' 
+                            for="{_id2}">{ds_name}</label>
+                        <span class="h5tb-dims">{_shape_repr}</span>: {h5dataset[()]}"""
+        else:
+            _html_pre = f"""\n
+                        <ul id="{_id1}" class="h5tb-var-list">
+                        <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                        <label class='h5tb-varname' 
+                            for="{_id2}">{ds_name}</label>
+                        <span class="h5tb-dims">{_shape_repr}</span>"""
+    else:
+        _html_pre = f"""\n
+                    <ul id="{_id1}" class="h5tb-var-list">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' 
+                        for="{_id2}">{ds_name}</label>
+                    <span class="h5tb-dims">{_shape_repr}</span>  [
+                    <span class="h5tb-unit">{_unit}</span>]"""
     # now all attributes of the dataset:
     # open attribute section:
     _html_ds_attrs = f"""\n<ul class="h5tb-attr-list">"""
