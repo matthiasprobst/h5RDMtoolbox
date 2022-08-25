@@ -99,7 +99,7 @@ def generate_time_str(dtime: datetime, fmt: str) -> str:
         raise ValueError(f'Invalid formatting string. Can only handle one %z formatter')
 
 
-def touch_tmp_hdf5_file(touch=True) -> pathlib.Path:
+def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     """
     Generates a file path in directory h5wrapperclasses/.tmp
     with filename dsXXXX.hdf where XXXX is more or less a
@@ -118,6 +118,9 @@ def touch_tmp_hdf5_file(touch=True) -> pathlib.Path:
     if touch:
         with File(hdf_filepath, "w") as h5touch:
             h5touch.attrs['__h5rdmtoolbox_version__'] = __version__
+            if attrs is not None:
+                for ak, av in attrs.items():
+                    h5touch.attrs[ak] = av
     return hdf_filepath
 
 

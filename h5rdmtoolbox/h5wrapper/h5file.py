@@ -1701,28 +1701,20 @@ class H5File(h5py.File, H5Group):
         _bytes = os.path.getsize(self.filename)
         return _bytes * ureg.byte
 
-    # @property
-    # def title(self) -> Union[str, None]:
-    #     """Return the title (stored as HDF5 attribute) of the file. If it does not exist, None is returned"""
-    #     return self.attrs.get('title')
-    #
-    # @title.setter
-    # def title(self, title):
-    #     """Sets the title of the file"""
-    #     self.attrs.modify('title', title)
-
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
                  layout_filename: Path = H5File_layout_filename,
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
-
+        _tmp_init = False
         if name is None:
+            _tmp_init = True
             logger.debug("An empty H5File class is initialized")
-            name = utils.touch_tmp_hdf5_file()
-            # mode must be at w or r+ because there is no filename yet (temp willl be created)
-            mode = 'r+'
+            if title is not None:
+                name = utils.touch_tmp_hdf5_file(attrs={'title': title})
+            else:
+                name = utils.touch_tmp_hdf5_file()
         elif isinstance(name, ObjectID):
             pass
         elif not isinstance(name, (str, Path)):
@@ -1731,14 +1723,16 @@ class H5File(h5py.File, H5Group):
         else:
             if mode == 'r+':
                 if not Path(name).exists():
+                    _tmp_init = True
                     # "touch" the file, so it exists
                     with h5py.File(name, mode='w', driver=driver,
                                    libver=libver, userblock_size=userblock_size, swmr=swmr,
                                    rdcc_nslots=rdcc_nslots, rdcc_nbytes=rdcc_nbytes, rdcc_w0=rdcc_w0,
                                    track_order=track_order, fs_strategy=fs_strategy, fs_persist=fs_persist,
                                    fs_threshold=fs_threshold,
-                                   **kwds):
-                        pass
+                                   **kwds) as _h5:
+                        if title is not None:
+                            _h5.attrs['title'] = title
 
         if not isinstance(name, ObjectID):
             self.hdf_filename = Path(name)
@@ -1752,6 +1746,9 @@ class H5File(h5py.File, H5Group):
         this_class_name = type(self).__name__
         self.layout_file = Path.joinpath(
             user_data_dir, f'{this_class_name}_Layout.hdf')
+
+        if not _tmp_init and self.mode == 'r' and title is not None:
+            raise RuntimeError('No write intent. Cannot write title.')
 
         # update file creation/modification times and h5wrapper version
         if self.mode != 'r':

@@ -18,12 +18,33 @@ class TestCommon(unittest.TestCase):
         self.wrapper_classes = (h5tbx.H5File, h5tbx.H5Flow, h5tbx.H5PIV)
         self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5PIVGroup)
 
+    def test_title_at_init(self):
+        for wc in self.wrapper_classes:
+            # with wc(mode='r', title='mytitle') as h5:
+            #     self.assertEqual(h5.attrs['title'], 'mytitle')
+            #     self.assertEqual(h5.mode, 'r')
+            # with wc(mode='r+', title='mytitle') as h5:
+            #     self.assertEqual(h5.attrs['title'], 'mytitle')
+            #     self.assertEqual(h5.mode, 'r+')
+            # with wc(mode='w', title='mytitle') as h5:
+            #     self.assertEqual(h5.attrs['title'], 'mytitle')
+            #     self.assertEqual(h5.mode, 'r+')
+            with wc(mode='w', title=None) as h5touch:
+                pass
+            # # try to set a tilte when file is in read-only but already exist:
+            with self.assertRaises(RuntimeError):
+                with wc(h5touch.hdf_filename, mode='r', title='mytitle'):
+                    pass
+            with wc(h5touch.hdf_filename, mode='r+', title='mytitle') as h5:
+                self.assertEqual(h5.attrs['title'], 'mytitle')
+                self.assertEqual(h5.mode, 'r+')
+
     def test_file_times(self):
         for wc in self.wrapper_classes:
             with wc() as h5:
                 now = datetime.now().astimezone()
                 file_now = h5.creation_time
-                self.assertTrue(abs((file_now-now).total_seconds()) < 0.1)
+                self.assertTrue(abs((file_now - now).total_seconds()) < 0.1)
 
     def test_create_group(self):
         """testing the creation of groups"""
