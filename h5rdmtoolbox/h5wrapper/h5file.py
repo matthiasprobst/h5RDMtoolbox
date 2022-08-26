@@ -845,6 +845,33 @@ class H5Group(h5py.Group):
             subgrp.attrs['long_name'] = long_name
         return self._h5grp(subgrp)
 
+    def create_string_dataset(self, name: str, data: Union[str, List[str]], overwrite=False,
+                              standard_name=None,
+                              long_name=None,
+                              attrs=None):
+        """Create a string dataset. In this version only one string is allowed.
+        In future version a list of strings may be allowed, too.
+        No long or standard name needed"""
+        if isinstance(data, str):
+            n_letter = len(data)
+        elif isinstance(data, (tuple, list)):
+            n_letter = max([len(d) for d in data])
+        dtype = f'S{n_letter}'
+        if name in self:
+            if overwrite is True:
+                del self[name]  # delete existing dataset
+            # else let h5py return the error
+        ds = super().create_dataset(name, dtype=dtype, data=data)
+        if attrs is None:
+            attrs = {}
+        if long_name:
+            attrs.update({'long_name': long_name})
+        if standard_name:
+            attrs.update({'standard_name': long_name})
+        for ak, av in attrs.items():
+            ds.attrs[ak] = av
+        return ds
+
     def create_dataset(self, name, shape=None, dtype=None, data=None,
                        units=None, long_name=None,
                        standard_name: Union[str, conventions.StandardizedName] = None,

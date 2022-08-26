@@ -93,6 +93,36 @@
   },
   {
    "cell_type": "markdown",
+   "id": "5283b85d-bcf8-420e-91c1-fc7dadab6bf6",
+   "metadata": {},
+   "source": [
+    "### String datasets\n",
+    "String datasets can be created very quickly. No standard_name, long_name or units *must* be given. As units generally anyhow makes no sense, there is still the option to pass long and standard name via the method parameters.<br>\n",
+    "The dump method will display single strings but not lists of strings.<br>\n",
+    "The return value when sliced will still be a `xarray.DataArray` as attributes should still be attached to the object. Use `.values` to get the raw string:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a854cf32-74d8-47a9-a34c-1921b36913c8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_string_dataset('astr', 'hello_world')\n",
+    "    h5.create_string_dataset('string_list', ['hello', 'world'])\n",
+    "    h5.dump()\n",
+    "    \n",
+    "    print('---\\n', h5['astr'][()])\n",
+    "    print('---\\n',h5['astr'].values[()])\n",
+    "    \n",
+    "    print('---\\n', h5['string_list'][:])\n",
+    "    print('---\\n',h5['string_list'].values[:])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
    "id": "9d0d95f9-8dbe-4755-ad03-2258a51beae4",
    "metadata": {},
    "source": [
