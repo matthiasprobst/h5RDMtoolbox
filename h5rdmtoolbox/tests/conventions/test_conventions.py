@@ -19,7 +19,7 @@ class TestCnventions(unittest.TestCase):
         with H5PIV(mode='w') as h5:
             ds = h5.create_dataset('u', shape=(), long_name='x_velocity', units='m/s')
             self.assertFalse('standard_name' in ds.attrs)
-            translations.update_standard_names(h5)
+            translations.update_pivview_standard_names(h5)
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
     def test_standard_name(self):

@@ -1,4 +1,7 @@
+import pathlib
+from os.path import basename
 from pathlib import Path
+from typing import Dict
 
 import h5py
 
@@ -105,7 +108,37 @@ class H5StandardNameUpdate:
             update(h5obj, self._translation_dict)
 
 
-def update_standard_names(root: h5py.Group, recursive=True):
+def from_yaml(yaml_file: pathlib.Path) -> Dict:
+    yaml_file = pathlib.Path(yaml_file)
+    import yaml
+    with open(yaml_file) as yf:
+        snt = yaml.safe_load(yf)
+    return snt
+
+
+def translate_standard_names(root: h5py.Group, translation_dict: Dict,
+                             verbose: bool = False):
+    """Iterate through root recursively and add or update
+    standard names according to the translation dictionary,
+    which provides a translation of names to standard names
+    where 'names' are the dataset names found during
+    iteration through the file"""
+
+    def sn_update(name, node):
+        if isinstance(node, h5py.Dataset):
+            if node.name in translation_dict:
+                node.attrs['standard_name'] = translation_dict[node.name]
+                if verbose:
+                    print(f'{name} -> {translation_dict[name]}')
+            elif basename(node.name) in translation_dict:
+                node.attrs['standard_name'] = translation_dict[basename(node.name)]
+                if verbose:
+                    print(f'{name} -> {translation_dict[basename(node.name)]}')
+
+    root.visititems(sn_update)
+
+
+def update_pivview_standard_names(root: h5py.Group, recursive=True):
     """Updates standard names of datasets for PIVview data in
     an HDF5 group. Does it recursively per default"""
     h5snu = H5StandardNameUpdate(pivview_to_standardnames_dict)

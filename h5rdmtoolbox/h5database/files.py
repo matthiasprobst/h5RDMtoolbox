@@ -169,6 +169,8 @@ _cmp = {'$eq': _eq,
 
 _h5type = {'$dataset': h5py.Dataset,
            '$group': h5py.Group}
+
+
 def find(h5obj: Union[h5py.Group, h5py.Dataset], flt, recursive: bool,
          h5type: Union[str, None],
          find_one: bool):
