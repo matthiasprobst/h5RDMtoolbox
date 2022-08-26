@@ -332,6 +332,13 @@ class StandardizedNameTable(_StandardizedNameTable):
         return snt
 
     @staticmethod
+    def from_yml(yml_filename):
+        import yaml
+        with open(yml_filename, 'r') as f:
+            ymldict = yaml.safe_load(f)
+        return StandardizedNameTable(**ymldict)
+
+    @staticmethod
     def from_versionname(version_name: str):
         """reads the table from an xml file stored in this package"""
         # xml_filename = Path(__file__).parent / 'snxml' / f'{version_name}.xml'
@@ -422,14 +429,24 @@ class StandardizedNameTable(_StandardizedNameTable):
         return True
 
     def translate(self, name: str, source: str) -> Union[str, None]:
-        """If convention/xml file comes with tanslation entries, this method converts
-        the input name into the convention's standardized name"""
+        """If convention/xml file comes with translation entries, this method converts
+        the input name into the convention's standardized name
+
+        Parameters
+        ----------
+        name: str
+            Name to be translated
+        source:
+            (sub) dictionary entry to use for translation. Per Standard Name Table
+            there can be multiple translation dictionaries e.g. for different software.
+        """
         if self._translation_dict:
             if source in self._translation_dict:
                 if name in self._translation_dict[source]:
                     return self._translation_dict[source][name]
                 return None
-            return None
+            else:
+                AttributeError(f'No such translation dictionary: {source}')
         raise ValueError(f'Translation dictionary is empty!')
 
 
