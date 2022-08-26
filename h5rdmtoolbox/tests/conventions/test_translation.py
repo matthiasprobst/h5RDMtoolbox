@@ -1,3 +1,4 @@
+import pathlib
 import unittest
 from pprint import pprint
 
@@ -8,8 +9,9 @@ from h5rdmtoolbox.conventions import translations
 class TestTranslation(unittest.TestCase):
 
     def test_read_yml(self):
-        self.assertIsInstance(translations.from_yaml('../../conventions/snt_pivview.yml'), dict)
-        pprint(translations.from_yaml('../../conventions/snt_pivview.yml'))
+        self.assertIsInstance(
+            translations.from_yaml(pathlib.Path(__file__).parent / '../../conventions/snt_pivview.yml'), dict)
+        pprint(translations.from_yaml(pathlib.Path(__file__).parent / '../../conventions/snt_pivview.yml'))
 
     def test_translation(self):
         with h5tbx.H5File() as h5:
