@@ -317,93 +317,94 @@ class CFXCase(CFXFile):
                 self._filename.unlink(missing_ok=True)
 
             def generate(self, force: bool = False, verbose: bool = True):
-                if self.out_of_date or force:
-                    st = time.perf_counter()
-                    ccl_filename = ccl.generate(self._cfx_case.filename, verbose=verbose)
-                    elapsed_time = time.perf_counter() - st
-                    if verbose:
-                        print(f'Conversion took {elapsed_time} s')
-                    ccl.CCLTextFile(ccl_filename).to_hdf(self._filename)
+                if self._cfx_case.has_result_files:
+                    if self.out_of_date or force:
+                        st = time.perf_counter()
+                        ccl_filename = ccl.generate(self._cfx_case.filename, verbose=verbose)
+                        elapsed_time = time.perf_counter() - st
+                        if verbose:
+                            print(f'Conversion took {elapsed_time} s')
+                        ccl.CCLTextFile(ccl_filename).to_hdf(self._filename)
 
-                    if len(self._cfx_case) == 0:
-                        monitor_data = None
-                    else:
-                        monitor_data = self._cfx_case.latest.monitor.data
+                        if len(self._cfx_case) == 0:
+                            monitor_data = None
+                        else:
+                            monitor_data = self._cfx_case.latest.monitor.data
 
-                    scale_sub_names = ('ACCUMULATED TIMESTEP', 'CURRENT TIMESTEP', 'TIME',)
-                    scale_monitor_names = []
-                    scale_datasets = []
-                    with h5py.File(self._filename, 'r+') as h5:
-                        if monitor_data is not None:
-                            for k in monitor_data.keys():
-                                if any([scale_name in k for scale_name in scale_sub_names]):
-                                    scale_monitor_names.append(k)
-                                    meta_dict = process_monitor_string(k)
-                                    ds_name = f'{meta_dict["group"]}/{meta_dict["name"]}'
-                                    ds = h5.create_dataset(name=ds_name, data=monitor_data[k])
-                                    ds.attrs['units'] = meta_dict['units']
-                                    try:
-                                        ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
-                                    except KeyError:
-                                        logger.debug(f'Could not set standard name for {ds_name}')
-                                    ds.make_scale()
-                                    scale_datasets.append(ds)
+                        scale_sub_names = ('ACCUMULATED TIMESTEP', 'CURRENT TIMESTEP', 'TIME',)
+                        scale_monitor_names = []
+                        scale_datasets = []
+                        with h5py.File(self._filename, 'r+') as h5:
+                            if monitor_data is not None:
+                                for k in monitor_data.keys():
+                                    if any([scale_name in k for scale_name in scale_sub_names]):
+                                        scale_monitor_names.append(k)
+                                        meta_dict = process_monitor_string(k)
+                                        ds_name = f'{meta_dict["group"]}/{meta_dict["name"]}'
+                                        ds = h5.create_dataset(name=ds_name, data=monitor_data[k])
+                                        ds.attrs['units'] = meta_dict['units']
+                                        try:
+                                            ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
+                                        except KeyError:
+                                            logger.debug(f'Could not set standard name for {ds_name}')
+                                        ds.make_scale()
+                                        scale_datasets.append(ds)
 
-                            grp = h5.create_group('monitor')
-                            for k, v in monitor_data.items():
-                                if k not in scale_monitor_names:
-                                    meta_dict = process_monitor_string(k)
+                                grp = h5.create_group('monitor')
+                                for k, v in monitor_data.items():
+                                    if k not in scale_monitor_names:
+                                        meta_dict = process_monitor_string(k)
 
-                                    if meta_dict["group"] in grp:
-                                        if meta_dict["name"] in grp[meta_dict["group"]]:
-                                            raise NameError(f'Name "{meta_dict["name"]}" already exists in "{grp[meta_dict["group"]].name}"')
-                                    #     name = f'{meta_dict["group"]}_{meta_dict["name"]}'
-                                    # else:
-                                    name = f'{meta_dict["group"]}/{meta_dict["name"]}'
-                                    try:
-                                        ds = grp.create_dataset(name=name, data=v)
-                                    except Exception as e:
-                                        # workaround when don't know what to do...:
-                                        old_name = name
-                                        _name_split = old_name.rsplit('/', 1)
-                                        name = f'{_name_split[0]}_{_name_split[1]}'
-                                        ds = grp.create_dataset(name=name, data=v)
-                                        # raise Exception(f'Could not create {name} after processing {k} '
-                                        #                    f'due to: "{e}"')
+                                        if meta_dict["group"] in grp:
+                                            if meta_dict["name"] in grp[meta_dict["group"]]:
+                                                raise NameError(f'Name "{meta_dict["name"]}" already exists in "{grp[meta_dict["group"]].name}"')
+                                        #     name = f'{meta_dict["group"]}_{meta_dict["name"]}'
+                                        # else:
+                                        name = f'{meta_dict["group"]}/{meta_dict["name"]}'
+                                        try:
+                                            ds = grp.create_dataset(name=name, data=v)
+                                        except Exception as e:
+                                            # workaround when don't know what to do...:
+                                            old_name = name
+                                            _name_split = old_name.rsplit('/', 1)
+                                            name = f'{_name_split[0]}_{_name_split[1]}'
+                                            ds = grp.create_dataset(name=name, data=v)
+                                            # raise Exception(f'Could not create {name} after processing {k} '
+                                            #                    f'due to: "{e}"')
 
-                                    try:
-                                        ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
-                                    except KeyError:
-                                        logger.debug(f'Could not set standard name for {ds_name}. Using name '
-                                                     f'as long_name instead')
-                                        ds.attrs['long_name'] = meta_dict['name']
-                                    ds.attrs['units'] = meta_dict['units']
-                                    ds.dims[0].attach_scale(h5['ACCUMULATED TIMESTEP'])
-                                    for scale_dataset in scale_datasets:
-                                        ds.dims[0].attach_scale(scale_dataset)
-                                    if meta_dict['coords']:
-                                        ds.attrs['COORDINATES'] = list(meta_dict['coords'].keys())
-                                        for kc, vc in meta_dict['coords'].items():
-                                            if kc in grp[meta_dict["group"]]:
-                                                if vc == grp[meta_dict["group"]][kc][()]:
-                                                    pass
+                                        try:
+                                            ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
+                                        except KeyError:
+                                            logger.debug(f'Could not set standard name for {ds_name}. Using name '
+                                                         f'as long_name instead')
+                                            ds.attrs['long_name'] = meta_dict['name']
+                                        ds.attrs['units'] = meta_dict['units']
+                                        ds.dims[0].attach_scale(h5['ACCUMULATED TIMESTEP'])
+                                        for scale_dataset in scale_datasets:
+                                            ds.dims[0].attach_scale(scale_dataset)
+                                        if meta_dict['coords']:
+                                            ds.attrs['COORDINATES'] = list(meta_dict['coords'].keys())
+                                            for kc, vc in meta_dict['coords'].items():
+                                                if kc in grp[meta_dict["group"]]:
+                                                    if vc == grp[meta_dict["group"]][kc][()]:
+                                                        pass
+                                                    else:
+                                                        # run into error:
+                                                        try:
+                                                            dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
+                                                        except ValueError:
+                                                            raise ValueError(f'Cannot create dataset {kc} in group {grp[meta_dict["group"]]}')
                                                 else:
-                                                    # run into error:
-                                                    try:
-                                                        dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
-                                                    except ValueError:
-                                                        raise ValueError(f'Cannot create dataset {kc} in group {grp[meta_dict["group"]]}')
-                                            else:
-                                                dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
+                                                    dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
 
-                                            try:
-                                                ds.attrs['standard_name'] = cfx_to_standard_name[kc]
-                                            except KeyError:
-                                                logger.debug(f'Could not set standard name for {ds_name}. Using name '
-                                                             f'as long_name instead')
-                                                ds.attrs['long_name'] = kc
-                                            # NOTE: ASSUMING [m] is the default units but TODO check in CCL file what the base unit is!
-                                            dsc.attrs['units'] = 'm'
+                                                try:
+                                                    ds.attrs['standard_name'] = cfx_to_standard_name[kc]
+                                                except KeyError:
+                                                    logger.debug(f'Could not set standard name for {ds_name}. Using name '
+                                                                 f'as long_name instead')
+                                                    ds.attrs['long_name'] = kc
+                                                # NOTE: ASSUMING [m] is the default units but TODO check in CCL file what the base unit is!
+                                                dsc.attrs['units'] = 'm'
                 return self._filename
 
         return HDFFileInterface(change_suffix(self.filename, '.hdf'), self)

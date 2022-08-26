@@ -1,6 +1,5 @@
 import unittest
 
-import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.x2hdf.cfd import cfx2hdf
 
