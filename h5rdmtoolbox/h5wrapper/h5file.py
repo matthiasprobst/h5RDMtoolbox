@@ -1734,6 +1734,8 @@ class H5File(h5py.File, H5Group):
                         if title is not None:
                             _h5.attrs['title'] = title
 
+        if _tmp_init:
+            mode = 'r+'
         if not isinstance(name, ObjectID):
             self.hdf_filename = Path(name)
         super().__init__(name=name, mode=mode, driver=driver,
