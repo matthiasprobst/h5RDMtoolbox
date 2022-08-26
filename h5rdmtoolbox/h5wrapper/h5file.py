@@ -6,9 +6,7 @@ import shutil
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Union
+from typing import List, Tuple, Union, Dict
 
 import h5py
 import numpy as np
@@ -416,7 +414,7 @@ class H5Dataset(h5py.Dataset):
                     for i in range(len(d)):
                         if item == os.path.basename(d[i].name):
                             return d[i]
-        return super().__getattr__(item)
+        return super().__getattribute__(item)
 
     def __setitem__(self, key, value):
         if isinstance(value, xr.DataArray):
@@ -694,10 +692,50 @@ class H5Group(h5py.Group):
         else:
             ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
 
-    def __setitem__(self, name, obj):
+    def __setitem__(self, name: str, obj: Union[xr.DataArray, List, Tuple, Dict]) -> None:
+        """
+        Lazy creating datasets. More difficult than using h5py as mandatoy
+        parameters must be provided.
+
+        Parameters
+        ----------
+        name: str
+            Name of dataset
+        obj: xr.DataArray or Dict or List/Tuple of data and meta data-
+            If obj is not a xr.DataArray, data must be provided using a list or tuple.
+            See examples for possible ways to pass data.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> with h5tbx.H5File() as h5:
+        >>>     h5['x'] = [1,2,3], 'm/s', {'long_name':'hallo'}
+        >>> with h5tbx.H5File() as h5:
+        >>>     h5['x'] = ([1,2,3], 'm/s', 'long_name', 'standard_name')
+        >>> with h5tbx.H5File() as h5:
+        >>>     h5['x'] = ([1,2,3], dict(units='m/s', long_name='long_name', attrs={'hello': 'world'}, compression='gzip'))
+        """
         if isinstance(obj, xr.DataArray):
-            return obj.hdf.to_group(self, name)
-        super().__setitem__(name, obj)
+            _ = obj.hdf.to_group(self, name)
+        elif isinstance(obj, (list, tuple)):
+            _keys = ('data', 'units', 'long_name', 'standard_name', 'kwargs')
+            _values = {}
+            kwargs = {}
+            # first enty must be data:
+            for i, (_obj, _key) in enumerate(zip(obj, _keys)):
+                if isinstance(_obj, dict):
+                    kwargs = _obj
+                    break
+                if not isinstance(_obj, dict):
+                    _values[_key] = _obj
+            self.create_dataset(name, **_values, **kwargs)
+        elif isinstance(obj, dict):
+            self.create_dataset(**obj)
+        else:
+            super().__setitem__(name, obj)
 
     def __getitem__(self, name):
         ret = super().__getitem__(name)
@@ -972,9 +1010,6 @@ class H5Group(h5py.Group):
             dset = data.hdf.to_group(self, name=name, overwrite=overwrite,
                                      compression=compression,
                                      compression_opts=compression_opts, attrs=attrs)
-
-            # for k, v in attrs.items():
-            #     dset.attrs.modify(k, v)
 
             return dset
 
@@ -1807,11 +1842,6 @@ class H5File(h5py.File, H5Group):
         self.layout_filename = layout_filename
         self._layout = conventions.layout.H5Layout(self.layout_filename)
         self._layout.check(self, silent=True, recursive=True)
-
-    def __setitem__(self, name, obj):
-        if isinstance(obj, xr.DataArray):
-            return obj.hdf.to_group(self, name)
-        super().__setitem__(name, obj)
 
     def check(self, grp='/', silent: bool = True) -> int:
         """Run layout check. This method may be overwritten to add conditional

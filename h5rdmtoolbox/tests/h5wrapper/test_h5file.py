@@ -458,6 +458,31 @@ class TestH5Group(unittest.TestCase):
             if fname.suffix not in ('py', '.py', ''):
                 fname.unlink()
 
+    def test_setitem(self):
+        with H5File() as h5:
+            h5['x'] = [1, 2, 3], 'm/s', {'long_name': 'hallo'}
+            self.assertEqual(h5['x'].shape, (3,))
+            self.assertEqual(h5['x'].attrs['long_name'], 'hallo')
+            self.assertEqual(h5['x'].attrs['units'], 'm/s')
+
+        with H5File() as h5:
+            h5['x'] = (np.random.random((20, 3, 5)), 'm/s', 'long_name', 'standard_name')
+            self.assertEqual(h5['x'].shape, (20, 3, 5))
+            self.assertEqual(h5['x'].attrs['long_name'], 'long_name')
+            self.assertEqual(h5['x'].attrs['standard_name'], 'standard_name')
+            from h5rdmtoolbox import config
+            self.assertEqual(h5['x'].compression_opts, config.hdf_compression_opts)
+
+        with H5File() as h5:
+            h5['x'] = ([1, 2, 3], dict(units='m/s', long_name='long_name',
+                                       attrs={'hello': 'world'}, compression='gzip',
+                                       compression_opts=2))
+            self.assertEqual(h5['x'].shape, (3,))
+            self.assertEqual(h5['x'].attrs['long_name'], 'long_name')
+            self.assertEqual(h5['x'].attrs['hello'], 'world')
+            self.assertEqual(h5['x'].compression, 'gzip')
+            self.assertEqual(h5['x'].compression_opts, 2)
+
     def test_attrs(self):
         with H5File(mode='w') as h5:
             config.natural_naming = False

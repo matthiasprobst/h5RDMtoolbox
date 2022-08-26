@@ -169,6 +169,38 @@
     "    h5.create_dataset('temperature', data=arr)\n",
     "    h5.dump()"
    ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3c4808bb-63cb-4886-b2ea-4fd863238e48",
+   "metadata": {},
+   "source": [
+    "We may also create a dataset by using the `__setitem__`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a52f72b8-5cdc-4ce0-adfe-67ab83d650ef",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5['x'] = [1,2,3], 'm/s', {'long_name':'hallo'}\n",
+    "with h5tbx.H5File() as h5:\n",
+    "    h5['x'] = ([1,2,3], 'm/s', 'long_name', 'standard_name')\n",
+    "with h5tbx.H5File() as h5:\n",
+    "    h5['x'] = ([1,2,3], dict(units='m/s', long_name='long_name',\n",
+    "                             attrs={'hello': 'world'}, compression='gzip'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "99ee90e4-435a-4b82-8a2b-a8e8429cb28a",
+   "metadata": {},
+   "outputs": [],
+   "source": []
   }
  ],
  "metadata": {
