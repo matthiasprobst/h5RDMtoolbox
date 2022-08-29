@@ -7,6 +7,42 @@ import h5py
 from ..h5wrapper import open_wrapper
 
 
+def find_obj_by_property(root, target_value, recursive, h5obj, cmp_func):
+
+    found_objs = []
+
+    def _get_ds(name, node):
+        if isinstance(node, h5obj):
+            if cmp_func(node, target_value):
+                found_objs.append(node)
+
+    if recursive:
+        root.visititems(_get_ds)
+        return found_objs
+
+    if isinstance(root, h5obj):
+        if cmp_func(root, target_value):
+            found_objs.append(root)
+        return found_objs
+    raise TypeError(f'Shape can only be checked for datasets not {type(root)}')
+
+
+def find_one_obj_by_property(root, target_value, recursive, h5obj, cmp_func):
+
+    def _get_ds(name, node):
+        if isinstance(node, h5obj):
+            if cmp_func(node, target_value):
+                return node
+
+    if recursive:
+        return root.visititems(_get_ds)
+
+    if isinstance(root, h5obj):
+        if cmp_func(root, target_value):
+            return root
+    raise TypeError(f'Shape can only be checked for datasets not {type(root)}')
+
+
 def find_obj_by_name(root, objname, recursive, h5obj, cmp: Callable):
     found_objs = []
 
@@ -25,7 +61,7 @@ def find_obj_by_name(root, objname, recursive, h5obj, cmp: Callable):
         return found_objs
 
     for k, v in root.items():
-        if isinstance(v, h5py.Dataset):
+        if isinstance(v, h5obj):
             if cmp(k, objname):
                 found_objs.append(v)
     return found_objs
@@ -160,6 +196,26 @@ def _regex(inputstr, pattern):
     return re.search(pattern, inputstr)
 
 
+def _eq_name(node, name):
+    return node.name == name
+
+
+def _eq_basename(node, name):
+    return node.basename == name
+
+
+def _eq_ndim(node, ndim):
+    return node.ndim == ndim
+
+
+def _eq_shape(node, shape):
+    return node.shape == shape
+
+
+_ds_flt = {'$name': _eq_name,
+           '$basename': _eq_basename,
+           '$ndim': _eq_ndim,
+           '$shape': _eq_shape}
 _cmp = {'$eq': _eq,
         '$gt': _gt,
         '$gte': _gte,
@@ -186,8 +242,20 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset], flt, recursive: bool,
                     raise NotImplementedError('Currently it is only allowed to filter for one condition')
                 if find_one:
                     for _condition, _value in v.items():
+                        if _condition[0] == '$':
+                            if _condition not in ('$basename', '$name'):
+                                # some conditions cannot be checked for groups:
+                                if _h5type[k] == h5py.Group:
+                                    raise RuntimeError(f'Cannot process {_condition} on groups!')
+                            return find_one_obj_by_property(h5obj, _value, recursive, _h5type[k], _ds_flt[_condition])
                         return find_one_obj_by_name(h5obj, _value, recursive, _h5type[k], cmp=_cmp[_condition])
                 for _condition, _value in v.items():
+                    if _condition[0] == '$':
+                        if _condition not in ('$basename', '$name'):
+                            # some conditions cannot be checked for groups:
+                            if _h5type[k] == h5py.Group:
+                                raise RuntimeError(f'Cannot process {_condition} on groups!')
+                        return find_obj_by_property(h5obj, _value, recursive, _h5type[k], _ds_flt[_condition])
                     return find_obj_by_name(h5obj, _value, recursive, _h5type[k], cmp=_cmp[_condition])
             if not isinstance(v, (str, dict)):
                 raise TypeError(f'Value must be of type str or dict not {type(v)}')
