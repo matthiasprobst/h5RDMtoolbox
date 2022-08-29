@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>H5mongo &#8212; h5RDMtoolbox  documentation</title>
+    <title>HDF5 + mongoDB &#8212; h5RDMtoolbox  documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -240,7 +240,7 @@
    </li>
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
-     H5mongo
+     HDF5 + mongoDB
     </a>
    </li>
   </ul>
@@ -446,41 +446,36 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#First-things-first:-Connection-to-the-DB:">
+   First things first: Connection to the DB:
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Testdata">
+   Testdata
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Filling-the-database">
    Filling the database
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Find-all:">
-     Find all:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Find-inside-a-dictionary:">
-     Find inside a dictionary:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Filter-for-datetime:">
-     Filter for datetime:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Get-the-number-of-found-documents:">
-     Get the number of found documents:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Get-generation_time-of-document">
-     Get generation_time of document
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Update-a-document:">
-     Update a document:
+    <a class="reference internal nav-link" href="#Find-one:">
+     Find one:
     </a>
    </li>
   </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Find-many:">
+   Find many:
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Query-for-other-meta-data.">
+   Query for other meta data.
+  </a>
  </li>
 </ul>
 
@@ -491,7 +486,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>H5mongo</h1>
+                <h1>HDF5 + mongoDB</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -502,41 +497,36 @@ title="Print to PDF"
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#First-things-first:-Connection-to-the-DB:">
+   First things first: Connection to the DB:
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Testdata">
+   Testdata
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Filling-the-database">
    Filling the database
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Find-all:">
-     Find all:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Find-inside-a-dictionary:">
-     Find inside a dictionary:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Filter-for-datetime:">
-     Filter for datetime:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Get-the-number-of-found-documents:">
-     Get the number of found documents:
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Get-generation_time-of-document">
-     Get generation_time of document
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Update-a-document:">
-     Update a document:
+    <a class="reference internal nav-link" href="#Find-one:">
+     Find one:
     </a>
    </li>
   </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Find-many:">
+   Find many:
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Query-for-other-meta-data.">
+   Query for other meta data.
+  </a>
  </li>
 </ul>
 
@@ -804,9 +794,9 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="H5mongo">
-<h1>H5mongo<a class="headerlink" href="#H5mongo" title="Permalink to this headline">#</a></h1>
-<p>This databases uses <code class="docutils literal notranslate"><span class="pre">pymongo</span></code> as the backend database. Only meta data (or part of it) is stored in the database, not the raw data</p>
+<section id="HDF5-+-mongoDB">
+<h1>HDF5 + mongoDB<a class="headerlink" href="#HDF5-+-mongoDB" title="Permalink to this headline">#</a></h1>
+<p>This databases uses <code class="docutils literal notranslate"><span class="pre">pymongo</span></code> as the backend database. Only meta data (or part of it) is stored in the database, not the raw data. To understand how dataset raw data is linked to the database see the respective chapter in this document.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -816,6 +806,8 @@ div.rendered_html tbody tr:hover {
 
 <span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">tutorial</span>
 <span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
 
@@ -829,9 +821,12 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&#39;0.1.3&#39;
+&#39;0.1.10&#39;
 </pre></div></div>
 </div>
+<section id="First-things-first:-Connection-to-the-DB:">
+<h2>First things first: Connection to the DB:<a class="headerlink" href="#First-things-first:-Connection-to-the-DB:" title="Permalink to this headline">#</a></h2>
+<p>Connect to the mongod client:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
@@ -850,168 +845,424 @@ div.rendered_html tbody tr:hover {
 MongoClient(host=[&#39;localhost:27017&#39;], document_class=dict, tz_aware=False, connect=True)
 </pre></div></div>
 </div>
+<p>Create a database and a (test) collection named “digits”:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="p">[</span><span class="s1">&#39;h5database_notebook_tutorial&#39;</span><span class="p">]</span>
-<span class="n">collection</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">]</span>
+<span class="n">collection</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s1">&#39;digits&#39;</span><span class="p">]</span>
+
+<span class="c1"># drop all content in order to start from scratch:</span>
+<span class="n">collection</span><span class="o">.</span><span class="n">drop</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<p>Let’s generate some test data</p>
+</section>
+<section id="Testdata">
+<h2>Testdata<a class="headerlink" href="#Testdata" title="Permalink to this headline">#</a></h2>
+<p>We will take test data from scikit-learn, namely the hand-written digits ((<a class="reference external" href="https://scikit-learn.org/stable/auto_examples/classification/plot_digits_classification.html">https://scikit-learn.org/stable/auto_examples/classification/plot_digits_classification.html</a>):</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">usernames</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;Allen&#39;</span><span class="p">,</span> <span class="s1">&#39;Mike&#39;</span><span class="p">,</span> <span class="s1">&#39;Ellen&#39;</span><span class="p">,</span> <span class="s1">&#39;Alliot&#39;</span><span class="p">)</span>
-<span class="n">company</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;bikeCompany&#39;</span><span class="p">,</span> <span class="s1">&#39;shoeCompany&#39;</span><span class="p">,</span> <span class="s1">&#39;bikeCompany&#39;</span><span class="p">,</span> <span class="s1">&#39;shoeCompany&#39;</span><span class="p">)</span>
-<span class="n">filenames</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">company</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">usernames</span><span class="p">,</span> <span class="n">company</span><span class="p">)):</span>
-    <span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">(),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-        <span class="n">filenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span>
-        <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">username</span>
-        <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;company&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">company</span>
-        <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;meta&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;day&#39;</span><span class="p">:</span> <span class="s1">&#39;monday&#39;</span><span class="p">,</span> <span class="s1">&#39;iday&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;idgroup&#39;</span><span class="p">)</span>
-        <span class="n">g</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># !pip install scikit-learn</span>
+<span class="c1"># !pip install scikit-image</span>
 </pre></div>
 </div>
 </div>
-<p>Import the mongo module (will add the accessor <code class="docutils literal notranslate"><span class="pre">mongo</span></code> to datasets and groups)</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">load_digits</span>
+<span class="n">digits</span> <span class="o">=</span> <span class="n">load_digits</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>Fill a HDF5 file with the loaded data. We additionally compute the mean count and two gray occurance properties (dissimilarity and correlation). Those three datasets together with the true digit of the image are linked to the image via HDF dimension scales:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">skimage.feature</span> <span class="kn">import</span> <span class="n">graycomatrix</span><span class="p">,</span> <span class="n">graycoprops</span>
+
+<span class="n">filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
+
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">ds_trg</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;digit&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">digits</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;true digit&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">ds_img</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;images&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">digits</span><span class="o">.</span><span class="n">images</span><span class="p">),</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;pixel&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;image of hand-written digit&#39;</span><span class="p">)</span>
+
+    <span class="n">ds_mean</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">digits</span><span class="o">.</span><span class="n">images</span><span class="p">),</span> <span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;counts&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;mean counts of the image&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">ds_diss</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;dissimilarity&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">digits</span><span class="o">.</span><span class="n">images</span><span class="p">),</span> <span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;counts&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;dissimilarity&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">ds_corr</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;correlation&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">digits</span><span class="o">.</span><span class="n">images</span><span class="p">),</span> <span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;counts&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;correlation&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">img</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">digits</span><span class="o">.</span><span class="n">images</span><span class="p">):</span>
+        <span class="n">ds_img</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">img</span>
+        <span class="n">ds_mean</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+
+        <span class="n">glcm</span> <span class="o">=</span> <span class="n">graycomatrix</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">distances</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">angles</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">levels</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+                            <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ds_diss</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">graycoprops</span><span class="p">(</span><span class="n">glcm</span><span class="p">,</span> <span class="s1">&#39;dissimilarity&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">ds_corr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">graycoprops</span><span class="p">(</span><span class="n">glcm</span><span class="p">,</span> <span class="s1">&#39;correlation&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">ds_img</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">attach_scale</span><span class="p">(</span><span class="n">ds_trg</span><span class="p">)</span>
+    <span class="n">ds_img</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">attach_scale</span><span class="p">(</span><span class="n">ds_mean</span><span class="p">)</span>
+    <span class="n">ds_img</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">attach_scale</span><span class="p">(</span><span class="n">ds_diss</span><span class="p">)</span>
+    <span class="n">ds_img</span><span class="o">.</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">attach_scale</span><span class="p">(</span><span class="n">ds_corr</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<head><style>/*
+CSS inspired by xarray: https://github.com/pydata/xarray
+*/
+.h5tb-header > div,
+.h5tb-header > ul {
+    display: inline;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.h5tb-dataarray-cls,
+.h5tb-dataarray-name {
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+.h5tb-dataarray-name {
+    color: #000;
+}
+
+.h5grp-sections {
+    list-style: none;
+    padding: 3px;
+    margin: 0;
+}
+
+.h5grp-sections input {
+    display: none;
+}
+
+.h5grp-sections label {
+    display: inline;
+}
+
+.h5grp-sections > li > input + label > span {
+    display: inline;
+    margin-left: 4px;
+}
+
+.h5grp-sections > li > input:checked + label > span {
+    display: none;
+}
+
+.h5grp-sections input:enabled + label {
+    cursor: pointer;
+}
+
+.h5grp-sections input:not(.h5tb-values-in) ~ ul {
+    display: none;
+}
+
+.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
+    display: block;
+}
+
+.h5grp-sections > li > input + label {
+    width: 140px;
+    color: #555;
+    font-weight: 500;
+    padding: 4px 0 2px 0;
+}
+
+
+.h5grp-sections > li > input + label:before {
+    display: inline-block;
+    content: '+';
+    font-size: 11px;
+    width: 15px;
+    text-align: center;
+}
+
+.h5grp-sections > li > input:disabled + label:before {
+    color: #777;
+}
+
+.h5grp-sections > li > input:checked + label:before {
+    content: '-';
+}
+
+.h5tb-dim-list {
+    display: inline-block !important;
+    list-style: none;
+    padding: 0;
+}
+
+.h5tb-dim-list li {
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-dim-list:before {
+    content: '(';
+}
+
+.h5tb-dim-list:after {
+    content: ')';
+}
+
+.h5tb-dim-list li:not(:last-child):after {
+    content: ',';
+}
+
+.h5tb-has-index {
+    text-decoration: underline;
+}
+
+.h5tb-var-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-var-list > li {
+    background-color: #fcfcfc;
+    overflow: hidden;
+}
+
+.h5tb-var-list > li:nth-child(odd) {
+    background-color: #efefef;
+}
+
+.h5tb-var-list li:hover {
+    background-color: rgba(3, 169, 244, .2);
+}
+
+.h5tb-var-list li > span {
+    display: inline-block;
+}
+
+input.h5tb-varname-in + label {
+    width: 140px;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+.h5tb-dataset {
+    width: 100px;
+}
+
+.h5tb-attributevalue {
+    width: 100px;
+    text-align: left;
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+input.h5tb-varname-in + label:before {
+    content: ' ';
+    display: inline-block;
+    font-size: 11px;
+    width: 15px;
+    padding-left: 2px;
+    padding-right: 2px;
+    text-align: center;
+    color: #aaa;
+    text-decoration: none !important;
+}
+
+input.h5tb-varname-in:enabled + label:hover:before {
+    color: #000;
+}
+
+input.h5tb-varname-in:checked + label:before {
+    color: #ccc;
+}
+
+.h5tb-dims {
+    width: 280px;
+    white-space: nowrap;
+}
+
+
+.h5tb-unit {
+    width: 96px;
+    white-space: nowrap;
+    padding-right: 2px;
+    text-align: right;
+    color: #555;
+    font-style: italic;
+}
+
+.h5tb-attr-list {
+    list-style: none;
+    background-color: #fff;
+    padding-bottom: 6px;
+    color: #555;
+}
+
+.h5tb-attr-list li,
+.h5tb-attr-list li:hover {
+    background-color: #fff;
+}
+
+.h5tb-dim-highlight {
+    background-color: rgba(3, 169, 244, .2);
+    cursor: pointer;
+}</style></head>
+<p>tmp0</p>
+<p>Check resuted in 1 issues.</p>
+
+<div class='h5tb-warp'>
+
+          <ul style="list-style-type: none;" class="h5grp-sections">
+                <li>
+                    <input id="group-ds-/-6366299500" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-6366299500">
+                    /<span>(5)</span></label>
+
+
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.10</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                </ul>
+
+                    <ul id="ds-1-/correlation-6367850200" class="h5tb-var-list">
+                    <input id="ds-2-/correlation-6367852800" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/correlation-6367852800">correlation</label>
+                    <span class="h5tb-dims">(1797,)</span>  [
+                    <span class="h5tb-unit">counts</span>]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : correlation</li>
+
+                </ul>
+
+             </ul>
+
+
+                    <ul id="ds-1-/digit-6368260200" class="h5tb-var-list">
+                    <input id="ds-2-/digit-6368262500" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/digit-6368262500">digit</label>
+                    <span class="h5tb-dims">(1797,)</span>  [
+                    <span class="h5tb-unit">-</span>]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : true digit</li>
+
+                </ul>
+
+             </ul>
+
+
+                    <ul id="ds-1-/dissimilarity-6368575900" class="h5tb-var-list">
+                    <input id="ds-2-/dissimilarity-6368578100" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/dissimilarity-6368578100">dissimilarity</label>
+                    <span class="h5tb-dims">(1797,)</span>  [
+                    <span class="h5tb-unit">counts</span>]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : dissimilarity</li>
+
+                </ul>
+
+             </ul>
+
+
+                    <ul id="ds-1-/images-6369009100" class="h5tb-var-list">
+                    <input id="ds-2-/images-6369011400" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/images-6369011400">images</label>
+                    <span class="h5tb-dims">(digit: 1797)</span>  [
+                    <span class="h5tb-unit">pixel</span>]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : image of hand-written digit</li>
+
+                </ul>
+
+             </ul>
+
+
+                    <ul id="ds-1-/mean-6369253200" class="h5tb-var-list">
+                    <input id="ds-2-/mean-6369255200" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/mean-6369255200">mean</label>
+                    <span class="h5tb-dims">(1797,)</span>  [
+                    <span class="h5tb-unit">counts</span>]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : mean counts of the image</li>
+
+                </ul>
+
+             </ul>
+
+</li>
+</ul>
+</div></div>
+</div>
+</section>
+<section id="Filling-the-database">
+<h2>Filling the database<a class="headerlink" href="#Filling-the-database" title="Permalink to this headline">#</a></h2>
+<p>To insert data from the HDF5 file into the DB, we need the accessor “mongo”:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.h5database</span> <span class="kn">import</span> <span class="n">mongo</span>
 </pre></div>
 </div>
 </div>
-<section id="Filling-the-database">
-<h2>Filling the database<a class="headerlink" href="#Filling-the-database" title="Permalink to this headline">#</a></h2>
-<p>The accessor object <code class="docutils literal notranslate"><span class="pre">mongo</span></code> can be applied both on groups and datasets. If applied on groups, then two parameter values should be considered specifically: - <code class="docutils literal notranslate"><span class="pre">recursive</span></code>: Whether to write all data of the group and below or not - <code class="docutils literal notranslate"><span class="pre">flatten_tree</span></code>: The tree-structure can be flatten. Then there will be a DB entry per group and dataset. If False, then only one entry as a dictionary is written:</p>
-<p>We devide for <code class="docutils literal notranslate"><span class="pre">recursive=True</span></code> and check how the DB entries look different for <code class="docutils literal notranslate"><span class="pre">flatten_tree=True</span></code> and <code class="docutils literal notranslate"><span class="pre">flatten_tree=False</span></code>.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection</span><span class="o">.</span><span class="n">drop</span><span class="p">()</span> <span class="c1"># delete all entries if already exist</span>
-<span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
-    <span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-        <span class="n">h5</span><span class="o">.</span><span class="n">mongo</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">flatten_tree</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\h5rdmtoolbox\h5database\mongo.py:34: UserWarning: Could not determine/convert type. Try to continue with type &lt;class &#39;datetime.datetime&#39;&gt; of 2022-08-19 06:03:27.488516+00:00. Original error: Cannot interpret &#39;datetime.datetime(2022, 8, 19, 6, 3, 27, 488516, tzinfo=datetime.timezone.utc)&#39; as a data type
-  warnings.warn(f&#39;Could not determine/convert type. Try to continue with type {type(av)} of {av}. &#39;
-C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\h5rdmtoolbox\h5database\mongo.py:34: UserWarning: Could not determine/convert type. Try to continue with type &lt;class &#39;datetime.datetime&#39;&gt; of 2022-08-19 06:03:27.498744+00:00. Original error: Cannot interpret &#39;datetime.datetime(2022, 8, 19, 6, 3, 27, 498744, tzinfo=datetime.timezone.utc)&#39; as a data type
-  warnings.warn(f&#39;Could not determine/convert type. Try to continue with type {type(av)} of {av}. &#39;
-C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\h5rdmtoolbox\h5database\mongo.py:34: UserWarning: Could not determine/convert type. Try to continue with type &lt;class &#39;datetime.datetime&#39;&gt; of 2022-08-19 06:03:27.503239+00:00. Original error: Cannot interpret &#39;datetime.datetime(2022, 8, 19, 6, 3, 27, 503239, tzinfo=datetime.timezone.utc)&#39; as a data type
-  warnings.warn(f&#39;Could not determine/convert type. Try to continue with type {type(av)} of {av}. &#39;
-</pre></div></div>
-</div>
-<p>Let’s inspect the first result:</p>
-<section id="Find-all:">
-<h3>Find all:<a class="headerlink" href="#Find-all:" title="Permalink to this headline">#</a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">({})</span>
-<span class="n">pprint</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">rewind</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-{&#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.3&#39;,
- &#39;__standard_name_table__&#39;: &#39;EmptyStandardizedNameTable-v0&#39;,
- &#39;__wrcls__&#39;: &#39;H5File&#39;,
- &#39;_id&#39;: ObjectId(&#39;62ff27af2a7fa06235ffd468&#39;),
- &#39;company&#39;: &#39;bikeCompany&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 19, 6, 3, 27, 488000),
- &#39;idgroup&#39;: {&#39;id&#39;: 0},
- &#39;meta&#39;: {&#39;day&#39;: &#39;monday&#39;, &#39;iday&#39;: 0},
- &#39;username&#39;: &#39;Allen&#39;}
-</pre></div></div>
-</div>
-</section>
-<section id="Find-inside-a-dictionary:">
-<h3>Find inside a dictionary:<a class="headerlink" href="#Find-inside-a-dictionary:" title="Permalink to this headline">#</a></h3>
-<p>The dictionary entry can be used for filter keyword, too:</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;meta.day&#39;</span><span class="p">:</span> <span class="s1">&#39;monday&#39;</span><span class="p">}):</span>
-    <span class="n">pprint</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;images&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mongo</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">collection</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-{&#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.3&#39;,
- &#39;__standard_name_table__&#39;: &#39;EmptyStandardizedNameTable-v0&#39;,
- &#39;__wrcls__&#39;: &#39;H5File&#39;,
- &#39;_id&#39;: ObjectId(&#39;62ff27af2a7fa06235ffd468&#39;),
- &#39;company&#39;: &#39;bikeCompany&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 19, 6, 3, 27, 488000),
- &#39;idgroup&#39;: {&#39;id&#39;: 0},
- &#39;meta&#39;: {&#39;day&#39;: &#39;monday&#39;, &#39;iday&#39;: 0},
- &#39;username&#39;: &#39;Allen&#39;}
-{&#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.3&#39;,
- &#39;__standard_name_table__&#39;: &#39;EmptyStandardizedNameTable-v0&#39;,
- &#39;__wrcls__&#39;: &#39;H5File&#39;,
- &#39;_id&#39;: ObjectId(&#39;62ff27af2a7fa06235ffd469&#39;),
- &#39;company&#39;: &#39;shoeCompany&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 19, 6, 3, 27, 498000),
- &#39;idgroup&#39;: {&#39;id&#39;: 1},
- &#39;meta&#39;: {&#39;day&#39;: &#39;monday&#39;, &#39;iday&#39;: 0},
- &#39;username&#39;: &#39;Mike&#39;}
-{&#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.3&#39;,
- &#39;__standard_name_table__&#39;: &#39;EmptyStandardizedNameTable-v0&#39;,
- &#39;__wrcls__&#39;: &#39;H5File&#39;,
- &#39;_id&#39;: ObjectId(&#39;62ff27af2a7fa06235ffd46a&#39;),
- &#39;company&#39;: &#39;bikeCompany&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 19, 6, 3, 27, 498000),
- &#39;idgroup&#39;: {&#39;id&#39;: 2},
- &#39;meta&#39;: {&#39;day&#39;: &#39;monday&#39;, &#39;iday&#39;: 0},
- &#39;username&#39;: &#39;Ellen&#39;}
-{&#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.3&#39;,
- &#39;__standard_name_table__&#39;: &#39;EmptyStandardizedNameTable-v0&#39;,
- &#39;__wrcls__&#39;: &#39;H5File&#39;,
- &#39;_id&#39;: ObjectId(&#39;62ff27af2a7fa06235ffd46b&#39;),
- &#39;company&#39;: &#39;shoeCompany&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 19, 6, 3, 27, 503000),
- &#39;idgroup&#39;: {&#39;id&#39;: 3},
- &#39;meta&#39;: {&#39;day&#39;: &#39;monday&#39;, &#39;iday&#39;: 0},
- &#39;username&#39;: &#39;Alliot&#39;}
-</pre></div></div>
-</div>
-</section>
-<section id="Filter-for-datetime:">
-<h3>Filter for datetime:<a class="headerlink" href="#Filter-for-datetime:" title="Permalink to this headline">#</a></h3>
-<p>Each entry has a <code class="docutils literal notranslate"><span class="pre">document_last_modified</span></code> (time when the document entry was last modified) and a <code class="docutils literal notranslate"><span class="pre">file_creation_time</span></code> (time when HDF file was created):</p>
+<section id="Find-one:">
+<h3>Find one:<a class="headerlink" href="#Find-one:" title="Permalink to this headline">#</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">datetime</span>
-<span class="n">d</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span><span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s2">&quot;document_last_modified&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$gt&quot;</span><span class="p">:</span> <span class="n">d</span><span class="p">}})</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;username&quot;</span><span class="p">):</span>
-    <span class="n">pprint</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">one_res</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$eq&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}})</span>
+<span class="n">one_res</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;_id&#39;: ObjectId(&#39;630cc03dcace93e59d400f64&#39;),
+ &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp41\\tmp0&#39;,
+ &#39;path&#39;: &#39;/images&#39;,
+ &#39;name&#39;: &#39;images&#39;,
+ &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 29, 13, 33, 47, 78000),
+ &#39;shape&#39;: [1797, 8, 8],
+ &#39;ndim&#39;: 3,
+ &#39;hdfobj&#39;: &#39;dataset&#39;,
+ &#39;slice&#39;: [[3, 4, 1], [0, None, 1], [0, None, 1]],
+ &#39;digit&#39;: 3,
+ &#39;mean&#39;: 4.171875,
+ &#39;dissimilarity&#39;: 4.875,
+ &#39;correlation&#39;: -0.3547935485839844,
+ &#39;long_name&#39;: &#39;image of hand-written digit&#39;,
+ &#39;units&#39;: &#39;pixel&#39;}
+</pre></div></div>
+</div>
+<p>We found one entry only because we asked for one only. Note, that the sult dictionary provides a “slice” entry. This is the slice within the 3D array in the HDF file. We can use this to slice the array. There is even a method in the accessor to simplify this:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">mongo</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">one_res</span><span class="p">[</span><span class="s1">&#39;slice&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1019,91 +1270,217 @@ C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\h5rdmtoolbox\h5databas
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-2022-08-19 05:13:27.638861
-</pre></div></div>
+<img alt="../_images/h5database_h5mongo_17_0.png" src="../_images/h5database_h5mongo_17_0.png" />
+</div>
 </div>
 </section>
-<section id="Get-the-number-of-found-documents:">
-<h3>Get the number of found documents:<a class="headerlink" href="#Get-the-number-of-found-documents:" title="Permalink to this headline">#</a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="s1">&#39;company&#39;</span><span class="p">:</span> <span class="s2">&quot;shoeCompany&quot;</span><span class="p">})</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-2
-</pre></div></div>
-</div>
-<p>Total number of documents:</p>
-<div class="nbinput docutils container">
+</section>
+<section id="Find-many:">
+<h2>Find many:<a class="headerlink" href="#Find-many:" title="Permalink to this headline">#</a></h2>
+<p>Let’ query a rang of data. Mean count shall be above 5 counts and the digit is &gt;3 and &lt;=8:</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({})</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">},</span> <span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$lte&#39;</span><span class="p">:</span> <span class="mi">8</span><span class="p">}})</span>
+<span class="n">many_res</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">},</span> <span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$lte&#39;</span><span class="p">:</span> <span class="mi">8</span><span class="p">}})</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-4
-</pre></div></div>
-</div>
-</section>
-<section id="Get-generation_time-of-document">
-<h3>Get generation_time of document<a class="headerlink" href="#Get-generation_time-of-document" title="Permalink to this headline">#</a></h3>
-<div class="nbinput docutils container">
+<p>Inspect the result by the help of pandas:</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res</span><span class="o">.</span><span class="n">rewind</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">generation_time</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-datetime.datetime(2022, 8, 19, 6, 3, 27, tzinfo=&lt;bson.tz_util.FixedOffset object at 0x000001EC123E0850&gt;)
-</pre></div></div>
-</div>
-</section>
-<section id="Update-a-document:">
-<h3>Update a document:<a class="headerlink" href="#Update-a-document:" title="Permalink to this headline">#</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">filter</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="s1">&#39;Allen&#39;</span> <span class="p">}</span>
-<span class="n">newvalues</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">&quot;$set&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="s1">&#39;me&#39;</span> <span class="p">}</span> <span class="p">}</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">many_res</span><span class="o">.</span><span class="n">rewind</span><span class="p">()])</span>
+<span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;_id&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;filename&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;slice&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;long_name&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-<span class="n">collection</span><span class="o">.</span><span class="n">update_one</span><span class="p">(</span><span class="nb">filter</span><span class="p">,</span> <span class="n">newvalues</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">[[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="s1">&#39;dissimilarity&#39;</span><span class="p">,</span> <span class="s1">&#39;correlation&#39;</span><span class="p">,</span> <span class="s1">&#39;digit&#39;</span><span class="p">]],</span> <span class="n">hist_kwds</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;bins&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">})</span>
+<span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>path</th>
+      <th>name</th>
+      <th>file_creation_time</th>
+      <th>shape</th>
+      <th>ndim</th>
+      <th>hdfobj</th>
+      <th>digit</th>
+      <th>mean</th>
+      <th>dissimilarity</th>
+      <th>correlation</th>
+      <th>units</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>/images</td>
+      <td>images</td>
+      <td>2022-08-29 13:33:47.078</td>
+      <td>[1797, 8, 8]</td>
+      <td>3</td>
+      <td>dataset</td>
+      <td>2</td>
+      <td>5.375000</td>
+      <td>6.291667</td>
+      <td>-0.360439</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>/images</td>
+      <td>images</td>
+      <td>2022-08-29 13:33:47.078</td>
+      <td>[1797, 8, 8]</td>
+      <td>3</td>
+      <td>dataset</td>
+      <td>5</td>
+      <td>5.343750</td>
+      <td>7.250000</td>
+      <td>-0.430473</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>/images</td>
+      <td>images</td>
+      <td>2022-08-29 13:33:47.078</td>
+      <td>[1797, 8, 8]</td>
+      <td>3</td>
+      <td>dataset</td>
+      <td>8</td>
+      <td>5.578125</td>
+      <td>7.416667</td>
+      <td>-0.469501</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>/images</td>
+      <td>images</td>
+      <td>2022-08-29 13:33:47.078</td>
+      <td>[1797, 8, 8]</td>
+      <td>3</td>
+      <td>dataset</td>
+      <td>0</td>
+      <td>5.031250</td>
+      <td>7.875000</td>
+      <td>-0.520575</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>/images</td>
+      <td>images</td>
+      <td>2022-08-29 13:33:47.078</td>
+      <td>[1797, 8, 8]</td>
+      <td>3</td>
+      <td>dataset</td>
+      <td>3</td>
+      <td>5.015625</td>
+      <td>6.375000</td>
+      <td>-0.383382</td>
+      <td>pixel</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/h5database_h5mongo_22_1.png" src="../_images/h5database_h5mongo_22_1.png" />
+</div>
+</div>
+</section>
+<section id="Query-for-other-meta-data.">
+<h2>Query for other meta data.<a class="headerlink" href="#Query-for-other-meta-data." title="Permalink to this headline">#</a></h2>
+<p>First of all we could have insert the full file. We might have decided to insert only a group content or really all data in the file, thus a recursive run that insert all data. Ok, let’s do that:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="p">[</span><span class="s1">&#39;h5database_notebook_tutorial&#39;</span><span class="p">]</span>
+<span class="n">collection_full_digits</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s1">&#39;full_digits&#39;</span><span class="p">]</span>
+
+<span class="c1"># drop all content in order to start from scratch:</span>
+<span class="n">collection_full_digits</span><span class="o">.</span><span class="n">drop</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">mongo</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">collection_full_digits</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The first entry looks like this:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection_full_digits</span><span class="o">.</span><span class="n">find_one</span><span class="p">({})</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;pymongo.results.UpdateResult at 0x1ec31c5f490&gt;
+{&#39;_id&#39;: ObjectId(&#39;630cc041cace93e59d401666&#39;),
+ &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp41\\tmp0&#39;,
+ &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 29, 13, 33, 47, 78000),
+ &#39;name&#39;: &#39;&#39;,
+ &#39;path&#39;: &#39;/&#39;,
+ &#39;hdfobj&#39;: &#39;group&#39;,
+ &#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.10&#39;,
+ &#39;__standard_name_table__&#39;: &#39;EmptyStandardizedNameTable-v0&#39;,
+ &#39;__wrcls__&#39;: &#39;H5File&#39;}
 </pre></div></div>
 </div>
+<p>It is the data of the root group. It shows all attribute of the group.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
@@ -1112,7 +1489,6 @@ datetime.datetime(2022, 8, 19, 6, 3, 27, tzinfo=&lt;bson.tz_util.FixedOffset obj
 </pre></div>
 </div>
 </div>
-</section>
 </section>
 </section>
 

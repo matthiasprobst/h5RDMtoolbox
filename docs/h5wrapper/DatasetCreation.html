@@ -240,7 +240,7 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../h5database/h5mongo.html">
-     H5mongo
+     HDF5 + mongoDB
     </a>
    </li>
   </ul>
@@ -446,6 +446,11 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#String-datasets">
+   String datasets
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Advanced-dataset-creation">
    Advanced dataset creation
   </a>
@@ -469,6 +474,11 @@ title="Print to PDF"
                         </div>
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#String-datasets">
+   String datasets
+  </a>
+ </li>
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Advanced-dataset-creation">
    Advanced dataset creation
@@ -819,11 +829,295 @@ Standardized name &#34;a_coordinate&#34; not in name table
 Unit of standard name &#34;x_coordinate&#34; not as expected: &#34;kg&#34; != &#34;m&#34;
 </pre></div></div>
 </div>
+<section id="String-datasets">
+<h2>String datasets<a class="headerlink" href="#String-datasets" title="Permalink to this headline">#</a></h2>
+<p>String datasets can be created very quickly. No standard_name, long_name or units <em>must</em> be given. As units generally anyhow makes no sense, there is still the option to pass long and standard name via the method parameters. The dump method will display single strings but not lists of strings. The return value when sliced will still be a <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> as attributes should still be attached to the object. Use <code class="docutils literal notranslate"><span class="pre">.values</span></code> to get the raw string:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_string_dataset</span><span class="p">(</span><span class="s1">&#39;astr&#39;</span><span class="p">,</span> <span class="s1">&#39;hello_world&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_string_dataset</span><span class="p">(</span><span class="s1">&#39;string_list&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="s1">&#39;world&#39;</span><span class="p">])</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;---</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;astr&#39;</span><span class="p">][()])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;---</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;astr&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[()])</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;---</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;string_list&#39;</span><span class="p">][:])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;---</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;string_list&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<head><style>/*
+CSS inspired by xarray: https://github.com/pydata/xarray
+*/
+.h5tb-header > div,
+.h5tb-header > ul {
+    display: inline;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.h5tb-dataarray-cls,
+.h5tb-dataarray-name {
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+.h5tb-dataarray-name {
+    color: #000;
+}
+
+.h5grp-sections {
+    list-style: none;
+    padding: 3px;
+    margin: 0;
+}
+
+.h5grp-sections input {
+    display: none;
+}
+
+.h5grp-sections label {
+    display: inline;
+}
+
+.h5grp-sections > li > input + label > span {
+    display: inline;
+    margin-left: 4px;
+}
+
+.h5grp-sections > li > input:checked + label > span {
+    display: none;
+}
+
+.h5grp-sections input:enabled + label {
+    cursor: pointer;
+}
+
+.h5grp-sections input:not(.h5tb-values-in) ~ ul {
+    display: none;
+}
+
+.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
+    display: block;
+}
+
+.h5grp-sections > li > input + label {
+    width: 140px;
+    color: #555;
+    font-weight: 500;
+    padding: 4px 0 2px 0;
+}
+
+
+.h5grp-sections > li > input + label:before {
+    display: inline-block;
+    content: '+';
+    font-size: 11px;
+    width: 15px;
+    text-align: center;
+}
+
+.h5grp-sections > li > input:disabled + label:before {
+    color: #777;
+}
+
+.h5grp-sections > li > input:checked + label:before {
+    content: '-';
+}
+
+.h5tb-dim-list {
+    display: inline-block !important;
+    list-style: none;
+    padding: 0;
+}
+
+.h5tb-dim-list li {
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-dim-list:before {
+    content: '(';
+}
+
+.h5tb-dim-list:after {
+    content: ')';
+}
+
+.h5tb-dim-list li:not(:last-child):after {
+    content: ',';
+}
+
+.h5tb-has-index {
+    text-decoration: underline;
+}
+
+.h5tb-var-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-var-list > li {
+    background-color: #fcfcfc;
+    overflow: hidden;
+}
+
+.h5tb-var-list > li:nth-child(odd) {
+    background-color: #efefef;
+}
+
+.h5tb-var-list li:hover {
+    background-color: rgba(3, 169, 244, .2);
+}
+
+.h5tb-var-list li > span {
+    display: inline-block;
+}
+
+input.h5tb-varname-in + label {
+    width: 140px;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+.h5tb-dataset {
+    width: 100px;
+}
+
+.h5tb-attributevalue {
+    width: 100px;
+    text-align: left;
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+input.h5tb-varname-in + label:before {
+    content: ' ';
+    display: inline-block;
+    font-size: 11px;
+    width: 15px;
+    padding-left: 2px;
+    padding-right: 2px;
+    text-align: center;
+    color: #aaa;
+    text-decoration: none !important;
+}
+
+input.h5tb-varname-in:enabled + label:hover:before {
+    color: #000;
+}
+
+input.h5tb-varname-in:checked + label:before {
+    color: #ccc;
+}
+
+.h5tb-dims {
+    width: 280px;
+    white-space: nowrap;
+}
+
+
+.h5tb-unit {
+    width: 96px;
+    white-space: nowrap;
+    padding-right: 2px;
+    text-align: right;
+    color: #555;
+    font-style: italic;
+}
+
+.h5tb-attr-list {
+    list-style: none;
+    background-color: #fff;
+    padding-bottom: 6px;
+    color: #555;
+}
+
+.h5tb-attr-list li,
+.h5tb-attr-list li:hover {
+    background-color: #fff;
+}
+
+.h5tb-dim-highlight {
+    background-color: rgba(3, 169, 244, .2);
+    cursor: pointer;
+}</style></head>
+<p>tmp3.hdf</p>
+<p>Check resuted in 1 issues.</p>
+
+<div class='h5tb-warp'>
+
+          <ul style="list-style-type: none;" class="h5grp-sections">
+                <li>
+                    <input id="group-ds-/-2790997500" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2790997500">
+                    /<span>(2)</span></label>
+
+
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.10</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                </ul>
+
+                        <ul id="ds-1-/astr-2791547000" class="h5tb-var-list">
+                        <input id="ds-2-/astr-2791549300" class="h5tb-varname-in" type="checkbox">
+                        <label class='h5tb-varname'
+                            for="ds-2-/astr-2791549300">astr</label>
+                        <span class="h5tb-dims"></span>: b'hello_world'
+<ul class="h5tb-attr-list">
+
+                </ul>
+
+             </ul>
+
+
+                        <ul id="ds-1-/string_list-2792418400" class="h5tb-var-list">
+                        <input id="ds-2-/string_list-2792421000" class="h5tb-varname-in" type="checkbox">
+                        <label class='h5tb-varname'
+                            for="ds-2-/string_list-2792421000">string_list</label>
+                        <span class="h5tb-dims">(2,)</span>
+<ul class="h5tb-attr-list">
+
+                </ul>
+
+             </ul>
+
+</li>
+</ul>
+</div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+---
+ &lt;xarray.DataArray &#39;astr&#39; ()&gt;
+array(b&#39;hello_world&#39;, dtype=&#39;|S11&#39;)
+---
+ b&#39;hello_world&#39;
+---
+ &lt;xarray.DataArray &#39;string_list&#39; (dim_0: 2)&gt;
+array([b&#39;hello&#39;, b&#39;world&#39;], dtype=&#39;|S5&#39;)
+Dimensions without coordinates: dim_0
+---
+ [b&#39;hello&#39; b&#39;world&#39;]
+</pre></div></div>
+</div>
+</section>
 <section id="Advanced-dataset-creation">
 <h2>Advanced dataset creation<a class="headerlink" href="#Advanced-dataset-creation" title="Permalink to this headline">#</a></h2>
 <p>There is more to dataset creation. You can: - add attributes</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -835,7 +1129,7 @@ Unit of standard name &#34;x_coordinate&#34; not as expected: &#34;kg&#34; != &#
 <li><p>make and attach scales (Note the output using <code class="docutils literal notranslate"><span class="pre">dump()</span></code>: the scale “link” is shown)</p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1057,27 +1351,27 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp4.hdf</p>
+<p>tmp5.hdf</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3034525100" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3034525100">
+                    <input id="group-ds-/-2837459500" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2837459500">
                     /<span>(2)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.6</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.10</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                <ul id="ds-1-/t-3035674200" class="h5tb-var-list">
-                <input id="ds-2-/t-3035676700" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/t-3035676700">t</label>
-                <span class="h5tb-dims">(x: 3)</span>  [
-                <span class="h5tb-unit">degC</span>]
+                    <ul id="ds-1-/t-2838175900" class="h5tb-var-list">
+                    <input id="ds-2-/t-2838178200" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/t-2838178200">t</label>
+                    <span class="h5tb-dims">(x: 3)</span>  [
+                    <span class="h5tb-unit">degC</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
          italic">standard_name : temperature</li>
 
@@ -1086,12 +1380,12 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/x-3035923900" class="h5tb-var-list">
-                <input id="ds-2-/x-3035926100" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/x-3035926100">x</label>
-                <span class="h5tb-dims">(3,)</span>  [
-                <span class="h5tb-unit">m</span>]
+                    <ul id="ds-1-/x-2838423400" class="h5tb-var-list">
+                    <input id="ds-2-/x-2838425600" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/x-2838425600">x</label>
+                    <span class="h5tb-dims">(3,)</span>  [
+                    <span class="h5tb-unit">m</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
          italic">standard_name : x_coordinate</li>
 
@@ -1107,7 +1401,7 @@ input.h5tb-varname-in:checked + label:before {
 <li><p>add <code class="docutils literal notranslate"><span class="pre">xarry.DataArrays</span></code></p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
@@ -1332,27 +1626,27 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp5.hdf</p>
+<p>tmp6.hdf</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3069950700" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3069950700">
+                    <input id="group-ds-/-2858766700" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2858766700">
                     /<span>(3)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.6</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.10</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                <ul id="ds-1-/temperature-3070830500" class="h5tb-var-list">
-                <input id="ds-2-/temperature-3070832800" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/temperature-3070832800">temperature</label>
-                <span class="h5tb-dims">(y: 3, x: 2)</span>  [
-                <span class="h5tb-unit">m/s</span>]
+                    <ul id="ds-1-/temperature-2859651000" class="h5tb-var-list">
+                    <input id="ds-2-/temperature-2859653200" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/temperature-2859653200">temperature</label>
+                    <span class="h5tb-dims">(y: 3, x: 2)</span>  [
+                    <span class="h5tb-unit">m/s</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : a long name</li>
 
                 </ul>
@@ -1360,12 +1654,12 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/x-3071047300" class="h5tb-var-list">
-                <input id="ds-2-/x-3071049500" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/x-3071049500">x</label>
-                <span class="h5tb-dims">(2,)</span>  [
-                <span class="h5tb-unit">N.A.</span>]
+                    <ul id="ds-1-/x-2859993700" class="h5tb-var-list">
+                    <input id="ds-2-/x-2859997600" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/x-2859997600">x</label>
+                    <span class="h5tb-dims">(2,)</span>  [
+                    <span class="h5tb-unit">N.A.</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
          italic">standard_name : x_coordinate</li>
 
@@ -1374,12 +1668,12 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                <ul id="ds-1-/y-3071347500" class="h5tb-var-list">
-                <input id="ds-2-/y-3071349600" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/y-3071349600">y</label>
-                <span class="h5tb-dims">(3,)</span>  [
-                <span class="h5tb-unit">m</span>]
+                    <ul id="ds-1-/y-2860533900" class="h5tb-var-list">
+                    <input id="ds-2-/y-2860536500" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/y-2860536500">y</label>
+                    <span class="h5tb-dims">(3,)</span>  [
+                    <span class="h5tb-unit">m</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
          italic">standard_name : y_coordinate</li>
 
@@ -1393,7 +1687,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <p>We may also create a dataset by using the <code class="docutils literal notranslate"><span class="pre">__setitem__</span></code>:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>

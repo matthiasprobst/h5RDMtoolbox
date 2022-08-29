@@ -8,7 +8,6 @@ from ..h5wrapper import open_wrapper
 
 
 def find_obj_by_property(root, target_value, recursive, h5obj, cmp_func):
-
     found_objs = []
 
     def _get_ds(name, node):
@@ -28,7 +27,6 @@ def find_obj_by_property(root, target_value, recursive, h5obj, cmp_func):
 
 
 def find_one_obj_by_property(root, target_value, recursive, h5obj, cmp_func):
-
     def _get_ds(name, node):
         if isinstance(node, h5obj):
             if cmp_func(node, target_value):
@@ -196,6 +194,10 @@ def _regex(inputstr, pattern):
     return re.search(pattern, inputstr)
 
 
+def _regex2(node, pattern):
+    return re.search(pattern, node.name)
+
+
 def _eq_name(node, name):
     return node.name == name
 
@@ -215,7 +217,9 @@ def _eq_shape(node, shape):
 _ds_flt = {'$name': _eq_name,
            '$basename': _eq_basename,
            '$ndim': _eq_ndim,
-           '$shape': _eq_shape}
+           '$shape': _eq_shape,
+           '$regex': _regex2}
+
 _cmp = {'$eq': _eq,
         '$gt': _gt,
         '$gte': _gte,
@@ -243,7 +247,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset], flt, recursive: bool,
                 if find_one:
                     for _condition, _value in v.items():
                         if _condition[0] == '$':
-                            if _condition not in ('$basename', '$name'):
+                            if _condition not in ('$basename', '$name', '$regex'):
                                 # some conditions cannot be checked for groups:
                                 if _h5type[k] == h5py.Group:
                                     raise RuntimeError(f'Cannot process {_condition} on groups!')
@@ -251,7 +255,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset], flt, recursive: bool,
                         return find_one_obj_by_name(h5obj, _value, recursive, _h5type[k], cmp=_cmp[_condition])
                 for _condition, _value in v.items():
                     if _condition[0] == '$':
-                        if _condition not in ('$basename', '$name'):
+                        if _condition not in ('$basename', '$name', '$regex'):
                             # some conditions cannot be checked for groups:
                             if _h5type[k] == h5py.Group:
                                 raise RuntimeError(f'Cannot process {_condition} on groups!')
