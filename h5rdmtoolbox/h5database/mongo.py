@@ -201,3 +201,7 @@ class MongoDatasetAccessor:
         else:
             raise NotImplementedError('This method is under heavy construction. Currently, '
                                       'only accepts axis==0 in this developmet stage.')
+
+    def slice(self, list_of_slices: List["slice"]) -> "xr.DataArray":
+        """Slice the array with a mongo return value for a slice"""
+        return self._h5ds[tuple([slice(*s) for s in list_of_slices])]
