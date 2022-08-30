@@ -1,5 +1,6 @@
 import pathlib
 import re
+from itertools import chain
 from typing import Union, Any, Dict, Callable
 
 import h5py
@@ -286,7 +287,12 @@ class H5Files:
     """H5File-like interface for multiple HDF Files"""
 
     def __init__(self, *filenames, h5wrapper=None):
-        self._list_of_filenames = [pathlib.Path(f) for f in filenames]
+        if isinstance(filenames[0], (list, tuple)):
+            if len(filenames) != 1:
+                raise ValueError('Expecting filenames to be passe separately or in alist/tuple')
+            self._list_of_filenames = [pathlib.Path(f) for f in filenames[0]]
+        else:
+            self._list_of_filenames = [pathlib.Path(f) for f in filenames]
         self._opened_files = {}
         self._h5wrapper = h5wrapper
 
@@ -309,9 +315,25 @@ class H5Files:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def find_one(self, flt: Union[Dict, str], rec: bool = True) -> Union[h5py.Group, h5py.Dataset, None]:
+        """See find() in h5file.py"""
+        for v in self.values():
+            found = find(v, flt, recursive=rec, h5type=None, find_one=True)
+            if found:
+                return found
+
+    def find(self, flt: Union[Dict, str], rec: bool = True):
+        """See find() in h5file.py"""
+        found = [find(v, flt, recursive=rec, h5type=None, find_one=False) for v in self.values()]
+        return list(chain.from_iterable(found))
+
     def keys(self):
         """Return all opened filename stems"""
         return self._opened_files.keys()
+
+    def values(self):
+        """Return all group instances in the file stems"""
+        return self._opened_files.values()
 
     def close(self):
         """Close all opened files"""
