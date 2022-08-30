@@ -297,6 +297,8 @@ class H5Files:
         self._h5wrapper = h5wrapper
 
     def __getitem__(self, item):
+        if isinstance(item, int):
+            return self._opened_files[self.keys()[item]]
         return self._opened_files[item]
 
     def __enter__(self):
