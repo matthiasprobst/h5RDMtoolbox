@@ -67,14 +67,17 @@ class TestH5Repo(unittest.TestCase):
     def test_insert_dataset(self):
         self.collection.drop()
         with H5File() as h5:
+            hdf_filename = h5.hdf_filename
             h5.create_dataset('z', data=2, dtype=int,
                               units='', long_name='z_coordinate')
             h5.create_dataset('index', data=np.arange(0, 4, 1), dtype=int,
                               units='', long_name='index', make_scale=True)
+            h5.create_dataset('index2', data=np.arange(0, 4, 1), dtype=int,
+                              units='', long_name='index', make_scale=True)
             h5.create_dataset('images', data=np.random.random((4, 11, 21)),
                               units='counts',
                               long_name='a long name',
-                              attach_scales=(h5['index'], None, None))
+                              attach_scales=([h5['index'], h5['index2']], None, None))
             h5['images'].attrs['COORDINATES'] = ['/z', ]
 
             h5.images.mongo.insert(axis=0, collection=self.collection)
@@ -85,10 +88,29 @@ class TestH5Repo(unittest.TestCase):
 
         for r in res:
             if r['name'] == 'images':
-                for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'z', 'long_name', 'units'):
+                self.assertEqual(r['filename'], str(hdf_filename))
+                for k in ('filename', 'path', 'shape', 'ndim', 'slice', 'index', 'index2', 'z', 'long_name', 'units'):
                     self.assertIn(k, r.keys())
 
             self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
+
+        self.collection.drop()
+        with H5File(hdf_filename) as h5:
+            h5.images.mongo.insert(axis=0, collection=self.collection, dims=('/index',))
+        res = self.collection.find()
+        for r in res:
+            self.assertIn('index', r.keys())
+            self.assertNotIn('index2', r.keys())
+
+        self.collection.drop()
+        with H5File(hdf_filename) as h5:
+            h5.images.mongo.insert(axis=0, collection=self.collection, dims=('/index', '/index2'))
+        res = self.collection.find()
+        for r in res:
+            self.assertIn('index', r.keys())
+            self.assertIn('index2', r.keys())
+
+
 
     def test_insert_group(self):
         self.collection.drop()

@@ -125,14 +125,11 @@ class MongoDatasetAccessor:
         self._h5ds = h5ds
 
     def insert(self, axis, collection: pymongo.collection.Collection,
-               ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
-        """!!!UNDER HEAVY CONSTRUCTION!!!
+               ignore_attrs: List[str] = None, dims: List[str] = None) -> pymongo.collection.Collection:
+        """Using axis is UNDER HEAVY CONSTRUCTION!!! Currently only axis=0 works
 
-        Insert a dataset with all its attributes and slice
-
-        let's say first an last axis have dim scales
-        h5['mydataset'] --> shape: (4, 21, 25, 3)
-        h5['mydataset'].mongo.insert(axis=(0, 3)
+        By providing `dims` the dimension scales can be defined. If set to None, all attached
+        scales are used
         """
         if ignore_attrs is None:
             ignore_attrs = []
@@ -141,8 +138,8 @@ class MongoDatasetAccessor:
 
         if axis is None:
             post = {"filename": str(ds.file.filename),
-                    "path": ds.name,
-                    "name": os.path.basename(ds.name),
+                    "name": ds.name,
+                    "basename": os.path.basename(ds.name),
                     "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
                     # "document_last_modified": datetime.now(),  # last modified
                     "shape": ds.shape,
@@ -182,6 +179,9 @@ class MongoDatasetAccessor:
                         if dim.ndim != 1:
                             warnings.warn(f'Dimension scale dataset must be 1D, not {dim.ndim}D. Skipping')
                             continue
+                        if dims is not None:
+                            if dim.name not in dims:
+                                continue
                         scale = dim[i]
                         post[dim.name[1:]] = type2mongo(scale)
 
