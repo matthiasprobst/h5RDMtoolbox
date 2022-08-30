@@ -298,7 +298,7 @@ class H5Files:
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            return self._opened_files[self.keys()[item]]
+            return self._opened_files[list(self.keys())[item]]
         return self._opened_files[item]
 
     def __enter__(self):
