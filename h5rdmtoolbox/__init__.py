@@ -13,9 +13,6 @@ name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
 
 
-# from .convention.time import datetime_str
-
-
 def set_loglevel(level):
     """setting logging level of all modules"""
     from .x2hdf import set_loglevel as x2hdf_set_loglevel
@@ -28,12 +25,39 @@ def set_loglevel(level):
     conventions_set_loglevel(level)
 
 
+def _cli():
+    """command line interface function"""
+    import argparse
+
+    def link(uri, label=None):
+        """from https://stackoverflow.com/questions/40419276/python-how-to-print-text-to-console-as-hyperlink"""
+        if label is None:
+            label = uri
+        parameters = ''
+
+        # OSC 8 ; params ; URI ST <name> OSC 8 ;; ST
+        escape_mask = '\033]8;{};{}\033\\{}\033]8;;\033\\'
+
+        return escape_mask.format(parameters, uri, label)
+
+    parser = argparse.ArgumentParser(description='Main h5rdmtoolbox command line interface.')
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}')
+    parser.add_argument('-D', '--documentation', type=bool, nargs='?', default=False,
+                        help='Opens the documentation in the browser')
+    args = parser.parse_args()
+
+    if not args.documentation:
+        import webbrowser
+        webbrowser.open('https://matthiasprobst.github.io/h5RDMtoolbox/')
+
+
 def check():
     """Run file check"""
     import argparse
-    parser = argparse.ArgumentParser(description='PIV uncertainty estimation with CNN')
+    parser = argparse.ArgumentParser(description='Layout check iof an HDF5')
     parser.add_argument("filename", help="Filename to run check on.",
                         type=str)
+
     # parser.add_argument('-l', '--layout',
     #                     type=bool,
     #                     nargs='?',
