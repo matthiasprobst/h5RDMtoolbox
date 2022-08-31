@@ -89,16 +89,17 @@ class MongoGroupAccessor:
             ignore_attrs = []
 
         grp = self._h5grp
-        post = {"filename": str(grp.file.filename),
-                "file_creation_time": get_file_creation_time(self._h5grp.file.filename),
-                "name": os.path.basename(grp.name),
-                "path": grp.name, 'hdfobj': 'group'}
+        doc = {"filename": str(grp.file.filename),
+               "file_creation_time": get_file_creation_time(self._h5grp.file.filename),
+               "basename": os.path.basename(grp.name),
+               "name": grp.name,
+               'hdfobj': 'group'}
 
         for ak, av in grp.attrs.items():
             if ak not in H5_DIM_ATTRS:
                 if ak not in ignore_attrs:
-                    post[ak] = type2mongo(av)
-        collection.insert_one(post)
+                    doc[ak] = type2mongo(av)
+        collection.insert_one(doc)
 
         if recursive:
             include_dataset = True
@@ -124,30 +125,22 @@ class MongoDatasetAccessor:
     def __init__(self, h5ds: H5Dataset):
         self._h5ds = h5ds
 
-    def insert(self, axis, collection: pymongo.collection.Collection,
-               ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
-        """!!!UNDER HEAVY CONSTRUCTION!!!
-
-        Insert a dataset with all its attributes and slice
-
-        let's say first an last axis have dim scales
-        h5['mydataset'] --> shape: (4, 21, 25, 3)
-        h5['mydataset'].mongo.insert(axis=(0, 3)
-        """
+    def get_documents(self, axis: int, ignore_attrs: List[str] = None, dims: List[str] = None) -> List[Dict]:
+        """Generates the document from the dataset and return list of dictionaries"""
         if ignore_attrs is None:
             ignore_attrs = []
 
         ds = self._h5ds
 
         if axis is None:
-            post = {"filename": str(ds.file.filename),
-                    "path": ds.name,
-                    "name": os.path.basename(ds.name),
-                    "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
-                    # "document_last_modified": datetime.now(),  # last modified
-                    "shape": ds.shape,
-                    "ndim": ds.ndim,
-                    'hdfobj': 'dataset'}
+            doc = {"filename": str(ds.file.filename),
+                   "name": ds.name,
+                   "basename": os.path.basename(ds.name),
+                   "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
+                   # "document_last_modified": datetime.now(),  # last modified
+                   "shape": ds.shape,
+                   "ndim": ds.ndim,
+                   'hdfobj': 'dataset'}
 
             for ak, av in ds.attrs.items():
                 if ak not in H5_DIM_ATTRS:
@@ -155,26 +148,27 @@ class MongoDatasetAccessor:
                         if ak == 'COORDINATES':
                             if isinstance(av, (np.ndarray, list)):
                                 for c in av:
-                                    post[c] = float(ds.parent[c][()])
+                                    doc[c] = float(ds.parent[c][()])
                             else:
-                                post[av] = float(ds.parent[av][()])
+                                doc[av] = float(ds.parent[av][()])
                         else:
-                            post[ak] = av
-            collection.insert_one(post)
-            return collection
+                            doc[ak] = av
+            return [doc, ]
 
         if axis == 0:
+            docs = []
             for i in range(ds.shape[axis]):
 
-                post = {"filename": str(ds.file.filename), "path": ds.name,  # name without /
-                        "name": os.path.basename(ds.name),
-                        "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
-                        "shape": ds.shape,
-                        "ndim": ds.ndim,
-                        'hdfobj': 'dataset',
-                        'slice': ((i, i + 1, 1),
-                                  (0, None, 1),
-                                  (0, None, 1))}
+                doc = {"filename": str(ds.file.filename),
+                       "name": ds.name,
+                       "basename": os.path.basename(ds.name),
+                       "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
+                       "shape": ds.shape,
+                       "ndim": ds.ndim,
+                       'hdfobj': 'dataset',
+                       'slice': ((i, i + 1, 1),
+                                 (0, None, 1),
+                                 (0, None, 1))}
 
                 if len(ds.dims[axis]) > 0:
                     for iscale in range(len(ds.dims[axis])):
@@ -183,7 +177,9 @@ class MongoDatasetAccessor:
                             warnings.warn(f'Dimension scale dataset must be 1D, not {dim.ndim}D. Skipping')
                             continue
                         scale = dim[i]
-                        post[dim.name[1:]] = type2mongo(scale)
+                        basename = os.path.basename(dim.name[1:])
+                        # TODO: add string entry that tells us where the scale ds is located
+                        doc[basename] = type2mongo(scale)
 
                 for ak, av in ds.attrs.items():
                     if ak not in H5_DIM_ATTRS:
@@ -191,16 +187,44 @@ class MongoDatasetAccessor:
                             if ak == 'COORDINATES':
                                 if isinstance(av, (np.ndarray, list)):
                                     for c in av:
-                                        post[c[1:]] = float(ds.parent[c][()])
+                                        doc[c[1:]] = float(ds.parent[c][()])
                                 else:
-                                    post[av[1:]] = float(ds.parent[av][()])
+                                    doc[av[1:]] = float(ds.parent[av][()])
                             else:
-                                post[ak] = av
-                collection.insert_one(post)
-            return collection
+                                doc[ak] = av
+                docs.append(doc)
+            return docs
         else:
             raise NotImplementedError('This method is under heavy construction. Currently, '
                                       'only accepts axis==0 in this developmet stage.')
+
+    def insert(self, axis, collection: pymongo.collection.Collection,
+               ignore_attrs: List[str] = None, dims: List[str] = None,
+               additional_fields: Dict = None) -> pymongo.collection.Collection:
+        """Using axis is UNDER HEAVY CONSTRUCTION!!! Currently only axis=0 works
+
+        By providing `dims` the dimension scales can be defined. If set to None, all attached
+        scales are used
+        """
+        docs = self.get_documents(axis, ignore_attrs, dims)
+
+        if additional_fields is not None:
+            for doc in docs:
+                # for k, v in additional_fields.items():
+                doc.update(additional_fields)
+        collection.insert_many(docs)
+        return collection
+
+    def update(self, axis, collection: pymongo.collection.Collection,
+               ignore_attrs: List[str] = None, dims: List[str] = None) -> pymongo.collection.Collection:
+        """update the dataset content"""
+        raise NotImplementedError('Planned to be implemented soon.')
+        # docs = self.get_documents(axis, ignore_attrs, dims)
+        # for doc in docs:
+        #     myquery = doc
+        #     newvalues = {"$set": doc}
+        #     collection.update_one(myquery, newvalues)
+        # return collection
 
     def slice(self, list_of_slices: List["slice"]) -> "xr.DataArray":
         """Slice the array with a mongo return value for a slice"""
