@@ -183,7 +183,9 @@ class MongoDatasetAccessor:
                             warnings.warn(f'Dimension scale dataset must be 1D, not {dim.ndim}D. Skipping')
                             continue
                         scale = dim[i]
-                        post[dim.name[1:]] = type2mongo(scale)
+                        basename = os.path.basename(dim.name[1:])
+                        # TODO: add string entry that tells us where the scale ds is located
+                        post[basename] = type2mongo(scale)
 
                 for ak, av in ds.attrs.items():
                     if ak not in H5_DIM_ATTRS:
