@@ -176,6 +176,9 @@ class MongoDatasetAccessor:
                         if dim.ndim != 1:
                             warnings.warn(f'Dimension scale dataset must be 1D, not {dim.ndim}D. Skipping')
                             continue
+                        if dims is not None:
+                            if dim.name not in dims:
+                                continue
                         scale = dim[i]
                         basename = os.path.basename(dim.name[1:])
                         # TODO: add string entry that tells us where the scale ds is located
