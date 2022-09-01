@@ -56,7 +56,7 @@ class TestH5Repo(unittest.TestCase):
                 h5['ds_at_root'].make_scale()
                 g = h5.create_group('idgroup')
                 ds = g.create_dataset('ds_at_subgroup', data=np.random.random((2, 10, 13)), units='',
-                                 long_name='ds_at_subgroup')
+                                      long_name='ds_at_subgroup')
                 ds.dims[0].attach_scale(h5['ds_at_root'])
                 ds.attrs['id'] = i
 
@@ -74,6 +74,8 @@ class TestH5Repo(unittest.TestCase):
                               units='', long_name='index', make_scale=True)
             h5.create_dataset('index2', data=np.arange(0, 4, 1), dtype=int,
                               units='', long_name='index', make_scale=True)
+            h5.create_dataset('index3', data=np.arange(0, 4, 1), dtype=int,
+                              units='', long_name='index', make_scale=False)
             h5.create_dataset('images', data=np.random.random((4, 11, 21)),
                               units='counts',
                               long_name='a long name',
@@ -100,7 +102,8 @@ class TestH5Repo(unittest.TestCase):
         res = self.collection.find()
         for r in res:
             self.assertIn('index', r.keys())
-            self.assertNotIn('index2', r.keys())
+            self.assertIn('index2', r.keys())
+            self.assertNotIn('index3', r.keys())
 
         self.collection.drop()
         with H5File(hdf_filename) as h5:
@@ -109,8 +112,16 @@ class TestH5Repo(unittest.TestCase):
         for r in res:
             self.assertIn('index', r.keys())
             self.assertIn('index2', r.keys())
+            self.assertNotIn('index3', r.keys())
 
-
+        self.collection.drop()
+        with H5File(hdf_filename) as h5:
+            h5.images.mongo.insert(axis=0, collection=self.collection, dims=('/index3',))
+        res = self.collection.find()
+        for r in res:
+            self.assertIn('index', r.keys())
+            self.assertIn('index2', r.keys())
+            self.assertIn('index3', r.keys())
 
     def test_insert_group(self):
         self.collection.drop()

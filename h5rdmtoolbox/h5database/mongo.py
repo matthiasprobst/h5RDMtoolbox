@@ -1,15 +1,16 @@
 import os
 import pathlib
 import warnings
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
 import h5py
 import numpy as np
 import pymongo.collection
 from pymongo.errors import InvalidDocument
 
+from ..h5wrapper import open_wrapper
 from ..h5wrapper.accessory import register_special_dataset
 from ..h5wrapper.h5file import H5Dataset, H5Group
 
@@ -70,14 +71,21 @@ class MongoGroupAccessor:
     def insert(self, collection: pymongo.collection.Collection, recursive: bool = False,
                include_dataset: bool = True,
                flatten_tree: bool = True,
-               ignore_attrs: List[str] = None) -> pymongo.collection.Collection:
+               ignore_attrs: List[str] = None,
+               use_relative_filename: bool = False) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
+
+        filename_ctime = get_file_creation_time(self._h5grp.file.filename)
+        if use_relative_filename:
+            filename = self._h5grp.file.filename
+        else:
+            filename = str(pathlib.Path(self._h5grp.file.filename).absolute())
 
         if not flatten_tree:
             tree = self._h5grp.get_tree_structure(recursive=recursive,
                                                   ignore_attrs=ignore_attrs)
-            tree["file_creation_time"] = get_file_creation_time(self._h5grp.file.filename)
-            tree["filename"] = self._h5grp.file.filename
+            tree["file_creation_time"] = filename_ctime
+            tree["filename"] = filename
             try:
                 collection.insert_one(make_dict_mongo_compatible(tree))
             except InvalidDocument as e:
@@ -89,8 +97,8 @@ class MongoGroupAccessor:
             ignore_attrs = []
 
         grp = self._h5grp
-        doc = {"filename": str(grp.file.filename),
-               "file_creation_time": get_file_creation_time(self._h5grp.file.filename),
+        doc = {"filename": str(filename),
+               "file_creation_time": filename_ctime,
                "basename": os.path.basename(grp.name),
                "name": grp.name,
                'hdfobj': 'group'}
@@ -125,19 +133,25 @@ class MongoDatasetAccessor:
     def __init__(self, h5ds: H5Dataset):
         self._h5ds = h5ds
 
-    def get_documents(self, axis: int, ignore_attrs: List[str] = None, dims: List[str] = None) -> List[Dict]:
+    def get_documents(self, axis: int, ignore_attrs: List[str] = None, dims: List[str] = None,
+                      use_relativle_filename: bool = False) -> List[Dict]:
         """Generates the document from the dataset and return list of dictionaries"""
         if ignore_attrs is None:
             ignore_attrs = []
 
         ds = self._h5ds
 
+        filename_ctime = get_file_creation_time(self._h5ds.file.filename)
+        if use_relativle_filename:
+            filename = ds.file.filename
+        else:
+            filename = str(pathlib.Path(ds.file.filename).absolute())
+
         if axis is None:
-            doc = {"filename": str(ds.file.filename),
+            doc = {"filename": filename,
                    "name": ds.name,
                    "basename": os.path.basename(ds.name),
-                   "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
-                   # "document_last_modified": datetime.now(),  # last modified
+                   "file_creation_time": filename_ctime,
                    "shape": ds.shape,
                    "ndim": ds.ndim,
                    'hdfobj': 'dataset'}
@@ -159,10 +173,10 @@ class MongoDatasetAccessor:
             docs = []
             for i in range(ds.shape[axis]):
 
-                doc = {"filename": str(ds.file.filename),
+                doc = {"filename": filename,
                        "name": ds.name,
                        "basename": os.path.basename(ds.name),
-                       "file_creation_time": get_file_creation_time(self._h5ds.file.filename),
+                       "file_creation_time": filename_ctime,
                        "shape": ds.shape,
                        "ndim": ds.ndim,
                        'hdfobj': 'dataset',
@@ -170,19 +184,28 @@ class MongoDatasetAccessor:
                                  (0, None, 1),
                                  (0, None, 1))}
 
+                dim_ls = []
+                if dims is not None:
+                    for dim in dims:
+                        if not isinstance(dim, h5py.Dataset):
+                            raise TypeError(f'Dimension must be of type h5py.Dataset, not {type(dim)}')
+                        dim_ls.append(dim)
+
                 if len(ds.dims[axis]) > 0:
                     for iscale in range(len(ds.dims[axis])):
                         dim = ds.dims[axis][iscale]
                         if dim.ndim != 1:
                             warnings.warn(f'Dimension scale dataset must be 1D, not {dim.ndim}D. Skipping')
-                            continue
-                        if dims is not None:
-                            if dim.name not in dims:
-                                continue
-                        scale = dim[i]
-                        basename = os.path.basename(dim.name[1:])
-                        # TODO: add string entry that tells us where the scale ds is located
-                        doc[basename] = type2mongo(scale)
+                        else:
+                            if dim.name not in dim_ls:
+                                # add dim scale to list
+                                dim_ls.append(dim)
+
+                for dim in dim_ls:
+                    scale = dim[i]
+                    basename = os.path.basename(dim.name[1:])
+                    # TODO: add string entry that tells us where the scale ds is located
+                    doc[basename] = type2mongo(scale)
 
                 for ak, av in ds.attrs.items():
                     if ak not in H5_DIM_ATTRS:
@@ -232,3 +255,90 @@ class MongoDatasetAccessor:
     def slice(self, list_of_slices: List["slice"]) -> "xr.DataArray":
         """Slice the array with a mongo return value for a slice"""
         return self._h5ds[tuple([slice(*s) for s in list_of_slices])]
+
+
+@dataclass
+class H5Result:
+    """Result interface. Either accessing a h5py.Dataset or a h5py.Group"""
+    rdict: Dict
+
+    def __post_init__(self):
+        self.file = None
+
+    # def dump(self):
+    #     """Dump the content ofthe dataset/group to screen"""
+    #     with self as h5:
+    #         h5.dump()
+    # def sdump(self):
+    #     """Dump the content ofthe dataset/group to screen"""
+    #     with self as h5:
+    #         h5.sdump()
+    def __getitem__(self, item):
+        """Return sliced xarray for dataset. For group this will raise an error"""
+        with self as h5:
+            if isinstance(h5, h5py.Group):
+                return h5.__getitem__(item)
+            if 'slice' not in self.rdict:
+                """return full array"""
+                return h5[:]
+            list_of_slices = self.rdict['slice']
+            return h5[tuple([slice(*s) for s in list_of_slices])].__getitem__(item)
+
+    def __enter__(self):
+        if 'filename' not in self.rdict:
+            raise AttributeError('No filename provided')
+        return self.open()
+
+    def open(self):
+        """open the file"""
+        try:
+            self.file = open_wrapper(self.rdict['filename'])
+        except RuntimeError as e:
+            if self.file is not None:
+                print('closing file')
+                self.file.close()
+            raise RuntimeError(e)
+        return self.file[self.rdict['name']]
+
+    def close(self):
+        """close the file"""
+        self.file.close()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+
+@dataclass
+class H5Results:
+    """Class interfacing a pymongo cursor that contains
+    HDF5 entries build with this package"""
+
+    cursor: pymongo.cursor.Cursor
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return H5Result(self.cursor.next())
+
+    def __getitem__(self, item) -> H5Result:
+        if isinstance(item, int):
+            for i, c in enumerate(self.cursor.rewind()):
+                if i == item:
+                    return H5Result(c)
+
+    def rewind(self):
+        """rewind the cursor"""
+        self.cursor.rewind()
+        return self
+
+    def get(self, *names, fill_value=np.nan) -> Dict:
+        """Get values of name(s) and return a dictionary"""
+        dictionary = {n: [] for n in names}
+        for c in self.cursor.rewind():
+            for n in names:
+                try:
+                    dictionary[n].append(c[n])
+                except IndexError:
+                    dictionary[n].append(fill_value)
+        return dictionary
