@@ -72,7 +72,8 @@ class MongoGroupAccessor:
                include_dataset: bool = True,
                flatten_tree: bool = True,
                ignore_attrs: List[str] = None,
-               use_relative_filename: bool = False) -> pymongo.collection.Collection:
+               use_relative_filename: bool = False,
+               additional_fields: Dict = None) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
 
         filename_ctime = get_file_creation_time(self._h5grp.file.filename)
@@ -102,6 +103,9 @@ class MongoGroupAccessor:
                "basename": os.path.basename(grp.name),
                "name": grp.name,
                'hdfobj': 'group'}
+
+        if additional_fields is not None:
+            doc.update(additional_fields)
 
         for ak, av in grp.attrs.items():
             if ak not in H5_DIM_ATTRS:
@@ -236,7 +240,6 @@ class MongoDatasetAccessor:
 
         if additional_fields is not None:
             for doc in docs:
-                # for k, v in additional_fields.items():
                 doc.update(additional_fields)
         collection.insert_many(docs)
         return collection
