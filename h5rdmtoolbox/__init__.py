@@ -29,17 +29,6 @@ def _cli():
     """command line interface function"""
     import argparse
 
-    def link(uri, label=None):
-        """from https://stackoverflow.com/questions/40419276/python-how-to-print-text-to-console-as-hyperlink"""
-        if label is None:
-            label = uri
-        parameters = ''
-
-        # OSC 8 ; params ; URI ST <name> OSC 8 ;; ST
-        escape_mask = '\033]8;{};{}\033\\{}\033]8;;\033\\'
-
-        return escape_mask.format(parameters, uri, label)
-
     parser = argparse.ArgumentParser(description='Main h5rdmtoolbox command line interface.')
     parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}')
     parser.add_argument('-D', '--documentation', type=bool, nargs='?', default=False,
@@ -54,33 +43,38 @@ def _cli():
 def check():
     """Run file check"""
     import argparse
-    parser = argparse.ArgumentParser(description='Layout check iof an HDF5')
+    parser = argparse.ArgumentParser(description=f'h5rdmtoolbox ({__version__})\nLayout check of an HDF5')
     parser.add_argument("filename", help="Filename to run check on.",
                         type=str)
 
-    # parser.add_argument('-l', '--layout',
-    #                     type=bool,
-    #                     nargs='?',
-    #                     default=False,
-    #                     help='Run layout check.')
-    # parser.add_argument('-n', '--names',
-    #                     type=bool,
-    #                     nargs='?',
-    #                     default=False,
-    #                     help='Run name check.')
-    parser.add_argument('-d', '--dump',
+    parser.add_argument('-l', '--layout',
                         type=bool,
                         nargs='?',
+                        default=False,
+                        help='Run layout check.')
+    parser.add_argument('-n', '--names',
+                        type=bool,
+                        nargs='?',
+                        default=False,
+                        help='Run name check.')
+    # parser.add_argument('-f', '--file',
+    #                     type=str,
+    #                     required=False,
+    #                     default=None,
+    #                     help='HDF5 file name.')
+    parser.add_argument('-d', '--dump',
+                        action='store_true',
                         default=False,
                         help='Dumps the content to screen.')
 
     args = parser.parse_args()
-
+    print(args)
     if not args.layout and not args.names:
         with open_wrapper(args.filename) as h5:
-            h5.check(silent=False)
-            if args.dump is None:
+            if args.dump:
                 h5.sdump()
+            else:
+                h5.check(silent=False)
 
 
 @atexit.register
