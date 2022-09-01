@@ -98,7 +98,7 @@ class TestH5Repo(unittest.TestCase):
 
         self.collection.drop()
         with H5File(hdf_filename) as h5:
-            h5.images.mongo.insert(axis=0, collection=self.collection, dims=('/index',))
+            h5.images.mongo.insert(axis=0, collection=self.collection, dims=(h5['/index'],))
         res = self.collection.find()
         for r in res:
             self.assertIn('index', r.keys())
@@ -107,7 +107,7 @@ class TestH5Repo(unittest.TestCase):
 
         self.collection.drop()
         with H5File(hdf_filename) as h5:
-            h5.images.mongo.insert(axis=0, collection=self.collection, dims=('/index', '/index2'))
+            h5.images.mongo.insert(axis=0, collection=self.collection, dims=(h5['/index'], h5['/index2']))
         res = self.collection.find()
         for r in res:
             self.assertIn('index', r.keys())
@@ -116,7 +116,7 @@ class TestH5Repo(unittest.TestCase):
 
         self.collection.drop()
         with H5File(hdf_filename) as h5:
-            h5.images.mongo.insert(axis=0, collection=self.collection, dims=('/index3',))
+            h5.images.mongo.insert(axis=0, collection=self.collection, dims=(h5['/index3'],))
         res = self.collection.find()
         for r in res:
             self.assertIn('index', r.keys())
