@@ -471,6 +471,25 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 """
             self.assertEqual(sdump_str, _str)
 
+    def test_xr_dataset(self):
+        import xarray as xr
+        # from https://docs.xarray.dev/en/v0.9.5/examples/quick-overview.html#datasets
+        ds = xr.Dataset({'foo': [1, 2, 3], 'bar': ('x', [1, 2]), 'baz': np.pi})
+        ds.foo.attrs['units'] = 'm'
+        ds.foo.attrs['long_name'] = 'foo'
+
+        ds.bar.attrs['units'] = 'm'
+        ds.bar.attrs['long_name'] = 'bar'
+
+        ds.baz.attrs['units'] = 'm'
+        ds.baz.attrs['long_name'] = 'baz'
+
+        ds.bar.x.attrs['units']='m'
+        ds.bar.x.attrs['long_name']='x'
+
+        with H5File() as h5:
+            h5.create_dataset_from_xarray_dataset(ds)
+
 
 class TestH5Group(unittest.TestCase):
 

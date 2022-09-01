@@ -1476,7 +1476,10 @@ class H5Group(h5py.Group):
             ds = self.create_dataset(data_var, data=dataset[data_var].values,
                                      attrs=dataset[data_var].attrs, overwrite=False)
             for idim, dim in enumerate(dataset[data_var].dims):
-                ds.dims[idim].attach_scale(ds_coords[dim])
+                if dim not in ds_coords:
+                    self.create_dataset(name=dim, data=dataset[data_var][dim])
+                else:
+                    ds.dims[idim].attach_scale(ds_coords[dim])
 
     def create_external_link(self, name, filename, path, overwrite=False,
                              keep_relative=False):
