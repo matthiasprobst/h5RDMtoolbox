@@ -3,7 +3,7 @@
 import unittest
 from importlib.metadata import metadata
 
-from h5rdmtoolbox.h5wrapper.standardized_attributes import software
+from h5rdmtoolbox.h5wrapper.accessors import software
 
 import h5rdmtoolbox as h5tbx
 class TestOptAccessors(unittest.TestCase):

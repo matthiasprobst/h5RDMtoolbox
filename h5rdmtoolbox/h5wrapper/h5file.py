@@ -1982,4 +1982,4 @@ H5Group._h5ds = H5Dataset
 
 # import accessors
 # noinspection PyUnresolvedReferences
-from .standardized_attributes import title
+from .accessors import title

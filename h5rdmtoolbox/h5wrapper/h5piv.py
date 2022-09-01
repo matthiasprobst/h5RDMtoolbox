@@ -7,6 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Tuple
 from typing import Protocol, Any, Union, Dict, List
+from .accessors.software import Software
 
 import numpy as np
 from pint_xarray import unit_registry as ureg
@@ -367,43 +368,6 @@ class PIVviewParameters:
         return default
 
 
-class PIVSoftware:
-    """PIV-Software class"""
-
-    def __init__(self, name, version, **kwargs):
-        if name is None:
-            self._name = 'unknown'
-        else:
-            self._name = name
-        if version is None:
-            self._version = None
-        else:
-            self._version = str(version)
-        self._attrs = kwargs
-
-    @property
-    def name(self) -> str:
-        """Return software name"""
-        return self._name
-
-    @property
-    def version(self) -> str:
-        """Return software version"""
-        return self._version
-
-    def __getitem__(self, item):
-        if item == 'name':
-            return self._name
-        if item == 'version':
-            return self._version
-        return self._attrs[item]
-
-    def to_dict(self) -> dict:
-        """exports the data to a dictionary"""
-        _dict = self._attrs.copy()
-        _dict.update(dict(name=self._name, version=self._version))
-        return _dict
-
 
 class PIVParameters:
 
@@ -562,40 +526,40 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             _max.append(np.nanmax(self[n][()]))
         return tuple(_min), tuple(_max)
 
-    @property
-    def software(self) -> Union[PIVSoftware, None]:
-        """Return attribute 'software'"""
-        _software = None
-        if 'software' in self.attrs:
-            _software = self.attrs.get('software')
-        else:
-            raise AttributeError('Cannot determine the software. Expecting it to be an attribute of the root group!')
-
-        if isinstance(_software, dict):
-            name = _software.pop('name', None)
-            if name is None:
-                warnings.warn(f'Software attribute cannot be interpreted: {name}')
-                return None
-            return PIVSoftware(name, _software.pop('version', None),
-                               **_software)
-        elif isinstance(_software, (tuple, list)):
-            return PIVSoftware(*_software)
-        # expecting a str
-        return PIVSoftware(_software, version=None)
-
-    @software.setter
-    def software(self, software: Union[PIVSoftware, str], **kwargs):
-        if isinstance(software, str):
-            version = kwargs.pop('version', None)
-            _software = PIVSoftware(software, version=version, **kwargs)
-        elif isinstance(software, tuple):
-            if len(software) > 3:
-                _software = PIVSoftware(*software)
-            else:
-                raise ValueError('Only excepts tuples of length 2, e.g. ("softwarename", "version", extra_dict)')
-        else:
-            _software = software
-        self.attrs['software'] = _software.to_dict()
+    # @property
+    # def software(self) -> Union[Software, None]:
+    #     """Return attribute 'software'"""
+    #     _software = None
+    #     if 'software' in self.attrs:
+    #         _software = self.attrs.get('software')
+    #     else:
+    #         raise AttributeError('Cannot determine the software. Expecting it to be an attribute of the root group!')
+    #
+    #     if isinstance(_software, dict):
+    #         name = _software.pop('name', None)
+    #         if name is None:
+    #             warnings.warn(f'Software attribute cannot be interpreted: {name}')
+    #             return None
+    #         return Software(name, _software.pop('version', None),
+    #                            **_software)
+    #     elif isinstance(_software, (tuple, list)):
+    #         return Software(*_software)
+    #     # expecting a str
+    #     return Software(_software, version=None)
+    #
+    # @software.setter
+    # def software(self, software: Union[Software, str], **kwargs):
+    #     if isinstance(software, str):
+    #         version = kwargs.pop('version', None)
+    #         _software = Software(software, version=version, **kwargs)
+    #     elif isinstance(software, tuple):
+    #         if len(software) > 3:
+    #             _software = Software(*software)
+    #         else:
+    #             raise ValueError('Only excepts tuples of length 2, e.g. ("softwarename", "version", extra_dict)')
+    #     else:
+    #         _software = software
+    #     self.attrs['software'] = _software.to_dict()
 
     def get_parameters(self, iz: int = None, software=None) -> PIVParameters:
         """Retruns the PIVParameter class of the respective software (if identified)
@@ -612,7 +576,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         if software is None:
             software = self.software
         if isinstance(software, str):
-            software = PIVSoftware(software, None)
+            software = Software(software, None)
 
         def _get_parameter_dict():
             if 'piv_parameters' in self:  # at root level --> valid for all z

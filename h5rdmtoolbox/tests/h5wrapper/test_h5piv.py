@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import packaging
 import xarray as xr
 
 import h5rdmtoolbox as h5tbx
@@ -54,25 +55,39 @@ class TestH5PIV(unittest.TestCase):
             h5.create_dataset('u', shape=h5['v'].shape,
                               units='m/s', standard_name='x_velocity')
 
-            self.assertIsInstance(h5.software, h5piv.PIVSoftware)
+            self.assertIsInstance(h5.software, h5piv.Software)
             self.assertEqual(h5.software.name, 'PIVTec PIVview')
             self.assertEqual(h5.software.version, None)
+            self.assertEqual(h5.software.url, None)
+            self.assertEqual(h5.software.description, None)
 
-            h5.software = h5piv.PIVSoftware('test', 3.4,
-                                            extra='test')
-            self.assertIsInstance(h5.software, h5piv.PIVSoftware)
-            self.assertEqual(h5.software.name, 'test')
-            self.assertEqual(h5.software.version, '3.4')
-            self.assertEqual(h5.software['extra'], 'test')
-            self.assertEqual(h5.software['name'], 'test')
-            self.assertEqual(h5.software['version'], '3.4')
-
-            h5.attrs['software'] = ('PIVview', 3.4)
-            self.assertIsInstance(h5.software, h5piv.PIVSoftware)
+            h5.software = h5piv.Software(name='PIVview',
+                                         version='3.8.6',
+                                         url='www.pivtec.com/pivview.html',
+                                         description='PIV processing')
+            self.assertIsInstance(h5.software, h5piv.Software)
             self.assertEqual(h5.software.name, 'PIVview')
-            self.assertEqual(h5.software.version, '3.4')
+            self.assertEqual(h5.software.version, packaging.version.parse('3.8.6'))
+            self.assertEqual(str(h5.software.version), '3.8.6')
+            self.assertEqual(h5.software.name, 'PIVview')
 
-            h5.software = h5piv.PIVSoftware('PIVTec PIVview', 999)
+            with self.assertRaises(TypeError):
+                h5.attrs['software'] = ('PIVview', '3.8.6',
+                                        'www.pivtec.com/pivview.html',
+                                        'PIV processing')
+
+            h5.attrs['software'] = dict(name='PIVview',
+                                        version='3.8.0',
+                                        url='www.pivtec.com/pivview.html',
+                                        description='PIV processing')
+            self.assertIsInstance(h5.software, h5piv.Software)
+            self.assertEqual(h5.software.name, 'PIVview')
+            self.assertEqual(h5.software.version.__str__(), '3.8.0')
+
+            h5.software = h5piv.Software(name='PIVview',
+                                         version='3.8.6',
+                                         url='www.pivtec.com/pivview.html',
+                                         description='PIV processing')
 
             _min, _max = h5.extent
             self.assertTupleEqual(_min, (min(h5['x'][:]),
