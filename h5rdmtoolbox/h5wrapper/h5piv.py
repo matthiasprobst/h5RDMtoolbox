@@ -188,7 +188,7 @@ H5PIV_layout_filename = Path.joinpath(_user.user_data_dir, f'layout/H5PIV.hdf')
 
 def write_H5PIV_layout_file():
     """Write the H5File layout to <user_dir>/layout"""
-    lay = layoutconvention.H5Layout.init_from(H5Flow_layout_filename, H5PIV_layout_filename)
+    lay = layoutconvention.H5Layout.init_from_filename(H5Flow_layout_filename, H5PIV_layout_filename)
     with lay.File(mode='r+') as h5lay:
         h5lay.attrs['title'] = '__The common name of the file that might ' \
                                'better explain it by a short string'

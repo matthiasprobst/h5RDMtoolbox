@@ -47,11 +47,11 @@ def check():
     parser.add_argument("filename", help="Filename to run check on.",
                         type=str)
 
-    parser.add_argument('-l', '--layout',
-                        type=bool,
-                        nargs='?',
-                        default=False,
-                        help='Run layout check.')
+    parser.add_argument('-l', '--layout-file',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='Layout file name or registered name.')
     parser.add_argument('-n', '--names',
                         type=bool,
                         nargs='?',
@@ -68,13 +68,25 @@ def check():
                         help='Dumps the content to screen.')
 
     args = parser.parse_args()
-    print(args)
-    if not args.layout and not args.names:
+
+    if args.layout_file:
+        import pathlib
+        from .conventions.layout import H5Layout
+        layout_filename = pathlib.Path(args.layout_file)
+        if layout_filename.exists():
+            layout = H5Layout(args.layout_file)
+        else:
+            layout = H5Layout.load_registered(args.layout_file)
+
         with open_wrapper(args.filename) as h5:
-            if args.dump:
-                h5.sdump()
-            else:
-                h5.check(silent=False)
+            layout.check(h5, recursive=True, silent=False)
+    else:
+        if not args.layout_file and not args.names:
+            with open_wrapper(args.filename) as h5:
+                if args.dump:
+                    h5.sdump()
+                else:
+                    h5.check(silent=False)
 
 
 @atexit.register
