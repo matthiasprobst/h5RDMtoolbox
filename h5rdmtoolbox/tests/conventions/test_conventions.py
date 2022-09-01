@@ -4,6 +4,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions import translations, Empty_Standard_Name_Table
 from h5rdmtoolbox.conventions.identifier import StandardizedNameTable, EmailError
 from h5rdmtoolbox.conventions.translations import pivview_to_standardnames_dict
+from h5rdmtoolbox.errors import StandardizedNameTableVersionError
 from h5rdmtoolbox.h5wrapper import H5PIV
 
 
@@ -69,6 +70,6 @@ class TestCnventions(unittest.TestCase):
         with h5tbx.H5File(standard_name_table=fluid) as h5:
             pass
 
-        with self.assertRaises(h5tbx.conventions.identifier.StandardizedNameTableError):
+        with self.assertRaises(StandardizedNameTableVersionError):
             with h5tbx.H5File(h5.hdf_filename, standard_name_table=empty) as h5:
                 pass

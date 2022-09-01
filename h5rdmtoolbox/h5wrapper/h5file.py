@@ -25,10 +25,12 @@ from .accessory import USER_PROPERTIES
 from .. import _repr
 from .. import config
 from .. import conventions
+from .. import errors
 from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_data_dir
 from .._version import __version__
+from ..errors import StandardizedNameTableVersionError
 from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME, NAME_IDENTIFIER_ATTR_NAME, UNITS_ATTR_NAME
 # noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
@@ -987,7 +989,7 @@ class H5Group(h5py.Group):
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
             if config.require_units:
-                raise conventions.UnitsError('Units cannot be None. A dimensionless dataset has units "''"')
+                raise errors.UnitsError('Units cannot be None. A dimensionless dataset has units "''"')
             attrs['units'] = ''
         else:
             attrs['units'] = units
@@ -1850,8 +1852,8 @@ class H5File(h5py.File, H5Group):
 
                 snt_attr_name, snt_attr_vn = snt_attr.split('-v')
                 cmp = conventions.StandardizedNameTable.from_name_and_version(snt_attr_name, int(snt_attr_vn))
-                if snt != cmp:
-                    raise conventions.identifier.StandardizedNameTableError(
+                if not cmp.compare_versionname(snt):
+                    raise StandardizedNameTableVersionError(
                         'Standardized name table registered in the file (attr "standard_name_table") '
                         f'is not equal to the passed name table: {snt.versionname} <-> {cmp.versionname}')
 

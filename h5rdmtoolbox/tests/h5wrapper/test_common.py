@@ -192,7 +192,7 @@ class TestCommon(unittest.TestCase):
         self.assertIsInstance(obj, h5tbx.H5File)
 
     def test_create_dataset(self):
-        from h5rdmtoolbox.conventions import UnitsError
+        from h5rdmtoolbox.errors import UnitsError
         from h5rdmtoolbox.conventions import Empty_Standard_Name_Table
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc(standard_name_table=Empty_Standard_Name_Table) as h5:

@@ -25,10 +25,6 @@ def set_loglevel(level):
         logger.setLevel(level)
 
 
-class UnitsError(Exception):
-    """Units Error"""
-    pass
-
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
 __all__ = ['H5Layout', 'datetime_str', 'set_loglevel',

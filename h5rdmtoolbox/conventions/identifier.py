@@ -16,19 +16,28 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Dict
-from typing import Union
+from typing import Tuple, Dict, Union
 
 import pandas as pd
+import yaml
 from IPython.display import display, HTML
+from pint.errors import UndefinedUnitError
 from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
 from .utils import is_valid_email_address, dict2xml
+from ..errors import StandardizedNameError
 
 STRICT = True
 
 CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
+
+
+def test_units(_units):
+    try:
+        ureg.Unit(_units)
+    except UndefinedUnitError as e:
+        raise UndefinedUnitError(f'Units cannot be understood using pint_xarray package: {_units}. --> {e}')
 
 
 def _units_power_fix(_str: str):
@@ -49,11 +58,6 @@ def equal_base_units(unit1, unit2):
     base_unit1 = ureg(unit1).to_base_units().units.__format__(ureg.default_format)
     base_unit2 = ureg(unit2).to_base_units().units.__format__(ureg.default_format)
     return base_unit1 == base_unit2
-
-
-class StandardizedNameError(Exception):
-    """Exception class for error associated with standard name usage"""
-    pass
 
 
 @dataclass
@@ -123,10 +127,6 @@ def meta_from_xml(xml_filename):
     _dict, meta = xmlconvention2dict(xml_filename)
     meta.update(dict(table_dict=_dict))
     return meta
-
-
-class StandardizedNameTableError(Exception):
-    pass
 
 
 class StandardizedNameTable(_StandardizedNameTable):
@@ -244,16 +244,23 @@ class StandardizedNameTable(_StandardizedNameTable):
         return item in self._dict
 
     def __eq__(self, other):
-        return self.versionname == other.versionname
+        eq1 = self._dict == other._dict
+        eq2 = self.versionname == other.versionname
+        return eq1 and eq2
 
     def __neg__(self, other):
         return not self.__eq__(other)
+
+    def compare_versionname(self, other):
+        """Compare versionname"""
+        return self.versionname == other.versionname
 
     def set(self, name: str, description: str, canonical_units: str):
         """Sets the value of a standardized name"""
         if name in self._dict:
             raise StandardizedNameError(f'name "{name}" already exists in table. Use modify() '
                                         f'to change the content')
+        test_units(canonical_units)
         self._dict[name] = dict(description=description, canonical_units=canonical_units)
 
     def modify(self, name: str, description: str, canonical_units: str):
@@ -324,19 +331,44 @@ class StandardizedNameTable(_StandardizedNameTable):
             self._dict.update(data)
 
     @staticmethod
-    def from_xml(xml_filename):
-        """reads the table from an xml file"""
+    def from_xml(xml_filename) -> "StandardizedNameTable":
+        """read from xml file"""
         meta = meta_from_xml(xml_filename)
         snt = StandardizedNameTable(**meta)
         snt._xml_filename = xml_filename
         return snt
 
     @staticmethod
-    def from_yml(yml_filename):
+    def from_yaml(yml_filename) -> "StandardizedNameTable":
+        """alias method of from_yml"""
+        return StandardizedNameTable.from_yml(yml_filename)
+
+    @staticmethod
+    def from_yml(yml_filename) -> "StandardizedNameTable":
+        """read from yaml file"""
         import yaml
         with open(yml_filename, 'r') as f:
             ymldict = yaml.safe_load(f)
         return StandardizedNameTable(**ymldict)
+
+    @staticmethod
+    def from_web(url: str, known_hash: str = None,
+                 valid_characters: str = '[^a-zA-Z0-9_]',
+                 pattern: str = '^[0-9 ].*'):
+        """Init from an online resource. Provide a hash is recommended. For more info
+        see documentation of pooch.retrieve()"""
+        try:
+            import pooch
+        except ImportError:
+            raise ImportError(f'Package "pooch" is needed to download the file cf-standard-name-table.xml')
+        file_path = pooch.retrieve(
+            url=url,
+            known_hash=known_hash,
+        )
+        snt = StandardizedNameTable.from_xml(file_path)
+        snt._valid_characters = valid_characters
+        snt._pattern = pattern
+        return snt
 
     @staticmethod
     def from_versionname(version_name: str):
@@ -366,7 +398,7 @@ class StandardizedNameTable(_StandardizedNameTable):
         return StandardizedNameTable(**meta)
 
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:
-        """saves the convention in a XML file"""
+        """Save the convention in a XML file"""
         if not xml_filename.parent.exists() and parents:
             xml_filename.parent.mkdir(parents=parents)
         if datetime_str is None:
@@ -378,16 +410,46 @@ class StandardizedNameTable(_StandardizedNameTable):
         xml_translation_filename = xml_parent / 'translation' / xml_name
         if not xml_translation_filename.parent.exists():
             xml_translation_filename.parent.mkdir(parents=True)
-        dict2xml(xml_translation_filename,
-                 'tanslation', self._translation_dict, dict(version_number=self.version_number,
-                                                            contact=self.contact,
-                                                            institution=self.institution,
-                                                            last_modified=last_modified))
-        return dict2xml(xml_filename,
-                        self.name, self._dict, dict(version_number=self.version_number,
-                                                    contact=self.contact,
-                                                    institution=self.institution,
-                                                    last_modified=last_modified))
+        dict2xml(filename=xml_translation_filename,
+                 name='tanslation',
+                 dictionary=self._translation_dict,
+                 metadata=dict(version_number=self.version_number,
+                               contact=self.contact,
+                               institution=self.institution,
+                               last_modified=last_modified)
+                 )
+        return dict2xml(filename=xml_filename,
+                        name=self.name,
+                        dictionary=self._dict,
+                        metadata=dict(version_number=self.version_number,
+                                      contact=self.contact,
+                                      institution=self.institution,
+                                      last_modified=last_modified)
+                        )
+
+    def to_yml(self, *args, **kwargs) -> Path:
+        """alias of to_yaml()"""
+        return self.to_yaml(*args, **kwargs)
+
+    def to_yaml(self, yml_filename: Path, datetime_str=None, parents=True) -> Path:
+        """Save the convention in a XML file"""
+        yml_filename = Path(yml_filename)
+        if not yml_filename.parent.exists() and parents:
+            yml_filename.parent.mkdir(parents=parents)
+        if datetime_str is None:
+            datetime_str = '%Y-%m-%d_%H:%M:%S'
+        last_modified = datetime.now().strftime(datetime_str)
+        with open(yml_filename, 'w') as f:
+            yaml.dump({'name': self.name}, f)
+            yaml.dump({'version_number': self.version_number}, f)
+            yaml.dump({'institution': self.institution}, f)
+            yaml.dump({'contact': self.contact}, f)
+            yaml.dump({'valid_characters': self.valid_characters}, f)
+            yaml.dump({'pattern': self.pattern}, f)
+            yaml.dump({'last_modified': last_modified}, f)
+            yaml.dump({'table_dict': self._dict}, f)
+            yaml.dump({'translation_dict': self._translation_dict}, f)
+        return yml_filename
 
     def check_name(self, name, strict=False) -> bool:
         """Verifies general requirements like lower-case writing and no
