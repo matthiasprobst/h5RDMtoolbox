@@ -5,23 +5,23 @@ import appdirs
 
 _filecounter = count()
 _dircounter = count()
-user_data_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
 
-user_config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
-if not user_config_dir.exists():
-    user_config_dir.mkdir(parents=True)
-user_config_filename = user_config_dir / 'h5rdmtoolbox.yaml'
+_user_root_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
+user_dirs = {'root': _user_root_dir,
+             'layouts': _user_root_dir / 'layouts',
+             'standard_names': _user_root_dir / 'standard_names'}
 
-user_layout_dir = user_data_dir / 'layout'
-if not user_layout_dir.exists():
-    user_layout_dir.mkdir(parents=True)
+for _user_dir in user_dirs.values():
+    _user_dir.mkdir(parents=True, exist_ok=True)
+
+config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
+config_filename = config_dir / 'h5rdmtoolbox.yaml'
+
 
 # tmp folder name is individual for every call of the package:
 _dircounter = count()
-_root_tmp_dir = user_data_dir / 'tmp'
-user_tmp_dir = _root_tmp_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
-
-if not user_tmp_dir.exists():
-    user_tmp_dir.mkdir(parents=True)
+_root_tmp_dir = _user_root_dir / 'tmp'
+user_dirs['tmp'] = _user_root_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
+user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
 
 testdir = pathlib.Path(__file__).parent / 'tests/data'

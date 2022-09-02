@@ -28,7 +28,7 @@ from .. import conventions
 from .. import errors
 from .. import utils
 from .._repr import h5file_html_repr
-from .._user import user_data_dir
+from .._user import user_dirs
 from .._version import __version__
 from ..errors import StandardizedNameTableVersionError
 from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME, NAME_IDENTIFIER_ATTR_NAME, UNITS_ATTR_NAME
@@ -284,7 +284,7 @@ class DatasetValues:
         return self.h5dataset.__setitem__(args, val)
 
 
-H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
+H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
 
 
 def write_H5File_layout_file():
@@ -1477,7 +1477,10 @@ class H5Group(h5py.Group):
                                      attrs=dataset[data_var].attrs, overwrite=False)
             for idim, dim in enumerate(dataset[data_var].dims):
                 if dim not in ds_coords:
-                    self.create_dataset(name=dim, data=dataset[data_var][dim])
+                    # warnings.warn(f'xr-dimension {dim} was skipped because no units and long_name/standard_name '
+                    #               'are available and cannot be set anyhow. This is due to the package xarray.')
+                    # xarray does not let me add attributes to this dimension
+                    self.create_dataset(name=dim, data=dataset[data_var][dim].values, units='', long_name='xarray dimension')
                 else:
                     ds.dims[idim].attach_scale(ds_coords[dim])
 
@@ -1813,8 +1816,7 @@ class H5File(h5py.File, H5Group):
                          **kwds)
 
         this_class_name = type(self).__name__
-        self.layout_file = Path.joinpath(
-            user_data_dir, f'{this_class_name}_Layout.hdf')
+        self.layout_file = Path.joinpath(user_dirs['layouts'], f'{this_class_name}.hdf')
 
         if not _tmp_init and self.mode == 'r' and title is not None:
             raise RuntimeError('No write intent. Cannot write title.')

@@ -4,12 +4,12 @@ from . import openpiv
 from . import pivview
 from .interface import PIVSnapshot, PIVPlane, PIVMultiPlane
 from .pivview import PIVViewNcFile
-from ..._user import user_data_dir
+from ..._user import user_dirs
 
-if (user_data_dir / 'piv2hdf.yaml').exists():
+if (user_dirs['root'] / 'piv2hdf.yaml').exists():
     from ._config import read_yaml_file
 
-    config = read_yaml_file(user_data_dir / 'piv2hdf.yaml')
+    config = read_yaml_file(user_dirs['root'] / 'piv2hdf.yaml')
 else:
     from ._config import DEFAULT_CONFIGURATION
 

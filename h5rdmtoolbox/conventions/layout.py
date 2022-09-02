@@ -14,6 +14,7 @@ from IPython.display import HTML, display
 
 from .identifier import equal_base_units
 from .. import _repr
+from .._user import user_dirs
 
 logger = logging.getLogger(__package__)
 
@@ -344,21 +345,20 @@ class H5Layout:
     @staticmethod
     def load_registered(name: str, filename: Path = None) -> 'H5Layout':
         """Load from user data dir, copy to filename. If filename is None a tmp file is created"""
-        from .._user import user_layout_dir
         if filename is None:
             from ..utils import generate_temporary_filename
             filename = generate_temporary_filename(suffix='.hdf')
-        src = user_layout_dir / name
+        src = user_dirs['layouts'] / name
         if src.exists():
             shutil.copy2(src, filename)
             return H5Layout(filename)
         # search for names:
-        candidates = list(user_layout_dir.glob(f'{name}.*'))
+        candidates = list(user_dirs['layouts'].glob(f'{name}.*'))
         if len(candidates) == 1:
             shutil.copy2(src / candidates[0], filename)
             return H5Layout(filename)
-        raise FileNotFoundError(f'File could not be found or passed name was not unique. Check the user layout dir '
-                                f'{user_layout_dir}')
+        raise FileNotFoundError('File could not be found or passed name was not unique. Check the user layout dir '
+                                f'{user_dirs["layouts"]}')
 
     def File(self, mode='r'):
         self._file = H5FileLayout(self.filename, mode=mode)
@@ -428,12 +428,16 @@ class H5Layout:
 
     def register(self, name=None, overwrite=False) -> pathlib.Path:
         """Copy file to user data dir"""
-        from .._user import user_layout_dir
         if name is None:
-            trg = user_layout_dir / self.filename.name
+            trg = user_dirs['layouts'] / self.filename.name
         else:
-            trg = user_layout_dir / name
+            trg = user_dirs['layouts'] / name
         if trg.exists() and not overwrite:
             raise FileExistsError(f'Target file already exists: {trg}')
         print(f'copying here: {trg}')
         return shutil.copy2(self.filename, trg)
+
+    @staticmethod
+    def list_registered():
+        """Return sorted list of layout HDF files"""
+        return sorted(user_dirs['layouts'].glob('*'))

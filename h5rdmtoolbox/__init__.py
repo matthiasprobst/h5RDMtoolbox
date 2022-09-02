@@ -4,7 +4,7 @@ import atexit
 import shutil
 
 from . import conventions
-from ._user import user_data_dir, user_tmp_dir
+from ._user import user_dirs
 from ._version import __version__
 from .h5wrapper import H5File, H5Flow, H5PIV, open_wrapper
 from .utils import generate_temporary_filename, generate_temporary_directory
@@ -44,8 +44,6 @@ def check():
     """Run file check"""
     import argparse
     parser = argparse.ArgumentParser(description=f'h5rdmtoolbox ({__version__})\nLayout check of an HDF5')
-    parser.add_argument("filename", help="Filename to run check on.",
-                        type=str)
 
     parser.add_argument('-l', '--layout-file',
                         type=str,
@@ -57,32 +55,49 @@ def check():
                         nargs='?',
                         default=False,
                         help='Run name check.')
-    # parser.add_argument('-f', '--file',
-    #                     type=str,
-    #                     required=False,
-    #                     default=None,
-    #                     help='HDF5 file name.')
+    parser.add_argument('-f', '--file',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='Filename to run check on.')
     parser.add_argument('-d', '--dump',
                         action='store_true',
                         default=False,
                         help='Dumps the content to screen.')
+    parser.add_argument('-list', '--list-registered',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='List registered files. Either pass "layout" or "names" or "standard_names".')
 
     args = parser.parse_args()
+
+    if args.list_registered:
+        if args.list_registered.lower() in ('layout', 'layouts'):
+            from .conventions.layout import H5Layout
+            for f in H5Layout.list_registered():
+                print(f' > {f.name}')
+        if args.list_registered.lower() in ('names', 'name', 'standard_names', 'standard_name'):
+            from .conventions.identifier import StandardizedNameTable
+            for f in StandardizedNameTable.list_registered():
+                print(f' > {f.name}')
+        return
 
     if args.layout_file:
         import pathlib
         from .conventions.layout import H5Layout
+
         layout_filename = pathlib.Path(args.layout_file)
         if layout_filename.exists():
             layout = H5Layout(args.layout_file)
         else:
             layout = H5Layout.load_registered(args.layout_file)
 
-        with open_wrapper(args.filename) as h5:
+        with open_wrapper(args.file) as h5:
             layout.check(h5, recursive=True, silent=False)
     else:
         if not args.layout_file and not args.names:
-            with open_wrapper(args.filename) as h5:
+            with open_wrapper(args.file) as h5:
                 if args.dump:
                     h5.sdump()
                 else:
@@ -95,12 +110,12 @@ def clean_temp_data():
     from ._user import _root_tmp_dir
     failed_dirs = []
     failed_dirs_file = _root_tmp_dir / 'failed.txt'
-    if user_tmp_dir.exists():
+    if user_dirs['tmp'].exists():
         try:
-            shutil.rmtree(user_tmp_dir)
+            shutil.rmtree(user_dirs['tmp'])
         except RuntimeError as e:
-            failed_dirs.append(user_tmp_dir)
-            print(f'removing tmp folder "{user_tmp_dir}" failed due to "{e}". Best is you '
+            failed_dirs.append(user_dirs['tmp'])
+            print(f'removing tmp folder "{user_dirs["tmp"]}" failed due to "{e}". Best is you '
                   f'manually delete the directory.')
         finally:
             lines = []
@@ -123,6 +138,6 @@ def clean_temp_data():
 
 from . import tutorial
 
-__all__ = ['tutorial', '__version__', '__author__', 'user_data_dir', 'conventions', 'H5File', 'H5Flow', 'H5PIV',
+__all__ = ['tutorial', '__version__', '__author__', 'user_dirs', 'conventions', 'H5File', 'H5Flow', 'H5PIV',
            'open_wrapper',
            'generate_temporary_filename', 'generate_temporary_directory']

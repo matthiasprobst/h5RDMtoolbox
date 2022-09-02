@@ -6,13 +6,13 @@ from typing import Union
 import dotenv
 
 from .utils import ansys_version_from_inst_dir
-from ...._user import user_config_dir
+from ...._user import config_dir
 
 logger = logging.getLogger('cfdtoolkit')
 
 PATHLIKE = Union[str, bytes, os.PathLike, pathlib.Path]
 
-CFX_DOTENV_FILENAME = user_config_dir / 'cfx.env'
+CFX_DOTENV_FILENAME = config_dir / 'cfx.env'
 SESSIONS_DIR = pathlib.Path(__file__).parent.joinpath('session_files')
 
 

@@ -28,6 +28,8 @@ from tabulate import tabulate
 from .utils import is_valid_email_address, dict2xml
 from ..errors import StandardizedNameError
 
+from .._user import user_dirs
+
 STRICT = True
 
 CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
@@ -510,6 +512,15 @@ class StandardizedNameTable(_StandardizedNameTable):
             else:
                 AttributeError(f'No such translation dictionary: {source}')
         raise ValueError(f'Translation dictionary is empty!')
+
+    def register(self):
+        """Register the standard name table"""
+        raise NotImplementedError
+
+    @staticmethod
+    def list_registered():
+        """Return sorted list of standard names files"""
+        return sorted(user_dirs['standard_names'].glob('*'))
 
 
 Empty_Standard_Name_Table = StandardizedNameTable(name='EmptyStandardizedNameTable',

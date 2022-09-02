@@ -14,7 +14,8 @@ from pint_xarray import unit_registry as ureg
 
 from .accessory import register_special_dataset
 from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
-from .. import config, _user
+from .. import config
+from .._user import user_dirs
 from ..conventions import layout as layoutconvention
 from ..conventions.custom import PIVStandardNameTable
 
@@ -182,8 +183,8 @@ def vdp(piv_flags, flag_masked, flag_valid=None, flag_invalid=None, abs=False):
     return n_valid
 
 
-H5Flow_layout_filename = Path.joinpath(_user.user_data_dir, f'layout/H5Flow.hdf')
-H5PIV_layout_filename = Path.joinpath(_user.user_data_dir, f'layout/H5PIV.hdf')
+H5Flow_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5Flow.hdf')
+H5PIV_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5PIV.hdf')
 
 
 def write_H5PIV_layout_file():

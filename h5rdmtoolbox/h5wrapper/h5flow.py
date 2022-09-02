@@ -16,7 +16,7 @@ from pint_xarray import unit_registry as ureg
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5Dataset
 from .. import config, conventions
-from .._user import user_data_dir
+from .._user import user_dirs
 
 # from ..conventions.custom import FluidStandardNameTable
 
@@ -24,8 +24,8 @@ logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
 DEVICE_ATTR_NAME = 'device'
 
-H5File_layout_filename = Path.joinpath(user_data_dir, f'layout/H5File.hdf')
-H5Flow_layout_filename = Path.joinpath(user_data_dir, f'layout/H5Flow.hdf')
+H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
+H5Flow_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5Flow.hdf')
 
 
 def write_H5Flow_layout_file():

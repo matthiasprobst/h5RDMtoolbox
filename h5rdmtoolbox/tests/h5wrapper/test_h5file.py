@@ -484,9 +484,6 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
         ds.baz.attrs['units'] = 'm'
         ds.baz.attrs['long_name'] = 'baz'
 
-        ds.bar.x.attrs['units']='m'
-        ds.bar.x.attrs['long_name']='x'
-
         with H5File() as h5:
             h5.create_dataset_from_xarray_dataset(ds)
 
