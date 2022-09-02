@@ -360,7 +360,8 @@ class H5Layout:
         raise FileNotFoundError('File could not be found or passed name was not unique. Check the user layout dir '
                                 f'{user_dirs["layouts"]}')
 
-    def File(self, mode='r'):
+    def File(self, mode='r') -> H5FileLayout:
+        """File instance"""
         self._file = H5FileLayout(self.filename, mode=mode)
         return self._file
 
