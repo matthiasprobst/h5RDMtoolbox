@@ -16,8 +16,9 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Dict, Union
+from typing import Tuple, Dict, Union, List
 
+import h5py
 import pandas as pd
 import yaml
 from IPython.display import display, HTML
@@ -26,9 +27,8 @@ from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
 from .utils import is_valid_email_address, dict2xml
-from ..errors import StandardizedNameError
-
 from .._user import user_dirs
+from ..errors import StandardizedNameError, EmailError
 
 STRICT = True
 
@@ -103,10 +103,6 @@ class StandardizedName:
 
 
 class _StandardizedNameTable:
-    pass
-
-
-class EmailError(ValueError):
     pass
 
 
@@ -492,6 +488,28 @@ class StandardizedNameTable(_StandardizedNameTable):
                                             f'"{units}" != "{self[name].canonical_units}"')
         return True
 
+    def check_file(self, filename, recursive: bool = True, raise_error: bool = True):
+        """Check file for standard names"""
+        with h5py.File(filename) as h5:
+            self.check_grp(h5['/'], recursive=recursive, raise_error=raise_error)
+
+    def check_grp(self, h5grp: h5py.Group, recursive: bool = True, raise_error: bool = True):
+        """Check group dataset """
+
+        def _check_ds(name, node):
+            if isinstance(node, h5py.Dataset):
+                if 'standard_name' in node.attrs:
+                    units = node.attrs['units']
+                    try:
+                        self.check_units(node.attrs['standard_name'], units=units)
+                    except StandardizedNameError as e:
+                        if raise_error:
+                            raise StandardizedNameError(e)
+                        else:
+                            print(f' > ds: {node.name}: {e}')
+
+        h5grp.visititems(_check_ds)
+
     def translate(self, name: str, source: str) -> Union[str, None]:
         """If convention/xml file comes with translation entries, this method converts
         the input name into the convention's standardized name
@@ -513,14 +531,33 @@ class StandardizedNameTable(_StandardizedNameTable):
                 AttributeError(f'No such translation dictionary: {source}')
         raise ValueError(f'Translation dictionary is empty!')
 
-    def register(self):
-        """Register the standard name table"""
-        raise NotImplementedError
+    def register(self, overwrite: bool = False) -> None:
+        """Register the standard name table under its versionname."""
+        trg = user_dirs['standard_names'] / f'{self.versionname}.yml'
+        if trg.exists() and not overwrite:
+            raise FileExistsError(f'Standard name table {self.versionname} already exists!')
+        self.to_yaml(trg)
 
     @staticmethod
-    def list_registered():
+    def load_registered(name: str) -> 'StandardizedNameTable':
+        """Load from user data dir"""
+        # search for names:
+        candidates = list(user_dirs['standard_names'].glob(f'{name}.yml'))
+        if len(candidates) == 1:
+            return StandardizedNameTable.from_yml(candidates[0])
+        raise FileNotFoundError('File could not be found or passed name was not unique. Check the user layout dir '
+                                f'{user_dirs["standard_names"]}')
+
+    @staticmethod
+    def get_registered() -> List[Path]:
         """Return sorted list of standard names files"""
         return sorted(user_dirs['standard_names'].glob('*'))
+
+    @staticmethod
+    def print_registered() -> None:
+        """Return sorted list of standard names files"""
+        for f in StandardizedNameTable.get_registered():
+            print(f' > {f.name}')
 
 
 Empty_Standard_Name_Table = StandardizedNameTable(name='EmptyStandardizedNameTable',

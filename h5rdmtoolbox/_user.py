@@ -21,7 +21,7 @@ config_filename = config_dir / 'h5rdmtoolbox.yaml'
 # tmp folder name is individual for every call of the package:
 _dircounter = count()
 _root_tmp_dir = _user_root_dir / 'tmp'
-user_dirs['tmp'] = _user_root_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
+user_dirs['tmp'] = _root_tmp_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
 user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
 
 testdir = pathlib.Path(__file__).parent / 'tests/data'

@@ -18,3 +18,8 @@ class StandardizedNameTableError(Exception):
 class StandardizedNameTableVersionError(Exception):
     """Incompatible Errors"""
     pass
+
+
+class EmailError(ValueError):
+    """Wrong Email Error"""
+    pass

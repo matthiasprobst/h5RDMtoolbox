@@ -424,8 +424,6 @@ class H5Layout:
         self._issues_list = issues
         return self.n_issues
 
-        # return self.check_static(grp, silent) + self.check_dynamic(root_grp, silent)
-
     def register(self, name=None, overwrite=False) -> pathlib.Path:
         """Copy file to user data dir"""
         if name is None:
@@ -438,6 +436,12 @@ class H5Layout:
         return shutil.copy2(self.filename, trg)
 
     @staticmethod
-    def list_registered():
+    def get_registered() -> List[pathlib.Path]:
         """Return sorted list of layout HDF files"""
         return sorted(user_dirs['layouts'].glob('*'))
+
+    @staticmethod
+    def print_registered() -> None:
+        """Return sorted list of standard names files"""
+        for f in H5Layout.get_registered():
+            print(f' > {f.name}')

@@ -51,10 +51,10 @@ def check():
                         default=None,
                         help='Layout file name or registered name.')
     parser.add_argument('-n', '--names',
-                        type=bool,
+                        type=str,
                         nargs='?',
-                        default=False,
-                        help='Run name check.')
+                        default=None,
+                        help='Run standard name check on all datasets in the file.')
     parser.add_argument('-f', '--file',
                         type=str,
                         required=False,
@@ -75,16 +75,14 @@ def check():
     if args.list_registered:
         if args.list_registered.lower() in ('layout', 'layouts'):
             from .conventions.layout import H5Layout
-            for f in H5Layout.list_registered():
-                print(f' > {f.name}')
+            H5Layout.print_registered()
         if args.list_registered.lower() in ('names', 'name', 'standard_names', 'standard_name'):
             from .conventions.identifier import StandardizedNameTable
-            for f in StandardizedNameTable.list_registered():
-                print(f' > {f.name}')
+            StandardizedNameTable.print_registered()
         return
 
+    import pathlib
     if args.layout_file:
-        import pathlib
         from .conventions.layout import H5Layout
 
         layout_filename = pathlib.Path(args.layout_file)
@@ -95,13 +93,16 @@ def check():
 
         with open_wrapper(args.file) as h5:
             layout.check(h5, recursive=True, silent=False)
-    else:
-        if not args.layout_file and not args.names:
-            with open_wrapper(args.file) as h5:
-                if args.dump:
-                    h5.sdump()
-                else:
-                    h5.check(silent=False)
+    if args.names:
+        print(args.names)
+        from .conventions.identifier import StandardizedNameTable
+
+        snt_filename = pathlib.Path(args.names)
+        if snt_filename.exists():
+            snt = StandardizedNameTable(args.names)
+        else:
+            snt = StandardizedNameTable.load_registered(args.names)
+        snt.check_file(args.file, recursive=True, raise_error=False)
 
 
 @atexit.register
