@@ -22,6 +22,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" href="../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
@@ -31,6 +32,8 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -106,6 +109,11 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../gettingstarted/quickoverview.html">
      Quick Overview
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../gettingstarted/command_line_interface.html">
+     Command Line Interfaces
     </a>
    </li>
   </ul>
@@ -458,13 +466,14 @@ jupyter notebooks walk you through the usage and features.</p>
 familiar to the <cite>h5py</cite> package will find all featues but will be enforced to provide e.g. certain attributes
 to fulfill the requirements of a certain meta convention.</p>
 </div>
-<dl class="simple">
-<dt>The package <cite>h5wrapper</cite> adds additional functionalities to the core HDF5-interface, which is implemented in the package <cite>h5py</cite> (<a class="reference external" href="https://docs.h5py.org/en/stable/">https://docs.h5py.org/en/stable/</a>). This is done by providing so-calle wrapper classes. They</dt><dd><ul class="simple">
+<p>The package <cite>h5wrapper</cite> adds additional functionalities to the core HDF5-interface, which is implemented in the
+package <cite>h5py</cite> (<a class="reference external" href="https://docs.h5py.org/en/stable/">https://docs.h5py.org/en/stable/</a>). This is done by providing so-calle wrapper classes. They</p>
+<blockquote>
+<div><ul class="simple">
 <li><p>facilitate and streamline the work with HDF5 files and</p></li>
 <li><p>integrate meta-conventions and file-layout specifications.</p></li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
 <p>Besides high-level methods that enhances the usability, naming <cite>conventions</cite>, the usage of <cite>units</cite> and the defintion of so-called <cite>layouts</cite> are a core feature. They are motivated by the FAIR principles of sustainable data management.</p>
 <p>This notebook will guide through the high-level methods and the mentioned concepts.</p>
 <p>The package <cite>h5wrapper</cite> provides classes that ar inherited from the interface classes of <cite>h5py</cite>. They are

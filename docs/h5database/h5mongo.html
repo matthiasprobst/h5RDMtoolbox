@@ -22,6 +22,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" href="../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
@@ -31,6 +32,8 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -108,6 +111,11 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../gettingstarted/quickoverview.html">
      Quick Overview
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../gettingstarted/command_line_interface.html">
+     Command Line Interfaces
     </a>
    </li>
   </ul>
@@ -821,7 +829,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&#39;0.1.10&#39;
+&#39;0.1.12&#39;
 </pre></div></div>
 </div>
 <section id="First-things-first:-Connection-to-the-DB:">
@@ -1125,18 +1133,18 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-6366299500" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-6366299500">
+                    <input id="group-ds-/-7220226400" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-7220226400">
                     /<span>(5)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.10</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.12</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                    <ul id="ds-1-/correlation-6367850200" class="h5tb-var-list">
-                    <input id="ds-2-/correlation-6367852800" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/correlation-7221451900" class="h5tb-var-list">
+                    <input id="ds-2-/correlation-7221454400" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/correlation-6367852800">correlation</label>
+                        for="ds-2-/correlation-7221454400">correlation</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">counts</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : correlation</li>
@@ -1146,10 +1154,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/digit-6368260200" class="h5tb-var-list">
-                    <input id="ds-2-/digit-6368262500" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/digit-7221866400" class="h5tb-var-list">
+                    <input id="ds-2-/digit-7221868800" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/digit-6368262500">digit</label>
+                        for="ds-2-/digit-7221868800">digit</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">-</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : true digit</li>
@@ -1159,10 +1167,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/dissimilarity-6368575900" class="h5tb-var-list">
-                    <input id="ds-2-/dissimilarity-6368578100" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/dissimilarity-7222221100" class="h5tb-var-list">
+                    <input id="ds-2-/dissimilarity-7222223700" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/dissimilarity-6368578100">dissimilarity</label>
+                        for="ds-2-/dissimilarity-7222223700">dissimilarity</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">counts</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : dissimilarity</li>
@@ -1172,10 +1180,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/images-6369009100" class="h5tb-var-list">
-                    <input id="ds-2-/images-6369011400" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/images-7222705100" class="h5tb-var-list">
+                    <input id="ds-2-/images-7222707500" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/images-6369011400">images</label>
+                        for="ds-2-/images-7222707500">images</label>
                     <span class="h5tb-dims">(digit: 1797)</span>  [
                     <span class="h5tb-unit">pixel</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : image of hand-written digit</li>
@@ -1185,10 +1193,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/mean-6369253200" class="h5tb-var-list">
-                    <input id="ds-2-/mean-6369255200" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/mean-7222987300" class="h5tb-var-list">
+                    <input id="ds-2-/mean-7222989900" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/mean-6369255200">mean</label>
+                        for="ds-2-/mean-7222989900">mean</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">counts</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : mean counts of the image</li>
@@ -1239,11 +1247,11 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;_id&#39;: ObjectId(&#39;630cc03dcace93e59d400f64&#39;),
- &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp41\\tmp0&#39;,
- &#39;path&#39;: &#39;/images&#39;,
- &#39;name&#39;: &#39;images&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 29, 13, 33, 47, 78000),
+{&#39;_id&#39;: ObjectId(&#39;631210e3cf638f5a24b3608a&#39;),
+ &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp1\\tmp0&#39;,
+ &#39;name&#39;: &#39;/images&#39;,
+ &#39;basename&#39;: &#39;images&#39;,
+ &#39;file_creation_time&#39;: datetime.datetime(2022, 9, 2, 14, 19, 10, 741000),
  &#39;shape&#39;: [1797, 8, 8],
  &#39;ndim&#39;: 3,
  &#39;hdfobj&#39;: &#39;dataset&#39;,
@@ -1334,8 +1342,8 @@ input.h5tb-varname-in:checked + label:before {
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>path</th>
       <th>name</th>
+      <th>basename</th>
       <th>file_creation_time</th>
       <th>shape</th>
       <th>ndim</th>
@@ -1352,7 +1360,7 @@ input.h5tb-varname-in:checked + label:before {
       <th>0</th>
       <td>/images</td>
       <td>images</td>
-      <td>2022-08-29 13:33:47.078</td>
+      <td>2022-09-02 14:19:10.741</td>
       <td>[1797, 8, 8]</td>
       <td>3</td>
       <td>dataset</td>
@@ -1366,7 +1374,7 @@ input.h5tb-varname-in:checked + label:before {
       <th>1</th>
       <td>/images</td>
       <td>images</td>
-      <td>2022-08-29 13:33:47.078</td>
+      <td>2022-09-02 14:19:10.741</td>
       <td>[1797, 8, 8]</td>
       <td>3</td>
       <td>dataset</td>
@@ -1380,7 +1388,7 @@ input.h5tb-varname-in:checked + label:before {
       <th>2</th>
       <td>/images</td>
       <td>images</td>
-      <td>2022-08-29 13:33:47.078</td>
+      <td>2022-09-02 14:19:10.741</td>
       <td>[1797, 8, 8]</td>
       <td>3</td>
       <td>dataset</td>
@@ -1394,7 +1402,7 @@ input.h5tb-varname-in:checked + label:before {
       <th>3</th>
       <td>/images</td>
       <td>images</td>
-      <td>2022-08-29 13:33:47.078</td>
+      <td>2022-09-02 14:19:10.741</td>
       <td>[1797, 8, 8]</td>
       <td>3</td>
       <td>dataset</td>
@@ -1408,7 +1416,7 @@ input.h5tb-varname-in:checked + label:before {
       <th>4</th>
       <td>/images</td>
       <td>images</td>
-      <td>2022-08-29 13:33:47.078</td>
+      <td>2022-09-02 14:19:10.741</td>
       <td>[1797, 8, 8]</td>
       <td>3</td>
       <td>dataset</td>
@@ -1469,13 +1477,13 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;_id&#39;: ObjectId(&#39;630cc041cace93e59d401666&#39;),
- &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp41\\tmp0&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 8, 29, 13, 33, 47, 78000),
- &#39;name&#39;: &#39;&#39;,
- &#39;path&#39;: &#39;/&#39;,
+{&#39;_id&#39;: ObjectId(&#39;631210e4cf638f5a24b3678c&#39;),
+ &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp1\\tmp0&#39;,
+ &#39;file_creation_time&#39;: datetime.datetime(2022, 9, 2, 14, 19, 10, 741000),
+ &#39;basename&#39;: &#39;&#39;,
+ &#39;name&#39;: &#39;/&#39;,
  &#39;hdfobj&#39;: &#39;group&#39;,
- &#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.10&#39;,
+ &#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.12&#39;,
  &#39;__standard_name_table__&#39;: &#39;EmptyStandardizedNameTable-v0&#39;,
  &#39;__wrcls__&#39;: &#39;H5File&#39;}
 </pre></div></div>

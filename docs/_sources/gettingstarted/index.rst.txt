@@ -11,4 +11,5 @@ in the respective chapters of each sub-package
 
     motivation
     quickoverview.ipynb
+    command_line_interface
 

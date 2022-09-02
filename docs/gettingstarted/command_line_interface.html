@@ -429,12 +429,41 @@ title="Print to PDF"
     </ul>
   </div>
 </div>
+<label for="__page-toc"
+  class="headerbtn headerbtn-page-toc"
+  
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-list"></i>
+  </span>
+
+</label>
 
     </div>
 </div>
 
 <!-- Table of contents -->
 <div class="col-md-3 bd-toc show noprint">
+    <div class="tocsection onthispage pt-5 pb-3">
+        <i class="fas fa-list"></i> Contents
+    </div>
+    <nav id="bd-toc-nav" aria-label="Page">
+        <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#layouts">
+   Layouts
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#standard-name-tables">
+   Standard name (tables)
+  </a>
+ </li>
+</ul>
+
+    </nav>
 </div>
     </div>
     <div class="article row">
@@ -446,6 +475,24 @@ title="Print to PDF"
                 <div id="print-main-content">
                     <div id="jb-print-toc">
                         
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#layouts">
+   Layouts
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#standard-name-tables">
+   Standard name (tables)
+  </a>
+ </li>
+</ul>
+
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -456,7 +503,10 @@ title="Print to PDF"
   <section id="command-line-interfaces">
 <h1>Command Line Interfaces<a class="headerlink" href="#command-line-interfaces" title="Permalink to this headline">#</a></h1>
 <p>By installing the package some console calls become available. For all command line interfaces
-a help exists. Just pass the argument <cite>-h</cite>.</p>
+a help exists. Just pass the argument <cite>-h</cite>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx -h
+</pre></div>
+</div>
 <ul class="simple">
 <li><p>Open the documentation in the browser:</p></li>
 </ul>
@@ -469,6 +519,48 @@ a help exists. Just pass the argument <cite>-h</cite>.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx -V
 </pre></div>
 </div>
+<section id="layouts">
+<h2>Layouts<a class="headerlink" href="#layouts" title="Permalink to this headline">#</a></h2>
+<ul class="simple">
+<li><p>List all registered layout files</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx layout --list
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Check an HDF5 file (my_file) usign a registered layout (my_layout):</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx standard_name -s my_layout -f my_file
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Check an HDF5 file (my_file) usign a layout file (my_layout.hdf):</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx standard_name -s my_layout.hdf -f my_file
+</pre></div>
+</div>
+</section>
+<section id="standard-name-tables">
+<h2>Standard name (tables)<a class="headerlink" href="#standard-name-tables" title="Permalink to this headline">#</a></h2>
+<ul class="simple">
+<li><p>List all registered standard name table files</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx standard_name --list
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Check an HDF5 file (my_file) for a registered standard name table (my_table):</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx standard_name -s my_table -f my_file
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Check an HDF5 file (my_file) for a standard name table (my_table.yml):</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>h5tbx standard_name -s my_table.yml -f my_file
+</pre></div>
+</div>
+</section>
 </section>
 
 

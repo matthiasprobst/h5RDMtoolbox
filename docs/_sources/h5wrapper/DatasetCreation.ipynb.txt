@@ -30,7 +30,7 @@
     "with h5tbx.H5File(standard_name_table=None) as h5:\n",
     "    try:\n",
     "        h5.create_dataset('x', shape=(4,))\n",
-    "    except h5tbx.conventions.UnitsError as e:\n",
+    "    except h5tbx.errors.UnitsError as e:\n",
     "        print(e)\n",
     "    h5.create_dataset('x', shape=(4,), units='m', long_name='a coordinate')"
    ]
@@ -198,6 +198,70 @@
     "with h5tbx.H5File() as h5:\n",
     "    h5.create_dataset('temperature', data=arr)\n",
     "    h5.dump()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4c629265-da4a-4f50-b887-f16aa3a385c8",
+   "metadata": {},
+   "source": [
+    "- add `xarry.Dataset`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "23d2c88c-8707-4ee0-938c-20eb90699ca6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# from https://docs.xarray.dev/en/v0.9.5/examples/quick-overview.html#datasets\n",
+    "ds = xr.Dataset({'foo': [1,2,3], 'bar': ('x', [1, 2]), 'baz': np.pi})\n",
+    "ds"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e167343f-12c2-400b-9c1f-c2b338758471",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "try:\n",
+    "    with h5tbx.H5File() as h5:\n",
+    "        h5.create_dataset_from_xarray_dataset(ds)\n",
+    "except h5tbx.errors.UnitsError as e:\n",
+    "    print(e)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "00ad35bc-dbfa-4da9-8c27-8f727e2555c5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ds.foo.attrs['units']='m'\n",
+    "ds.foo.attrs['long_name']='foo'\n",
+    "\n",
+    "ds.bar.attrs['units']='m'\n",
+    "ds.bar.attrs['long_name']='bar'\n",
+    "\n",
+    "ds.baz.attrs['units']='m'\n",
+    "ds.baz.attrs['long_name']='baz'\n",
+    "\n",
+    "ds"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "52b1701c-11bb-4b8f-aa26-d7a77e56b126",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset_from_xarray_dataset(ds)"
    ]
   },
   {

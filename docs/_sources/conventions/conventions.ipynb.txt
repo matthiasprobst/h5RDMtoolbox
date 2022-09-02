@@ -14,7 +14,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 30,
+   "execution_count": 1,
    "id": "3026a8e2-ebf6-48aa-9bd6-9d915b9672d9",
    "metadata": {
     "tags": []
@@ -34,7 +34,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 31,
+   "execution_count": 2,
    "id": "52a96fd3-318c-4e0a-8c57-82cfcb170480",
    "metadata": {
     "tags": []
@@ -57,7 +57,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 32,
+   "execution_count": 3,
    "id": "569b7ff4-5e17-4eda-9e8b-d449277f203e",
    "metadata": {
     "tags": []
@@ -69,7 +69,7 @@
        "Test_SNC (version number: 1)"
       ]
      },
-     "execution_count": 32,
+     "execution_count": 3,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -89,7 +89,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 33,
+   "execution_count": 4,
    "id": "77561296-edfe-476c-b316-553c1ff92cee",
    "metadata": {},
    "outputs": [
@@ -100,7 +100,7 @@
        "  'description': 'velocity is a vector quantity.'}}"
       ]
      },
-     "execution_count": 33,
+     "execution_count": 4,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -120,7 +120,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 34,
+   "execution_count": 5,
    "id": "1c3230f1-2a0d-4b09-b885-3b6a8a16fe83",
    "metadata": {},
    "outputs": [
@@ -162,12 +162,12 @@
    "id": "584a57e5-acf8-456a-bad4-cfdeea50dfb8",
    "metadata": {},
    "source": [
-    "New entries cann be assigned by using `set` or `modified` depending on whether the entry already exists or not:"
+    "New entries can be assigned by using `set` or `modified` depending on whether the entry already exists or not:"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 35,
+   "execution_count": 6,
    "id": "9e4ce9fe-de0e-4e3c-9410-e5dc891294af",
    "metadata": {
     "tags": []
@@ -202,9 +202,9 @@
    "id": "a2855d67-4e91-4d32-a173-c581f77b6b93",
    "metadata": {},
    "source": [
-    "## Writing Standard Name Convention to XML\n",
+    "## Saving Standard Name Conventions\n",
     "\n",
-    "Standardized name tables should be provided as xml documents:"
+    "Standardized name tables should be saved as xml documents or yaml-files:"
    ]
   },
   {
@@ -214,21 +214,70 @@
    "metadata": {
     "tags": []
    },
+   "outputs": [],
+   "source": [
+    "xml_filename = h5tbx.generate_temporary_filename(suffix='.xml')\n",
+    "sc.to_xml(xml_filename)\n",
+    "\n",
+    "yml_filename = h5tbx.generate_temporary_filename(suffix='.yml')\n",
+    "sc.to_yaml(yml_filename)\n",
+    "pass"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "88bc791e-8ea4-491f-bc6e-3fdc5149575b",
+   "metadata": {},
+   "source": [
+    "For later usage from anywhere, the table can be registerd with the toolbox. Call `register()`. It save the convention as yml file in the user directory for standard name data and will use the `versionname`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "d4e396b6-9564-4e39-aba8-0c8e9ebbef90",
+   "metadata": {},
    "outputs": [
     {
-     "data": {
-      "text/plain": [
-       "WindowsPath('C:/Users/da4323/AppData/Local/h5rdmtoolbox/h5rdmtoolbox/tmp/tmp26/tmp0.xml')"
-      ]
-     },
-     "execution_count": 7,
-     "metadata": {},
-     "output_type": "execute_result"
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " > standard_name_table-v79.yml\n",
+      " > Test_SNC-v1.yml\n"
+     ]
     }
    ],
    "source": [
-    "xml_filename = h5tbx.generate_temporary_filename(suffix='.xml')\n",
-    "sc.to_xml(xml_filename)"
+    "sc.register(overwrite=True)\n",
+    "h5tbx.conventions.StandardizedNameTable.print_registered()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "63b38596-fb6d-420f-ac97-9462f38ea76a",
+   "metadata": {},
+   "source": [
+    "Use the command line call"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "3fe3ac64-a900-407c-ac09-69ec7187a538",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " > H5File.hdf\n",
+      " > H5Flow.hdf\n",
+      " > H5PIV.hdf\n"
+     ]
+    }
+   ],
+   "source": [
+    "! h5tbx layout -l"
    ]
   },
   {
@@ -236,12 +285,14 @@
    "id": "9fa87fb5-04c1-4cb1-bae8-6a5f57339ad1",
    "metadata": {},
    "source": [
-    "## Load Standard Name Convention from XML"
+    "## Load Standard Name Convention from file\n",
+    "\n",
+    "If you have standard name tables to your hand, just load them. They must be provided as XML or YML:"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 8,
+   "execution_count": 10,
    "id": "be7625e3-349d-49bd-a14c-e9b2f220da91",
    "metadata": {
     "tags": []
@@ -295,26 +346,140 @@
      },
      "metadata": {},
      "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Test_SNC-v1\n"
+     ]
+    },
+    {
+     "data": {
+      "text/html": [
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>canonical_units</th>\n",
+       "      <th>description</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>time</th>\n",
+       "      <td>s</td>\n",
+       "      <td>physical time</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>x_velocity</th>\n",
+       "      <td>m/s</td>\n",
+       "      <td>velocity is a vector quantity. x indicates the component in y-axis direction</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>y_velocity</th>\n",
+       "      <td>m/s</td>\n",
+       "      <td>velocity is a vector quantity. y indicates the component in y-axis direction</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>z_velocity</th>\n",
+       "      <td>m/s</td>\n",
+       "      <td>velocity is a vector quantity. z indicates the component in z-axis direction</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>"
+      ],
+      "text/plain": [
+       "<IPython.core.display.HTML object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
     }
    ],
    "source": [
     "sc_test = h5tbx.conventions.StandardizedNameTable.from_xml(xml_filename)\n",
+    "print(sc_test.versionname)\n",
+    "sc_test.dump()\n",
+    "\n",
+    "sc_test = h5tbx.conventions.StandardizedNameTable.from_yml(yml_filename)\n",
     "print(sc_test.versionname)\n",
     "sc_test.dump()"
    ]
   },
   {
    "cell_type": "markdown",
-   "id": "1f23f296-6757-4ad8-9c43-1a3a383c185f",
+   "id": "9c7aa611-30f4-457e-a7cf-87a228be9f90",
    "metadata": {},
    "source": [
-    "## Existing Standard Name Convention\n",
-    "There are already a domain-specific convention provided by the repository for fluid problems. As they are far from complete and under current deelopment at the current stage, we rather have a look into the cf-conventions from which the concept is adopted. We can download the current XML document from https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml by using the `turoial` module of this repo:"
+    "Load a registered Standard Name Table from the toolbox:"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 9,
+   "execution_count": 11,
+   "id": "f3861a50-33bc-4625-80d3-6ef95deeddf6",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>canonical_units</th>\n",
+       "      <th>description</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>time</th>\n",
+       "      <td>s</td>\n",
+       "      <td>physical time</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>x_velocity</th>\n",
+       "      <td>m/s</td>\n",
+       "      <td>velocity is a vector quantity. x indicates the component in y-axis direction</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>y_velocity</th>\n",
+       "      <td>m/s</td>\n",
+       "      <td>velocity is a vector quantity. y indicates the component in y-axis direction</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>z_velocity</th>\n",
+       "      <td>m/s</td>\n",
+       "      <td>velocity is a vector quantity. z indicates the component in z-axis direction</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>"
+      ],
+      "text/plain": [
+       "<IPython.core.display.HTML object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "h5tbx.conventions.StandardizedNameTable.load_registered('Test_SNC-v1').dump()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7f0dcdab-e9b3-4e89-bec7-06eda703bdbc",
+   "metadata": {},
+   "source": [
+    "## Load from web\n",
+    "Optimally a community has defined a naming conventions, just like the cfconventions from where the concept is adoped. Let's imort their latest xml document:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
    "id": "49060588-f59a-415b-b0ca-55afbf4f609a",
    "metadata": {},
    "outputs": [
@@ -324,19 +489,19 @@
        "standard_name_table (version number: 79)"
       ]
      },
-     "execution_count": 9,
+     "execution_count": 12,
      "metadata": {},
      "output_type": "execute_result"
     }
    ],
    "source": [
-    "cf_xml_filename = h5tbx.tutorial.Conventions.fetch_cf_standard_name_table()\n",
-    "cf_xml_filename"
+    "cf = h5tbx.conventions.StandardizedNameTable.from_web(url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml')\n",
+    "cf"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 10,
+   "execution_count": 13,
    "id": "24fcc5e1-6c7a-43ce-a370-47ebe5449ba5",
    "metadata": {},
    "outputs": [
@@ -401,12 +566,21 @@
     }
    ],
    "source": [
-    "cf_xml_filename.dump(max_rows=4)"
+    "cf.dump(max_rows=4)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "923fb6d4-e82d-4bc0-8b02-d9588916c20c",
+   "metadata": {},
+   "source": [
+    "## Perform checks\n",
+    "A naming convention can be used to test new standard names, whether they comply with it or not:"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 11,
+   "execution_count": 14,
    "id": "ae55dbd6-af9a-4346-b232-b9f4fed3e436",
    "metadata": {},
    "outputs": [
@@ -416,18 +590,18 @@
        "True"
       ]
      },
-     "execution_count": 11,
+     "execution_count": 14,
      "metadata": {},
      "output_type": "execute_result"
     }
    ],
    "source": [
-    "cf_xml_filename.check_name('zenith_angle', strict=True)"
+    "cf.check_name('zenith_angle', strict=True)"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 12,
+   "execution_count": 15,
    "id": "7ef1281b-1b74-4143-b57e-299735526941",
    "metadata": {},
    "outputs": [
@@ -443,31 +617,31 @@
        "<Unit('meter / second')>"
       ]
      },
-     "execution_count": 12,
+     "execution_count": 15,
      "metadata": {},
      "output_type": "execute_result"
     }
    ],
    "source": [
-    "cf_xml_filename['x_wind_gust'].canonical_units"
+    "cf['x_wind_gust'].canonical_units"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 13,
+   "execution_count": 16,
    "id": "67174d49-18b5-4c47-af61-36e391f85eb0",
    "metadata": {},
    "outputs": [],
    "source": [
     "try:\n",
-    "    cf_xml_filename.check_units('x_wind_gust', units='m/s')\n",
+    "    cf.check_units('x_wind_gust', units='m/s')\n",
     "except h5tbx.conventions.StandardizedNameError as e:\n",
     "    print(e)"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 14,
+   "execution_count": 17,
    "id": "a77d1c78-6a18-434d-b483-5cfeb049fd37",
    "metadata": {},
    "outputs": [],
@@ -477,7 +651,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 15,
+   "execution_count": 18,
    "id": "a773fd35-a187-4bd3-a083-d944b8347130",
    "metadata": {},
    "outputs": [
@@ -487,7 +661,7 @@
        "'degree'"
       ]
      },
-     "execution_count": 15,
+     "execution_count": 18,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -498,7 +672,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 16,
+   "execution_count": 19,
    "id": "6497fe45-cb00-4566-9031-4fdad221ccff",
    "metadata": {},
    "outputs": [
@@ -515,26 +689,105 @@
        "True"
       ]
      },
-     "execution_count": 16,
+     "execution_count": 19,
      "metadata": {},
      "output_type": "execute_result"
     }
    ],
    "source": [
     "try:\n",
-    "    cf_xml_filename.check_units('zenith_angle', units='K')\n",
+    "    cf.check_units('zenith_angle', units='K')\n",
     "except h5tbx.conventions.StandardizedNameError as e:\n",
     "    print(e)\n",
-    "cf_xml_filename.check_units('zenith_angle', units='degree')"
+    "cf.check_units('zenith_angle', units='degree')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3562c750-98b1-4068-a6fe-4c7028b9f946",
+   "metadata": {},
+   "source": [
+    "Perform a check on a file"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": null,
-   "id": "c6bcea4c-7cb0-4b36-bdde-2ee9b12b7f46",
+   "execution_count": 20,
+   "id": "fbf33dbe-4453-482e-8cd9-2462bf7f81c0",
    "metadata": {},
    "outputs": [],
-   "source": []
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset('zenith angle 1', shape=(3,), units='K', standard_name='zenith_angle')\n",
+    "    h5.create_dataset('zenith angle 2', shape=(3,), units='degree', standard_name='zenith_angle')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "ef3f5cbe-4106-469c-a85d-d5517be154d8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"deg\"\n"
+     ]
+    }
+   ],
+   "source": [
+    "cf.check_file(h5.hdf_filename, raise_error=False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "160839e2-7ad3-4194-b341-88c75569ae39",
+   "metadata": {},
+   "source": [
+    "Use the command line call"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "0fd0adab-2a27-456d-96bb-c3f07e9773f6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cf.register(overwrite=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "ba85f48f-9c41-4a24-b267-c182ff400e2e",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "usage: h5tbx [-h] [-V] [-D] [-d DUMP] [check] [standard_names] [layout]\n",
+      "\n",
+      "Main h5rdmtoolbox command line interface.\n",
+      "\n",
+      "positional arguments:\n",
+      "  check                 Enter check commands\n",
+      "  standard_names        Enter standard_name commands\n",
+      "  layout                Enter layout commands\n",
+      "\n",
+      "optional arguments:\n",
+      "  -h, --help            Show this help message and exit.\n",
+      "  -V, --version         show program's version number and exit\n",
+      "  -D                    Opens documentation in browser\n",
+      "  -d DUMP, --dump DUMP  Dump file content.\n"
+     ]
+    }
+   ],
+   "source": [
+    "! h5tbx standard_name -f {h5.hdf_filename} -s {cf.versionname}"
+   ]
   }
  ],
  "metadata": {

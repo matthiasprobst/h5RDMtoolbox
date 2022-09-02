@@ -1,7 +1,7 @@
 
 <h1 text-align: center;><img src="docs/icons/icon4.svg" alt="" width="40"/> HDF5 Research Data Management Toolbox</h1>
 
-*Note, that the repository is under current development!*
+*Note, that the repository is under current development! A first stable release is planned for version 0.2.0.*
 
 The "HDF5 Research Data Management Toolbox" (h5rdmtoolbox) supports the data creation, processing and sharing 
 of data using the HDF5 file format while fulfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles. 

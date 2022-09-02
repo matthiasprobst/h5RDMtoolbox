@@ -32,6 +32,7 @@ extensions = ['sphinx_book_theme',  # 'sphinx_rtd_theme',   'sphinx_rtd_theme'
               'sphinx.ext.viewcode',
               "IPython.sphinxext.ipython_directive",
               "IPython.sphinxext.ipython_console_highlighting",
+              "sphinx_copybutton",
               "nbsphinx"]
 
 # Add any paths that contain templates here, relative to this directory.
