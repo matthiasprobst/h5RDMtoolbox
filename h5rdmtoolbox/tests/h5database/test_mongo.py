@@ -33,6 +33,7 @@ def read_many_from_database(db_entry: pymongo.collection.Cursor) -> List[any]:
 class TestH5Repo(unittest.TestCase):
 
     def setUp(self) -> None:
+        self.mongodb_running = True
         try:
             client = MongoClient(serverSelectionTimeoutMS=1.)
             client.server_info()
@@ -46,10 +47,10 @@ class TestH5Repo(unittest.TestCase):
             collection = db['test']
             self.collection = collection
         else:
-            self.collection = None
+            self.mongodb_running = False
 
     def test_tree_to_mongo(self):
-        if self.collection:
+        if self.mongodb_running:
             self.collection.drop()
 
             usernames = ('Allen', 'Mike', 'Ellen', 'Elliot')
@@ -75,7 +76,7 @@ class TestH5Repo(unittest.TestCase):
             self.collection.insert_one(make_dict_mongo_compatible(tree))
 
     def test_insert_dataset(self):
-        if self.collection:
+        if self.mongodb_running:
             self.collection.drop()
             with H5File() as h5:
                 hdf_filename = h5.hdf_filename
@@ -103,7 +104,7 @@ class TestH5Repo(unittest.TestCase):
                 if r['name'] == 'images':
                     self.assertEqual(r['filename'], str(hdf_filename))
                     for k in (
-                    'filename', 'path', 'shape', 'ndim', 'slice', 'index', 'index2', 'z', 'long_name', 'units'):
+                            'filename', 'path', 'shape', 'ndim', 'slice', 'index', 'index2', 'z', 'long_name', 'units'):
                         self.assertIn(k, r.keys())
 
                 self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
@@ -136,7 +137,7 @@ class TestH5Repo(unittest.TestCase):
                 self.assertIn('index3', r.keys())
 
     def test_insert_group(self):
-        if self.collection:
+        if self.mongodb_running:
             self.collection.drop()
             with H5File() as h5:
                 h5.attrs['rootatr'] = 1
@@ -158,7 +159,7 @@ class TestH5Repo(unittest.TestCase):
                     self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
 
     def test_insert_group_flatten(self):
-        if self.collection:
+        if self.mongodb_running:
             self.collection.drop()
 
             repo_filenames = tutorial.Database.generate_test_files()

@@ -349,13 +349,16 @@ class H5Files:
                     h5file = open_wrapper(filename, mode='r')
                 else:
                     h5file = self._h5wrapper(filename, mode='r')
-                self._opened_files[filename.stem] = h5file
-            except RuntimeError:
+                self._opened_files[str(filename)] = h5file
+            except RuntimeError as e:
+                print(f'RuntimeError: {e}')
                 for h5file in self._opened_files.values():
                     h5file.close()
+                self._opened_files = {}
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._opened_files = {}
         self.close()
 
     def find_one(self, flt: Union[Dict, str], rec: bool = True) -> Union[h5py.Group, h5py.Dataset, None]:
