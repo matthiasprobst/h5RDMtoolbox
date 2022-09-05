@@ -230,7 +230,7 @@ class MongoDatasetAccessor:
 
     def insert(self, axis, collection: pymongo.collection.Collection,
                ignore_attrs: List[str] = None, dims: List[str] = None,
-               additional_fields: Dict = None) -> pymongo.collection.Collection:
+               additional_fields: Dict = None, ordered: bool = True) -> pymongo.collection.Collection:
         """Using axis is UNDER HEAVY CONSTRUCTION!!! Currently only axis=0 works
 
         By providing `dims` the dimension scales can be defined. If set to None, all attached
@@ -241,7 +241,7 @@ class MongoDatasetAccessor:
         if additional_fields is not None:
             for doc in docs:
                 doc.update(additional_fields)
-        collection.insert_many(docs)
+        collection.insert_many(docs, ordered=ordered)
         return collection
 
     def update(self, axis, collection: pymongo.collection.Collection,
