@@ -1,4 +1,3 @@
-import logging
 import os
 import pathlib
 import time
@@ -12,9 +11,9 @@ import xarray as xr
 
 from . import session, PATHLIKE, ccl, CFX_DOTENV_FILENAME, mon
 from .utils import change_suffix
+from ..._logger import logger
 from ....conventions.translations import cfx_to_standard_name
 
-logger = logging.getLogger(__package__)
 dotenv.load_dotenv(CFX_DOTENV_FILENAME)
 
 CFX5SOLVE = os.environ.get("cfx5solve")

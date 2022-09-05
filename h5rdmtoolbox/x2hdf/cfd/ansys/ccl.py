@@ -1,4 +1,3 @@
-import logging
 import os
 import pathlib
 import shutil
@@ -13,10 +12,9 @@ from . import session, AnsysInstallation, PATHLIKE, CFX_DOTENV_FILENAME
 from .cmd import call_cmd
 from .session import cfx2def
 from .utils import change_suffix
+from ..._logger import logger
 
 dotenv.load_dotenv(CFX_DOTENV_FILENAME)
-
-logger = logging.getLogger('cfdtoolkit')
 
 
 @dataclass
