@@ -21,8 +21,8 @@ jupyter notebooks walk you through the usage and features.
 
 The package `h5wrapper` adds additional functionalities to the core HDF5-interface, which is implemented in the
 package `h5py` (https://docs.h5py.org/en/stable/). This is done by providing so-calle wrapper classes. They
-  - facilitate and streamline the work with HDF5 files and
-  - integrate meta-conventions and file-layout specifications.
+* facilitate and streamline the work with HDF5 files and
+* integrate meta-conventions and file-layout specifications.
 
 Besides high-level methods that enhances the usability, naming `conventions`, the usage of `units` and the defintion of so-called `layouts` are a core feature. They are motivated by the FAIR principles of sustainable data management.
 

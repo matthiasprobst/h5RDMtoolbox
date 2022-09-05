@@ -224,7 +224,12 @@
   <ul>
    <li class="toctree-l2">
     <a class="reference internal" href="../x2hdf/piv2hdf.html">
-     Introduction
+     PIV to HDF5
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
+     Ansys CFX to HDF
     </a>
    </li>
   </ul>
@@ -467,13 +472,9 @@ familiar to the <cite>h5py</cite> package will find all featues but will be enfo
 to fulfill the requirements of a certain meta convention.</p>
 </div>
 <p>The package <cite>h5wrapper</cite> adds additional functionalities to the core HDF5-interface, which is implemented in the
-package <cite>h5py</cite> (<a class="reference external" href="https://docs.h5py.org/en/stable/">https://docs.h5py.org/en/stable/</a>). This is done by providing so-calle wrapper classes. They</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>facilitate and streamline the work with HDF5 files and</p></li>
-<li><p>integrate meta-conventions and file-layout specifications.</p></li>
-</ul>
-</div></blockquote>
+package <cite>h5py</cite> (<a class="reference external" href="https://docs.h5py.org/en/stable/">https://docs.h5py.org/en/stable/</a>). This is done by providing so-calle wrapper classes. They
+* facilitate and streamline the work with HDF5 files and
+* integrate meta-conventions and file-layout specifications.</p>
 <p>Besides high-level methods that enhances the usability, naming <cite>conventions</cite>, the usage of <cite>units</cite> and the defintion of so-called <cite>layouts</cite> are a core feature. They are motivated by the FAIR principles of sustainable data management.</p>
 <p>This notebook will guide through the high-level methods and the mentioned concepts.</p>
 <p>The package <cite>h5wrapper</cite> provides classes that ar inherited from the interface classes of <cite>h5py</cite>. They are

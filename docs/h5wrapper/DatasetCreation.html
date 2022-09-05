@@ -226,7 +226,12 @@
   <ul>
    <li class="toctree-l2">
     <a class="reference internal" href="../x2hdf/piv2hdf.html">
-     Introduction
+     PIV to HDF5
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
+     Ansys CFX to HDF
     </a>
    </li>
   </ul>
@@ -454,14 +459,21 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#String-datasets">
-   String datasets
+  <a class="reference internal nav-link" href="#Dimension-scales">
+   Dimension scales
   </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Advanced-dataset-creation">
-   Advanced dataset creation
-  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#String-datasets">
+     String datasets
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Advanced-dataset-creation">
+     Advanced dataset creation
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -483,14 +495,21 @@ title="Print to PDF"
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#String-datasets">
-   String datasets
+  <a class="reference internal nav-link" href="#Dimension-scales">
+   Dimension scales
   </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Advanced-dataset-creation">
-   Advanced dataset creation
-  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#String-datasets">
+     String datasets
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Advanced-dataset-creation">
+     Advanced dataset creation
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -766,6 +785,7 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 </pre></div>
 </div>
 </div>
@@ -837,11 +857,666 @@ Standardized name &#34;a_coordinate&#34; not in name table
 Unit of standard name &#34;x_coordinate&#34; not as expected: &#34;kg&#34; != &#34;m&#34;
 </pre></div></div>
 </div>
-<section id="String-datasets">
-<h2>String datasets<a class="headerlink" href="#String-datasets" title="Permalink to this headline">#</a></h2>
-<p>String datasets can be created very quickly. No standard_name, long_name or units <em>must</em> be given. As units generally anyhow makes no sense, there is still the option to pass long and standard name via the method parameters. The dump method will display single strings but not lists of strings. The return value when sliced will still be a <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> as attributes should still be attached to the object. Use <code class="docutils literal notranslate"><span class="pre">.values</span></code> to get the raw string:</p>
+<p><strong>Dataset creation in non-existing groups</strong>: If a dataset name includes a path in the HDF5 file that does not exist, it is created along the way:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;grp/subgrp/x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_coordinate&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<head><style>/*
+CSS inspired by xarray: https://github.com/pydata/xarray
+*/
+.h5tb-header > div,
+.h5tb-header > ul {
+    display: inline;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.h5tb-dataarray-cls,
+.h5tb-dataarray-name {
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+.h5tb-dataarray-name {
+    color: #000;
+}
+
+.h5grp-sections {
+    list-style: none;
+    padding: 3px;
+    margin: 0;
+}
+
+.h5grp-sections input {
+    display: none;
+}
+
+.h5grp-sections label {
+    display: inline;
+}
+
+.h5grp-sections > li > input + label > span {
+    display: inline;
+    margin-left: 4px;
+}
+
+.h5grp-sections > li > input:checked + label > span {
+    display: none;
+}
+
+.h5grp-sections input:enabled + label {
+    cursor: pointer;
+}
+
+.h5grp-sections input:not(.h5tb-values-in) ~ ul {
+    display: none;
+}
+
+.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
+    display: block;
+}
+
+.h5grp-sections > li > input + label {
+    width: 140px;
+    color: #555;
+    font-weight: 500;
+    padding: 4px 0 2px 0;
+}
+
+
+.h5grp-sections > li > input + label:before {
+    display: inline-block;
+    content: '+';
+    font-size: 11px;
+    width: 15px;
+    text-align: center;
+}
+
+.h5grp-sections > li > input:disabled + label:before {
+    color: #777;
+}
+
+.h5grp-sections > li > input:checked + label:before {
+    content: '-';
+}
+
+.h5tb-dim-list {
+    display: inline-block !important;
+    list-style: none;
+    padding: 0;
+}
+
+.h5tb-dim-list li {
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-dim-list:before {
+    content: '(';
+}
+
+.h5tb-dim-list:after {
+    content: ')';
+}
+
+.h5tb-dim-list li:not(:last-child):after {
+    content: ',';
+}
+
+.h5tb-has-index {
+    text-decoration: underline;
+}
+
+.h5tb-var-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-var-list > li {
+    background-color: #fcfcfc;
+    overflow: hidden;
+}
+
+.h5tb-var-list > li:nth-child(odd) {
+    background-color: #efefef;
+}
+
+.h5tb-var-list li:hover {
+    background-color: rgba(3, 169, 244, .2);
+}
+
+.h5tb-var-list li > span {
+    display: inline-block;
+}
+
+input.h5tb-varname-in + label {
+    width: 140px;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+.h5tb-dataset {
+    width: 100px;
+}
+
+.h5tb-attributevalue {
+    width: 100px;
+    text-align: left;
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+input.h5tb-varname-in + label:before {
+    content: ' ';
+    display: inline-block;
+    font-size: 11px;
+    width: 15px;
+    padding-left: 2px;
+    padding-right: 2px;
+    text-align: center;
+    color: #aaa;
+    text-decoration: none !important;
+}
+
+input.h5tb-varname-in:enabled + label:hover:before {
+    color: #000;
+}
+
+input.h5tb-varname-in:checked + label:before {
+    color: #ccc;
+}
+
+.h5tb-dims {
+    width: 280px;
+    white-space: nowrap;
+}
+
+
+.h5tb-unit {
+    width: 96px;
+    white-space: nowrap;
+    padding-right: 2px;
+    text-align: right;
+    color: #555;
+    font-style: italic;
+}
+
+.h5tb-attr-list {
+    list-style: none;
+    background-color: #fff;
+    padding-bottom: 6px;
+    color: #555;
+}
+
+.h5tb-attr-list li,
+.h5tb-attr-list li:hover {
+    background-color: #fff;
+}
+
+.h5tb-dim-highlight {
+    background-color: rgba(3, 169, 244, .2);
+    cursor: pointer;
+}</style></head>
+<p>tmp3.hdf</p>
+<p>Check resuted in 1 issues.</p>
+
+<div class='h5tb-warp'>
+
+          <ul style="list-style-type: none;" class="h5grp-sections">
+                <li>
+                    <input id="group-ds-/-2690955600" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2690955600">
+                    /<span>(1)</span></label>
+
+
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.12</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                </ul>
+
+          <ul style="list-style-type: none;" class="h5grp-sections">
+                <li>
+                    <input id="group-ds-/grp-2691205600" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/grp-2691205600">
+                    grp<span>(1)</span></label>
+
+
+                <ul class="h5tb-attr-list">
+                </ul>
+
+          <ul style="list-style-type: none;" class="h5grp-sections">
+                <li>
+                    <input id="group-ds-/grp/subgrp-2691300000" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/grp/subgrp-2691300000">
+                    subgrp<span>(1)</span></label>
+
+
+                <ul class="h5tb-attr-list">
+                </ul>
+
+                    <ul id="ds-1-/grp/subgrp/x-2692287600" class="h5tb-var-list">
+                    <input id="ds-2-/grp/subgrp/x-2692290200" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname'
+                        for="ds-2-/grp/subgrp/x-2692290200">x</label>
+                    <span class="h5tb-dims">(4,)</span>  [
+                    <span class="h5tb-unit">m</span>]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
+         italic">standard_name : x_coordinate</li>
+
+                </ul>
+
+             </ul>
+
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div>
+</div>
+<section id="Dimension-scales">
+<h2>Dimension scales<a class="headerlink" href="#Dimension-scales" title="Permalink to this headline">#</a></h2>
+<p>Dimension scales can be defined during dataset creation. Let <code class="docutils literal notranslate"><span class="pre">time</span></code> be the dimension scale and <code class="docutils literal notranslate"><span class="pre">pressure</span></code> be the dataset to which it is attached. The dataset also has a well-defined x-coordinate, too:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="mf">5.32</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_coordinate&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;pressure&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;Pa&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">attach_scale</span><span class="o">=</span><span class="p">((</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">])),</span>
+                     <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;COORDINATES&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,)})</span>  <span class="c1"># the x-coordinate must be attach using the attribute &quot;COORDINATES&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">pressure</span><span class="p">[:]</span>
+<span class="n">p</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><svg style="position: absolute; width: 0; height: 0; overflow: hidden">
+<defs>
+<symbol id="icon-database" viewBox="0 0 32 32">
+<path d="M16 0c-8.837 0-16 2.239-16 5v4c0 2.761 7.163 5 16 5s16-2.239 16-5v-4c0-2.761-7.163-5-16-5z"></path>
+<path d="M16 17c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+<path d="M16 26c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+</symbol>
+<symbol id="icon-file-text2" viewBox="0 0 32 32">
+<path d="M28.681 7.159c-0.694-0.947-1.662-2.053-2.724-3.116s-2.169-2.030-3.116-2.724c-1.612-1.182-2.393-1.319-2.841-1.319h-15.5c-1.378 0-2.5 1.121-2.5 2.5v27c0 1.378 1.122 2.5 2.5 2.5h23c1.378 0 2.5-1.122 2.5-2.5v-19.5c0-0.448-0.137-1.23-1.319-2.841zM24.543 5.457c0.959 0.959 1.712 1.825 2.268 2.543h-4.811v-4.811c0.718 0.556 1.584 1.309 2.543 2.268zM28 29.5c0 0.271-0.229 0.5-0.5 0.5h-23c-0.271 0-0.5-0.229-0.5-0.5v-27c0-0.271 0.229-0.5 0.5-0.5 0 0 15.499-0 15.5 0v7c0 0.552 0.448 1 1 1h7v19.5z"></path>
+<path d="M23 26h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 22h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 18h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+</symbol>
+</defs>
+</svg>
+<style>/* CSS stylesheet for displaying xarray objects in jupyterlab.
+ *
+ */
+
+:root {
+  --xr-font-color0: var(--jp-content-font-color0, rgba(0, 0, 0, 1));
+  --xr-font-color2: var(--jp-content-font-color2, rgba(0, 0, 0, 0.54));
+  --xr-font-color3: var(--jp-content-font-color3, rgba(0, 0, 0, 0.38));
+  --xr-border-color: var(--jp-border-color2, #e0e0e0);
+  --xr-disabled-color: var(--jp-layout-color3, #bdbdbd);
+  --xr-background-color: var(--jp-layout-color0, white);
+  --xr-background-color-row-even: var(--jp-layout-color1, white);
+  --xr-background-color-row-odd: var(--jp-layout-color2, #eeeeee);
+}
+
+html[theme=dark],
+body[data-theme=dark],
+body.vscode-dark {
+  --xr-font-color0: rgba(255, 255, 255, 1);
+  --xr-font-color2: rgba(255, 255, 255, 0.54);
+  --xr-font-color3: rgba(255, 255, 255, 0.38);
+  --xr-border-color: #1F1F1F;
+  --xr-disabled-color: #515151;
+  --xr-background-color: #111111;
+  --xr-background-color-row-even: #111111;
+  --xr-background-color-row-odd: #313131;
+}
+
+.xr-wrap {
+  display: block !important;
+  min-width: 300px;
+  max-width: 700px;
+}
+
+.xr-text-repr-fallback {
+  /* fallback to plain text repr when CSS is not injected (untrusted notebook) */
+  display: none;
+}
+
+.xr-header {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: solid 1px var(--xr-border-color);
+}
+
+.xr-header > div,
+.xr-header > ul {
+  display: inline;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.xr-obj-type,
+.xr-array-name {
+  margin-left: 2px;
+  margin-right: 10px;
+}
+
+.xr-obj-type {
+  color: var(--xr-font-color2);
+}
+
+.xr-sections {
+  padding-left: 0 !important;
+  display: grid;
+  grid-template-columns: 150px auto auto 1fr 20px 20px;
+}
+
+.xr-section-item {
+  display: contents;
+}
+
+.xr-section-item input {
+  display: none;
+}
+
+.xr-section-item input + label {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-item input:enabled + label {
+  cursor: pointer;
+  color: var(--xr-font-color2);
+}
+
+.xr-section-item input:enabled + label:hover {
+  color: var(--xr-font-color0);
+}
+
+.xr-section-summary {
+  grid-column: 1;
+  color: var(--xr-font-color2);
+  font-weight: 500;
+}
+
+.xr-section-summary > span {
+  display: inline-block;
+  padding-left: 0.5em;
+}
+
+.xr-section-summary-in:disabled + label {
+  color: var(--xr-font-color2);
+}
+
+.xr-section-summary-in + label:before {
+  display: inline-block;
+  content: '►';
+  font-size: 11px;
+  width: 15px;
+  text-align: center;
+}
+
+.xr-section-summary-in:disabled + label:before {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-summary-in:checked + label:before {
+  content: '▼';
+}
+
+.xr-section-summary-in:checked + label > span {
+  display: none;
+}
+
+.xr-section-summary,
+.xr-section-inline-details {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.xr-section-inline-details {
+  grid-column: 2 / -1;
+}
+
+.xr-section-details {
+  display: none;
+  grid-column: 1 / -1;
+  margin-bottom: 5px;
+}
+
+.xr-section-summary-in:checked ~ .xr-section-details {
+  display: contents;
+}
+
+.xr-array-wrap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 20px auto;
+}
+
+.xr-array-wrap > label {
+  grid-column: 1;
+  vertical-align: top;
+}
+
+.xr-preview {
+  color: var(--xr-font-color3);
+}
+
+.xr-array-preview,
+.xr-array-data {
+  padding: 0 5px !important;
+  grid-column: 2;
+}
+
+.xr-array-data,
+.xr-array-in:checked ~ .xr-array-preview {
+  display: none;
+}
+
+.xr-array-in:checked ~ .xr-array-data,
+.xr-array-preview {
+  display: inline-block;
+}
+
+.xr-dim-list {
+  display: inline-block !important;
+  list-style: none;
+  padding: 0 !important;
+  margin: 0;
+}
+
+.xr-dim-list li {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.xr-dim-list:before {
+  content: '(';
+}
+
+.xr-dim-list:after {
+  content: ')';
+}
+
+.xr-dim-list li:not(:last-child):after {
+  content: ',';
+  padding-right: 5px;
+}
+
+.xr-has-index {
+  font-weight: bold;
+}
+
+.xr-var-list,
+.xr-var-item {
+  display: contents;
+}
+
+.xr-var-item > div,
+.xr-var-item label,
+.xr-var-item > .xr-var-name span {
+  background-color: var(--xr-background-color-row-even);
+  margin-bottom: 0;
+}
+
+.xr-var-item > .xr-var-name:hover span {
+  padding-right: 5px;
+}
+
+.xr-var-list > li:nth-child(odd) > div,
+.xr-var-list > li:nth-child(odd) > label,
+.xr-var-list > li:nth-child(odd) > .xr-var-name span {
+  background-color: var(--xr-background-color-row-odd);
+}
+
+.xr-var-name {
+  grid-column: 1;
+}
+
+.xr-var-dims {
+  grid-column: 2;
+}
+
+.xr-var-dtype {
+  grid-column: 3;
+  text-align: right;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-preview {
+  grid-column: 4;
+}
+
+.xr-var-name,
+.xr-var-dims,
+.xr-var-dtype,
+.xr-preview,
+.xr-attrs dt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.xr-var-name:hover,
+.xr-var-dims:hover,
+.xr-var-dtype:hover,
+.xr-attrs dt:hover {
+  overflow: visible;
+  width: auto;
+  z-index: 1;
+}
+
+.xr-var-attrs,
+.xr-var-data {
+  display: none;
+  background-color: var(--xr-background-color) !important;
+  padding-bottom: 5px !important;
+}
+
+.xr-var-attrs-in:checked ~ .xr-var-attrs,
+.xr-var-data-in:checked ~ .xr-var-data {
+  display: block;
+}
+
+.xr-var-data > table {
+  float: right;
+}
+
+.xr-var-name span,
+.xr-var-data,
+.xr-attrs {
+  padding-left: 25px !important;
+}
+
+.xr-attrs,
+.xr-var-attrs,
+.xr-var-data {
+  grid-column: 1 / -1;
+}
+
+dl.xr-attrs {
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 125px auto;
+}
+
+.xr-attrs dt,
+.xr-attrs dd {
+  padding: 0;
+  margin: 0;
+  float: left;
+  padding-right: 10px;
+  width: auto;
+}
+
+.xr-attrs dt {
+  font-weight: normal;
+  grid-column: 1;
+}
+
+.xr-attrs dt:hover span {
+  display: inline-block;
+  background: var(--xr-background-color);
+  padding-right: 10px;
+}
+
+.xr-attrs dd {
+  grid-column: 2;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.xr-icon-database,
+.xr-icon-file-text2 {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1.5em !important;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+</style><pre class='xr-text-repr-fallback'>&lt;xarray.DataArray &#x27;pressure&#x27; (time: 6)&gt;
+array([0.5798953 , 0.05078585, 0.56507403, 0.80538484, 0.88711864,
+       0.11024215])
+Coordinates:
+  * time     (time) int32 0 1 2 3 4 5
+    x        float64 5.32
+Attributes:
+    standard_name:  time
+    units:          Pa</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.DataArray</div><div class='xr-array-name'>'pressure'</div><ul class='xr-dim-list'><li><span class='xr-has-index'>time</span>: 6</li></ul></div><ul class='xr-sections'><li class='xr-section-item'><div class='xr-array-wrap'><input id='section-8ca72116-6c32-4d69-aba6-dca9f8842970' class='xr-array-in' type='checkbox' checked><label for='section-8ca72116-6c32-4d69-aba6-dca9f8842970' title='Show/hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-array-preview xr-preview'><span>0.5799 0.05079 0.5651 0.8054 0.8871 0.1102</span></div><div class='xr-array-data'><pre>array([0.5798953 , 0.05078585, 0.56507403, 0.80538484, 0.88711864,
+       0.11024215])</pre></div></div></li><li class='xr-section-item'><input id='section-e3772e85-706e-4623-b741-933742b59ce2' class='xr-section-summary-in' type='checkbox'  checked><label for='section-e3772e85-706e-4623-b741-933742b59ce2' class='xr-section-summary' >Coordinates: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>time</span></div><div class='xr-var-dims'>(time)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>0 1 2 3 4 5</div><input id='attrs-ff799156-be08-4a70-a44e-13d5f22e2e45' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-ff799156-be08-4a70-a44e-13d5f22e2e45' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-6f21c552-4b8d-4dad-81c7-6605dd9f81e9' class='xr-var-data-in' type='checkbox'><label for='data-6f21c552-4b8d-4dad-81c7-6605dd9f81e9' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>standard_name :</span></dt><dd>time</dd><dt><span>units :</span></dt><dd>s</dd></dl></div><div class='xr-var-data'><pre>array([0, 1, 2, 3, 4, 5])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>x</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>5.32</div><input id='attrs-dc86b703-f8f6-459a-b346-9a4a04f71bc2' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-dc86b703-f8f6-459a-b346-9a4a04f71bc2' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-c12af0e0-1e4d-4405-815c-741782ce17f9' class='xr-var-data-in' type='checkbox'><label for='data-c12af0e0-1e4d-4405-815c-741782ce17f9' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>standard_name :</span></dt><dd>x_coordinate</dd><dt><span>units :</span></dt><dd>m</dd></dl></div><div class='xr-var-data'><pre>array(5.32)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-c1c74d71-a1eb-475a-9d3e-e97dbc4b2e15' class='xr-section-summary-in' type='checkbox'  checked><label for='section-c1c74d71-a1eb-475a-9d3e-e97dbc4b2e15' class='xr-section-summary' >Attributes: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>standard_name :</span></dt><dd>time</dd><dt><span>units :</span></dt><dd>Pa</dd></dl></div></li></ul></div></div></div>
+</div>
+<section id="String-datasets">
+<h3>String datasets<a class="headerlink" href="#String-datasets" title="Permalink to this headline">#</a></h3>
+<p>String datasets can be created very quickly. No standard_name, long_name or units <em>must</em> be given. As units generally anyhow makes no sense, there is still the option to pass long and standard name via the method parameters. The dump method will display single strings but not lists of strings. The return value when sliced will still be a <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> as attributes should still be attached to the object. Use <code class="docutils literal notranslate"><span class="pre">.values</span></code> to get the raw string:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1060,25 +1735,25 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp3.hdf</p>
+<p>tmp5.hdf</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-2884881100" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2884881100">
+                    <input id="group-ds-/-2755163000" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2755163000">
                     /<span>(2)</span></label>
 
 
                 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.12</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                        <ul id="ds-1-/astr-2885676500" class="h5tb-var-list">
-                        <input id="ds-2-/astr-2885680400" class="h5tb-varname-in" type="checkbox">
+                        <ul id="ds-1-/astr-2755676600" class="h5tb-var-list">
+                        <input id="ds-2-/astr-2755678800" class="h5tb-varname-in" type="checkbox">
                         <label class='h5tb-varname'
-                            for="ds-2-/astr-2885680400">astr</label>
+                            for="ds-2-/astr-2755678800">astr</label>
                         <span class="h5tb-dims"></span>: b'hello_world'
 <ul class="h5tb-attr-list">
 
@@ -1087,10 +1762,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                        <ul id="ds-1-/string_list-2887172600" class="h5tb-var-list">
-                        <input id="ds-2-/string_list-2887175100" class="h5tb-varname-in" type="checkbox">
+                        <ul id="ds-1-/string_list-2755969100" class="h5tb-var-list">
+                        <input id="ds-2-/string_list-2755971500" class="h5tb-varname-in" type="checkbox">
                         <label class='h5tb-varname'
-                            for="ds-2-/string_list-2887175100">string_list</label>
+                            for="ds-2-/string_list-2755971500">string_list</label>
                         <span class="h5tb-dims">(2,)</span>
 <ul class="h5tb-attr-list">
 
@@ -1122,10 +1797,10 @@ Dimensions without coordinates: dim_0
 </div>
 </section>
 <section id="Advanced-dataset-creation">
-<h2>Advanced dataset creation<a class="headerlink" href="#Advanced-dataset-creation" title="Permalink to this headline">#</a></h2>
+<h3>Advanced dataset creation<a class="headerlink" href="#Advanced-dataset-creation" title="Permalink to this headline">#</a></h3>
 <p>There is more to dataset creation. You can: - add attributes</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1137,7 +1812,7 @@ Dimensions without coordinates: dim_0
 <li><p>make and attach scales (Note the output using <code class="docutils literal notranslate"><span class="pre">dump()</span></code>: the scale “link” is shown)</p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1359,25 +2034,25 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp5.hdf</p>
+<p>tmp7.hdf</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-2932496300" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2932496300">
+                    <input id="group-ds-/-2803360700" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2803360700">
                     /<span>(2)</span></label>
 
 
                 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.12</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                    <ul id="ds-1-/t-2933218200" class="h5tb-var-list">
-                    <input id="ds-2-/t-2933220400" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/t-2804077200" class="h5tb-var-list">
+                    <input id="ds-2-/t-2804079600" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/t-2933220400">t</label>
+                        for="ds-2-/t-2804079600">t</label>
                     <span class="h5tb-dims">(x: 3)</span>  [
                     <span class="h5tb-unit">degC</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1388,10 +2063,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/x-2933473500" class="h5tb-var-list">
-                    <input id="ds-2-/x-2933475700" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/x-2804320000" class="h5tb-var-list">
+                    <input id="ds-2-/x-2804322200" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/x-2933475700">x</label>
+                        for="ds-2-/x-2804322200">x</label>
                     <span class="h5tb-dims">(3,)</span>  [
                     <span class="h5tb-unit">m</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1409,11 +2084,10 @@ input.h5tb-varname-in:checked + label:before {
 <li><p>add <code class="docutils literal notranslate"><span class="pre">xarry.DataArrays</span></code></p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="n">arr</span> <span class="o">=</span>  <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">),</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
                                  <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
                                                                <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;m&#39;</span><span class="p">,</span>
@@ -1634,25 +2308,25 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp6.hdf</p>
+<p>tmp8.hdf</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-2964514100" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2964514100">
+                    <input id="group-ds-/-2836104000" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-2836104000">
                     /<span>(3)</span></label>
 
 
                 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.12</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                    <ul id="ds-1-/temperature-2965565000" class="h5tb-var-list">
-                    <input id="ds-2-/temperature-2965567600" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/temperature-2836997500" class="h5tb-var-list">
+                    <input id="ds-2-/temperature-2836999900" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/temperature-2965567600">temperature</label>
+                        for="ds-2-/temperature-2836999900">temperature</label>
                     <span class="h5tb-dims">(y: 3, x: 2)</span>  [
                     <span class="h5tb-unit">m/s</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : a long name</li>
@@ -1662,10 +2336,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/x-2965892000" class="h5tb-var-list">
-                    <input id="ds-2-/x-2965894700" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/x-2837221100" class="h5tb-var-list">
+                    <input id="ds-2-/x-2837223400" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/x-2965894700">x</label>
+                        for="ds-2-/x-2837223400">x</label>
                     <span class="h5tb-dims">(2,)</span>  [
                     <span class="h5tb-unit">N.A.</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1676,10 +2350,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/y-2966400400" class="h5tb-var-list">
-                    <input id="ds-2-/y-2966402900" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/y-2837527100" class="h5tb-var-list">
+                    <input id="ds-2-/y-2837529200" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/y-2966402900">y</label>
+                        for="ds-2-/y-2837529200">y</label>
                     <span class="h5tb-dims">(3,)</span>  [
                     <span class="h5tb-unit">m</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1697,7 +2371,7 @@ input.h5tb-varname-in:checked + label:before {
 <li><p>add <code class="docutils literal notranslate"><span class="pre">xarry.Dataset</span></code></p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># from https://docs.xarray.dev/en/v0.9.5/examples/quick-overview.html#datasets</span>
@@ -1707,7 +2381,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -2070,10 +2744,10 @@ Coordinates:
 Dimensions without coordinates: x
 Data variables:
     bar      (x) int32 1 2
-    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-ec294dde-3504-4e30-ba38-cf6c7c59bdcc' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-ec294dde-3504-4e30-ba38-cf6c7c59bdcc' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-e7ba7de4-12c6-4db2-ac2f-21ec5d9d16ea' class='xr-section-summary-in' type='checkbox'  checked><label for='section-e7ba7de4-12c6-4db2-ac2f-21ec5d9d16ea' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-e4022944-ddf2-4b1f-8262-aff98cfb3dcb' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-e4022944-ddf2-4b1f-8262-aff98cfb3dcb' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-1d4ebd66-37c1-4bed-b11b-30d77cfc408b' class='xr-var-data-in' type='checkbox'><label for='data-1d4ebd66-37c1-4bed-b11b-30d77cfc408b' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-577c4c6c-28a2-4244-a596-6c122a56e9a5' class='xr-section-summary-in' type='checkbox'  checked><label for='section-577c4c6c-28a2-4244-a596-6c122a56e9a5' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-e730dd0b-61e0-4292-aa4f-d7aace3e4c05' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-e730dd0b-61e0-4292-aa4f-d7aace3e4c05' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-f4430161-37ce-4199-8c89-484bc432cf92' class='xr-var-data-in' type='checkbox'><label for='data-f4430161-37ce-4199-8c89-484bc432cf92' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-911a0ecf-bb26-4cdc-ae64-fa6f0b79ea04' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-911a0ecf-bb26-4cdc-ae64-fa6f0b79ea04' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-14c80ee0-0652-436f-8292-7aed8358438f' class='xr-var-data-in' type='checkbox'><label for='data-14c80ee0-0652-436f-8292-7aed8358438f' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-4e2fed02-e6e3-4e33-9cf3-7a81934ce53b' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-4e2fed02-e6e3-4e33-9cf3-7a81934ce53b' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
+    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-b921ed89-c5f9-4de8-8f56-40b898fbfd09' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-b921ed89-c5f9-4de8-8f56-40b898fbfd09' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-b79602f3-f437-43bd-acaf-c9511cd62db9' class='xr-section-summary-in' type='checkbox'  checked><label for='section-b79602f3-f437-43bd-acaf-c9511cd62db9' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-bbbbe7eb-42d0-4768-ba5a-c63583f366b2' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-bbbbe7eb-42d0-4768-ba5a-c63583f366b2' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-318f1ed0-a164-4577-9d60-8cd45e86978c' class='xr-var-data-in' type='checkbox'><label for='data-318f1ed0-a164-4577-9d60-8cd45e86978c' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-88d423be-5901-4985-81ae-07d96e1d404d' class='xr-section-summary-in' type='checkbox'  checked><label for='section-88d423be-5901-4985-81ae-07d96e1d404d' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-dc48bbfa-ac2b-4323-b967-eba41d7203a5' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-dc48bbfa-ac2b-4323-b967-eba41d7203a5' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-dd74a699-bb4a-4700-996e-82648d76884e' class='xr-var-data-in' type='checkbox'><label for='data-dd74a699-bb4a-4700-996e-82648d76884e' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-dba2a17d-5b60-43b6-90a2-9273229b917e' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-dba2a17d-5b60-43b6-90a2-9273229b917e' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-7f57efc5-fc91-4124-acff-0a8341ea861a' class='xr-var-data-in' type='checkbox'><label for='data-7f57efc5-fc91-4124-acff-0a8341ea861a' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-ee12fd02-ab1b-4547-94a8-039fdda7ad55' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-ee12fd02-ab1b-4547-94a8-039fdda7ad55' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
@@ -2093,7 +2767,7 @@ Units cannot be None. A dimensionless dataset has units &#34;&#34;
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="o">.</span><span class="n">foo</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;m&#39;</span>
@@ -2110,7 +2784,7 @@ Units cannot be None. A dimensionless dataset has units &#34;&#34;
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -2473,10 +3147,10 @@ Coordinates:
 Dimensions without coordinates: x
 Data variables:
     bar      (x) int32 1 2
-    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-a5a57a05-385d-4bcf-924e-30c802c4e89b' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-a5a57a05-385d-4bcf-924e-30c802c4e89b' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-203622ed-612b-42c2-8e78-d78c28e4b592' class='xr-section-summary-in' type='checkbox'  checked><label for='section-203622ed-612b-42c2-8e78-d78c28e4b592' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-ceb4e4a3-f599-4a30-b6ad-aa01c8b0df70' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-ceb4e4a3-f599-4a30-b6ad-aa01c8b0df70' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-875a2114-3817-4fbe-9033-c1f022105aaa' class='xr-var-data-in' type='checkbox'><label for='data-875a2114-3817-4fbe-9033-c1f022105aaa' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>foo</dd></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-c1d9d3d3-afbd-49db-9091-97f31b6f5f72' class='xr-section-summary-in' type='checkbox'  checked><label for='section-c1d9d3d3-afbd-49db-9091-97f31b6f5f72' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-3076b170-ff46-463d-80d9-8ee37e8bd0b1' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-3076b170-ff46-463d-80d9-8ee37e8bd0b1' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-90559fee-c666-4b81-a69e-3ea87c027df8' class='xr-var-data-in' type='checkbox'><label for='data-90559fee-c666-4b81-a69e-3ea87c027df8' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>bar</dd></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-192089f3-221b-4582-b77e-4e3cf5d6b3c0' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-192089f3-221b-4582-b77e-4e3cf5d6b3c0' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-0e19c981-8154-417b-8fba-d693ea68974f' class='xr-var-data-in' type='checkbox'><label for='data-0e19c981-8154-417b-8fba-d693ea68974f' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>baz</dd></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-034f2f40-7590-4afe-8384-7b99260d64f1' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-034f2f40-7590-4afe-8384-7b99260d64f1' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
+    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-965cf7c7-36a1-43b8-bc8e-32c246f91252' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-965cf7c7-36a1-43b8-bc8e-32c246f91252' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-3b214759-e7c3-4da9-b39a-b50730ce161a' class='xr-section-summary-in' type='checkbox'  checked><label for='section-3b214759-e7c3-4da9-b39a-b50730ce161a' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-2daf6c0a-d37f-4519-b509-176ee8e83eb0' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-2daf6c0a-d37f-4519-b509-176ee8e83eb0' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-99b8ace1-4c9f-48c6-97ed-58851973b79d' class='xr-var-data-in' type='checkbox'><label for='data-99b8ace1-4c9f-48c6-97ed-58851973b79d' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>foo</dd></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-9a378c02-5b40-407b-a4e0-fcffa9872491' class='xr-section-summary-in' type='checkbox'  checked><label for='section-9a378c02-5b40-407b-a4e0-fcffa9872491' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-693d8002-076e-4f42-8091-32605ef00f3b' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-693d8002-076e-4f42-8091-32605ef00f3b' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-8fac1f78-dcee-4bfe-9e04-3910591157cc' class='xr-var-data-in' type='checkbox'><label for='data-8fac1f78-dcee-4bfe-9e04-3910591157cc' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>bar</dd></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-3892cfe6-4af3-4136-a6b9-47bced3a4b5a' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-3892cfe6-4af3-4136-a6b9-47bced3a4b5a' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-2311a5d5-993e-44be-be0c-8ea4f4dec02a' class='xr-var-data-in' type='checkbox'><label for='data-2311a5d5-993e-44be-be0c-8ea4f4dec02a' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>baz</dd></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-8b94b472-9d81-4f59-9e27-d54d5199fbca' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-8b94b472-9d81-4f59-9e27-d54d5199fbca' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -2486,7 +3160,7 @@ Data variables:
 </div>
 <p>We may also create a dataset by using the <code class="docutils literal notranslate"><span class="pre">__setitem__</span></code>:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -2507,6 +3181,7 @@ Data variables:
 </pre></div>
 </div>
 </div>
+</section>
 </section>
 </section>
 
