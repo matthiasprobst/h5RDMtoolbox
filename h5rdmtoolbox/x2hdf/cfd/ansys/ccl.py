@@ -256,8 +256,7 @@ def _list_of_instances_by_keyword_substring(filename, root_group, substring, cla
 
 
 def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
-             cfx5pre: pathlib.Path = None, overwrite: bool = True,
-             verbose=False) -> pathlib.Path:
+             overwrite: bool = True, verbose=False) -> pathlib.Path:
     """
     Converts a .res, .cfx or .def file into a ccl file.
     If no `ccl_filename` is provided the input filename is
@@ -269,8 +268,6 @@ def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
         *.res or *.cfx file
     ccl_filename: PATHLIKE or None
         Where to write ccl file. Default changes extension of input to "ccl"
-    cfx5pre: `Path`
-        Path to exe. Default takes path from config
     overwrite: bool
         Whether to overwrite an existing ccl file
 
@@ -291,18 +288,14 @@ def generate(input_file: PATHLIKE, ccl_filename: Union[PATHLIKE, None] = None,
     if input_file.suffix in ('.cfx', '.res'):
         # build def file and then call _generate_from_def
         # this is the safe way!
-        if cfx5pre is None:
-            cfx5pre = AnsysInstallation().cfx5pre
-
         if verbose:
-            if input_file.suffix == '.cfx':
-                print(f'generating ccl file from .cfx file: {input_file}')
-            else:
-                print(f'generating ccl file from .res file: {input_file}')
+            print('Writing def file from source.')
         def_filename = cfx2def(input_file)
+        if verbose:
+            print('Generating ccl from def file.')
         return _generate_from_def(def_filename, ccl_filename, overwrite)
     if verbose:
-        print(f'generating ccl file from def file: {input_file}')
+        print(f'Generating ccl file from def file: {input_file}')
     return _generate_from_def(input_file, ccl_filename, overwrite)
 
 

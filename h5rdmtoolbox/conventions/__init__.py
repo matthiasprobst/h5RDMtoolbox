@@ -13,6 +13,7 @@ from ._logger import logger
 from .custom import PIVStandardNameTable, FluidStandardNameTable
 from .identifier import StandardizedNameTable, StandardizedNameError, StandardizedName, Empty_Standard_Name_Table
 from .layout import H5Layout
+from . import layout
 from .longname import LongName
 from .utils import dict2xml, is_valid_email_address
 
@@ -31,5 +32,4 @@ __all__ = ['H5Layout', 'datetime_str', 'set_loglevel',
            'StandardizedNameTable', 'StandardizedNameError', 'StandardizedName',
            'Empty_Standard_Name_Table', 'LongName',
            'FluidStandardNameTable',
-           'PIVStandardNameTable',
-           'UnitsError']
+           'PIVStandardNameTable']
