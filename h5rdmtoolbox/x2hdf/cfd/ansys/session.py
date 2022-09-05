@@ -1,4 +1,3 @@
-import logging
 import os
 import pathlib
 import shutil
@@ -6,11 +5,9 @@ import tempfile
 from typing import Union
 
 from . import PATHLIKE, AnsysInstallation
-from . import logger
 from .cmd import call_cmd
 from .utils import change_suffix
-
-logger = logging.getLogger('x2hdf')
+from ..._logger import logger
 
 SESSIONS_DIR = pathlib.Path(__file__).parent.joinpath('session_files')
 

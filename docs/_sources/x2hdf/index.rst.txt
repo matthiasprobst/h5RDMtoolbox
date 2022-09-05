@@ -14,3 +14,4 @@ and cfd2hdf (Conversion of Computational Fluid Dynamics data).
     :hidden:
 
     piv2hdf.ipynb
+    cfx2hdf.ipynb

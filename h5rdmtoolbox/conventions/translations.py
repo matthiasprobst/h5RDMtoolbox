@@ -109,6 +109,7 @@ class H5StandardNameUpdate:
 
 
 def from_yaml(yaml_file: pathlib.Path) -> Dict:
+    """Read yaml file"""
     yaml_file = pathlib.Path(yaml_file)
     import yaml
     with open(yaml_file) as yf:

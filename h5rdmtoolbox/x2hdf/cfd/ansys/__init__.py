@@ -1,6 +1,6 @@
-import logging
 import os
 import pathlib
+from dataclasses import dataclass
 from typing import Union
 
 import dotenv
@@ -8,39 +8,30 @@ import dotenv
 from .utils import ansys_version_from_inst_dir
 from ...._user import config_dir
 
-logger = logging.getLogger('cfdtoolkit')
-
 PATHLIKE = Union[str, bytes, os.PathLike, pathlib.Path]
 
 CFX_DOTENV_FILENAME = config_dir / 'cfx.env'
 SESSIONS_DIR = pathlib.Path(__file__).parent.joinpath('session_files')
 
 
-class CFXExeNotFound(FileNotFoundError):
-    """raised if exe not found"""
-    pass
-
-
-from dataclasses import dataclass
-
-
 @dataclass
 class AnsysInstallation:
     """Ansys Installation class to manage exe files"""
 
+    inst_dir: pathlib.Path = None
     cfx5pre: pathlib.Path = None
     cfx5cmds: pathlib.Path = None
     cfx5mondata: pathlib.Path = None
     cfx5solve: pathlib.Path = None
-    inst_dir: pathlib.Path = None
 
     def __post_init__(self):
+        if self.inst_dir is not None:
+            self.installation_directory = self.inst_dir
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         self.cfx5pre = self.get('cfx5pre')
         self.cfx5cmds = self.get('cfx5cmds')
         self.cfx5mondata = self.get('cfx5mondata')
         self.cfx5solve = self.get('cfx5solve')
-        self.inst_dir = self.installation_directory
 
     def set_installation_directory(self, inst_dir):
         """Set the installation directory and at the same time the executables."""
@@ -56,11 +47,13 @@ class AnsysInstallation:
 
     @property
     def dotenv_values(self):
+        """Return .env values"""
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         return dotenv.dotenv_values(CFX_DOTENV_FILENAME)
 
     @property
     def installation_directory(self):
+        """Installation directory. Expecting to find cfx5pre, cfx5cmd, cfx5mondata and cfx5solve there."""
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         for name in ('cfx5pre', 'cfx5cmds', 'cfx5mondata', 'cfx5solve'):
             if name in dotenv.dotenv_values(CFX_DOTENV_FILENAME):
@@ -70,9 +63,11 @@ class AnsysInstallation:
 
     @installation_directory.setter
     def installation_directory(self, inst_dir):
+        """Set th installation directory"""
         self.set_installation_directory(inst_dir)
 
     def set(self, name_exe, exe_path):
+        """Set AnsysCFX exe"""
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         exe_path = pathlib.Path(exe_path)
         if os.name == 'nt':
@@ -97,6 +92,7 @@ class AnsysInstallation:
         return _path
 
     @property
-    def version(self):
+    def version(self) -> str:
+        """Ansys CFX version"""
         dotenv.load_dotenv(CFX_DOTENV_FILENAME)
         return ansys_version_from_inst_dir(self.get('cfx5pre'))

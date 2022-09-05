@@ -5,8 +5,11 @@ import pathlib
 import sys
 import webbrowser
 
+from h5rdmtoolbox.conventions.translations import from_yaml
 from . import open_wrapper
 from ._version import __version__
+
+from h5rdmtoolbox.x2hdf.cfd import cfx2hdf
 
 
 def main():
@@ -27,6 +30,8 @@ def main():
                         default=None, help="Enter standard_name commands")
     parser.add_argument('layout', type=str, nargs='?',
                         default=None, help="Enter layout commands")
+    parser.add_argument('cfx2hdf', type=str, nargs='?',
+                        default=None, help="Enter cfx-to-hdf conversion menu")
     parser.add_argument('-d', '--dump',
                         type=str,
                         required=False,
@@ -42,6 +47,9 @@ def main():
         if args.standard_name == 'standard_name':
             standard_name('-h')
             exit(0)
+        if args.standard_name == 'cfx2hdf':
+            _cfx2hdf('-h')
+            exit(0)
         parser.print_help(sys.stderr)
         sys.exit(0)
 
@@ -55,6 +63,12 @@ def main():
         if not unknown:
             unknown = ['-h', ]
         standard_name(*unknown)
+        sys.exit(0)
+
+    if args.standard_name == 'cfx2hdf':
+        if not unknown:
+            unknown = ['-h', ]
+        _cfx2hdf(*unknown)
         sys.exit(0)
 
     if args.documentation:
@@ -144,3 +158,61 @@ def layout(*args):
             layout.check(h5, recursive=True, silent=False)
         sys.exit(0)
     parser.print_help(sys.stderr)
+
+
+def _cfx2hdf(*args):
+    """Command line interface method. A folder is expected"""
+    import pathlib
+    from h5rdmtoolbox.x2hdf.cfd.ansys import AnsysInstallation
+    parser = argparse.ArgumentParser(description='PIV uncertainty estimation with CNN')
+
+    # Add the arguments
+    parser.add_argument('-f', '--file',
+                        type=str,
+                        required=False,
+                        help='CFX file (*.cfx)')
+    parser.add_argument('-inst', '--installation_directory',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='Path to installation directory of ansys cfx')
+    parser.add_argument('-snt', '--standard-name-translation',
+                        type=str,
+                        required=False,
+                        help='File path to standard name translation. If not set, it will be searched for '
+                             'snt.yml in the working directory. To suppress this, set "-ignsnt"')
+    parser.add_argument("-ignsnt",
+                        "--ignore-snt",
+                        default=False,
+                        action="store_true",
+                        help='Ignore standard name translation files available int the folder')
+    parser.add_argument("-v",
+                        "--verbose",
+                        default=False,
+                        action="store_true",
+                        help='Additional output')
+
+    args = parser.parse_args(args)
+
+    ansys_inst = AnsysInstallation()
+    if args.installation_directory is not None:
+        ansys_inst.installation_directory = args.installation_directory
+
+    installation_directory = ansys_inst.installation_directory
+    if installation_directory is None:
+        raise FileNotFoundError('Ansys installation directory is unknown. Run cfx2hdf -inst INST_DIR')
+
+    if args.file is not None:
+        cfx_filename = pathlib.Path(args.file)
+        parent = cfx_filename.parent
+        # search for snt:
+        snt_files = sorted(parent.glob('snt*.yml'))
+        if not args.ignore_snt:
+            if len(snt_files) > 0:
+                snt_dict = from_yaml(snt_files[0])
+                hdf_filename = cfx2hdf(cfx_filename, snt_dict, verbose=args.verbose)
+            else:
+                hdf_filename = cfx2hdf(cfx_filename)
+        else:
+            hdf_filename = cfx2hdf(cfx_filename)
+        print(f'Generated {hdf_filename} from {cfx_filename}')

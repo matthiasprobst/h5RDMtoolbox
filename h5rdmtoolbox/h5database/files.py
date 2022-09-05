@@ -1,9 +1,13 @@
+import os
 import pathlib
 import re
 from itertools import chain
+from typing import List
 from typing import Union, Any, Dict, Callable
 
 import h5py
+import numpy as np
+import pandas as pd
 
 from ..h5wrapper import open_wrapper
 
@@ -283,6 +287,41 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset], flt, recursive: bool,
                                cmp=_eq)
 
 
+class DatasetValues:
+    def __init__(self, arr: Dict):
+        self.arr = arr
+
+    def to_DataFrame(self, axis=0, join='outer') -> pd.DataFrame:
+        """Return DataFrame. Only works for 1D data!"""
+        if np.all([a[:].ndim == 1 for a in self.arr.values()]):
+            keys = [os.path.dirname(k) for k in list(self.arr.keys())]
+            frames = [pd.DataFrame({os.path.basename(k): v[:]}) for k, v in self.arr.items()]
+            return pd.concat(frames, axis=axis, join=join, keys=keys)
+        raise ValueError('to_DataFrame() only works with 1D data')
+
+
+class H5Objects:
+
+    def __init__(self, h5objdict: Dict):
+        self.h5objdict = h5objdict
+        # TODO: check if all are the same object type!
+
+    @property
+    def names(self) -> List[str]:
+        """Names of objects"""
+        return [obj for obj in self.h5objdict.keys()]
+
+    @property
+    def basenames(self) -> List[str]:
+        """Names of objects"""
+        return [os.path.basename(obj.name) for obj in self.h5objdict.values()]
+
+    def __getitem__(self, item):
+        if isinstance(self.h5objdict[list(self.h5objdict.keys())[0]], h5py.Dataset):
+            return DatasetValues({k: v.values for k, v in self.h5objdict.items()})
+        raise TypeError('Cannot slice hdf group objects')
+
+
 class H5Files:
     """H5File-like interface for multiple HDF Files"""
 
@@ -296,10 +335,12 @@ class H5Files:
         self._opened_files = {}
         self._h5wrapper = h5wrapper
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> Union[h5py.Group, H5Objects]:
+        """If integer, returns item-th root-group. If string,
+        a list of objects of that item is returned"""
         if isinstance(item, int):
             return self._opened_files[list(self.keys())[item]]
-        return self._opened_files[item]
+        return H5Objects({f'{key}/item': rgrp[item] for key, rgrp in zip(self.keys(), self.values()) if item in rgrp})
 
     def __enter__(self):
         for filename in self._list_of_filenames:
@@ -308,13 +349,16 @@ class H5Files:
                     h5file = open_wrapper(filename, mode='r')
                 else:
                     h5file = self._h5wrapper(filename, mode='r')
-                self._opened_files[filename.stem] = h5file
-            except RuntimeError:
+                self._opened_files[str(filename)] = h5file
+            except RuntimeError as e:
+                print(f'RuntimeError: {e}')
                 for h5file in self._opened_files.values():
                     h5file.close()
+                self._opened_files = {}
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._opened_files = {}
         self.close()
 
     def find_one(self, flt: Union[Dict, str], rec: bool = True) -> Union[h5py.Group, h5py.Dataset, None]:

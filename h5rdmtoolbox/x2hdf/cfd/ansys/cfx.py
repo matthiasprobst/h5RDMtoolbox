@@ -1,4 +1,3 @@
-import logging
 import os
 import pathlib
 import time
@@ -12,9 +11,9 @@ import xarray as xr
 
 from . import session, PATHLIKE, ccl, CFX_DOTENV_FILENAME, mon
 from .utils import change_suffix
+from ..._logger import logger
 from ....conventions.translations import cfx_to_standard_name
 
-logger = logging.getLogger(__package__)
 dotenv.load_dotenv(CFX_DOTENV_FILENAME)
 
 CFX5SOLVE = os.environ.get("cfx5solve")
@@ -65,7 +64,8 @@ class MonitorUserExpression(xr.DataArray):
     __slots__ = ()
 
 
-def process_monitor_string(monitor_str: str):
+def process_monitor_string(monitor_str: str) -> Dict:
+    """Process a CFX monitor name"""
     if monitor_str not in ('COMMAND FILE', 'monitor', 'LIBRARY', 'FLOW: Flow Analysis 1'):
         _split = monitor_str.split(',')
         _groups = _split[0:-1]
@@ -86,7 +86,7 @@ def process_monitor_string(monitor_str: str):
         name, _units = _split[-1].split(' [')
         if _units == ']':
             _units = ''
-        return {'group': group, 'name': name, 'units': _units[:-1], 'coords': coords}
+        return {'group': group, 'name': name, 'units': _units[:-1].replace('^', '**'), 'coords': coords}
 
 
 def _str_to_UserPoint(input_str: str, data: np.ndarray) -> Union[MonitorUserPoint, MonitorUserExpression]:
@@ -314,10 +314,17 @@ class CFXCase(CFXFile):
                 return this_mtime < cmp_mtime
 
             def unlink(self):
+                """Delete the HDF5 file"""
                 self._filename.unlink(missing_ok=True)
 
             def generate(self, force: bool = False, verbose: bool = True):
-                if self._cfx_case.has_result_files:
+                """Generate the HDF5 file"""
+                if verbose:
+                    print('Starting conversion process.')
+                if not self._cfx_case.has_result_files:
+                    import warnings
+                    warnings.warn('Case has no result files!')
+                else:
                     if self.out_of_date or force:
                         st = time.perf_counter()
                         ccl_filename = ccl.generate(self._cfx_case.filename, verbose=verbose)
@@ -357,13 +364,14 @@ class CFXCase(CFXFile):
 
                                         if meta_dict["group"] in grp:
                                             if meta_dict["name"] in grp[meta_dict["group"]]:
-                                                raise NameError(f'Name "{meta_dict["name"]}" already exists in "{grp[meta_dict["group"]].name}"')
+                                                raise NameError(
+                                                    f'Name "{meta_dict["name"]}" already exists in "{grp[meta_dict["group"]].name}"')
                                         #     name = f'{meta_dict["group"]}_{meta_dict["name"]}'
                                         # else:
                                         name = f'{meta_dict["group"]}/{meta_dict["name"]}'
                                         try:
                                             ds = grp.create_dataset(name=name, data=v)
-                                        except Exception as e:
+                                        except Exception:
                                             # workaround when don't know what to do...:
                                             old_name = name
                                             _name_split = old_name.rsplit('/', 1)
@@ -393,16 +401,18 @@ class CFXCase(CFXFile):
                                                         try:
                                                             dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
                                                         except ValueError:
-                                                            raise ValueError(f'Cannot create dataset {kc} in group {grp[meta_dict["group"]]}')
+                                                            raise ValueError(
+                                                                f'Cannot create dataset {kc} in group {grp[meta_dict["group"]]}')
                                                 else:
                                                     dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
 
                                                 try:
-                                                    ds.attrs['standard_name'] = cfx_to_standard_name[kc]
+                                                    dsc.attrs['standard_name'] = cfx_to_standard_name[kc]
                                                 except KeyError:
-                                                    logger.debug(f'Could not set standard name for {ds_name}. Using name '
-                                                                 f'as long_name instead')
-                                                    ds.attrs['long_name'] = kc
+                                                    logger.debug(
+                                                        f'Could not set standard name for {ds_name}. Using name '
+                                                        f'as long_name instead')
+                                                    dsc.attrs['long_name'] = kc
                                                 # NOTE: ASSUMING [m] is the default units but TODO check in CCL file what the base unit is!
                                                 dsc.attrs['units'] = 'm'
                 return self._filename
