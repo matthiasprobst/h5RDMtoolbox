@@ -65,13 +65,24 @@ def get_rootparent(obj):
     return get_root(obj.parent)
 
 
-def pop_hdf_attributes(attrs: Dict) -> dict:
-    """removes HDF attributes like NAME, CLASS, ...."""
+def pop_hdf_attributes(attrs: Dict) -> Dict:
+    """Remove HDF attributes like NAME, CLASS, .... from the input dictionary
+
+    Parameters
+    ----------
+    attrs: Dict
+        Input dictionary
+
+    Returns
+    -------
+    dict
+        Dictionary without entries registered in `H5_DIM_ATTRS`
+    """
     return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
 
 
-def _is_not_valid_natural_name(instance, name, is_natural_naming_enabled):
-    """checks if name is already a function call or a property"""
+def _is_not_valid_natural_name(instance, name: str, is_natural_naming_enabled: bool) -> bool:
+    """Check if name is already a function call or a property"""
     if is_natural_naming_enabled:
         if isinstance(name, str):
             return hasattr(instance, name)
@@ -287,7 +298,7 @@ class DatasetValues:
 H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
 
 
-def write_H5File_layout_file():
+def write_H5File_layout_file() -> None:
     """Write the H5File layout to <user_dir>/layout"""
     lay = conventions.layout.H5Layout(H5File_layout_filename)
     with lay.File(mode='w') as h5lay:
@@ -300,8 +311,7 @@ write_H5File_layout_file()
 
 
 class H5Dataset(h5py.Dataset):
-    """
-    Subclass of h5py.Dataset implementing a model.
+    """Subclass of h5py.Dataset implementing a model.
     This core version enforces the user to use units and
     long_name or standard_name when creating datasets.
     The property standard_name return a standard name
@@ -316,12 +326,25 @@ class H5Dataset(h5py.Dataset):
             return WrapperAttributeManager(self)
 
     @property
-    def parent(self):
+    def parent(self) -> "H5Group":
+        """Return the parent group of this dataset
+        
+        Returns
+        -------
+        H5Group
+            Parent group of this dataset"""
+
         return self._h5grp(super().parent)
 
     @property
-    def rootparent(self):
-        """Return the root group instance."""
+    def rootparent(self) -> "H5Group":
+        """Return the root group of the file.
+
+        Returns
+        -------
+        H5Group
+            Root group object.
+        """
 
         def get_root(parent):
             global found
@@ -341,12 +364,27 @@ class H5Dataset(h5py.Dataset):
         return self._h5grp(get_root(super().parent))
 
     @property
-    def basename(self):
+    def basename(self) -> str:
+        """Basename of the dataset, which is the name without the
+        internal file path
+
+        Returns
+        -------
+        str
+            The basename.
+        """
         return os.path.basename(self.name)
 
     @property
-    def values(self):
-        """avoiding using xarray"""
+    def values(self) -> DatasetValues:
+        """Mimic the h5py behaviour and return a numpy array instead
+        of a xarray object.
+
+        Returns
+        -------
+        DatasetValues
+            Helper class mimicing the h5py behaviour of returning a numpy array.
+        """
         return DatasetValues(self)
 
     @property
@@ -370,44 +408,44 @@ class H5Dataset(h5py.Dataset):
         self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
         _SNT_CACHE[self.id.id] = convention
 
-    @property
-    def units(self):
-        """Return the attribute units. Returns None if it does not exist."""
-        return self.attrs.get('units')
+    # @property
+    # def units(self):
+    #     """Return the attribute units. Returns None if it does not exist."""
+    #     return self.attrs.get('units')
+    #
+    # @units.setter
+    # def units(self, units):
+    #     """Sets the attribute units to attribute 'units'
+    #     default unit registry format of pint is used."""
+    #     self.attrs['units'] = units
 
-    @units.setter
-    def units(self, units):
-        """Sets the attribute units to attribute 'units'
-        default unit registry format of pint is used."""
-        self.attrs['units'] = units
-
-    @property
-    def long_name(self):
-        """Return the attribute long_name. Returns None if it does not exist."""
-        return self.attrs.get('long_name')
-
-    @long_name.setter
-    def long_name(self, new_long_name):
-        """Writes attribute long_name if passed string is not None"""
-        if new_long_name:
-            self.attrs['long_name'] = new_long_name
-        else:
-            raise TypeError('long_name must not be type None.')
-
-    @property
-    def standard_name(self) -> Union[str, None]:
-        """Return the standardized name of the dataset. The attribute name is `standard_name`.
-        Returns `None` if it does not exist."""
-        attrs_string = self.attrs.get(NAME_IDENTIFIER_ATTR_NAME)
-        if attrs_string is None:
-            return None
-        return self.standard_name_table[attrs_string]
-
-    @standard_name.setter
-    def standard_name(self, new_standard_name):
-        """Writes attribute standard_name if passed string is not None.
-        The rules for the standard_name is checked before writing to file."""
-        self.attrs['standard_name'] = new_standard_name
+    # @property
+    # def long_name(self):
+    #     """Return the attribute long_name. Returns None if it does not exist."""
+    #     return self.attrs.get('long_name')
+    #
+    # @long_name.setter
+    # def long_name(self, new_long_name):
+    #     """Writes attribute long_name if passed string is not None"""
+    #     if new_long_name:
+    #         self.attrs['long_name'] = new_long_name
+    #     else:
+    #         raise TypeError('long_name must not be type None.')
+    #
+    # @property
+    # def standard_name(self) -> Union[str, None]:
+    #     """Return the standardized name of the dataset. The attribute name is `standard_name`.
+    #     Returns `None` if it does not exist."""
+    #     attrs_string = self.attrs.get(NAME_IDENTIFIER_ATTR_NAME)
+    #     if attrs_string is None:
+    #         return None
+    #     return self.standard_name_table[attrs_string]
+    #
+    # @standard_name.setter
+    # def standard_name(self, new_standard_name):
+    #     """Writes attribute standard_name if passed string is not None.
+    #     The rules for the standard_name is checked before writing to file."""
+    #     self.attrs['standard_name'] = new_standard_name
 
     def __getattr__(self, item):
         if item not in self.__dict__:
@@ -647,18 +685,18 @@ class H5Group(h5py.Group):
         import re
         return [grp for grp in grps if re.search(pattern, os.path.basename(grp.name))]
 
-    @property
-    def long_name(self):
-        """Return the attribute long_name. Returns None if it does not exist."""
-        return self.attrs.get('long_name')
-
-    @long_name.setter
-    def long_name(self, new_long_name):
-        """Writes attribute long_name if passed string is not None"""
-        if new_long_name:
-            self.attrs['long_name'] = new_long_name
-        else:
-            raise TypeError('long_name must not be type None.')
+    # @property
+    # def long_name(self):
+    #     """Return the attribute long_name. Returns None if it does not exist."""
+    #     return self.attrs.get('long_name')
+    #
+    # @long_name.setter
+    # def long_name(self, new_long_name):
+    #     """Writes attribute long_name if passed string is not None"""
+    #     if new_long_name:
+    #         self.attrs['long_name'] = new_long_name
+    #     else:
+    #         raise TypeError('long_name must not be type None.')
 
     @property
     def data_source_type(self) -> conventions.data.DataSourceType:
@@ -807,7 +845,7 @@ class H5Group(h5py.Group):
         long_name : str
             The long name of the group. Rules for long_name is checked in method
             check_long_name
-        overwrite : bool, optional=None
+        overwrite : bool, default=None
             If the group does not already exist, the new group is written and this parameter has no effect.
             If the group exists and ...
             ... overwrite is None: h5py behaviour is enabled meaning that if a group exists h5py will raise
@@ -894,7 +932,7 @@ class H5Group(h5py.Group):
             Dataset shape. see h5py doc. Default None. Required if data=None.
         dtype : str, optional
             dtype of dataset. see h5py doc. Default is dtype('f')
-        data : numpy ndarray, optional=None
+        data : numpy ndarray, default=None
             Provide data to initialize the dataset.  If not used,
             provide shape and optionally dtype via kwargs (see more in
             h5py documentation regarding arguments for create_dataset
@@ -903,10 +941,10 @@ class H5Group(h5py.Group):
             If None, standard_name must be provided
         standard_name: str or conventions.StandardizedName
             The standard name of the dataset. If None, long_name must be provided
-        units : str, optional=None
+        units : str, default=None
             Physical units of the data. Can only be None if data is not attached with such attribute,
             e.g. through xarray.
-        overwrite : bool, optional=None
+        overwrite : bool, default=None
             If the dataset does not already exist, the new dataset is written and this parameter has no effect.
             If the dataset exists and ...
             ... overwrite is None: h5py behaviour is enabled meaning that if a dataset exists h5py will raise
@@ -926,7 +964,7 @@ class H5Group(h5py.Group):
             Also note, that if data is a xr.DataArray and attach_scales is not None,
             coordinates of xr.DataArray are ignored and only attach_scales is
             considered.
-        make_scale: bool, optional=False
+        make_scale: bool, default=False
             Makes this dataset scale. The parameter attach_scale must be uses, thus be None.
         **kwargs
             see documentation of h5py.File.create_dataset
@@ -1144,7 +1182,7 @@ class H5Group(h5py.Group):
 
         Returns
         -------
-        h5obj: h5py.Dataset | h5py.Group
+        h5obj: h5py.Dataset or h5py.Group
         """
         from ..h5database import files
         return files.find(self, flt, recursive=rec, h5type=None, find_one=False)
@@ -1480,7 +1518,8 @@ class H5Group(h5py.Group):
                     # warnings.warn(f'xr-dimension {dim} was skipped because no units and long_name/standard_name '
                     #               'are available and cannot be set anyhow. This is due to the package xarray.')
                     # xarray does not let me add attributes to this dimension
-                    self.create_dataset(name=dim, data=dataset[data_var][dim].values, units='', long_name='xarray dimension')
+                    self.create_dataset(name=dim, data=dataset[data_var][dim].values, units='',
+                                        long_name='xarray dimension')
                 else:
                     ds.dims[idim].attach_scale(ds_coords[dim])
 
@@ -1590,14 +1629,14 @@ class H5Group(h5py.Group):
         ----------
         attribute_name: str
             Name of the attribute
-        attribute_value: any, optional=None
+        attribute_value: any, default=None
             Value of the attribute. If None, the value is not checked
-        h5type: str, optional=None
+        h5type: str, default=None
             If specified, looking only for groups or datasets.
             To look only for groups, pass 'group' or 'grp'.
             To look only for datasets, pass 'dataset' or 'ds'.
             Default is None, which looks in both object types.
-        recursive: bool, optional=True
+        recursive: bool, default=True
             If True, scans recursively through all groups below current.
 
         Returns
@@ -1772,7 +1811,7 @@ class H5File(h5py.File, H5Group):
         return _bytes * ureg.byte
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
-                 layout_filename: Path = H5File_layout_filename,
+                 layout_filename: Path = 'H5File',
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
@@ -1781,10 +1820,7 @@ class H5File(h5py.File, H5Group):
         if name is None:
             _tmp_init = True
             logger.debug("An empty H5File class is initialized")
-            if title is not None:
-                name = utils.touch_tmp_hdf5_file(attrs={'title': title})
-            else:
-                name = utils.touch_tmp_hdf5_file()
+            name = utils.touch_tmp_hdf5_file()
         elif isinstance(name, ObjectID):
             pass
         elif not isinstance(name, (str, Path)):
@@ -1873,112 +1909,112 @@ class H5File(h5py.File, H5Group):
         else:
             self.standard_name_table = snt
 
-        self.layout_filename = layout_filename
-        self._layout = conventions.layout.H5Layout(self.layout_filename)
+        self._layout = conventions.layout.H5Layout.load_registered(layout_filename)
         self._layout.check(self, silent=True, recursive=True)
 
-    def check(self, grp='/', silent: bool = True) -> int:
+    def check(self, grp: Union[str, h5py.Group] = '/', silent: bool = True) -> int:
         """Run layout check. This method may be overwritten to add conditional
-         checking."""
+         checking.
+
+         Parameters
+         ----------
+         grp: str or h5py.Group, default='/'
+            Group from where to start the layout check.
+            Per default starts at root level
+         silent: bool, default=True
+             Silent will mute all informative output.
+
+         Returns
+         -------
+         int
+            Number of detected issues.
+         """
         return self.layout.check(self[grp], silent)
 
-    def special_inspect(self, silent: bool = False) -> int:
-        """Optional special inspection, e.g. conditional checks."""
-        return 0
-
-    def moveto(self, filename: Path, overwrite: bool = False) -> Path:
-        """
-        moves the file to a new location and optionally renames the file if asked.
+    def moveto(self, destination: Path, overwrite: bool = False) -> Path:
+        """Move the opened file to a new destination.
 
         Parameters
         ----------
-        target_dir : str
-            Target directory to which file is moved.
-        filename : str, optional=None
-            Filename to be used. If None (default) original filename is not
-            changed
+        destination : Path
+            New filename.
         overwrite : bool
-            Whether to overwrite an existing name at target_dir with name
-            filename
+            Whether to overwrite an existing file.
 
         Return
         ------
-        new_filepath : str
-            Path to new file location
-        """
-        trg_fname = Path(filename)
-        if trg_fname.exists() and not overwrite:
-            raise FileExistsError(f'The target file "{trg_fname}" already exists and overwriting is set to False.'
-                                  ' Not moving the file!')
-        logger.debug(f'Moving file {self.hdf_filename} to {trg_fname}')
+        new_filepath : Path
+            Path to new file locationRaises
 
-        if not trg_fname.parent.exists():
-            Path.mkdir(trg_fname.parent, parents=True)
-            logger.debug(f'Created directory {trg_fname.parent}')
+        Raises
+        ------
+        FileExistsError
+            If destination file exists and overwrite is False.
+        """
+        dest_fname = Path(destination)
+        if dest_fname.exists() and not overwrite:
+            raise FileExistsError(f'The target file "{dest_fname}" already exists and overwriting is set to False.'
+                                  ' Not moving the file!')
+        logger.debug(f'Moving file {self.hdf_filename} to {dest_fname}')
+
+        if not dest_fname.parent.exists():
+            Path.mkdir(dest_fname.parent, parents=True)
+            logger.debug(f'Created directory {dest_fname.parent}')
 
         mode = self.mode
         self.close()
-        shutil.move(self.hdf_filename, trg_fname)
-        super().__init__(trg_fname, mode=mode)
-        new_filepath = trg_fname.absolute()
+        shutil.move(self.hdf_filename, dest_fname)
+        super().__init__(dest_fname, mode=mode)
+        new_filepath = dest_fname.absolute()
         self.hdf_filename = new_filepath
         return new_filepath
 
-    def saveas(self, filename: Path, overwrite: bool = False, keep_old: bool = True):
+    def saveas(self, filename: Path, overwrite: bool = False) -> "H5File":
         """
-        This method copies the current file to the new destination. If keep_old is True, the original
-        file s kept.
-        Closes the current H5Wrapper and returns a new and opened one wih previous file mode
+        Save this file under a new name (effectively a copy). This file is closed and re-opened
+        from the new destination usng the previous file mode.
 
         Parameters
         ----------
         filename: Path
             New filename.
-        overwrite: bool, optional=False
+        overwrite: bool, default=False
             Whether to not to overwrite an existing filename.
-        keep_old: bool, optional=True
-            Wheher to keep to original file.
 
         Returns
         -------
-        save_path : Path
-            new filename
+        H5File
+            Instance of moved H5File
 
         """
         _filename = Path(filename)
         if _filename.is_file():
             if overwrite:
                 os.remove(_filename)
-                src = self.filename
-                mode = self.mode
-                self.close()  # close this instance
-                if keep_old:
-                    shutil.copy2(src, _filename)
-                else:
-                    shutil.move(src, _filename)
-                self.hdf_filename = _filename
-                return super().__init__(_filename, mode=mode)
             else:
-                logger.info("Note: File was not moved to new location as a file already exists with this name"
-                            " and overwriting was disabled")
-                return None
+                raise FileExistsError("Note: File was not moved to new location as a file already exists with this name"
+                                      " and overwriting was disabled")
+
         src = self.filename
         mode = self.mode
         self.close()  # close this instance
 
-        if keep_old:
-            shutil.copy2(src, _filename)
-        else:
-            shutil.move(src, _filename)
-
+        shutil.copy2(src, _filename)
         self.hdf_filename = _filename
-        super().__init__(_filename, mode=mode)
-        save_path = self.hdf_filename.absolute()
-        return save_path
+        return H5File(_filename, mode=mode)
 
-    def open(self, mode="r+"):
-        """Opens the closed file"""
-        super().__init__(self.hdf_filename, mode=mode)
+    def open(self, mode: str = "r+") -> None:
+        """Open the closed file
+        Parameters
+        ----------
+        mode: str
+            Mode used to open the file: r, r+, w, w-, x, a
+
+        Returns
+        -------
+        None
+        """
+        self.__init__(self.hdf_filename, mode=mode)
 
 
 H5Dataset._h5grp = H5Group
@@ -1989,4 +2025,5 @@ H5Group._h5ds = H5Dataset
 
 # import accessors
 # noinspection PyUnresolvedReferences
-from .accessors import title
+
+from .accessors import accessor_long_name, accessor_standard_name, accessor_units, accessor_title

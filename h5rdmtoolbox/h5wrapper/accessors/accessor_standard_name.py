@@ -11,6 +11,7 @@ class standard_name:
 
 @register_special_property(H5Dataset)
 class standard_name:
+    """Standard Name attribute"""
 
     def set(self, new_standard_name):
         """Writes attribute standard_name if passed string is not None.
@@ -31,4 +32,5 @@ class standard_name:
         return self.standard_name_table[val]
 
     def delete(self):
+        """Delete attribute"""
         self.attrs.__delitem__('standard_name')

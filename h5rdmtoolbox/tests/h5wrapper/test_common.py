@@ -176,9 +176,10 @@ class TestCommon(unittest.TestCase):
             with CLS() as h5:
                 old_filename = h5.hdf_filename
                 new_filename = generate_temporary_filename(suffix='.hdf')
-                new_filename = h5.saveas(new_filename)
-                self.assertTrue(new_filename.exists())
+                new_instance = h5.saveas(new_filename)
+                self.assertTrue(new_instance.hdf_filename.exists())
                 self.assertTrue(old_filename.exists())
+                new_instance.close()
 
             with CLS() as h5:
                 filename = h5.hdf_filename

@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Tuple
 from typing import Protocol, Any, Union, Dict, List
-from .accessors.software import Software
+from .accessors.accessor_software import Software
 
 import numpy as np
 from pint_xarray import unit_registry as ureg

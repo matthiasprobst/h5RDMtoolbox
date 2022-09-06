@@ -74,5 +74,5 @@ class software:
         return Software.from_dict(datadict)
 
     def delete(self):
-        """Delete the attribute 'software'"""
-        self.attrs.__delitem__('software')
+        """Delete attribute"""
+        self.attrs.__delitem__('standard_name')

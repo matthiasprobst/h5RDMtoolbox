@@ -466,7 +466,8 @@ class StandardizedNameTable(_StandardizedNameTable):
             raise StandardizedNameError(f'Name must not end with a space!')
 
         if re.sub(self.valid_characters, '', name) != name:
-            raise StandardizedNameError(f'Invalid special characters in name "{name}": Only "_" is allowed.')
+            raise StandardizedNameError(f'Invalid special characters in name "{name}": Only "{self.valid_characters}" '
+                                        'is allowed.')
 
         if self.pattern != '' and self.pattern is not None:
             if re.match(self.pattern, name):
@@ -566,7 +567,8 @@ Empty_Standard_Name_Table = StandardizedNameTable(name='EmptyStandardizedNameTab
                                                   institution=None,
                                                   contact='none@none.none',
                                                   last_modified=None,
-                                                  valid_characters='')
+                                                  valid_characters='[^a-zA-Z0-9_]',
+                                                  pattern='^[0-9 ].*')
 
 
 class CFStandardNameTable(StandardizedNameTable):

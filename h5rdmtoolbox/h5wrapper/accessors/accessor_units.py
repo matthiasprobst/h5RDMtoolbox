@@ -1,3 +1,5 @@
+from typing import Union
+
 import pint
 from pint_xarray import unit_registry as ureg
 
@@ -10,24 +12,25 @@ ureg.default_format = config.ureg_format
 
 @register_special_property(H5Dataset)
 class units:
+    """Units attribute"""
 
-    def set(self, units):
+    def set(self, new_units: Union[str, pint.Unit]):
         """Sets the attribute units to attribute 'units'
         default unit registry format of pint is used."""
-        if units:
-            if isinstance(units, str):
-                _units = ureg.Unit(units).__format__(ureg.default_format)
-            elif isinstance(units, pint.Unit):
-                _units = units.__format__(ureg.default_format)
+        if new_units:
+            if isinstance(new_units, str):
+                _new_units = ureg.Unit(new_units).__format__(ureg.default_format)
+            elif isinstance(new_units, pint.Unit):
+                _new_units = new_units.__format__(ureg.default_format)
             else:
-                raise TypeError(f'Unit must be a string or pint.Unit but not {type(units)}')
+                raise TypeError(f'Unit must be a string or pint.Unit but not {type(new_units)}')
         else:
-            _units = units
+            _new_units = new_units
         standard_name = self.attrs.get('standard_name')
         if standard_name:
-            self.standard_name_table.check_units(standard_name, _units)
+            self.standard_name_table.check_units(standard_name, _new_units)
 
-        self.attrs.create('units', _units)
+        self.attrs.create('units', _new_units)
 
     def get(self):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.
@@ -35,4 +38,5 @@ class units:
         return self.attrs.get('units', None)
 
     def delete(self):
+        """Delete attribute units"""
         self.attrs.__delitem__('units')
