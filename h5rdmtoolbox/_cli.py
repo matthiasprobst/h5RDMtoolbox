@@ -6,10 +6,9 @@ import sys
 import webbrowser
 
 from h5rdmtoolbox.conventions.translations import from_yaml
+from h5rdmtoolbox.x2hdf.cfd import cfx2hdf
 from . import open_wrapper
 from ._version import __version__
-
-from h5rdmtoolbox.x2hdf.cfd import cfx2hdf
 
 
 def main():
@@ -38,7 +37,14 @@ def main():
                         default=None,
                         help='Dump file content.')
 
-    args, unknown = parser.parse_known_args()
+    args, unknown = parser.parse_known_args()  # unknown is a list
+    if args.standard_name == 'layout' and args.dump is not None:
+        # it's not dump because -d must be passed to layout where it is --delete
+        _dargs = vars(args)
+        unknown.append('--delete')
+        unknown.append(_dargs['dump'])
+        del _dargs['dump']
+        args = argparse.Namespace(**_dargs)
 
     if args.flexhelp:
         if args.standard_name == 'layout':
@@ -103,16 +109,16 @@ def standard_name(*args):
     _args = parser.parse_args(args)
 
     if _args.list:
-        from .conventions.identifier import StandardizedNameTable
-        StandardizedNameTable.print_registered()
+        from .conventions.identifier import StandardNameTable
+        StandardNameTable.print_registered()
         sys.exit(0)
     else:
-        from .conventions.identifier import StandardizedNameTable
+        from .conventions.identifier import StandardNameTable
         snt_filename = pathlib.Path(_args.select)
         if snt_filename.exists():
-            snt = StandardizedNameTable.from_yml(_args.select)
+            snt = StandardNameTable.from_yml(_args.select)
         else:
-            snt = StandardizedNameTable.load_registered(_args.select)
+            snt = StandardNameTable.load_registered(_args.select)
         print(f'Checking file "{_args.file}" with layout filename "{snt}"')
         with open_wrapper(_args.file) as h5:
             snt.check_grp(h5, recursive=True, raise_error=False)
@@ -132,11 +138,26 @@ def layout(*args):
                         required=False,
                         default=None,
                         help='Registered layout name or filename of a layout.')
-    parser.add_argument('-f', '--file',
+    parser.add_argument('-c', '--check',
                         type=str,
                         required=False,
                         default=None,
                         help='Filename to run check on.')
+    parser.add_argument('-f', '--file',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='Filename to run check on. Depreciated. Use -d/--check in instead!')
+    parser.add_argument('-r', '--register',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='Register a layout.')
+    parser.add_argument('-d', '--delete',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='Delete a registered Layout file.')
     _args = parser.parse_args(args)
 
     if _args.list:
@@ -145,18 +166,37 @@ def layout(*args):
         sys.exit(0)
     else:
         from .conventions.layout import H5Layout
-        layout_filename = pathlib.Path(_args.select)
-        if layout_filename.exists():
-            layout = H5Layout(_args.select)
-        else:
-            layout = H5Layout.load_registered(_args.select)
-        if _args.file is None:
-            layout.sdump()
+        if _args.file:
+            raise DeprecationWarning('Use -c/--check')
+        if _args.select and _args.check:
+            layout_filename = pathlib.Path(_args.select)
+            if layout_filename.exists():
+                lay = H5Layout(_args.select)
+            else:
+                lay = H5Layout.load_registered(_args.select)
+
+            if _args.check is None:
+                lay.sdump()
+                sys.exit(0)
+
+            print(f' > Checking file with layout "{lay.filename.name}":\n')
+            with open_wrapper(_args.check) as h5:
+                lay.check(h5, recursive=True, silent=False)
+            lay.report()
             sys.exit(0)
-        print(f' > Checking file "{_args.file}" with layout filename "{layout.filename.name}":\n')
-        with open_wrapper(_args.file) as h5:
-            layout.check(h5, recursive=True, silent=False)
-        sys.exit(0)
+
+        if _args.register:
+            lay = H5Layout(pathlib.Path(_args.register))
+            lay.register()
+            H5Layout.print_registered()
+            sys.exit(0)
+
+        if _args.delete:
+            filename = H5Layout.find_registered_filename(_args.delete)
+            print(f'Deleting {filename}')
+            filename.unlink()
+            H5Layout.print_registered()
+            sys.exit(0)
     parser.print_help(sys.stderr)
 
 

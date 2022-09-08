@@ -4,8 +4,8 @@ from typing import Union, Dict
 
 from packaging import version
 
-from ..accessory import register_special_property
-from ..h5file import H5Group
+from . import register_standard_attribute
+from ...h5wrapper.h5file import H5Group
 
 
 @dataclass
@@ -31,7 +31,7 @@ class Software:
                     url=self.url, description=self.description)
 
 
-@register_special_property(H5Group)
+@register_standard_attribute(H5Group)
 class software:
     """property attach to a H5Group"""
 

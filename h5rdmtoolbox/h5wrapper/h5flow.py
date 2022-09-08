@@ -288,7 +288,7 @@ class H5Flow(H5File, H5FlowGroup):
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
         if standard_name_table is None:
-            standard_name_table = conventions.FluidStandardNameTable
+            standard_name_table = 'fluid-v1'
         super().__init__(name, mode, title, standard_name_table,
                          layout_filename,
                          driver, libver, userblock_size,

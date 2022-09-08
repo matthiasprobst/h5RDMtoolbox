@@ -3,14 +3,14 @@ from typing import Union
 import pint
 from pint_xarray import unit_registry as ureg
 
-from ..accessory import register_special_property
-from ..h5file import H5Dataset
+from . import register_standard_attribute
 from ... import config
+from ...h5wrapper.h5file import H5Dataset
 
 ureg.default_format = config.ureg_format
 
 
-@register_special_property(H5Dataset)
+@register_standard_attribute(H5Dataset)
 class units:
     """Units attribute"""
 

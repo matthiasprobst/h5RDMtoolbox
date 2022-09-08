@@ -1,6 +1,7 @@
 """h5rdtoolbox repository"""
 
 import atexit
+import pathlib
 import shutil
 
 from . import conventions
@@ -34,7 +35,7 @@ def clean_temp_data():
     if user_dirs['tmp'].exists():
         try:
             shutil.rmtree(user_dirs['tmp'])
-        except RuntimeError as e:
+        except PermissionError as e:
             failed_dirs.append(user_dirs['tmp'])
             print(f'removing tmp folder "{user_dirs["tmp"]}" failed due to "{e}". Best is you '
                   f'manually delete the directory.')
@@ -43,11 +44,12 @@ def clean_temp_data():
             if failed_dirs_file.exists():
                 with open(failed_dirs_file, 'r') as f:
                     lines = f.readlines()
-                    for l in lines:
+                    for line in lines:
                         try:
-                            shutil.rmtree(l)
-                        except RuntimeError:
-                            failed_dirs.append(l)
+                            shutil.rmtree(line.strip())
+                        except Exception:
+                            if pathlib.Path(line).exists():
+                                failed_dirs.append(line)
 
             if lines or failed_dirs:
                 with open(failed_dirs_file, 'w') as f:

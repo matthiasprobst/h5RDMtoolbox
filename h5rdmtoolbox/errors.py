@@ -11,11 +11,11 @@ class StandardizedNameError(Exception):
     pass
 
 
-class StandardizedNameTableError(Exception):
+class StandardNameTableError(Exception):
     pass
 
 
-class StandardizedNameTableVersionError(Exception):
+class StandardNameTableVersionError(Exception):
     """Incompatible Errors"""
     pass
 
@@ -23,3 +23,11 @@ class StandardizedNameTableVersionError(Exception):
 class EmailError(ValueError):
     """Wrong Email Error"""
     pass
+
+
+class LongNameError(ValueError):
+    """An error associated with the user property"""
+
+
+class OrcidError(ValueError):
+    """An error associated with the user property"""

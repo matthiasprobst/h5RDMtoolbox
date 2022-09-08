@@ -3,7 +3,7 @@ This is work in progress and as long as there is no official version provided by
 this repository uses this convention
 """
 
-from h5rdmtoolbox.conventions import StandardizedNameTable
+from h5rdmtoolbox.conventions import StandardNameTable
 from h5rdmtoolbox.conventions.pivview import pivview_to_cgns_dict
 
 from .identifier import standard_name_table_to_xml
@@ -60,7 +60,7 @@ piv_extended_cgns_standard_names_dict.update({
     'Peak3DisplacementY': {'canonical_units': '', 'description': None},
 })
 
-PIVCGNSStandardNameTable = StandardizedNameTable(name='CGNS_Standard_Name', table_dict=cgns_standard_names_dict,
+PIVCGNSStandardNameTable = StandardNameTable(name='CGNS_Standard_Name', table_dict=cgns_standard_names_dict,
                                                  version_number=1, contact='matthias.probst@kit.edu',
                                                  institution='Karlsruhe Institute of Technology',
                                                  valid_characters='[^a-zA-Z0-9_]',

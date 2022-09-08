@@ -1,14 +1,14 @@
 import re
 
-from ..accessory import register_special_property
-from ..h5file import H5File
+from . import register_standard_attribute
+from ...h5wrapper.h5file import H5File
 
 
 class TitleError(ValueError):
     """An error associated with the title property"""
 
 
-@register_special_property(H5File)
+@register_standard_attribute(H5File)
 class title:
     """Title attribute"""
 

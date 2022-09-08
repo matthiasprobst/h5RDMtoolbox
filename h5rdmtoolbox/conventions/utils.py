@@ -1,12 +1,22 @@
+import pathlib
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Tuple, Dict
+from typing import Dict, Union
+
+from pint_xarray import unit_registry as ureg
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
 
 EMAIL_REGREX = re.compile(r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"([]!#-[^-~ \t]|(\\[\t -~]))+\")@"
                           r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])")
+
+
+def equal_base_units(unit1, unit2):
+    """Return if two units are equivalent"""
+    base_unit1 = ureg(unit1).to_base_units().units.__format__(ureg.default_format)
+    base_unit2 = ureg(unit2).to_base_units().units.__format__(ureg.default_format)
+    return base_unit1 == base_unit2
 
 
 def is_valid_email_address(email: str) -> bool:
@@ -17,7 +27,7 @@ def is_valid_email_address(email: str) -> bool:
     return False
 
 
-def dict2xml(filename, name: str, dictionary: Dict, metadata: Dict) -> Path:
+def dict2xml(filename: Union[str, pathlib.Path], name: str, dictionary: Dict, **metadata) -> Path:
     """writes standard_names dictionary into a xml in style of cf-standard-name-table
 
     data must be a Tuple where first entry is the dictionary and the second one is metadata
@@ -55,6 +65,3 @@ def xml_to_html_table_view(xml_filename, html_filename=None):
 
     with open(html_filename, 'w') as f:
         f.writelines(lines)
-
-
-

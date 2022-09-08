@@ -7,29 +7,25 @@ The standrd name definitions (name, description, units) are to be provided in XM
 are provided by this sub-packages (fluid and piv). As the projec is under development, they are generated
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
+import logging
 
 from . import data
-from ._logger import logger
-from .custom import PIVStandardNameTable, FluidStandardNameTable
-from .identifier import StandardizedNameTable, StandardizedNameError, StandardizedName, Empty_Standard_Name_Table
-from .layout import H5Layout
 from . import layout
-from .longname import LongName
+from ._logger import logger
+# from .custom import PIVStandardNameTable, FluidStandardNameTable
+from .layout import H5Layout
+
 from .utils import dict2xml, is_valid_email_address
 
 
-def set_loglevel(level):
+def set_loglevel(level) -> logging.Logger:
     """setting the log level of the sub-package conventions"""
     if isinstance(level, str):
         logger.setLevel(level.upper())
     else:
         logger.setLevel(level)
-
+    return logger
 
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['H5Layout', 'datetime_str', 'set_loglevel',
-           'StandardizedNameTable', 'StandardizedNameError', 'StandardizedName',
-           'Empty_Standard_Name_Table', 'LongName',
-           'FluidStandardNameTable',
-           'PIVStandardNameTable']
+__all__ = ['H5Layout', 'datetime_str', 'set_loglevel']

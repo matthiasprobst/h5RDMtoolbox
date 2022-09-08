@@ -7,7 +7,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Tuple
 from typing import Protocol, Any, Union, Dict, List
-from .accessors.accessor_software import Software
 
 import numpy as np
 from pint_xarray import unit_registry as ureg
@@ -17,7 +16,8 @@ from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config
 from .._user import user_dirs
 from ..conventions import layout as layoutconvention
-from ..conventions.custom import PIVStandardNameTable
+# from ..conventions.custom import PIVStandardNameTable
+from ..conventions.standard_attributes.stdattr_software import Software
 
 logger = logging.getLogger(__package__)
 
@@ -367,7 +367,6 @@ class PIVviewParameters:
             else:
                 return PIVCorrelationMode(self.processing.get('View0_PIV_Eval_CorrelationMode'.lower()) + 1)
         return default
-
 
 
 class PIVParameters:
@@ -747,7 +746,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
 
         """
         if standard_name_table is None:
-            standard_name_table = PIVStandardNameTable
+            standard_name_table = 'piv-v1'
         super(H5PIV, self).__init__(name=name, mode=mode, title=title,
                                     standard_name_table=standard_name_table,
                                     layout_filename=layout_filename,

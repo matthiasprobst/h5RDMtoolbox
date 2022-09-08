@@ -10,6 +10,7 @@ from h5rdmtoolbox.h5wrapper.h5file import H5Group
 from h5rdmtoolbox.h5wrapper.h5file import WrapperAttributeManager
 from h5rdmtoolbox.h5wrapper.h5flow import H5FlowGroup
 from h5rdmtoolbox.h5wrapper.h5piv import H5PIVGroup
+from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardName
 
 
 class TestCommon(unittest.TestCase):
@@ -62,8 +63,8 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.attrs['an_attr'], 'a_string')
                 h5.attrs['mean'] = 1.2
                 self.assertEqual(h5.attrs['mean'], 1.2)
-                with self.assertRaises(AttributeError):
-                    h5.attrs['standard_name'] = 'a_string'
+                # with self.assertRaises(AttributeError):
+                #     h5.attrs['standard_name'] = 'a_string'
                 with self.assertRaises(ValueError):
                     h5.attrs['long_name'] = '1alongname'
                 with self.assertRaises(ValueError):
@@ -119,7 +120,7 @@ class TestCommon(unittest.TestCase):
 
                 # self.assertEqual(ds.standard_name, h5tbx.conventions.Empty_Standard_Name_Table)
                 ds.standard_name = 'x_velocity'
-                self.assertIsInstance(ds.standard_name, h5tbx.conventions.StandardizedName)
+                self.assertIsInstance(ds.standard_name, StandardName)
                 self.assertIsInstance(ds.attrs['standard_name'], str)
                 self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
@@ -194,7 +195,7 @@ class TestCommon(unittest.TestCase):
 
     def test_create_dataset(self):
         from h5rdmtoolbox.errors import UnitsError
-        from h5rdmtoolbox.conventions import Empty_Standard_Name_Table
+        from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import Empty_Standard_Name_Table
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc(standard_name_table=Empty_Standard_Name_Table) as h5:
                 self.assertEqual(h5.standard_name_table.name, Empty_Standard_Name_Table.name)

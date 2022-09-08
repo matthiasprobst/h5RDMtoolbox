@@ -1,0 +1,242 @@
+interpolation: false
+apply_mask: true
+masking: slack
+time_unit: s
+z_source: coord_min
+datetime_str: '%Y-%m-%dT%H:%M:%SZ%z'
+attrs_unit_name: units
+compression: gzip
+compression_opts: 5
+take_min_nt: true
+standardized_name_table: !!python/object:h5rdmtoolbox.conventions.identifier.StandardizedNameTable
+  _name: piv
+  _version_number: '1'
+  _valid_characters: ''
+  _pattern: ''
+  _institution: Karlsruhe Institute of Technology
+  _contact: matthias.probst@kit.edu
+  _xml_filename: null
+  _last_modified: 2022-08-12_21:37:46
+  _dict:
+    time:
+      canonical_units: s
+      description: physical time
+    x_velocity:
+      canonical_units: m/s
+      description: velocity is a vector quantity. x indicates the component in x-axis
+        direction
+    y_velocity:
+      canonical_units: m/s
+      description: velocity is a vector quantity. y indicates the component in y-axis
+        direction
+    z_velocity:
+      canonical_units: m/s
+      description: velocity is a vector quantity. z indicates the component in z-axis
+        direction
+    z_vorticity:
+      canonical_units: 1/s
+      description: vorticity is a vector quantity. z indicates the component in z-axis
+        direction
+    magnitude_of_velocity:
+      canonical_units: m/s
+      description: Magnitude of the vector quantity velocity.
+    x_derivative_of_x_velocity:
+      canonical_units: 1/s
+      description: Derivative of x velocity in x axis direction.
+    y_derivative_of_x_velocity:
+      canonical_units: 1/s
+      description: Derivative of x velocity in y axis direction.
+    z_derivative_of_x_velocity:
+      canonical_units: 1/s
+      description: Derivative of x velocity in z axis direction.
+    x_derivative_of_y_velocity:
+      canonical_units: 1/s
+      description: Derivative of y velocity in x axis direction.
+    y_derivative_of_y_velocity:
+      canonical_units: 1/s
+      description: Derivative of y velocity in y axis direction.
+    z_derivative_of_y_velocity:
+      canonical_units: 1/s
+      description: Derivative of y velocity in z axis direction.
+    x_derivative_of_z_velocity:
+      canonical_units: 1/s
+      description: Derivative of z velocity in x axis direction.
+    y_derivative_of_z_velocity:
+      canonical_units: 1/s
+      description: Derivative of z velocity in y axis direction.
+    z_derivative_of_z_velocity:
+      canonical_units: 1/s
+      description: Derivative of z velocity in z axis direction.
+    q_criterion:
+      canonical_units: 1/s**2
+      description: Three dimensional Q-Criterion
+    q_criterion_z:
+      canonical_units: 1/s**2
+      description: Two dimensional Q-Criterion in z plane.
+    x_coordinate:
+      canonical_units: m
+      description: null
+    y_coordinate:
+      canonical_units: m
+      description: null
+    z_coordinate:
+      canonical_units: m
+      description: null
+    xx_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    xy_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    xz_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    yx_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    yy_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    yz_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    zx_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    zy_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    zz_reynolds_stress:
+      canonical_units: m**2/s**2
+      description: null
+    pressure:
+      canonical_units: Pa
+      description: null
+    turbulent_kinetic_energy:
+      canonical_units: m**2/s**2
+      description: null
+    static_pressure:
+      canonical_units: Pa
+      description: null
+    static_pressure_difference:
+      canonical_units: Pa
+      description: null
+    dynamic_pressure:
+      canonical_units: Pa
+      description: null
+    dynamic_pressure_difference:
+      canonical_units: Pa
+      description: null
+    total_pressure:
+      canonical_units: Pa
+      description: null
+    total_pressure_difference:
+      canonical_units: Pa
+      description: null
+    absolute_pressure:
+      canonical_units: Pa
+      description: null
+    absolute_pressure_difference:
+      canonical_units: Pa
+      description: null
+    sound_pressure:
+      canonical_units: Pa
+      description: null
+    temperature:
+      canonical_units: K
+      description: null
+    ambient_temperature:
+      canonical_units: K
+      description: null
+    x_pixel_coordinate:
+      canonical_units: pixel
+      description: null
+    y_pixel_coordinate:
+      canonical_units: pixel
+      description: null
+    x_displacement_of_peak1:
+      canonical_units: null
+      description: null
+    x_displacement_of_peak2:
+      canonical_units: null
+      description: null
+    x_displacement_of_peak3:
+      canonical_units: null
+      description: null
+    y_displacement_of_peak1:
+      canonical_units: null
+      description: null
+    y_displacement_of_peak2:
+      canonical_units: null
+      description: null
+    y_displacement_of_peak3:
+      canonical_units: null
+      description: null
+  _translation_dict:
+    pivview:
+      time: time
+      u: x_velocity
+      v: y_velocity
+      w: z_velocity
+      x: x_coordinate
+      y: y_coordinate
+      ix: x_pixel_coordinate
+      iy: y_pixel_coordinate
+      z: z_coordinate
+      velmag: magnitude_of_velocity
+      dx: x_displacement
+      piv_peak1_dx: x_displacement_of_peak1
+      piv_peak2_dx: x_displacement_of_peak2
+      piv_peak3_dx: x_displacement_of_peak3
+      dy: y_displacement
+      piv_peak1_dy: y_displacement_of_peak1
+      piv_peak2_dy: y_displacement_of_peak2
+      piv_peak3_dy: y_displacement_of_peak3
+      dz: z_displacement
+      piv_snr_data: signal_to_noise
+      piv_flags: piv_flag
+      valid: validation_flag
+      piv_peak1_corr: piv_correlation_value
+      piv_peak2_corr: piv_correlation_value
+      piv_peak3_corr: piv_correlation_value
+      piv_correlation_coeff: piv_correlation_coefficient
+      piv_3c_residuals: least_square_residual_of_z_displacement_reconstruction
+      tke: turbulent_kinetic_energy
+      dudx: x_derivative_of_x_velocity
+      dudy: y_derivative_of_x_velocity
+      dudz: z_derivative_of_x_velocity
+      dvdx: x_derivative_of_y_velocity
+      dvdy: y_derivative_of_y_velocity
+      dvdz: z_derivative_of_y_velocity
+      dwdx: x_derivative_of_z_velocity
+      dwdy: y_derivative_of_z_velocity
+      dwdz: x_derivative_of_z_velocity
+      uu: xx_reynolds_stress
+      uv: xy_reynolds_stress
+      uw: xz_reynolds_stress
+      vv: yy_reynolds_stress
+      vw: yz_reynolds_stress
+      ww: zz_reynolds_stress
+timeAverages:
+  compute: false
+  use_nc: false
+post:
+  compute: false
+  grpname: post
+  grpdesc: Post processing data
+  running_mean:
+    compute: false
+    grpname: running_mean
+    grpdesc: Running mean
+    dataset_names:
+    - u
+    - v
+  running_std:
+    compute: false
+    grpname: running_std
+    grpdesc: Running standard deviation
+    dataset_names:
+    - u
+    - v
+  velocity_abs_ds_name: c
+  compute_dwdz: false

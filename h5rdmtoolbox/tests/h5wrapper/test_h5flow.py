@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import xarray as xr
 
-from h5rdmtoolbox.conventions import StandardizedNameTable, StandardizedNameError
+from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
+from h5rdmtoolbox.errors import StandardizedNameError
 from h5rdmtoolbox.h5wrapper import H5Flow
 from h5rdmtoolbox.h5wrapper.accessory import SpecialDataset
 from h5rdmtoolbox.h5wrapper.h5flow import Device
@@ -40,7 +41,7 @@ class TestH5Flow(unittest.TestCase):
 
     def test_convention(self):
         with H5Flow() as h5:
-            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
+            self.assertIsInstance(h5.standard_name_table, StandardNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)
             self.assertEqual(h5.standard_name_table.name, 'fluid')
             self.assertEqual(h5.standard_name_table.versionname, 'fluid-v1')
