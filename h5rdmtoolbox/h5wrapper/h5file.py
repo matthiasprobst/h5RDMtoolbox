@@ -29,8 +29,6 @@ from .._repr import h5file_html_repr
 from .._user import user_dirs
 from .._version import __version__
 from ..conventions.standard_attributes import STANDARD_ATTRIBUTE_NAMES
-from ..errors import StandardNameTableVersionError
-from ..package_attr_names import STD_NAME_TABLE_ATTR_NAME, NAME_IDENTIFIER_ATTR_NAME
 # noinspection PyUnresolvedReferences
 from ..x2hdf import xr2hdf
 
@@ -180,22 +178,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
             return
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
-        # if name == NAME_IDENTIFIER_ATTR_NAME:
-        #     if value is None:
-        #         raise ValueError(f'{NAME_IDENTIFIER_ATTR_NAME} cannot be None')
-        #     if not isinstance(self._parent, h5py.Dataset):
-        #         raise AttributeError(f'Attribute name {name} is reserverd '
-        #                              'for dataset only.')
-        #     # check for standardized data-name identifiers
-        #     snt = self._parent.standard_name_table
-        #     if snt.check_name(value, strict=conventions.identifier.STRICT):
-        #         if value in snt._dict and conventions.identifier.STRICT:
-        #             # check units only if strict==True because it needs to be in the standard name table
-        #             units = self.get('units', None)
-        #             if units:
-        #                 snt.check_units(value, units)
-        #         self.create(NAME_IDENTIFIER_ATTR_NAME, data=value)
-        #     return
 
         if name in STANDARD_ATTRIBUTE_NAMES:
             if hasattr(self._parent, name):
@@ -365,20 +347,6 @@ class H5Dataset(h5py.Dataset):
             Helper class mimicing the h5py behaviour of returning a numpy array.
         """
         return DatasetValues(self)
-
-    # @property
-    # def standard_name_table(self):
-    #     """Return the standard name convention associated with the file instance"""
-    #     try:
-    #         return _SNT_CACHE[self.file.id.id]
-    #     except KeyError:
-    #         return conventions.Empty_Standard_Name_Table
-    #
-    # @standard_name_table.setter
-    # def standard_name_table(self, convention: conventions.StandardNameTable):
-    #     """Return the standard name convention associated with the file instance"""
-    #     self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
-    #     _SNT_CACHE[self.id.id] = convention
 
     def __getattr__(self, item):
         if item not in self.__dict__:
@@ -642,20 +610,6 @@ class H5Group(h5py.Group):
         except KeyError:
             warnings.warn(f'Data source type is unknown to meta convention: "{ds_value}"')
             return conventions.data.DataSourceType.unknown
-
-    # @property
-    # def standard_name_table(self) -> conventions.StandardNameTable:
-    #     """Return the standar name convention associated with the file instance"""
-    #     try:
-    #         return _SNT_CACHE[self.file.id.id]
-    #     except KeyError:
-    #         return conventions.Empty_Standard_Name_Table
-    #
-    # @standard_name_table.setter
-    # def standard_name_table(self, convention: conventions.StandardNameTable):
-    #     """sets the standard name convention as attribute and in 'SNT_CACHE'"""
-    #     self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, convention.versionname)
-    #     _SNT_CACHE[self.id.id] = convention
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
@@ -1799,12 +1753,10 @@ class H5File(h5py.File, H5Group):
 
         if standard_name_table is not None:
             if isinstance(standard_name_table, str):
-                from ..conventions.standard_attributes.stdatt_standard_name import StandardNameTable
+                from ..conventions.standard_attributes.standard_name import StandardNameTable
                 standard_name_table = StandardNameTable.load_registered(standard_name_table)
             if self.standard_name_table != standard_name_table:
                 self.standard_name_table = standard_name_table
-
-        # _SNT_CACHE[self.file.id.id] = self.standard_name_table
 
         self._layout = conventions.layout.H5Layout.load_registered(layout_filename)
         self._layout.check(self, silent=True, recursive=True)
@@ -1921,5 +1873,4 @@ H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
 
 # noinspection PyUnresolvedReferences
-from ..conventions.standard_attributes import (stdattr_long_name, stdatt_standard_name,
-                                               stdattr_units, sattr_title, stdattr_software)
+from ..conventions.standard_attributes import standard_name, units, title, software, long_name

@@ -3,7 +3,7 @@ This is work in progress and as long as there is no official version provided by
 this repository uses this convention
 """
 
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
 from h5rdmtoolbox.conventions.translations import pivview_to_standardnames_dict
 
 FluidStandardNameTable = StandardNameTable('fluid',

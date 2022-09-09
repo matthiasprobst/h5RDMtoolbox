@@ -7,9 +7,9 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import errors
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
-from h5rdmtoolbox.conventions.standard_attributes import stdattr_software
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import merge
+from h5rdmtoolbox.conventions.standard_attributes import software
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge
 
 
 class TestOptAccessors(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestOptAccessors(unittest.TestCase):
     def test_software(self):
         meta = metadata('numpy')
 
-        s = stdattr_software.Software(meta['Name'], version=meta['Version'], url=meta['Home-page'],
+        s = software.Software(meta['Name'], version=meta['Version'], url=meta['Home-page'],
                                       description=meta['Summary'])
 
         with h5tbx.H5File() as h5:
@@ -76,7 +76,7 @@ class TestOptAccessors(unittest.TestCase):
                 h5.user
 
         # noinspection PyUnresolvedReferences
-        from h5rdmtoolbox.conventions.standard_attributes import stdattr_user
+        from h5rdmtoolbox.conventions.standard_attributes import user
         with h5tbx.H5File() as h5:
             with self.assertRaises(errors.OrcidError):
                 h5.user = '11308429'

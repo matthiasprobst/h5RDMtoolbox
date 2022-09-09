@@ -6,7 +6,12 @@ class UnitsError(Exception):
     pass
 
 
-class StandardizedNameError(Exception):
+class StandardNameError(Exception):
+    """Exception class for error associated with standard name usage"""
+    pass
+
+
+class StandardNameTableError(Exception):
     """Exception class for error associated with standard name usage"""
     pass
 

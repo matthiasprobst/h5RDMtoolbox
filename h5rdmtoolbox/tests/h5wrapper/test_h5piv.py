@@ -7,7 +7,7 @@ import xarray as xr
 import h5rdmtoolbox as h5tbx
 import h5rdmtoolbox.tutorial
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
 from h5rdmtoolbox.h5wrapper import H5PIV
 from h5rdmtoolbox.h5wrapper import h5piv
 from h5rdmtoolbox.h5wrapper.h5piv import PIVParameters, PIVMethod

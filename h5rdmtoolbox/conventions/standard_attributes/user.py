@@ -1,8 +1,8 @@
 import re
 from typing import Union, List
 
-from ...errors import OrcidError
 from . import register_standard_attribute
+from ...errors import OrcidError
 from ...h5wrapper.h5file import H5Group, H5Dataset
 
 ORCID_PATTERN: str = '^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$'
@@ -13,9 +13,9 @@ def is_invalid_orcid_pattern(orcid_str: str) -> bool:
     return re.match(ORCID_PATTERN, orcid_str) is None
 
 
-@register_standard_attribute(H5Group)
-@register_standard_attribute(H5Dataset)
-class user:
+@register_standard_attribute(H5Group, name='user')
+@register_standard_attribute(H5Dataset, name='user')
+class UserAttribute:
     """User can be one or multiple persons in charge or related to the
     file, group or dataset"""
 

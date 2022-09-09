@@ -20,9 +20,9 @@ class LongName(str):
         return str.__new__(cls, value)
 
 
-@register_standard_attribute(H5Group)
-@register_standard_attribute(H5Dataset)
-class long_name:
+@register_standard_attribute(H5Group, name='long_name')
+@register_standard_attribute(H5Dataset, name='long_name')
+class LongNameAttribute:
     """Long name attribute"""
 
     def set(self, value):

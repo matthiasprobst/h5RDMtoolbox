@@ -2,8 +2,8 @@ import unittest
 
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import merge
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge
 
 
 class TestStandardNameTable(unittest.TestCase):

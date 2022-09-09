@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 
 from .utils import is_time
-from ...conventions.standard_attributes.stdatt_standard_name import StandardNameTable
+from ...conventions.standard_attributes.standard_name import StandardNameTable
 
 try:
     from scipy.interpolate import LinearNDInterpolator

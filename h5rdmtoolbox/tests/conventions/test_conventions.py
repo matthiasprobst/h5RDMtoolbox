@@ -5,11 +5,11 @@ from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions import translations
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import verify_unit_object, StandardNameTable, \
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import verify_unit_object, StandardNameTable, \
     Empty_Standard_Name_Table
 from h5rdmtoolbox.conventions.translations import pivview_to_standardnames_dict
-from h5rdmtoolbox.errors import EmailError
-from h5rdmtoolbox.errors import StandardizedNameError
+from h5rdmtoolbox.errors import EmailError, StandardNameTableError
+from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.h5wrapper import H5PIV
 
 
@@ -78,16 +78,17 @@ class TestConventions(unittest.TestCase):
         with h5tbx.H5File(standard_name_table=pivsnt) as h5:
             pass
 
-        with h5tbx.H5File(h5.hdf_filename, standard_name_table=empty):
-            pass
+        with self.assertRaises(StandardNameTableError):
+            with h5tbx.H5File(h5.hdf_filename, standard_name_table=empty):
+                pass
 
         with h5tbx.H5File(h5.hdf_filename) as h5:
             self.assertEqual(h5.standard_name_table, pivsnt)
 
         self.assertEqual(pivsnt.name, str(pivsnt))
-        with self.assertRaises(StandardizedNameError):
+        with self.assertRaises(StandardNameError):
             self.assertTrue(pivsnt.check_name('hallo'))
-        with self.assertRaises(StandardizedNameError):
+        with self.assertRaises(StandardNameError):
             pivsnt.check_name(' 213 ')
 
     def test_identifier(self):

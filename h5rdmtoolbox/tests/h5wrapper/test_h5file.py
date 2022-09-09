@@ -13,8 +13,8 @@ from h5rdmtoolbox import __version__
 from h5rdmtoolbox import config
 from h5rdmtoolbox import h5wrapper
 from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
-from h5rdmtoolbox.errors import StandardizedNameError
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.h5wrapper import H5File, set_loglevel
 from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
@@ -246,7 +246,7 @@ class TestH5File(unittest.TestCase):
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
+            from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
             convention = StandardNameTable(name='empty',
                                            table_dict={'x_velocity': {'description': '',
                                                                       'units': 'm/s'}},
@@ -256,15 +256,15 @@ class TestH5File(unittest.TestCase):
             h5.standard_name_table = convention
             self.assertIsInstance(h5.standard_name_table, StandardNameTable)
             ds = h5.create_dataset('ds', shape=(), long_name='x_velocity', units='m/s')
-            with self.assertRaises(StandardizedNameError):
+            with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = ' x_velocity'
-            from h5rdmtoolbox.conventions.standard_attributes import stdatt_standard_name
-            stdatt_standard_name.STRICT = False
+            from h5rdmtoolbox.conventions.standard_attributes import standard_name
+            standard_name.STRICT = False
             ds.attrs['standard_name'] = 'x_velocityyy'
-            with self.assertRaises(StandardizedNameError):
+            with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = '!x_velocityyy'
-            stdatt_standard_name.STRICT = True
-            with self.assertRaises(StandardizedNameError):
+            standard_name.STRICT = True
+            with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
@@ -384,8 +384,8 @@ class TestH5File(unittest.TestCase):
             grp.create_dataset('grpds', shape=(2, 40, 3), units='', long_name='long name',
                                standard_name='a_standard_name')
             tree = h5.get_tree_structure()
-            from pprint import pprint
-            pprint(tree)
+            # from pprint import pprint
+            # pprint(tree)
 
 
 class TestH5Dataset(unittest.TestCase):
@@ -596,9 +596,9 @@ class TestH5Group(unittest.TestCase):
         with H5File(mode='w', standard_name_table=sc) as h5:
             with self.assertRaises(RuntimeError):
                 ds = h5.create_dataset('ds', shape=(2, 3), units='')
-            with self.assertRaises(StandardizedNameError):
+            with self.assertRaises(StandardNameError):
                 ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity', units='')
-            with self.assertRaises(StandardizedNameError):
+            with self.assertRaises(StandardNameError):
                 ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity_wrong', units='')
             ds = h5.create_dataset('vel', shape=(2, 3), standard_name='x_velocity', units='m/s')
             self.assertEqual(ds.units, 'm/s')

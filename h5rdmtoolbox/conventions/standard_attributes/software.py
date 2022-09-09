@@ -31,8 +31,8 @@ class Software:
                     url=self.url, description=self.description)
 
 
-@register_standard_attribute(H5Group)
-class software:
+@register_standard_attribute(H5Group, name='software')
+class SoftwareAttribute:
     """property attach to a H5Group"""
 
     def set(self, sftw: Union[Software, Dict]):

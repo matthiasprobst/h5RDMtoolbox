@@ -8,8 +8,9 @@ import h5py
 import numpy as np
 
 from ._config import DEFAULT_CONFIGURATION
-from ...conventions.standard_attributes.stdatt_standard_name import StandardNameTable
+from ...conventions.standard_attributes.standard_name import StandardNameTable
 from ...utils import generate_temporary_filename
+from ... import config as h5tbxconfig
 
 PIV_PARAMETER_GRP_NAME = 'piv_parameters'
 
@@ -553,4 +554,8 @@ class PIVMultiPlane(PIVConverter):
         plane_hdf_files = [plane.to_hdf(generate_temporary_filename(suffix='_plane.hdf'), config) for plane
                            in self.list_of_piv_folder]
         hdf_filename = self.merge_planes(plane_hdf_files, hdf_filename, rtol, atol, fill_time_vec_differences)
+
+        # specify the standard name table to be used:
+        with h5py.File(hdf_filename, 'r+') as h5:
+            h5.attrs[h5tbxconfig.standard_name_table_attribute_name] = 'piv-v1'
         return hdf_filename

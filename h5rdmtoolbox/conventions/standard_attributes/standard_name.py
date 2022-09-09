@@ -31,10 +31,10 @@ from tabulate import tabulate
 from . import register_standard_attribute
 from ..utils import equal_base_units
 from ..utils import is_valid_email_address, dict2xml
+from ... import config
 from ..._user import user_dirs
-from ...errors import StandardizedNameError, EmailError
+from ...errors import StandardNameError, EmailError, StandardNameTableError
 from ...h5wrapper.h5file import H5Dataset, H5Group
-from ...package_attr_names import STD_NAME_TABLE_ATTR_NAME
 
 STRICT = True
 
@@ -88,14 +88,14 @@ def _units_power_fix(_str: str):
     return _str
 
 
-@register_standard_attribute(H5Group)
-class standard_name:
+@register_standard_attribute(H5Group, name='standard_name')
+class StandardNameGroupAttribute:
     def set(self, new_standard_name):
         raise RuntimeError('A standard name attribute is used for datasets only')
 
 
-@register_standard_attribute(H5Dataset)
-class standard_name:
+@register_standard_attribute(H5Dataset, name='standard_name')
+class StandardNameDatasetAttribute:
     """Standard Name attribute"""
 
     def set(self, new_standard_name):
@@ -285,8 +285,8 @@ class StandardNameTable:
     def set(self, name: str, description: str, canonical_units: str):
         """Sets the value of a standardized name"""
         if name in self._dict:
-            raise StandardizedNameError(f'name "{name}" already exists in table. Use modify() '
-                                        f'to change the content')
+            raise StandardNameError(f'name "{name}" already exists in table. Use modify() '
+                                    f'to change the content')
         verify_unit_object(canonical_units)
         self._dict[name] = dict(description=description, canonical_units=canonical_units)
 
@@ -488,27 +488,27 @@ class StandardNameTable:
             strict = STRICT
 
         if not len(name) > 0:
-            raise StandardizedNameError(f'Name too short!')
+            raise StandardNameError(f'Name too short!')
 
         if name[0] == ' ':
-            raise StandardizedNameError(f'Name must not start with a space!')
+            raise StandardNameError(f'Name must not start with a space!')
 
         if name[-1] == ' ':
-            raise StandardizedNameError(f'Name must not end with a space!')
+            raise StandardNameError(f'Name must not end with a space!')
 
         if re.sub(self.valid_characters, '', name) != name:
-            raise StandardizedNameError(f'Invalid special characters in name "{name}": Only "{self.valid_characters}" '
-                                        'is allowed.')
+            raise StandardNameError(f'Invalid special characters in name "{name}": Only "{self.valid_characters}" '
+                                    'is allowed.')
 
         if self.pattern != '' and self.pattern is not None:
             if re.match(self.pattern, name):
-                raise StandardizedNameError(f'Name must not start with a number!')
+                raise StandardNameError(f'Name must not start with a number!')
 
         if strict:
             if self._dict:
                 if name not in self._dict:
-                    raise StandardizedNameError(f'Standardized name "{name}" not in '
-                                                'name table')
+                    raise StandardNameError(f'Standardized name "{name}" not in '
+                                            'name table')
         return True
 
     def check_units(self, name, units) -> bool:
@@ -516,8 +516,8 @@ class StandardNameTable:
         self.check_name(name, strict=True)  # will raise an error if name not in self._dict
         if name in self._dict:
             if not equal_base_units(_units_power_fix(self._dict[name]['canonical_units']), units):
-                raise StandardizedNameError(f'Unit of standard name "{name}" not as expected: '
-                                            f'"{units}" != "{self[name].canonical_units}"')
+                raise StandardNameError(f'Unit of standard name "{name}" not as expected: '
+                                        f'"{units}" != "{self[name].canonical_units}"')
         return True
 
     def check_file(self, filename, recursive: bool = True, raise_error: bool = True):
@@ -534,9 +534,9 @@ class StandardNameTable:
                     units = node.attrs['units']
                     try:
                         self.check_units(node.attrs['standard_name'], units=units)
-                    except StandardizedNameError as e:
+                    except StandardNameError as e:
                         if raise_error:
-                            raise StandardizedNameError(e)
+                            raise StandardNameError(e)
                         else:
                             print(f' > ds: {node.name}: {e}')
 
@@ -637,28 +637,45 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               valid_characters='')
 
 
-@register_standard_attribute(H5Dataset)
-@register_standard_attribute(H5Group)
-class standard_name_table:
+@register_standard_attribute(H5Dataset, name='standard_name_table')
+@register_standard_attribute(H5Group, name='standard_name_table')
+class StandardNameTableAttribute:
     """Standard Name Table attribute"""
 
-    def set(self, snt):
+    def set(self, snt: Union[str, StandardNameTable]):
+        """Set (write to root group) Standard Name Table
+
+        Raises
+        ------
+        StandardNameTableError
+            If no write intent on file.
+
+        """
         if isinstance(snt, str):
             StandardNameTable.print_registered()
             snt = StandardNameTable.load_registered(snt)
-        if self.mode != 'r':
-            self.rootparent.attrs.modify(STD_NAME_TABLE_ATTR_NAME, snt.versionname)
+        if self.mode == 'r':
+            raise StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
+        self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.versionname)
         _SNT_CACHE[self.id.id] = snt
 
-    def get(self):
-        snt = self.rootparent.attrs.get(STD_NAME_TABLE_ATTR_NAME, None)
+    def get(self) -> StandardNameTable:
+        """Get (if exists) Standard Name Table from file
+
+        Raises
+        ------
+        KeyError
+            If cannot load SNT from registration.
+        """
+        snt = self.rootparent.attrs.get(config.standard_name_table_attribute_name, None)
         if snt is not None:
             try:
                 return _SNT_CACHE[self.file.id.id]
             except KeyError:
-                return StandardNameTable.load_registered(self.rootparent.attrs[STD_NAME_TABLE_ATTR_NAME])
+                return StandardNameTable.load_registered(
+                    self.rootparent.attrs[config.standard_name_table_attribute_name])
         return Empty_Standard_Name_Table
 
     def delete(self):
-        """Delete attribute"""
-        self.attrs.__delitem__(STD_NAME_TABLE_ATTR_NAME)
+        """Delete standard name table from root attributes"""
+        self.attrs.__delitem__(config.standard_name_table_attribute_name)

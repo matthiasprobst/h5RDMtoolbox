@@ -10,8 +10,8 @@ from ...h5wrapper.h5file import H5Dataset
 ureg.default_format = config.ureg_format
 
 
-@register_standard_attribute(H5Dataset)
-class units:
+@register_standard_attribute(H5Dataset, name='units')
+class UnitsAttribute:
     """Units attribute"""
 
     def set(self, new_units: Union[str, pint.Unit]):

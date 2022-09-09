@@ -8,8 +8,8 @@ class TitleError(ValueError):
     """An error associated with the title property"""
 
 
-@register_standard_attribute(H5File)
-class title:
+@register_standard_attribute(H5File, name='title')
+class TitleAttribute:
     """Title attribute"""
 
     def set(self, value):

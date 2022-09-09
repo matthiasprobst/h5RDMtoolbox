@@ -14,7 +14,7 @@ from . import layout
 from ._logger import logger
 # from .custom import PIVStandardNameTable, FluidStandardNameTable
 from .layout import H5Layout
-
+from .standard_attributes.standard_name import StandardNameTable, StandardName
 from .utils import dict2xml, is_valid_email_address
 
 

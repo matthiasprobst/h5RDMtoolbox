@@ -17,7 +17,7 @@ from .. import config
 from .._user import user_dirs
 from ..conventions import layout as layoutconvention
 # from ..conventions.custom import PIVStandardNameTable
-from ..conventions.standard_attributes.stdattr_software import Software
+from ..conventions.standard_attributes.software import Software
 
 logger = logging.getLogger(__package__)
 
@@ -745,7 +745,9 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         None
 
         """
-        if standard_name_table is None:
+        if standard_name_table is None and name is None:  # this leads to mode = 'r+'
+            standard_name_table = 'piv-v1'
+        elif standard_name_table is None and mode != 'r':
             standard_name_table = 'piv-v1'
         super(H5PIV, self).__init__(name=name, mode=mode, title=title,
                                     standard_name_table=standard_name_table,

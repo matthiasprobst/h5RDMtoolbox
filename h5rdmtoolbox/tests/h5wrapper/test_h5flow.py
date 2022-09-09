@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 import xarray as xr
 
-from h5rdmtoolbox.conventions.standard_attributes.stdatt_standard_name import StandardNameTable
-from h5rdmtoolbox.errors import StandardizedNameError
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.h5wrapper import H5Flow
 from h5rdmtoolbox.h5wrapper.accessory import SpecialDataset
 from h5rdmtoolbox.h5wrapper.h5flow import Device
@@ -17,7 +17,7 @@ class TestH5Flow(unittest.TestCase):
             ds = h5.create_dataset('ds', shape=(1,), units='m',
                                    standard_name='y_coordinate')
             ds.attrs['standard_name'] = 'x_coordinate'
-            with self.assertRaises(StandardizedNameError):
+            with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = 'x_velocity'
             ds.standard_name = 'x_coordinate'
             self.assertEqual(ds.attrs['standard_name'], 'x_coordinate')
@@ -90,7 +90,7 @@ class TestH5Flow(unittest.TestCase):
             # CGNS convention:
             # create dataset with cf convention:
             ds = h5.create_dataset('x', data=1, units='m', standard_name='x_coordinate')
-            with self.assertRaises(StandardizedNameError):
+            with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = 'CoordinateX'
             h5.check()
             del h5['x']
@@ -113,7 +113,7 @@ class TestH5Flow(unittest.TestCase):
             self.assertEqual(n_issuess, 3)
 
             # use [kg] for units. must be NOT accepted:
-            with self.assertRaises(StandardizedNameError):
+            with self.assertRaises(StandardNameError):
                 h5['x'].attrs['units'] = 'kg'
             # workaround:
             h5['x'].attrs.create('units', 'kg')

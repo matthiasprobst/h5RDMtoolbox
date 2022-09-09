@@ -287,8 +287,11 @@ class H5Flow(H5File, H5FlowGroup):
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
                  **kwds):
-        if standard_name_table is None:
+        if standard_name_table is None and name is None:  # this leads to mode = 'r+'
             standard_name_table = 'fluid-v1'
+        elif standard_name_table is None and mode != 'r':
+            standard_name_table = 'fluid-v1'
+        print('standard_name_table', standard_name_table, mode)
         super().__init__(name, mode, title, standard_name_table,
                          layout_filename,
                          driver, libver, userblock_size,
