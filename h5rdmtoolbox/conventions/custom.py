@@ -3,7 +3,7 @@ This is work in progress and as long as there is no official version provided by
 this repository uses this convention
 """
 
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable, StandardNameTableTranslation
 from h5rdmtoolbox.conventions.translations import pivview_to_standardnames_dict
 
 FluidStandardNameTable = StandardNameTable('fluid',
@@ -99,14 +99,17 @@ piv_name_table_dict.update({'x_pixel_coordinate': {'canonical_units': 'pixel', '
                             'y_displacement_of_peak3': {'canonical_units': '', 'description': None},
                             })
 
+
 PIVStandardNameTable = StandardNameTable(name='piv', table_dict=piv_name_table_dict,
                                          version_number=1, contact='matthias.probst@kit.edu',
                                          institution='Karlsruhe Institute of Technology',
                                          valid_characters='[^a-zA-Z0-9_]',
-                                         pattern='^[0-9 ].*',
-                                         translation_dict={'pivview': pivview_to_standardnames_dict})
+                                         pattern='^[0-9 ].*')
 
-FluidStandardNameTable.register()
-PIVStandardNameTable.register()
+snttrans_pivview = StandardNameTableTranslation(pivview_to_standardnames_dict, PIVStandardNameTable)
+snttrans_pivview.register()
+
+FluidStandardNameTable.register(overwrite=True)
+PIVStandardNameTable.register(overwrite=True)
 # standard_name_table_to_xml(FluidStandardNameTable)
 # standard_name_table_to_xml(PIVStandardNameTable)

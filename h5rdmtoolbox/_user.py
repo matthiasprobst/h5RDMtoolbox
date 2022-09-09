@@ -9,7 +9,9 @@ _dircounter = count()
 _user_root_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
 user_dirs = {'root': _user_root_dir,
              'layouts': _user_root_dir / 'layouts',
-             'standard_names': _user_root_dir / 'standard_names'}
+             'standard_name_tables': _user_root_dir / 'standard_name_tables',
+             'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
+             }
 
 for _user_dir in user_dirs.values():
     _user_dir.mkdir(parents=True, exist_ok=True)

@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 
 from .utils import is_time
-from ...conventions.standard_attributes.standard_name import StandardNameTable
+from ...conventions.standard_attributes.standard_name import StandardNameTable,StandardNameTableTranslation
 
 try:
     from scipy.interpolate import LinearNDInterpolator
@@ -374,10 +374,10 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
             snt = StandardNameTable.from_versionname(standardized_name_table)
         else:
             snt = standardized_name_table
-        if snt.has_translation_dictionary:
-            for k, v in variable_attributes.items():
-                sn = snt.translate(k, 'pivview')
-                if sn:
-                    v['standard_name'] = sn
+        translation_snt = StandardNameTableTranslation.load_registered(snt.versionname)
+        for k, v in variable_attributes.items():
+            sn = translation_snt.translate(k)
+            if sn:
+                v['standard_name'] = sn
 
     return piv_data_array_dict, root_attributes, variable_attributes

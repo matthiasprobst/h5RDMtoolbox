@@ -11,7 +11,7 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
-
+import pathlib
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -160,8 +160,7 @@ class StandardNameTable:
     def __init__(self, name: str, table_dict: Union[Dict, None], version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '', pattern: str = '',
-                 translation_dict: dict = None):
+                 valid_characters: str = '', pattern: str = ''):
         self._name = name
         self._version_number = version_number
         self._valid_characters = valid_characters
@@ -184,17 +183,6 @@ class StandardNameTable:
         if not self.has_valid_structure():
             raise KeyError(f'Invalid dictionary structure. Each entry must contain "description" and '
                            '"canonical units"')
-
-        if translation_dict:
-            for k, v in translation_dict.items():
-                if not isinstance(v, dict):
-                    raise ValueError(f'Unexpected translation dictionary structure')
-                for kk, vv in v.items():
-                    if not isinstance(vv, str):
-                        raise ValueError(f'Unexpected translation dictionary structure')
-        else:
-            translation_dict = dict()
-        self._translation_dict = translation_dict
 
     @property
     def names(self):
@@ -231,11 +219,6 @@ class StandardNameTable:
     @property
     def version_number(self):
         return self._version_number
-
-    @property
-    def has_translation_dictionary(self):
-        """Return whether the table is associated with a translation dict"""
-        return len(self._translation_dict) > 0
 
     @contact.setter
     def contact(self, contact):
@@ -401,29 +384,7 @@ class StandardNameTable:
         vn_split = version_name.rsplit('-v', 1)
         if len(vn_split) != 2:
             raise ValueError(f'Unexpected version name: {version_name}. Expecting syntax NAME-v999')
-        # xml_filename = Path(__file__).parent / 'snxml' / f'{version_name}.xml'
-        # if not xml_filename.exists():
-        #     raise FileExistsError(f'Cannot find convention filename "{xml_filename}')
-        # meta = meta_from_xml(xml_filename)
-        # meta.update({'version_number': int(version_name.split('-v')[1])})
-        # translation_xml = xml_filename.parent / 'translation' / xml_filename.name
-        # if translation_xml.exists():
-        #     translation_dict = xmlconvention2dict(translation_xml)[0]
-        #     meta.update(dict(translation_dict=translation_dict))
         return StandardNameTable.load_registered(version_name)
-
-    # @staticmethod
-    # def from_name_and_version(name: str, version_number: int):
-    #     """reads the table from an xml file stored in this package"""
-    #     xml_filename = Path(__file__).parent / 'snxml' / f'{name}-v{version_number}.xml'
-    #     if not xml_filename.exists():
-    #         raise FileExistsError(f'Cannot find convention filename "{xml_filename}')
-    #     meta = meta_from_xml(xml_filename)
-    #     translation_xml = xml_filename.parent / 'translation' / xml_filename.name
-    #     if translation_xml.exists():
-    #         translation_dict = xmlconvention2dict(translation_xml)[0]
-    #         meta.update(dict(translation_dict=translation_dict))
-    #     return StandardNameTable(**meta)
 
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:
         """Save the convention in a XML file"""
@@ -439,13 +400,6 @@ class StandardNameTable:
         if not xml_translation_filename.parent.exists():
             xml_translation_filename.parent.mkdir(parents=True)
 
-        dict2xml(filename=xml_translation_filename,
-                 name='tanslation',
-                 dictionary=self._translation_dict,
-                 version_number=self.version_number,
-                 contact=self.contact,
-                 institution=self.institution,
-                 last_modified=last_modified)
         return dict2xml(filename=xml_filename,
                         name=self.name,
                         dictionary=self._dict,
@@ -475,7 +429,6 @@ class StandardNameTable:
             yaml.dump({'pattern': self.pattern}, f)
             yaml.dump({'last_modified': last_modified}, f)
             yaml.dump({'table_dict': self._dict}, f)
-            yaml.dump({'translation_dict': self._translation_dict}, f)
         return yml_filename
 
     def check_name(self, name, strict: bool = None) -> bool:
@@ -542,30 +495,9 @@ class StandardNameTable:
 
         h5grp.visititems(_check_ds)
 
-    def translate(self, name: str, source: str) -> Union[str, None]:
-        """If convention/xml file comes with translation entries, this method converts
-        the input name into the convention's standardized name
-
-        Parameters
-        ----------
-        name: str
-            Name to be translated
-        source:
-            (sub) dictionary entry to use for translation. Per Standard Name Table
-            there can be multiple translation dictionaries e.g. for different software.
-        """
-        if self._translation_dict:
-            if source in self._translation_dict:
-                if name in self._translation_dict[source]:
-                    return self._translation_dict[source][name]
-                return None
-            else:
-                AttributeError(f'No such translation dictionary: {source}')
-        raise ValueError(f'Translation dictionary is empty!')
-
     def register(self, overwrite: bool = False) -> None:
         """Register the standard name table under its versionname."""
-        trg = user_dirs['standard_names'] / f'{self.versionname}.yml'
+        trg = user_dirs['standard_name_tables'] / f'{self.versionname}.yml'
         if trg.exists() and not overwrite:
             raise FileExistsError(f'Standard name table {self.versionname} already exists!')
         self.to_yaml(trg)
@@ -574,7 +506,7 @@ class StandardNameTable:
     def load_registered(name: str) -> 'StandardNameTable':
         """Load from user data dir"""
         # search for names:
-        candidates = list(user_dirs['standard_names'].glob(f'{name}.yml'))
+        candidates = list(user_dirs['standard_name_tables'].glob(f'{name}.yml'))
         if len(candidates) == 1:
             return StandardNameTable.from_yml(candidates[0])
         list_of_reg_names = [snt.versionname for snt in StandardNameTable.get_registered()]
@@ -584,7 +516,7 @@ class StandardNameTable:
     @staticmethod
     def get_registered() -> List["StandardNameTable"]:
         """Return sorted list of standard names files"""
-        return [StandardNameTable.from_yaml(f) for f in sorted(user_dirs['standard_names'].glob('*'))]
+        return [StandardNameTable.from_yaml(f) for f in sorted(user_dirs['standard_name_tables'].glob('*'))]
 
     @staticmethod
     def print_registered() -> None:
@@ -598,21 +530,69 @@ class StandardNameTableTranslation:
     translation dictionary"""
     raise_error: bool = False
 
-    def __init__(self, translation: Union[str, Path, Dict]):
-        if isinstance(translation, Dict):
-            self.translation = translation
-        else:
-            self.translation = read_yaml(translation)
+    def __init__(self, translation_dict: Dict, snt: StandardNameTable):
+        self.translation_dict = translation_dict
+        self.snt = snt
 
-    def translate(self, name: str, snt_versionname: str) -> Union[str, None]:
-        """Translate name into a standard"""
-        if name in self.translation[snt_versionname]:
-            return self.translation[snt_versionname][name]
-        else:
-            if self.raise_error:
-                raise KeyError(f'{name} not in translation dictionary')
-            else:
-                return None
+    @property
+    def name(self) -> str:
+        """Equal to name of snt"""
+        return self.snt.name
+
+    @property
+    def versionname(self) -> str:
+        """Equal to versionname of snt"""
+        return self.snt.versionname
+
+    @staticmethod
+    def from_yaml(yaml_filename: pathlib.Path) -> "StandardNameTableTranslation":
+        """Init Translation from  yaml file"""
+        return StandardNameTableTranslation(**read_yaml(yaml_filename))
+
+    def to_yaml(self, yaml_filename: pathlib.Path, parents: bool = True,
+                overwrite: bool = False) -> pathlib.Path:
+        """Dump translation dict to yaml"""
+        yml_filename = pathlib.Path(yaml_filename)
+        if yml_filename.exists() and not overwrite:
+            raise FileExistsError('File exists and overwrite is False')
+        if not yml_filename.parent.exists() and parents:
+            yml_filename.parent.mkdir(parents=parents)
+
+        with open(yml_filename, 'w') as f:
+            yaml.dump({'snt': self.snt.versionname,
+                       'translation_dict': self.translation_dict}, f)
+
+    def translate(self, name: str) -> Union[str, None]:
+        """Translate name into a standard."""
+        try:
+            return self.translation_dict[name]
+        except KeyError:
+            return None
+
+    def verify(self) -> bool:
+        """Verifies if all values re part of the standard name table passed"""
+        for v in self.translation_dict.values():
+            if v not in self.snt._dict:
+                raise KeyError(f'{v} is not part of the standard name table {self.snt.versionname}')
+        return True
+
+    def register(self, overwrite: bool = False) -> None:
+        """Register the standard name table under its versionname."""
+        trg = user_dirs['standard_name_table_translations'] / f'{self.versionname}.yml'
+        if trg.exists() and not overwrite:
+            raise FileExistsError(f'Standard name translation {self.versionname} already exists!')
+        self.to_yaml(trg)
+
+    @staticmethod
+    def load_registered(versionname: str) -> 'StandardNameTableTranslation':
+        """Load from user data dir"""
+        # search for names:
+        candidates = list(user_dirs['standard_name_table_translations'].glob(f'{versionname}.yml'))
+        if len(candidates) == 1:
+            return StandardNameTableTranslation.from_yaml(candidates[0])
+        list_of_reg_names = [snt.versionname for snt in StandardNameTableTranslation.get_registered()]
+        raise FileNotFoundError(f'File {versionname} could not be found or passed name was not unique. '
+                                f'Registered tables are: {list_of_reg_names}')
 
 
 def merge(list_of_snt: List[StandardNameTable], name: str, version_number: int, institution: str,

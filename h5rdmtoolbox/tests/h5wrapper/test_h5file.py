@@ -25,7 +25,7 @@ set_loglevel('error')
 ureg.default_format = config.ureg_format
 
 
-class TestH5FileLayout(unittest.TestCase):
+class TestH5File(unittest.TestCase):
 
     def test_layout(self):
         lay = H5Layout('lay.hdf')
@@ -174,9 +174,6 @@ class TestH5FileLayout(unittest.TestCase):
         #     other.create_group('plane000/pivpar')
         #     lay.check(other)
         # self.assertEqual(lay.n_issues, 0)
-
-
-class TestH5File(unittest.TestCase):
 
     def setUp(self) -> None:
         with H5File(mode='w') as h5:
@@ -387,12 +384,6 @@ class TestH5File(unittest.TestCase):
             # from pprint import pprint
             # pprint(tree)
 
-
-class TestH5Dataset(unittest.TestCase):
-    """
-    Test functions to test every method/functionality/feature available through H5Dataset
-    """
-
     def tearDown(self) -> None:
         for fname in Path(__file__).parent.glob('*'):
             if fname.suffix not in ('py', '.py', ''):
@@ -486,9 +477,6 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 
         with H5File() as h5:
             h5.create_dataset_from_xarray_dataset(ds)
-
-
-class TestH5Group(unittest.TestCase):
 
     def tearDown(self) -> None:
         for fname in Path(__file__).parent.glob('*'):
@@ -764,9 +752,6 @@ class TestH5Group(unittest.TestCase):
         with H5File(tmpfile, mode='r') as h5:
             n = h5.check(silent=False)
             self.assertEqual(n, 2)
-
-
-class TestCore(unittest.TestCase):
 
     def tearDown(self) -> None:
         for fname in Path(__file__).parent.glob('*'):

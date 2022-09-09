@@ -5,24 +5,12 @@ from importlib.metadata import metadata
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import errors
-from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions.standard_attributes import software
 from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
 from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge
 
 
 class TestOptAccessors(unittest.TestCase):
-
-    def test_from_yml(self):
-        table = StandardNameTable.from_yml(testdir / 'sntable.yml')
-        self.assertEqual(table.translate('images', 'pivsig'), 'synthetic_particle_image')
-
-        yaml_filename = table.to_yaml(generate_temporary_filename(suffix='.yml'))
-        table2 = StandardNameTable.from_yml(yaml_filename)
-        self.assertEqual(table, table2)
-        table2.set('other', 'desc', 'm')
-        self.assertNotEqual(table, table2)
 
     def test_merge(self):
         registered_snts = StandardNameTable.get_registered()
@@ -34,7 +22,7 @@ class TestOptAccessors(unittest.TestCase):
         meta = metadata('numpy')
 
         s = software.Software(meta['Name'], version=meta['Version'], url=meta['Home-page'],
-                                      description=meta['Summary'])
+                              description=meta['Summary'])
 
         with h5tbx.H5File() as h5:
             h5.software = s

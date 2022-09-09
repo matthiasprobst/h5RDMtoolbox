@@ -12,9 +12,8 @@ import logging
 from . import data
 from . import layout
 from ._logger import logger
-# from .custom import PIVStandardNameTable, FluidStandardNameTable
 from .layout import H5Layout
-from .standard_attributes.standard_name import StandardNameTable, StandardName
+from .standard_attributes.standard_name import StandardNameTable, StandardName, StandardNameTableTranslation
 from .utils import dict2xml, is_valid_email_address
 
 
@@ -28,4 +27,5 @@ def set_loglevel(level) -> logging.Logger:
 
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['H5Layout', 'datetime_str', 'set_loglevel']
+__all__ = ['H5Layout', 'datetime_str', 'set_loglevel', 'StandardName', 'StandardNameTableTranslation',
+           'StandardNameTable']
