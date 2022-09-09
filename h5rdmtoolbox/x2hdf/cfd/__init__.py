@@ -32,8 +32,10 @@ def cfx2hdf(cfx_filename: pathlib.Path,
     if snt:
         if isinstance(snt, Dict):
             sntdict = snt
-        else:
+        elif isinstance(snt, (str, pathlib.Path)):
             sntdict = from_yaml(snt)
+        else:
+            sntdict = snt
         if sntdict:
             with h5py.File(hdf_filename, 'r+') as h5:
                 translate_standard_names(h5, sntdict, verbose)

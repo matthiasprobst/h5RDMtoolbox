@@ -250,7 +250,7 @@ def main():
                         return
                     if len(snt_files) == 1:
                         print(f'  > Using SNT: {snt_files[0]}')
-                        snt_dict = StandardNameTableTranslation(snt_files[0])
+                        snt_dict = StandardNameTableTranslation.from_yaml(snt_files[0])
                         hdf_filename = cfx2hdf(cfx_filename, snt_dict, verbose=args.verbose)
                     else:
                         hdf_filename = cfx2hdf(cfx_filename)

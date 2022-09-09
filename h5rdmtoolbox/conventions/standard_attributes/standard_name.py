@@ -534,6 +534,12 @@ class StandardNameTableTranslation:
         self.translation_dict = translation_dict
         self.snt = snt
 
+    def __getitem__(self, item):
+        return self.translate(item)
+
+    def __contains__(self, item):
+        return item in self.translation_dict
+
     @property
     def name(self) -> str:
         """Equal to name of snt"""
