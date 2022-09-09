@@ -219,7 +219,7 @@ def main():
             else:
                 snt_filename = pathlib.Path(args.select)
                 if snt_filename.exists():
-                    snt = StandardNameTable.from_yml(args.select)
+                    snt = StandardNameTable.from_yaml(args.select)
                 else:
                     snt = StandardNameTable.load_registered(args.select)
                 print(f' > Checking file "{args.file}" with standard name table "{snt.versionname}"')

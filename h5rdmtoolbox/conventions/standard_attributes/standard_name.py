@@ -42,9 +42,9 @@ CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
 _SNT_CACHE = {}
 
 
-def read_yaml(yml_filename: str) -> Dict:
+def read_yaml(yaml_filname: str) -> Dict:
     """Read yaml file and return dictionary"""
-    with open(yml_filename, 'r') as f:
+    with open(yaml_filname, 'r') as f:
         ymldict = yaml.safe_load(f)
     return ymldict
 
@@ -349,15 +349,10 @@ class StandardNameTable:
         return snt
 
     @staticmethod
-    def from_yaml(yml_filename) -> "StandardNameTable":
-        """alias method of from_yml"""
-        return StandardNameTable.from_yml(yml_filename)
-
-    @staticmethod
-    def from_yml(yml_filename) -> "StandardNameTable":
+    def from_yaml(yaml_filname) -> "StandardNameTable":
         """read from yaml file"""
-        ymldict = read_yaml(yml_filename)
-        return StandardNameTable(**ymldict)
+        print(f'read {yaml_filname')
+        return StandardNameTable(**read_yaml(yaml_filname))
 
     @staticmethod
     def from_web(url: str, known_hash: str = None,
@@ -412,15 +407,15 @@ class StandardNameTable:
         """alias of to_yaml()"""
         return self.to_yaml(*args, **kwargs)
 
-    def to_yaml(self, yml_filename: Path, datetime_str=None, parents=True) -> Path:
+    def to_yaml(self, yaml_filname: Path, datetime_str=None, parents=True) -> Path:
         """Save the convention in a XML file"""
-        yml_filename = Path(yml_filename)
-        if not yml_filename.parent.exists() and parents:
-            yml_filename.parent.mkdir(parents=parents)
+        yaml_filname = Path(yaml_filname)
+        if not yaml_filname.parent.exists() and parents:
+            yaml_filname.parent.mkdir(parents=parents)
         if datetime_str is None:
             datetime_str = '%Y-%m-%d_%H:%M:%S'
         last_modified = datetime.now().strftime(datetime_str)
-        with open(yml_filename, 'w') as f:
+        with open(yaml_filname, 'w') as f:
             yaml.dump({'name': self.name}, f)
             yaml.dump({'version_number': self.version_number}, f)
             yaml.dump({'institution': self.institution}, f)
@@ -429,7 +424,7 @@ class StandardNameTable:
             yaml.dump({'pattern': self.pattern}, f)
             yaml.dump({'last_modified': last_modified}, f)
             yaml.dump({'table_dict': self._dict}, f)
-        return yml_filename
+        return yaml_filname
 
     def check_name(self, name, strict: bool = None) -> bool:
         """Verifies general requirements like lower-case writing and no
@@ -508,7 +503,7 @@ class StandardNameTable:
         # search for names:
         candidates = list(user_dirs['standard_name_tables'].glob(f'{name}.yml'))
         if len(candidates) == 1:
-            return StandardNameTable.from_yml(candidates[0])
+            return StandardNameTable.from_yaml(candidates[0])
         list_of_reg_names = [snt.versionname for snt in StandardNameTable.get_registered()]
         raise FileNotFoundError(f'File {name} could not be found or passed name was not unique. '
                                 f'Registered tables are: {list_of_reg_names}')
@@ -558,13 +553,13 @@ class StandardNameTableTranslation:
     def to_yaml(self, yaml_filename: pathlib.Path, parents: bool = True,
                 overwrite: bool = False) -> pathlib.Path:
         """Dump translation dict to yaml"""
-        yml_filename = pathlib.Path(yaml_filename)
-        if yml_filename.exists() and not overwrite:
+        yaml_filname = pathlib.Path(yaml_filename)
+        if yaml_filname.exists() and not overwrite:
             raise FileExistsError('File exists and overwrite is False')
-        if not yml_filename.parent.exists() and parents:
-            yml_filename.parent.mkdir(parents=parents)
+        if not yaml_filname.parent.exists() and parents:
+            yaml_filname.parent.mkdir(parents=parents)
 
-        with open(yml_filename, 'w') as f:
+        with open(yaml_filname, 'w') as f:
             yaml.dump({'snt': self.snt.versionname,
                        'translation_dict': self.translation_dict}, f)
 

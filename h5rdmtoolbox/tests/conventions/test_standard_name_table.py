@@ -8,8 +8,8 @@ from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge
 
 class TestStandardNameTable(unittest.TestCase):
 
-    def test_from_yml(self):
-        table = StandardNameTable.from_yml(testdir / 'sntable.yml')
+    def test_from_yaml(self):
+        table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
 
         snttrans = StandardNameTableTranslation({'images': 'invalid_synthetic_particle_image'},
                                                 table)
@@ -23,7 +23,7 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertEqual(snttrans.translate('images'), 'synthetic_particle_image')
 
         yaml_filename = table.to_yaml(generate_temporary_filename(suffix='.yml'))
-        table2 = StandardNameTable.from_yml(yaml_filename)
+        table2 = StandardNameTable.from_yaml(yaml_filename)
         self.assertEqual(table, table2)
         table2.set('other', 'desc', 'm')
         self.assertNotEqual(table, table2)
