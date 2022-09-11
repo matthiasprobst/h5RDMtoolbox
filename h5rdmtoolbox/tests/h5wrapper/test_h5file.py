@@ -245,7 +245,7 @@ class TestH5File(unittest.TestCase):
         with H5File(mode='w') as h5:
             from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
             convention = StandardNameTable(name='empty',
-                                           table_dict={'x_velocity': {'description': '',
+                                           table={'x_velocity': {'description': '',
                                                                       'units': 'm/s'}},
                                            version_number=0,
                                            valid_characters='[^a-zA-Z0-9_]',
@@ -571,7 +571,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 
     def test_create_dataset(self):
         config.natural_naming = True
-        sc = StandardNameTable(table_dict={}, name='Test_SNC', version_number=1,
+        sc = StandardNameTable(table={}, name='Test_SNC', version_number=1,
                                contact='contact@python.com', institution='my_institution')
         sc.set('time', canonical_units='s', description='physical time')
         sc.set('x_velocity', canonical_units='m/s',

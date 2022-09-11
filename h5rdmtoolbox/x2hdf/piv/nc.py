@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 
 from .utils import is_time
-from ...conventions.standard_attributes.standard_name import StandardNameTable,StandardNameTableTranslation
+from ...conventions.standard_attributes.standard_name import StandardNameTable, StandardNameTableTranslation
 
 try:
     from scipy.interpolate import LinearNDInterpolator
@@ -46,7 +46,7 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                             z_source: str = 'coord_min',
                             compute_dwdz: bool = False,
                             build_coord_datasets: bool = True,
-                            standardized_name_table: Union[StandardNameTable, None] = None) -> Tuple[
+                            standardized_name_table_translation: Union[StandardNameTable, None] = None) -> Tuple[
     Dict, Dict, Dict]:
     """
     Reads data and attributes from netCDF file. Results are stored in dictionary. Interpolation
@@ -369,14 +369,13 @@ def process_pivview_nc_data(nc_file: pathlib.Path, interpolate: bool,
                     piv_data_array_dict[k] = v
 
     # standardized naming:
-    if standardized_name_table is not None:
-        if isinstance(standardized_name_table, str):
-            snt = StandardNameTable.from_versionname(standardized_name_table)
+    if standardized_name_table_translation is not None:
+        if isinstance(standardized_name_table_translation, str):
+            sntt = StandardNameTableTranslation.load_registered(standardized_name_table_translation)
         else:
-            snt = standardized_name_table
-        translation_snt = StandardNameTableTranslation.load_registered(snt.versionname)
+            sntt = standardized_name_table_translation
         for k, v in variable_attributes.items():
-            sn = translation_snt.translate(k)
+            sn = sntt.translate(k)
             if sn:
                 v['standard_name'] = sn
 

@@ -4,10 +4,9 @@ this repository uses this convention
 """
 
 from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable, StandardNameTableTranslation
-from h5rdmtoolbox.conventions.translations import pivview_to_standardnames_dict
 
 FluidStandardNameTable = StandardNameTable('fluid',
-                                           table_dict={
+                                           table={
                                                'time': {'canonical_units': 's', 'description': 'physical time'},
                                                'x_velocity': {'canonical_units': 'm/s',
                                                               'description': 'velocity is a vector quantity. x indicates the component in x-axis direction'},
@@ -88,7 +87,7 @@ FluidStandardNameTable = StandardNameTable('fluid',
                                            institution='Karlsruhe Institute of Technology',
                                            valid_characters='[^a-zA-Z0-9_]',
                                            pattern='^[0-9 ].*')
-piv_name_table_dict = FluidStandardNameTable._dict.copy()
+piv_name_table_dict = FluidStandardNameTable.table.copy()
 piv_name_table_dict.update({'x_pixel_coordinate': {'canonical_units': 'pixel', 'description': None},
                             'y_pixel_coordinate': {'canonical_units': 'pixel', 'description': None},
                             'x_displacement_of_peak1': {'canonical_units': '', 'description': None},
@@ -100,14 +99,14 @@ piv_name_table_dict.update({'x_pixel_coordinate': {'canonical_units': 'pixel', '
                             })
 
 
-PIVStandardNameTable = StandardNameTable(name='piv', table_dict=piv_name_table_dict,
+PIVStandardNameTable = StandardNameTable(name='piv', table=piv_name_table_dict,
                                          version_number=1, contact='matthias.probst@kit.edu',
                                          institution='Karlsruhe Institute of Technology',
                                          valid_characters='[^a-zA-Z0-9_]',
                                          pattern='^[0-9 ].*')
 
 snttrans_pivview = StandardNameTableTranslation(pivview_to_standardnames_dict, PIVStandardNameTable)
-snttrans_pivview.register()
+snttrans_pivview.register(overwrite=True)
 
 FluidStandardNameTable.register(overwrite=True)
 PIVStandardNameTable.register(overwrite=True)

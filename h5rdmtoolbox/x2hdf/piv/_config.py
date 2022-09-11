@@ -11,7 +11,7 @@ from ... import config as h5tbx_config
 # from ...conventions.cgns import PIVCGNSStandardNameTable
 # and change next line:
 
-DEFAULT_CONVENTION = 'piv-v1'
+DEFAULT_TRANSLATION = 'pivview-to-piv-v1'
 
 DEFAULT_CONFIGURATION = {
     'interpolation': False,
@@ -24,7 +24,7 @@ DEFAULT_CONFIGURATION = {
     'compression': h5tbx_config.hdf_compression,
     'compression_opts': h5tbx_config.hdf_compression_opts,
     'take_min_nt': True,  # False will fill datasets up with np.NA
-    'standardized_name_table': DEFAULT_CONVENTION,  # convention to use for PIV variables
+    'standardized_name_table_translation': DEFAULT_TRANSLATION,  # convention to use for PIV variables
     'timeAverages': {'compute': False,
                      'use_nc': False},  # reads avg.nc, reyn.nc and rms.nc if available
     'post': {
