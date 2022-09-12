@@ -114,7 +114,7 @@ class MongoGroupAccessor:
                 if ak not in ignore_attrs:
                     doc[ak] = type2mongo(av)
         if update:
-            collection.update_one({'filename': doc['filename'], 'name': doc['name']},
+            collection.update_one(doc,
                                   {'$set': doc}, upsert=True)
         else:
             collection.insert_one(doc)
@@ -252,8 +252,7 @@ class MongoDatasetAccessor:
                 doc.update(additional_fields)
         if update:
             for doc in docs:
-                collection.update_many({'filename': doc['filename'], 'name': doc['name']},
-                                       {'$set': doc}, upsert=True)
+                collection.update_one(doc, {'$set': doc}, upsert=True)
         else:
             collection.insert_many(docs, ordered=ordered)
         return collection
