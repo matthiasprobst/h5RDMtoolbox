@@ -719,7 +719,7 @@ div.rendered_html tbody tr:hover {
 <section id="Dataset-slicing">
 <h1>Dataset slicing<a class="headerlink" href="#Dataset-slicing" title="Permalink to this headline">#</a></h1>
 <p>Differently to the <code class="docutils literal notranslate"><span class="pre">h5py</span></code> package, <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> is returned and not <code class="docutils literal notranslate"><span class="pre">numpy.ndarray</span></code>. Note, how also the attach dimension scales are considered:</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
@@ -727,6 +727,14 @@ div.rendered_html tbody tr:hover {
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
+</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
@@ -1099,17 +1107,39 @@ dl.xr-attrs {
   fill: currentColor;
 }
 </style><pre class='xr-text-repr-fallback'>&lt;xarray.DataArray &#x27;data&#x27; (y: 3, x: 5)&gt;
-array([[0.63440447, 0.79486017, 0.6487674 , 0.35631605, 0.22341354],
-       [0.83372765, 0.11700994, 0.36490173, 0.17485427, 0.17504139],
-       [0.05934164, 0.39826294, 0.86133372, 0.18494475, 0.28142542]])
+array([[0.71001955, 0.86339906, 0.91865504, 0.29158144, 0.37281942],
+       [0.93258523, 0.14993301, 0.4975899 , 0.57760298, 0.75878505],
+       [0.88303066, 0.07131618, 0.02628856, 0.08214783, 0.25905021]])
 Coordinates:
   * y        (y) float64 0.0 2.5 5.0
   * x        (x) float64 0.0 2.5 5.0 7.5 10.0
 Attributes:
     long_name:  velocity
-    units:      m/s</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.DataArray</div><div class='xr-array-name'>'data'</div><ul class='xr-dim-list'><li><span class='xr-has-index'>y</span>: 3</li><li><span class='xr-has-index'>x</span>: 5</li></ul></div><ul class='xr-sections'><li class='xr-section-item'><div class='xr-array-wrap'><input id='section-fecb7b20-c548-41ed-97ae-354a7fda6568' class='xr-array-in' type='checkbox' checked><label for='section-fecb7b20-c548-41ed-97ae-354a7fda6568' title='Show/hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-array-preview xr-preview'><span>0.6344 0.7949 0.6488 0.3563 0.2234 ... 0.3983 0.8613 0.1849 0.2814</span></div><div class='xr-array-data'><pre>array([[0.63440447, 0.79486017, 0.6487674 , 0.35631605, 0.22341354],
-       [0.83372765, 0.11700994, 0.36490173, 0.17485427, 0.17504139],
-       [0.05934164, 0.39826294, 0.86133372, 0.18494475, 0.28142542]])</pre></div></div></li><li class='xr-section-item'><input id='section-18197672-2db9-4960-ad1e-e67301dd0e70' class='xr-section-summary-in' type='checkbox'  checked><label for='section-18197672-2db9-4960-ad1e-e67301dd0e70' class='xr-section-summary' >Coordinates: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>y</span></div><div class='xr-var-dims'>(y)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 2.5 5.0</div><input id='attrs-23861bde-ff73-4abf-a7f7-3bfad3ede32f' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-23861bde-ff73-4abf-a7f7-3bfad3ede32f' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-9088bc2e-26d5-43a7-9a13-7c5648fe9d5f' class='xr-var-data-in' type='checkbox'><label for='data-9088bc2e-26d5-43a7-9a13-7c5648fe9d5f' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>long_name :</span></dt><dd>y</dd><dt><span>units :</span></dt><dd>mm</dd></dl></div><div class='xr-var-data'><pre>array([0. , 2.5, 5. ])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>x</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 2.5 5.0 7.5 10.0</div><input id='attrs-ababf17d-d401-4334-a691-451cafbb393a' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-ababf17d-d401-4334-a691-451cafbb393a' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-31e0451d-30f6-4f5f-858c-f5c4726b46cb' class='xr-var-data-in' type='checkbox'><label for='data-31e0451d-30f6-4f5f-858c-f5c4726b46cb' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>long_name :</span></dt><dd>x</dd><dt><span>units :</span></dt><dd>mm</dd></dl></div><div class='xr-var-data'><pre>array([ 0. ,  2.5,  5. ,  7.5, 10. ])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-7fa17564-b31f-4718-bd72-ad64186abd49' class='xr-section-summary-in' type='checkbox'  checked><label for='section-7fa17564-b31f-4718-bd72-ad64186abd49' class='xr-section-summary' >Attributes: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>long_name :</span></dt><dd>velocity</dd><dt><span>units :</span></dt><dd>m/s</dd></dl></div></li></ul></div></div></div>
+    units:      m/s</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.DataArray</div><div class='xr-array-name'>'data'</div><ul class='xr-dim-list'><li><span class='xr-has-index'>y</span>: 3</li><li><span class='xr-has-index'>x</span>: 5</li></ul></div><ul class='xr-sections'><li class='xr-section-item'><div class='xr-array-wrap'><input id='section-9040d3b7-da68-4bbd-8223-7dea0577912b' class='xr-array-in' type='checkbox' checked><label for='section-9040d3b7-da68-4bbd-8223-7dea0577912b' title='Show/hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-array-preview xr-preview'><span>0.71 0.8634 0.9187 0.2916 0.3728 ... 0.07132 0.02629 0.08215 0.2591</span></div><div class='xr-array-data'><pre>array([[0.71001955, 0.86339906, 0.91865504, 0.29158144, 0.37281942],
+       [0.93258523, 0.14993301, 0.4975899 , 0.57760298, 0.75878505],
+       [0.88303066, 0.07131618, 0.02628856, 0.08214783, 0.25905021]])</pre></div></div></li><li class='xr-section-item'><input id='section-a85a7bed-11fc-4fec-846d-41ce8740e092' class='xr-section-summary-in' type='checkbox'  checked><label for='section-a85a7bed-11fc-4fec-846d-41ce8740e092' class='xr-section-summary' >Coordinates: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>y</span></div><div class='xr-var-dims'>(y)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 2.5 5.0</div><input id='attrs-7c4f4c2e-b7d5-43ed-9e60-9876e66c725b' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-7c4f4c2e-b7d5-43ed-9e60-9876e66c725b' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-93a9fee1-2cdd-4fd8-983f-2947c637ab1f' class='xr-var-data-in' type='checkbox'><label for='data-93a9fee1-2cdd-4fd8-983f-2947c637ab1f' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>long_name :</span></dt><dd>y</dd><dt><span>units :</span></dt><dd>mm</dd></dl></div><div class='xr-var-data'><pre>array([0. , 2.5, 5. ])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>x</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>0.0 2.5 5.0 7.5 10.0</div><input id='attrs-9167bf2a-2bef-4614-8b53-ab6c92cb8258' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-9167bf2a-2bef-4614-8b53-ab6c92cb8258' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-60d5e5ae-c197-4238-bad3-55f646d86bae' class='xr-var-data-in' type='checkbox'><label for='data-60d5e5ae-c197-4238-bad3-55f646d86bae' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>long_name :</span></dt><dd>x</dd><dt><span>units :</span></dt><dd>mm</dd></dl></div><div class='xr-var-data'><pre>array([ 0. ,  2.5,  5. ,  7.5, 10. ])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-92518f76-9cae-4cfb-b452-1b36d3afd8b6' class='xr-section-summary-in' type='checkbox'  checked><label for='section-92518f76-9cae-4cfb-b452-1b36d3afd8b6' class='xr-section-summary' >Attributes: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>long_name :</span></dt><dd>velocity</dd><dt><span>units :</span></dt><dd>m/s</dd></dl></div></li></ul></div></div></div>
+</div>
+<p>To get a <code class="docutils literal notranslate"><span class="pre">numpy</span></code> array anyhow, just place a <code class="docutils literal notranslate"><span class="pre">values</span></code> in front:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:]</span>
+<span class="n">arr</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[0.71001955, 0.86339906, 0.91865504, 0.29158144, 0.37281942],
+       [0.93258523, 0.14993301, 0.4975899 , 0.57760298, 0.75878505],
+       [0.88303066, 0.07131618, 0.02628856, 0.08214783, 0.25905021]])
+</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:

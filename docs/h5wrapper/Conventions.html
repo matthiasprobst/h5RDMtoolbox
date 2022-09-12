@@ -760,7 +760,7 @@ div.rendered_html tbody tr:hover {
 <p><strong>standard_name and long_name</strong> For the sake of improved readability and interpretability we suggest to use <code class="docutils literal notranslate"><span class="pre">long_name</span></code> or <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> as additional attributes. While <code class="docutils literal notranslate"><span class="pre">long_name</span></code> is human-readable and interpretable attribute, <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> is intended to be read by a machine (other software). This allows to automate exploration and processing work.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> generally should not be chosen freely but must follow a certain convention. Such a naming convention may be defined by a project or a community, e.g. the climate and forecast community <a class="reference external" href="http://cfconventions.org/">cfconventions.org</a>, from which the concept of standard names is adoped. A convention is described in an <strong>XML</strong> file and associated with the wrapper file <code class="docutils literal notranslate"><span class="pre">H5File</span></code>. Again this is adoped from <a class="reference external" href="http://cfconventions.org/">cfconventions.org</a>. The XML file
 contains the standard name, a description for each one and the respective unit. Thus, if a convention is associated with a wrapper class, the standard name and unit cannot be freely be chsen but is verified.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
@@ -768,258 +768,77 @@ contains the standard name, a description for each one and the respective unit. 
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
+</pre></div></div>
+</div>
+<section id="Checks">
+<h2>Checks<a class="headerlink" href="#Checks" title="Permalink to this headline">#</a></h2>
+<p>We can use the standard name table to check some name. We can check for name compliance in a strict or non-strict way. That means, that we check whether the name actally exists in the table or if only the naming conventn in a formal way is approved (e.g. does not start with a letter):</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardNameTable</span><span class="o">.</span><span class="n">print_registered</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area rendered_html docutils container">
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>canonical_units</th>
-      <th>description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>absolute_pressure</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>absolute_pressure_difference</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>ambient_temperature</th>
-      <td>K</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>dynamic_pressure</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>dynamic_pressure_difference</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>magnitude_of_velocity</th>
-      <td>m/s</td>
-      <td>Magnitude of the vector quantity velocity.</td>
-    </tr>
-    <tr>
-      <th>pressure</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>q_criterion</th>
-      <td>1/s**2</td>
-      <td>Three dimensional Q-Criterion</td>
-    </tr>
-    <tr>
-      <th>q_criterion_z</th>
-      <td>1/s**2</td>
-      <td>Two dimensional Q-Criterion in z plane.</td>
-    </tr>
-    <tr>
-      <th>sound_pressure</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>static_pressure</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>static_pressure_difference</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>temperature</th>
-      <td>K</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>time</th>
-      <td>s</td>
-      <td>physical time</td>
-    </tr>
-    <tr>
-      <th>total_pressure</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>total_pressure_difference</th>
-      <td>Pa</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>turbulent_kinetic_energy</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>x_coordinate</th>
-      <td>m</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>x_derivative_of_x_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of x velocity in x axis direction.</td>
-    </tr>
-    <tr>
-      <th>x_derivative_of_y_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of y velocity in x axis direction.</td>
-    </tr>
-    <tr>
-      <th>x_derivative_of_z_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of z velocity in x axis direction.</td>
-    </tr>
-    <tr>
-      <th>x_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. x indicates the component in x-axis direction</td>
-    </tr>
-    <tr>
-      <th>xx_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>xy_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>xz_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>y_coordinate</th>
-      <td>m</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>y_derivative_of_x_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of x velocity in y axis direction.</td>
-    </tr>
-    <tr>
-      <th>y_derivative_of_y_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of y velocity in y axis direction.</td>
-    </tr>
-    <tr>
-      <th>y_derivative_of_z_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of z velocity in y axis direction.</td>
-    </tr>
-    <tr>
-      <th>y_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. y indicates the component in y-axis direction</td>
-    </tr>
-    <tr>
-      <th>yx_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>yy_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>yz_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>z_coordinate</th>
-      <td>m</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>z_derivative_of_x_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of x velocity in z axis direction.</td>
-    </tr>
-    <tr>
-      <th>z_derivative_of_y_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of y velocity in z axis direction.</td>
-    </tr>
-    <tr>
-      <th>z_derivative_of_z_velocity</th>
-      <td>1/s</td>
-      <td>Derivative of z velocity in z axis direction.</td>
-    </tr>
-    <tr>
-      <th>z_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. z indicates the component in z-axis direction</td>
-    </tr>
-    <tr>
-      <th>z_vorticity</th>
-      <td>1/s</td>
-      <td>vorticity is a vector quantity. z indicates the component in z-axis direction</td>
-    </tr>
-    <tr>
-      <th>zx_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>zy_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-    <tr>
-      <th>zz_reynolds_stress</th>
-      <td>m**2/s**2</td>
-      <td>None</td>
-    </tr>
-  </tbody>
-</table></div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ &gt; cgns-v1
+ &gt; cgns_ext-v1
+ &gt; fluid-v1
+ &gt; operation_point_convention-v1
+ &gt; piv-v1
+ &gt; standard_name_table-v79
+ &gt; Test_SNC-v1
+</pre></div></div>
 </div>
-<section id="Checks">
-<h2>Checks<a class="headerlink" href="#Checks" title="Permalink to this headline">#</a></h2>
-<p>We can use the standard name table to check some name. We can check for name compliance in a strict or non-strict way. That means, that we check whether the name actally exists in the table or if only the naming conventn in a formal way is approved (e.g. does not start with a letter):</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">snt</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardNameTable</span><span class="o">.</span><span class="n">load_registered</span><span class="p">(</span><span class="s1">&#39;piv-v1&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">snt</span><span class="o">.</span><span class="n">check_name</span><span class="p">(</span><span class="s1">&#39;x_coordinate&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
-    <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">check_name</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">except</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="n">snt</span><span class="o">.</span><span class="n">check_name</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">StandardNameError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">check_name</span><span class="p">(</span><span class="s1">&#39;1234test&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="k">except</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="n">snt</span><span class="o">.</span><span class="n">check_name</span><span class="p">(</span><span class="s1">&#39;1234test&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">StandardNameError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">check_name</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -1030,46 +849,6 @@ contains the standard name, a description for each one and the respective unit. 
 <div class="highlight"><pre>
 Standardized name &#34;test&#34; not in name table
 Name must not start with a number!
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">check_name</span><span class="p">(</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">check_units</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">)</span>
-<span class="k">except</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">check_units</span><span class="p">(</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">)</span>
-<span class="k">except</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-
-<span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">FluidStandardNameTable</span><span class="o">.</span><span class="n">check_units</span><span class="p">(</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;m/s&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-Standardized name &#34;test&#34; not in name table
-Unit of standard name &#34;x_velocity&#34; not as expected: &#34;m&#34; != &#34;m/s&#34;
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
 </pre></div></div>
 </div>
 </section>
