@@ -1,18 +1,17 @@
 import warnings
 from pathlib import Path
+from typing import Dict, Union
 
 import yaml
 
 from h5rdmtoolbox.conventions import datetime_str
-from ...conventions.custom import PIVStandardNameTable
+from ... import config as h5tbx_config
 
 # to use CGNS:
 # from ...conventions.cgns import PIVCGNSStandardNameTable
 # and change next line:
 
-DEFAULT_CONVENTION = PIVStandardNameTable
-
-from ... import config as h5tbx_config
+DEFAULT_TRANSLATION = 'pivview-to-piv-v1'
 
 DEFAULT_CONFIGURATION = {
     'interpolation': False,
@@ -25,7 +24,7 @@ DEFAULT_CONFIGURATION = {
     'compression': h5tbx_config.hdf_compression,
     'compression_opts': h5tbx_config.hdf_compression_opts,
     'take_min_nt': True,  # False will fill datasets up with np.NA
-    'standardized_name_table': DEFAULT_CONVENTION.versionname,  # convention to use for PIV variables
+    'standardized_name_table_translation': DEFAULT_TRANSLATION,  # convention to use for PIV variables
     'timeAverages': {'compute': False,
                      'use_nc': False},  # reads avg.nc, reyn.nc and rms.nc if available
     'post': {
@@ -46,14 +45,19 @@ DEFAULT_CONFIGURATION = {
 }
 
 
-def read_yaml_file(yaml_filename):
+def read_yaml_file(yaml_filename: Union[str, Path]) -> Dict:
+    """Read yaml file and return content asdictionary"""
     _yaml_filename = Path(yaml_filename)
+    # with open(_yaml_filename, 'r') as f:
+    #     for line in f.readlines():
+    #         print(line)
     with open(_yaml_filename, 'r') as f:
         yaml_config = yaml.safe_load(f)
     return yaml_config
 
 
-def check_yaml_file(yaml_file: Path or dict) -> bool:
+def check_yaml_file(yaml_file: Union[Path, Dict]) -> bool:
+    """Check keys in yaml file to be a valid piv2hdf configuration"""
     if not isinstance(yaml_file, dict):
         _config = read_yaml_file(yaml_file)
     else:
@@ -74,12 +78,13 @@ def check_yaml_file(yaml_file: Path or dict) -> bool:
     return True
 
 
-def write_config(filename, config, overwrite=False) -> Path:
+def write_config(filename: Path, config: Dict, overwrite: bool = False) -> Path:
     """overwrites existing yaml config in user dir with default one and returns path to the file"""
     if filename.exists() and not overwrite:
         print('Could not write yaml user file. It already exists and overwrite is set to False')
         return filename
 
+    print(config)
     with open(filename, 'w') as f:
         yaml.dump(config, f, sort_keys=False)
     return filename

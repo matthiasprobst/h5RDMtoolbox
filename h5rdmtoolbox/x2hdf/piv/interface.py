@@ -2,15 +2,15 @@ import abc
 import json
 import os
 import pathlib
-from datetime import datetime
 from typing import List, Union, Dict, Tuple
 
 import h5py
 import numpy as np
 
 from ._config import DEFAULT_CONFIGURATION
-from ...conventions.identifier import CF_DATETIME_STR
+from ...conventions.standard_attributes.standard_name import StandardNameTable
 from ...utils import generate_temporary_filename
+from ... import config as h5tbxconfig
 
 PIV_PARAMETER_GRP_NAME = 'piv_parameters'
 
@@ -143,11 +143,8 @@ class PIVSnapshot(PIVConverter):
                 raise TypeError(f'Configuration must a dictionary, not {type(config)}')
 
         if 'standardized_name_table' in config:
-            from ...conventions.identifier import StandardizedNameTable
-            if not isinstance(config['standardized_name_table'], StandardizedNameTable):
-                config['standardized_name_table'] = StandardizedNameTable.from_name_and_version(
-                    *config['standardized_name_table'].split('-v')
-                )
+            if isinstance(config['standardized_name_table'], StandardNameTable):
+                config['standardized_name_table'] = config['standardized_name_table'].versionname
 
         if hdf_filename is None:
             hdf_filename = self.piv_file.filename.parent / f'{self.piv_file.filename.stem}.hdf'
@@ -209,11 +206,8 @@ class PIVPlane(PIVConverter):
                 raise TypeError(f'Configuration must a dictionary, not {type(config)}')
 
         if 'standardized_name_table' in config:
-            from ...conventions.identifier import StandardizedNameTable
-            if not isinstance(config['standardized_name_table'], StandardizedNameTable):
-                config['standardized_name_table'] = StandardizedNameTable.from_name_and_version(
-                    *config['standardized_name_table'].split('-v')
-                )
+            if isinstance(config['standardized_name_table'], StandardNameTable):
+                config['standardized_name_table'] = config['standardized_name_table'].versionname
 
         if hdf_filename is None:
             hdf_filename = self.list_of_piv_file[0].filename.parent / f'{self.list_of_piv_file[0].filename.parent}.hdf'
@@ -560,4 +554,8 @@ class PIVMultiPlane(PIVConverter):
         plane_hdf_files = [plane.to_hdf(generate_temporary_filename(suffix='_plane.hdf'), config) for plane
                            in self.list_of_piv_folder]
         hdf_filename = self.merge_planes(plane_hdf_files, hdf_filename, rtol, atol, fill_time_vec_differences)
+
+        # specify the standard name table to be used:
+        with h5py.File(hdf_filename, 'r+') as h5:
+            h5.attrs[h5tbxconfig.standard_name_table_attribute_name] = 'piv-v1'
         return hdf_filename

@@ -1,17 +1,19 @@
 import re
 
-from ..accessory import register_special_property
-from ..h5file import H5File
+from . import register_standard_attribute
+from ...h5wrapper.h5file import H5File
 
 
 class TitleError(ValueError):
     """An error associated with the title property"""
 
 
-@register_special_property(H5File)
-class title:
+@register_standard_attribute(H5File, name='title')
+class TitleAttribute:
+    """Title attribute"""
 
     def set(self, value):
+        """Set title"""
         if value[0] == ' ':
             raise TitleError('Title must not start with a space')
         if value[-1] == ' ':
@@ -23,7 +25,9 @@ class title:
         self.attrs.create('title', value)
 
     def get(self):
+        """Get title attribute"""
         return self.attrs.get('title', None)
 
     def delete(self):
+        """Get title attribute"""
         self.attrs.__delitem__('title')

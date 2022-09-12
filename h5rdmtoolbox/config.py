@@ -11,3 +11,4 @@ mpl_style = 'h5rdmtoolbox'
 xarray_unit_repr_in_plots = '/'
 require_units = True  # datasets require units
 ureg_format = 'C~'
+standard_name_table_attribute_name = '__standard_name_table__'

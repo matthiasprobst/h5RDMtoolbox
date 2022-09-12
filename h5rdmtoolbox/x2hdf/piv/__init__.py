@@ -37,6 +37,7 @@ def pivview2hdf():
     parser.add_argument('-s', '--source',
                         type=str,
                         required=False,
+                        default=None,
                         help='Folder or file. Folder must contain nc files or folder with nc files.')
     parser.add_argument('-o', '--outputfile',
                         type=str,
@@ -78,6 +79,8 @@ def pivview2hdf():
                         help='File name (for configuration)')
 
     args = parser.parse_args()
+    # args, unknown = parser.parse_known_args()
+    print(args)
 
     if args.write_default_config:
         if args.file is None:
@@ -89,6 +92,8 @@ def pivview2hdf():
         write_config(trg_cfg_filename, config=DEFAULT_CONFIGURATION, overwrite=args.overwrite)
         return
 
+    if args.source is None:
+        return
     args_dict = vars(args)
     source_path = pathlib.Path(args_dict['source'])
     if not source_path.exists():
@@ -96,9 +101,9 @@ def pivview2hdf():
 
     if args.config:
         from ._config import read_yaml_file
-        from ...conventions.identifier import StandardizedNameTable
+        from ...conventions.identifier import StandardNameTable
         config = read_yaml_file(pathlib.Path(args.config))
-        config['standardized_name_table'] = StandardizedNameTable.from_versionname(
+        config['standardized_name_table'] = StandardNameTable.from_versionname(
             config['standardized_name_table'])
     else:
         config = None

@@ -136,6 +136,22 @@ class TestH5Repo(unittest.TestCase):
                 self.assertIn('index2', r.keys())
                 self.assertIn('index3', r.keys())
 
+    def test_insert_dataset_update(self):
+        if self.mongodb_running:
+            self.collection.drop()
+            with H5File() as h5:
+                hdf_filename = h5.hdf_filename
+                h5.create_dataset('z', data=2, dtype=int,
+                                  units='', long_name='z_coordinate')
+                for i in range(3):
+                    h5.z.mongo.insert(axis=None, collection=self.collection, update=True)
+                self.assertEqual(self.collection.count_documents({}), 1)
+                for i in range(3):
+                    h5.z.mongo.insert(axis=None, collection=self.collection, update=False)
+                self.assertEqual(self.collection.count_documents({}), 4)
+                for r in self.collection.find({}):
+                    print(r)
+
     def test_insert_group(self):
         if self.mongodb_running:
             self.collection.drop()

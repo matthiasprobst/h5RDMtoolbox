@@ -4,11 +4,10 @@ from typing import Union, Dict
 import h5py
 
 from .ansys.cfx import CFXCase
-from ...conventions.translations import from_yaml, translate_standard_names
-
+from ...conventions import StandardNameTable, StandardNameTableTranslation
 
 def cfx2hdf(cfx_filename: pathlib.Path,
-            snt: Union[pathlib.Path, Dict, None] = None,
+            sntt: Union[pathlib.Path, StandardNameTableTranslation, None] = None,
             verbose: bool = False) -> pathlib.Path:
     """Convert a CFX case into a HDF. This includes only meta data, monitor and user point data
     and no solution field data!
@@ -17,7 +16,7 @@ def cfx2hdf(cfx_filename: pathlib.Path,
     ----------
     cfx_filename: pathlib.Path
         The filename of the CFX case
-    snt: pathlib.Path | Dict | None, optional=None
+    sntt: pathlib.Path | Dict | None, optional=None
         Standard Name Translation Dictionary
     verbose: bool, optional=False
         Additional output
@@ -29,12 +28,14 @@ def cfx2hdf(cfx_filename: pathlib.Path,
     """
     cfx_case = CFXCase(cfx_filename)
     hdf_filename = cfx_case.hdf.generate(True)
-    if snt:
-        if isinstance(snt, Dict):
-            sntdict = snt
+    if sntt:
+        if isinstance(sntt, StandardNameTableTranslation):
+            sntt = sntt
+        elif isinstance(sntt, (str, pathlib.Path)):
+            sntt = StandardNameTableTranslation.from_yaml(sntt)
         else:
-            sntdict = from_yaml(snt)
-        if sntdict:
+            sntt = sntt
+        if sntt:
             with h5py.File(hdf_filename, 'r+') as h5:
-                translate_standard_names(h5, sntdict, verbose)
+                sntt.translate_group(h5, verbose)
     return hdf_filename

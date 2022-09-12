@@ -12,7 +12,7 @@ import numpy as np
 import pint_xarray
 from IPython.display import HTML, display
 
-from .identifier import equal_base_units
+from .utils import equal_base_units
 from .. import _repr
 from .._user import user_dirs
 
@@ -343,22 +343,44 @@ class H5Layout:
         return H5Layout(filename)
 
     @staticmethod
-    def load_registered(name: str, filename: Path = None) -> 'H5Layout':
-        """Load from user data dir, copy to filename. If filename is None a tmp file is created"""
-        if filename is None:
-            from ..utils import generate_temporary_filename
-            filename = generate_temporary_filename(suffix='.hdf')
+    def find_registered_filename(name: str) -> pathlib.Path:
+        """Return the file of the registered layout
+
+        Parameters
+        ----------
+        name: str
+            Name under which the layout is registered.
+
+        Returns
+        -------
+        pathlib.Path
+            The found filename in the user directory for registered layouts
+
+        Raises
+        ------
+        FileNotFoundError
+            If no unique filename found be idetified.
+
+        """
         src = user_dirs['layouts'] / name
         if src.exists():
-            shutil.copy2(src, filename)
-            return H5Layout(filename)
+            return src
         # search for names:
         candidates = list(user_dirs['layouts'].glob(f'{name}.*'))
         if len(candidates) == 1:
-            shutil.copy2(src / candidates[0], filename)
-            return H5Layout(filename)
+            return pathlib.Path(candidates[0])
         raise FileNotFoundError('File could not be found or passed name was not unique. Check the user layout dir '
                                 f'{user_dirs["layouts"]}')
+
+    @staticmethod
+    def load_registered(name: str, filename: Path = None) -> 'H5Layout':
+        """Load from user data dir, copy to filename. If filename is None a tmp file is created"""
+        src_filename = H5Layout.find_registered_filename(name)
+        if filename is None:
+            from ..utils import generate_temporary_directory
+            filename = generate_temporary_directory() / f'{name}.hdf'
+        shutil.copy2(src_filename, filename)
+        return H5Layout(filename)
 
     def File(self, mode='r') -> H5FileLayout:
         """File instance"""
@@ -391,6 +413,12 @@ class H5Layout:
             h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
         return self.filename
 
+    def check_file(self, filename: Union[str, pathlib.Path], silent: bool = True,
+                   recursive: bool = True) -> int:
+        """Run check on a file. Class method check() is called on the root group"""
+        with h5py.File(filename) as h5:
+            return self.check(h5, silent=silent, recursive=recursive)
+
     def check(self, grp: h5py.Group, silent: bool = True,
               recursive: bool = True) -> int:
         """Run layout check.
@@ -398,7 +426,7 @@ class H5Layout:
         Parameters
         ----------
         grp: h5py.Group
-            HDF5 root group of the file to be inspected
+            HDF5 group of the file to be inspected
         silent: bool, optional=False
             Control extra string output.
         recursive: boo, optional=True
@@ -407,10 +435,7 @@ class H5Layout:
         Returns
         -------
         n_issues: int
-            Number of issues
-        silent: bool, optional=False
-            Controlling verbose output to screen. If True issue information is printed,
-            which is especcially helpful.
+            Number of detected issues.
         """
         if not isinstance(grp, h5py.Group):
             raise TypeError(f'Expecting h5py.Group, not type {type(grp)}')
@@ -445,4 +470,4 @@ class H5Layout:
     def print_registered() -> None:
         """Return sorted list of standard names files"""
         for f in H5Layout.get_registered():
-            print(f' > {f.name}')
+            print(f' > {f.stem}')

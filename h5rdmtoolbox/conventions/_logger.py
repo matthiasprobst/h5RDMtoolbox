@@ -8,11 +8,11 @@ name = __package__
 _logdir = appdirs.user_log_dir(name)
 _log = pathlib.Path(_logdir)  # Currently, this is unversioned
 
-try:
-    pathlib.Path.mkdir(_log, parents=True)
+if not _log.exists():
+    pathlib.Path.mkdir(_log, parents=True, exist_ok=False)
     _logFolderMsg = f'{name} log folder created at {_logdir}'
-except FileExistsError:
-    _logFolderMsg = f'{name} log folder available: {_logdir}'
+else:
+    _logFolderMsg = f'f{name} log folder exist at {_logdir}'
 
 # Initialize logger, set high level to prevent ipython debugs. File level is
 # set below

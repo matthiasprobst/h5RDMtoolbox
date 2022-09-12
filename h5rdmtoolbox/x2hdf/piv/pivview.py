@@ -474,8 +474,8 @@ class PIVViewNcFile(PIVFile):
                                                                           interpolate=interpolation,
                                                                           apply_mask=apply_mask,
                                                                           build_coord_datasets=build_coord_datasets,
-                                                                          standardized_name_table=config[
-                                                                              'standardized_name_table'])
+                                                                          standardized_name_table_translation=config[
+                                                                              'standardized_name_table_translation'])
         # nc_root_attr['filename'] = nc_root_attr.pop('long_name')
         unique_flags = np.unique(nc_data['piv_flags'][:])
         nc_variable_attr['piv_flags']['flag_meaning'] = json.dumps(

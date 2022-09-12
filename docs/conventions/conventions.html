@@ -798,7 +798,7 @@ div.rendered_html tbody tr:hover {
 <p>Standard name conventions define how meta information is called what syntax is accepted. Intentionally this results in efficient, automatated and clear data exploration and processing.</p>
 <p>Most basically, a name identifier should be defined as an attribute of every dataset in an HDF file. A popular one is “standard_name” as used by the climate and forecast community. It e.g. does not allow space in standard names and must be lower case. Furthermore, the construction of it is defined in online documentations and naming tables (standard name tables) provide standard names currently excepted by the community. This packages adopts this concept by introducing standardized name tables
 (class <code class="docutils literal notranslate"><span class="pre">StandardzedNameTable</span></code>) which allows flexible usage of such name definitions.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
@@ -806,24 +806,32 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp109
+</pre></div></div>
+</div>
 <p>Whenever a dataset is written and the parameter “standard_name” is set, it is verified against the standard name convention/table associated with the wrapper class. If the constant <code class="docutils literal notranslate"><span class="pre">STRICT</span></code> is set to True (default), the name is looked-up in the table and, if not found, the dataset cannot be written. To allow standard names, that fulfill the spelling requirements but are not yet listed in the table, set <code class="docutils literal notranslate"><span class="pre">STRICT</span></code> to False:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">identifier</span><span class="o">.</span><span class="n">STRICT</span> <span class="o">=</span> <span class="kc">False</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">standard_attributes</span><span class="o">.</span><span class="n">standard_name</span><span class="o">.</span><span class="n">STRICT</span> <span class="o">=</span> <span class="kc">False</span>
 </pre></div>
 </div>
 </div>
 <section id="Initialize-a-Standard-Name-Convention">
 <h2>Initialize a Standard Name Convention<a class="headerlink" href="#Initialize-a-Standard-Name-Convention" title="Permalink to this headline">#</a></h2>
 <p>A standardized name table is a XML document, which contains (at least) a description and a canonical unit for a standarized name. We’ll build one from scratch first and then have a look into already implemented ones:</p>
-<p>Call <code class="docutils literal notranslate"><span class="pre">StandardizedNameTable</span></code> from the sub-package <code class="docutils literal notranslate"><span class="pre">conventions</span></code> and provide a <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">version</span></code>, <code class="docutils literal notranslate"><span class="pre">table_dict</span></code>, <code class="docutils literal notranslate"><span class="pre">contact</span></code> and and <code class="docutils literal notranslate"><span class="pre">insitution</span></code>:</p>
+<p>Call <code class="docutils literal notranslate"><span class="pre">StandardNameTable</span></code> from the sub-package <code class="docutils literal notranslate"><span class="pre">conventions</span></code> and provide a <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">version</span></code>, <code class="docutils literal notranslate"><span class="pre">table_dict</span></code>, <code class="docutils literal notranslate"><span class="pre">contact</span></code> and and <code class="docutils literal notranslate"><span class="pre">insitution</span></code>:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sc</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameTable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Test_SNC&#39;</span><span class="p">,</span> <span class="n">table_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">version_number</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">contact</span><span class="o">=</span><span class="s1">&#39;contact@python.com&#39;</span><span class="p">,</span> <span class="n">institution</span><span class="o">=</span><span class="s1">&#39;my_institution&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sc</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardNameTable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Test_SNC&#39;</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="p">{},</span> <span class="n">version_number</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">contact</span><span class="o">=</span><span class="s1">&#39;contact@python.com&#39;</span><span class="p">,</span> <span class="n">institution</span><span class="o">=</span><span class="s1">&#39;my_institution&#39;</span><span class="p">)</span>
 <span class="n">sc</span>
 </pre></div>
 </div>
@@ -940,7 +948,7 @@ Test_SNC (version: 1)
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameTable</span><span class="o">.</span><span class="n">print_registered</span><span class="p">()</span>
+<span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardNameTable</span><span class="o">.</span><span class="n">print_registered</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -949,9 +957,13 @@ Test_SNC (version: 1)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
- &gt; operation_point_convention-v1.yml
- &gt; standard_name_table-v79.yml
- &gt; Test_SNC-v1.yml
+ &gt; cgns-v1
+ &gt; cgns_ext-v1
+ &gt; fluid-v1
+ &gt; operation_point_convention-v1
+ &gt; piv-v1
+ &gt; standard_name_table-v79
+ &gt; Test_SNC-v1
 </pre></div></div>
 </div>
 <p>Use the command line call</p>
@@ -968,9 +980,14 @@ Test_SNC (version: 1)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
- &gt; operation_point_convention-v1.yml
- &gt; standard_name_table-v79.yml
- &gt; Test_SNC-v1.yml
+tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
+ &gt; cgns-v1
+ &gt; cgns_ext-v1
+ &gt; fluid-v1
+ &gt; operation_point_convention-v1
+ &gt; piv-v1
+ &gt; standard_name_table-v79
+ &gt; Test_SNC-v1
 </pre></div></div>
 </div>
 </section>
@@ -981,59 +998,15 @@ Test_SNC (version: 1)
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sc_test</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameTable</span><span class="o">.</span><span class="n">from_xml</span><span class="p">(</span><span class="n">xml_filename</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">sc_test</span><span class="o">.</span><span class="n">versionname</span><span class="p">)</span>
-<span class="n">sc_test</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># sc_test = h5tbx.conventions.StandardNameTable.from_xml(xml_filename)</span>
+<span class="c1"># print(sc_test.versionname)</span>
+<span class="c1"># sc_test.dump()</span>
 
-<span class="n">sc_test</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameTable</span><span class="o">.</span><span class="n">from_yml</span><span class="p">(</span><span class="n">yml_filename</span><span class="p">)</span>
+<span class="n">sc_test</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardNameTable</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="n">yml_filename</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">sc_test</span><span class="o">.</span><span class="n">versionname</span><span class="p">)</span>
 <span class="n">sc_test</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Test_SNC-v1
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area rendered_html docutils container">
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>canonical_units</th>
-      <th>description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>time</th>
-      <td>s</td>
-      <td>physical time</td>
-    </tr>
-    <tr>
-      <th>x_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. x indicates the component in y-axis direction</td>
-    </tr>
-    <tr>
-      <th>y_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. y indicates the component in y-axis direction</td>
-    </tr>
-    <tr>
-      <th>z_velocity</th>
-      <td>m/s</td>
-      <td>velocity is a vector quantity. z indicates the component in z-axis direction</td>
-    </tr>
-  </tbody>
-</table></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1084,7 +1057,7 @@ Test_SNC-v1
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameTable</span><span class="o">.</span><span class="n">load_registered</span><span class="p">(</span><span class="s1">&#39;Test_SNC-v1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardNameTable</span><span class="o">.</span><span class="n">load_registered</span><span class="p">(</span><span class="s1">&#39;Test_SNC-v1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -1132,7 +1105,7 @@ Test_SNC-v1
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cf</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardizedNameTable</span><span class="o">.</span><span class="n">from_web</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s1">&#39;https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cf</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">StandardNameTable</span><span class="o">.</span><span class="n">from_web</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s1">&#39;https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml&#39;</span><span class="p">)</span>
 <span class="n">cf</span>
 </pre></div>
 </div>
@@ -1144,6 +1117,23 @@ Test_SNC-v1
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 standard_name_table (version number: 79)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cf</span><span class="o">.</span><span class="n">versionname</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;standard_name_table-v79&#39;
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1254,7 +1244,7 @@ m/s</div>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
@@ -1262,25 +1252,29 @@ m/s</div>
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">ModuleNotFoundError</span>                       Traceback (most recent call last)
+Input <span class="ansi-green-intense-fg ansi-bold">In [17]</span>, in <span class="ansi-cyan-fg">&lt;cell line: 1&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-bold" style="color: rgb(0,135,0)">from</span> <span class="ansi-bold" style="color: rgb(0,0,255)">h5rdmtoolbox</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">conventions</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">identifier</span> <span class="ansi-bold" style="color: rgb(0,135,0)">import</span> _units_power_fix
+
+<span class="ansi-red-intense-fg ansi-bold">ModuleNotFoundError</span>: No module named &#39;h5rdmtoolbox.conventions.identifier&#39;
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_units_power_fix</span><span class="p">(</span><span class="s1">&#39;degree&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-&#39;degree&#39;
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
@@ -1291,26 +1285,9 @@ m/s</div>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Unit of standard name &#34;zenith_angle&#34; not as expected: &#34;K&#34; != &#34;deg&#34;
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
 <p>Perform a check on a file</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1319,47 +1296,30 @@ True
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cf</span><span class="o">.</span><span class="n">check_file</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">,</span> <span class="n">raise_error</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
- &gt; ds: /zenith angle 1: Unit of standard name &#34;zenith_angle&#34; not as expected: &#34;K&#34; != &#34;deg&#34;
-</pre></div></div>
-</div>
 <p>Use the command line call</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cf</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx standard_name -f <span class="o">{</span>h5.hdf_filename<span class="o">}</span> -s <span class="o">{</span>cf.versionname<span class="o">}</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Checking file &#34;C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp28\tmp2.hdf&#34; with layout filename &#34;standard_name_table&#34;
- &gt; ds: /zenith angle 1: Unit of standard name &#34;zenith_angle&#34; not as expected: &#34;K&#34; != &#34;deg&#34;
-</pre></div></div>
 </div>
 </section>
 </section>

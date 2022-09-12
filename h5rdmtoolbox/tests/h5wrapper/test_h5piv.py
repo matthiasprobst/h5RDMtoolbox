@@ -7,7 +7,7 @@ import xarray as xr
 import h5rdmtoolbox as h5tbx
 import h5rdmtoolbox.tutorial
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions import StandardizedNameTable
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
 from h5rdmtoolbox.h5wrapper import H5PIV
 from h5rdmtoolbox.h5wrapper import h5piv
 from h5rdmtoolbox.h5wrapper.h5piv import PIVParameters, PIVMethod
@@ -117,7 +117,7 @@ class TestH5PIV(unittest.TestCase):
 
     def test_convention(self):
         with H5PIV() as h5:
-            self.assertIsInstance(h5.standard_name_table, StandardizedNameTable)
+            self.assertIsInstance(h5.standard_name_table, StandardNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 1)
             self.assertEqual(h5.standard_name_table.name, 'piv')
 

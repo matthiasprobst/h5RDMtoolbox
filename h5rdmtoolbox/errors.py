@@ -6,16 +6,21 @@ class UnitsError(Exception):
     pass
 
 
-class StandardizedNameError(Exception):
+class StandardNameError(Exception):
     """Exception class for error associated with standard name usage"""
     pass
 
 
-class StandardizedNameTableError(Exception):
+class StandardNameTableError(Exception):
+    """Exception class for error associated with standard name usage"""
     pass
 
 
-class StandardizedNameTableVersionError(Exception):
+class StandardNameTableError(Exception):
+    pass
+
+
+class StandardNameTableVersionError(Exception):
     """Incompatible Errors"""
     pass
 
@@ -23,3 +28,11 @@ class StandardizedNameTableVersionError(Exception):
 class EmailError(ValueError):
     """Wrong Email Error"""
     pass
+
+
+class LongNameError(ValueError):
+    """An error associated with the user property"""
+
+
+class OrcidError(ValueError):
+    """An error associated with the user property"""

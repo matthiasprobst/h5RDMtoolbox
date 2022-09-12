@@ -12,7 +12,9 @@ import xarray as xr
 from . import session, PATHLIKE, ccl, CFX_DOTENV_FILENAME, mon
 from .utils import change_suffix
 from ..._logger import logger
-from ....conventions.translations import cfx_to_standard_name
+from ....conventions import StandardNameTableTranslation
+
+sntt = StandardNameTableTranslation.load_registered('cfx-to-fluid-v1')
 
 dotenv.load_dotenv(CFX_DOTENV_FILENAME)
 
@@ -351,7 +353,7 @@ class CFXCase(CFXFile):
                                         ds = h5.create_dataset(name=ds_name, data=monitor_data[k])
                                         ds.attrs['units'] = meta_dict['units']
                                         try:
-                                            ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
+                                            ds.attrs['standard_name'] = sntt.translate(meta_dict["name"].lower())
                                         except KeyError:
                                             logger.debug(f'Could not set standard name for {ds_name}')
                                         ds.make_scale()
@@ -380,9 +382,10 @@ class CFXCase(CFXFile):
                                             # raise Exception(f'Could not create {name} after processing {k} '
                                             #                    f'due to: "{e}"')
 
-                                        try:
-                                            ds.attrs['standard_name'] = cfx_to_standard_name[meta_dict["name"].lower()]
-                                        except KeyError:
+                                        sn = sntt.translate(meta_dict['name'].lower())
+                                        if sn:
+                                            ds.attrs['standard_name'] = sn
+                                        else:
                                             logger.debug(f'Could not set standard name for {ds_name}. Using name '
                                                          f'as long_name instead')
                                             ds.attrs['long_name'] = meta_dict['name']
@@ -407,7 +410,7 @@ class CFXCase(CFXFile):
                                                     dsc = grp[meta_dict["group"]].create_dataset(kc, data=vc)
 
                                                 try:
-                                                    dsc.attrs['standard_name'] = cfx_to_standard_name[kc]
+                                                    dsc.attrs['standard_name'] = sntt.translate(kc)
                                                 except KeyError:
                                                     logger.debug(
                                                         f'Could not set standard name for {ds_name}. Using name '

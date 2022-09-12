@@ -467,11 +467,23 @@ title="Print to PDF"
   <a class="reference internal nav-link" href="#Write-an-individual-layout">
    Write an individual layout
   </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Relative-checking">
-   Relative checking
-  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Attributes">
+     Attributes
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Datasets">
+     Datasets
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Groups">
+     Groups
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -501,11 +513,23 @@ title="Print to PDF"
   <a class="reference internal nav-link" href="#Write-an-individual-layout">
    Write an individual layout
   </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Relative-checking">
-   Relative checking
-  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Attributes">
+     Attributes
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Datasets">
+     Datasets
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Groups">
+     Groups
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -775,19 +799,55 @@ div.rendered_html tbody tr:hover {
 </style>
 <section id="Layouts">
 <h1>Layouts<a class="headerlink" href="#Layouts" title="Permalink to this headline">#</a></h1>
-<p>Layout in the context of this package describe the required content of a HDF file. A layout essentially is a HDF itself and is associates with a wrapper class, e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code>. The idea behind defining layout is, that the data generation process is supervised. This means, when using <code class="docutils literal notranslate"><span class="pre">H5File</span></code> for filling an HDF5 file a <code class="docutils literal notranslate"><span class="pre">check()</span></code> method will tell, if the minimal required (meta) data has been written. A third user would then only accept the file if a check-run results in zero issues.</p>
-<p>The generation and usage of layouts is outlined in the following:</p>
-<div class="nbinput nblast docutils container">
+<p>A Layout in the context of this package describes the required tree-structure and multiple meta information of an HDF5 file. What and how exactly can be defined via a layout is outlined in <a class="reference external" href="#Write-an-individual-layout">a later section.</a></p>
+<p>A layout essentially is a HDF itself and is used in combination with a another HDF5 file, e.g. one that contains measurement data. Specialized “wrapper-HDF files” in this package such as <code class="docutils literal notranslate"><span class="pre">H5File</span></code> or <code class="docutils literal notranslate"><span class="pre">H5PIV</span></code> come already with a pre-defined layout, which is already associated with it</p>
+<p>The idea behind defining layouts is, that the data generation process is supervised. This means, that a <em>check</em> can be performed by the user filling the HDF5 file with data using the provided layout file. This in turn will lead to no suprises or inconsitencies when exchanging the file with other as everybody involved agreed on the respected layout. Optimally, this will save a lot of tie and costs.</p>
+<p>There are two way to work with layouts: 1. Via raw python 2. Via the shell</p>
+<p>Using the shell is recommended for quick checks and to get an overview. Let’s first do that and find out which layouts are already provided by the package:</p>
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout -l
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
+</pre></div></div>
+</div>
+<p>If you created a layout or got a layout file from another person and want to register it in the package so you can access and use it from everywhere on your machine, register it via:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>h5tb layout -r <span class="p">&lt;</span>hdf_filenam.hdf&gt;
+</pre></div>
+</div>
+<p>Find out more about what the command line interface can do by printing out the help:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>h5tb layout -h
+</pre></div>
+</div>
+<p>Now let’s head back to raw python and discuss how to generate a layout and apply checks:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
 </pre></div>
 </div>
 </div>
-<p>The already implemented wrapper classes like e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code> or <code class="docutils literal notranslate"><span class="pre">H5Flow</span></code> are already associated with pre-defined layouts that come with the package and we can called it directly from <code class="docutils literal notranslate"><span class="pre">H5File</span></code> as it is a property of the class:</p>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
+</pre></div></div>
+</div>
+<p>If a <code class="docutils literal notranslate"><span class="pre">H5File</span></code> (or a subclass of it) is already associated with a layout, we can call the <code class="docutils literal notranslate"><span class="pre">layout</span></code>-property (We saw above that a layout for H5File indeed is registered aleady):</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -804,10 +864,29 @@ div.rendered_html tbody tr:hover {
 &lt;H5FileLayout with 1 issues&gt;
 </pre></div></div>
 </div>
-<p>As a <code class="docutils literal notranslate"><span class="pre">layout</span></code> is a HDF file itself, it has similar features like wrapper files, e.g. we can get a nice html representation of the content. Like this we can see what is required to have in any file written with <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.</p>
+<p>As can be seen, the file has one issue. To see which issues were found, call <code class="docutils literal notranslate"><span class="pre">report()</span></code>. In the example, the root-attribute “title” was missing:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">lay</span><span class="o">.</span><span class="n">report</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+H5FileLayout issue report (1 issues)
+-------------------
+/.title: -&gt; missing
+</pre></div></div>
+</div>
+<p>As said in the introduction, a <code class="docutils literal notranslate"><span class="pre">layout</span></code> is a HDF file itself, it has similar features like wrapper files, e.g. we can get a nice html representation of the content. Like this we can see what is required to have in any file written with <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.</p>
 <p>Doing so, we directly see, that the layout <strong>requires to have two attributes</strong>, namely <code class="docutils literal notranslate"><span class="pre">__h5rdmtoobox_version__</span></code> and a <code class="docutils literal notranslate"><span class="pre">title</span></code>:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">lay</span>
@@ -815,7 +894,7 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1024,8 +1103,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-2727842200" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2727842200">
+                    <input id="group-ds-/-4652164800" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-4652164800">
                     /<span>(0)</span></label>
 
 
@@ -1039,7 +1118,7 @@ input.h5tb-varname-in:checked + label:before {
 <h2>Check layout<a class="headerlink" href="#Check-layout" title="Permalink to this headline">#</a></h2>
 <p>Let’s create an empty HDF5 file with <code class="docutils literal notranslate"><span class="pre">h5py</span></code>, thus no data will be available. If we then open it with a <code class="docutils literal notranslate"><span class="pre">H5File</span></code> wrapper, everything defined in the layout file is missing, hence, we expect 4 issues to raise:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># create an HDF5 file with the package h5py:</span>
@@ -1076,12 +1155,40 @@ repr of layout:
 &lt;H5FileLayout with 1 issues&gt;
 </pre></div></div>
 </div>
+<p>The command line equivalent would be:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout -s H5File -c <span class="s2">&quot;{filename}&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp111
+</pre></div></div>
+</div>
 </section>
 <section id="Write-an-individual-layout">
 <h2>Write an individual layout<a class="headerlink" href="#Write-an-individual-layout" title="Permalink to this headline">#</a></h2>
-<p>Layout file are HDF file, thus we need a filename an then initialize a <code class="docutils literal notranslate"><span class="pre">Layout</span></code> object:</p>
+<p>The class <code class="docutils literal notranslate"><span class="pre">H5Layout</span></code> can be found in the sub-package <code class="docutils literal notranslate"><span class="pre">conventions</span></code>. To add groups, datasets and attributes to an object <code class="docutils literal notranslate"><span class="pre">H5Layout</span></code>, we need to initializes it first and then work with the property <code class="docutils literal notranslate"><span class="pre">File</span></code>.</p>
+<p>Let’s first create a reference HDF file to which the layout shall be applied. At the beginning it is empty except the title attribute:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;A test file&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">hdf_filename</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span>
+</pre></div>
+</div>
+</div>
+<p>Init the <code class="docutils literal notranslate"><span class="pre">H5Layout</span></code> object:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">hdf_layout_filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.hdf&#39;</span><span class="p">)</span>
@@ -1091,7 +1198,7 @@ repr of layout:
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1294,14 +1401,14 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>H5FileLayout File "tmp2"</p>
+<p>H5FileLayout File "tmp6"</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-2759108400" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2759108400">
+                    <input id="group-ds-/-7571952700" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-7571952700">
                     /<span>(0)</span></label>
 
 
@@ -1311,365 +1418,20 @@ input.h5tb-varname-in:checked + label:before {
 </ul>
 </div></div>
 </div>
-<p>Say we expect HDF files to have the following data and structure: - a root attribtue “title”, which an have any value - the datasets “x” and “y” which are 1d-arrays, which must have the attributes “standard_name” or “long_name” - a group “meta”</p>
-<p>Fill the file with content. Note, the layout file is an HDF file:</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">mylayout</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
-    <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span>  <span class="c1"># shape does not matter here, but has to be passed</span>
-    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;__ndim__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;standard_name.alt:long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
-    <span class="n">dsy</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span>  <span class="c1"># shape does not matter here, but has to be passed</span>
-    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;__shape__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="p">)</span>
-    <span class="n">dsy</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;standard_name.alt:long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;meta&#39;</span><span class="p">)</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;meta/other&#39;</span><span class="p">)</span>
-<span class="n">mylayout</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<head><style>/*
-CSS inspired by xarray: https://github.com/pydata/xarray
-*/
-.h5tb-header > div,
-.h5tb-header > ul {
-    display: inline;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.h5tb-dataarray-cls,
-.h5tb-dataarray-name {
-    margin-left: 2px;
-    margin-right: 10px;
-}
-
-.h5tb-dataarray-name {
-    color: #000;
-}
-
-.h5grp-sections {
-    list-style: none;
-    padding: 3px;
-    margin: 0;
-}
-
-.h5grp-sections input {
-    display: none;
-}
-
-.h5grp-sections label {
-    display: inline;
-}
-
-.h5grp-sections > li > input + label > span {
-    display: inline;
-    margin-left: 4px;
-}
-
-.h5grp-sections > li > input:checked + label > span {
-    display: none;
-}
-
-.h5grp-sections input:enabled + label {
-    cursor: pointer;
-}
-
-.h5grp-sections input:not(.h5tb-values-in) ~ ul {
-    display: none;
-}
-
-.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
-    display: block;
-}
-
-.h5grp-sections > li > input + label {
-    width: 140px;
-    color: #555;
-    font-weight: 500;
-    padding: 4px 0 2px 0;
-}
-
-
-.h5grp-sections > li > input + label:before {
-    display: inline-block;
-    content: '+';
-    font-size: 11px;
-    width: 15px;
-    text-align: center;
-}
-
-.h5grp-sections > li > input:disabled + label:before {
-    color: #777;
-}
-
-.h5grp-sections > li > input:checked + label:before {
-    content: '-';
-}
-
-.h5tb-dim-list {
-    display: inline-block !important;
-    list-style: none;
-    padding: 0;
-}
-
-.h5tb-dim-list li {
-    display: inline-block;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-dim-list:before {
-    content: '(';
-}
-
-.h5tb-dim-list:after {
-    content: ')';
-}
-
-.h5tb-dim-list li:not(:last-child):after {
-    content: ',';
-}
-
-.h5tb-has-index {
-    text-decoration: underline;
-}
-
-.h5tb-var-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-var-list > li {
-    background-color: #fcfcfc;
-    overflow: hidden;
-}
-
-.h5tb-var-list > li:nth-child(odd) {
-    background-color: #efefef;
-}
-
-.h5tb-var-list li:hover {
-    background-color: rgba(3, 169, 244, .2);
-}
-
-.h5tb-var-list li > span {
-    display: inline-block;
-}
-
-input.h5tb-varname-in + label {
-    width: 140px;
-    padding-left: 0;
-    font-weight: bold;
-}
-
-.h5tb-dataset {
-    width: 100px;
-}
-
-.h5tb-attributevalue {
-    width: 100px;
-    text-align: left;
-    color: #888;
-    white-space: nowrap;
-    font-size: 12px;
-}
-
-input.h5tb-varname-in + label:before {
-    content: ' ';
-    display: inline-block;
-    font-size: 11px;
-    width: 15px;
-    padding-left: 2px;
-    padding-right: 2px;
-    text-align: center;
-    color: #aaa;
-    text-decoration: none !important;
-}
-
-input.h5tb-varname-in:enabled + label:hover:before {
-    color: #000;
-}
-
-input.h5tb-varname-in:checked + label:before {
-    color: #ccc;
-}
-
-.h5tb-dims {
-    width: 280px;
-    white-space: nowrap;
-}
-
-
-.h5tb-unit {
-    width: 96px;
-    white-space: nowrap;
-    padding-right: 2px;
-    text-align: right;
-    color: #555;
-    font-style: italic;
-}
-
-.h5tb-attr-list {
-    list-style: none;
-    background-color: #fff;
-    padding-bottom: 6px;
-    color: #555;
-}
-
-.h5tb-attr-list li,
-.h5tb-attr-list li:hover {
-    background-color: #fff;
-}
-
-.h5tb-dim-highlight {
-    background-color: rgba(3, 169, 244, .2);
-    cursor: pointer;
-}</style></head>
-<p>H5FileLayout File "tmp2"</p>
-
-<div class='h5tb-warp'>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/-2775502500" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2775502500">
-                    /<span>(3)</span></label>
-
-
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">title : __any</li>
-                </ul>
-
-                <ul id="ds-1-/x-2776857900" class="h5tb-var-list">
-                <input id="ds-2-/x-2776862200" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/x-2776862200">x</label>
-                <span class="h5tb-dims">(1,)</span>  [
-                <span class="h5tb-unit">N.A.</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__ndim__ : 1</li><li style="list-style-type: none; font-style: italic">__shape__ : [20]</li><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
-
-                </ul>
-
-             </ul>
-
-
-                <ul id="ds-1-/y-2777348800" class="h5tb-var-list">
-                <input id="ds-2-/y-2777351500" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/y-2777351500">y</label>
-                <span class="h5tb-dims">(1,)</span>  [
-                <span class="h5tb-unit">N.A.</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">standard_name.alt:long_name : __any</li>
-
-                </ul>
-
-             </ul>
-
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/meta-2777460200" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta-2777460200">
-                    meta<span>(1)</span></label>
-
-
-                <ul class="h5tb-attr-list">
-                </ul>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/meta/other-2777622800" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/meta/other-2777622800">
-                    other<span>(0)</span></label>
-
-
-                <ul class="h5tb-attr-list">
-                </ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</div></div>
-</div>
-<p>Now let’s create an example HDF5 file:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">test_filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
-<span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;my test file&#39;</span>
-    <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
-    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;x coordinate&#39;</span>
-    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;standard_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;x_coordinate&#39;</span>
-    <span class="n">dsy</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]])</span>
-</pre></div>
-</div>
-</div>
-<p>We use <code class="docutils literal notranslate"><span class="pre">check()</span></code> and pass the opened hdf5 group to check for any issues:</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">mylayout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Group name &#34;meta&#34; missing in /.
-Wrong shape of dataset /x: (20,) != (3,)
-Neither of the attribute standard_name, long_name exist in /y
-</pre></div></div>
-</div>
-<p>We get 3 issues as stated in the printouts above. If we suppress the print statements by <code class="docutils literal notranslate"><span class="pre">silent=True</span></code>, then we can get a similar output by calling <code class="docutils literal notranslate"><span class="pre">.report()</span></code>:</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mylayout</span><span class="o">.</span><span class="n">report</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-H5FileLayout issue report (3 issues)
--------------------
-/meta: -&gt; missing
-/x: -&gt; wrong shape: (3,) != (20,)
-/y.standard_name or long_name: -&gt; missing
-</pre></div></div>
-</div>
-</section>
-<section id="Relative-checking">
-<h2>Relative checking<a class="headerlink" href="#Relative-checking" title="Permalink to this headline">#</a></h2>
-<p>By callng <code class="docutils literal notranslate"><span class="pre">.check()</span></code> from the layout object, we can change the entry point by passing other HDF groups than the root group, e.g. we could start from the group “meta”:</p>
+<section id="Attributes">
+<h3>Attributes<a class="headerlink" href="#Attributes" title="Permalink to this headline">#</a></h3>
+<p>Many parts of the HDF5 tree structure can be defined via the layout. Most obviously we can define attributes. We can distinguish between two definition: 1. Defining the exact value 2. Defining the name with any value</p>
+<p>Let’s enforce the user to use the attribute <code class="docutils literal notranslate"><span class="pre">title</span></code> but let the value be open (use special value string <code class="docutils literal notranslate"><span class="pre">__any</span></code>) and enforce the usage of the root attribute <code class="docutils literal notranslate"><span class="pre">type=testdata</span></code>.</p>
+<p>Attribute values starting with <code class="docutils literal notranslate"><span class="pre">__</span></code> are ignored. Thus instead of <code class="docutils literal notranslate"><span class="pre">__any</span></code> we can use any other string, e.g. <code class="docutils literal notranslate"><span class="pre">__a_title</span></code>:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;meta&#39;</span><span class="p">)</span>
-    <span class="n">mylayout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;meta&#39;</span><span class="p">],</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">mylayout</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">mylayout</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;testdata&#39;</span>
+<span class="n">mylayout</span><span class="o">.</span><span class="n">check_file</span><span class="p">(</span><span class="n">hdf_filename</span><span class="p">)</span>
+<span class="n">mylayout</span><span class="o">.</span><span class="n">report</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -1678,17 +1440,57 @@ H5FileLayout issue report (3 issues)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;H5FileLayout with 1 issues&gt;
+H5FileLayout issue report (1 issues)
+-------------------
+/.type: -&gt; missing
 </pre></div></div>
 </div>
-<p>Also we can specify, whether we want to run the check on all subgropups or only stay at the entry level. Such an recursive search can be suppressed by passing <code class="docutils literal notranslate"><span class="pre">recursive=False</span></code>:</p>
-<div class="nbinput docutils container">
+</section>
+<section id="Datasets">
+<h3>Datasets<a class="headerlink" href="#Datasets" title="Permalink to this headline">#</a></h3>
+<p>It generally makes no sense to define the data content of a dataset. However, it might be reasonable to define the expected shape or dimension of the array and once again its attributes. For this, we need to create the expected dataset at the expected group level and give it any shape. Best is to use the smallest possible in order to reduce the size of the layout file. It anyhow does not play a role because shape or dimension checks are made based on specific attributes assigned to the dataset.</p>
+<p>Special attributes names start and end with <code class="docutils literal notranslate"><span class="pre">__</span></code>. Available ones to be used for datasets in layouts are: - <code class="docutils literal notranslate"><span class="pre">__shape__</span></code>: Specify the exact shape: Tuple ot int - <code class="docutils literal notranslate"><span class="pre">__dim__</span></code>: Specify the exact dimension: int</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">mylayout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">],</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">mylayout</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">mylayout</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="c1"># expect a 1D array dataset called &quot;x&quot;:</span>
+    <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span>
+    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;__ndim__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;standard_name.alt:long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
+    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;m&#39;</span>
+
+    <span class="c1"># expect a 2D array dataset called &quot;data&quot; with shape (20, 30):</span>
+    <span class="n">dsdata</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span>
+    <span class="n">dsdata</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;__shape__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+    <span class="n">dsdata</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;standard_name.alt:long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;__any&#39;</span>
+    <span class="n">dsdata</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;kg&#39;</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s update the reference file:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">hdf_filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;testdata&#39;</span>
+    <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+    <span class="n">dsx</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;long_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;x coordinate&#39;</span>
+
+    <span class="n">dsdata</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">32</span><span class="p">))</span>
+    <span class="n">dsdata</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;m&#39;</span>
+</pre></div>
+</div>
+</div>
+<p>The layout check reveals that some meta data is mising, other is wrong</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mylayout</span><span class="o">.</span><span class="n">check_file</span><span class="p">(</span><span class="n">hdf_filename</span><span class="p">)</span>
+<span class="n">mylayout</span><span class="o">.</span><span class="n">report</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -1697,9 +1499,19 @@ H5FileLayout issue report (3 issues)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;H5FileLayout with 2 issues&gt;
+H5FileLayout issue report (4 issues)
+-------------------
+/data: -&gt; wrong shape: (20, 32) != (20, 30)
+/data.standard_name or long_name: -&gt; missing
+/data.units: -&gt; wrong
+/x.units: -&gt; missing
 </pre></div></div>
 </div>
+</section>
+<section id="Groups">
+<h3>Groups<a class="headerlink" href="#Groups" title="Permalink to this headline">#</a></h3>
+<p>Defining groups is straight forward and similar to datasets, just without the option to define shape/dim and similar.</p>
+</section>
 </section>
 </section>
 

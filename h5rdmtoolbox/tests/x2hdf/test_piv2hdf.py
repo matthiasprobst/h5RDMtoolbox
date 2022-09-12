@@ -1,13 +1,26 @@
+import argparse
 import shutil
 import unittest
+from unittest import mock  # python 3.3+
 
 import numpy as np
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.x2hdf import piv
+from h5rdmtoolbox.x2hdf.piv import pivview2hdf
 
 
 class TestPIV2HDF(unittest.TestCase):
+
+    @mock.patch('argparse.ArgumentParser.parse_args',
+                return_value=argparse.Namespace(help=True, write_default_config=None, source=None))
+    def test_command(self, mock_args):
+        pivview2hdf()
+
+    def test_config(self):
+        ymlfile = piv._config.write_config(h5tbx.generate_temporary_filename(suffix='.yml'),
+                                           piv._config.DEFAULT_CONFIGURATION)
+        self.assertTrue(piv._config.check_yaml_file(ymlfile))
 
     def test_parameter(self):
         pivview_parameter_file = h5tbx.tutorial.PIVview.get_parameter_file()
@@ -143,3 +156,16 @@ class TestPIV2HDF(unittest.TestCase):
             self.assertEqual(np.isnan(h5piv.u[-1, -1, :, :].values).sum(), h5piv['x'].size * h5piv['y'].size)
             self.assertEqual(h5piv.check(silent=False), 0)
             h5piv.get_parameters(0)
+
+    def test_utils(self):
+        from h5rdmtoolbox.x2hdf.piv import utils
+        from pint_xarray import unit_registry
+        self.assertTrue(utils.is_time('s'))
+        self.assertTrue(utils.is_time(unit_registry.Unit('s')))
+        self.assertTrue(utils.is_time(unit_registry.Unit('ms')))
+        self.assertFalse(utils.is_time(unit_registry.Unit('m')))
+
+        self.assertTrue(utils.is_length('m'))
+        self.assertTrue(utils.is_length(unit_registry.Unit('m')))
+        self.assertTrue(utils.is_length(unit_registry.Unit('km')))
+        self.assertFalse(utils.is_length(unit_registry.Unit('s')))
