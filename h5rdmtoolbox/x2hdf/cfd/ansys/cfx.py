@@ -12,7 +12,7 @@ import xarray as xr
 from . import session, PATHLIKE, ccl, CFX_DOTENV_FILENAME, mon
 from .utils import change_suffix
 from ..._logger import logger
-from ....conventions import StandardNameTableTranslation, StandardNameTable
+from ....conventions import StandardNameTableTranslation
 
 sntt = StandardNameTableTranslation.load_registered('cfx-to-fluid-v1')
 
@@ -382,9 +382,10 @@ class CFXCase(CFXFile):
                                             # raise Exception(f'Could not create {name} after processing {k} '
                                             #                    f'due to: "{e}"')
 
-                                        try:
-                                            ds.attrs['standard_name'] = sntt.translate(meta_dict['name'].lower())
-                                        except KeyError:
+                                        sn = sntt.translate(meta_dict['name'].lower())
+                                        if sn:
+                                            ds.attrs['standard_name'] = sn
+                                        else:
                                             logger.debug(f'Could not set standard name for {ds_name}. Using name '
                                                          f'as long_name instead')
                                             ds.attrs['long_name'] = meta_dict['name']
