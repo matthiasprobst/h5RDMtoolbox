@@ -68,7 +68,9 @@ class MongoGroupAccessor:
     def __init__(self, h5grp: H5Group):
         self._h5grp = h5grp
 
-    def insert(self, collection: pymongo.collection.Collection, recursive: bool = False,
+    def insert(self, collection: pymongo.collection.Collection,
+               recursive: bool = False,
+               update: bool = True,
                include_dataset: bool = True,
                flatten_tree: bool = True,
                ignore_attrs: List[str] = None,
@@ -111,7 +113,11 @@ class MongoGroupAccessor:
             if ak not in H5_DIM_ATTRS:
                 if ak not in ignore_attrs:
                     doc[ak] = type2mongo(av)
-        collection.insert_one(doc)
+        if update:
+            collection.update_one({'filename': doc['filename'], 'name': doc['name']},
+                                  {'$set': doc}, upsert=True)
+        else:
+            collection.insert_one(doc)
 
         if recursive:
             include_dataset = True
@@ -121,10 +127,12 @@ class MongoGroupAccessor:
                 if isinstance(h5obj, h5py.Dataset):
                     if include_dataset:
                         h5obj.mongo.insert(axis=None, collection=collection,
+                                           update=update,
                                            ignore_attrs=ignore_attrs)
                 else:
                     if recursive:
                         h5obj.mongo.insert(collection, recursive=recursive,
+                                           update=update,
                                            include_dataset=include_dataset,
                                            ignore_attrs=ignore_attrs)
         return collection
@@ -229,6 +237,7 @@ class MongoDatasetAccessor:
                                       'only accepts axis==0 in this developmet stage.')
 
     def insert(self, axis, collection: pymongo.collection.Collection,
+               update: bool = True,
                ignore_attrs: List[str] = None, dims: List[str] = None,
                additional_fields: Dict = None, ordered: bool = True) -> pymongo.collection.Collection:
         """Using axis is UNDER HEAVY CONSTRUCTION!!! Currently only axis=0 works
@@ -241,7 +250,12 @@ class MongoDatasetAccessor:
         if additional_fields is not None:
             for doc in docs:
                 doc.update(additional_fields)
-        collection.insert_many(docs, ordered=ordered)
+        if update:
+            for doc in docs:
+                collection.update_many({'filename': doc['filename'], 'name': doc['name']},
+                                       {'$set': doc}, upsert=True)
+        else:
+            collection.insert_many(docs, ordered=ordered)
         return collection
 
     def update(self, axis, collection: pymongo.collection.Collection,
