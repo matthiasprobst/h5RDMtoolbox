@@ -78,6 +78,7 @@ def xmlconvention2dict(xml_filename: Path) -> Tuple[dict, dict]:
 def meta_from_xml(xml_filename):
     _dict, meta = xmlconvention2dict(xml_filename)
     meta.update(dict(table=_dict))
+    meta.pop('alias')
     return meta
 
 

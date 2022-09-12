@@ -80,6 +80,10 @@ def main():
                                  required=False,
                                  default=None,
                                  help='Filename to run check on.')
+    sp_standardname.add_argument('-t', '--list-translations',
+                                 action='store_true',
+                                 default=False,
+                                 help='List all registered standard name translations.')
 
     # CFX2HDF
     sp_cfx2hdf = subparsers.add_parser('cfx2hdf', help='cfx2hdf menu')
@@ -216,6 +220,9 @@ def main():
             if args.list:
                 StandardNameTable.print_registered()
                 return
+            if args.list_translations:
+                from .conventions.standard_attributes.standard_name import StandardNameTableTranslation
+                StandardNameTableTranslation.print_registered()
             else:
                 snt_filename = pathlib.Path(args.select)
                 if snt_filename.exists():

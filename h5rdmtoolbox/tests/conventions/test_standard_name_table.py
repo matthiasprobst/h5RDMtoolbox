@@ -58,6 +58,12 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertIsInstance(table._table, MetaDataYamlDict)
         self.assertDictEqual(table._table._data, {})
 
+    def test_StandardNameTableFromWeb(self):
+        cf = StandardNameTable.from_web(
+            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml')
+        self.assertEqual(cf.name, 'standard_name_table')
+        self.assertEqual(cf.versionname, 'standard_name_table-v79')
+
     def test_from_yaml(self):
         table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
 

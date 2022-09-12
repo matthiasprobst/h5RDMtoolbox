@@ -19,11 +19,16 @@ for _user_dir in user_dirs.values():
 config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
 config_filename = config_dir / 'h5rdmtoolbox.yaml'
 
-
 # tmp folder name is individual for every call of the package:
-_dircounter = count()
 _root_tmp_dir = _user_root_dir / 'tmp'
-user_dirs['tmp'] = _root_tmp_dir / f'tmp{len(list(_root_tmp_dir.glob("tmp*")))}'
+itmp = len(list(_root_tmp_dir.glob("tmp*")))
+user_dirs['tmp'] = _root_tmp_dir / f'tmp{itmp}'
+while user_dirs['tmp'].exists():
+    itmp += 1
+    user_dirs['tmp'] = _root_tmp_dir / f'tmp{itmp}'
+
+print(f'tmp: {user_dirs["tmp"]}')
+
 user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
 
 testdir = pathlib.Path(__file__).parent / 'tests/data'
