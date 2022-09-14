@@ -10,11 +10,9 @@ from pymongo import MongoClient
 
 import h5rdmtoolbox as h5tbx
 import h5rdmtoolbox.h5database as h5db
-from h5rdmtoolbox import H5File
-from h5rdmtoolbox import tutorial
+from h5rdmtoolbox import H5File, tutorial
 # noinspection PyUnresolvedReferences
 from h5rdmtoolbox.h5database import mongo
-from h5rdmtoolbox.h5database.mongo import make_dict_mongo_compatible
 
 
 def read_many_from_database(db_entry: pymongo.collection.Cursor) -> List[any]:
@@ -73,7 +71,7 @@ class TestHDF5mongo(unittest.TestCase):
 
             with h5tbx.H5File(filenames[0]) as h5:
                 tree = h5.get_tree_structure(True)
-            self.collection.insert_one(make_dict_mongo_compatible(tree))
+            self.collection.insert_one(mongo.make_dict_mongo_compatible(tree))
 
     def test_insert_dataset(self):
         if self.mongodb_running:
@@ -85,7 +83,7 @@ class TestHDF5mongo(unittest.TestCase):
                 h5.create_dataset('index', data=np.arange(0, 4, 1), dtype=int,
                                   units='', long_name='index', make_scale=True)
                 h5.create_dataset('index2', data=np.arange(0, 4, 1), dtype=int,
-                                  units='', long_name='index', make_scale=True)
+                                  units='', standard_name='standard_index', make_scale=True)
                 h5.create_dataset('index3', data=np.arange(0, 4, 1), dtype=int,
                                   units='', long_name='index', make_scale=False)
                 h5.create_dataset('images', data=np.random.random((4, 11, 21)),
@@ -94,9 +92,10 @@ class TestHDF5mongo(unittest.TestCase):
                                   attach_scales=([h5['index'], h5['index2']], None, None))
                 h5['images'].attrs['COORDINATES'] = ['/z', ]
 
-                h5.images.mongo.insert(axis=0, collection=self.collection)
+                h5.images.mongo.insert(axis=0, collection=self.collection, use_standard_names_for_dimscales=True)
 
             res = self.collection.find()
+            self.assertTrue('standard_index' in self.collection.find_one())
 
             now = datetime.datetime.utcnow()
 

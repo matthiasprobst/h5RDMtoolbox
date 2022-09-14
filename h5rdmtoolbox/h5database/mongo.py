@@ -10,6 +10,7 @@ import numpy as np
 import pymongo.collection
 from pymongo.errors import InvalidDocument
 
+from .filequery import distinct
 from ..h5wrapper import open_wrapper
 from ..h5wrapper.accessory import register_special_dataset
 from ..h5wrapper.h5file import H5Dataset, H5Group
@@ -146,7 +147,8 @@ class MongoDatasetAccessor:
         self._h5ds = h5ds
 
     def get_documents(self, axis: int, ignore_attrs: List[str] = None, dims: List[str] = None,
-                      use_relativle_filename: bool = False) -> List[Dict]:
+                      use_relative_filename: bool = False,
+                      use_standard_names_for_dimscales: bool = False) -> List[Dict]:
         """Generates the document from the dataset and return list of dictionaries"""
         if ignore_attrs is None:
             ignore_attrs = []
@@ -154,7 +156,7 @@ class MongoDatasetAccessor:
         ds = self._h5ds
 
         filename_ctime = get_file_creation_time(self._h5ds.file.filename)
-        if use_relativle_filename:
+        if use_relative_filename:
             filename = ds.file.filename
         else:
             filename = str(pathlib.Path(ds.file.filename).absolute())
@@ -215,9 +217,19 @@ class MongoDatasetAccessor:
 
                 for dim in dim_ls:
                     scale = dim[i]
-                    basename = os.path.basename(dim.name[1:])
+                    if use_standard_names_for_dimscales:
+                        dimname_to_use = dim.attrs.get('standard_name')
+                        if not dimname_to_use:
+                            dimname_to_use = os.path.basename(dim.name[1:])
+                        else:
+                            if len(distinct(dim, 'standard_name', None)) > 1:
+                                dimname_to_use = os.path.basename(dim.name[1:])
+                                warnings.warn(f'Cannot use standard name of dim scale {dim.name} because it '
+                                              f'is not distinct in the dataset')
+                    else:
+                        dimname_to_use = os.path.basename(dim.name[1:])
                     # TODO: add string entry that tells us where the scale ds is located
-                    doc[basename] = type2mongo(scale)
+                    doc[dimname_to_use] = type2mongo(scale)
 
                 for ak, av in ds.attrs.items():
                     if ak not in H5_DIM_ATTRS:
@@ -239,13 +251,15 @@ class MongoDatasetAccessor:
     def insert(self, axis, collection: pymongo.collection.Collection,
                update: bool = True,
                ignore_attrs: List[str] = None, dims: List[str] = None,
-               additional_fields: Dict = None, ordered: bool = True) -> pymongo.collection.Collection:
+               additional_fields: Dict = None, ordered: bool = True,
+               use_standard_names_for_dimscales: bool = False) -> pymongo.collection.Collection:
         """Using axis is UNDER HEAVY CONSTRUCTION!!! Currently only axis=0 works
 
         By providing `dims` the dimension scales can be defined. If set to None, all attached
         scales are used
         """
-        docs = self.get_documents(axis, ignore_attrs, dims)
+        docs = self.get_documents(axis, ignore_attrs, dims,
+                                  use_standard_names_for_dimscales=use_standard_names_for_dimscales)
 
         if additional_fields is not None:
             for doc in docs:
