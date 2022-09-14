@@ -234,6 +234,7 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
     passed group."""
     if key[0] == '$':
         rpc = RecPropCollect(key[1:], objfilter)
+
         h5obj.visititems(rpc)
         if objfilter:
             if isinstance(h5obj, objfilter):
@@ -243,20 +244,27 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
                 except AttributeError:
                     pass
         else:
-            if key in h5obj.attrs:
-                rpc.found_objects.append(h5obj.attrs[key])
+            try:
+                propval = h5obj.__getattribute__(key[1:])
+                rpc.found_objects.append(propval)
+            except AttributeError:
+                pass
 
         return list(set(rpc.found_objects))
 
     rac = RecAttrCollect(key, objfilter)
-    h5obj.visititems(rac)
-    if objfilter:
-        if isinstance(h5obj, objfilter):
+    for k, v in h5obj.attrs.items():
+        if k == key:
+            rac.found_objects.append(v)
+    if isinstance(h5obj, h5py.Group):
+        h5obj.visititems(rac)
+        if objfilter:
+            if isinstance(h5obj, objfilter):
+                if key in h5obj.attrs:
+                    rac.found_objects.append(h5obj.attrs[key])
+        else:
             if key in h5obj.attrs:
                 rac.found_objects.append(h5obj.attrs[key])
-    else:
-        if key in h5obj.attrs:
-            rac.found_objects.append(h5obj.attrs[key])
 
     return list(set(rac.found_objects))
 

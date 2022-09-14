@@ -328,10 +328,11 @@ class TestH5File(unittest.TestCase):
             h5.create_dataset('ds3', shape=(2, 4, 5), units='', long_name='longname', attrs=dict(a=3))
             self.assertEqual(h5.distinct('a'), [1, 2, 3])
             self.assertEqual(sorted(h5.distinct('long_name')), ['longname', 'root long name'])
+            self.assertEqual(sorted(h5.distinct('$long_name')), ['longname', 'root long name'])
             self.assertEqual(h5.distinct('long_name', 'group'), ['root long name'])
             self.assertEqual(h5.distinct('$shape'), [(2, 3), (2, 4, 5)])
             self.assertEqual(h5.distinct('$ndim'), [2, 3])
-            self.assertEqual(sorted(h5.distinct('$basename')), ['ds1', 'ds2', 'ds3'])
+            self.assertEqual(sorted(h5.distinct('$basename')), ['', 'ds1', 'ds2', 'ds3'])
 
     def test_find_group_data(self):
         with H5File(self.test_filename, mode='r') as h5:
