@@ -215,11 +215,33 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="../h5database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../h5database/filequery.html">
+     HDF File as a Database
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../h5database/h5mongo.html">
+     HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../x2hdf/index.html">
+   x2hdf
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -232,28 +254,6 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../x2hdf/cfx2hdf.html">
      Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/Serverless.html">
-     Serverless HDF Database
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
-     HDF5 + mongoDB
     </a>
    </li>
   </ul>
@@ -804,21 +804,13 @@ div.rendered_html tbody tr:hover {
 <p>The idea behind defining layouts is, that the data generation process is supervised. This means, that a <em>check</em> can be performed by the user filling the HDF5 file with data using the provided layout file. This in turn will lead to no suprises or inconsitencies when exchanging the file with other as everybody involved agreed on the respected layout. Optimally, this will save a lot of tie and costs.</p>
 <p>There are two way to work with layouts: 1. Via raw python 2. Via the shell</p>
 <p>Using the shell is recommended for quick checks and to get an overview. Let’s first do that and find out which layouts are already provided by the package:</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout -l
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp7
-</pre></div></div>
 </div>
 <p>If you created a layout or got a layout file from another person and want to register it in the package so you can access and use it from everywhere on your machine, register it via:</p>
 <div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>h5tb layout -r <span class="p">&lt;</span>hdf_filenam.hdf&gt;
@@ -829,21 +821,13 @@ tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp7
 </pre></div>
 </div>
 <p>Now let’s head back to raw python and discuss how to generate a layout and apply checks:</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp7
-</pre></div></div>
 </div>
 <p>If a <code class="docutils literal notranslate"><span class="pre">H5File</span></code> (or a subclass of it) is already associated with a layout, we can call the <code class="docutils literal notranslate"><span class="pre">layout</span></code>-property (We saw above that a layout for H5File indeed is registered aleady):</p>
 <div class="nbinput docutils container">
@@ -1103,8 +1087,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-4960406500" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-4960406500">
+                    <input id="group-ds-/-5393246200" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-5393246200">
                     /<span>(0)</span></label>
 
 
@@ -1156,21 +1140,13 @@ repr of layout:
 </pre></div></div>
 </div>
 <p>The command line equivalent would be:</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout -s H5File -c <span class="s2">&quot;{filename}&quot;</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp9
-</pre></div></div>
 </div>
 </section>
 <section id="Write-an-individual-layout">
@@ -1407,8 +1383,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-7187295600" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-7187295600">
+                    <input id="group-ds-/-7635470800" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-7635470800">
                     /<span>(0)</span></label>
 
 

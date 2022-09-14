@@ -30,7 +30,7 @@ def read_many_from_database(db_entry: pymongo.collection.Cursor) -> List[any]:
         return arrs
 
 
-class TestH5Repo(unittest.TestCase):
+class TestHDF5mongo(unittest.TestCase):
 
     def setUp(self) -> None:
         self.mongodb_running = True
@@ -185,3 +185,26 @@ class TestH5Repo(unittest.TestCase):
             now = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
             for r in self.collection.find({}):
                 self.assertTrue((now - r['file_creation_time']).total_seconds() < 20)
+
+    def test_found(self):
+        with h5tbx.H5File() as h5:
+            g = h5.create_group('/grp/subgrp/name1')
+            ds1 = h5.create_dataset('ds1', shape=(10, 2), units='', long_name='long1')
+            ds2 = h5.create_dataset('ds2', shape=(10, 2), units='', long_name='long1')
+            dsg2 = h5.create_group('g2', long_name='long1')
+            g.attrs['testuser'] = 'me'
+            g.attrs['num'] = 10.2
+            h5.attrs['num'] = .2
+
+            self.assertEqual([ds1, ], h5.find({'long_name': 'long1', '$basename': 'ds1'}))
+            self.assertEqual([h5['ds2'], h5['ds1']],
+                             h5.find({'long_name': 'long1'}, objfilter='dataset'))
+            self.assertEqual([h5['g2']],
+                             h5.find({'long_name': 'long1'}, objfilter='group'))
+
+            self.assertEqual(h5.find_one({'$name': '/grp/subgrp'}), h5['/grp/subgrp/'])
+            self.assertEqual(h5.find_one({'num': {'$lte': .2}}), h5)
+            #
+            self.assertEqual(h5.find({'testuser': 'me2'}), [])
+            self.assertEqual(h5.find({'testuser': 'me'}), [g])
+            self.assertEqual(h5.find({'$name': '/grp/subgrp'}), [h5['/grp/subgrp/'], ])

@@ -3,6 +3,8 @@ from itertools import count
 
 import appdirs
 
+from ._logger import logger
+
 _filecounter = count()
 _dircounter = count()
 
@@ -27,8 +29,8 @@ while user_dirs['tmp'].exists():
     itmp += 1
     user_dirs['tmp'] = _root_tmp_dir / f'tmp{itmp}'
 
-print(f'tmp: {user_dirs["tmp"]}')
-
 user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
 
 testdir = pathlib.Path(__file__).parent / 'tests/data'
+
+logger.debug(f'user direcotries are: {user_dirs}')

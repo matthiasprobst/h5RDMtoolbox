@@ -39,8 +39,8 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="How to …. ?" href="../howto/howto.html" />
-    <link rel="prev" title="Serverless HDF Database" href="Serverless.html" />
+    <link rel="next" title="x2hdf: Conversion of specifc data to HDF" href="../x2hdf/index.html" />
+    <link rel="prev" title="HDF File as a Database" href="filequery.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -214,12 +214,34 @@
    </li>
   </ul>
  </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   H5Database
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+  <label for="toctree-checkbox-4">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="filequery.html">
+     HDF File as a Database
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../x2hdf/index.html">
    x2hdf
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
-  <label for="toctree-checkbox-4">
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -232,28 +254,6 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../x2hdf/cfx2hdf.html">
      Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 current active has-children">
-  <a class="reference internal" href="index.html">
-   H5Database
-  </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul class="current">
-   <li class="toctree-l2">
-    <a class="reference internal" href="Serverless.html">
-     Serverless HDF Database
-    </a>
-   </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
-     HDF5 + mongoDB
     </a>
    </li>
   </ul>
@@ -810,7 +810,7 @@ div.rendered_html tbody tr:hover {
 <section id="HDF5-+-mongoDB">
 <h1>HDF5 + mongoDB<a class="headerlink" href="#HDF5-+-mongoDB" title="Permalink to this headline">#</a></h1>
 <p>This databases uses <code class="docutils literal notranslate"><span class="pre">pymongo</span></code> as the backend database. Only meta data (or part of it) is stored in the database, not the raw data. To understand how dataset raw data is linked to the database see the respective chapter in this document.</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
@@ -823,27 +823,8 @@ div.rendered_html tbody tr:hover {
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
-
-<span class="n">h5tbx</span><span class="o">.</span><span class="n">__version__</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp1
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-&#39;0.1.12&#39;
-</pre></div></div>
 </div>
 <section id="First-things-first:-Connection-to-the-DB:">
 <h2>First things first: Connection to the DB:<a class="headerlink" href="#First-things-first:-Connection-to-the-DB:" title="Permalink to this headline">#</a></h2>
@@ -868,7 +849,7 @@ MongoClient(host=[&#39;localhost:27017&#39;], document_class=dict, tz_aware=Fals
 </div>
 <p>Create a database and a (test) collection named “digits”:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="p">[</span><span class="s1">&#39;h5database_notebook_tutorial&#39;</span><span class="p">]</span>
@@ -884,7 +865,7 @@ MongoClient(host=[&#39;localhost:27017&#39;], document_class=dict, tz_aware=Fals
 <h2>Testdata<a class="headerlink" href="#Testdata" title="Permalink to this headline">#</a></h2>
 <p>We will take test data from scikit-learn, namely the hand-written digits ((<a class="reference external" href="https://scikit-learn.org/stable/auto_examples/classification/plot_digits_classification.html">https://scikit-learn.org/stable/auto_examples/classification/plot_digits_classification.html</a>):</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># !pip install scikit-learn</span>
@@ -893,7 +874,7 @@ MongoClient(host=[&#39;localhost:27017&#39;], document_class=dict, tz_aware=Fals
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">load_digits</span>
@@ -903,7 +884,7 @@ MongoClient(host=[&#39;localhost:27017&#39;], document_class=dict, tz_aware=Fals
 </div>
 <p>Fill a HDF5 file with the loaded data. We additionally compute the mean count and two gray occurance properties (dissimilarity and correlation). Those three datasets together with the true digit of the image are linked to the image via HDF dimension scales:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">skimage.feature</span> <span class="kn">import</span> <span class="n">graycomatrix</span><span class="p">,</span> <span class="n">graycoprops</span>
@@ -1139,25 +1120,25 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp3</p>
+<p>tmp0</p>
 <p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-117974359700" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-117974359700">
+                    <input id="group-ds-/-6674064600" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-6674064600">
                     /<span>(5)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.12</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.13</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                    <ul id="ds-1-/correlation-117975558100" class="h5tb-var-list">
-                    <input id="ds-2-/correlation-117975560700" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/correlation-6675449100" class="h5tb-var-list">
+                    <input id="ds-2-/correlation-6675452000" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/correlation-117975560700">correlation</label>
+                        for="ds-2-/correlation-6675452000">correlation</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">count</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : correlation</li>
@@ -1167,10 +1148,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/digit-117976077400" class="h5tb-var-list">
-                    <input id="ds-2-/digit-117976079800" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/digit-6675990000" class="h5tb-var-list">
+                    <input id="ds-2-/digit-6675992900" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/digit-117976079800">digit</label>
+                        for="ds-2-/digit-6675992900">digit</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">-</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : true digit</li>
@@ -1180,10 +1161,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/dissimilarity-117976497600" class="h5tb-var-list">
-                    <input id="ds-2-/dissimilarity-117976501000" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/dissimilarity-6676364800" class="h5tb-var-list">
+                    <input id="ds-2-/dissimilarity-6676367400" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/dissimilarity-117976501000">dissimilarity</label>
+                        for="ds-2-/dissimilarity-6676367400">dissimilarity</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">count</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : dissimilarity</li>
@@ -1193,10 +1174,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/images-117977011000" class="h5tb-var-list">
-                    <input id="ds-2-/images-117977014500" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/images-6676872200" class="h5tb-var-list">
+                    <input id="ds-2-/images-6676875000" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/images-117977014500">images</label>
+                        for="ds-2-/images-6676875000">images</label>
                     <span class="h5tb-dims">(digit: 1797)</span>  [
                     <span class="h5tb-unit">pixel</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : image of hand-written digit</li>
@@ -1206,10 +1187,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/mean-117977276100" class="h5tb-var-list">
-                    <input id="ds-2-/mean-117977278200" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/mean-6677163700" class="h5tb-var-list">
+                    <input id="ds-2-/mean-6677166200" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/mean-117977278200">mean</label>
+                        for="ds-2-/mean-6677166200">mean</label>
                     <span class="h5tb-dims">(1797,)</span>  [
                     <span class="h5tb-unit">count</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : mean counts of the image</li>
@@ -1227,7 +1208,7 @@ input.h5tb-varname-in:checked + label:before {
 <h2>Filling the database<a class="headerlink" href="#Filling-the-database" title="Permalink to this headline">#</a></h2>
 <p>To insert data from the HDF5 file into the DB, we need the accessor “mongo”:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.h5database</span> <span class="kn">import</span> <span class="n">mongo</span>
@@ -1235,7 +1216,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1245,7 +1226,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <p>Count the number of collections inserted:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({})</span>
@@ -1253,18 +1234,18 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-3594
+1797
 </pre></div></div>
 </div>
 <section id="Find-one:">
 <h3>Find one:<a class="headerlink" href="#Find-one:" title="Permalink to this headline">#</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">one_res</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$eq&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}})</span>
@@ -1273,36 +1254,43 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;_id&#39;: ObjectId(&#39;631efe87037a49b2d4a8673f&#39;),
- &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp1\\tmp3&#39;,
- &#39;name&#39;: &#39;/images&#39;,
+{&#39;_id&#39;: ObjectId(&#39;632193175626ce29e15e0743&#39;),
  &#39;basename&#39;: &#39;images&#39;,
- &#39;file_creation_time&#39;: datetime.datetime(2022, 9, 12, 9, 40, 19, 703000),
- &#39;shape&#39;: [1797, 8, 8],
- &#39;ndim&#39;: 3,
- &#39;hdfobj&#39;: &#39;dataset&#39;,
- &#39;slice&#39;: [[3, 4, 1], [0, None, 1], [0, None, 1]],
- &#39;digit&#39;: 3,
- &#39;mean&#39;: 4.171875,
- &#39;dissimilarity&#39;: 4.875,
  &#39;correlation&#39;: -0.3547935485839844,
+ &#39;digit&#39;: 3,
+ &#39;dissimilarity&#39;: 4.875,
+ &#39;file_creation_time&#39;: datetime.datetime(2022, 9, 14, 8, 38, 42, 579000),
+ &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp77\\tmp0&#39;,
+ &#39;hdfobj&#39;: &#39;dataset&#39;,
  &#39;long_name&#39;: &#39;image of hand-written digit&#39;,
+ &#39;mean&#39;: 4.171875,
+ &#39;name&#39;: &#39;/images&#39;,
+ &#39;ndim&#39;: 3,
+ &#39;shape&#39;: [1797, 8, 8],
+ &#39;slice&#39;: [[3, 4, 1], [0, None, 1], [0, None, 1]],
  &#39;units&#39;: &#39;pixel&#39;}
 </pre></div></div>
 </div>
 <p>We found one entry only because we asked for one only. Note, that the sult dictionary provides a “slice” entry. This is the slice within the 3D array in the HDF file. We can use this to slice the array. There is even a method in the accessor to simplify this:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">mongo</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">one_res</span><span class="p">[</span><span class="s1">&#39;slice&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/h5database_h5mongo_19_0.png" src="../_images/h5database_h5mongo_19_0.png" />
 </div>
 </div>
 </section>
@@ -1311,7 +1299,7 @@ input.h5tb-varname-in:checked + label:before {
 <h2>Find many:<a class="headerlink" href="#Find-many:" title="Permalink to this headline">#</a></h2>
 <p>Let’ query a rang of data. Mean count shall be above 5 counts and the digit is &gt;3 and &lt;=8:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">},</span> <span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="s1">&#39;digit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$lte&#39;</span><span class="p">:</span> <span class="mi">8</span><span class="p">}})</span>
@@ -1321,15 +1309,15 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <p>Inspect the result by the help of pandas:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">many_res</span><span class="o">.</span><span class="n">rewind</span><span class="p">()])</span>
@@ -1343,12 +1331,130 @@ input.h5tb-varname-in:checked + label:before {
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>basename</th>
+      <th>correlation</th>
+      <th>digit</th>
+      <th>dissimilarity</th>
+      <th>file_creation_time</th>
+      <th>hdfobj</th>
+      <th>mean</th>
+      <th>name</th>
+      <th>ndim</th>
+      <th>shape</th>
+      <th>units</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>images</td>
+      <td>-0.360439</td>
+      <td>2</td>
+      <td>6.291667</td>
+      <td>2022-09-14 08:38:42.579</td>
+      <td>dataset</td>
+      <td>5.375000</td>
+      <td>/images</td>
+      <td>3</td>
+      <td>[1797, 8, 8]</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>images</td>
+      <td>-0.430473</td>
+      <td>5</td>
+      <td>7.250000</td>
+      <td>2022-09-14 08:38:42.579</td>
+      <td>dataset</td>
+      <td>5.343750</td>
+      <td>/images</td>
+      <td>3</td>
+      <td>[1797, 8, 8]</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>images</td>
+      <td>-0.469501</td>
+      <td>8</td>
+      <td>7.416667</td>
+      <td>2022-09-14 08:38:42.579</td>
+      <td>dataset</td>
+      <td>5.578125</td>
+      <td>/images</td>
+      <td>3</td>
+      <td>[1797, 8, 8]</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>images</td>
+      <td>-0.520575</td>
+      <td>0</td>
+      <td>7.875000</td>
+      <td>2022-09-14 08:38:42.579</td>
+      <td>dataset</td>
+      <td>5.031250</td>
+      <td>/images</td>
+      <td>3</td>
+      <td>[1797, 8, 8]</td>
+      <td>pixel</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>images</td>
+      <td>-0.383382</td>
+      <td>3</td>
+      <td>6.375000</td>
+      <td>2022-09-14 08:38:42.579</td>
+      <td>dataset</td>
+      <td>5.015625</td>
+      <td>/images</td>
+      <td>3</td>
+      <td>[1797, 8, 8]</td>
+      <td>pixel</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/h5database_h5mongo_24_1.png" src="../_images/h5database_h5mongo_24_1.png" />
+</div>
+</div>
 </section>
 <section id="Query-for-other-meta-data.">
 <h2>Query for other meta data.<a class="headerlink" href="#Query-for-other-meta-data." title="Permalink to this headline">#</a></h2>
 <p>First of all we could have insert the full file. We might have decided to insert only a group content or really all data in the file, thus a recursive run that insert all data. Ok, let’s do that:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="p">[</span><span class="s1">&#39;h5database_notebook_tutorial&#39;</span><span class="p">]</span>
@@ -1360,7 +1466,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1369,23 +1475,31 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 </div>
 <p>The first entry looks like this:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">collection_full_digits</span><span class="o">.</span><span class="n">find_one</span><span class="p">({})</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;_id&#39;: ObjectId(&#39;6321931b5626ce29e15e1550&#39;),
+ &#39;__h5rdmtoolbox_version__&#39;: &#39;0.1.13&#39;,
+ &#39;__wrcls__&#39;: &#39;H5File&#39;,
+ &#39;basename&#39;: &#39;&#39;,
+ &#39;file_creation_time&#39;: datetime.datetime(2022, 9, 14, 8, 38, 42, 579000),
+ &#39;filename&#39;: &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp77\\tmp0&#39;,
+ &#39;hdfobj&#39;: &#39;group&#39;,
+ &#39;name&#39;: &#39;/&#39;}
+</pre></div></div>
+</div>
 <p>It is the data of the root group. It shows all attribute of the group.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
-</div>
 </section>
 </section>
 
@@ -1397,17 +1511,17 @@ input.h5tb-varname-in:checked + label:before {
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="Serverless.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="filequery.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Serverless HDF Database</p>
+            <p class="prev-next-title">HDF File as a Database</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="../howto/howto.html" title="next page">
+    <a class='right-next' id="next-link" href="../x2hdf/index.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">How to …. ?</p>
+        <p class="prev-next-title">x2hdf: Conversion of specifc data to HDF</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

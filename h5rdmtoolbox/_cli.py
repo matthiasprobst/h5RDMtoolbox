@@ -1,6 +1,7 @@
 """collection of command line interfce functions"""
 
 import argparse
+import pathlib
 import sys
 import webbrowser
 from pprint import pprint
@@ -85,6 +86,52 @@ def main():
                                  default=False,
                                  help='List all registered standard name translations.')
 
+    # PIV2HDF
+    sp_piv2hdf = subparsers.add_parser('piv2hdf', help='piv2hdf menu')
+    sp_piv2hdf.set_defaults(cmd='piv2hdf')
+    sp_piv2hdf.add_argument('-s', '--source',
+                            type=str,
+                            required=False,
+                            default=None,
+                            help='Folder or file. Folder must contain nc files or folder with nc files.')
+    sp_piv2hdf.add_argument('-o', '--outputfile',
+                            type=str,
+                            nargs='?',
+                            default=None,
+                            help='Output HDF5 filename.')
+    sp_piv2hdf.add_argument('-n', '--nproc',
+                            type=int,
+                            nargs='?',
+                            default=1,
+                            help='Number of processors')
+    sp_piv2hdf.add_argument('-c', '--config',
+                            type=str,
+                            nargs='?',
+                            default=None,
+                            help='Configuration filename.')
+    sp_piv2hdf.add_argument('-r', '--recording_time',
+                            type=float,
+                            nargs='?',
+                            default=0.,
+                            help='Recording time in [s].')
+    sp_piv2hdf.add_argument('-freq', '--recording_frequency',
+                            type=float,
+                            nargs='?',
+                            default=0.,
+                            help='Recording frequency in [Hz].')
+    sp_piv2hdf.add_argument('write-default-config',
+                            nargs='?',
+                            help='write default config')
+    sp_piv2hdf.add_argument("-ov",
+                            "--overwrite",
+                            default=False,
+                            action="store_true")
+    sp_piv2hdf.add_argument('-f', '--file',
+                            type=str,
+                            required=False,
+                            default=None,
+                            help='File name (for configuration)')
+
     # CFX2HDF
     sp_cfx2hdf = subparsers.add_parser('cfx2hdf', help='cfx2hdf menu')
     sp_cfx2hdf.set_defaults(cmd='cfx2hdf')
@@ -158,11 +205,10 @@ def main():
         with open_wrapper(args.dump) as h5:
             h5.sdump()
     argvars = vars(args)
+
     if 'cmd' in argvars:
         if args.cmd == 'mongodb':
             from pymongo import MongoClient
-            print(args)
-            list_of_collections = []
             db = None
             collection = None
 
@@ -216,7 +262,6 @@ def main():
             return
         elif args.cmd == 'standard_name':
             from .conventions.standard_attributes.standard_name import StandardNameTable
-            import pathlib
             if args.list:
                 StandardNameTable.print_registered()
                 return
@@ -237,7 +282,6 @@ def main():
             from h5rdmtoolbox.x2hdf.cfd.ansys import AnsysInstallation
             from h5rdmtoolbox.x2hdf.cfd import cfx2hdf
             from .conventions.standard_attributes.standard_name import StandardNameTable, StandardNameTableTranslation
-            import pathlib
             ansys_inst = AnsysInstallation()
             if args.installation_directory is not None:
                 ansys_inst.installation_directory = args.installation_directory
@@ -264,5 +308,49 @@ def main():
                 else:
                     hdf_filename = cfx2hdf(cfx_filename)
                 print(f'Generated {hdf_filename} from {cfx_filename}')
+        elif args.cmd == 'piv2hdf':
+            from h5rdmtoolbox.x2hdf.piv._config import write_config, DEFAULT_CONFIGURATION, read_yaml_file
+            from h5rdmtoolbox.x2hdf.piv import PIVSnapshot, PIVViewNcFile, PIVPlane
+            args_dict = vars(args)
+            if args_dict['write-default-config'] is not None:
+                if args.file is None:
+                    trg_cfg_filename = pathlib.Path.cwd() / './piv2hdf_config.yml'
+                else:
+                    trg_cfg_filename = args.file
+                print(f'writing default config to {trg_cfg_filename}')
+                write_config(trg_cfg_filename, config=DEFAULT_CONFIGURATION,
+                             overwrite=args.overwrite)
+                return
 
+            if args.source is None:
+                return
+            args_dict = vars(args)
+            source_path = pathlib.Path(args_dict['source'])
+            if not source_path.exists():
+                raise FileExistsError(f'Source not found: {source_path}')
+
+            if args.config:
+                from h5rdmtoolbox.conventions import StandardNameTable
+                config = read_yaml_file(pathlib.Path(args.config))
+                config['standardized_name_table'] = StandardNameTable.from_versionname(
+                    config['standardized_name_table'])
+            else:
+                config = None
+
+            if source_path.is_file():
+                if not source_path.suffix == '.nc':
+                    raise ValueError('Source file must be a netCDF4 file!')
+
+                snapshot = PIVSnapshot(PIVViewNcFile(source_path), recording_time=args_dict['recording_time'])
+                hdf_filename = snapshot.to_hdf(hdf_filename=args_dict['outputfile'], config=config)
+                print(f'Snapshot file {hdf_filename} created')
+            else:
+                nc_files = sorted(source_path.glob('*.nc'))
+                if len(nc_files) > 0:
+                    plane = PIVPlane([PIVViewNcFile(ncf) for ncf in nc_files],
+                                     recording_time_or_frequency=args_dict['recording_frequency'])
+                else:
+                    raise NotADirectoryError(f'Not a pivview plane. No nc files found!')
+                hdf_filename = plane.to_hdf(hdf_filename=args_dict['outputfile'], config=config)
+                print(f'Snapshot file {hdf_filename} created')
     sys.exit()

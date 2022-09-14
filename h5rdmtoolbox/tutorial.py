@@ -362,8 +362,7 @@ class Database:
 
     @staticmethod
     def generate_test_files() -> List[pathlib.Path]:
-        from h5rdmtoolbox import h5database as h5db
+        """Generate many files in a nested folders"""
         tocdir = generate_temporary_directory('test_repo')
         Database.build_test_repo(tocdir)
-        repo = h5db.H5repo(tocdir)
-        return repo.filenames
+        return list(tocdir.rglob('*.hdf'))

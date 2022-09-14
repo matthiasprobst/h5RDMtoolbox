@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Ansys CFX to HDF &#8212; h5RDMtoolbox  documentation</title>
+    <title>HDF File as a Database &#8212; h5RDMtoolbox  documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -39,8 +39,8 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="How to …. ?" href="../howto/howto.html" />
-    <link rel="prev" title="PIV to HDF5" href="piv2hdf.html" />
+    <link rel="next" title="HDF5 + mongoDB" href="h5mongo.html" />
+    <link rel="prev" title="h5database" href="index.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -214,45 +214,45 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
    H5Database
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/filequery.html">
+  <ul class="current">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      HDF File as a Database
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
+    <a class="reference internal" href="h5mongo.html">
      HDF5 + mongoDB
     </a>
    </li>
   </ul>
  </li>
- <li class="toctree-l1 current active has-children">
-  <a class="reference internal" href="index.html">
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../x2hdf/index.html">
    x2hdf
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
   <label for="toctree-checkbox-5">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul class="current">
+  <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="piv2hdf.html">
+    <a class="reference internal" href="../x2hdf/piv2hdf.html">
      PIV to HDF5
     </a>
    </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
+   <li class="toctree-l2">
+    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
      Ansys CFX to HDF
     </a>
    </li>
@@ -371,7 +371,7 @@ title="Source repository"
       </li>
       
       <li>
-        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fx2hdf/cfx2hdf.html&body=Your%20issue%20content%20here."
+        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fh5database/filequery.html&body=Your%20issue%20content%20here."
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -399,7 +399,7 @@ title="Open an issue"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/x2hdf/cfx2hdf.ipynb.txt"
+        <a href="../_sources/h5database/filequery.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -459,24 +459,21 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Managing-the-installation">
-   Managing the installation
+  <a class="reference internal nav-link" href="#Query-syntax">
+   Query syntax
   </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Converting-a-case-(partly)-to-HDF">
-   Converting a case (partly) to HDF
-  </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Defining-standard-names-for-specific-datasets">
-   Defining standard names for specific datasets
-  </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#From-shell">
-   From shell
-  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Basic-search">
+     Basic search
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Advanced-search">
+     Advanced search
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -487,7 +484,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Ansys CFX to HDF</h1>
+                <h1>HDF File as a Database</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -498,24 +495,21 @@ title="Print to PDF"
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Managing-the-installation">
-   Managing the installation
+  <a class="reference internal nav-link" href="#Query-syntax">
+   Query syntax
   </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Converting-a-case-(partly)-to-HDF">
-   Converting a case (partly) to HDF
-  </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Defining-standard-names-for-specific-datasets">
-   Defining standard names for specific datasets
-  </a>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#From-shell">
-   From shell
-  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Basic-search">
+     Basic search
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Advanced-search">
+     Advanced search
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -783,150 +777,102 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="Ansys-CFX-to-HDF">
-<h1>Ansys CFX to HDF<a class="headerlink" href="#Ansys-CFX-to-HDF" title="Permalink to this headline">#</a></h1>
-<p>It possible yet impracticle to convert a AnsysCFX result file into a single HDF5 file. Our approach here is to convert only the meta information (setup information) of the case/result files together with the moitor points.</p>
+<section id="HDF-File-as-a-Database">
+<h1>HDF File as a Database<a class="headerlink" href="#HDF-File-as-a-Database" title="Permalink to this headline">#</a></h1>
+<p>As many information can be stored in an HDF5 files. By using goups, the structure can be quite nested and sometime it could be helpful to just search for an attribute, a dataset name or a specific property of it, or instance. Thus, an HDF5 file itself is a kind of database in itself.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">h5rdmtoolbox</span></code> provides methods for <code class="docutils literal notranslate"><span class="pre">H5File</span></code> (and its subclasses) to find datasets and groups. The query syntax is tried to be as close as possible to the one <code class="docutils literal notranslate"><span class="pre">pymongo</span></code> uses.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.h5wrapper</span> <span class="kn">import</span> <span class="n">H5File</span>
-<span class="kn">from</span> <span class="nn">h5rdmtoolbox.x2hdf.cfd.ansys</span> <span class="kn">import</span> <span class="n">AnsysInstallation</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">h5database</span> <span class="k">as</span> <span class="n">h5db</span>
+<span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">generate_temporary_directory</span>
+<span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">tutorial</span>
+<span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
 </pre></div>
 </div>
 </div>
-<section id="Managing-the-installation">
-<h2>Managing the installation<a class="headerlink" href="#Managing-the-installation" title="Permalink to this headline">#</a></h2>
-<p>The class <code class="docutils literal notranslate"><span class="pre">AnsysInstallation</span></code> helps to manage the installation directory. If you have already set up environment variables for <code class="docutils literal notranslate"><span class="pre">cfx5pre</span></code>, <code class="docutils literal notranslate"><span class="pre">cfx5solve</span></code> etc., just initialize the object <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">AnsysInstallation</span></code> with a None. Otherwise the installation directory is required.</p>
+<p>Let’s build an example file:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">test_filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
+
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;a float&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">4.1</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;root_attr3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;a string&#39;</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;a group&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">attrvalue</span><span class="o">=</span><span class="mf">14.3</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_coordinate&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">attrvalue</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;y_coordinate&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Query-syntax">
+<h2>Query syntax<a class="headerlink" href="#Query-syntax" title="Permalink to this headline">#</a></h2>
+<p>The method to be called to find something in an HDF5 file is <code class="docutils literal notranslate"><span class="pre">find()</span></code> (or <code class="docutils literal notranslate"><span class="pre">find_one()</span></code>). What can be foud are datasets or groups. It can also be limited to one of the both objects.</p>
+<p>The syntax is very similar to that of pymongo. There’s a basic search and a advanced search.</p>
+<section id="Basic-search">
+<h3>Basic search<a class="headerlink" href="#Basic-search" title="Permalink to this headline">#</a></h3>
+<p>The basic search queries attributes, only. To find an object, a dictionary is passed containing the name of an <code class="docutils literal notranslate"><span class="pre">attribute</span></code> and the <code class="docutils literal notranslate"><span class="pre">value</span></code>, e.g.:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ansysinst</span> <span class="o">=</span> <span class="n">AnsysInstallation</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>  <span class="c1"># if you already have env.-variables set</span>
-<span class="n">ansysinst</span> <span class="o">=</span> <span class="n">AnsysInstallation</span><span class="p">(</span><span class="s1">&#39;C:\Program Files\ANSYS Inc</span><span class="se">\v</span><span class="s1">212\CFX</span><span class="se">\b</span><span class="s1">in&#39;</span><span class="p">)</span>
-<span class="n">ansysinst</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}))</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">})</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-AnsysInstallation(inst_dir=WindowsPath(&#39;C:/Program Files/ANSYS Inc/v212/CFX/bin&#39;), cfx5pre=WindowsPath(&#39;C:/Program Files/ANSYS Inc/v212/CFX/bin/cfx5pre.exe&#39;), cfx5cmds=WindowsPath(&#39;C:/Program Files/ANSYS Inc/v212/CFX/bin/cfx5cmds.exe&#39;), cfx5mondata=WindowsPath(&#39;C:/Program Files/ANSYS Inc/v212/CFX/bin/cfx5mondata.exe&#39;), cfx5solve=WindowsPath(&#39;C:/Program Files/ANSYS Inc/v212/CFX/bin/cfx5solve.exe&#39;))
+[&lt;HDF5 file &#34;tmp0&#34; (mode r)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
+&lt;HDF5 wrapper file &#34;tmp0&#34; (mode r)&gt;
 </pre></div></div>
 </div>
+<p>The above query finds to objects (root group and dataset ‘x’) based on the attribute “attrvalue”, which matches 3.</p>
 </section>
-<section id="Converting-a-case-(partly)-to-HDF">
-<h2>Converting a case (partly) to HDF<a class="headerlink" href="#Converting-a-case-(partly)-to-HDF" title="Permalink to this headline">#</a></h2>
-<p>Get the test cfx file:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<section id="Advanced-search">
+<h3>Advanced search<a class="headerlink" href="#Advanced-search" title="Permalink to this headline">#</a></h3>
+<p>The advanced search involveds special keywords starting with a dollar sign. For the key of the dictionary this is intepreted as a class property: <code class="docutils literal notranslate"><span class="pre">$&lt;class-property&gt;</span></code>. A typical property-keyword would be <code class="docutils literal notranslate"><span class="pre">$basename</span></code>, which matches all base-names (name without parent-path). The dictionary value can also be adjusted. This allows other comparisons than “is equal to” as it is the case with the basic search. Let’s perform some advanced searches:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">tutorial</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">test_cfx_filename</span> <span class="o">=</span> <span class="n">tutorial</span><span class="o">.</span><span class="n">CFX</span><span class="o">.</span><span class="n">get_cfx_filename</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;{&#39;attrvalue&#39;: {&#39;$gt&#39;: 0}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}}))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;{&#39;standard_name&#39;:  {&#39;$regex&#39;: &#39;_coordinate$&#39;}}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$regex&#39;</span><span class="p">:</span> <span class="s1">&#39;_coordinate$&#39;</span><span class="p">}}))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;{&#39;$basename&#39;: &#39;x&#39;}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;x&#39;</span><span class="p">}))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;{&#39;$ndim&#39;: 1)}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$ndim&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;{&#39;$shape&#39;: (2, )}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$shape&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="p">)}))</span>
 </pre></div>
 </div>
 </div>
-<p>To convert the data, simply call cfx2hdf:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.x2hdf.cfd</span> <span class="kn">import</span> <span class="n">cfx2hdf</span>
-</pre></div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;attrvalue&#39;: {&#39;$gt&#39;: 0}:
+         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper group &#34;/a group&#34; (members 0)&gt;, &lt;HDF5 file &#34;tmp0&#34; (mode r)&gt;]
+{&#39;standard_name&#39;:  {&#39;$regex&#39;: &#39;_coordinate$&#39;}}:
+         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
+{&#39;$basename&#39;: &#39;x&#39;}:
+         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
+{&#39;$ndim&#39;: 1)}:
+         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
+{&#39;$shape&#39;: (2, )}:
+         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
+</pre></div></div>
 </div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">hdf_filename</span> <span class="o">=</span> <span class="n">cfx2hdf</span><span class="p">(</span><span class="n">test_cfx_filename</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">H5File</span><span class="p">(</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">p</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">monitor</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;$dataset&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;Total Pressure&#39;</span><span class="p">}})</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
+<p>All query operators (that’s what it is called in pymongo) implemented are: - \<span class="math notranslate nohighlight">\(gt : greater than - \\\)</span>gte : geater than equal - \<span class="math notranslate nohighlight">\(lt : less than - \\\)</span>lte : less than equal - \<span class="math notranslate nohighlight">\(eq : equal to - \\\)</span>regex : Filter with regular expression</p>
 </section>
-<section id="Defining-standard-names-for-specific-datasets">
-<h2>Defining standard names for specific datasets<a class="headerlink" href="#Defining-standard-names-for-specific-datasets" title="Permalink to this headline">#</a></h2>
-<p>Let’s first create a translation file to assign standard names to certain datasets. We do that for one here:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">yaml</span>
-<br/></pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">snt_filename</span> <span class="o">=</span> <span class="n">test_cfx_filename</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">&#39;snt_translation.yml&#39;</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">snt_filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s1">&#39;Total Pressure&#39;</span><span class="p">:</span> <span class="s1">&#39;total_air_pressure&#39;</span><span class="p">},</span> <span class="n">f</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">hdf_filename</span> <span class="o">=</span> <span class="n">cfx2hdf</span><span class="p">(</span><span class="n">test_cfx_filename</span><span class="p">,</span> <span class="n">snt</span><span class="o">=</span><span class="n">snt_filename</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<p>Check if standard name really has been applied:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">H5File</span><span class="p">(</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">p</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">monitor</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;$dataset&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;Total Pressure&#39;</span><span class="p">}})</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">H5File</span><span class="p">(</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">p</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">monitor</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;$dataset&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;Total Pressure&#39;</span><span class="p">}})</span>
-    <span class="n">p</span><span class="p">[:]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</section>
-<section id="From-shell">
-<h2>From shell<a class="headerlink" href="#From-shell" title="Permalink to this headline">#</a></h2>
-<p>The same could have been called from a shell:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx cfx2hdf -f <span class="o">{</span>test_cfx_filename<span class="o">}</span> -snt <span class="o">{</span>snt_filename<span class="o">}</span>
-</pre></div>
-</div>
-</div>
 </section>
 </section>
 
@@ -938,17 +884,17 @@ AnsysInstallation(inst_dir=WindowsPath(&#39;C:/Program Files/ANSYS Inc/v212/CFX/
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="piv2hdf.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="index.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">PIV to HDF5</p>
+            <p class="prev-next-title">h5database</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="../howto/howto.html" title="next page">
+    <a class='right-next' id="next-link" href="h5mongo.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">How to …. ?</p>
+        <p class="prev-next-title">HDF5 + mongoDB</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

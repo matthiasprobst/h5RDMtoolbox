@@ -4,6 +4,7 @@ import unittest
 from unittest import mock  # python 3.3+
 
 import numpy as np
+import yaml
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.x2hdf import piv
@@ -22,10 +23,22 @@ class TestPIV2HDF(unittest.TestCase):
                                            piv._config.DEFAULT_CONFIGURATION)
         self.assertTrue(piv._config.check_yaml_file(ymlfile))
 
+        with self.assertRaises(FileExistsError):
+            piv._config.write_config(ymlfile, {}, overwrite=False)
+
+        ymlfile = h5tbx.generate_temporary_filename(suffix='.yml')
+        with open(ymlfile, 'w') as f:
+            yaml.safe_dump({'a': 1}, f)
+        with self.assertRaises(ValueError):
+            piv._config.check_yaml_file(ymlfile)
+
     def test_parameter(self):
         pivview_parameter_file = h5tbx.tutorial.PIVview.get_parameter_file()
         par = piv.pivview.PIVviewParameterFile(pivview_parameter_file)
         par.to_dict()
+        parfilename = h5tbx.generate_temporary_filename(suffix='.par')
+        par.save(parfilename)
+        self.assertTrue(parfilename.exists())
 
         openpiv_parameter_file = h5tbx.tutorial.OpenPIV.get_parameter_file()
         par = piv.openpiv.OpenPIVParameterFile(openpiv_parameter_file)

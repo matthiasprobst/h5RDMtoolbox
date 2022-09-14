@@ -3,15 +3,14 @@ h5database
 
 Introduction into h5database.
 
-Three concepts are provided in the scope of this sub-package:
+Two concepts are provided in the scope of this sub-package:
 
-- ``H5repo``: Using external HDF5 links. A HDF5 file serves as a "table of content" to link to files within a classic file system
-- ``H5Files``: Allows to open multiple files at the same time and brwose through them
-- ``h5mongo``: Using pymongo (mongodb) to mirrow meta data of hdf files
+- ``filequery``: Allows to query inside of a single file.
+- ``h5mongo``: Using pymongo (mongodb) to mirrow meta data of hdf files into the database to be queried afterwards.
 
 .. toctree::
     :titlesonly:
     :glob:
 
-    Serverless.ipynb
+    filequery.ipynb
     h5mongo.ipynb

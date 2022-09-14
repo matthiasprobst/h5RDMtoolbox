@@ -60,14 +60,14 @@ def use(yaml_file):
 
 
 def set_loglevel(level):
+    """Set the logging level for the package"""
     if isinstance(level, str):
         logger.setLevel(level.upper())
     else:
         logger.setLevel(level)
 
 
-from .h5repo import H5repo
-from .files import H5Files
+from .filequery import H5Files
 
 if not user_yaml_filename.exists():
     write_default_user_yaml_file(silent=False)

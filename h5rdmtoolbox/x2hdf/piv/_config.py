@@ -57,7 +57,8 @@ def read_yaml_file(yaml_filename: Union[str, Path]) -> Dict:
 
 
 def check_yaml_file(yaml_file: Union[Path, Dict]) -> bool:
-    """Check keys in yaml file to be a valid piv2hdf configuration"""
+    """Check keys in yaml file to be a valid piv2hdf configuration.
+    Raises ValueError if entry not found."""
     if not isinstance(yaml_file, dict):
         _config = read_yaml_file(yaml_file)
     else:
@@ -65,29 +66,22 @@ def check_yaml_file(yaml_file: Union[Path, Dict]) -> bool:
 
     for k in DEFAULT_CONFIGURATION:
         if k not in _config:
-            warnings.warn(f'User yaml config entry "{k}" not found in your config.')
-            return False
+            raise ValueError(f'User yaml config entry "{k}" not found in your config.')
     for k in DEFAULT_CONFIGURATION['timeAverages']:
         if k not in _config['timeAverages']:
-            warnings.warn(f'User yaml config entry "timeAverages/{k}" not found in your config.')
-            return False
+            raise ValueError(f'User yaml config entry "timeAverages/{k}" not found in your config.')
     for k in DEFAULT_CONFIGURATION['post']:
         if k not in _config['post']:
-            warnings.warn(f'User yaml config entry "post/{k}" not found in your config.')
-            return False
+            raise ValueError(f'User yaml config entry "post/{k}" not found in your config.')
     return True
 
 
 def write_config(filename: Path, config: Dict, overwrite: bool = False) -> Path:
     """overwrites existing yaml config in user dir with default one and returns path to the file"""
     if filename.exists() and not overwrite:
-        print('Could not write yaml user file. It already exists and overwrite is set to False')
-        return filename
+        raise FileExistsError('Could not write yaml user file. It already exists and overwrite is set to False')
 
     print(config)
     with open(filename, 'w') as f:
         yaml.dump(config, f, sort_keys=False)
     return filename
-
-# if __name__ == '__main__':
-#     write_config(Path(__file__).parent / 'piv2hdf.yaml', DEFAULT_CONFIGURATION)

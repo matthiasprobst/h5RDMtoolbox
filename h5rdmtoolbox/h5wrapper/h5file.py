@@ -101,26 +101,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         self._parent = parent
         # self.identifier_convention = identifier_convention  # standard_name_convention
 
-    def find_one(self, name, value=None, rec=True, h5type=None) -> Union[h5py.Group, h5py.Dataset]:
-        """Search for one (!) attribute with name `name`.
-        If `value` not None, then value is verified for
-        the found value. First match is returend. Recursive
-        search is enabled by default. With h5type the search
-        can be limited to dataset or groups only. Default
-        is to search in both objects."""
-        from ..h5database.files import find_attributes
-        return find_attributes(self._parent, name, value, rec, h5type, find_one=True)
-
-    def find(self, name, value=None, rec=True, h5type=None) -> List[Union[h5py.Group, h5py.Dataset]]:
-        """Search for attributes (multiple!) with name `name`.
-        If `value` not None, then value is verified for
-        the found value. First match is returend. Recursive
-        search is enabled by default. With h5type the search
-        can be limited to dataset or groups only. Default
-        is to search in both objects."""
-        from ..h5database.files import find_attributes
-        return find_attributes(self._parent, name, value, rec, h5type, find_one=False)
-
     @with_phil
     def __getitem__(self, name):
         # if name in self.__dict__:
@@ -442,6 +422,17 @@ class H5Dataset(h5py.Dataset):
             return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
     def __str__(self):
+        return f'<HDF5 wrapper dataset shape "{self.shape}" (<{self.dtype}>)>'
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def dump(self) -> None:
+        """Call sdump()"""
+        self.sdump()
+
+    def sdump(self) -> None:
+        """Print the dataset content in a more comprehensive way"""
         out = f'{self.__class__.__name__} "{self.name}"'
         out += f'\n{"-" * len(out)}'
         out += f'\n{"shape:":14} {self.shape}'
@@ -465,7 +456,7 @@ class H5Dataset(h5py.Dataset):
                     dim_str += f'\n       units:         {d[iaxis].attrs.get("units")}'
         if has_dim:
             out += dim_str
-        return out
+        print(out)
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Dataset):
@@ -697,8 +688,14 @@ class H5Group(h5py.Group):
         else:
             return super().__getattribute__(item)
 
-    def __str__(self):
-        return self.sdump(ret=True)
+    def __str__(self) -> str:
+        if self.name == '/':
+            return f'<HDF5 wrapper file "{self.hdf_filename.name}" (mode {self.mode})>'
+        else:
+            return f'<HDF5 wrapper group "{self.name}" (members {len(self)})>'
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
@@ -744,13 +741,14 @@ class H5Group(h5py.Group):
             Track creation order under this group. Default is None.
         """
         if name in self:
-            if overwrite is True:
-                del self[name]
-            elif overwrite is False:
-                return self[name]
-            else:
-                # let h5py.Group raise the error...
-                h5py.Group.create_group(self, name, track_order=track_order)
+            if isinstance(self[name], h5py.Group):
+                if overwrite is True:
+                    del self[name]
+                elif overwrite is False:
+                    return self[name]
+                else:
+                    # let h5py.Group raise the error...
+                    h5py.Group.create_group(self, name, track_order=track_order)
 
         if _is_not_valid_natural_name(self, name, config.natural_naming):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
@@ -1045,19 +1043,33 @@ class H5Group(h5py.Group):
 
         return self._h5ds(ds.id)
 
-    def find_one(self, flt: Union[Dict, str], rec: bool = True):
+    def find_one(self, flt: Union[Dict, str],
+                 objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+                 rec: bool = True):
         """See find()"""
-        from ..h5database import files
-        return files.find(self, flt, recursive=rec, h5type=None, find_one=True)
+        from ..h5database import filequery
+        if isinstance(objfilter, str):
+            if objfilter.lower() == 'group':
+                objfilter = h5py.Group
+            elif objfilter.lower() == 'dataset':
+                objfilter = h5py.Dataset
+            elif objfilter.lower() == '$group':
+                objfilter = h5py.Group
+            elif objfilter.lower() == '$dataset':
+                objfilter = h5py.Dataset
+            else:
+                raise NameError(f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+        return filequery.find(self, flt, objfilter, recursive=rec, find_one=True)
 
-    def find(self, flt: Union[Dict, str], rec: bool = True):
+    def find(self, flt: Union[Dict, str],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             rec: bool = True):
         """
         Examples for filter parameters:
         filter = {'long_name': 'any objects long name'} --> searches in attribtues only
-        filter = {'$name': 'dataset name'}  --> searches in goups and datasets
-        filter = {'$dataset': 'dataset name'}  --> searches in datasets only
-        filter = {'$group': 'dataset name'}  --> searches in groups only
-        filter = {'$attribute': {'standard_name': 'x_velocity'}} --> searches in attribtues "standard_name" only
+        filter = {'$name': 'name'}  --> searches in goups and datasets for the (path)name
+        filter = {'basename': 'name'}  --> searches in goups and datasets for the basename (without path)
+        filter = {'standard_name': {'$regex': '^x_'} --> searches for attribtues "standard_name" starting with 'x_'
 
         Parameters
         ----------
@@ -1070,8 +1082,19 @@ class H5Group(h5py.Group):
         -------
         h5obj: h5py.Dataset or h5py.Group
         """
-        from ..h5database import files
-        return files.find(self, flt, recursive=rec, h5type=None, find_one=False)
+        from ..h5database import filequery
+        if isinstance(objfilter, str):
+            if objfilter.lower() == 'group':
+                objfilter = h5py.Group
+            elif objfilter.lower() == 'dataset':
+                objfilter = h5py.Dataset
+            elif objfilter.lower() == '$group':
+                objfilter = h5py.Group
+            elif objfilter.lower() == '$dataset':
+                objfilter = h5py.Dataset
+            else:
+                raise NameError(f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+        return filequery.find(self, flt, objfilter, recursive=rec, find_one=False)
 
     def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:
         """Return the dataset with a specific standard_name within the current group.

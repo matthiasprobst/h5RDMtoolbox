@@ -215,11 +215,33 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="../h5database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../h5database/filequery.html">
+     HDF File as a Database
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../h5database/h5mongo.html">
+     HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../x2hdf/index.html">
+   x2hdf
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -232,28 +254,6 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../x2hdf/cfx2hdf.html">
      Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/Serverless.html">
-     Serverless HDF Database
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
-     HDF5 + mongoDB
     </a>
    </li>
   </ul>
@@ -760,21 +760,13 @@ div.rendered_html tbody tr:hover {
 <p><strong>standard_name and long_name</strong> For the sake of improved readability and interpretability we suggest to use <code class="docutils literal notranslate"><span class="pre">long_name</span></code> or <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> as additional attributes. While <code class="docutils literal notranslate"><span class="pre">long_name</span></code> is human-readable and interpretable attribute, <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> is intended to be read by a machine (other software). This allows to automate exploration and processing work.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> generally should not be chosen freely but must follow a certain convention. Such a naming convention may be defined by a project or a community, e.g. the climate and forecast community <a class="reference external" href="http://cfconventions.org/">cfconventions.org</a>, from which the concept of standard names is adoped. A convention is described in an <strong>XML</strong> file and associated with the wrapper file <code class="docutils literal notranslate"><span class="pre">H5File</span></code>. Again this is adoped from <a class="reference external" href="http://cfconventions.org/">cfconventions.org</a>. The XML file
 contains the standard name, a description for each one and the respective unit. Thus, if a convention is associated with a wrapper class, the standard name and unit cannot be freely be chsen but is verified.</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp7
-</pre></div></div>
 </div>
 <section id="Checks">
 <h2>Checks<a class="headerlink" href="#Checks" title="Permalink to this headline">#</a></h2>

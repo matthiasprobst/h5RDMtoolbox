@@ -34,6 +34,8 @@
    "outputs": [],
    "source": [
     "import h5rdmtoolbox as h5tbx\n",
+    "\n",
+    "import matplotlib.pyplot as plt\n",
     "import numpy as np"
    ]
   },
@@ -130,7 +132,8 @@
    "outputs": [],
    "source": [
     "with h5tbx.H5File(signal_filename, 'r') as h5:\n",
-    "    h5['signal'][:].plot()"
+    "    plt.figure(figsize=(3, 2))\n",
+    "    h5['signal'][:].plot(marker='o')"
    ]
   },
   {
@@ -178,8 +181,16 @@
     "with h5tbx.H5File(signal_filename) as h5:\n",
     "    h5.dump()\n",
     "    print('+-----------------+\\n')\n",
-    "    h5.sdump()"
+    "    h5.time.sdump()"
    ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c12dc16a-a893-4a70-9f31-7fd88ff293a0",
+   "metadata": {},
+   "outputs": [],
+   "source": []
   }
  ],
  "metadata": {

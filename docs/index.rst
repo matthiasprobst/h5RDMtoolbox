@@ -35,24 +35,22 @@ Install from source from github:
 
 .. code:: sh
 
-   python3.8 -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
+   pip install https://github.com/matthiasprobst/h5RDMtoolbox
 
 Clone and install from source:
 
 .. code:: sh
 
    git clone https://github.com/matthiasprobst/h5RDMtoolbox
-   python3.8 -m pip install h5RDMtoolbox/
+   pip install h5RDMtoolbox/
 
-You may install optional dependencies:
+You may install optional dependencies to be put in square brackets, e.g. the following, that enables working with the mongoDB:
 
 .. code:: sh
 
-   python3.8 -m pip install "h5RDMtoolbox[vtk]"  # installs dependencies to convert datasets to vtk
-   python3.8 -m pip install "h5RDMtoolbox[tec]"  # installs pytecplot to build tecplot-readable HDF5 files
-   python3.8 -m pip install "h5RDMtoolbox[piv]"  # installs e.g. netCDF4 which isneeded to convt n files
-   python3.8 -m pip install "h5RDMtoolbox[cfd]"  # installs dependencies needed by the cfd2hdf package
-   python3.8 -m pip install "h5RDMtoolbox[complete]"  # installs all avbove plus dependencies for testing and documentation
+   python3.8 -m pip install "h5RDMtoolbox[mongodb]"
+   
+Other optional dependency keywords are `tec`, `b16`, `piv`, `cfd`, `cf`, `test`, `docs` or `complete` to install everything.
 
 
 
@@ -65,8 +63,8 @@ You may install optional dependencies:
     Getting Started <gettingstarted/index>
     Conventions <conventions/index>
     H5wrapper <h5wrapper/index>
-    x2hdf <x2hdf/index>
     H5Database <h5database/index>
+    x2hdf <x2hdf/index>
     HowTo <howto/howto.ipynb>
     Glossary <glossary/index>
     References <references>

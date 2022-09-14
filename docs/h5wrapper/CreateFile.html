@@ -215,11 +215,33 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="../h5database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../h5database/filequery.html">
+     HDF File as a Database
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../h5database/h5mongo.html">
+     HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../x2hdf/index.html">
+   x2hdf
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -232,28 +254,6 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../x2hdf/cfx2hdf.html">
      Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/Serverless.html">
-     Serverless HDF Database
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
-     HDF5 + mongoDB
     </a>
    </li>
   </ul>
@@ -757,21 +757,13 @@ div.rendered_html tbody tr:hover {
 <h1>Create a HDF file<a class="headerlink" href="#Create-a-HDF-file" title="Permalink to this headline">#</a></h1>
 <p>To work with HDF5 files, the “wrapper”-class <code class="docutils literal notranslate"><span class="pre">H5File</span></code> is used (equiilant to <code class="docutils literal notranslate"><span class="pre">h5py.File</span></code>).</p>
 <p>There are several ways to open a file with this package. First thing to note, is that we don’t need to specify a filename when calling the the class. Instead a temporary file will be generated. Like this, the default mode is <code class="docutils literal notranslate"><span class="pre">r+</span></code>:</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp7
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
@@ -1075,8 +1067,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-2865998800" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2865998800">
+                    <input id="group-ds-/-4063061700" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-4063061700">
                     /<span>(0)</span></label>
 
 

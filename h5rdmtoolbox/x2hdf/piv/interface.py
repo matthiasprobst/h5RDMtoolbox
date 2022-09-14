@@ -8,9 +8,9 @@ import h5py
 import numpy as np
 
 from ._config import DEFAULT_CONFIGURATION
+from ... import config as h5tbxconfig
 from ...conventions.standard_attributes.standard_name import StandardNameTable
 from ...utils import generate_temporary_filename
-from ... import config as h5tbxconfig
 
 PIV_PARAMETER_GRP_NAME = 'piv_parameters'
 
@@ -149,12 +149,6 @@ class PIVSnapshot(PIVConverter):
         if hdf_filename is None:
             hdf_filename = self.piv_file.filename.parent / f'{self.piv_file.filename.stem}.hdf'
         return self.piv_file.to_hdf(hdf_filename, config, self.recording_time)
-
-    @staticmethod
-    def from_pivview(nc_filename: pathlib.Path, recording_time: float):
-        """Read from a pivview file"""
-        from .pivview import PIVViewNcFile
-        return PIVSnapshot(PIVViewNcFile(nc_filename), recording_time)
 
 
 class PIVPlane(PIVConverter):

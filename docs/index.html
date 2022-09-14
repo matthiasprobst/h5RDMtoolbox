@@ -212,11 +212,33 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="h5database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="h5database/filequery.html">
+     HDF File as a Database
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="h5database/h5mongo.html">
+     HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="x2hdf/index.html">
+   x2hdf
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -229,28 +251,6 @@
    <li class="toctree-l2">
     <a class="reference internal" href="x2hdf/cfx2hdf.html">
      Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="h5database/Serverless.html">
-     Serverless HDF Database
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="h5database/h5mongo.html">
-     HDF5 + mongoDB
     </a>
    </li>
   </ul>
@@ -521,22 +521,19 @@ of data using the HDF5 file format while fulfilling the <a class="reference exte
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">#</a></h2>
 <p>The repository requires python 3.8. or higher.</p>
 <p>Install from source from github:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip install https://github.com/matthiasprobst/h5RDMtoolbox
 </pre></div>
 </div>
 <p>Clone and install from source:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/matthiasprobst/h5RDMtoolbox
-python3.8 -m pip install h5RDMtoolbox/
+pip install h5RDMtoolbox/
 </pre></div>
 </div>
-<p>You may install optional dependencies:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[vtk]&quot;</span>  <span class="c1"># installs dependencies to convert datasets to vtk</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[tec]&quot;</span>  <span class="c1"># installs pytecplot to build tecplot-readable HDF5 files</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[piv]&quot;</span>  <span class="c1"># installs e.g. netCDF4 which isneeded to convt n files</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[cfd]&quot;</span>  <span class="c1"># installs dependencies needed by the cfd2hdf package</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[complete]&quot;</span>  <span class="c1"># installs all avbove plus dependencies for testing and documentation</span>
+<p>You may install optional dependencies to be put in square brackets, e.g. the following, that enables working with the mongoDB:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[mongodb]&quot;</span>
 </pre></div>
 </div>
+<p>Other optional dependency keywords are <cite>tec</cite>, <cite>b16</cite>, <cite>piv</cite>, <cite>cfd</cite>, <cite>cf</cite>, <cite>test</cite>, <cite>docs</cite> or <cite>complete</cite> to install everything.</p>
 <div class="toctree-wrapper compound">
 </div>
 <div class="toctree-wrapper compound">
