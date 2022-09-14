@@ -1,3 +1,13 @@
 [run]
 omit =
     h5rdmtoolbox/tests/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    @atexit.register
+    except AttributeError
+    raise NotImplementedError
+    except TypeError
+    return f"{bcolors.*

@@ -4,7 +4,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.h5database import H5Files
 
 
-class TestH5Files(unittest.TestCase):
+class TestFileQuery(unittest.TestCase):
 
     def test_H5Files(self):
         fnames = []

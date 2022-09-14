@@ -2,6 +2,7 @@ import unittest
 
 import yaml
 
+import h5rdmtoolbox
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions import StandardNameTable, StandardNameTableTranslation
@@ -81,6 +82,15 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertEqual(table, table2)
         table2.set('other', 'desc', 'm')
         self.assertNotEqual(table, table2)
+
+    def test_tranlsate_group(self):
+        with h5rdmtoolbox.H5File() as h5:
+            ds1 = h5.create_dataset('ds1', shape=(2,), units='', long_name='a long name')
+            ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='', long_name='a long name')
+            translation = {'ds1': 'dataset_one', 'ds2': 'dataset_two'}
+            sntt = StandardNameTableTranslation('test', translation)
+            sntt.translate_group(h5)
+            h5.sdump()
 
     def test_merge(self):
         registered_snts = StandardNameTable.get_registered()

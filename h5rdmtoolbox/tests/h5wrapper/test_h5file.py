@@ -319,6 +319,20 @@ class TestH5File(unittest.TestCase):
             self.assertIn(h5['/'], h5.find({'one': {'$gte': 1}}))
             self.assertIn(h5['/'], h5.find({'one': {'$gte': 1}}))
 
+    def test_destinct(self):
+        with H5File() as h5:
+            h5.attrs['a'] = 1
+            h5.attrs['long_name'] = 'root long name'
+            h5.create_dataset('ds1', shape=(2, 3), units='', long_name='longname', attrs=dict(a=1))
+            h5.create_dataset('ds2', shape=(2, 3), units='', long_name='longname', attrs=dict(a=2))
+            h5.create_dataset('ds3', shape=(2, 4, 5), units='', long_name='longname', attrs=dict(a=3))
+            self.assertEqual(h5.distinct('a'), [1, 2, 3])
+            self.assertEqual(sorted(h5.distinct('long_name')), ['longname', 'root long name'])
+            self.assertEqual(h5.distinct('long_name', 'group'), ['root long name'])
+            self.assertEqual(h5.distinct('$shape'), [(2, 3), (2, 4, 5)])
+            self.assertEqual(h5.distinct('$ndim'), [2, 3])
+            self.assertEqual(sorted(h5.distinct('$basename')), ['ds1', 'ds2', 'ds3'])
+
     def test_find_group_data(self):
         with H5File(self.test_filename, mode='r') as h5:
             self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}))

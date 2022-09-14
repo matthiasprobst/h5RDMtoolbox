@@ -19,10 +19,6 @@ def _eq(a, b):
     return a == b
 
 
-def _any_str(a, b):
-    return True
-
-
 def _gt(a, b):
     return a > b
 
@@ -89,6 +85,48 @@ class RecAttrFind:
         if self._attribute in obj.attrs:
             if self._func(obj.attrs[self._attribute], self._value):
                 self.found_objects.append(obj)
+
+
+class RecPropCollect:
+    """Visititems class to collect all class attributes matching a certain string"""
+
+    def __init__(self, attribute_name: str, objfilter: Union[h5py.Group, h5py.Dataset, None]):
+        self._attribute_name = attribute_name
+        self._objfilter = objfilter
+        self.found_objects = []
+
+    def __call__(self, name, obj):
+        if self._objfilter is None:
+            try:
+                propval = obj.__getattribute__(self._attribute_name)
+                self.found_objects.append(propval)
+            except AttributeError:
+                pass
+        else:
+            if isinstance(obj, self._objfilter):
+                try:
+                    propval = obj.__getattribute__(self._attribute_name)
+                    self.found_objects.append(propval)
+                except AttributeError:
+                    pass
+
+
+class RecAttrCollect:
+    """Visititems class to collect all attributes matching a certain string"""
+
+    def __init__(self, attribute_name: str, objfilter: Union[h5py.Group, h5py.Dataset, None]):
+        self._attribute_name = attribute_name
+        self._objfilter = objfilter
+        self.found_objects = []
+
+    def __call__(self, name, obj):
+        if self._objfilter is None:
+            if self._attribute_name in obj.attrs:
+                self.found_objects.append(obj.attrs[self._attribute_name])
+        else:
+            if isinstance(obj, self._objfilter):
+                if self._attribute_name in obj.attrs:
+                    self.found_objects.append(obj.attrs[self._attribute_name])
 
 
 def _find_in_external_link(el: h5py.ExternalLink, operator: Callable, name, value, found_objs):
@@ -161,7 +199,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
 
 
 def find(h5obj: Union[h5py.Group, h5py.Dataset],
-         flt: Dict, objfilter,
+         flt: Dict, objfilter: Union[h5py.Group, h5py.Dataset, None],
          recursive: bool,
          find_one: bool):
     # start with some input checks:
@@ -186,6 +224,41 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
     if objfilter:
         return [r for r in common_results if isinstance(r, objfilter)]
     return common_results
+
+
+def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
+             objfilter: Union[h5py.Group, h5py.Dataset, None]) -> List[str]:
+    """Return a distinct list of all found targets. A target generally is
+    understood to be an attribute name. However, by adding a $ in front, class
+    properties can be found, too, e.g. $shape will return all distinct shapes of the
+    passed group."""
+    if key[0] == '$':
+        rpc = RecPropCollect(key[1:], objfilter)
+        h5obj.visititems(rpc)
+        if objfilter:
+            if isinstance(h5obj, objfilter):
+                try:
+                    propval = h5obj.__getattribute__(key[1:])
+                    rpc.found_objects.append(propval)
+                except AttributeError:
+                    pass
+        else:
+            if key in h5obj.attrs:
+                rpc.found_objects.append(h5obj.attrs[key])
+
+        return list(set(rpc.found_objects))
+
+    rac = RecAttrCollect(key, objfilter)
+    h5obj.visititems(rac)
+    if objfilter:
+        if isinstance(h5obj, objfilter):
+            if key in h5obj.attrs:
+                rac.found_objects.append(h5obj.attrs[key])
+    else:
+        if key in h5obj.attrs:
+            rac.found_objects.append(h5obj.attrs[key])
+
+    return list(set(rac.found_objects))
 
 
 class DatasetValues:
@@ -262,8 +335,9 @@ class H5Files:
         self._opened_files = {}
         self.close()
 
-    def find_one(self, flt: Union[Dict, str], objfilter=None, rec: bool = True) -> Union[
-        h5py.Group, h5py.Dataset, None]:
+    def find_one(self, flt: Union[Dict, str],
+                 objfilter=None,
+                 rec: bool = True) -> Union[h5py.Group, h5py.Dataset, None]:
         """See find() in h5file.py"""
         for v in self.values():
             found = find(v, flt, objfilter=objfilter, recursive=rec, find_one=True)

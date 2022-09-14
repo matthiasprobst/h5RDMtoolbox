@@ -1061,6 +1061,12 @@ class H5Group(h5py.Group):
                 raise NameError(f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
         return filequery.find(self, flt, objfilter, recursive=rec, find_one=True)
 
+    def distinct(self, key, objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None) -> List:
+        """Find a distinct key"""
+        from ..h5database.filequery import distinct
+        objfilter = utils._process_obj_filter_input(objfilter)
+        return distinct(self, key, objfilter)
+
     def find(self, flt: Union[Dict, str],
              objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
              rec: bool = True):
@@ -1083,17 +1089,7 @@ class H5Group(h5py.Group):
         h5obj: h5py.Dataset or h5py.Group
         """
         from ..h5database import filequery
-        if isinstance(objfilter, str):
-            if objfilter.lower() == 'group':
-                objfilter = h5py.Group
-            elif objfilter.lower() == 'dataset':
-                objfilter = h5py.Dataset
-            elif objfilter.lower() == '$group':
-                objfilter = h5py.Group
-            elif objfilter.lower() == '$dataset':
-                objfilter = h5py.Dataset
-            else:
-                raise NameError(f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+        objfilter = utils._process_obj_filter_input(objfilter)
         return filequery.find(self, flt, objfilter, recursive=rec, find_one=False)
 
     def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:

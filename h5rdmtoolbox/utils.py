@@ -1,7 +1,9 @@
 import pathlib
 from datetime import datetime
 from re import sub as re_sub
+from typing import Union
 
+import h5py
 from dateutil.tz import tzlocal
 from h5py import File
 
@@ -141,3 +143,18 @@ def load_img(img_filepath: pathlib.Path):
         return pco.load(str(img_filepath))
     from cv2 import imread as cv2_imread
     return cv2_imread(str(img_filepath), -1)
+
+
+def _process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:
+    if isinstance(objfilter, str):
+        if objfilter.lower() == 'group':
+            return h5py.Group
+        elif objfilter.lower() == 'dataset':
+            return h5py.Dataset
+        elif objfilter.lower() == '$group':
+            return h5py.Group
+        elif objfilter.lower() == '$dataset':
+            return h5py.Dataset
+        raise NameError(
+            f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+    return objfilter
