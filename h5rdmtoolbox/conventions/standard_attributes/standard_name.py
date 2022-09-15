@@ -619,6 +619,7 @@ class StandardNameTableTranslation:
             g = yaml.safe_load_all(f)
             first_split = next(g)
 
+        yaml_filename = pathlib.Path(yaml_filename)
         application_name = yaml_filename.stem.split('-to-', 1)[0]
         if 'translation_dict' in first_split:
             sntt = StandardNameTableTranslation(application_name=application_name,
