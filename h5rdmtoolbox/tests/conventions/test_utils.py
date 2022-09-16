@@ -2,7 +2,7 @@ import unittest
 
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions import utils
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import xmlconvention2dict, StandardNameTable
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import xmlsnt2dict, StandardNameTable
 
 
 class TestTranslation(unittest.TestCase):
@@ -13,6 +13,6 @@ class TestTranslation(unittest.TestCase):
                                       name=PIVStandardNameTable.name,
                                       dictionary=PIVStandardNameTable.table,
                                       versionname=PIVStandardNameTable.versionname)
-        data, meta = xmlconvention2dict(xml_filename=xml_filename)
+        data, meta = xmlsnt2dict(xml_filename=xml_filename)
         self.assertEqual(meta['name'], PIVStandardNameTable.name, )
         self.assertEqual(meta['versionname'], PIVStandardNameTable.versionname)

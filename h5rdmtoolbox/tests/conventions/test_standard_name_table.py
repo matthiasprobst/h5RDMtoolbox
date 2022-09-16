@@ -60,7 +60,8 @@ class TestStandardNameTable(unittest.TestCase):
 
     def test_StandardNameTableFromWeb(self):
         cf = StandardNameTable.from_web(
-            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml')
+            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+            name='standard_name_table')
         self.assertEqual(cf.name, 'standard_name_table')
         self.assertEqual(cf.versionname, 'standard_name_table-v79')
 

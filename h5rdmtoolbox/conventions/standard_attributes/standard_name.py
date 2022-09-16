@@ -11,12 +11,15 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
+import json
 import os
 import pathlib
 import re
+import warnings
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Dict, Union, List
 from typing import Tuple
@@ -58,8 +61,8 @@ def verify_unit_object(_units):
         raise UndefinedUnitError(f'Units cannot be understood using pint_xarray package: {_units}. --> {e}')
 
 
-def xmlconvention2dict(xml_filename: Path) -> Tuple[dict, dict]:
-    """reads an xml convention xml file and returns data and meta dictionaries"""
+def xmlsnt2dict(xml_filename: Path) -> Tuple[dict, dict]:
+    """reads an SNT as xml file and returns data and meta dictionaries"""
     tree = ET.parse(xml_filename)
     root = tree.getroot()
     standard_names = {}
@@ -76,7 +79,7 @@ def xmlconvention2dict(xml_filename: Path) -> Tuple[dict, dict]:
 
 
 def meta_from_xml(xml_filename):
-    _dict, meta = xmlconvention2dict(xml_filename)
+    _dict, meta = xmlsnt2dict(xml_filename)
     meta.update(dict(table=_dict))
     meta.pop('alias')
     return meta
@@ -130,7 +133,7 @@ class StandardName:
     name: str
     description: Union[str, None]
     canonical_units: Union[str, None]
-    convention: "StandardNameTable"
+    snt: "StandardNameTable"
 
     def __post_init__(self):
         if self.canonical_units:
@@ -149,11 +152,11 @@ class StandardName:
             return any([self.name != other.name,
                         self.description != other.description,
                         self.canonical_units != other.canonical_units,
-                        self.convention != other.convention])
+                        self.snt != other.snt])
 
     def check(self):
-        """Run the name check of the convention."""
-        self.convention.check_name(self.name)
+        """Run the name check of the standard name."""
+        self.snt.check_name(self.name)
 
 
 class MetaDataYamlDict:
@@ -205,14 +208,32 @@ class MetaDataYamlDict:
         return self.data.values()
 
 
+class StandardNameTableStoreOption(Enum):
+    """Enum class to define how to store standard name tables in files"""
+    url = 1
+    dict = 2
+    versionname = 3
+    none = 4
+
+
+def url_exists(url: str) -> bool:
+    """Return True if URL exist"""
+    import requests
+    response = requests.head(url)
+    return response.status_code == 200
+
+
 class StandardNameTable:
     """Base class of Standardized Name Tables"""
+    STORE_AS: StandardNameTableStoreOption = StandardNameTableStoreOption.none
 
     def __init__(self, name: str, table: Union[MetaDataYamlDict, Dict, None],
                  version_number: int,
                  institution: str, contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '', pattern: str = ''):
+                 valid_characters: str = '', pattern: str = '',
+                 url: str = None,
+                 alias: Dict = None):
 
         self._name = name
         self._version_number = version_number
@@ -220,7 +241,9 @@ class StandardNameTable:
         self._pattern = pattern
         self._institution = institution
         self.contact = contact
-        self._xml_filename = None
+        self._filename = {None, None}
+        self.url = url
+        self.alias = alias
         if last_modified is None:
             now = datetime.now()
             self._last_modified = now.strftime(CF_DATETIME_STR)
@@ -242,6 +265,11 @@ class StandardNameTable:
         if isinstance(self._table, dict):
             return self._table
         return self._table.data
+
+    def alias(self):
+        if isinstance(self._alias, dict):
+            return self._alias
+        return self._alias.data
 
     @property
     def names(self):
@@ -279,6 +307,10 @@ class StandardNameTable:
     def version_number(self):
         return self._version_number
 
+    @property
+    def filename(self):
+        return self._filename[1]
+
     @contact.setter
     def contact(self, contact):
         if not isinstance(contact, str):
@@ -305,10 +337,10 @@ class StandardNameTable:
         if item in self.table:
             return StandardName(item, self.table[item]['description'],
                                 self.table[item]['canonical_units'],
-                                convention=self)
+                                snt=self)
         else:
             # return a standard name that is not in the table
-            return StandardName(item, None, None, convention=self)
+            return StandardName(item, None, None, snt=self)
 
     def __contains__(self, item):
         return item in self.table
@@ -347,7 +379,7 @@ class StandardNameTable:
                 self.table[name]['canonical_units'] = canonical_units
 
     def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
-        """string representation of the convention in form of a table"""
+        """string representation of the SNT in form of a table"""
         if self._name is None:
             name = self.__class__.__name__
         else:
@@ -401,11 +433,45 @@ class StandardNameTable:
             self.table.update(data)
 
     @staticmethod
-    def from_xml(xml_filename) -> "StandardNameTable":
+    def from_xml(xml_filename, name: str = None) -> "StandardNameTable":
         """read from xml file"""
-        meta = meta_from_xml(xml_filename)
-        snt = StandardNameTable(**meta)
-        snt._xml_filename = xml_filename
+        import xmltodict
+        with open(xml_filename, 'r', encoding='utf-8') as file:
+            my_xml = file.read()
+        xmldict = xmltodict.parse(my_xml)
+        _name = list(xmldict.keys())[0]
+        if name is None:
+            name = _name
+        data = xmldict[_name]
+
+        version_number = data.get('version_number', None)
+        last_modified = data.get('last_modified', None)
+        institution = data.get('institution', None)
+        contact = data.get('contact', None)
+        _alias = data.get('alias', None)
+        valid_characters = data.get('valid_characters', None)
+        pattern = data.get('pattern', None)
+
+        table = {}
+        for entry in data['entry']:
+            table[entry.pop('@id')] = entry
+
+        alias = {}
+        if _alias:
+            for aliasentry in _alias:
+                k, v = list(aliasentry.values())
+                alias[k] = v
+
+        snt = StandardNameTable(name, table=table,
+                                version_number=version_number,
+                                institution=institution,
+                                contact=contact,
+                                valid_characters=valid_characters,
+                                pattern=pattern,
+                                last_modified=last_modified,
+                                alias=alias
+                                )
+        snt._filename = {'xml', xml_filename}
         return snt
 
     @staticmethod
@@ -421,6 +487,7 @@ class StandardNameTable:
 
     @staticmethod
     def from_web(url: str, known_hash: str = None,
+                 name: str = None,
                  valid_characters: str = '[^a-zA-Z0-9_]',
                  pattern: str = '^[0-9 ].*'):
         """Init from an online resource. Provide a hash is recommended. For more info
@@ -433,9 +500,16 @@ class StandardNameTable:
             url=url,
             known_hash=known_hash,
         )
-        snt = StandardNameTable.from_xml(file_path)
+        file_path = pathlib.Path(file_path)
+        if file_path.suffix == '.xml':
+            snt = StandardNameTable.from_xml(file_path, name)
+        elif file_path.suffix in ('.yml', '.yaml'):
+            snt = StandardNameTable.from_yaml(file_path)
+        else:
+            raise ValueError(f'Unexpected file suffix: {file_path.suffix}. Expected .xml, .yml or .yaml')
         snt._valid_characters = valid_characters
         snt._pattern = pattern
+        snt.url = url
         return snt
 
     @staticmethod
@@ -446,8 +520,20 @@ class StandardNameTable:
             raise ValueError(f'Unexpected version name: {version_name}. Expecting syntax NAME-v999')
         return StandardNameTable.load_registered(version_name)
 
+    def to_dict(self):
+        """Dictionary representation of the standard name table"""
+        return dict(name=self.name,
+                    version_number=self.version_number,
+                    institution=self.institution,
+                    contact=self.contact,
+                    valid_characters=self.valid_characters,
+                    pattern=self.pattern,
+                    url=self.url,
+                    table=self.table
+                    )
+
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:
-        """Save the convention in a XML file"""
+        """Save the SNT in a XML file"""
         if not xml_filename.parent.exists() and parents:
             xml_filename.parent.mkdir(parents=parents)
         if datetime_str is None:
@@ -469,7 +555,7 @@ class StandardNameTable:
                         last_modified=last_modified)
 
     def to_yaml(self, yaml_filename: Path, datetime_str=None, parents=True) -> Path:
-        """Save the convention in a XML file"""
+        """Save the SNT in a YAML file"""
         yaml_filename = Path(yaml_filename)
         if not yaml_filename.parent.exists() and parents:
             yaml_filename.parent.mkdir(parents=parents)
@@ -493,7 +579,7 @@ class StandardNameTable:
         invalid character exist in the name.
         If strict is True, it is further checked whether the name exists
         in the standard name table. This is a global setting which can be changed
-        in `conventions.identifier.STRICT`"""
+        in `conventions.standard_attributes.standard_name.STRICT`"""
         if strict is None:
             strict = STRICT
 
@@ -764,7 +850,29 @@ class StandardNameTableAttribute:
             snt = StandardNameTable.load_registered(snt)
         if self.mode == 'r':
             raise StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
-        self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.versionname)
+        if snt.STORE_AS == StandardNameTableStoreOption.none:
+            if snt.url:
+                if url_exists(snt.url):
+                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.url)
+                else:
+                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
+                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name,
+                                                 snt.to_dict())
+            else:
+                self.rootparent.attrs.modify(config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
+        if snt.STORE_AS == StandardNameTableStoreOption.versionname:
+            self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.versionname)
+        elif snt.STORE_AS == StandardNameTableStoreOption.dict:
+            self.rootparent.attrs.modify(config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
+        elif snt.STORE_AS == StandardNameTableStoreOption.url:
+            if snt.url is not None:
+                if url_exists(snt.url):
+                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.url)
+                else:
+                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
+                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.to_dict())
+            else:  # else fall back to writing dict. better than versionname because cannot get lost
+                self.rootparent.attrs.modify(config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
         _SNT_CACHE[self.id.id] = snt
 
     def get(self) -> StandardNameTable:
@@ -780,8 +888,13 @@ class StandardNameTableAttribute:
             try:
                 return _SNT_CACHE[self.file.id.id]
             except KeyError:
-                return StandardNameTable.load_registered(
-                    self.rootparent.attrs[config.standard_name_table_attribute_name])
+                # snt is a string
+                if snt[0] == '{':
+                    return StandardNameTable(**json.loads(snt))
+                elif snt[0:4] in ('http', 'wwww.'):
+                    return StandardNameTable.from_web(snt)
+                else:
+                    return StandardNameTable.from_versionname(snt)
         return Empty_Standard_Name_Table
 
     def delete(self):
