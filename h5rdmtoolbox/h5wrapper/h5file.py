@@ -132,13 +132,16 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     dictionary = json.loads(ret)
                     for k, v in dictionary.items():
                         if isinstance(v, str):
-                            if v[0] == '/':
-                                if isinstance(self._id, h5py.h5g.GroupID):
-                                    rootgrp = get_rootparent(h5py.Group(self._id))
-                                    dictionary[k] = rootgrp.get(v)
-                                elif isinstance(self._id, h5py.h5d.DatasetID):
-                                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                                    dictionary[k] = rootgrp.get(v)
+                            if not v:
+                                dictionary[k] = ''
+                            else:
+                                if v[0] == '/':
+                                    if isinstance(self._id, h5py.h5g.GroupID):
+                                        rootgrp = get_rootparent(h5py.Group(self._id))
+                                        dictionary[k] = rootgrp.get(v)
+                                    elif isinstance(self._id, h5py.h5d.DatasetID):
+                                        rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+                                        dictionary[k] = rootgrp.get(v)
                     return dictionary
                 elif ret[0] == '/':  # it may be group or dataset path
                     if isinstance(self._id, h5py.h5g.GroupID):
