@@ -1,6 +1,7 @@
 import pathlib
 import re
 import xml.etree.ElementTree as ET
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, Union
 
@@ -10,6 +11,10 @@ STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_f
 
 EMAIL_REGREX = re.compile(r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"([]!#-[^-~ \t]|(\\[\t -~]))+\")@"
                           r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])")
+
+
+def get_similar_names_ratio(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 
 
 def equal_base_units(unit1, unit2):

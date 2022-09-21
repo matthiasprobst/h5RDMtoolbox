@@ -33,8 +33,7 @@ from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
 from . import register_standard_attribute
-from ..utils import equal_base_units
-from ..utils import is_valid_email_address, dict2xml
+from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from ... import config
 from ..._user import user_dirs
 from ...errors import StandardNameError, EmailError, StandardNameTableError
@@ -601,11 +600,18 @@ class StandardNameTable:
                 raise StandardNameError(f'Name must not start with a number!')
 
         if strict:
-            if self.table:
-                if name not in self.table:
-                    raise StandardNameError(f'Standardized name "{name}" not in '
-                                            'name table')
+            if name not in self.table:
+                err_msg = f'Standardized name "{name}" not in name table {self.versionname}.'
+                if self.table:
+                    similar_names = self.find_similar_names(name)
+                    if similar_names:
+                        err_msg += f'\nSimilar names are {similar_names}'
+                    raise StandardNameError(err_msg)
+
         return True
+
+    def find_similar_names(self, key):
+        return [k for k in self.table.keys() if get_similar_names_ratio(key, k) > 0.75]
 
     def check_units(self, name, units) -> bool:
         """Raises an error if units is wrong. """
@@ -883,18 +889,19 @@ class StandardNameTableAttribute:
         KeyError
             If cannot load SNT from registration.
         """
+        try:
+            return _SNT_CACHE[self.file.id.id]
+        except KeyError:
+            pass  # not cached
         snt = self.rootparent.attrs.get(config.standard_name_table_attribute_name, None)
         if snt is not None:
-            try:
-                return _SNT_CACHE[self.file.id.id]
-            except KeyError:
-                # snt is a string
-                if snt[0] == '{':
-                    return StandardNameTable(**json.loads(snt))
-                elif snt[0:4] in ('http', 'wwww.'):
-                    return StandardNameTable.from_web(snt)
-                else:
-                    return StandardNameTable.from_versionname(snt)
+            # snt is a string
+            if snt[0] == '{':
+                return StandardNameTable(**json.loads(snt))
+            elif snt[0:4] in ('http', 'wwww.'):
+                return StandardNameTable.from_web(snt)
+            else:
+                return StandardNameTable.from_versionname(snt)
         return Empty_Standard_Name_Table
 
     def delete(self):
