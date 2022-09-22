@@ -4,7 +4,7 @@ import yaml
 
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
-from h5rdmtoolbox.conventions import StandardNameTable, StandardNameTableTranslation
+from h5rdmtoolbox.conventions import StandardNameTable, StandardNameTableTranslation, StandardName
 from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge, MetaDataYamlDict
 
 
@@ -16,7 +16,7 @@ class TestStandardNameTable(unittest.TestCase):
         with open(test_yamlfilename, 'w') as f:
             yaml.safe_dump({'a': 1}, f)
             f.writelines('---\n')
-            yaml.safe_dump({'data': {'b': 2}}, f)
+            yaml.safe_dump({'table': {'b': 2}}, f)
         mdyd = MetaDataYamlDict(test_yamlfilename)
         self.assertDictEqual(mdyd.meta, {'a': 1})
         self.assertFalse(mdyd._data_is_read)
@@ -57,6 +57,14 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertEqual(table.pattern, '')
         self.assertIsInstance(table._table, MetaDataYamlDict)
         self.assertDictEqual(table._table._data, {})
+        self.assertDictEqual(table.table, {'synthetic_particle_image': {'canonical_units': 'counts',
+                                                                        'description': 'Synthetic particle image velocimetry image containing image particles of a single synthetic recording.'},
+                                           'mean_particle_diameter': {'canonical_units': 'pixel',
+                                                                      'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.'}})
+        self.assertDictEqual(table.alias, {'particle_image': 'synthetic_particle_image'})
+        self.assertTrue(table.check_name('synthetic_particle_image'))
+        self.assertTrue(table.check_name('particle_image', strict=True))
+        self.assertIsInstance(table['particle_image'], StandardName)
 
     def test_StandardNameTableFromWeb(self):
         cf = StandardNameTable.from_web(

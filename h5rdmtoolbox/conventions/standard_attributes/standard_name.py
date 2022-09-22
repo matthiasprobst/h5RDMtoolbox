@@ -165,6 +165,7 @@ class MetaDataYamlDict:
     def __init__(self, filename):
         self._filename = filename
         self._data = {}
+        self._alias = {}
         self._meta = {}
         self._data_is_read = False
         self._meta_is_read = False
@@ -184,11 +185,21 @@ class MetaDataYamlDict:
                 next(g)  # skip meta secion
                 for item in g:
                     if len(item) == 1:
-                        self._data = item[list(item.keys())[0]]
+                        grp = list(item.keys())[0]
+                        if grp == 'table':
+                            self._data = item[list(item.keys())[0]]
+                        elif grp == 'alias':
+                            self._alias = item[list(item.keys())[0]]
                     else:
                         self._data = item
             self._data_is_read = True
         return self._data
+
+    @property
+    def alias(self) -> Dict:
+        if not self._data_is_read:
+            _ = self.data
+        return self._alias
 
     @property
     def meta(self):
@@ -242,7 +253,7 @@ class StandardNameTable:
         self.contact = contact
         self._filename = {None, None}
         self.url = url
-        self.alias = alias
+        self._alias = alias
         if last_modified is None:
             now = datetime.now()
             self._last_modified = now.strftime(CF_DATETIME_STR)
@@ -260,63 +271,78 @@ class StandardNameTable:
                             f'StandardNameTable or dict.')
 
     @property
-    def table(self):
+    def names(self):
+        """Return keys of table"""
+        return [*list(self.table.keys()), *list(self.alias.keys())]
+
+    @property
+    def table(self) -> Dict:
+        """Return table as dictionary"""
         if isinstance(self._table, dict):
             return self._table
         return self._table.data
 
-    def alias(self):
-        if isinstance(self._alias, dict):
-            return self._alias
-        return self._alias.data
+    @property
+    def alias(self) -> Dict:
+        """Return alias dictionary"""
+        if isinstance(self._table, MetaDataYamlDict):
+            return self._table.alias
+        if self._alias is None:
+            return {}
+        return self._alias
 
     @property
-    def names(self):
-        return list(self.table.keys())
-
-    @property
-    def versionname(self):
+    def versionname(self) -> str:
+        """Return version name which is constructed like this: <name>-v<verions_number>"""
         return f'{self._name}-v{self._version_number}'
 
     @property
-    def contact(self):
+    def contact(self) -> str:
+        """Return contact (email)"""
         return self._contact
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def valid_characters(self):
-        return self._valid_characters
-
-    @property
-    def pattern(self):
-        return self._pattern
-
-    @property
-    def laset_modified(self):
-        return self._laset_modified
-
-    @property
-    def institution(self):
-        return self._institution
-
-    @property
-    def version_number(self):
-        return self._version_number
-
-    @property
-    def filename(self):
-        return self._filename[1]
 
     @contact.setter
     def contact(self, contact):
+        """Set contact (email)"""
         if not isinstance(contact, str):
             raise ValueError(f'Invalid type for contact Expcting str but got {type(contact)}')
         if not is_valid_email_address(contact):
             raise EmailError(f'Invalid email address: {contact}')
         self._contact = contact
+
+    @property
+    def name(self) -> str:
+        """Return name of standard name table"""
+        return self._name
+
+    @property
+    def valid_characters(self) -> str:
+        """Return valid characters of the snt"""
+        return self._valid_characters
+
+    @property
+    def pattern(self) -> str:
+        """Return valid pattern of the snt"""
+        return self._pattern
+
+    @property
+    def last_modified(self) -> str:
+        """Return when the snt was last modified"""
+        return self._last_modified
+
+    @property
+    def institution(self) -> str:
+        """Return the institution at which the snt was created"""
+        return self._institution
+
+    @property
+    def version_number(self) -> int:
+        """Return the version number of the snt"""
+        return self._version_number
+
+    @property
+    def filename(self):
+        return self._filename[1]
 
     def __repr__(self) -> str:
         if self._name is None:
@@ -336,6 +362,10 @@ class StandardNameTable:
         if item in self.table:
             return StandardName(item, self.table[item]['description'],
                                 self.table[item]['canonical_units'],
+                                snt=self)
+        elif item in self.alias:
+            return StandardName(item, self.table[self.alias[item]]['description'],
+                                self.table[self.alias[item]]['canonical_units'],
                                 snt=self)
         else:
             # return a standard name that is not in the table
@@ -357,7 +387,7 @@ class StandardNameTable:
         return self.versionname == other.versionname
 
     def set(self, name: str, description: str, canonical_units: str):
-        """Sets the value of a standardized name"""
+        """Set the value of a standard name"""
         if name in self.table:
             raise StandardNameError(f'name "{name}" already exists in table. Use modify() '
                                     f'to change the content')
@@ -365,7 +395,7 @@ class StandardNameTable:
         self.table[name] = dict(description=description, canonical_units=canonical_units)
 
     def modify(self, name: str, description: str, canonical_units: str):
-        """modifies a standard name or creates one if non-existing"""
+        """Modify a standard name or creates one if non-existing"""
         if name not in self.table:
             if not description or not canonical_units:
                 raise ValueError(f'Name {name} does not exist yet. You must provide string values '
@@ -376,6 +406,13 @@ class StandardNameTable:
                 self.table[name]['description'] = description
             if canonical_units:
                 self.table[name]['canonical_units'] = canonical_units
+
+    def rename(self, name, new_name) -> None:
+        """Rename an existing standard name. Make sure that description and unit is still
+        valid as this only renames the name of the standard name"""
+        existing_sn = self.table.get(name)
+        self.set(new_name, **existing_sn)
+        self.table.pop(name)
 
     def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
         """string representation of the SNT in form of a table"""
@@ -480,6 +517,7 @@ class StandardNameTable:
         if 'table' in mdyd.meta:
             return StandardNameTable(**mdyd.meta)
         elif 'table_dict' in mdyd.meta:
+            raise DeprecationWarning('Dont use "table_dict" key word but "table"')
             mdyd.meta['table'] = mdyd.meta.pop('table_dict')
             return StandardNameTable(**mdyd.meta)
         return StandardNameTable(**mdyd.meta, table=mdyd)
@@ -601,17 +639,18 @@ class StandardNameTable:
 
         if strict:
             if name not in self.table:
-                err_msg = f'Standardized name "{name}" not in name table {self.versionname}.'
-                if self.table:
-                    similar_names = self.find_similar_names(name)
-                    if similar_names:
-                        err_msg += f'\nSimilar names are {similar_names}'
-                    raise StandardNameError(err_msg)
-
+                if name not in self.alias:
+                    err_msg = f'Standardized name "{name}" not in name table {self.versionname}.'
+                    if self.table:
+                        similar_names = self.find_similar_names(name)
+                        if similar_names:
+                            err_msg += f'\nSimilar names are {similar_names}'
+                        raise StandardNameError(err_msg)
         return True
 
     def find_similar_names(self, key):
-        return [k for k in self.table.keys() if get_similar_names_ratio(key, k) > 0.75]
+        """Return similar names to key"""
+        return [k for k in [*self.table.keys(), *self.alias.keys()] if get_similar_names_ratio(key, k) > 0.75]
 
     def check_units(self, name, units) -> bool:
         """Raises an error if units is wrong. """
@@ -735,7 +774,7 @@ class StandardNameTableTranslation:
         with open(yaml_filename, 'w') as f:
             yaml.dump({'snt': snt.versionname}, f)
             f.writelines('---\n')
-            yaml.dump({'translation_dict': self.translation_dict}, f)
+            yaml.dump({'table': self.translation_dict}, f)
 
     def translate_dataset(self, ds: h5py.Dataset):
         """Based on the dataset basename the attribute standard_name is created"""
