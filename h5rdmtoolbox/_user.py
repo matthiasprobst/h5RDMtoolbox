@@ -27,8 +27,6 @@ while user_dirs['tmp'].exists():
     itmp += 1
     user_dirs['tmp'] = _root_tmp_dir / f'tmp{itmp}'
 
-print(f'tmp: {user_dirs["tmp"]}')
-
 user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
 
 testdir = pathlib.Path(__file__).parent / 'tests/data'

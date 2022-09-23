@@ -43,7 +43,7 @@ class TestH5Repo(unittest.TestCase):
             warnings.warn('Cannot test mongoDB features as no mongodb server is running!')
 
         if mongodb_av:
-            db = client['synpiv_test_db']
+            db = client['h5tbx_test_db']
             collection = db['test']
             self.collection = collection
         else:

@@ -161,8 +161,6 @@ def main():
     if 'cmd' in argvars:
         if args.cmd == 'mongodb':
             from pymongo import MongoClient
-            print(args)
-            list_of_collections = []
             db = None
             collection = None
 
@@ -177,10 +175,10 @@ def main():
                 db = client[args.db]
 
             if args.collection:
-                list_of_collections = db.list_collection_names()
-                if len(list_of_collections) == 0:
-                    print(f' ! No collections found')
-                    return
+                # list_of_collections = db.list_collection_names()
+                # if len(list_of_collections) == 0:
+                #     print(f' ! No collections found')
+                #     return
                 collection = db[args.collection]
                 print(f' > Selected collection: {collection}')
 
@@ -212,7 +210,9 @@ def main():
                     return
                 print(f' > Adding hdf file: {args.add} to collection {collection.name} of database {db.name}')
                 with open_wrapper(args.add) as h5:
-                    h5.insert(collections=collection)
+                    # noinspection PyUnresolvedReferences
+                    from h5rdmtoolbox.h5database import mongo
+                    h5.mongo.insert(collection=collection, recursive=True, update=True)
             return
         elif args.cmd == 'standard_name':
             from .conventions.standard_attributes.standard_name import StandardNameTable
@@ -264,5 +264,3 @@ def main():
                 else:
                     hdf_filename = cfx2hdf(cfx_filename)
                 print(f'Generated {hdf_filename} from {cfx_filename}')
-
-    sys.exit()

@@ -281,9 +281,17 @@ class Conventions:
 
 
 class CFX:
+    """Test interface class for ANSYS CFX"""
+
     @staticmethod
     def get_cfx_filename():
+        """Return .cfx file"""
         return testdir / f'CFD/AnsysCFX/channel_plus_cyl.cfx'
+
+    @staticmethod
+    def get_def_filename():
+        """Return .def file"""
+        return testdir / f'CFD/AnsysCFX/channel_plus_cyl.def'
 
 
 class Database:

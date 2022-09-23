@@ -80,7 +80,6 @@ def pivview2hdf():
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()
-    print(args)
 
     if args.write_default_config:
         if args.file is None:

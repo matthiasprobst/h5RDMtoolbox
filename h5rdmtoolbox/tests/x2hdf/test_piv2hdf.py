@@ -1,7 +1,7 @@
 import argparse
 import shutil
 import unittest
-from unittest import mock  # python 3.3+
+from unittest import mock
 
 import numpy as np
 
