@@ -32,6 +32,7 @@ from pint.errors import UndefinedUnitError
 from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
+from h5rdmtoolbox import generate_temporary_filename
 from . import register_standard_attribute
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from ... import config
@@ -548,6 +549,45 @@ class StandardNameTable:
         snt._pattern = pattern
         snt.url = url
         return snt
+
+    @staticmethod
+    def from_yaml_gitlab(url: str, project_id: int, ref_name: str,
+                         file_path: str, private_token: str = None) -> "StandardNameTable":
+        """
+        Download a yaml file from a gitlab repository and provide StandardNameTable based on this.
+
+        Parameters
+        ----------
+        url: str
+            gitlab url, e.g. https://gitlab.com
+        project_id: int
+            ID of gitlab project
+        ref_name: str
+            Name of branch or tag
+        file_path: str
+            Path to file in gitlab project
+        private_token: str
+            Token if porject is not public
+
+        Returns
+        -------
+        StandardNameTable
+
+        Notes
+        -----
+        Equivalent curl statement:
+        curl <url>/api/v4/projects/<project-id>/repository/files/<file-path>/raw?ref\=<ref_name> -o <output-filename>
+        """
+        try:
+            import gitlab
+        except ImportError:
+            raise ImportError('python-gitlab not installed')
+        gl = gitlab.Gitlab(url, private_token=private_token)
+        pl = gl.projects.get(id=project_id)
+        yamlfilename = generate_temporary_filename(suffix='.yaml')
+        with open(yamlfilename, 'wb') as f:
+            pl.files.raw(file_path=file_path, ref=ref_name, streamed=True, action=f.write)
+        return StandardNameTable(yamlfilename)
 
     @staticmethod
     def from_versionname(version_name: str):
