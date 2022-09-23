@@ -32,13 +32,13 @@ from pint.errors import UndefinedUnitError
 from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
-from h5rdmtoolbox import generate_temporary_filename
 from . import register_standard_attribute
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from ... import config
 from ..._user import user_dirs
 from ...errors import StandardNameError, EmailError, StandardNameTableError
 from ...h5wrapper.h5file import H5Dataset, H5Group
+from ...utils import generate_temporary_filename
 
 STRICT = True
 
@@ -551,16 +551,16 @@ class StandardNameTable:
         return snt
 
     @staticmethod
-    def from_yaml_gitlab(url: str, project_id: int, ref_name: str,
-                         file_path: str, private_token: str = None) -> "StandardNameTable":
+    def from_gitlab(url: str, project_id: int, ref_name: str,
+                    file_path: str, private_token: str = None) -> "StandardNameTable":
         """
-        Download a yaml file from a gitlab repository and provide StandardNameTable based on this.
+        Download a file from a gitlab repository and provide StandardNameTable based on this.
 
         Parameters
         ----------
         url: str
             gitlab url, e.g. https://gitlab.com
-        project_id: int
+        project_id: str
             ID of gitlab project
         ref_name: str
             Name of branch or tag
@@ -584,10 +584,17 @@ class StandardNameTable:
             raise ImportError('python-gitlab not installed')
         gl = gitlab.Gitlab(url, private_token=private_token)
         pl = gl.projects.get(id=project_id)
-        yamlfilename = generate_temporary_filename(suffix='.yaml')
-        with open(yamlfilename, 'wb') as f:
+
+        tmpfilename = generate_temporary_filename(suffix=file_path.rsplit('.', 1)[1])
+        with open(tmpfilename, 'wb') as f:
             pl.files.raw(file_path=file_path, ref=ref_name, streamed=True, action=f.write)
-        return StandardNameTable(yamlfilename)
+
+        if file_path.endswith('.yaml') or file_path.endswith('.yml'):
+            return StandardNameTable.from_yaml(tmpfilename)
+        elif file_path.endswith('.xml'):
+            return StandardNameTable.from_xml(tmpfilename)
+        raise NotImplementedError(f'Cannot handle file name extention {file_path.rsplit(".", 1)[1]}. '
+                                  f'Expected yml/yaml or xml')
 
     @staticmethod
     def from_versionname(version_name: str):

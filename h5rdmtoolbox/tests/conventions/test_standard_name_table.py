@@ -73,6 +73,13 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertEqual(cf.name, 'standard_name_table')
         self.assertEqual(cf.versionname, 'standard_name_table-v79')
 
+        opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                 file_path='open_centrifugal_fan_database-v1.yaml',
+                                                 project_id='35443',
+                                                 ref_name='main')
+        self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
+        self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+
     def test_from_yaml(self):
         table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
 
