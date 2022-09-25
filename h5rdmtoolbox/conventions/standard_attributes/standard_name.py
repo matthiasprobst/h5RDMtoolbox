@@ -807,12 +807,14 @@ class StandardNameTableTranslation:
         sntt.filename = yaml_filename
         return sntt
 
-    def to_yaml(self, yaml_filename: pathlib.Path,
+    def to_yaml(self, target_dir: pathlib.Path,
                 snt: StandardNameTable,
                 parents: bool = True,
                 overwrite: bool = False) -> pathlib.Path:
         """Dump translation dict to yaml"""
-        yaml_filename = pathlib.Path(yaml_filename)
+        name = f'{self.application_name}-to-{snt.versionname}.yml'
+        yaml_filename = pathlib.Path(target_dir) / name
+
         if yaml_filename.exists() and not overwrite:
             raise FileExistsError('File exists and overwrite is False')
         if not yaml_filename.parent.exists() and parents:
@@ -863,14 +865,16 @@ class StandardNameTableTranslation:
 
     def register(self, snt: StandardNameTable, overwrite: bool = False) -> None:
         """Register the standard name table under its versionname.
+
+        Parameters
+        ----------
         snt: StandardNameTable
             The standard name table to which the translation dicitonary referrs to
         overwrite: bool, default=False
             Whether to overwrite an existing translation name
         """
-        name = f'{self.application_name}-to-{snt.versionname}'
-        trg = user_dirs['standard_name_table_translations'] / f'{name}.yml'
-        self.to_yaml(trg, snt, overwrite=overwrite)
+        self.to_yaml(target_dir=user_dirs['standard_name_table_translations'],
+                     snt=snt, overwrite=overwrite)
 
     @staticmethod
     def load_registered(name: str) -> 'StandardNameTableTranslation':
