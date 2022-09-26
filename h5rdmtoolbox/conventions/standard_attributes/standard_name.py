@@ -33,6 +33,7 @@ from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
 from . import register_standard_attribute
+from .._logger import logger
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from ... import config
 from ..._user import user_dirs
@@ -235,7 +236,7 @@ def url_exists(url: str) -> bool:
 
 
 class StandardNameTable:
-    """Base class of Standardized Name Tables"""
+    """Base class of Standard Name Tables"""
     STORE_AS: StandardNameTableStoreOption = StandardNameTableStoreOption.none
 
     def __init__(self, name: str, table: Union[MetaDataYamlDict, Dict, None],
@@ -687,7 +688,7 @@ class StandardNameTable:
         if strict:
             if name not in self.table:
                 if name not in self.alias:
-                    err_msg = f'Standardized name "{name}" not in name table {self.versionname}.'
+                    err_msg = f'Standard name "{name}" not in name table {self.versionname}.'
                     if self.table:
                         similar_names = self.find_similar_names(name)
                         if similar_names:
@@ -714,7 +715,7 @@ class StandardNameTable:
             self.check_grp(h5['/'], recursive=recursive, raise_error=raise_error)
 
     def check_grp(self, h5grp: h5py.Group, recursive: bool = True, raise_error: bool = True):
-        """Check group dataset """
+        """Check group datasets. Run recursively if requested."""
 
         def _check_ds(name, node):
             if isinstance(node, h5py.Dataset):
@@ -726,9 +727,12 @@ class StandardNameTable:
                         if raise_error:
                             raise StandardNameError(e)
                         else:
-                            print(f' > ds: {node.name}: {e}')
+                            logger.error(f' > ds: {node.name}: {e}')
 
-        h5grp.visititems(_check_ds)
+        if recursive:
+            h5grp.visititems(_check_ds)
+        else:
+            _check_ds(None, h5grp)
 
     def register(self, overwrite: bool = False) -> None:
         """Register the standard name table under its versionname."""
@@ -824,25 +828,27 @@ class StandardNameTableTranslation:
             yaml.dump({'snt': snt.versionname}, f)
             f.writelines('---\n')
             yaml.dump({'table': self.translation_dict}, f)
+        return yaml_filename
 
     def translate_dataset(self, ds: h5py.Dataset):
         """Based on the dataset basename the attribute standard_name is created"""
         ds_basename = os.path.basename(ds.name)
         ds.attrs['standard_name'] = self.translate(ds_basename)
 
-    def translate_group(self, grp: h5py.Group, rec: bool = True, verbose: bool = False):
+    def translate_group(self, grp: h5py.Group, rec: bool = True):
         """Translate all datasets in group and recursive if rec==True"""
 
         def sn_update(name, node):
+            """function called when visiting HDF objects"""
             if isinstance(node, h5py.Dataset):
                 if node.name in self.translation_dict:
-                    node.attrs['standard_name'] = self.translation_dict[node.name]
-                    if verbose:
-                        print(f'{name} -> {self.translation_dict[name]}')
+                    sn = self.translation_dict[node.name]
+                    node.attrs['standard_name'] = sn
+                    logger.debug(f'translate name {name} to standard name {sn}')
                 elif os.path.basename(node.name) in self.translation_dict:
-                    node.attrs['standard_name'] = self.translation_dict[os.path.basename(node.name)]
-                    if verbose:
-                        print(f'{name} -> {self.translation_dict[os.path.basename(node.name)]}')
+                    sn = self.translation_dict[os.path.basename(node.name)]
+                    node.attrs['standard_name'] = sn
+                    logger.debug(f'translate name {name} to standard name {sn}')
 
         if rec:
             grp.visititems(sn_update)
