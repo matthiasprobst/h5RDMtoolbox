@@ -14,10 +14,10 @@ from h5rdmtoolbox.h5wrapper import H5PIV
 class TestConventions(unittest.TestCase):
 
     def test_logger(self):
-        logger = h5tbx.conventions.set_loglevel(logging.DEBUG)
-        self.assertEqual(logger.level, logging.DEBUG)
-        logger = h5tbx.conventions.set_loglevel(logging.CRITICAL)
-        self.assertEqual(logger.level, logging.CRITICAL)
+        h5tbx.conventions.set_loglevel(logging.DEBUG)
+        self.assertEqual(h5tbx.conventions.logger.level, logging.DEBUG)
+        h5tbx.conventions.set_loglevel(logging.CRITICAL)
+        self.assertEqual(h5tbx.conventions.logger.level, logging.CRITICAL)
 
     def test_pivview(self):
         with H5PIV(mode='w') as h5:

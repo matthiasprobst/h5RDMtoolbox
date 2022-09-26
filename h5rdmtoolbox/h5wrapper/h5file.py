@@ -30,7 +30,7 @@ from .._user import user_dirs
 from .._version import __version__
 from ..conventions.standard_attributes import STANDARD_ATTRIBUTE_NAMES
 # noinspection PyUnresolvedReferences
-from ..x2hdf import xr2hdf
+from . import xr2hdf
 
 logger = logging.getLogger(__package__)
 

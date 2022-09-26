@@ -30,7 +30,7 @@ def read_many_from_database(db_entry: pymongo.collection.Cursor) -> List[any]:
         return arrs
 
 
-class TestH5Repo(unittest.TestCase):
+class TestH5Mongo(unittest.TestCase):
 
     def setUp(self) -> None:
         self.mongodb_running = True

@@ -363,8 +363,7 @@ class Database:
 
     @staticmethod
     def generate_test_files() -> List[pathlib.Path]:
-        from h5rdmtoolbox import h5database as h5db
+        """Generate a nested filestructure of hdf files and return list of the filenames"""
         tocdir = generate_temporary_directory('test_repo')
         Database.build_test_repo(tocdir)
-        repo = h5db.H5repo(tocdir)
-        return repo.filenames
+        return sorted(tocdir.rglob('*.hdf'))

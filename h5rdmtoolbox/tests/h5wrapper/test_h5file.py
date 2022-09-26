@@ -20,7 +20,7 @@ from h5rdmtoolbox.h5wrapper.h5file import H5Dataset, H5Group
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 
 logger = logging.getLogger('h5rdmtoolbox.h5wrapper')
-set_loglevel('error')
+set_loglevel('ERROR')
 
 ureg.default_format = config.ureg_format
 
@@ -759,9 +759,9 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
                 fname.unlink()
 
     def test_logger(self):
-        set_loglevel('debug')
+        set_loglevel('DEBUG')
         self.assertTrue(logger.level == logging.DEBUG)
-        set_loglevel('info')
+        set_loglevel('INFO')
         self.assertTrue(logger.level == logging.INFO)
 
     def test_multi_dim_scales(self):

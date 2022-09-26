@@ -16,11 +16,9 @@ __author__ = 'Matthias Probst'
 
 def set_loglevel(level):
     """setting logging level of all modules"""
-    from .x2hdf import set_loglevel as x2hdf_set_loglevel
     from .h5wrapper import set_loglevel as h5wrapper_set_loglevel
     from .h5database import set_loglevel as h5database_set_loglevel
     from .conventions import set_loglevel as conventions_set_loglevel
-    x2hdf_set_loglevel(level)
     h5wrapper_set_loglevel(level)
     h5database_set_loglevel(level)
     conventions_set_loglevel(level)
