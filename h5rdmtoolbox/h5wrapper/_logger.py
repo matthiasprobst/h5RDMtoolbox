@@ -38,12 +38,3 @@ logger.addHandler(_stream_handler)
 
 # Log messages collected above
 logger.debug(_logFolderMsg)
-
-# other loggers:
-# ---- piv uncertainty
-piv_uncertainty_logger = logging.getLogger('piv_uncertainty')
-_uncertainty_file_handler = RotatingFileHandler(_log / 'piv_uncertainty.log', maxBytes=int(5e6), backupCount=2)
-_uncertainty_file_handler.setLevel(DEFAULT_LOGGING_LEVEL)
-_uncertainty_file_handler.setFormatter(_formatter)
-piv_uncertainty_logger.addHandler(_uncertainty_file_handler)
-piv_uncertainty_logger.addHandler(_stream_handler)

@@ -829,7 +829,7 @@ class H5Group(h5py.Group):
         long_name : str
             The long name (human readable description of the dataset).
             If None, standard_name must be provided
-        standard_name: str or conventions.StandardizedName
+        standard_name: str or conventions.StandardName
             The standard name of the dataset. If None, long_name must be provided
         units : str, default=None
             Physical units of the data. Can only be None if data is not attached with such attribute,
@@ -1633,7 +1633,7 @@ class H5Group(h5py.Group):
         else:
             preamble = f'<p>Group: {self.name}</p>\n'
         if check:
-            preamble += f'<p>Check resuted in {self.check(silent=True)} issues.</p>\n'
+            preamble += f'<p>Check resuted in {self.check()} issues.</p>\n'
         build_debug_html_page = kwargs.pop('build_debug_html_page', False)
         display(HTML(h5file_html_repr(self, max_attr_length, preamble=preamble,
                                       build_debug_html_page=build_debug_html_page)))
@@ -1762,9 +1762,9 @@ class H5File(h5py.File, H5Group):
                 self.standard_name_table = standard_name_table
 
         self._layout = conventions.layout.H5Layout.load_registered(layout_filename)
-        self._layout.check(self, silent=True, recursive=True)
+        self._layout.check(self, recursive=True)
 
-    def check(self, grp: Union[str, h5py.Group] = '/', silent: bool = True) -> int:
+    def check(self, grp: Union[str, h5py.Group] = '/') -> int:
         """Run layout check. This method may be overwritten to add conditional
          checking.
 
@@ -1773,15 +1773,13 @@ class H5File(h5py.File, H5Group):
          grp: str or h5py.Group, default='/'
             Group from where to start the layout check.
             Per default starts at root level
-         silent: bool, default=True
-             Silent will mute all informative output.
 
          Returns
          -------
          int
             Number of detected issues.
          """
-        return self.layout.check(self[grp], silent)
+        return self.layout.check(self[grp])
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.

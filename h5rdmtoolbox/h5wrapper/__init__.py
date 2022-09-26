@@ -12,9 +12,9 @@ from .h5piv import H5PIV
 
 def set_loglevel(level):
     """setting the logging level of sub-package h5wrapper"""
-    logger.setLevel(level.upper())
-    _file_handler.setLevel(level.upper())
-    _stream_handler.setLevel(level.upper())
+    logger.setLevel(level)
+    for handler in logger.handlers:
+        handler.setLevel(level)
 
 
 def open_wrapper(filename, mode='r', **kwargs):

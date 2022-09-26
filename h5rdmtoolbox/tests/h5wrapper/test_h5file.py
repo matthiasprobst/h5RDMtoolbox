@@ -729,7 +729,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
         with h5py.File(tmpfile, mode='w') as h5:
             h5.create_dataset(name='test', data=1)
         with H5File(tmpfile, mode='r') as h5:
-            n = h5.check(silent=False)
+            n = h5.check()
             # missing at root level:
             # title
             # missing at dataset:
@@ -750,7 +750,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             h5.create_group(name='test')
 
         with H5File(tmpfile, mode='r') as h5:
-            n = h5.check(silent=False)
+            n = h5.check()
             self.assertEqual(n, 2)
 
     def tearDown(self) -> None:

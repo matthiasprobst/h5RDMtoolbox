@@ -20,8 +20,7 @@ logger = logging.getLogger(__package__)
 
 
 def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
-                     otherobj: Union[h5py.Dataset, h5py.Group],
-                     silent: bool = False):
+                     otherobj: Union[h5py.Dataset, h5py.Group]):
     """Check consistency of attributes"""
     issues = IssueList()
     for ak, av in obj.attrs.items():
@@ -29,8 +28,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
         if ak == '__shape__':
             _shape = tuple(av)
             if otherobj.shape != _shape:
-                if not silent:
-                    print(f'Wrong shape of dataset {obj.name}: {_shape} != {otherobj.shape}')
+                logger.error(f'Wrong shape of dataset {obj.name}: {_shape} != {otherobj.shape}')
                 issues.append({'path': obj.name,
                                'obj_type': 'dataset',
                                'name': ak,
@@ -56,12 +54,10 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
             other_units = otherobj.attrs.get('units')
             if other_units is not None:
                 if av != otherobj.attrs[ak]:
-                    if not silent:
-                        print(f'Exact units check failed for {obj.name}: {av} != {other_units}')
+                    logger.error(f'Exact units check failed for {obj.name}: {av} != {other_units}')
                     issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': 'units', 'issue': 'wrong'})
             else:
-                if not silent:
-                    print(f'Attribute units missing in {obj.name}')
+                logger.error(f'Attribute units missing in {obj.name}')
                 issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': 'units', 'issue': 'missing'})
             continue
 
@@ -69,19 +65,16 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
             other_units = otherobj.attrs.get('units')
             if other_units is not None:
                 if not equal_base_units(av, otherobj.attrs[ak]):
-                    if not silent:
-                        print(f'Base-units check failed for {obj.name}: {av} != {other_units}')
+                    logger.error(f'Base-units check failed for {obj.name}: {av} != {other_units}')
                     issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': 'units', 'issue': 'wrong'})
             else:
-                if not silent:
-                    print(f'Attribute units missing in {obj.name}')
+                logger.error(f'Attribute units missing in {obj.name}')
                 issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': 'units', 'issue': 'missing'})
             continue
         keys = ak.split('.alt:')
         if len(keys) > 1:
             if not any([k in otherobj.attrs for k in keys]):
-                if not silent:
-                    print(f'Neither of the attribute {", ".join(keys)} exist in {otherobj.name}')
+                logger.error(f'Neither of the attribute {", ".join(keys)} exist in {otherobj.name}')
                 issues.append(
                     {'path': obj.name, 'obj_type': 'attribute', 'name': ' or '.join(keys), 'issue': 'missing'})
             continue
@@ -96,11 +89,9 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
             if not av.startswith('__'):
                 if av != other_av:
                     issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': ak, 'issue': 'unequal'})
-                    if not silent:
-                        print(f'Attribute value issue for {obj.name}: {av} != {other_av}')
+                    logger.error(f'Attribute value issue for {obj.name}: {av} != {other_av}')
         else:
-            if not silent:
-                print(f'Attribute {ak} missing in group {obj.name}')
+            logger.error(f'Attribute {ak} missing in group {obj.name}')
             issues.append({'path': obj.name, 'obj_type': 'attribute', 'name': ak, 'issue': 'missing'})
     return issues
 
@@ -120,10 +111,10 @@ class IssueList(list):
 class LayoutDataset(h5py.Dataset):
     """H5FileLayout check class for datasets"""
 
-    def check(self, other: h5py.Dataset, silent: bool = True) -> List[Dict]:
+    def check(self, other: h5py.Dataset) -> List[Dict]:
         """Run consistency check"""
         issues = IssueList()
-        issues.append(check_attributes(self, other, silent))
+        issues.append(check_attributes(self, other))
         return issues
 
 
@@ -152,12 +143,11 @@ class LayoutGroup(h5py.Group):
             return _repr.sdump(h5, ret, nspaces, grp_only, hide_attributes, color_code_verification,
                                is_layout=True)
 
-    def check(self, other: h5py.Group, silent: bool = True,
-              recursive: bool = True):
+    def check(self, other: h5py.Group, recursive: bool = True):
         """Run consistency check"""
         issues = IssueList()
 
-        issues.append(check_attributes(self, other, silent))
+        issues.append(check_attributes(self, other))
         for obj_name, obj in self.items():
             if isinstance(obj, h5py.Dataset):
                 alt_grp_name = obj.attrs.get('__alternative_source_group__')
@@ -165,7 +155,7 @@ class LayoutGroup(h5py.Group):
                     ds_name = obj_name
                     # first check if the dataset exist:
                     if ds_name in other:
-                        issues.append(self[obj_name].check(other[ds_name], silent))
+                        issues.append(self[obj_name].check(other[ds_name]))
                     else:
                         # now check alternative:
                         # does the alternative group exist?
@@ -174,46 +164,42 @@ class LayoutGroup(h5py.Group):
                                 if isinstance(other_grp, h5py.Group):
                                     if re.match(alt_grp_name[3:], other_grp_name):
                                         if ds_name in other_grp:
-                                            issues.append(self[obj_name].check(other_grp[ds_name], silent))
+                                            issues.append(self[obj_name].check(other_grp[ds_name]))
                                         else:
                                             issues.append({'path': os.path.join(other.name, alt_grp_name, ds_name),
                                                            'obj_type': 'dataset',
                                                            'issue': 'missing'})
-                                            if not silent:
-                                                print(f'Dataset name {ds_name} missing in '
-                                                      f'{os.path.join(other.name, alt_grp_name, ds_name)}.')
+                                            logger.error(f'Dataset name {ds_name} missing in '
+                                                         f'{os.path.join(other.name, alt_grp_name, ds_name)}.')
 
                         else:
                             if alt_grp_name in other.keys():
                                 if ds_name in other[alt_grp_name]:
-                                    issues.append(self[obj_name].check(other[alt_grp_name][ds_name], silent))
+                                    issues.append(self[obj_name].check(other[alt_grp_name][ds_name]))
                                 else:
                                     issues.append(
                                         {'path': os.path.join(other, alt_grp_name, ds_name), 'obj_type': 'dataset',
                                          'issue': 'missing'})
-                                    if not silent:
-                                        print(
-                                            f'Dataset name {ds_name} missing in '
-                                            f'{os.path.join(other, alt_grp_name, ds_name)}.')
+                                    logger.error(
+                                        f'Dataset name {ds_name} missing in '
+                                        f'{os.path.join(other, alt_grp_name, ds_name)}.')
                             else:
                                 issues.append({'path': alt_grp_name, 'obj_type': 'group', 'issue': 'missing'})
-                                if not silent:
-                                    print(f'Group name {alt_grp_name} missing in {self.name}.')
+                                logger.error(f'Group name {alt_grp_name} missing in {self.name}.')
 
                 else:
                     if obj_name in other:
-                        issues.append(self[obj_name].check(other[obj_name], silent))
+                        issues.append(self[obj_name].check(other[obj_name]))
                     else:
                         if '__optional__' not in obj.attrs:
                             issues.append({'path': obj.name, 'obj_type': 'dataset', 'issue': 'missing'})
-                            if not silent:
-                                print(f'Dataset name {obj_name} missing in {self.name}.')
+                            logger.error(f'Dataset name {obj_name} missing in {self.name}.')
             else:
                 if recursive:
                     alt_grp_name = obj.attrs.get('__alternative_source_group__')
                     if alt_grp_name:
                         if obj.name in other:
-                            issues.append(LayoutGroup(obj.id).check(other[obj.name], silent))
+                            issues.append(LayoutGroup(obj.id).check(other[obj.name]))
                         else:
                             # check the alternative:
                             if alt_grp_name.startswith('re:'):
@@ -227,19 +213,17 @@ class LayoutGroup(h5py.Group):
                                             if obj_basename in other_grp:
                                                 n_found += 1
                                                 issues.append(
-                                                    LayoutGroup(obj.id).check(other_grp[obj_basename], silent))
+                                                    LayoutGroup(obj.id).check(other_grp[obj_basename]))
 
                                 if n_found == 0 and not obj.attrs.get('__check_isoptional__', False):
-                                    if not silent:
-                                        print(f'Group name "{obj_name}" missing in {other.name}.')
+                                    logger.error(f'Group name "{obj_name}" missing in {other.name}.')
                                     issues.append({'path': self[obj_name].name,
                                                    'obj_type': 'group',
                                                    'issue': 'missing'})
                             else:
                                 # a single alternative
                                 if alt_grp_name not in other:
-                                    if not silent:
-                                        print(f'Group name "{alt_grp_name}" missing in {other.name}.')
+                                    logger.error(f'Group name "{alt_grp_name}" missing in {other.name}.')
                                     issues.append({'path': os.path.join(self.name, alt_grp_name),
                                                    'obj_type': 'group',
                                                    'issue': 'missing'})
@@ -253,10 +237,9 @@ class LayoutGroup(h5py.Group):
                                 if isinstance(other_grp, h5py.Group):
                                     if re.match(name_re_split[1], other_grp_name):
                                         n_found += 1
-                                        issues.append(LayoutGroup(obj.id).check(other_grp, silent))
+                                        issues.append(LayoutGroup(obj.id).check(other_grp))
                             if n_found == 0 and not obj.attrs.get('__check_isoptional__', False):
-                                if not silent:
-                                    print(f'Group name "{obj_name}" missing in {other.name}.')
+                                logger.error(f'Group name "{obj_name}" missing in {other.name}.')
                                 issues.append({'path': self[obj_name].name,
                                                'obj_type': 'group',
                                                'issue': 'missing'})
@@ -266,8 +249,7 @@ class LayoutGroup(h5py.Group):
                             else:
                                 is_optional = obj.attrs.get('__check_isoptional__', False)
                                 if not is_optional:
-                                    if not silent:
-                                        print(f'Group name "{obj_name}" missing in {other.name}.')
+                                    logger.error(f'Group name "{obj_name}" missing in {other.name}.')
                                     issues.append({'path': self[obj_name].name,
                                                    'obj_type': 'group',
                                                    'issue': 'missing'})
@@ -413,13 +395,13 @@ class H5Layout:
             h5.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
         return self.filename
 
-    def check_file(self, filename: Union[str, pathlib.Path], silent: bool = True,
+    def check_file(self, filename: Union[str, pathlib.Path],
                    recursive: bool = True) -> int:
         """Run check on a file. Class method check() is called on the root group"""
         with h5py.File(filename) as h5:
-            return self.check(h5, silent=silent, recursive=recursive)
+            return self.check(h5, recursive=recursive)
 
-    def check(self, grp: h5py.Group, silent: bool = True,
+    def check(self, grp: h5py.Group,
               recursive: bool = True) -> int:
         """Run layout check.
 
@@ -427,8 +409,6 @@ class H5Layout:
         ----------
         grp: h5py.Group
             HDF5 group of the file to be inspected
-        silent: bool, optional=False
-            Control extra string output.
         recursive: boo, optional=True
             Recursive check.
 
@@ -443,8 +423,7 @@ class H5Layout:
         grp_name = grp.name
         with H5FileLayout(self.filename) as lay:
             if grp_name in lay:
-                issues.append(lay[grp_name].check(grp, silent=silent,
-                                                  recursive=recursive))
+                issues.append(lay[grp_name].check(grp, recursive=recursive))
             else:
                 raise KeyError(f'Group {grp_name} does not exist in layout')
         self._issues_list = issues

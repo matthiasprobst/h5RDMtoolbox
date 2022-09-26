@@ -7,7 +7,6 @@ The standrd name definitions (name, description, units) are to be provided in XM
 are provided by this sub-packages (fluid and piv). As the projec is under development, they are generated
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
-import logging
 
 from . import data
 from . import layout
@@ -17,13 +16,11 @@ from .standard_attributes.standard_name import StandardNameTable, StandardName, 
 from .utils import dict2xml, is_valid_email_address
 
 
-def set_loglevel(level) -> logging.Logger:
-    """setting the log level of the sub-package conventions"""
-    if isinstance(level, str):
-        logger.setLevel(level.upper())
-    else:
-        logger.setLevel(level)
-    return logger
+def set_loglevel(level):
+    """setting the logging level of sub-package h5wrapper"""
+    logger.setLevel(level)
+    for handler in logger.handlers:
+        handler.setLevel(level)
 
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'

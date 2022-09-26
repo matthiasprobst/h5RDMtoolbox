@@ -131,7 +131,7 @@ class TestCommon(unittest.TestCase):
 
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc() as h5:
-                n_issuess = h5.check(silent=True)
+                n_issuess = h5.check()
                 self.assertIsInstance(n_issuess, int)
                 self.assertTrue(n_issuess > 0)
 

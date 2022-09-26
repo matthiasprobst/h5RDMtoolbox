@@ -49,7 +49,7 @@ class TestPIV2HDF(unittest.TestCase):
         snapshot_pivview = piv.PIVSnapshot(pivview_file, recording_time=0.)
         hdf_filename = snapshot_pivview.to_hdf()
         with h5tbx.H5PIV(hdf_filename) as h5piv:
-            self.assertEqual(h5piv.check(silent=False), 0)
+            self.assertEqual(h5piv.check(), 0)
 
     def test_multi_piv_equal_nt(self):
         plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()[0:2]
@@ -58,7 +58,7 @@ class TestPIV2HDF(unittest.TestCase):
         mplane = piv.PIVMultiPlane(plane_objs)
         hdf_filename = mplane.to_hdf()
         with h5tbx.H5PIV(hdf_filename) as h5piv:
-            self.assertEqual(h5piv.check(silent=False), 0)
+            self.assertEqual(h5piv.check(), 0)
 
     def test_multi_piv_unequal_nt(self):
         plane_dirs = h5tbx.tutorial.PIVview.get_multiplane_directories()
@@ -67,7 +67,7 @@ class TestPIV2HDF(unittest.TestCase):
         mplane = piv.PIVMultiPlane(plane_objs)
         hdf_filename = mplane.to_hdf()
         with h5tbx.H5PIV(hdf_filename) as h5piv:
-            self.assertEqual(h5piv.check(silent=False), 0)
+            self.assertEqual(h5piv.check(), 0)
 
     def test_multi_piv_unequal_nt2(self):
         """check what happens if first plane has more times than second and vice versa"""
@@ -154,7 +154,7 @@ class TestPIV2HDF(unittest.TestCase):
         hdf_filename = mplane.to_hdf(fill_time_vec_differences=True)
         with h5tbx.H5PIV(hdf_filename, 'r') as h5piv:
             self.assertEqual(np.isnan(h5piv.u[-1, -1, :, :].values).sum(), h5piv['x'].size * h5piv['y'].size)
-            self.assertEqual(h5piv.check(silent=False), 0)
+            self.assertEqual(h5piv.check(), 0)
             h5piv.get_parameters(0)
 
     def test_utils(self):

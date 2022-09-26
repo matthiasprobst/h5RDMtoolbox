@@ -22,16 +22,14 @@ config = {
 default_dict = config.copy()
 
 
-def write_default_user_yaml_file(overwrite=False, filename=user_yaml_filename, silent=False) -> pathlib.Path:
+def write_default_user_yaml_file(overwrite=False, filename=user_yaml_filename) -> pathlib.Path:
     """Writes the default configuration to a file. Default file location is user_yaml_filename"""
     _filename = pathlib.Path(filename)
     if _filename.exists() and not overwrite:
-        if not silent:
-            warnings.warn('Could not write yaml user file. It already exists and overwrite is set to False')
+        warnings.warn('Could not write yaml user file. It already exists and overwrite is set to False')
         return _filename
 
-    if not silent:
-        print(f'Writing h5database yaml to: {_filename}')
+    logger.info(f'Writing h5database yaml to: {_filename}')
     with open(_filename, 'w') as f:
         yaml.dump(default_dict, f, sort_keys=False)
     return _filename
@@ -60,16 +58,16 @@ def use(yaml_file):
 
 
 def set_loglevel(level):
-    if isinstance(level, str):
-        logger.setLevel(level.upper())
-    else:
-        logger.setLevel(level)
+    """setting the logging level of sub-package h5wrapper"""
+    logger.setLevel(level)
+    for handler in logger.handlers:
+        handler.setLevel(level)
 
 
 from .h5repo import H5repo
 from .files import H5Files
 
 if not user_yaml_filename.exists():
-    write_default_user_yaml_file(silent=False)
+    write_default_user_yaml_file()
 
 __all__ = ['config', 'user_config_dir', 'set_loglevel', 'H5Files']

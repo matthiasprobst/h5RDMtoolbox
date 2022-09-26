@@ -651,7 +651,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         """computes the PIV uncertainty based on the displacement vector and method passed"""
         return displacement_dataset(method, *args, **kwargs)
 
-    def special_inspect(self, silent: bool = False) -> int:
+    def special_inspect(self) -> int:
         """Conditional inspection"""
         n_issues = 0
         if 'z' in self and 'time' in self:
