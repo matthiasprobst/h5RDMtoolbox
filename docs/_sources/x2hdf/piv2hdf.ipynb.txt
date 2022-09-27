@@ -3141,7 +3141,7 @@
     {
      "data": {
       "text/plain": [
-       "<h5rdmtoolbox.h5wrapper.h5piv.PIVParameters at 0x2057cf424c0>"
+       "<h5rdmtoolbox.wrapper.h5piv.PIVParameters at 0x2057cf424c0>"
       ]
      },
      "execution_count": 19,

@@ -13,8 +13,34 @@ user_dirs = {'root': _user_root_dir,
              'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
              }
 
-for _user_dir in user_dirs.values():
-    _user_dir.mkdir(parents=True, exist_ok=True)
+if not user_dirs['root'].exists():
+    user_dirs['root'].mkdir(parents=True)
+
+if not user_dirs['standard_name_tables'].exists():
+    # first copy the default data there:
+    import shutil
+    import pkg_resources
+
+    try:
+        fluid_v1 = pkg_resources.resource_filename('h5rdmtoolbox', 'data/fluid-v1.yml')
+        piv_v1 = pkg_resources.resource_filename('h5rdmtoolbox', 'data/piv-v1.yml')
+        test_v1 = pkg_resources.resource_filename('h5rdmtoolbox', 'data/Test-v1.yml')
+    except TypeError:
+        import pathlib
+
+        fluid_v1 = pathlib.Path(__file__).parent / 'data/fluid_v1.yml'
+        piv_v1 = pathlib.Path(__file__).parent / 'data/piv_v1.yml'
+        test_v1 = pathlib.Path(__file__).parent / 'data/test_v1.yml'
+
+    user_dirs['standard_name_tables'].mkdir()
+    shutil.copy2(fluid_v1, user_dirs['standard_name_tables'])
+    shutil.copy2(piv_v1, user_dirs['standard_name_tables'])
+    shutil.copy2(test_v1, user_dirs['standard_name_tables'])
+
+if not user_dirs['layouts'].exists():
+    user_dirs['layouts'].mkdir()
+if not user_dirs['standard_name_table_translations'].exists():
+    user_dirs['standard_name_table_translations'].mkdir()
 
 config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
 config_filename = config_dir / 'h5rdmtoolbox.yaml'

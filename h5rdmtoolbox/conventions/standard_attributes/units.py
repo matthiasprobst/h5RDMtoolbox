@@ -5,7 +5,7 @@ from pint_xarray import unit_registry as ureg
 
 from . import register_standard_attribute
 from ... import config
-from ...h5wrapper.h5file import H5Dataset
+from ...wrapper.h5file import H5Dataset
 
 ureg.default_format = config.ureg_format
 

@@ -23,7 +23,7 @@
    "outputs": [],
    "source": [
     "from h5rdmtoolbox import h5database\n",
-    "from h5rdmtoolbox.h5database import tutorial\n",
+    "from h5rdmtoolbox.database import tutorial\n",
     "from h5rdmtoolbox import generate_temporary_directory"
    ]
   },
@@ -516,7 +516,7 @@
     {
      "data": {
       "text/plain": [
-       "<h5rdmtoolbox.h5database.h5repo.SingleResult at 0x1d6b16a8fa0>"
+       "<h5rdmtoolbox.database.h5repo.SingleResult at 0x1d6b16a8fa0>"
       ]
      },
      "execution_count": 5,
@@ -542,7 +542,7 @@
    },
    "outputs": [],
    "source": [
-    "from h5rdmtoolbox.h5database.filter_classes import *"
+    "from h5rdmtoolbox.database.filter_classes import *"
    ]
   },
   {
@@ -1284,7 +1284,7 @@
     {
      "data": {
       "text/plain": [
-       "<h5rdmtoolbox.h5database.h5repo.SingleResult at 0x1d6b23568b0>"
+       "<h5rdmtoolbox.database.h5repo.SingleResult at 0x1d6b23568b0>"
       ]
      },
      "execution_count": 12,

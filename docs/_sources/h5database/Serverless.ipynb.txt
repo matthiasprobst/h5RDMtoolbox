@@ -223,7 +223,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from h5rdmtoolbox.h5database.filter_classes import *\n",
+    "from h5rdmtoolbox.database.filter_classes import *\n",
     "# repo.list_attribute_values('operator', '/')"
    ]
   },
@@ -321,7 +321,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from h5rdmtoolbox.h5database import H5Files"
+    "from h5rdmtoolbox.database import H5Files"
    ]
   },
   {

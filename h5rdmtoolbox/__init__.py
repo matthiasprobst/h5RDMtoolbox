@@ -7,7 +7,7 @@ import shutil
 from . import conventions
 from ._user import user_dirs
 from ._version import __version__
-from .h5wrapper import H5File, H5Flow, H5PIV, open_wrapper
+from .wrapper import H5File, H5Flow, H5PIV, open_wrapper
 from .utils import generate_temporary_filename, generate_temporary_directory
 
 name = 'h5rdmtoolbox'
@@ -16,8 +16,8 @@ __author__ = 'Matthias Probst'
 
 def set_loglevel(level):
     """setting logging level of all modules"""
-    from .h5wrapper import set_loglevel as h5wrapper_set_loglevel
-    from .h5database import set_loglevel as h5database_set_loglevel
+    from .wrapper import set_loglevel as h5wrapper_set_loglevel
+    from .database import set_loglevel as h5database_set_loglevel
     from .conventions import set_loglevel as conventions_set_loglevel
     h5wrapper_set_loglevel(level)
     h5database_set_loglevel(level)

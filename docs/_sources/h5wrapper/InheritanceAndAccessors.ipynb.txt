@@ -42,7 +42,7 @@
    },
    "outputs": [],
    "source": [
-    "class MyDataset(h5tbx.h5wrapper.h5file.H5Dataset):\n",
+    "class MyDataset(h5tbx.wrapper.h5file.H5Dataset):\n",
     "    def __repr__(self):\n",
     "        return f'{self.name}\\n{self.attrs}'\n",
     "    \n",
@@ -74,7 +74,7 @@
    },
    "outputs": [],
    "source": [
-    "class MyGroup(h5tbx.h5wrapper.h5file.H5Group):\n",
+    "class MyGroup(h5tbx.wrapper.h5file.H5Group):\n",
     "    \n",
     "    def get_all_datasets(self):\n",
     "        \"\"\"returns all datasets of this group\"\"\"\n",
@@ -382,7 +382,7 @@
    },
    "outputs": [],
    "source": [
-    "from h5rdmtoolbox.h5wrapper.accessory import register_special_dataset, register_special_property"
+    "from h5rdmtoolbox.wrapper.accessory import register_special_dataset, register_special_property"
    ]
   },
   {
@@ -400,7 +400,7 @@
    "outputs": [],
    "source": [
     "import xarray as xr\n",
-    "@register_special_dataset('user', h5tbx.h5wrapper.h5file.H5Dataset)\n",
+    "@register_special_dataset('user', h5tbx.wrapper.h5file.H5Dataset)\n",
     "class InfoProperty:\n",
     "    \"\"\"Device Accessor class\"\"\"\n",
     "\n",
@@ -461,7 +461,7 @@
    "outputs": [],
    "source": [
     "# register a property with setter and getter method:\n",
-    "@register_special_property(h5tbx.h5wrapper.h5file.H5Dataset, overwrite=True)\n",
+    "@register_special_property(h5tbx.wrapper.h5file.H5Dataset, overwrite=True)\n",
     "class username:\n",
     "    \"\"\"User Name Property\"\"\"\n",
     "\n",

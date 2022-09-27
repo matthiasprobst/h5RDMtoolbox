@@ -4,7 +4,7 @@ import unittest
 from psutil._compat import FileExistsError
 
 from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.h5wrapper import H5File
+from h5rdmtoolbox.wrapper import H5File
 
 
 class TestCnventions(unittest.TestCase):

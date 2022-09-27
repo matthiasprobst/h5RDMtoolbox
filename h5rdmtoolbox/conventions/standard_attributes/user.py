@@ -3,7 +3,7 @@ from typing import Union, List
 
 from . import register_standard_attribute
 from ...errors import OrcidError
-from ...h5wrapper.h5file import H5Group, H5Dataset
+from ...wrapper.h5file import H5Group, H5Dataset
 
 ORCID_PATTERN: str = '^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$'
 

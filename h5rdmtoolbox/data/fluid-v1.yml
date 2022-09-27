@@ -1,0 +1,37 @@
+name: fluid
+version_number: 1
+institution: ITS, KIT
+contact: matthias.probst@kit.edu
+valid_characters: ''
+pattern: ''
+last_modified: 2022-09-27_20:46:26
+---
+table:
+  time:
+    canonical_units: s
+    description: physical time
+  x_coordinate:
+    canonical_units: m
+    description: Coordinate of the x-axis.
+  y_coordinate:
+    canonical_units: m
+    description: Coordinate of the y-axis.
+  z_coordinate:
+    canonical_units: m
+    description: Coordinate of the z-axis.
+  x_velocity:
+    canonical_units: m/s
+    description: Velocity is a vector quantity. x indicates the component in y-axis
+      direction
+  y_velocity:
+    canonical_units: m/s
+    description: Velocity is a vector quantity. y indicates the component in y-axis
+      direction
+  z_velocity:
+    canonical_units: m/s
+    description: Velocity is a vector quantity. z indicates the component in z-axis
+      direction
+  static_pressure:
+    canonical_units: Pa
+    description: Static air pressure is the amount of pressure exerted by air that
+

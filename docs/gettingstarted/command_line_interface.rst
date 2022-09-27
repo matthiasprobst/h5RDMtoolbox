@@ -65,7 +65,7 @@ Standard name (tables)
 
 .. code-block:: bash
 
-    h5tbx standard_name -s my_table -f my_file
+    h5tbx standard_name -t my_table -f my_file
     
     
 
@@ -73,4 +73,4 @@ Standard name (tables)
 
 .. code-block:: bash
 
-    h5tbx standard_name -s my_table.yml -f my_file
+    h5tbx standard_name -t my_table.yml -f my_file

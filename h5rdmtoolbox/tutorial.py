@@ -232,7 +232,7 @@ def get_xr_dataset(name):
 
 def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
     """Return the HDF filename of a tutoral case."""
-    from .h5wrapper import H5PIV
+    from .wrapper import H5PIV
     if name == 'minimal_flow':
         fname = testdir / 'minimal_flow.hdf'
         tmp_filename = shutil.copy2(fname, generate_temporary_filename(suffix='.hdf'))

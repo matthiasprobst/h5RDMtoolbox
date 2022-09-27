@@ -38,7 +38,7 @@ from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_simi
 from ... import config
 from ..._user import user_dirs
 from ...errors import StandardNameError, EmailError, StandardNameTableError
-from ...h5wrapper.h5file import H5Dataset, H5Group
+from ...wrapper.h5file import H5Dataset, H5Group
 from ...utils import generate_temporary_filename
 
 STRICT = True

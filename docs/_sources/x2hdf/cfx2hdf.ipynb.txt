@@ -19,7 +19,7 @@
    },
    "outputs": [],
    "source": [
-    "from h5rdmtoolbox.h5wrapper import H5File\n",
+    "from h5rdmtoolbox.wrapper import H5File\n",
     "from h5rdmtoolbox.x2hdf.cfd.ansys import AnsysInstallation"
    ]
   },

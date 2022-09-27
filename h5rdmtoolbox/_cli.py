@@ -1,14 +1,13 @@
 """collection of command line interfce functions"""
 
 import argparse
-import sys
 import webbrowser
 from pprint import pprint
 
 import h5py
 
 from ._version import __version__
-from .h5wrapper import open_wrapper
+from .wrapper import open_wrapper
 
 
 def main():
@@ -70,7 +69,7 @@ def main():
                                  action='store_true',
                                  default=False,
                                  help='List all registered standard name tables.')
-    sp_standardname.add_argument('-s', '--select',
+    sp_standardname.add_argument('-t', '--table',
                                  type=str,
                                  required=False,
                                  default=None,
@@ -80,38 +79,6 @@ def main():
                                  required=False,
                                  default=None,
                                  help='Filename to run check on.')
-    sp_standardname.add_argument('-t', '--list-translations',
-                                 action='store_true',
-                                 default=False,
-                                 help='List all registered standard name translations.')
-
-    # CFX2HDF
-    sp_cfx2hdf = subparsers.add_parser('cfx2hdf', help='cfx2hdf menu')
-    sp_cfx2hdf.set_defaults(cmd='cfx2hdf')
-    sp_cfx2hdf.add_argument('-f', '--file',
-                            type=str,
-                            required=False,
-                            help='CFX file (*.cfx)')
-    sp_cfx2hdf.add_argument('-inst', '--installation_directory',
-                            type=str,
-                            required=False,
-                            default=None,
-                            help='Path to installation directory of ansys cfx')
-    sp_cfx2hdf.add_argument('-snt', '--standard-name-translation',
-                            type=str,
-                            required=False,
-                            help='File path to standard name translation. If not set, it will be searched for '
-                                 'snt.yml in the working directory. To suppress this, set "-ignsnt"')
-    sp_cfx2hdf.add_argument("-ignsnt",
-                            "--ignore-snt",
-                            default=False,
-                            action="store_true",
-                            help='Ignore standard name translation files available int the folder')
-    sp_cfx2hdf.add_argument("-v",
-                            "--verbose",
-                            default=False,
-                            action="store_true",
-                            help='Additional output')
 
     # MONGODB
     sp_mongo = subparsers.add_parser('mongodb', help='mongodb menu')
@@ -211,7 +178,7 @@ def main():
                 print(f' > Adding hdf file: {args.add} to collection {collection.name} of database {db.name}')
                 with open_wrapper(args.add) as h5:
                     # noinspection PyUnresolvedReferences
-                    from h5rdmtoolbox.h5database import mongo
+                    from h5rdmtoolbox.database import mongo
                     h5.mongo.insert(collection=collection, recursive=True, update=True)
             return
         elif args.cmd == 'standard_name':
@@ -224,43 +191,12 @@ def main():
                 from .conventions.standard_attributes.standard_name import StandardNameTableTranslation
                 StandardNameTableTranslation.print_registered()
             else:
-                snt_filename = pathlib.Path(args.select)
+                snt_filename = pathlib.Path(args.table)
                 if snt_filename.exists():
-                    snt = StandardNameTable.from_yaml(args.select)
+                    snt = StandardNameTable.from_yaml(args.table)
                 else:
-                    snt = StandardNameTable.load_registered(args.select)
+                    snt = StandardNameTable.load_registered(args.table)
                 print(f' > Checking file "{args.file}" with standard name table "{snt.versionname}"')
                 with open_wrapper(args.file) as h5:
                     snt.check_grp(h5, recursive=True, raise_error=False)
                 return
-        elif args.cmd == 'cfx2hdf':
-            from h5rdmtoolbox.x2hdf.cfd.ansys import AnsysInstallation
-            from h5rdmtoolbox.x2hdf.cfd import cfx2hdf
-            from .conventions.standard_attributes.standard_name import StandardNameTable, StandardNameTableTranslation
-            import pathlib
-            ansys_inst = AnsysInstallation()
-            if args.installation_directory is not None:
-                ansys_inst.installation_directory = args.installation_directory
-
-            installation_directory = ansys_inst.installation_directory
-            if installation_directory is None:
-                raise FileNotFoundError('Ansys installation directory is unknown. Run cfx2hdf -inst INST_DIR')
-
-            if args.file is not None:
-                cfx_filename = pathlib.Path(args.file)
-                parent = cfx_filename.parent
-                # search for snt:
-                snt_files = sorted(parent.glob('snt*.yml'))
-                if not args.ignore_snt:
-                    if len(snt_files) > 1:
-                        print(' ! Found too many Standard Name Table files. Please specify one.')
-                        return
-                    if len(snt_files) == 1:
-                        print(f'  > Using SNT: {snt_files[0]}')
-                        snt_dict = StandardNameTableTranslation.from_yaml(snt_files[0])
-                        hdf_filename = cfx2hdf(cfx_filename, snt_dict, verbose=args.verbose)
-                    else:
-                        hdf_filename = cfx2hdf(cfx_filename)
-                else:
-                    hdf_filename = cfx2hdf(cfx_filename)
-                print(f'Generated {hdf_filename} from {cfx_filename}')

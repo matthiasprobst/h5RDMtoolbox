@@ -10,10 +10,10 @@ from . import config
 
 IGNORE_ATTRS = ('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
-    CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'h5wrapper/static/style.css').decode("utf8")
+    CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
 except TypeError:
     import pathlib
-    with open(pathlib.Path(__file__).parent / 'h5wrapper/static/style.css') as f:
+    with open(pathlib.Path(__file__).parent / 'data/style.css') as f:
         CSS_STR = f.read().rstrip()
 
 """

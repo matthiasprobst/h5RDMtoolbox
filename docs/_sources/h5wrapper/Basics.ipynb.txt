@@ -389,7 +389,7 @@
    },
    "outputs": [],
    "source": [
-    "@h5tbx.h5wrapper.register_special_property(h5tbx.H5File, overwrite=True)\n",
+    "@h5tbx.wrapper.register_special_property(h5tbx.H5File, overwrite=True)\n",
     "class username:\n",
     "    \n",
     "    def get(self):\n",
@@ -421,7 +421,7 @@
    "metadata": {},
    "source": [
     "Some words about above lines:\n",
-    "- `@h5tbx.h5wrapper.register_special_property(h5tbx.H5File)`: registering the below class (only) to the class `H5File`\n",
+    "- `@h5tbx.wrapper.register_special_property(h5tbx.H5File)`: registering the below class (only) to the class `H5File`\n",
     "- don't use existing property names. An error will be raised anyhow. You may however pass `overwrite=True` in the registration method. Be careful though!\n",
     "- provide `set` and optionally also `get` and `delete`. The method `get` makes sense though, while `delete` is not really needed most of the times.\n",
     "\n",

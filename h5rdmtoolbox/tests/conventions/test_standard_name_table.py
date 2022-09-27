@@ -11,7 +11,6 @@ from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge, Me
 class TestStandardNameTable(unittest.TestCase):
 
     def test_metadatayamldict(self):
-        from h5rdmtoolbox import generate_temporary_filename
         test_yamlfilename = generate_temporary_filename(suffix='.yaml')
         with open(test_yamlfilename, 'w') as f:
             yaml.safe_dump({'a': 1}, f)
@@ -27,14 +26,14 @@ class TestStandardNameTable(unittest.TestCase):
         translation = StandardNameTableTranslation('pytest', {'u': 'x_velocity'})
         self.assertIsInstance(translation, StandardNameTableTranslation)
         self.assertDictEqual(translation.translation_dict, {'u': 'x_velocity'})
-        snt = StandardNameTable.load_registered('piv-v1')
+        snt = StandardNameTable.load_registered('Test-v1')
         translation.register(snt, overwrite=True)
         StandardNameTableTranslation.print_registered()
         del translation
-        translation = StandardNameTableTranslation.load_registered('pytest-to-piv-v1')
+        translation = StandardNameTableTranslation.load_registered('test-to-Test-v1')
         self.assertIsInstance(translation, StandardNameTableTranslation)
         self.assertIsInstance(translation.translation_dict, MetaDataYamlDict)
-        self.assertDictEqual(translation.translation_dict.meta, {'snt': 'piv-v1'})
+        self.assertDictEqual(translation.translation_dict.meta, {'snt': 'Test-v1'})
         self.assertDictEqual(translation.translation_dict.data, {'u': 'x_velocity'})
 
     def test_StandardNameTableFromYaml(self):
