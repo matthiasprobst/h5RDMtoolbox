@@ -10,7 +10,7 @@ class TestVersion(unittest.TestCase):
 
     def test_version(self):
         this_version = 'x.x.x'
-        setupcfg_filename = __this_dir__ / '../../setup.cfg'
+        setupcfg_filename = __this_dir__ / '../setup.cfg'
         with open(setupcfg_filename, 'r') as f:
             lines = f.readlines()
             for line in lines:

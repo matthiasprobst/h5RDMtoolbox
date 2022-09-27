@@ -55,4 +55,4 @@ while user_dirs['tmp'].exists():
 
 user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
 
-testdir = pathlib.Path(__file__).parent / 'tests/data'
+testdir = pathlib.Path(__file__).parent / '../tests/data'
