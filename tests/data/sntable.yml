@@ -1,0 +1,13 @@
+name: test
+version_number: 1
+institution: ITS
+contact: matthias.probst@kit.edu
+valid_characters: ''
+pattern: ''
+table:
+    synthetic_particle_image:
+        canoncial_units: counts
+        description: Synthetic particle image velocimetry image containing image particles of a single synthetic recording.
+    mean_particle_diameter:
+        canoncial_units: pixel
+        description: The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.
