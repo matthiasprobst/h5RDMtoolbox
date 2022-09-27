@@ -172,7 +172,7 @@ class TestH5Mongo(unittest.TestCase):
                 self.assertEqual(self.collection.count_documents({}), 2)
                 now = datetime.datetime.utcnow()
                 for r in self.collection.find({}):
-                    self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
+                    self.assertTrue((now - r['file_creation_time']).total_seconds() < 1)
 
     def test_insert_group_flatten(self):
         if self.mongodb_running:
