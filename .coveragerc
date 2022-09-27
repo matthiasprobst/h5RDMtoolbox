@@ -1,6 +1,7 @@
 [run]
 omit =
     h5rdmtoolbox/tests/*
+    relative_files = true
 
 [report]
 exclude_lines =
