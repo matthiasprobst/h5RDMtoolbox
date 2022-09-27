@@ -4,8 +4,6 @@
 
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
 
-![Coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/h5RDMtoolbox/python-coverage-comment-action-v3-example/python-coverage-comment-action-data/endpoint.json)
-
 *Note, that the repository is under current development! A first stable release is planned for 
 Oktober, then being version 0.2.X.*
 
