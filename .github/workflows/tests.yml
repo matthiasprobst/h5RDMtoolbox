@@ -26,15 +26,15 @@ jobs:
     - name: Test with tox
       run: tox
 
-    # from https://github.com/py-cov-action/python-coverage-comment-action-v3-example/blob/master/.github/workflows/ci.yml
+    # from https://github.com/py-cov-action/python-coverage-comment-action-example/blob/master/.github/workflows/ci.yml
     - name: Coverage comment
       id: coverage_comment
-      uses: py-cov-action/python-coverage-comment-action@v3
+      uses: py-cov-action/python-coverage-comment-action@v2
       with:
         GITHUB_TOKEN: ${{ github.token }}
         VERBOSE: true
 
-    # from https://github.com/py-cov-action/python-coverage-comment-action-v3-example/blob/master/.github/workflows/ci.yml
+    # from https://github.com/py-cov-action/python-coverage-comment-action-example/blob/master/.github/workflows/ci.yml
     - name: Store Push Request comment to be posted
       uses: actions/upload-artifact@v2
       if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'

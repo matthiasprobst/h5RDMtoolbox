@@ -1,4 +1,4 @@
-# from https://github.com/py-cov-action/python-coverage-comment-action-v3-example/blob/master/.github/workflows/coverage.yml
+# https://github.com/py-cov-action/python-coverage-comment-action-example/blob/master/.github/workflows/coverage.yml
 
 name: Post coverage comment
 
@@ -15,6 +15,6 @@ jobs:
     if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'
     steps:
       - name: Post comment
-        uses: py-cov-action/python-coverage-comment-action@v3
+        uses: py-cov-action/python-coverage-comment-action@v2
         with:
           VERBOSE: true
