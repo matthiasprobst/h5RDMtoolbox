@@ -28,7 +28,7 @@ jobs:
 
     # from https://github.com/py-cov-action/python-coverage-comment-action-example/blob/master/.github/workflows/ci.yml
     - name: Coverage comment
-      runs-on: ubuntu-latest
+      if: matrix.os == 'ubuntu-latest'
       id: coverage_comment
       uses: py-cov-action/python-coverage-comment-action@v2
       with:
@@ -37,7 +37,7 @@ jobs:
 
     # from https://github.com/py-cov-action/python-coverage-comment-action-example/blob/master/.github/workflows/ci.yml
     - name: Store Push Request comment to be posted
-      runs-on: ubuntu-latest
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v2
       if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
       with:
