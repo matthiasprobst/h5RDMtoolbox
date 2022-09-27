@@ -4,7 +4,8 @@
 
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
 
-*Note, that the repository is under current development! A first stable release is planned for version 0.2.0.*
+*Note, that the repository is under current development! A first stable release is planned for 
+Oktober, then being version 0.2.X.*
 
 The "HDF5 Research Data Management Toolbox" (h5rdmtoolbox) supports the data creation, processing and sharing 
 of data using the HDF5 file format while fulfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles. 
