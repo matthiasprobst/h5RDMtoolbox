@@ -38,7 +38,7 @@ Layouts
 
 .. code-block:: bash
 
-    h5tbx standard_name -s my_layout -f my_file
+    h5tbx standard_name -l my_layout -c my_file
     
     
 
@@ -46,7 +46,7 @@ Layouts
 
 .. code-block:: bash
 
-    h5tbx standard_name -s my_layout.hdf -f my_file
+    h5tbx standard_name -l my_layout.hdf -c my_file
 
 
 

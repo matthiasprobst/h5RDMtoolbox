@@ -294,6 +294,14 @@ class H5Layout:
         """Return number of found issues"""
         return len(self._issues_list)
 
+    def __init__(self, filename: Path):
+        self.filename = Path(filename)
+        self._issues_list = []
+        if not self.filename.exists():
+            # touch file:
+            with H5FileLayout(self.filename, 'w'):
+                pass
+
     def __repr__(self) -> str:
         return f'<H5FileLayout with {self.n_issues} issues>'
 
@@ -309,14 +317,6 @@ class H5Layout:
             else:
                 out += f'\n{issue["path"]}: -> {issue["issue"]}'
         print(out)
-
-    def __init__(self, filename: Path):
-        self.filename = Path(filename)
-        self._issues_list = []
-        if not self.filename.exists():
-            # touch file:
-            with H5FileLayout(self.filename, 'w'):
-                pass
 
     @staticmethod
     def init_from_filename(src_filename: Path, filename: Path) -> 'H5Layout':
@@ -448,5 +448,6 @@ class H5Layout:
     @staticmethod
     def print_registered() -> None:
         """Return sorted list of standard names files"""
+        print(f'@ {user_dirs["layouts"]}:')
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')

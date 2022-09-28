@@ -32,11 +32,9 @@ def main():
     # LAYOUT
     sp_layout = subparsers.add_parser('layout', help='layout menu')
     sp_layout.set_defaults(cmd='layout')
-    sp_layout.add_argument('-l', '--list',
-                           action='store_true',
-                           default=False,
+    sp_layout.add_argument('--list-registered', action='store_true',
                            help='List all registered layouts.')
-    sp_layout.add_argument('-s', '--select',
+    sp_layout.add_argument('-l', '--layout',
                            type=str,
                            required=False,
                            default=None,
@@ -46,28 +44,16 @@ def main():
                            required=False,
                            default=None,
                            help='Filename to run check on.')
-    sp_layout.add_argument('-f', '--file',
-                           type=str,
-                           required=False,
-                           default=None,
-                           help='Filename to run check on. Depreciated. Use -d/--check in instead!')
     sp_layout.add_argument('-r', '--register',
                            type=str,
                            required=False,
                            default=None,
-                           help='Register a layout.')
-    sp_layout.add_argument('-d', '--delete',
-                           type=str,
-                           required=False,
-                           default=None,
-                           help='Delete a registered Layout file.')
+                           help='Register the passed HDF file as a layout.')
 
     # STANDARD NAME
     sp_standardname = subparsers.add_parser('standard_name', help='standrad name menu')
     sp_standardname.set_defaults(cmd='standard_name')
-    sp_standardname.add_argument('-l', '--list',
-                                 action='store_true',
-                                 default=False,
+    sp_standardname.add_argument('--list-registered', action='store_true',
                                  help='List all registered standard name tables.')
     sp_standardname.add_argument('-t', '--table',
                                  type=str,
@@ -131,7 +117,7 @@ def main():
             db = None
             collection = None
 
-            print(f'\n > Connecting to {args.ip}:{args.port}')
+            print(f'\n > Current connection: {args.ip}:{args.port}')
             client = MongoClient(args.ip, args.port)
             list_of_databases = client.list_database_names()
 
@@ -184,7 +170,7 @@ def main():
         elif args.cmd == 'standard_name':
             from .conventions.standard_attributes.standard_name import StandardNameTable
             import pathlib
-            if args.list:
+            if args.list_registered:
                 StandardNameTable.print_registered()
                 return
             if args.list_translations:
@@ -200,3 +186,31 @@ def main():
                 with open_wrapper(args.file) as h5:
                     snt.check_grp(h5, recursive=True, raise_error=False)
                 return
+        elif args.cmd == 'layout':
+            from .conventions.layout import H5Layout
+            import pathlib
+            if args.list_registered:
+                H5Layout.print_registered()
+                return
+            hdf_filename = None
+            if args.check:
+                hdf_filename = pathlib.Path(args.check)
+            if args.layout:
+                layout_filename = pathlib.Path(args.layout)
+                if layout_filename.exists():
+                    h5lay = H5Layout(layout_filename)
+                else:
+                    h5lay = H5Layout.load_registered(args.layout)
+                if hdf_filename is None:
+                    print('No hdf filename. Provide by -f <my_file.hdf>')
+                    return
+                print(f'Checking {hdf_filename} with layout {args.layout}')
+                with h5py.File(hdf_filename) as h5:
+                    h5lay.check(h5)
+                return
+            if args.register:
+                hdf_filename = pathlib.Path(args.register)
+                h5lay = H5Layout(hdf_filename)
+                h5lay.register()
+
+
