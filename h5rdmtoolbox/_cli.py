@@ -173,10 +173,7 @@ def main():
             if args.list_registered:
                 StandardNameTable.print_registered()
                 return
-            if args.list_translations:
-                from .conventions.standard_attributes.standard_name import StandardNameTableTranslation
-                StandardNameTableTranslation.print_registered()
-            else:
+            if args.table:
                 snt_filename = pathlib.Path(args.table)
                 if snt_filename.exists():
                     snt = StandardNameTable.from_yaml(args.table)

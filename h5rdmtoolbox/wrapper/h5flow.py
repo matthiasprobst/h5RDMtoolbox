@@ -30,8 +30,7 @@ H5Flow_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5Flow.hdf')
 
 def write_H5Flow_layout_file():
     """Write the H5File layout to <user_dir>/layout"""
-    lay = conventions.layout.H5Layout.init_from_filename(H5File_layout_filename, H5Flow_layout_filename)
-    with lay.File(mode='r+') as h5lay:
+    with h5py.File(H5File_layout_filename, mode='r+') as h5lay:
         ds_x = h5lay.create_dataset('x', shape=(1,))
         ds_y = h5lay.create_dataset('y', shape=(1,))
         ds_z = h5lay.create_dataset('z', shape=(1,))

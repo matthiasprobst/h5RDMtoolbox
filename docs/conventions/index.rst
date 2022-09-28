@@ -35,25 +35,9 @@ Standardized Name Table
 -----------------------
 A standardized name table (snt) again is motivated by the CF Metadata Convention. It is a table
 containing at least name, description and canonical_units. A python class is provided to read
-a table from and write to an XML file or to fill from a python script. Such an object
-may be passed to a wrapper-class to control the above described metadata of datasets.
+a table from and write to a YML or XML file. Such an object
+is passed to a wrapper-HDF-class to control the above described metadata of datasets.
 
-
-Special Name Tables
--------------------
-This work supports the genreal notation of the CF Metadata Convention. However, the name table
-of scientific domain cannot be used for others. As the authors of this repository are mainly working
-with fluid simulations and experiments of hydraulic fluid machineries a new name tables for this domain is
-suggested and provided until a standard in the community exists. Concretely, a general table for basic flow
-properties is written and a specialiced (inherited from the former) PIV table is provided, too. The
-convention package is intended to grow in number of tables for specialized domains until the respective community
-publishes a widely accepted one.
-
-.. note::
-
-    The computational fluid dynamic (CFD) domain knows a naming standard; the CFD Generl Notation System CGNS. It is
-    beyond the scope of this documentation to argue why this is not the first choice of this repository. However, for the
-    sake of completeness the user ma choose this convention with the wrapper classes.
 
 
 .. toctree::
