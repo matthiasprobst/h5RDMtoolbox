@@ -13,6 +13,7 @@
 *.hdf
 *.tiff
 *.par
+*.coverage
 
 # build
 *.egg*

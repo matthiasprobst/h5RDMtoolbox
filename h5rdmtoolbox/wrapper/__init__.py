@@ -14,8 +14,8 @@ from .h5piv import H5PIV
 
 def set_loglevel(level):
     """setting the logging level of sub-package h5wrapper"""
-    logger.setLevel(level)
-    for handler in logger.handlers:
+    _logger.logger.setLevel(level)
+    for handler in _logger.logger.handlers:
         handler.setLevel(level)
 
 
