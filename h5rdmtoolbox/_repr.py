@@ -11,7 +11,7 @@ from . import config
 IGNORE_ATTRS = ('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
     CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
-except TypeError:
+except FileNotFoundError:
     import pathlib
     with open(pathlib.Path(__file__).parent / 'data/style.css') as f:
         CSS_STR = f.read().rstrip()
