@@ -45,7 +45,7 @@ class TestCommon(unittest.TestCase):
             with wc() as h5:
                 now = datetime.now().astimezone()
                 file_now = h5.creation_time
-                self.assertTrue(abs((file_now - now).total_seconds()) < 0.1)
+                self.assertTrue(abs((file_now - now).total_seconds()) < 1)
 
     def test_create_group(self):
         """testing the creation of groups"""
