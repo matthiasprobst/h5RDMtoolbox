@@ -162,7 +162,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from h5rdmtoolbox.h5database import mongo"
+    "from h5rdmtoolbox.database import mongo"
    ]
   },
   {

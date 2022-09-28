@@ -1,3 +1,4 @@
+*.bak
 *.xml
 *.log
 *.res.lck
@@ -7,7 +8,8 @@
 *.iml
 *.pyc
 *-checkpoint.ipynb*
-*.nc
+#*.nc
+*.vtr
 *.hdf
 *.tiff
 *.par
@@ -31,7 +33,7 @@ Thumbs.db
 
 # testdata
 #testdata
-h5rdmtoolbox/tests/data
+#tests/data
 
 # jupyter
 *.ipynb_checkpoints*

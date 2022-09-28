@@ -5,11 +5,9 @@
    "id": "8c851066-f76d-4ef4-bf91-29cff0334ad0",
    "metadata": {},
    "source": [
-    "# HDF File as a Database\n",
+    "# Serverless HDF Database\n",
     "\n",
-    "As many information can be stored in an HDF5 files. By using goups, the structure can be quite nested and sometime it could be helpful to just search for an attribute, a dataset name or a specific property of it, or instance. Thus, an HDF5 file itself is a kind of database in itself.\n",
-    "\n",
-    "The `h5rdmtoolbox` provides methods for `H5File` (and its subclasses) to find datasets and groups. The query syntax is tried to be as close as possible to the one `pymongo` uses."
+    "No classic server client-client concept is used. Instead a HDF file is created with external links to root groups of HDF files that included to the database."
    ]
   },
   {
@@ -28,14 +26,6 @@
    ]
   },
   {
-   "cell_type": "markdown",
-   "id": "048228c1-1486-46e0-9ee5-8645d65034c9",
-   "metadata": {},
-   "source": [
-    "Let's build an example file:"
-   ]
-  },
-  {
    "cell_type": "code",
    "execution_count": null,
    "id": "b2a3fbff-7cbc-48fb-ab61-2cf002f59cb2",
@@ -44,16 +34,8 @@
    },
    "outputs": [],
    "source": [
-    "test_filename = h5tbx.generate_temporary_filename()\n",
-    "\n",
-    "with h5tbx.H5File(test_filename, 'r+') as h5:\n",
-    "    h5.attrs['attrvalue'] = 3\n",
-    "    h5.attrs['a float'] = 4.1\n",
-    "    h5.attrs['root_attr3'] = 'a string'\n",
-    "    h5.create_group('a group', attrs=dict(attrvalue=14.3))\n",
-    "    h5.create_dataset('x', shape=(2,), units='', standard_name='x_coordinate', attrs=dict(attrvalue=3))\n",
-    "    h5.create_dataset('y', shape=(2,), units='', standard_name='y_coordinate')\n",
-    "    "
+    "tocdir = generate_temporary_directory('test_repo')\n",
+    "tutorial.Database.build_test_repo(tocdir)"
    ]
   },
   {
@@ -61,75 +43,318 @@
    "id": "d004887e-18c6-4cac-aeb0-43248d12a3f8",
    "metadata": {},
    "source": [
-    "## Query syntax\n",
-    "\n",
-    "The method to be called to find something in an HDF5 file is `find()` (or `find_one()`). What can be foud are datasets or groups. It can also be limited to one of the both objects.\n",
-    "\n",
-    "The syntax is very similar to that of pymongo. There's a basic search and a advanced search.\n",
-    "\n",
-    "### Basic search\n",
-    "The basic search queries attributes, only. To find an object, a dictionary is passed containing the name of an `attribute` and the `value`, e.g.:"
+    "# Filtering a single file with pymongo-syntax"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "014ff095-7a92-42a8-8ec7-e7779d8571de",
+   "id": "104517fc-64b0-460f-8fe0-fd492f73f489",
    "metadata": {},
    "outputs": [],
    "source": [
-    "with h5tbx.H5File(test_filename) as h5:\n",
-    "    print(h5.find({'attrvalue': 3}))\n",
-    "    r = h5.find_one({'attrvalue': 3})\n",
-    "    print(r)"
+    "repo = h5db.H5repo(tocdir)"
    ]
   },
   {
    "cell_type": "markdown",
-   "id": "3a32b671-87dc-4e87-ae69-502078923546",
+   "id": "722784a5-d90c-4785-9f57-b424ce3f9b0f",
    "metadata": {},
    "source": [
-    "The above query finds to objects (root group and dataset 'x') based on the attribute \"attrvalue\", which matches 3."
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "c4a03b9d-f6dd-48a5-b19f-b81af0184c39",
-   "metadata": {},
-   "source": [
-    "### Advanced search\n",
-    "\n",
-    "The advanced search involveds special keywords starting with a dollar sign. For the key of the dictionary this is intepreted as a class property: `$<class-property>`. A typical property-keyword would be `$basename`, which matches all base-names (name without parent-path). The dictionary value can also be adjusted. This allows other comparisons than \"is equal to\" as it is the case with the basic search. Let's perform some advanced searches:"
+    "### Find based on name/basename\n",
+    "A `name` is the path within the file, the basename is the raw dataset or group name itself:"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "a5b0326a-61bd-48e9-8ee0-95b8244f0312",
+   "id": "410d8841-76f7-4db2-8c54-e7c67c46c79e",
    "metadata": {},
    "outputs": [],
    "source": [
-    "with h5tbx.H5File(test_filename) as h5:\n",
-    "    print(\"{'attrvalue': {'$gt': 0}:\\n\\t\", h5.find({'attrvalue': {'$gt': 0}}))\n",
-    "    print(\"{'standard_name':  {'$regex': '_coordinate$'}}:\\n\\t\", h5.find({'standard_name': {'$regex': '_coordinate$'}}))\n",
-    "    print(\"{'$basename': 'x'}:\\n\\t\", h5.find({'$basename': 'x'}))\n",
-    "    print(\"{'$ndim': 1)}:\\n\\t\", h5.find({'$ndim': 1}))\n",
-    "    print(\"{'$shape': (2, )}:\\n\\t\", h5.find({'$shape': (2, )}))"
+    "with h5tbx.H5File(repo[0].filename) as h5:\n",
+    "    print(h5.find({'$dataset': {'$basename': 'ptot'}}))\n",
+    "    print(h5.find({'$dataset': {'$name': '/operation_point/ptot'}}))\n",
+    "    print(h5.find({'$group': {'$basename': 'operation_point'}}))"
    ]
   },
   {
    "cell_type": "markdown",
-   "id": "e9bde294-7907-4c36-b28e-da2e6fc091a4",
+   "id": "5155c9bb-106a-4a3b-80f4-50e148ded6d5",
    "metadata": {},
    "source": [
-    "All query operators (that's what it is called in pymongo) implemented are:\n",
-    "- \\\\$gt : greater than\n",
-    "- \\\\$gte : geater than equal\n",
-    "- \\\\$lt : less than\n",
-    "- \\\\$lte : less than equal\n",
-    "- \\\\$eq : equal to\n",
-    "- \\\\$regex : Filter with regular expression"
+    "`find_one` returns the object, not a list of objects:"
    ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b1f58db2-0660-40a5-8563-2370c31ecb92",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(repo[0].filename) as h5:\n",
+    "    print(h5.find_one({'$dataset': {'$basename': 'ptot'}}))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b9fd4b9d-3479-4f15-80a1-228df20712c8",
+   "metadata": {},
+   "source": [
+    "### Find a dataset based on shape or dimension:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "214dce12-b722-469b-b6d8-5412830c0ccb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(repo[0].filename) as h5:\n",
+    "    h5.dump()\n",
+    "    print(h5.find({'$dataset': {'$shape': (100,)}}))\n",
+    "    print(h5.find({'$dataset': {'$ndim': 1}}))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "03d4ce23-61d0-4550-af60-e4230d54614d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(repo[0].filename) as h5:\n",
+    "    print(h5.find_one({'$dataset': {'$basename': 'ptot'}}))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "97d0af63-641e-4d45-95f3-0f0f30051254",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "# H5Repo - External link based reository\n",
+    "\n",
+    "**NOTE**: This is an old approach and may be removed from the package. The py-mongo-syntax will stay...\n",
+    "\n",
+    "Initialize a `H5Repo` object and specify the root directory under which HDF files are placed:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "dc0c5927-ef8d-4bb5-aece-f2e441b2162d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "repo = h5db.H5repo(tocdir)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "960aba76-8a4e-49ec-9dc6-561ff78822cc",
+   "metadata": {},
+   "source": [
+    "The object creates a `toc` file (toc=table of content) which is a HDF5 file with external links to the found HDF files:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "507836f4-a2fb-49fc-806b-c488494a5cd2",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "repo.toc_filename.name"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a8757ba4-9f4a-4c14-b13f-2d27af989522",
+   "metadata": {},
+   "source": [
+    "The content can be dumped to the screen as a (pandas-) table:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4175a43e-5daa-4998-adb6-bf300bb873cc",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "repo.dump(full_path=False)  # minimizes the output (no full folder path is shown)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c8164a83-074e-4806-a704-f2cff4c119bf",
+   "metadata": {},
+   "source": [
+    "The entries can be indexed and the file content is shown:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6ae17f27-593c-4088-9dee-03c7fc7c96cd",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "repo[0]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9b060253-6d08-488c-b50a-2c7f51749825",
+   "metadata": {},
+   "source": [
+    "### Filtering\n",
+    "\n",
+    "The repository can be filtered in a HDF5-like syntax. First import all filter classes from the module `filter_classes`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "02fc64dd-d9b1-4134-b54a-a56b3c9705fd",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from h5rdmtoolbox.database.filter_classes import *\n",
+    "# repo.list_attribute_values('operator', '/')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d1da468b-ebf3-4bac-9aa9-afac2f260d28",
+   "metadata": {},
+   "source": [
+    "The filter method requires an object `Entry`. It is the access location within a file, here the group \"operation_point\" in the root group. In the example the repository is filtered for the attribute \"long_name\" equal to \"Operation point data group\". A sub-repository is returend which is again an HDF5 file with external links - but this time only to the HDF files matching the filter request:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3d38475a-34bc-4800-88fc-9731d8378993",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%time\n",
+    "sub_repo = repo.filter(Entry['/operation_point'].attrs['long_name'] == 'Operation point data group')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3cb8ad41-be11-4de2-a731-fafd08fe440f",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "sub_repo.dump(False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5eda28c4-47af-48aa-a686-0cdc117c8fe8",
+   "metadata": {},
+   "source": [
+    "The elsaped time for the filter request and building the new HDF toc-file is:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "12e11e28-c96a-4508-b6f5-e2ee4053d2cf",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sub_repo.elapsed_time  # [s]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a2685fe7-1360-42fb-b4b3-f69f31161143",
+   "metadata": {},
+   "source": [
+    "Evaluating the sub-repository is quite straight forward as we are still working with HDF5 files. Let's plot data from the filter results:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8381f3b5-345c-4c1c-8196-9684db51f750",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%time\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "plt.figure()\n",
+    "for r in sub_repo:\n",
+    "    with r as h5:\n",
+    "        if 'operation_point' in h5:\n",
+    "            plt.scatter(h5['operation_point']['vfr'].attrs['mean'], h5['operation_point']['ptot'].attrs['mean'])\n",
+    "plt.xlabel('vfr')\n",
+    "plt.ylabel('ptot')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1215d0ee-b757-4762-bcab-20111db7ed8f",
+   "metadata": {},
+   "source": [
+    "## H5Files - Accessing multiple HDF files\n",
+    "\n",
+    "This concepts assumes that we already know the HDF files. This might be a result from above"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6162b18e-c778-46e2-8dbb-4581c7109d48",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from h5rdmtoolbox.database import H5Files"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e415dda1-feba-4d2f-878b-ab7ae7169c2a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sub_repo[0:3]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "090acaf7-f3f6-408e-9f94-e595f07ea4c7",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "with H5Files(*[sr.filename for sr in sub_repo[0:4]]) as h5files:\n",
+    "    print(h5files.keys())\n",
+    "    h5files[0].dump()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f7255276-ef7c-49f9-9127-b41072a7612d",
+   "metadata": {},
+   "outputs": [],
+   "source": []
   }
  ],
  "metadata": {

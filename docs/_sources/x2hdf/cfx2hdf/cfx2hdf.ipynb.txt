@@ -263,7 +263,7 @@
    },
    "outputs": [],
    "source": [
-    "from h5rdmtoolbox.h5wrapper import H5File"
+    "from h5rdmtoolbox.wrapper import H5File"
    ]
   },
   {

@@ -1,6 +1,7 @@
 [run]
 omit =
     h5rdmtoolbox/tests/*
+relative_files = true
 
 [report]
 exclude_lines =
@@ -11,3 +12,7 @@ exclude_lines =
     raise NotImplementedError
     except TypeError
     return f"{bcolors.*
+    def _attribute_repr_html
+    def _group_repr_html
+    def _html_repr_dataset
+    def h5file_html_repr

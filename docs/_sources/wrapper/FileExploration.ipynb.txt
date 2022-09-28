@@ -1,0 +1,226 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "e0dc0783-1b52-48bc-bb8a-e2546ee2a5d7",
+   "metadata": {},
+   "source": [
+    "# File exploration\n",
+    "\n",
+    "To find data quickly or to collect certain objects the `h5RDMtoolbox` provides helpful methods. It follows mainly the `pymongo`-syntax."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a3bc2c52-85e0-45bd-b2fd-1d7288637583",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import h5rdmtoolbox as h5tbx"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5757dc30-e732-48d0-b129-789dce5e94ae",
+   "metadata": {},
+   "source": [
+    "As always, let's build a HDF5 file from scratch:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "65294bdf-db4b-4edd-b069-5d6aa2a6110f",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_group('grp_1')\n",
+    "    h5.create_group('grp_2', long_name='my other group',\n",
+    "                    attrs=dict(one=2, two='a second attr'))\n",
+    "    h5.create_dataset('ds_1', shape=(2, 4), units='', long_name='dataset 1',\n",
+    "                      attrs=dict(mean=1.5))\n",
+    "    h5.create_dataset('ds_2', shape=(2, 4), units='', long_name='dataset 2',\n",
+    "                      attrs=dict(mean=2.0))\n",
+    "    h5.create_dataset('gr_1/ds_1', shape=(2, 4), units='', long_name='dataset 2',\n",
+    "                      attrs=dict(mean=1.5))\n",
+    "    filename = h5.hdf_filename"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "da9cda49-6eb6-4a6c-bcda-fb90110e92ad",
+   "metadata": {},
+   "source": [
+    "## Basenames\n",
+    "Sometimes it is useful to get the basename instead of the name of an HDF5 object. The name is equal to the path while the basename is the name of the dataset or group. `basename` is a property of datasets and groups:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "58d3616e-052c-43e1-9769-3dff328a9acb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print('name             basename')\n",
+    "    print(h5.gr_1.name, '      --> ', h5.gr_1.basename)\n",
+    "    print(h5.gr_1.ds_1.name, ' --> ', h5.gr_1.ds_1.basename)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "42e3e8bd-851d-4092-825e-ac87e216983e",
+   "metadata": {},
+   "source": [
+    "## Find\n",
+    "Syntax follows `pymongo`-syntax but not all queries may be implemented. Currently available:<br>\n",
+    "$\\$$gt, $\\$$gte, $\\$$lt, $\\$$lte, $\\$$regex\n",
+    "\n",
+    "You can decide to find only one appearance (`find_one`) or to find all (`find`)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fd80e1af-0984-42c0-a4a2-3a9dffa8db01",
+   "metadata": {},
+   "source": [
+    "### Find all groups/datasets in a level (or recursive through the file):\n",
+    "Use key \"$\\$$group\" or \"$\\$$dataset\". If the value is an empty string, all groups/datasets are returned:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0f8f3a59-607a-4c83-ad58-5b5bb49eceac",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'$group': ''}, rec=True))\n",
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'$dataset': ''}, rec=True))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "48d74472-e2d9-42bb-9038-17a0aa8fab8b",
+   "metadata": {},
+   "source": [
+    "### Find **one** specific group/dataset:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "11c0fee6-cc3c-4875-9cde-8725ba3d7192",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'$group': 'grp_1'}, rec=True))\n",
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'$dataset': 'ds_1'}, rec=True))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "065600e9-68b4-43f6-93ee-1e179d549d1b",
+   "metadata": {},
+   "source": [
+    "To use **regex** the value must be dict itself with key `$regex`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c7b77acb-9a7d-4cf1-9f51-cbbe7bdaeea7",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'$group': {'$regex': 'grp_[0-9]'}}, rec=True))\n",
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'$dataset': {'$regex': 'ds_[0-9]'}}, rec=True))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "64bd1a3b-dba1-4855-921c-7d5525076cf7",
+   "metadata": {},
+   "source": [
+    "### Find based on attributes:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5e909a0d-10d7-4cab-ae11-b52bfdbcf6ee",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'long_name': 'dataset 1'}, rec=True))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "efdce770-e975-4896-b30b-a7242e955df8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'long_name': 'dataset 1'}, rec=True))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3a614c10-a9bf-42be-ae7d-476aabba9463",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(filename) as h5:\n",
+    "    print(h5.find({'mean': {'$gt': 1.}}, rec=True))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "15a1a448-b3e1-4ddf-bf5e-d42344cb4a94",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.13"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

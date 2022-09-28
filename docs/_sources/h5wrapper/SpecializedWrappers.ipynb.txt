@@ -1054,7 +1054,7 @@
      "output_type": "stream",
      "text": [
       "Device \"PressureSensor\" from \"unknown\" @(0, 0, 0) [m])\n",
-      "<class 'h5rdmtoolbox.h5wrapper.h5flow.Device'>\n"
+      "<class 'h5rdmtoolbox.wrapper.h5flow.Device'>\n"
      ]
     }
    ],
@@ -1105,7 +1105,7 @@
     }
    ],
    "source": [
-    "p_sensor = h5tbx.h5wrapper.h5flow.Device('PressureSensor', manufacturer='unknown',\n",
+    "p_sensor = h5tbx.wrapper.h5flow.Device('PressureSensor', manufacturer='unknown',\n",
     "                  x=(0, dict(units='m',standard_name='x_coordinate')),\n",
     "                  y=(0, dict(units='m',standard_name='y_coordinate')),\n",
     "                  z=(0, dict(units='m',standard_name='z_coordinate')))\n",
@@ -1130,7 +1130,7 @@
      "output_type": "stream",
      "text": [
       "Device \"PressureSensor\" from \"unknown\" @(0, 0, 0) [m])\n",
-      "<class 'h5rdmtoolbox.h5wrapper.h5flow.Device'>\n"
+      "<class 'h5rdmtoolbox.wrapper.h5flow.Device'>\n"
      ]
     }
    ],

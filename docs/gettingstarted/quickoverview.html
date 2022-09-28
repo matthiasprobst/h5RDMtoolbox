@@ -143,7 +143,7 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5wrapper/index.html">
+  <a class="reference internal" href="../wrapper/index.html">
    H5wrapper
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
@@ -153,69 +153,64 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/CreateFile.html">
+    <a class="reference internal" href="../wrapper/CreateFile.html">
      Create a HDF file
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/DatasetCreation.html">
+    <a class="reference internal" href="../wrapper/DatasetCreation.html">
      Dataset creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/DatasetSlicing.html">
+    <a class="reference internal" href="../wrapper/DatasetSlicing.html">
      Dataset slicing
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/GroupCreation.html">
+    <a class="reference internal" href="../wrapper/GroupCreation.html">
      Group creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/FileExploration.html">
+    <a class="reference internal" href="../wrapper/FileExploration.html">
      File exploration
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/NaturalNaming.html">
+    <a class="reference internal" href="../wrapper/NaturalNaming.html">
      Natural Naming
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Conventions.html">
+    <a class="reference internal" href="../wrapper/Conventions.html">
      (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecialIO.html">
+    <a class="reference internal" href="../wrapper/SpecialIO.html">
      Special I/O
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Visualization.html">
+    <a class="reference internal" href="../wrapper/Visualization.html">
      Visualization
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Extensions.html">
+    <a class="reference internal" href="../wrapper/Extensions.html">
      Extensions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecializedWrappers.html">
+    <a class="reference internal" href="../wrapper/SpecializedWrappers.html">
      Specialized Wrappers
     </a>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
+  <a class="reference internal" href="../database/index.html">
    H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
@@ -225,35 +220,13 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/filequery.html">
-     HDF File as a Database
+    <a class="reference internal" href="../database/Serverless.html">
+     Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
+    <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/piv2hdf.html">
-     PIV to HDF5
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
-     Ansys CFX to HDF
     </a>
    </li>
   </ul>
@@ -812,8 +785,6 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
-
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 </pre></div>
 </div>
@@ -841,7 +812,7 @@ tmp0.hdf
 </section>
 <section id="Create-a-dataset">
 <h2>Create a dataset<a class="headerlink" href="#Create-a-dataset" title="Permalink to this headline">#</a></h2>
-<p>Assume we have a signal over time as numpy-arrays. We create two datasets for them. As signal is a function of time, we use HDF dimension scales (<a class="reference external" href="https://docs.h5py.org/en/stable/high/dims.html">https://docs.h5py.org/en/stable/high/dims.html</a>) to make the relationship:</p>
+<p>Assume we have a signal over time as numpy-arrays. We create two datasets for them. As signal is a function of time, we use HDF dimension scales (<a class="reference external" href="https://docs.h5py.org/en/stable/high/dims.html">https://docs.h5py.org/en/stable/high/dims.html</a>) to make the relationship, thus “time” is the scale (<code class="docutils literal notranslate"><span class="pre">make_scale=True</span></code>) to which “signal” is attached to (<code class="docutils literal notranslate"><span class="pre">attach_scale</span></code>).</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -873,14 +844,16 @@ tmp0.hdf
 </section>
 <section id="Plot-a-data">
 <h2>Plot a data<a class="headerlink" href="#Plot-a-data" title="Permalink to this headline">#</a></h2>
-<p>Plotting data is simple as the return value of a sliced HDF dataset is a <code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code> which, thanks to the package <code class="docutils literal notranslate"><span class="pre">xarray</span></code>, provides a plotting function:</p>
+<p>Plotting data is simple: The return value of a sliced HDF dataset is a <code class="docutils literal notranslate"><span class="pre">xr.DataArray</span></code>. Thanks to the package <code class="docutils literal notranslate"><span class="pre">xarray</span></code>, provides a plotting function:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">signal_filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;signal&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">signal_filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;signal&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -916,12 +889,10 @@ tmp0.hdf
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">signal_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;+-----------------+</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">sdump</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1125,24 +1096,23 @@ input.h5tb-varname-in:checked + label:before {
     cursor: pointer;
 }</style></head>
 <p>tmp2h.hdf</p>
-<p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-3836847600" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3836847600">
+                    <input id="group-ds-/-4210962200" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-4210962200">
                     /<span>(3)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.13</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.2.0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                    <ul id="ds-1-/signal-3837765700" class="h5tb-var-list">
-                    <input id="ds-2-/signal-3837768300" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/signal-4213171500" class="h5tb-var-list">
+                    <input id="ds-2-/signal-4213177600" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/signal-3837768300">signal</label>
+                        for="ds-2-/signal-4213177600">signal</label>
                     <span class="h5tb-dims">(time: 101)</span>  [
                     <span class="h5tb-unit">V</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : my signal</li>
@@ -1152,10 +1122,10 @@ input.h5tb-varname-in:checked + label:before {
              </ul>
 
 
-                    <ul id="ds-1-/time-3838080500" class="h5tb-var-list">
-                    <input id="ds-2-/time-3838083200" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/time-4213865600" class="h5tb-var-list">
+                    <input id="ds-2-/time-4213870800" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/time-3838083200">time</label>
+                        for="ds-2-/time-4213870800">time</label>
                     <span class="h5tb-dims">(101,)</span>  [
                     <span class="h5tb-unit">s</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : time</li>
@@ -1167,8 +1137,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/mygroup-3838529600" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/mygroup-3838529600">
+                    <input id="group-ds-/mygroup-4214443200" type="checkbox" >
+                    <label style="font-weight: bold" for="group-ds-/mygroup-4214443200">
                     mygroup<span>(0)</span></label>
 
 
@@ -1179,21 +1149,6 @@ input.h5tb-varname-in:checked + label:before {
 </li>
 </ul>
 </div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-+-----------------+
-
-H5Dataset &#34;/time&#34;
------------------
-shape:         (101,)
-long_name:     time
-standard_name: None
-units:         s
-</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:

@@ -34,8 +34,6 @@
    "outputs": [],
    "source": [
     "import h5rdmtoolbox as h5tbx\n",
-    "\n",
-    "import matplotlib.pyplot as plt\n",
     "import numpy as np"
    ]
   },
@@ -69,7 +67,7 @@
    "source": [
     "## Create a dataset\n",
     "\n",
-    "Assume we have a signal over time as numpy-arrays. We create two datasets for them. As signal is a function of time, we use HDF dimension scales (https://docs.h5py.org/en/stable/high/dims.html)  to make the relationship:"
+    "Assume we have a signal over time as numpy-arrays. We create two datasets for them. As signal is a function of time, we use HDF dimension scales (https://docs.h5py.org/en/stable/high/dims.html) to make the relationship, thus \"time\" is the scale (`make_scale=True`) to which \"signal\" is attached to (`attach_scale`)."
    ]
   },
   {
@@ -119,7 +117,7 @@
    "metadata": {},
    "source": [
     "## Plot a data\n",
-    "Plotting data is simple as the return value of a sliced HDF dataset is a `xr.DataArray` which, thanks to the package `xarray`, provides a plotting function:"
+    "Plotting data is simple: The return value of a sliced HDF dataset is a `xr.DataArray`. Thanks to the package `xarray`, provides a plotting function:"
    ]
   },
   {
@@ -131,9 +129,11 @@
    },
    "outputs": [],
    "source": [
+    "import matplotlib.pyplot as plt\n",
+    "\n",
     "with h5tbx.H5File(signal_filename, 'r') as h5:\n",
-    "    plt.figure(figsize=(3, 2))\n",
-    "    h5['signal'][:].plot(marker='o')"
+    "    plt.figure(figsize=(4,2))\n",
+    "    h5['signal'][:].plot()"
    ]
   },
   {
@@ -179,15 +179,13 @@
    "outputs": [],
    "source": [
     "with h5tbx.H5File(signal_filename) as h5:\n",
-    "    h5.dump()\n",
-    "    print('+-----------------+\\n')\n",
-    "    h5.time.sdump()"
+    "    h5.dump()"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "c12dc16a-a893-4a70-9f31-7fd88ff293a0",
+   "id": "7ce21c36-39ba-4c0c-96e6-2ab089295af8",
    "metadata": {},
    "outputs": [],
    "source": []

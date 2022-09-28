@@ -1,7 +1,11 @@
 
 <h1 text-align: center;><img src="docs/icons/icon4.svg" alt="" width="40"/> HDF5 Research Data Management Toolbox</h1>
 
-*Note, that the repository is under current development! A first stable release is planned for version 0.2.0.*
+
+![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
+
+*Note, that the repository is under current development! A first stable release is planned for 
+Oktober, then being version 0.2.X.*
 
 The "HDF5 Research Data Management Toolbox" (h5rdmtoolbox) supports the data creation, processing and sharing 
 of data using the HDF5 file format while fulfilling the [FAIR](https://www.nature.com/articles/sdata201618) principles. 
@@ -11,13 +15,12 @@ provide helpful methods that facilitate processing and visualization. Special wr
 inheritance (some are already provided by the package), that further improve the bevahviour or restrict naming and/or 
 data organization.
 
-The package is divided into four sub-packages, each of which concerning a separate topic towards a FAIR 
+The package is divided into three sub-packages, each of which concerning a separate topic towards a FAIR 
 data workflow. Note, that dependencies among the sub-packages exists, however a clear description for each 
 sub-package can be found:
   - `conventions`: Naming standards mostly for attributes in the HDF5 files. Used by wrapper classes
   - `h5wrapper`: Implementaiton of wrapper classes: Interacting/working with HDF5 files including many useful features 
      and user-defined methods including static and dynamic layout definition
-  - `x2hdf`: package facilitating conversion processes to meet the layout requirements defined in `h5wrapperpy`
   - `h5database`: Practical and easy searching in multiple HDF5 files
 
 The sub-packages are described in detail in the [documentation](https://matthiasprobst.github.io/h5RDMtoolbox/). 
@@ -39,7 +42,8 @@ or for editable mode:
     pip -e h5RDMtoolbox
 
 There are optional dependencies, e.g. for PIV-specific features. Specify them in square brackets after the package 
-name. Check the setup config (`setup.cfg`) for all optional dependencies. To install all dependencies, simply run
+name. Check the setup config (`setup.cfg`) or the [documentation](https://matthiasprobst.github.io/h5RDMtoolbox/) for 
+all optional dependencies. To install all dependencies, simply run
 
     pip h5RDMtoolbox[complete]
 

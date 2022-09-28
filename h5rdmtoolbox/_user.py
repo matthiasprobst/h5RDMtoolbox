@@ -1,7 +1,9 @@
 import pathlib
+import shutil
 from itertools import count
 
 import appdirs
+import pkg_resources
 
 from ._logger import logger
 
@@ -15,8 +17,38 @@ user_dirs = {'root': _user_root_dir,
              'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
              }
 
-for _user_dir in user_dirs.values():
-    _user_dir.mkdir(parents=True, exist_ok=True)
+if not user_dirs['root'].exists():
+    user_dirs['root'].mkdir(parents=True)
+
+
+def _get_pkg_resource_filename(fname):
+    try:
+        filename = pkg_resources.resource_filename('h5rdmtoolbox', fname)
+    except TypeError:
+        filename = pathlib.Path(__file__).parent / fname
+    return filename
+
+
+if not user_dirs['standard_name_tables'].exists():
+    # first copy the default data there:
+    fluid_v1 = _get_pkg_resource_filename('data/fluid-v1.yml')
+    piv_v1 = _get_pkg_resource_filename('data/piv-v1.yml')
+    test_v1 = _get_pkg_resource_filename('data/Test-v1.yml')
+
+    user_dirs['standard_name_tables'].mkdir()
+    shutil.copy2(fluid_v1, user_dirs['standard_name_tables'])
+    shutil.copy2(piv_v1, user_dirs['standard_name_tables'])
+    shutil.copy2(test_v1, user_dirs['standard_name_tables'])
+    shutil.copy2(test_v1, user_dirs['standard_name_tables'])
+
+if not user_dirs['layouts'].exists():
+    user_dirs['layouts'].mkdir()
+if not user_dirs['standard_name_table_translations'].exists():
+    user_dirs['standard_name_table_translations'].mkdir()
+    # first copy the default data there:
+    test_to_test = _get_pkg_resource_filename('data/test-to-Test-v1.yml')
+
+    shutil.copy2(test_to_test, user_dirs['standard_name_table_translations'])
 
 config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
 config_filename = config_dir / 'h5rdmtoolbox.yaml'
@@ -30,7 +62,4 @@ while user_dirs['tmp'].exists():
     user_dirs['tmp'] = _root_tmp_dir / f'tmp{itmp}'
 
 user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
-
-testdir = pathlib.Path(__file__).parent / 'tests/data'
-
-logger.debug(f'user direcotries are: {user_dirs}')
+testdir = pathlib.Path(__file__).parent / '../tests/data'

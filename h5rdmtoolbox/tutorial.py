@@ -11,103 +11,6 @@ from ._user import testdir
 from .utils import generate_temporary_directory, generate_temporary_filename
 
 
-class PIVview:
-    """PIVview tutorial class"""
-
-    @staticmethod
-    def get_parameter_file() -> pathlib.Path:
-        """Return pivview parameter file"""
-        return testdir / 'PIV/piv_challenge1_E/piv_parameters.par'
-
-    @staticmethod
-    def get_plane_directory() -> pathlib.Path:
-        """Return the path to the respective example PIV plane"""
-        return testdir / 'PIV/piv_challenge1_E/'
-
-    @staticmethod
-    def get_multiplane_directories() -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
-        """Copies the piv_challenge1_E data to three directories in the tmp directory
-        Two planes have three nc files, one plane has 2 nc files only"""
-        try:
-            from netCDF4 import Dataset as ncDataset
-        except ImportError:
-            raise ImportError('Package netCDF4 is not installed. Either install it '
-                              'separately or install the repository with pip install h5RDMtolbox [piv]')
-
-        def _set_z_in_nc(nc_filename, z_val):
-            with ncDataset(nc_filename, 'r+') as nc:
-                nc.setncattr('origin_offset_z', z_val)
-                for k, v in nc.variables.items():
-                    if 'coord_min' in nc[k].ncattrs():
-                        coord_min = nc[k].getncattr('coord_min')
-                        coord_min[-1] = z_val
-                        nc[k].setncattr('coord_min', coord_min)
-                        coord_max = nc[k].getncattr('coord_max')
-                        coord_max[-1] = z_val
-                        nc[k].setncattr('coord_max', coord_max)
-
-        src_dir = testdir / 'PIV/piv_challenge1_E/'
-        nc_files = sorted(src_dir.glob('*[0-9].nc'))
-
-        plane0 = generate_temporary_directory(prefix='mplane/')
-        _ = shutil.copy2(src_dir / 'piv_parameters.par', plane0.joinpath('piv_parameter.par'))
-        dst = shutil.copy2(nc_files[0], plane0.joinpath('f0.nc'))
-        _set_z_in_nc(dst, -5.)
-        dst = shutil.copy2(nc_files[1], plane0.joinpath('f1.nc'))
-        _set_z_in_nc(dst, -5.)
-        dst = shutil.copy2(nc_files[2], plane0.joinpath('f2.nc'))
-        _set_z_in_nc(dst, -5.)
-
-        plane1 = generate_temporary_directory(prefix='mplane/')
-        _ = shutil.copy2(src_dir / 'piv_parameters.par', plane1.joinpath('piv_parameter.par'))
-        dst = shutil.copy2(nc_files[3], plane1.joinpath('f0.nc'))
-        _set_z_in_nc(dst, 0.)
-        dst = shutil.copy2(nc_files[4], plane1.joinpath('f1.nc'))
-        _set_z_in_nc(dst, 0.)
-        dst = shutil.copy2(nc_files[5], plane1.joinpath('f2.nc'))
-        _set_z_in_nc(dst, 0.)
-
-        plane2 = generate_temporary_directory(prefix='mplane/')
-        _ = shutil.copy2(src_dir / 'piv_parameters.par', plane2.joinpath('piv_parameter.par'))
-        dst = shutil.copy2(nc_files[6], plane2.joinpath('f0.nc'))
-        _set_z_in_nc(dst, 10.)
-        dst = shutil.copy2(nc_files[7], plane2.joinpath('f1.nc'))
-        _set_z_in_nc(dst, 10.)
-
-        return plane0, plane1, plane2
-
-    @staticmethod
-    def get_snapshot_nc_files():
-        """Return a list of sorted nc files"""
-        return sorted((testdir / f'PIV/piv_challenge1_E/').glob('E00A*.nc'))
-
-    @staticmethod
-    def get_avg_file():
-        return testdir.joinpath('PIV/piv_challenge1_E/avg.dat')
-
-    @staticmethod
-    def get_rms_file():
-        return testdir.joinpath('PIV/piv_challenge1_E/rms.dat')
-
-    @staticmethod
-    def get_reyn_file():
-        return testdir.joinpath('PIV/piv_challenge1_E/reyn.dat')
-
-
-class OpenPIV:
-    """OpenPIV tutorial class"""
-
-    @staticmethod
-    def get_snapshot_txt_file():
-        """Return snapshot piv result from ILA vortex"""
-        return testdir / f'PIV/openpiv/vortex.txt'
-
-    @staticmethod
-    def get_parameter_file():
-        """Return openpiv parameters as file"""
-        return testdir / f'PIV/openpiv/openpiv.par'
-
-
 def get_xr_dataset(name):
     """Loads a xr.Dataset"""
 
@@ -232,15 +135,8 @@ def get_xr_dataset(name):
 
 def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
     """Return the HDF filename of a tutoral case."""
-    from .h5wrapper import H5PIV
-    if name == 'minimal_flow':
-        fname = testdir / 'minimal_flow.hdf'
-        tmp_filename = shutil.copy2(fname, generate_temporary_filename(suffix='.hdf'))
-        if tmp_filename.exists():
-            return H5PIV(tmp_filename, mode=mode)
-        else:
-            raise FileNotFoundError(tmp_filename)
-    elif name == 'vortex_snapshot':
+    from .wrapper import H5PIV
+    if name == 'vortex_snapshot':
 
         def _rgb2gray(rgb):
             """turns a rgb image (3D array) into a grayscale image (2D). If input is 2D array is just returned"""
@@ -265,6 +161,16 @@ def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
                                          long_name='piv_image_b',
                                          ufunc=_rgb2gray)
         return H5PIV(tmp_fname, mode=mode)
+    elif name == 'piv_challenge':
+        piv_challenge1_E_hdf_fname = testdir / 'PIV/piv_challenge1_E/piv_challenge1_E.hdf'
+        with H5PIV(piv_challenge1_E_hdf_fname, 'r+') as h5:
+            from h5rdmtoolbox.conventions.standard_attributes.software import Software
+            h5.software = Software(name='PIVview',
+                                         version='3.8.6',
+                                         url='www.pivtec.com/pivview.html',
+                                         description='PIV processing software')
+        tmp_fname = shutil.copy2(piv_challenge1_E_hdf_fname, generate_temporary_filename(suffix='.hdf'))
+        return H5PIV(tmp_fname, mode=mode)
     else:
         raise NameError(f'Invalid name')
 
@@ -275,22 +181,9 @@ class Conventions:
     @staticmethod
     def fetch_cf_standard_name_table():
         """download cf-standard-name-table"""
-        from h5rdmtoolbox.conventions.identifier import CFStandardNameTable
-        try:
-            import pooch
-        except ImportError:
-            raise ImportError(f'Package "pooch" is needed to download the file cf-standard-name-table.xml')
-        file_path = pooch.retrieve(
-            url="https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml",
-            known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4',
-        )
-        return CFStandardNameTable.from_xml(file_path)
-
-
-class CFX:
-    @staticmethod
-    def get_cfx_filename():
-        return testdir / f'CFD/AnsysCFX/channel_plus_cyl.cfx'
+        from h5rdmtoolbox.conventions import StandardNameTable
+        url = "https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml"
+        return StandardNameTable.from_web(url)
 
 
 class Database:
@@ -362,7 +255,7 @@ class Database:
 
     @staticmethod
     def generate_test_files() -> List[pathlib.Path]:
-        """Generate many files in a nested folders"""
+        """Generate a nested filestructure of hdf files and return list of the filenames"""
         tocdir = generate_temporary_directory('test_repo')
         Database.build_test_repo(tocdir)
-        return list(tocdir.rglob('*.hdf'))
+        return sorted(tocdir.rglob('*.hdf'))

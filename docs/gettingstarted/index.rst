@@ -1,8 +1,7 @@
 Getting Started
 ===============
 
-Get a quick insight and overview about the package and its usage. Detailed explanaitions are shown
-in the respective chapters of each sub-package
+Get a quick insight into the toolbox and an overview about the capabilities.
 
 
 .. toctree::
