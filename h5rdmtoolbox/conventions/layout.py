@@ -319,12 +319,6 @@ class H5Layout:
         print(out)
 
     @staticmethod
-    def init_from_filename(src_filename: Path, filename: Path) -> 'H5Layout':
-        """Copy src filename and return H5Layout object with filename"""
-        shutil.copy2(src_filename, filename)
-        return H5Layout(filename)
-
-    @staticmethod
     def find_registered_filename(name: str) -> pathlib.Path:
         """Return the file of the registered layout
 

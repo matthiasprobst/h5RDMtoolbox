@@ -1,6 +1,7 @@
 """H5PIV module: Wrapper for PIV data"""
 import configparser
 import logging
+import shutil
 import warnings
 from abc import ABC
 from enum import Enum
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Callable, Tuple
 from typing import Protocol, Any, Union, Dict, List
 
+import h5py
 import numpy as np
 from pint_xarray import unit_registry as ureg
 
@@ -15,7 +17,6 @@ from .accessory import register_special_dataset
 from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config
 from .._user import user_dirs
-from ..conventions import layout as layoutconvention
 # from ..conventions.custom import PIVStandardNameTable
 from ..conventions.standard_attributes.software import Software
 
@@ -189,8 +190,8 @@ H5PIV_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5PIV.hdf')
 
 def write_H5PIV_layout_file():
     """Write the H5File layout to <user_dir>/layout"""
-    lay = layoutconvention.H5Layout.init_from_filename(H5Flow_layout_filename, H5PIV_layout_filename)
-    with lay.File(mode='r+') as h5lay:
+    shutil.copy(H5Flow_layout_filename, H5PIV_layout_filename)
+    with h5py.File(H5PIV_layout_filename, mode='r+') as h5lay:
         h5lay.attrs['title'] = '__The common name of the file that might ' \
                                'better explain it by a short string'
 
@@ -968,24 +969,24 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             return img_list[it], img_list[it]
         return img_list[2 * it], img_list[2 * it + 1]
 
-    def to_vtk(self, vtk_filename: Path = None) -> Path:
-        """generates a vtk file with time-averaged data"""
-        from ..x2hdf.piv import vtk_utils
-        if 'timeAverages' not in self:
-            raise ValueError('The group "timeAverages" does not exist. Cannot write VTK file!')
-        filename = Path(self.filename)
-        if vtk_filename is None:
-            _vtk_filename = Path.joinpath(filename.parent, filename.stem)
-        else:
-            _vtk_filename = Path(vtk_filename)
-            if _vtk_filename.suffix != '':
-                _vtk_filename = Path.joinpath(vtk_filename.parent, vtk_filename.stem)
-            else:
-                _vtk_filename = vtk_filename
-        data = vtk_utils.get_time_average_data_from_piv_case(self.filename)
-        _, vtk_path = vtk_utils.result_3D_to_vtk(
-            data, target_filename=_vtk_filename)
-        return vtk_path
+    # def to_vtk(self, vtk_filename: Path = None) -> Path:
+    #     """generates a vtk file with time-averaged data"""
+    #     from ..x2hdf.piv import vtk_utils
+    #     if 'timeAverages' not in self:
+    #         raise ValueError('The group "timeAverages" does not exist. Cannot write VTK file!')
+    #     filename = Path(self.filename)
+    #     if vtk_filename is None:
+    #         _vtk_filename = Path.joinpath(filename.parent, filename.stem)
+    #     else:
+    #         _vtk_filename = Path(vtk_filename)
+    #         if _vtk_filename.suffix != '':
+    #             _vtk_filename = Path.joinpath(vtk_filename.parent, vtk_filename.stem)
+    #         else:
+    #             _vtk_filename = vtk_filename
+    #     data = vtk_utils.get_time_average_data_from_piv_case(self.filename)
+    #     _, vtk_path = vtk_utils.result_3D_to_vtk(
+    #         data, target_filename=_vtk_filename)
+    #     return vtk_path
 
 
 H5PIVGroup._h5grp = H5PIVGroup

@@ -1,6 +1,7 @@
 """H5Flow module: Wrapper for fluid dynamics data"""
 
 import logging
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
@@ -15,10 +16,8 @@ from pint_xarray import unit_registry as ureg
 
 from .accessory import SpecialDataset, register_special_dataset
 from .h5file import H5File, H5Group, H5Dataset
-from .. import config, conventions
+from .. import config
 from .._user import user_dirs
-
-# from ..conventions.custom import FluidStandardNameTable
 
 logger = logging.getLogger(__package__)
 DIM_NAMES = ('z', 'time', 'y', 'x')
@@ -30,7 +29,8 @@ H5Flow_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5Flow.hdf')
 
 def write_H5Flow_layout_file():
     """Write the H5File layout to <user_dir>/layout"""
-    with h5py.File(H5File_layout_filename, mode='r+') as h5lay:
+    shutil.copy(H5File_layout_filename, H5Flow_layout_filename)
+    with h5py.File(H5Flow_layout_filename, mode='r+') as h5lay:
         ds_x = h5lay.create_dataset('x', shape=(1,))
         ds_y = h5lay.create_dataset('y', shape=(1,))
         ds_z = h5lay.create_dataset('z', shape=(1,))
