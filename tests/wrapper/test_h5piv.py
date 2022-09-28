@@ -49,16 +49,16 @@ def my_uncertainty_method(uds, imgA, imgB):
 class TestH5PIV(unittest.TestCase):
 
     def test_H5PIV_properties(self):
-        with h5rdmtoolbox.tutorial.get_H5PIV('minimal_flow', 'r+') as h5:
+        with h5rdmtoolbox.tutorial.get_H5PIV('piv_challenge', 'r+') as h5:
             del h5['u']
             h5.create_dataset('u', shape=h5['v'].shape,
                               units='m/s', standard_name='x_velocity')
 
             self.assertIsInstance(h5.software, h5piv.Software)
-            self.assertEqual(h5.software.name, 'PIVTec PIVview')
-            self.assertEqual(h5.software.version, None)
-            self.assertEqual(h5.software.url, None)
-            self.assertEqual(h5.software.description, None)
+            self.assertEqual(h5.software.name, 'PIVview')
+            self.assertEqual(h5.software.version.__str__(), '3.8.6')
+            self.assertEqual(h5.software.url, 'www.pivtec.com/pivview.html')
+            self.assertEqual(h5.software.description, 'PIV processing software')
 
             h5.software = h5piv.Software(name='PIVview',
                                          version='3.8.6',
@@ -91,10 +91,10 @@ class TestH5PIV(unittest.TestCase):
             _min, _max = h5.extent
             self.assertTupleEqual(_min, (min(h5['x'][:]),
                                          min(h5['y'][:]),
-                                         min(h5['z'][:])))
+                                         h5['z'][()]))
             self.assertTupleEqual(_max, (max(h5['x'][:]),
                                          max(h5['y'][:]),
-                                         max(h5['z'][:])))
+                                         h5['z'][()]))
             self.assertEqual(h5.ntimesteps, h5['time'].size)
             self.assertEqual(h5.nplanes, h5['z'].size)
             del h5['time']
@@ -137,3 +137,13 @@ class TestH5PIV(unittest.TestCase):
         self.assertEqual(piv_param.window_function, h5piv.PIVWindowFunction.Gauss)
         # TODO:
         # self.assertIsInstance(piv_param.final_effective_window_size, PIVMethod)  # compute from final window size
+
+    def test_running_mean(self):
+        with h5tbx.tutorial.get_H5PIV('piv_challenge', mode='r+') as h5:
+            rm = h5.compute_running_mean('u', axis='time')
+        with self.assertRaises(ValueError):
+            with h5tbx.tutorial.get_H5PIV('piv_challenge', mode='r+') as h5:
+                rm = h5.compute_running_mean('u', axis='wrong')
+        with self.assertRaises(TypeError):
+            with h5tbx.tutorial.get_H5PIV('piv_challenge', mode='r+') as h5:
+                rm = h5.compute_running_mean('u', axis=3.4)

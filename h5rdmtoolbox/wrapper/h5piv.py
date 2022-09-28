@@ -1,6 +1,7 @@
 """H5PIV module: Wrapper for PIV data"""
 import configparser
 import logging
+import os.path
 import shutil
 import warnings
 from abc import ABC
@@ -17,6 +18,7 @@ from .accessory import register_special_dataset
 from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config
 from .._user import user_dirs
+from ..conventions.layout import H5Layout
 # from ..conventions.custom import PIVStandardNameTable
 from ..conventions.standard_attributes.software import Software
 
@@ -721,7 +723,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
         return eval(par['PIV processing parameters']['View0_PIV_Eval_SampleStep'])
 
     def __init__(self, name=None, mode="r+", title=None, standard_name_table=None,
-                 layout_filename: Path = H5PIV_layout_filename,
+                 layout: Union[Path, str, H5Layout] = H5PIV_layout_filename,
                  software=None, run_layout_check=False, **kwargs):
         """
         name : str, optional=None
@@ -752,7 +754,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
             standard_name_table = 'piv-v1'
         super(H5PIV, self).__init__(name=name, mode=mode, title=title,
                                     standard_name_table=standard_name_table,
-                                    layout_filename=layout_filename,
+                                    layout=layout,
                                     **kwargs)
         if software is not None:
             if isinstance(software, str):
@@ -878,13 +880,13 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
                                    compression_opts=compression_opts)
 
             # attach scales according to input dataset:
-            for i in range(4):
-                if len(dataset.dims[i]):
-                    rds.dims[i].attach_scale(dataset.dims[i][0])
+            for idim, dim in enumerate(dataset.dims):
+                for i in range(len(dim)):
+                    rds.dims[idim].attach_scale(dim[i])
             return rds
         return self[method_dataset_name]
 
-    def compute_running_mean(self, dataset, overwrite=False):
+    def compute_running_mean(self, dataset: str, axis: Union[int, str], overwrite=False):
         """
         Computes the running mean and stores it in
         group /post/running_mean/ under the same variable name
@@ -905,17 +907,34 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
                    'convergence of PIV phase-averaged recordings'
         if isinstance(dataset, str):
             dataset_desc = f'Running mean of {dataset}'
+            ds = self[dataset]
         else:
             dataset_desc = f'Running mean of {dataset.name}'
+            ds = dataset
+        _axis = None
+        if isinstance(axis, str):
+            for dim in ds.dims:
+                if _axis is not None:
+                    break
+                for i in range(len(dim)):
+                    if os.path.basename(dim[i].name) == axis:
+                        _axis = i
+                        break
+        elif isinstance(axis, int):
+            _axis = axis
+        else:
+            raise TypeError(f'Axis must be a string (dimension scale) or an interger, but got {type(axis)}')
+        if _axis is None:
+            raise ValueError('Could not determine the axis along which the statistic is to be computed.')
         return self._compute_running_statistics(running_mean,
                                                 grp_name='post/running_mean',
                                                 grp_long_name=grp_desc,
                                                 dataset=dataset,
                                                 dataset_long_name=dataset_desc,
                                                 overwrite=overwrite,
-                                                axis=1)
+                                                axis=_axis)
 
-    def compute_running_std(self, dataset='/velocity', overwrite=False):
+    def compute_running_std(self, dataset: str, axis: Union[int, str], overwrite=False):
         """
         Computes the running std and stores it in
         group /post/running_std/ under the same variable name
@@ -936,8 +955,25 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
                    'convergence of PIV phase-averaged recordings'
         if isinstance(dataset, str):
             dataset_desc = f'Running standard deviation of {dataset}'
+            ds = self[dataset]
         else:
             dataset_desc = f'Running standard deviation of {dataset.name}'
+            ds = dataset
+        _axis = None
+        if isinstance(axis, str):
+            for dim in ds.dims:
+                if _axis is not None:
+                    break
+                for i in range(len(dim)):
+                    if os.path.basename(dim[i].name) == axis:
+                        _axis = i
+                        break
+        elif isinstance(axis, int):
+            _axis = axis
+        else:
+            raise TypeError(f'Axis must be a string (dimension scale) or an interger, but got {type(axis)}')
+        if _axis is None:
+            raise ValueError('Could not determine the axis along which the statistic is to be computed.')
         return self._compute_running_statistics(running_std,
                                                 grp_name='post/running_std',
                                                 grp_long_name=grp_desc,
@@ -945,7 +981,7 @@ class H5PIV(H5Flow, H5PIVGroup, ABC):
                                                 dataset_long_name=dataset_desc,
                                                 overwrite=overwrite,
                                                 ddof=2,
-                                                axis=1)
+                                                axis=_axis)
 
     def get_image_files(self, iz, it, split_image, cam_rel_dir='../Cam1', img_suffix='.b16'):
         """Return the file path corresponding to snapshot it in plane iz.

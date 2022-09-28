@@ -233,14 +233,7 @@ def get_xr_dataset(name):
 def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
     """Return the HDF filename of a tutoral case."""
     from .wrapper import H5PIV
-    if name == 'minimal_flow':
-        fname = testdir / 'minimal_flow.hdf'
-        tmp_filename = shutil.copy2(fname, generate_temporary_filename(suffix='.hdf'))
-        if tmp_filename.exists():
-            return H5PIV(tmp_filename, mode=mode)
-        else:
-            raise FileNotFoundError(tmp_filename)
-    elif name == 'vortex_snapshot':
+    if name == 'vortex_snapshot':
 
         def _rgb2gray(rgb):
             """turns a rgb image (3D array) into a grayscale image (2D). If input is 2D array is just returned"""
@@ -264,6 +257,16 @@ def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
             h5.create_dataset_from_image(testdir / 'PIV/vortexpair/vp1b.tif', 'imgB',
                                          long_name='piv_image_b',
                                          ufunc=_rgb2gray)
+        return H5PIV(tmp_fname, mode=mode)
+    elif name == 'piv_challenge':
+        piv_challenge1_E_hdf_fname = testdir / 'PIV/piv_challenge1_E/piv_challenge1_E.hdf'
+        with H5PIV(piv_challenge1_E_hdf_fname, 'r+') as h5:
+            from h5rdmtoolbox.conventions.standard_attributes.software import Software
+            h5.software = Software(name='PIVview',
+                                         version='3.8.6',
+                                         url='www.pivtec.com/pivview.html',
+                                         description='PIV processing software')
+        tmp_fname = shutil.copy2(piv_challenge1_E_hdf_fname, generate_temporary_filename(suffix='.hdf'))
         return H5PIV(tmp_fname, mode=mode)
     else:
         raise NameError(f'Invalid name')

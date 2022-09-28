@@ -6,11 +6,12 @@ from datetime import datetime
 import h5py
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.conventions.layout import H5Layout
+from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardName
 from h5rdmtoolbox.wrapper.h5file import H5Group
 from h5rdmtoolbox.wrapper.h5file import WrapperAttributeManager
 from h5rdmtoolbox.wrapper.h5flow import H5FlowGroup
 from h5rdmtoolbox.wrapper.h5piv import H5PIVGroup
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardName
 
 
 class TestCommon(unittest.TestCase):
@@ -18,6 +19,21 @@ class TestCommon(unittest.TestCase):
     def setUp(self) -> None:
         self.wrapper_classes = (h5tbx.H5File, h5tbx.H5Flow, h5tbx.H5PIV)
         self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5PIVGroup)
+
+    def test_layout(self):
+        for wc in self.wrapper_classes:
+            with wc(mode='w', layout='H5File') as h5touch:
+                self.assertIsInstance(h5touch.layout, H5Layout)
+            list_of_registered_layouts = H5Layout.get_registered()
+            for lay in list_of_registered_layouts:
+                with wc(mode='w', layout=lay) as h5touch:
+                    self.assertIsInstance(h5touch.layout, H5Layout)
+            for lay in list_of_registered_layouts:
+                with wc(mode='w', layout=H5Layout(lay)) as h5touch:
+                    self.assertIsInstance(h5touch.layout, H5Layout)
+            with self.assertRaises(TypeError):
+                with wc(mode='w', layout=123.3):
+                    pass
 
     def test_title_at_init(self):
         for wc in self.wrapper_classes:

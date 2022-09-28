@@ -992,6 +992,8 @@ class StandardNameTableAttribute:
         snt = self.rootparent.attrs.get(config.standard_name_table_attribute_name, None)
         if snt is not None:
             # snt is a string
+            if isinstance(snt, dict):
+                return StandardNameTable(**snt)
             if snt[0] == '{':
                 return StandardNameTable(**json.loads(snt))
             elif snt[0:4] in ('http', 'wwww.'):

@@ -20,6 +20,8 @@ from h5py._objects import ObjectID
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
 
+# noinspection PyUnresolvedReferences
+from . import xr2hdf
 from .. import _repr
 from .. import config
 from .. import conventions
@@ -28,9 +30,8 @@ from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_dirs
 from .._version import __version__
+from ..conventions.layout import H5Layout
 from ..conventions.standard_attributes import STANDARD_ATTRIBUTE_NAMES
-# noinspection PyUnresolvedReferences
-from . import xr2hdf
 
 logger = logging.getLogger(__package__)
 
@@ -264,7 +265,7 @@ H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
 
 def write_H5File_layout_file() -> None:
     """Write the H5File layout to <user_dir>/layout"""
-    lay = conventions.layout.H5Layout(H5File_layout_filename)
+    lay = H5Layout(H5File_layout_filename)
     with lay.File(mode='w') as h5lay:
         h5lay.attrs['__h5rdmtoolbox_version__'] = '__version of this package'
         h5lay.attrs['title'] = '__file title'
@@ -1653,17 +1654,31 @@ class H5File(h5py.File, H5Group):
     All features from h5py packages are preserved."""
 
     @property
-    def layout(self):
+    def layout(self) -> 'H5Layout':
+        """Return layout"""
         return self._layout
 
+    @layout.setter
+    def layout(self, layout: Union[str, Path, H5Layout]) -> 'H5Layout':
+        """Return layout"""
+        if isinstance(layout, str):
+            self._layout = H5Layout.load_registered(layout)
+        elif isinstance(layout, Path):
+            self._layout = H5Layout(layout)
+        elif isinstance(layout, H5Layout):
+            self._layout = layout
+        else:
+            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or H5Layout but got '
+                            f'{type(layout)}')
+
     @property
-    def attrs(self):
+    def attrs(self) -> 'WrapperAttributeManager':
         """Return an attribute manager that is inherited from h5py's attribute manager"""
         with phil:
             return WrapperAttributeManager(self)
 
     @property
-    def version(self):
+    def version(self) -> str:
         """Return version stored in file"""
         return self.attrs.get('__h5rdmtoolbox_version__')
 
@@ -1700,7 +1715,7 @@ class H5File(h5py.File, H5Group):
         return _bytes * ureg.byte
 
     def __init__(self, name: Path = None, mode='r', title=None, standard_name_table=None,
-                 layout_filename: Union[Path, str] = 'H5File',
+                 layout: Union[Path, str, H5Layout] = 'H5File',
                  driver=None, libver=None, userblock_size=None,
                  swmr=False, rdcc_nslots=None, rdcc_nbytes=None, rdcc_w0=None,
                  track_order=None, fs_strategy=None, fs_persist=False, fs_threshold=1,
@@ -1740,8 +1755,6 @@ class H5File(h5py.File, H5Group):
                          fs_threshold=fs_threshold,
                          **kwds)
 
-        this_class_name = type(self).__name__
-
         if not _tmp_init and self.mode == 'r' and title is not None:
             raise RuntimeError('No write intent. Cannot write title.')
 
@@ -1759,8 +1772,7 @@ class H5File(h5py.File, H5Group):
                 standard_name_table = StandardNameTable.load_registered(standard_name_table)
             if self.standard_name_table != standard_name_table:
                 self.standard_name_table = standard_name_table
-
-        self._layout = conventions.layout.H5Layout.load_registered(layout_filename)
+        self.layout = layout
 
     def check(self, grp: Union[str, h5py.Group] = '/') -> int:
         """Run layout check. This method may be overwritten to add conditional
