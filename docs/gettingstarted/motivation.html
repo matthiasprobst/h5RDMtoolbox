@@ -141,7 +141,7 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5wrapper/index.html">
+  <a class="reference internal" href="../wrapper/index.html">
    H5wrapper
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
@@ -151,70 +151,65 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/CreateFile.html">
+    <a class="reference internal" href="../wrapper/CreateFile.html">
      Create a HDF file
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/DatasetCreation.html">
+    <a class="reference internal" href="../wrapper/DatasetCreation.html">
      Dataset creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/DatasetSlicing.html">
+    <a class="reference internal" href="../wrapper/DatasetSlicing.html">
      Dataset slicing
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/GroupCreation.html">
+    <a class="reference internal" href="../wrapper/GroupCreation.html">
      Group creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/FileExploration.html">
+    <a class="reference internal" href="../wrapper/FileExploration.html">
      File exploration
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/NaturalNaming.html">
+    <a class="reference internal" href="../wrapper/NaturalNaming.html">
      Natural Naming
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Conventions.html">
+    <a class="reference internal" href="../wrapper/Conventions.html">
      (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecialIO.html">
+    <a class="reference internal" href="../wrapper/SpecialIO.html">
      Special I/O
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Visualization.html">
+    <a class="reference internal" href="../wrapper/Visualization.html">
      Visualization
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Extensions.html">
+    <a class="reference internal" href="../wrapper/Extensions.html">
      Extensions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecializedWrappers.html">
+    <a class="reference internal" href="../wrapper/SpecializedWrappers.html">
      Specialized Wrappers
     </a>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="../database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -223,34 +218,12 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/piv2hdf.html">
-     PIV to HDF5
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
-     Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/Serverless.html">
+    <a class="reference internal" href="../database/Serverless.html">
      Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
+    <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
     </a>
    </li>
@@ -497,14 +470,16 @@ title="Print to PDF"
                 
   <section id="motivation">
 <h1>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline">#</a></h1>
-<p>The world generates more and more data. Without sustainable data management sharing and exploring becomes
-difficult and oftentimes impossible. A consequence simulations and experiments have to be redone. A data mangement
-that respects the FAIR principles (data must be Findable, Accessible, Interoperable and Re-usable) ensures that
-mandatory meta-data is available to interpret the data.</p>
-<p>This package assists during data generation, conversion and exploration of data stored in HDF5 files. It further
-speeds-up and streamlines working with HDF5 datasets by offering usefull features and general and domain-specific
-methods, which in the end reduce required code lines. By associating HDF5 files with meta-conventions like standard
-names for datasets or layout definitions it is ensured that conventions are met already during data generation.
+<p>Academia and industry generate more and more data. However, without sustainable data management sharing and exploring becomes
+difficult and oftentimes impossible and data may become valueless or only usable for only few users.
+As a consequence simulations and experiments have to be redone.
+A data management that respects the FAIR principles (data must be Findable, Accessible, Interoperable and Re-usable)
+ensures that mandatory meta-data is available to interpret the data.</p>
+<p>This python package/toolbox assists during data generation, processing and exploration of data stored in HDF5 files.
+It further speeds-up and streamlines working with HDF5 datasets by offering usefull features and general and
+domain-specific methods, which in the end reduce required code lines.
+By associating HDF5 files with meta-conventions like standard names for datasets or layout definitions it is ensured
+that conventions are met already during data generation.
 Consequently, data can be shared more easily and requires less iterations until the file content is complete.</p>
 <section id="why-hdf5">
 <h2>Why HDF5?<a class="headerlink" href="#why-hdf5" title="Permalink to this headline">#</a></h2>
@@ -516,6 +491,7 @@ Consequently, data can be shared more easily and requires less iterations until 
 <li><p>has a comprehensive file-system-like structure</p></li>
 <li><p>has a large community.</p></li>
 </ul>
+<p>More information can be found <a class="reference external" href="https://www.hdfgroup.org/solutions/hdf5/">here</a>.</p>
 </section>
 </section>
 

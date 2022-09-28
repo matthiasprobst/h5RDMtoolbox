@@ -1,0 +1,365 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "0052861b-12a3-4960-9279-7b8d03752a9d",
+   "metadata": {},
+   "source": [
+    "# Dataset creation\n",
+    "\n",
+    "Dataset creation works almost as known from `h5py`. However, to achieve FAIRness, some additional parameters are mandatory, others new ones are optional. These together with optional parameters and additional features are explained here. It is worth noting, that the return value of sliced HDF5 datasets through the `h5rdmtoolbox` are `xarray` objects rather than `numpy` objects. This can is the default setting although can be pypassed. In any case it is worth checking out the `xarray` package [here](https://docs.xarray.dev/en/stable/)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7e7ee488-fc61-4edd-a944-d5613969c769",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import h5rdmtoolbox as h5tbx\n",
+    "import numpy as np\n",
+    "import xarray as xr"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a6baa8c7-9bc8-4c45-9632-9322c72cda9d",
+   "metadata": {},
+   "source": [
+    "Mandatory parameters during dataset creation know fro `h5py` are `name`, `data` or `shape`. The toolbox adds new obligatory parameters: `standard_name` or `long_name` and a physical unit parameter, called `units`. These add miminaml required information to raw values.\n",
+    "\n",
+    "The user may select between `standard_name` and `long_name`. The latter is a human-readable (short) description of the dataset without any syntax restriction:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0bf9a1d3-5af4-46f1-8954-38dc7d1d0542",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset('x', shape=(4,),\n",
+    "                      units='m', long_name='coordinate in x direction')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "14815caa-c443-4423-98d7-393378da8756",
+   "metadata": {},
+   "source": [
+    "Standard names are defined in a [standard name table](./Conventions.ipynb) and underly certain synatx rues, e.g. no spaces are allowed:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "326f200b-6188-4327-b3e9-2290f7969c8f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset('x', shape=(4,),\n",
+    "                      units='m', standard_name='x_coordinate')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8f22c2e3-05a3-4b29-bce1-61e6ae9e1a1b",
+   "metadata": {},
+   "source": [
+    "**Note**: If the data is unitless, pass `units=''`"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7074b05a-d5d0-487b-aaed-fb5dee043a6b",
+   "metadata": {},
+   "source": [
+    "The name of the dataset is the path within the HDF5 file. It is possible to create the dataset although the (sub-)groups don't exist."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ba439684-87de-477e-bfc9-ca1645cc5fa7",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset('grp/subgrp/x', shape=(4,),\n",
+    "                      units='m', standard_name='x_coordinate')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ab70316c-64c5-4a56-a920-3caf83322963",
+   "metadata": {},
+   "source": [
+    "## Dimension scales\n",
+    "\n",
+    "Dimension scales can be defined during dataset creation. Let `time` be the dimension scale and `pressure` be the dataset to which it is attached."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ceb9c820-070c-4cd7-b944-5e130bd7e7dd",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "fname_dimcales = h5tbx.generate_temporary_filename()\n",
+    "with h5tbx.H5File(fname_dimcales, 'w') as h5:\n",
+    "    h5.create_dataset('time', data=[0,1,2,3,4,5],\n",
+    "                      units='s', standard_name='time', make_scale=True)\n",
+    "    h5.create_dataset('pressure', data=np.random.rand(6),\n",
+    "                      units='Pa', standard_name='time', attach_scale=((h5['time'])))\n",
+    "    p = h5.pressure[:]\n",
+    "p"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f1fdf25f-a193-458e-813e-b129f9134947",
+   "metadata": {},
+   "source": [
+    "In order to be compliant with xarrays, single value \"dimension scales\" are set via the attribute `COORDINATES`. An example is the location of the pressure sensor in our case. Let's first create the datasets and then add them as attributes to \"pressure\":"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "59560eec-0225-43bc-975d-3ba1812468fa",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File(fname_dimcales, 'r+') as h5:\n",
+    "    h5.create_dataset('x', data=5.32, units='m',\n",
+    "                      standard_name='x_coordinate')\n",
+    "    h5.create_dataset('y', data=-3.1, units='m',\n",
+    "                      standard_name='y_coordinate')\n",
+    "    h5['pressure'].attrs['COORDINATES'] = ('x', 'y')\n",
+    "    p = h5.pressure[:]\n",
+    "p"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5283b85d-bcf8-420e-91c1-fc7dadab6bf6",
+   "metadata": {},
+   "source": [
+    "### String datasets\n",
+    "String datasets can be created very quickly. No standard_name, long_name or units *must* be given. As units generally anyhow makes no sense, there is still the option to pass long and standard name via the method parameters.<br>\n",
+    "The dump method will display single strings but not lists of strings.<br>\n",
+    "The return value when sliced will still be a `xarray.DataArray` as attributes should still be attached to the object. Use `.values` to get the raw string:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a854cf32-74d8-47a9-a34c-1921b36913c8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_string_dataset('astr', 'hello_world')\n",
+    "    h5.create_string_dataset('string_list', ['hello', 'world'])\n",
+    "    h5.dump()\n",
+    "    \n",
+    "    print('---\\n', h5['astr'][()])\n",
+    "    print('---\\n',h5['astr'].values[()])\n",
+    "    \n",
+    "    print('---\\n', h5['string_list'][:])\n",
+    "    print('---\\n',h5['string_list'].values[:])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9d0d95f9-8dbe-4755-ad03-2258a51beae4",
+   "metadata": {},
+   "source": [
+    "### Advanced dataset creation\n",
+    "\n",
+    "There is more to dataset creation. You can:\n",
+    "- add attributes"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4b9899ee-8b74-4521-a8a5-6d132e3ef744",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset('ds', shape=(10, ), units='', attrs=dict(long_name='a long name', anothera='another attr'))  # unitless dataset. long_name is passed via parameter attrs"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0ca2a909-b2f7-44eb-8339-169c5fd62b3a",
+   "metadata": {},
+   "source": [
+    "- make and attach scales (Note the output using `dump()`: the scale \"link\" is shown)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4d2e9458-d5c9-414c-9def-44277d11aa47",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset('x', data=[1,2,3], units='m', standard_name='x_coordinate', make_scale=True)\n",
+    "    h5.create_dataset('t', data=[20.1, 18.5, 24.7], units='degC', standard_name='temperature', attach_scale=h5['x'])\n",
+    "    print(h5.t.x)  # note, that you can access the dimension scale using attribute-style-syntax\n",
+    "    h5.dump()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4e810d95-ae9f-43c8-8560-1f054ddd50eb",
+   "metadata": {},
+   "source": [
+    "- add `xarry.DataArrays`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9e8f826f-0579-405d-9c1d-bf47733c66fb",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "arr =  xr.DataArray(dims=('y', 'x'), data=np.random.rand(3, 2),\n",
+    "                                 coords={'y': xr.DataArray(dims='y', data=[1, 2, 3],\n",
+    "                                                               attrs={'units': 'm',\n",
+    "                                                                      'standard_name': 'y_coordinate'}),\n",
+    "                                         'x': xr.DataArray(dims='x',\n",
+    "                                                               data=[0, 1],\n",
+    "                                                               attrs={'standard_name': 'x_coordinate'})\n",
+    "                                        },\n",
+    "                                 attrs={'long_name': 'a long name',\n",
+    "                                        'units': 'm/s'})\n",
+    "\n",
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset('temperature', data=arr)\n",
+    "    h5.dump()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4c629265-da4a-4f50-b887-f16aa3a385c8",
+   "metadata": {},
+   "source": [
+    "- add `xarry.Dataset`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "23d2c88c-8707-4ee0-938c-20eb90699ca6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ds = xr.Dataset({'foo': [1,2,3], 'bar': ('x', [1, 2]), 'baz': np.pi})\n",
+    "ds"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e167343f-12c2-400b-9c1f-c2b338758471",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "try:\n",
+    "    with h5tbx.H5File() as h5:\n",
+    "        h5.create_dataset_from_xarray_dataset(ds)\n",
+    "except h5tbx.errors.UnitsError as e:\n",
+    "    print(e)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "00ad35bc-dbfa-4da9-8c27-8f727e2555c5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ds.foo.attrs['units']='m'\n",
+    "ds.foo.attrs['long_name']='foo'\n",
+    "\n",
+    "ds.bar.attrs['units']='m'\n",
+    "ds.bar.attrs['long_name']='bar'\n",
+    "\n",
+    "ds.baz.attrs['units']='m'\n",
+    "ds.baz.attrs['long_name']='baz'\n",
+    "\n",
+    "ds"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "52b1701c-11bb-4b8f-aa26-d7a77e56b126",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_dataset_from_xarray_dataset(ds)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3c4808bb-63cb-4886-b2ea-4fd863238e48",
+   "metadata": {},
+   "source": [
+    "We may also create a dataset by using the `__setitem__`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a52f72b8-5cdc-4ce0-adfe-67ab83d650ef",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    h5['x'] = [1,2,3], 'm/s', {'long_name':'hallo'}\n",
+    "with h5tbx.H5File() as h5:\n",
+    "    h5['x'] = ([1,2,3], 'm/s', 'long_name', 'standard_name')\n",
+    "with h5tbx.H5File() as h5:\n",
+    "    h5['x'] = ([1,2,3], dict(units='m/s', long_name='long_name',\n",
+    "                             attrs={'hello': 'world'}, compression='gzip'))"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.13"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

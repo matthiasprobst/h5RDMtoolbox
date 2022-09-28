@@ -140,7 +140,7 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="h5wrapper/index.html">
+  <a class="reference internal" href="wrapper/index.html">
    H5wrapper
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
@@ -150,70 +150,65 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/CreateFile.html">
+    <a class="reference internal" href="wrapper/CreateFile.html">
      Create a HDF file
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/DatasetCreation.html">
+    <a class="reference internal" href="wrapper/DatasetCreation.html">
      Dataset creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/DatasetSlicing.html">
+    <a class="reference internal" href="wrapper/DatasetSlicing.html">
      Dataset slicing
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/GroupCreation.html">
+    <a class="reference internal" href="wrapper/GroupCreation.html">
      Group creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/FileExploration.html">
+    <a class="reference internal" href="wrapper/FileExploration.html">
      File exploration
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/NaturalNaming.html">
+    <a class="reference internal" href="wrapper/NaturalNaming.html">
      Natural Naming
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/Conventions.html">
+    <a class="reference internal" href="wrapper/Conventions.html">
      (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/SpecialIO.html">
+    <a class="reference internal" href="wrapper/SpecialIO.html">
      Special I/O
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/Visualization.html">
+    <a class="reference internal" href="wrapper/Visualization.html">
      Visualization
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/Extensions.html">
+    <a class="reference internal" href="wrapper/Extensions.html">
      Extensions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="h5wrapper/SpecializedWrappers.html">
+    <a class="reference internal" href="wrapper/SpecializedWrappers.html">
      Specialized Wrappers
     </a>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -222,34 +217,12 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="x2hdf/piv2hdf.html">
-     PIV to HDF5
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="x2hdf/cfx2hdf.html">
-     Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="h5database/Serverless.html">
+    <a class="reference internal" href="database/Serverless.html">
      Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="h5database/h5mongo.html">
+    <a class="reference internal" href="database/h5mongo.html">
      HDF5 + mongoDB
     </a>
    </li>
@@ -502,24 +475,23 @@ title="Print to PDF"
 <section id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">#</a></h1>
 <p>The HDF5 Research Data Management Toolbox (h5RDMtoolbox) supports the data creation, processing and sharing
-of data using the HDF5 file format while fulfilling the <a class="reference external" href="https://www.nature.com/articles/sdata201618">FAIR priciples</a>.</p>
+of data using the HDF5 file format pursuing the <a class="reference external" href="https://www.nature.com/articles/sdata201618">FAIR priciples</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This project is under current development!</p>
+<p>This project is under current development! The first stable release is expected for Oktober 2022.</p>
 </div>
 <dl class="simple">
-<dt>The packges comes with four sub-packages:</dt><dd><ul class="simple">
-<li><p><a class="reference internal" href="conventions/index.html"><span class="doc">Conventions</span></a>: Naming standards mostly for attributes in the HDF5 files</p></li>
-<li><p><a class="reference internal" href="h5wrapper/index.html"><span class="doc"> h5wrapper</span></a>: Interacting/working with HDF5 files including many useful features and user-defined methods including static and dynamic layout definition</p></li>
-<li><p><a class="reference internal" href="x2hdf/index.html"><span class="doc">x2hdf: Conversion of specifc data to HDF</span></a>: package facilitating conversion processes to meet the layout requirements defined in <cite>h5wrapperpy</cite></p></li>
-<li><p><a class="reference internal" href="h5database/index.html"><span class="doc">h5database</span></a>: Practical and easy searching in multiple HDF5 files</p></li>
+<dt>The packges comes with three sub-packages:</dt><dd><ul class="simple">
+<li><p><a class="reference internal" href="conventions/index.html"><span class="doc">convention</span></a>: Naming standards mostly for attributes in the HDF5 files</p></li>
+<li><p><a class="reference internal" href="wrapper/index.html"><span class="doc">wrapper</span></a>: Interacting/working with HDF5 files including many useful features and user-defined methods including static and dynamic layout definition</p></li>
+<li><p><a class="reference internal" href="database/index.html"><span class="doc">database</span></a>: Practical and easy searching in multiple HDF5 files</p></li>
 </ul>
 </dd>
 </dl>
-<a class="reference internal image-reference" href="_images/icon4_subpackages.svg"><img alt="Alternative text" class="align-center" src="_images/icon4_subpackages.svg" width="300" /></a>
+<a class="reference internal image-reference" href="_images/package_overview.svg"><img alt="Alternative text" class="align-center" src="_images/package_overview.svg" width="350" /></a>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">#</a></h2>
-<p>The repository requires python 3.8. or higher.</p>
+<p>The repository requires python 3.8. or higher (tested for 3.8 and 3.9).</p>
 <p>Install from source from github:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
 </pre></div>
@@ -530,11 +502,10 @@ python3.8 -m pip install h5RDMtoolbox/
 </pre></div>
 </div>
 <p>You may install optional dependencies:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[vtk]&quot;</span>  <span class="c1"># installs dependencies to convert datasets to vtk</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[tec]&quot;</span>  <span class="c1"># installs pytecplot to build tecplot-readable HDF5 files</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[piv]&quot;</span>  <span class="c1"># installs e.g. netCDF4 which isneeded to convt n files</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[cfd]&quot;</span>  <span class="c1"># installs dependencies needed by the cfd2hdf package</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[complete]&quot;</span>  <span class="c1"># installs all avbove plus dependencies for testing and documentation</span>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[mongodb]&quot;</span>  <span class="c1"># installs dependencies to use the database mongoDB</span>
+python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[test]&quot;</span>  <span class="c1"># installs dependencies for testing</span>
+python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[docs]&quot;</span>  <span class="c1"># installs dependencies needed to build this documentation</span>
+python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[complete]&quot;</span>  <span class="c1"># installs all above dependencies</span>
 </pre></div>
 </div>
 <div class="toctree-wrapper compound">

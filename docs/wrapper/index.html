@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>h5wrapper &#8212; h5RDMtoolbox  documentation</title>
+    <title>HDF5-Wrapper &#8212; h5RDMtoolbox  documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -201,11 +201,6 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
     <a class="reference internal" href="SpecializedWrappers.html">
      Specialized Wrappers
     </a>
@@ -213,8 +208,8 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="../database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -223,34 +218,12 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/piv2hdf.html">
-     PIV to HDF5
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
-     Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/Serverless.html">
+    <a class="reference internal" href="../database/Serverless.html">
      Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
+    <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
     </a>
    </li>
@@ -369,7 +342,7 @@ title="Source repository"
       </li>
       
       <li>
-        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fh5wrapper/index.html&body=Your%20issue%20content%20here."
+        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fwrapper/index.html&body=Your%20issue%20content%20here."
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -397,7 +370,7 @@ title="Open an issue"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/h5wrapper/index.rst.txt"
+        <a href="../_sources/wrapper/index.rst.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -446,7 +419,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1> h5wrapper</h1>
+                <h1> HDF5-Wrapper</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -458,8 +431,8 @@ title="Print to PDF"
                 
               <div>
                 
-  <section id="h5wrappericon-h5wrapper">
-<h1><a class="reference internal" href="../_images/icon_h5wrapper.svg"><img alt="" src="../_images/icon_h5wrapper.svg" width="30" /></a> h5wrapper<a class="headerlink" href="#h5wrappericon-h5wrapper" title="Permalink to this headline">#</a></h1>
+  <section id="h5wrappericon-hdf5-wrapper">
+<h1><a class="reference internal" href="../_images/icon_h5wrapper.svg"><img alt="" src="../_images/icon_h5wrapper.svg" width="30" /></a> HDF5-Wrapper<a class="headerlink" href="#h5wrappericon-hdf5-wrapper" title="Permalink to this headline">#</a></h1>
 <p>Motivated by sustainable research data management, the package <cite>h5wrapper</cite> aims to integrate meta conventions
 during the data generation, processing and anlysing process while facilitating and streamlinig the work at the same
 time.
@@ -471,13 +444,13 @@ jupyter notebooks walk you through the usage and features.</p>
 familiar to the <cite>h5py</cite> package will find all featues but will be enforced to provide e.g. certain attributes
 to fulfill the requirements of a certain meta convention.</p>
 </div>
-<p>The package <cite>h5wrapper</cite> adds additional functionalities to the core HDF5-interface, which is implemented in the
+<p>The package <cite>wrapper</cite> adds additional functionalities to the core HDF5-interface, which is implemented in the
 package <cite>h5py</cite> (<a class="reference external" href="https://docs.h5py.org/en/stable/">https://docs.h5py.org/en/stable/</a>). This is done by providing so-calle wrapper classes. They
 * facilitate and streamline the work with HDF5 files and
 * integrate meta-conventions and file-layout specifications.</p>
 <p>Besides high-level methods that enhances the usability, naming <cite>conventions</cite>, the usage of <cite>units</cite> and the defintion of so-called <cite>layouts</cite> are a core feature. They are motivated by the FAIR principles of sustainable data management.</p>
 <p>This notebook will guide through the high-level methods and the mentioned concepts.</p>
-<p>The package <cite>h5wrapper</cite> provides classes that ar inherited from the interface classes of <cite>h5py</cite>. They are
+<p>The package <cite>wrapper</cite> provides classes that ar inherited from the interface classes of <cite>h5py</cite>. They are
 wrapper-classes as they streamline the work with HDF5 files and provide additional functionality to them.</p>
 <p>Wrapper files enhances the usability of HDF5files by</p>
 <blockquote>

@@ -39,7 +39,7 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Special Attributes" href="SpecialAttributes.html" />
+    <link rel="next" title="Specialized Wrappers" href="SpecializedWrappers.html" />
     <link rel="prev" title="Visualization" href="Visualization.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -203,11 +203,6 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
     <a class="reference internal" href="SpecializedWrappers.html">
      Specialized Wrappers
     </a>
@@ -215,8 +210,8 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="../database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -225,34 +220,12 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/piv2hdf.html">
-     PIV to HDF5
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
-     Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/Serverless.html">
+    <a class="reference internal" href="../database/Serverless.html">
      Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
+    <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
     </a>
    </li>
@@ -371,7 +344,7 @@ title="Source repository"
       </li>
       
       <li>
-        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fh5wrapper/Extensions.html&body=Your%20issue%20content%20here."
+        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fwrapper/Extensions.html&body=Your%20issue%20content%20here."
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -399,7 +372,7 @@ title="Open an issue"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/h5wrapper/Extensions.ipynb.txt"
+        <a href="../_sources/wrapper/Extensions.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -821,21 +794,13 @@ div.rendered_html tbody tr:hover {
 <h3>Registration of properties<a class="headerlink" href="#Registration-of-properties" title="Permalink to this headline">#</a></h3>
 <p>To facilitate and speed up certain tasks and workflows, it might be usefull to have additional properties. Let’s assume we want to store a username as an attribute in the HDF5 file. Let’s further assume that a user name has a firstname and a surname and both must start with a capitalized letter. To catch possible errerneous input by the user, we would need an additional method, e.g. “set_username” or a property “username” of <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.<strong>Two</strong> possible ways to achieve this: <strong>inheritance or
 composition</strong>. The quick and recommended way to add a new class property is to use composition by “registering” the property. Like this we don’t have to rewrite (inherite at least) the API but only simply write the porperty class. Let’s first write a property class “username”. It needs <strong>three methods</strong>: <code class="docutils literal notranslate"><span class="pre">get</span></code>, <code class="docutils literal notranslate"><span class="pre">set</span></code> and <code class="docutils literal notranslate"><span class="pre">delete</span></code>:</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
-</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
@@ -844,7 +809,7 @@ tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
 
 <span class="c1"># register a property with setter and getter method:</span>
-<span class="nd">@h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">register_special_property</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">register_special_property</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">username</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;User Name Property. Requires name and ORCID&quot;&quot;&quot;</span>
 
@@ -1096,24 +1061,23 @@ input.h5tb-varname-in:checked + label:before {
     cursor: pointer;
 }</style></head>
 <p>tmp0.hdf</p>
-<p>Check resuted in 1 issues.</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-2815335000" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2815335000">
+                    <input id="group-ds-/-3025841500" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-3025841500">
                     /<span>(1)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.12</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.2.0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
                 </ul>
 
-                    <ul id="ds-1-/test-2816702300" class="h5tb-var-list">
-                    <input id="ds-2-/test-2816704900" class="h5tb-varname-in" type="checkbox">
+                    <ul id="ds-1-/test-3027424400" class="h5tb-var-list">
+                    <input id="ds-2-/test-3027427000" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname'
-                        for="ds-2-/test-2816704900">test</label>
+                        for="ds-2-/test-3027427000">test</label>
                     <span class="h5tb-dims">(2,)</span>  [
                     <span class="h5tb-unit">-</span>]
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
@@ -1135,7 +1099,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">register_special_dataset</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">register_special_dataset</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">DeviceProperty</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Device Accessor class&quot;&quot;&quot;</span>
 
@@ -1192,7 +1156,7 @@ my device
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyDataset</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyDataset</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="si">}</span><span class="s1">&#39;</span>
 
@@ -1208,7 +1172,7 @@ my device
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyGroup</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Group</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyGroup</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Group</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">get_all_datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;returns all datasets of this group&quot;&quot;&quot;</span>
@@ -1380,7 +1344,7 @@ __main__.MyDataset
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">register_special_dataset</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">h5wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">register_special_dataset</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">DeviceProperty</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Device Accessor class&quot;&quot;&quot;</span>
 
@@ -1416,10 +1380,10 @@ __main__.MyDataset
             <p class="prev-next-title">Visualization</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="SpecialAttributes.html" title="next page">
+    <a class='right-next' id="next-link" href="SpecializedWrappers.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Special Attributes</p>
+        <p class="prev-next-title">Specialized Wrappers</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

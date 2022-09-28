@@ -39,7 +39,7 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="h5wrapper" href="../h5wrapper/index.html" />
+    <link rel="next" title="HDF5-Wrapper" href="../wrapper/index.html" />
     <link rel="prev" title="Standard Name Convention" href="conventions.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -143,7 +143,7 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5wrapper/index.html">
+  <a class="reference internal" href="../wrapper/index.html">
    H5wrapper
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
@@ -153,70 +153,65 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/CreateFile.html">
+    <a class="reference internal" href="../wrapper/CreateFile.html">
      Create a HDF file
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/DatasetCreation.html">
+    <a class="reference internal" href="../wrapper/DatasetCreation.html">
      Dataset creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/DatasetSlicing.html">
+    <a class="reference internal" href="../wrapper/DatasetSlicing.html">
      Dataset slicing
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/GroupCreation.html">
+    <a class="reference internal" href="../wrapper/GroupCreation.html">
      Group creation
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/FileExploration.html">
+    <a class="reference internal" href="../wrapper/FileExploration.html">
      File exploration
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/NaturalNaming.html">
+    <a class="reference internal" href="../wrapper/NaturalNaming.html">
      Natural Naming
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Conventions.html">
+    <a class="reference internal" href="../wrapper/Conventions.html">
      (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecialIO.html">
+    <a class="reference internal" href="../wrapper/SpecialIO.html">
      Special I/O
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Visualization.html">
+    <a class="reference internal" href="../wrapper/Visualization.html">
      Visualization
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/Extensions.html">
+    <a class="reference internal" href="../wrapper/Extensions.html">
      Extensions
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecialAttributes.html">
-     Special Attributes
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5wrapper/SpecializedWrappers.html">
+    <a class="reference internal" href="../wrapper/SpecializedWrappers.html">
      Specialized Wrappers
     </a>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../x2hdf/index.html">
-   x2hdf
+  <a class="reference internal" href="../database/index.html">
+   H5Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -225,34 +220,12 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/piv2hdf.html">
-     PIV to HDF5
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../x2hdf/cfx2hdf.html">
-     Ansys CFX to HDF
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../h5database/index.html">
-   H5Database
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/Serverless.html">
+    <a class="reference internal" href="../database/Serverless.html">
      Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../h5database/h5mongo.html">
+    <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
     </a>
    </li>
@@ -802,13 +775,13 @@ div.rendered_html tbody tr:hover {
 <p>A Layout in the context of this package describes the required tree-structure and multiple meta information of an HDF5 file. What and how exactly can be defined via a layout is outlined in <a class="reference external" href="#Write-an-individual-layout">a later section.</a></p>
 <p>A layout essentially is a HDF itself and is used in combination with a another HDF5 file, e.g. one that contains measurement data. Specialized “wrapper-HDF files” in this package such as <code class="docutils literal notranslate"><span class="pre">H5File</span></code> or <code class="docutils literal notranslate"><span class="pre">H5PIV</span></code> come already with a pre-defined layout, which is already associated with it</p>
 <p>The idea behind defining layouts is, that the data generation process is supervised. This means, that a <em>check</em> can be performed by the user filling the HDF5 file with data using the provided layout file. This in turn will lead to no suprises or inconsitencies when exchanging the file with other as everybody involved agreed on the respected layout. Optimally, this will save a lot of tie and costs.</p>
-<p>There are two way to work with layouts: 1. Via raw python 2. Via the shell</p>
+<p>There are two ways to work with layouts: 1. Via raw python 2. Via the shell</p>
 <p>Using the shell is recommended for quick checks and to get an overview. Let’s first do that and find out which layouts are already provided by the package:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout -l
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout --list-registered
 </pre></div>
 </div>
 </div>
@@ -817,33 +790,28 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
+@ C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\layouts:
+ &gt; H5File
+ &gt; H5Flow
+ &gt; H5PIV
 </pre></div></div>
 </div>
 <p>If you created a layout or got a layout file from another person and want to register it in the package so you can access and use it from everywhere on your machine, register it via:</p>
-<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>h5tb layout -r <span class="p">&lt;</span>hdf_filenam.hdf&gt;
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>h5tbx layout -r <span class="p">&lt;</span>hdf_filenam.hdf&gt;
 </pre></div>
 </div>
 <p>Find out more about what the command line interface can do by printing out the help:</p>
-<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>h5tb layout -h
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>h5tbx layout -h
 </pre></div>
 </div>
 <p>Now let’s head back to raw python and discuss how to generate a layout and apply checks:</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
-</pre></div></div>
 </div>
 <p>If a <code class="docutils literal notranslate"><span class="pre">H5File</span></code> (or a subclass of it) is already associated with a layout, we can call the <code class="docutils literal notranslate"><span class="pre">layout</span></code>-property (We saw above that a layout for H5File indeed is registered aleady):</p>
 <div class="nbinput docutils container">
@@ -861,7 +829,7 @@ tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;H5FileLayout with 1 issues&gt;
+&lt;H5FileLayout with 0 issues&gt;
 </pre></div></div>
 </div>
 <p>As can be seen, the file has one issue. To see which issues were found, call <code class="docutils literal notranslate"><span class="pre">report()</span></code>. In the example, the root-attribute “title” was missing:</p>
@@ -878,9 +846,8 @@ tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp110
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-H5FileLayout issue report (1 issues)
+H5FileLayout issue report (0 issues)
 -------------------
-/.title: -&gt; missing
 </pre></div></div>
 </div>
 <p>As said in the introduction, a <code class="docutils literal notranslate"><span class="pre">layout</span></code> is a HDF file itself, it has similar features like wrapper files, e.g. we can get a nice html representation of the content. Like this we can see what is required to have in any file written with <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.</p>
@@ -1103,8 +1070,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-4652164800" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-4652164800">
+                    <input id="group-ds-/-4635876400" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-4635876400">
                     /<span>(0)</span></label>
 
 
@@ -1128,17 +1095,26 @@ input.h5tb-varname-in:checked + label:before {
     <span class="k">pass</span>
 
 <span class="c1">#open with h5tbx and perform a check:</span>
-<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s1">&#39;H5File&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;run check&#39;</span><span class="p">)</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">run check again - different call&#39;</span><span class="p">)</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">],</span> <span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">])</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">repr of layout:&#39;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">layout</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-09-28_18:20:54,309 ERROR    [layout.py:94] Attribute title missing in group /
+2022-09-28_18:20:54,310 ERROR    [layout.py:94] Attribute title missing in group /
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -1146,10 +1122,8 @@ input.h5tb-varname-in:checked + label:before {
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 run check
-Attribute title missing in group /
 
 run check again - different call
-Attribute title missing in group /
 
 repr of layout:
 &lt;H5FileLayout with 1 issues&gt;
@@ -1167,9 +1141,10 @@ repr of layout:
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-tmp: C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp111
+usage: h5tbx [-h] [-V] [-D] [-u] [-d DUMP] {layout,standard_name,mongodb} ...
+h5tbx: error: unrecognized arguments: -s H5File
 </pre></div></div>
 </div>
 </section>
@@ -1407,8 +1382,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-7571952700" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-7571952700">
+                    <input id="group-ds-/-6586805300" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-6586805300">
                     /<span>(0)</span></label>
 
 
@@ -1434,6 +1409,14 @@ input.h5tb-varname-in:checked + label:before {
 <span class="n">mylayout</span><span class="o">.</span><span class="n">report</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-09-28_18:20:56,259 ERROR    [layout.py:94] Attribute type missing in group /
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -1494,6 +1477,17 @@ H5FileLayout issue report (1 issues)
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-09-28_18:20:56,304 ERROR    [layout.py:31] Wrong shape of dataset /data: (20, 30) != (20, 32)
+2022-09-28_18:20:56,304 ERROR    [layout.py:77] Neither of the attribute standard_name, long_name exist in /data
+2022-09-28_18:20:56,306 ERROR    [layout.py:68] Base-units check failed for /data: kg != m
+2022-09-28_18:20:56,308 ERROR    [layout.py:71] Attribute units missing in /x
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
@@ -1530,10 +1524,10 @@ H5FileLayout issue report (4 issues)
             <p class="prev-next-title">Standard Name Convention</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="../h5wrapper/index.html" title="next page">
+    <a class='right-next' id="next-link" href="../wrapper/index.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title"> h5wrapper</p>
+        <p class="prev-next-title"> HDF5-Wrapper</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

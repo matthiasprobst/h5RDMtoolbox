@@ -1,0 +1,401 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "91c4ae4d-2b0e-4de5-b759-4c9fc9d072b1",
+   "metadata": {},
+   "source": [
+    "# Extensions\n",
+    "\n",
+    "The wrapper class functionalities can be extended using composition or inheritance.\n",
+    "\n",
+    "## Composition\n",
+    "\n",
+    "The concept of composition adds a component to a composite class. The relationship is such, that the composite class does not know the component class but wise versa. This allows to add additional functionality without changing the original code. Adding components to an existing wrapper class will be called \"registering\" here.\n",
+    "\n",
+    "### Registration of properties\n",
+    "To facilitate and speed up certain tasks and workflows, it might be usefull to have additional properties. Let's assume we want to store a username as an attribute in the HDF5 file. Let's further assume that a user name has a firstname and a surname and both must start with a capitalized letter. To catch possible errerneous input by the user, we would need an additional method, e.g. \"set_username\" or a property \"username\" of `H5File`.<br>**Two** possible ways to achieve this: **inheritance or composition**. The quick and recommended way to add a new class property is to use composition by \"registering\" the property. Like this we don't have to rewrite (inherite at least) the API but only simply write the porperty class.<br>\n",
+    "Let's first write a property class \"username\". It needs **three methods**: `get`, `set` and `delete`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a1cbc998-a747-4370-b362-d04c4d6508be",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import h5rdmtoolbox as h5tbx"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "98270fc1-d0d1-4d46-99d0-76691da2ad64",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from typing import Tuple\n",
+    "\n",
+    "# register a property with setter and getter method:\n",
+    "@h5tbx.wrapper.register_special_property(h5tbx.wrapper.h5file.H5Dataset, overwrite=True)\n",
+    "class username:\n",
+    "    \"\"\"User Name Property. Requires name and ORCID\"\"\"\n",
+    "\n",
+    "    def set(self, user_name_data: Tuple[str, str]):\n",
+    "        \"\"\"setter method\"\"\"\n",
+    "        if not isinstance(user_name_data, (tuple, list)):\n",
+    "            raise ValueError(f'Expecting a tuple of name and orcid but got {type(user_name_data)}')\n",
+    "        if not len(user_name_data) == 2:\n",
+    "            raise ValueError(f'Expecting two entries (name and orcid) but got {len(user_name_data)}: {user_name_data}')\n",
+    "        self.attrs['user_name'] = user_name_data[0]\n",
+    "        self.attrs['user_orcid'] = user_name_data[1]\n",
+    "\n",
+    "    def get(self):\n",
+    "        \"\"\"getter method\"\"\"\n",
+    "        return self.attrs['user_name'], self.attrs['user_orcid']"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fc6fe738-3acc-47c4-860a-19d4de3d4d65",
+   "metadata": {},
+   "source": [
+    "Some words about above lines:\n",
+    "- `@h5tbx.wrapper.register_special_property(h5tbx.H5File)`: registering the below class (only) to the class `H5File`\n",
+    "- don't use existing property names. An error will be raised anyhow. You may however pass `overwrite=True` in the registration method. Be careful though!\n",
+    "- provide `set` and optionally also `get` and `delete`. The method `get` makes sense though, while `delete` is not really needed most of the times.\n",
+    "\n",
+    "Let's check if it worked out:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f1723f32-2916-431f-af6b-5b96cc6e9526",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    ds = h5.create_dataset('test', shape=(2,), units='', standard_name='standard_test')    \n",
+    "    ds.username = 'First User', '0000-0001-8729-0482'\n",
+    "    print(ds.username)\n",
+    "    try:\n",
+    "        ds.username = 'Second User'\n",
+    "    except ValueError as e :\n",
+    "        print(e)\n",
+    "    print(ds.username)\n",
+    "    h5.dump()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b7730172-11e8-47f0-93b1-9bc47aa0e1dd",
+   "metadata": {},
+   "source": [
+    "### Registration of datasets\n",
+    "We can also \"register\" dataset accessors. In the following example we add \"device\" as a \"property with methods\". So \"device\" seems to be a property which has a method \"add\". Such an implementation faclitates the interaction with HDF data, too. Note, that this \"property-like\" accessor is available for all `H5Dataset` objects from know on in this session:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "41f5c2c1-7de5-4e1c-b44e-4d350328f7ef",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "@h5tbx.wrapper.register_special_dataset('device', h5tbx.wrapper.h5file.H5Dataset, overwrite=True)\n",
+    "class DeviceProperty:\n",
+    "    \"\"\"Device Accessor class\"\"\"\n",
+    "\n",
+    "    def __init__(self, ds):\n",
+    "        self._ds = ds\n",
+    "        self._device_name = 'NoDeviceName'\n",
+    "        \n",
+    "    def add(self, new_device_name):\n",
+    "        \"\"\"adds the attribute device_name to the dataset\"\"\"\n",
+    "        self._ds.attrs['device_name'] = new_device_name\n",
+    "        \n",
+    "    @property\n",
+    "    def name(self):\n",
+    "        return self._ds.attrs['device_name']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2af29af0-aa80-4887-bd6f-8c93d719f2e8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5File() as h5:\n",
+    "    ds = h5.create_dataset('test', shape=(2,), units='', standard_name='standard_test')\n",
+    "    ds.device.add('my device')\n",
+    "    print(ds.device.name)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b144ceb1-f9e0-4a24-943a-004aa917e829",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "## Inheritance \n",
+    "\n",
+    "### New Wrapper Class\n",
+    "\n",
+    "The main wrapper class around a HDF5 file in this package is `H5File` which uses the wrapper class `H5Group` for `h5py.Group` and `H5Dataset` for wrapping `h5py.Dataset`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2a9e583e-b5a9-4c41-9f44-37be82808b46",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import h5rdmtoolbox as h5tbx\n",
+    "import h5py"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "238bccd4-b623-42e0-b4e7-5bb8cd61e42f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class MyDataset(h5tbx.wrapper.h5file.H5Dataset):\n",
+    "    def __repr__(self):\n",
+    "        return f'{self.name}\\n{self.attrs}'\n",
+    "    \n",
+    "    @property\n",
+    "    def is_2d(self):\n",
+    "        \"\"\"returns whether dataset is two-dimensional or not\"\"\"\n",
+    "        return self.ndim == 2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "02178fd3-2319-4382-941d-487545b77721",
+   "metadata": {},
+   "source": [
+    "Next we create a group class with a special method, hat returns all datasets of that group. Also the `create_dataset` method is overwritten. Take care to return `MyDataset` at the end of the method, otherwise dataset class of the parent class is taken."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ae1b660a-c370-4e29-9467-64d1272a3daa",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class MyGroup(h5tbx.wrapper.h5file.H5Group):\n",
+    "    \n",
+    "    def get_all_datasets(self):\n",
+    "        \"\"\"returns all datasets of this group\"\"\"\n",
+    "        return [k for k in self if isinstance(self[k], h5py.Dataset)]\n",
+    "    \n",
+    "    def create_group(self, *args, **kwargs):\n",
+    "        return __class__(super().create_group(*args, **kwargs).id)\n",
+    "    \n",
+    "    # def create_dataset(self, *args, **kwargs):\n",
+    "    #     return __class__(super().create_dataset(*args, **kwargs).id)\n",
+    "    \n",
+    "    def create_dataset(self, name, user, *args, **kwargs):\n",
+    "        ds = super().create_dataset(name, *args, **kwargs)\n",
+    "        ds.attrs.modify('user', user)\n",
+    "        return self._h5ds(ds.id)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "09e135e0-ce76-4c77-90eb-8ec7fe811f40",
+   "metadata": {},
+   "source": [
+    "The main file wrapper inherites from `H5File` (\"root\" parent was `h5py.File`) and the new group class. Next, we have set the group and dataset class again, since some methods in the file wrapper class will need that information when returning instances of those classes (e.g. dataset or group creation). Finally we define a new method which sets the user name to the root attributes:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "21bcc1fe-1fbc-49f8-942f-14b7b87f08bf",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class MyWrapper(h5tbx.H5File, MyGroup):\n",
+    "    \n",
+    "    def set_user(self, user_name):\n",
+    "        self.attrs.modify('user', user_name)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f764f4ba-2339-41d6-b57a-b6e2197e24e1",
+   "metadata": {},
+   "source": [
+    "register the dataset and group class in all classes. This is needed, so all return objects are of the newly defined types"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "bb4c50eb-4cf7-4a26-8b88-0c2185c681fb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "MyGroup._h5ds = MyDataset\n",
+    "MyGroup._h5grp = MyGroup\n",
+    "\n",
+    "MyDataset._h5ds = MyDataset\n",
+    "MyDataset._h5grp = MyGroup"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "bc3a2495-9167-4d4d-8c45-6280a5951b36",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "h5 = MyWrapper()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b3b00f9f-5801-4c3e-b92a-db12d883b8cf",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "type(h5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7d729bbe-89eb-46af-8cee-d46e700356a5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "g = h5.create_group('grp', overwrite=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "70fe8adc-884e-48ed-aed2-98092654befc",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "type(g)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c94cf1b1-6d2b-4aeb-8bfd-6fd3ad453ec8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "gg = g.create_group('grp', overwrite=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0d95e9ab-2b86-4041-8b58-aab672df3ed3",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "type(gg)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ff52f8fe-f255-4fcb-a5cf-af54f97597e1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ds = gg.create_dataset('hello', user='test user', shape=(2,3), units='', long_name='a long name', overwrite=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ed1414f5-9d42-4997-87d5-6e701afa615d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ds"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c84d0e04-07cf-4f9a-b65c-e6d58fb8c17a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "type(ds)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f45aec6e-0afe-41d6-bd1b-b06c9cac14de",
+   "metadata": {},
+   "source": [
+    "## Accessors"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "74f6c450-2f36-44a9-89fc-1f6f348580d4",
+   "metadata": {
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "@h5tbx.wrapper.register_special_dataset('device', h5tbx.wrapper.h5file.H5Dataset, overwrite=True)\n",
+    "class DeviceProperty:\n",
+    "    \"\"\"Device Accessor class\"\"\"\n",
+    "\n",
+    "    def __init__(self, ds):\n",
+    "        self._ds = ds\n",
+    "        self._device_name = 'NoDeviceName'\n",
+    "        \n",
+    "    def add(self, new_device_name):\n",
+    "        \"\"\"adds the attribute device_name to the dataset\"\"\"\n",
+    "        self._ds.attrs['device_name'] = new_device_name\n",
+    "        \n",
+    "    @property\n",
+    "    def name(self):\n",
+    "        return self._ds.attrs['device_name']"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.13"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

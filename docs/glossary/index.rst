@@ -14,10 +14,11 @@ Glossary
     long_name
         A human-readable string. Attribute of a dataset. Must be given if **standard_name** is not set.
 
-    Standardized name table
-        A XML document, with tablular content, which contains the standard name and (at least) a description and a
-        canonical unit for a it. The respective python class `StandardizedNameTable` is linked to an HDF5 file and
-        can performe consistensy checks (checks syntax, name and unit).
+    Standard Name table
+        Tablular content, which contains the standard name and (at least) a description and a
+        canonical unit for a it. The respective python class `StandardNameTable` is linked to an HDF5 file and
+        can performe consistensy checks (checks syntax, name and unit). A table as a file may be a XML document
+        or a YAML file.
 
     standard_name
         A string respecting more or less strict rules defined by a community and defined in a name table.
