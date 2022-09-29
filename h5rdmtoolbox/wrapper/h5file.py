@@ -102,26 +102,55 @@ class WrapperAttributeManager(h5py.AttributeManager):
         self._parent = parent
         # self.identifier_convention = identifier_convention  # standard_name_convention
 
-    def find_one(self, name, value=None, rec=True, h5type=None) -> Union[h5py.Group, h5py.Dataset]:
-        """Search for one (!) attribute with name `name`.
-        If `value` not None, then value is verified for
-        the found value. First match is returend. Recursive
-        search is enabled by default. With h5type the search
-        can be limited to dataset or groups only. Default
-        is to search in both objects."""
-        from ..database.files import find_attributes
-        return find_attributes(self._parent, name, value, rec, h5type, find_one=True)
+    def find_one(self, flt: Union[Dict, str],
+                 objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+                 rec: bool = True):
+        """See find()"""
+        from ..database import filequery
+        if isinstance(objfilter, str):
+            if objfilter.lower() == 'group':
+                objfilter = h5py.Group
+            elif objfilter.lower() == 'dataset':
+                objfilter = h5py.Dataset
+            elif objfilter.lower() == '$group':
+                objfilter = h5py.Group
+            elif objfilter.lower() == '$dataset':
+                objfilter = h5py.Dataset
+            else:
+                raise NameError(f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+        return filequery.find(self, flt, objfilter, recursive=rec, find_one=True)
 
-    def find(self, name, value=None, rec=True, h5type=None) -> List[Union[h5py.Group, h5py.Dataset]]:
-        """Search for attributes (multiple!) with name `name`.
-        If `value` not None, then value is verified for
-        the found value. First match is returend. Recursive
-        search is enabled by default. With h5type the search
-        can be limited to dataset or groups only. Default
-        is to search in both objects."""
-        from ..database.files import find_attributes
-        return find_attributes(self._parent, name, value, rec, h5type, find_one=False)
-        
+    def distinct(self, key, objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None) -> List:
+        """Find a distinct key"""
+        from ..database.filequery import distinct
+        objfilter = utils._process_obj_filter_input(objfilter)
+        return distinct(self, key, objfilter)
+
+    def find(self, flt: Union[Dict, str],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             rec: bool = True):
+        """
+        Examples for filter parameters:
+        filter = {'long_name': 'any objects long name'} --> searches in attribtues only
+        filter = {'$name': 'name'}  --> searches in goups and datasets for the (path)name
+        filter = {'basename': 'name'}  --> searches in goups and datasets for the basename (without path)
+        filter = {'standard_name': {'$regex': '^x_'} --> searches for attribtues "standard_name" starting with 'x_'
+
+        Parameters
+        ----------
+        flt: Dict
+            Filter request
+        rec: bool, optional
+            Recursive search. Default is True
+
+        Returns
+        -------
+        h5obj: h5py.Dataset or h5py.Group
+        """
+        from ..database import filequery
+        objfilter = utils._process_obj_filter_input(objfilter)
+        return filequery.find(self, flt, objfilter, recursive=rec, find_one=False)
+
     @with_phil
     def __getitem__(self, name):
         # if name in self.__dict__:
@@ -1076,7 +1105,7 @@ class H5Group(h5py.Group):
 
     def distinct(self, key, objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None) -> List:
         """Find a distinct key"""
-        from ..h5database.filequery import distinct
+        from ..database.filequery import distinct
         objfilter = utils._process_obj_filter_input(objfilter)
         return distinct(self, key, objfilter)
 

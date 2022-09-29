@@ -4,7 +4,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.database import H5Files
 
 
-class TestFileQuery(unittest.TestCase):
+class TestH5Files(unittest.TestCase):
 
     def test_H5Files(self):
         fnames = []
@@ -17,11 +17,11 @@ class TestFileQuery(unittest.TestCase):
                 fnames.append(h52.filename)
 
                 with H5Files(fnames) as h5s:
-                    res = h5s.find({'$basename': 'ds'})
+                    res = h5s.find({'$dataset': {'$basename': 'ds'}})
                     self.assertEqual([h51.ds, h52.ds], res)
                     self.assertEqual(res[0].long_name[-1], '1')
                     self.assertEqual(res[1].long_name[-1], '2')
-                    res = h5s.find_one({'$basename': 'ds'})
+                    res = h5s.find_one({'$dataset': {'$basename': 'ds'}})
                     self.assertEqual(h51.ds, res)
 
     def test_getitem(self):

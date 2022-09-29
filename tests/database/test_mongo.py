@@ -73,7 +73,7 @@ class TestH5Mongo(unittest.TestCase):
 
             with h5tbx.H5File(filenames[0]) as h5:
                 tree = h5.get_tree_structure(True)
-            self.collection.insert_one(mongo.make_dict_mongo_compatible(tree))
+            self.collection.insert_one(make_dict_mongo_compatible(tree))
 
     def test_insert_dataset(self):
         if self.mongodb_running:
@@ -85,7 +85,7 @@ class TestH5Mongo(unittest.TestCase):
                 h5.create_dataset('index', data=np.arange(0, 4, 1), dtype=int,
                                   units='', long_name='index', make_scale=True)
                 h5.create_dataset('index2', data=np.arange(0, 4, 1), dtype=int,
-                                  units='', standard_name='standard_index', make_scale=True)
+                                  units='', long_name='index', make_scale=True)
                 h5.create_dataset('index3', data=np.arange(0, 4, 1), dtype=int,
                                   units='', long_name='index', make_scale=False)
                 h5.create_dataset('images', data=np.random.random((4, 11, 21)),
@@ -94,10 +94,9 @@ class TestH5Mongo(unittest.TestCase):
                                   attach_scales=([h5['index'], h5['index2']], None, None))
                 h5['images'].attrs['COORDINATES'] = ['/z', ]
 
-                h5.images.mongo.insert(axis=0, collection=self.collection, use_standard_names_for_dimscales=True)
+                h5.images.mongo.insert(axis=0, collection=self.collection)
 
             res = self.collection.find()
-            self.assertTrue('standard_index' in self.collection.find_one())
 
             now = datetime.datetime.utcnow()
 
@@ -186,26 +185,3 @@ class TestH5Mongo(unittest.TestCase):
             now = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
             for r in self.collection.find({}):
                 self.assertTrue((now - r['file_creation_time']).total_seconds() < 20)
-
-    def test_found(self):
-        with h5tbx.H5File() as h5:
-            g = h5.create_group('/grp/subgrp/name1')
-            ds1 = h5.create_dataset('ds1', shape=(10, 2), units='', long_name='long1')
-            ds2 = h5.create_dataset('ds2', shape=(10, 2), units='', long_name='long1')
-            dsg2 = h5.create_group('g2', long_name='long1')
-            g.attrs['testuser'] = 'me'
-            g.attrs['num'] = 10.2
-            h5.attrs['num'] = .2
-
-            self.assertEqual([ds1, ], h5.find({'long_name': 'long1', '$basename': 'ds1'}))
-            self.assertEqual([h5['ds2'], h5['ds1']],
-                             h5.find({'long_name': 'long1'}, objfilter='dataset'))
-            self.assertEqual([h5['g2']],
-                             h5.find({'long_name': 'long1'}, objfilter='group'))
-
-            self.assertEqual(h5.find_one({'$name': '/grp/subgrp'}), h5['/grp/subgrp/'])
-            self.assertEqual(h5.find_one({'num': {'$lte': .2}}), h5)
-            #
-            self.assertEqual(h5.find({'testuser': 'me2'}), [])
-            self.assertEqual(h5.find({'testuser': 'me'}), [g])
-            self.assertEqual(h5.find({'$name': '/grp/subgrp'}), [h5['/grp/subgrp/'], ])
