@@ -1,7 +1,7 @@
 import os
 import pathlib
 import shutil
-from typing import Tuple, List
+from typing import List
 
 import numpy as np
 import xarray as xr
@@ -9,7 +9,6 @@ import xarray as xr
 from h5rdmtoolbox import H5File
 from ._user import testdir
 from .utils import generate_temporary_directory, generate_temporary_filename
-
 
 
 def get_xr_dataset(name):
@@ -167,9 +166,9 @@ def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
         with H5PIV(piv_challenge1_E_hdf_fname, 'r+') as h5:
             from h5rdmtoolbox.conventions.standard_attributes.software import Software
             h5.software = Software(name='PIVview',
-                                         version='3.8.6',
-                                         url='www.pivtec.com/pivview.html',
-                                         description='PIV processing software')
+                                   version='3.8.6',
+                                   url='www.pivtec.com/pivview.html',
+                                   description='PIV processing software')
         tmp_fname = shutil.copy2(piv_challenge1_E_hdf_fname, generate_temporary_filename(suffix='.hdf'))
         return H5PIV(tmp_fname, mode=mode)
     else:
