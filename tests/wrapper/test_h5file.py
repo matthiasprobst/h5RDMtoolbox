@@ -130,7 +130,6 @@ class TestH5File(unittest.TestCase):
             ds = other.create_dataset('u', shape=1)
             lay.check(other)
         self.assertEqual(lay.n_issues, 0)
-
         with h5py.File(self.other_filename, 'w') as other:
             ds = other.create_dataset('plane0/u', shape=1)
             lay.check(other)
@@ -301,38 +300,53 @@ class TestH5File(unittest.TestCase):
 
     def test_attrs_find(self):
         with H5File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['/grp_1'],
-                             h5.find_one({'$group': {'$regex': 'grp_[0-9]'}}))
-            self.assertListEqual([h5['/grp_1'], h5['/grp_2'], h5['/grp_3']],
-                                 h5.find({'$group': {'$regex': 'grp_[0-9]'}}))
-            self.assertListEqual([h5['/ds1'], h5['/ds2'], ],
-                                 h5.find({'$dataset': {'$regex': 'ds[0-9]'}}))
-            self.assertEqual(h5['/ds'], h5.find_one({'one': 1}))
-            self.assertEqual([h5['/ds'], h5['grp_1']], h5.find({'one': 1}))
+            self.assertEqual(h5['/grp_1'], h5.find_one({'$basename': {'$regex': 'grp_[0-9]'}},
+                                                       objfilter='group'))
+            self.assertIn(h5['/grp_1'], h5.find({'$basename': {'$regex': 'grp_[0-9]'}}, objfilter='group'))
+            self.assertIn(h5['/grp_2'], h5.find({'$basename': {'$regex': 'grp_[0-9]'}}, objfilter='group'))
+            self.assertIn(h5['/grp_3'], h5.find({'$basename': {'$regex': 'grp_[0-9]'}}, objfilter='group'))
+            self.assertIn(h5['/ds1'], h5.find({'$basename': {'$regex': 'ds[0-9]'}}, objfilter='dataset'))
+            self.assertIn(h5['/ds2'], h5.find({'$basename': {'$regex': 'ds[0-9]'}}, objfilter='dataset'))
+            self.assertEqual(h5['/'], h5.find_one({'one': 1}))
+            self.assertIn(h5['/'], h5.find({'one': 1}))
+            self.assertIn(h5['/ds'], h5.find({'one': 1}))
+            self.assertIn(h5['/grp_1'], h5.find({'one': 1}))
             self.assertListEqual([], h5.find({'one': {'$gt': 1}}))
-            self.assertListEqual([h5['ds'], h5['grp_1']], h5.find({'one': {'$gte': 1}}))
+            self.assertIn(h5['/'], h5.find({'one': {'$gte': 1}}))
+            self.assertIn(h5['/'], h5.find({'one': {'$gte': 1}}))
+            self.assertIn(h5['/'], h5.find({'one': {'$gte': 1}}))
+
+    def test_destinct(self):
+        with H5File() as h5:
+            h5.attrs['a'] = 1
+            h5.attrs['long_name'] = 'root long name'
+            h5.create_dataset('ds1', shape=(2, 3), units='', long_name='longname', attrs=dict(a=1))
+            h5.create_dataset('ds2', shape=(2, 3), units='', long_name='longname', attrs=dict(a=2))
+            h5.create_dataset('ds3', shape=(2, 4, 5), units='', long_name='longname', attrs=dict(a=3))
+            self.assertEqual(h5.distinct('a'), [1, 2, 3])
+            self.assertEqual(sorted(h5.distinct('long_name')), ['longname', 'root long name'])
+            self.assertEqual(sorted(h5.distinct('$long_name')), ['longname', 'root long name'])
+            self.assertEqual(h5.distinct('long_name', 'group'), ['root long name'])
+            self.assertEqual(h5.distinct('$shape'), [(2, 3), (2, 4, 5)])
+            self.assertEqual(h5.distinct('$ndim'), [2, 3])
+            self.assertEqual(sorted(h5.distinct('$basename')), ['', 'ds1', 'ds2', 'ds3'])
 
     def test_find_group_data(self):
         with H5File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['grp_1'], h5.find_one({'$group': 'grp_1'}))
-            self.assertEqual([h5['grp_1'], ], h5.find({'$group': 'grp_1'}))
-            self.assertEqual(h5['grp_2'], h5.find_one({'$group': {'$basename': 'grp_2'}}))
-            self.assertEqual([h5['grp_2'], ], h5.find({'$group': {'$basename': 'grp_2'}}))
-            with self.assertRaises(RuntimeError):
-                self.assertEqual(h5['grp_2'], h5.find_one({'$group': {'$shape': (2,)}}))
-            with self.assertRaises(RuntimeError):
-                self.assertEqual(h5['grp_2'], h5.find_one({'$group': {'$ndim': 2}}))
+            self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}))
+            self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}))
 
     def test_find_dataset_data(self):
         with H5File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': 'ds'}))
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': {'$basename': 'ds'}}))
-            self.assertEqual([h5['ds'], ], h5.find({'$dataset': 'ds'}))
-            self.assertEqual([h5['ds'], ], h5.find({'$dataset': {'$shape': (4,)}}))
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': {'$shape': (4,)}}))
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': {'$ndim': 1}}))
-            self.assertEqual([h5['ds'], h5['ds1'], h5['ds2'], h5['dsY']],
-                             h5.find({'$dataset': {'$ndim': 1}}))
+            self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}))
+            self.assertEqual([h5['ds'], ], h5.find({'$basename': 'ds'}))
+            self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}))
+            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}))
+            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}))
+            self.assertIn(h5['ds'], h5.find({'$ndim': 1}))
+            self.assertIn(h5['ds1'], h5.find({'$ndim': 1}))
+            self.assertIn(h5['ds2'], h5.find({'$ndim': 1}))
+            self.assertIn(h5['dsY'], h5.find({'$ndim': 1}))
 
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):
@@ -347,6 +361,14 @@ class TestH5File(unittest.TestCase):
         h5.open('r+')
         self.assertEqual(h5.mode, 'r+')
         h5.close()
+
+    def test_create_external_link(self):
+        with H5File() as h5:
+            h5.create_dataset('ds1', shape=(2, 3), units='', long_name='long')
+            fname1 = h5.hdf_filename
+        with H5File() as h5:
+            h5.create_external_link('ds1', fname1, '/ds1')
+            self.assertIsInstance(h5['ds1'], H5Dataset)
 
     def test_create_group(self):
         with H5File() as h5:
@@ -386,11 +408,6 @@ class TestH5File(unittest.TestCase):
             tree = h5.get_tree_structure()
             # from pprint import pprint
             # pprint(tree)
-
-    def tearDown(self) -> None:
-        for fname in Path(__file__).parent.glob('*'):
-            if fname.suffix not in ('py', '.py', ''):
-                fname.unlink()
 
     def test_rootparent(self):
         with H5File(mode='w') as h5:

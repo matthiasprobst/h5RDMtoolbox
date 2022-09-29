@@ -107,7 +107,7 @@ class TestH5Mongo(unittest.TestCase):
                             'filename', 'path', 'shape', 'ndim', 'slice', 'index', 'index2', 'z', 'long_name', 'units'):
                         self.assertIn(k, r.keys())
 
-                self.assertTrue((now - r['file_creation_time']).total_seconds() < 0.1)
+                self.assertTrue((now - r['file_creation_time']).total_seconds() < 1)
 
             self.collection.drop()
             with H5File(hdf_filename) as h5:
