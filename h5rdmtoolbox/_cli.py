@@ -65,7 +65,6 @@ def main():
                                  required=False,
                                  default=None,
                                  help='Filename to run check on.')
-                                 
     # MONGODB
     sp_mongo = subparsers.add_parser('mongodb', help='mongodb menu')
     sp_mongo.set_defaults(cmd='mongodb')
@@ -210,3 +209,4 @@ def main():
                 hdf_filename = pathlib.Path(args.register)
                 h5lay = H5Layout(hdf_filename)
                 h5lay.register()
+                

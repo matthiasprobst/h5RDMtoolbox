@@ -16,8 +16,6 @@ def set_loglevel(level):
     """setting the logging level of sub-package h5wrapper"""
     _logger.logger.setLevel(level)
     for handler in _logger.logger.handlers:
-        handler.setLevel(level)
-
 
 def open_wrapper(filename, mode='r', **kwargs):
     """opens an HDF file and returns an opened instance of the identified wrapper class which

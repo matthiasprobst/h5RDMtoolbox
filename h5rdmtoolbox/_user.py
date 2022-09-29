@@ -4,7 +4,6 @@ from itertools import count
 
 import appdirs
 import pkg_resources
-
 from ._logger import logger
 
 _filecounter = count()
