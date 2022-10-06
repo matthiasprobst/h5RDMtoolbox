@@ -9,10 +9,9 @@ in the fluid.py file but in later versions the conventions will only be provided
 """
 
 from . import data
-from . import layout
 from ._logger import logger
 from .layout import H5Layout
-from .standard_attributes.standard_name import StandardNameTable, StandardName, StandardNameTableTranslation
+from .standard_name import StandardNameTable, StandardName, StandardNameTableTranslation
 from .utils import dict2xml, is_valid_email_address
 
 

@@ -1,9 +1,9 @@
 import re
 from typing import Union
 
-from . import register_standard_attribute
-from ...errors import LongNameError
-from ...wrapper.h5file import H5Dataset, H5Group
+from .registration import register_standard_attribute
+from ..errors import LongNameError
+from ..wrapper.h5file import H5Dataset, H5Group
 
 
 class LongName(str):

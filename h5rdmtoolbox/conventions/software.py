@@ -4,8 +4,8 @@ from typing import Union, Dict
 
 from packaging import version
 
-from . import register_standard_attribute
-from ...wrapper.h5file import H5Group
+from .registration import register_standard_attribute
+from ..wrapper.h5file import H5Group
 
 
 @dataclass

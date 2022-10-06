@@ -1,7 +1,7 @@
 import re
 
-from . import register_standard_attribute
-from ...wrapper.h5file import H5File
+from .registration import register_standard_attribute
+from ..wrapper.h5file import H5File
 
 
 class TitleError(ValueError):

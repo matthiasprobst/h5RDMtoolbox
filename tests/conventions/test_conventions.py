@@ -4,8 +4,7 @@ import unittest
 from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import verify_unit_object, StandardNameTable, \
-    Empty_Standard_Name_Table
+from h5rdmtoolbox.conventions.standard_name import verify_unit_object, StandardNameTable, Empty_Standard_Name_Table
 from h5rdmtoolbox.errors import EmailError, StandardNameTableError
 from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.wrapper import H5PIV

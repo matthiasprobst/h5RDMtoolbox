@@ -31,7 +31,7 @@ from .._repr import h5file_html_repr
 from .._user import user_dirs
 from .._version import __version__
 from ..conventions.layout import H5Layout
-from ..conventions.standard_attributes import STANDARD_ATTRIBUTE_NAMES
+from ..conventions.registration import STANDARD_ATTRIBUTE_NAMES
 
 logger = logging.getLogger(__package__)
 
@@ -1825,7 +1825,7 @@ class H5File(h5py.File, H5Group):
 
         if standard_name_table is not None:
             if isinstance(standard_name_table, str):
-                from ..conventions.standard_attributes.standard_name import StandardNameTable
+                from ..conventions.standard_name import StandardNameTable
                 standard_name_table = StandardNameTable.load_registered(standard_name_table)
             if self.standard_name_table != standard_name_table:
                 self.standard_name_table = standard_name_table
@@ -1941,4 +1941,4 @@ H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
 
 # noinspection PyUnresolvedReferences
-from ..conventions.standard_attributes import standard_name, units, title, software, long_name
+from ..conventions import standard_name, units, title, software, long_name

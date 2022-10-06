@@ -32,14 +32,14 @@ from pint.errors import UndefinedUnitError
 from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
-from . import register_standard_attribute
+from .registration import register_standard_attribute
 from .._logger import logger
-from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
-from ... import config
-from ..._user import user_dirs
-from ...errors import StandardNameError, EmailError, StandardNameTableError
-from ...wrapper.h5file import H5Dataset, H5Group
-from ...utils import generate_temporary_filename
+from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
+from .. import config
+from .._user import user_dirs
+from ..errors import StandardNameError, EmailError, StandardNameTableError
+from ..wrapper.h5file import H5Dataset, H5Group
+from ..utils import generate_temporary_filename
 
 STRICT = True
 

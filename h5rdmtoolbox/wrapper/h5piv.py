@@ -19,8 +19,7 @@ from .h5flow import VectorDataset, H5FlowGroup, H5Flow, H5FlowDataset
 from .. import config
 from .._user import user_dirs
 from ..conventions.layout import H5Layout
-# from ..conventions.custom import PIVStandardNameTable
-from ..conventions.standard_attributes.software import Software
+from ..conventions.software import Software
 
 logger = logging.getLogger(__package__)
 

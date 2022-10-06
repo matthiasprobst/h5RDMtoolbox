@@ -12,7 +12,8 @@ from h5rdmtoolbox.wrapper.h5file import H5Group
 from h5rdmtoolbox.wrapper.h5file import WrapperAttributeManager
 from h5rdmtoolbox.wrapper.h5flow import H5FlowGroup
 from h5rdmtoolbox.wrapper.h5piv import H5PIVGroup
-
+from h5rdmtoolbox.conventions import StandardNameTable
+from h5rdmtoolbox._user import testdir
 
 class TestCommon(unittest.TestCase):
 
@@ -225,3 +226,15 @@ class TestCommon(unittest.TestCase):
                 h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
                 h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')
                 h5.create_dataset(name='x4', standard_name='NoRealStdName', data=1, units='m')
+
+    def test_assign_snt(self):
+        table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            with wc() as h5:
+                h5.standard_name_table = table
+                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
+        table = StandardNameTable.from_yaml(testdir / 'sntable_with_split.yml')
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
+            with wc() as h5:
+                h5.standard_name_table = table
+                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
