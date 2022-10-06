@@ -164,7 +164,7 @@ def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
     elif name == 'piv_challenge':
         piv_challenge1_E_hdf_fname = testdir / 'PIV/piv_challenge1_E/piv_challenge1_E.hdf'
         with H5PIV(piv_challenge1_E_hdf_fname, 'r+') as h5:
-            from h5rdmtoolbox.conventions.standard_attributes.software import Software
+            from h5rdmtoolbox.conventions.software import Software
             h5.software = Software(name='PIVview',
                                    version='3.8.6',
                                    url='www.pivtec.com/pivview.html',

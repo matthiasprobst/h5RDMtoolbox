@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import xarray as xr
 
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_name import StandardNameTable
 from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.wrapper import H5Flow
 from h5rdmtoolbox.wrapper.accessory import SpecialDataset

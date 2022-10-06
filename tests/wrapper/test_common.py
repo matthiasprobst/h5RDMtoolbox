@@ -7,7 +7,7 @@ import h5py
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardName
+from h5rdmtoolbox.conventions.standard_name import StandardName
 from h5rdmtoolbox.wrapper.h5file import H5Group
 from h5rdmtoolbox.wrapper.h5file import WrapperAttributeManager
 from h5rdmtoolbox.wrapper.h5flow import H5FlowGroup
@@ -212,7 +212,7 @@ class TestCommon(unittest.TestCase):
 
     def test_create_dataset(self):
         from h5rdmtoolbox.errors import UnitsError
-        from h5rdmtoolbox.conventions.standard_attributes.standard_name import Empty_Standard_Name_Table
+        from h5rdmtoolbox.conventions.standard_name import Empty_Standard_Name_Table
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc(standard_name_table=Empty_Standard_Name_Table) as h5:
                 self.assertEqual(h5.standard_name_table.name, Empty_Standard_Name_Table.name)

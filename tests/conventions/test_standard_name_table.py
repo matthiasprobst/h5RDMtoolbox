@@ -6,7 +6,7 @@ import h5rdmtoolbox
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions import StandardNameTable, StandardNameTableTranslation, StandardName
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge, MetaDataYamlDict
+from h5rdmtoolbox.conventions.standard_name import merge, MetaDataYamlDict
 
 
 class TestStandardNameTable(unittest.TestCase):

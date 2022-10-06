@@ -13,7 +13,7 @@ from h5rdmtoolbox import __version__
 from h5rdmtoolbox import config
 from h5rdmtoolbox import wrapper
 from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_name import StandardNameTable
 from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import H5File, set_loglevel

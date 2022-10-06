@@ -1,7 +1,7 @@
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions.standard_attributes import register_standard_attribute
+from h5rdmtoolbox.conventions.registration import register_standard_attribute
 from h5rdmtoolbox.wrapper.h5file import H5Group
 
 
@@ -15,8 +15,6 @@ class TestAccessor(unittest.TestCase):
             def set(self, value):
                 """Set the short_name"""
                 self.attrs.create('short_name', value.__str__())
-
-
 
         @register_standard_attribute(H5Group, name=None)
         class shortyname:

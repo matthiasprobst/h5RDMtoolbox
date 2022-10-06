@@ -5,9 +5,9 @@ from importlib.metadata import metadata
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import errors
-from h5rdmtoolbox.conventions.standard_attributes import software
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
-from h5rdmtoolbox.conventions.standard_attributes.standard_name import merge
+from h5rdmtoolbox.conventions import software
+from h5rdmtoolbox.conventions.standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_name import merge
 
 
 class TestOptAccessors(unittest.TestCase):
@@ -64,7 +64,7 @@ class TestOptAccessors(unittest.TestCase):
                 h5.user
 
         # noinspection PyUnresolvedReferences
-        from h5rdmtoolbox.conventions.standard_attributes import user
+        from h5rdmtoolbox.conventions import user
         with h5tbx.H5File() as h5:
             with self.assertRaises(errors.OrcidError):
                 h5.user = '11308429'
