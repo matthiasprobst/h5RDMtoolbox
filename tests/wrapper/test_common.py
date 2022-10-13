@@ -68,7 +68,7 @@ class TestCommon(unittest.TestCase):
         """testing the creation of groups"""
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc() as h5:
-                h5.mode == 'r+'
+                self.assertEqual(h5.mode, 'r+')
                 grp = h5.create_group('testgrp')
                 self.assertIsInstance(grp, gc)
 
@@ -89,8 +89,7 @@ class TestCommon(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     h5.attrs['long_name'] = '1alongname '
 
-                with self.assertRaises(KeyError):
-                    h5.attrs['non_existing_attribute']
+                self.assertEqual(h5.attrs.get('non_existing_attribute'), None)
 
                 # dataset attibutes
                 ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='m/s')
@@ -133,7 +132,7 @@ class TestCommon(unittest.TestCase):
 
                 # TODO Fix the following issue:
                 h5.non_existing_attribute = 1
-                print(h5.non_existing_attribute)
+                h5.non_existing_attribute
 
                 # self.assertEqual(ds.standard_name, h5tbx.conventions.Empty_Standard_Name_Table)
                 ds.standard_name = 'x_velocity'
@@ -204,24 +203,25 @@ class TestCommon(unittest.TestCase):
             obj = open_wrapper(filename)
             self.assertIsInstance(obj, CLS)
 
-        with CLS() as h5:
-            del h5.attrs['__wrcls__']
-            filename = h5.hdf_filename
+            with CLS() as h5:
+                del h5.attrs['__wrcls__']
+                filename = h5.hdf_filename
         obj = open_wrapper(filename)
         self.assertIsInstance(obj, h5tbx.H5File)
 
     def test_create_dataset(self):
         from h5rdmtoolbox.errors import UnitsError
         from h5rdmtoolbox.conventions.standard_name import Empty_Standard_Name_Table
+        from h5rdmtoolbox import config
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc(standard_name_table=Empty_Standard_Name_Table) as h5:
                 self.assertEqual(h5.standard_name_table.name, Empty_Standard_Name_Table.name)
-                h5tbx.config.require_units = True
+                config.require_units = True
                 with self.assertRaises(UnitsError):
                     h5.create_dataset(name='x', standard_name='x_coordinate', data=1)
-                h5tbx.config.require_units = False
+                config.require_units = False
                 h5.create_dataset(name='x', standard_name='x_coordinate', data=1, units=None)
-                h5tbx.config.require_units = True
+                config.require_units = True
                 h5.create_dataset(name='x1', standard_name='x_coordinate', data=1, units='m')
                 h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
                 h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')

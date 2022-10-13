@@ -28,18 +28,20 @@ import h5py
 import pandas as pd
 import yaml
 from IPython.display import display, HTML
+from omegaconf import DictConfig
+from omegaconf import OmegaConf
 from pint.errors import UndefinedUnitError
 from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
 from .registration import register_standard_attribute
-from .._logger import logger
 from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from .. import config
+from .._logger import logger
 from .._user import user_dirs
 from ..errors import StandardNameError, EmailError, StandardNameTableError
-from ..wrapper.h5file import H5Dataset, H5Group
 from ..utils import generate_temporary_filename
+from ..wrapper.h5file import H5Dataset, H5Group
 
 STRICT = True
 
@@ -253,7 +255,7 @@ class StandardNameTable:
         self._pattern = pattern
         self._institution = institution
         self.contact = contact
-        self._filename = {None, None}
+        self._filename = None
         self.url = url
         self._alias = alias
         if last_modified is None:
@@ -261,16 +263,18 @@ class StandardNameTable:
             self._last_modified = now.strftime(CF_DATETIME_STR)
         else:
             self._last_modified = last_modified
-        if table is None:
-            self._table = {}
-        elif isinstance(table, (dict, MetaDataYamlDict)):
-            self._table = table
-            if isinstance(table, dict):
-                if not self.has_valid_structure():
-                    raise KeyError('Table has invalid structure')
-        else:
-            raise TypeError(f'Unexpected input type: {type(table)}. Expecting '
-                            f'StandardNameTable or dict.')
+        self._table = table
+        self._alias = alias
+
+        if self._table:
+            for v in self._table.values():
+                if isinstance(v, (dict, DictConfig)):
+                    if 'description' not in v:
+                        raise KeyError(f'Keyword "description" missing: {v}')
+                    if 'canonical_units' not in v:
+                        raise KeyError(f'Keyword "canonical_units" missing: {v}')
+                else:
+                    raise TypeError(f'Content of Table is unexpected: {self._table}')
 
     @property
     def names(self):
@@ -278,20 +282,22 @@ class StandardNameTable:
         return [*list(self.table.keys()), *list(self.alias.keys())]
 
     @property
-    def table(self) -> Dict:
+    def table(self) -> Union[Dict, DictConfig]:
         """Return table as dictionary"""
-        if isinstance(self._table, dict):
-            return self._table
-        return self._table.data
+        if self._table is None:
+            return {}
+        if isinstance(self._table, DictConfig):
+            return OmegaConf.to_container(self._table)
+        return self._table  # asuming it is a dict
 
     @property
-    def alias(self) -> Dict:
+    def alias(self) -> Union[Dict, DictConfig]:
         """Return alias dictionary"""
-        if isinstance(self._table, MetaDataYamlDict):
-            return self._table.alias
         if self._alias is None:
             return {}
-        return self._alias
+        if isinstance(self._alias, DictConfig):
+            return OmegaConf.to_container(self._alias)
+        return self._alias  # asuming it is a dict
 
     @property
     def versionname(self) -> str:
@@ -344,7 +350,7 @@ class StandardNameTable:
 
     @property
     def filename(self):
-        return self._filename[1]
+        return self._filename
 
     def __repr__(self) -> str:
         if self._name is None:
@@ -394,14 +400,14 @@ class StandardNameTable:
             raise StandardNameError(f'name "{name}" already exists in table. Use modify() '
                                     f'to change the content')
         verify_unit_object(canonical_units)
-        self.table[name] = dict(description=description, canonical_units=canonical_units)
+        self._table[name] = dict(description=description, canonical_units=canonical_units)
 
     def modify(self, name: str, description: str, canonical_units: str):
         """Modify a standard name or creates one if non-existing"""
         if name not in self.table:
             if not description or not canonical_units:
                 raise ValueError(f'Name {name} does not exist yet. You must provide string values '
-                                 f'for both description and canoncical_units')
+                                 f'for both description and canonical_units')
             self.table[name] = dict(description=description, canonical_units=canonical_units)
         else:
             if description:
@@ -509,20 +515,21 @@ class StandardNameTable:
                                 last_modified=last_modified,
                                 alias=alias
                                 )
-        snt._filename = {'xml', xml_filename}
+        snt._filename = xml_filename
         return snt
 
     @staticmethod
     def from_yaml(yaml_filename) -> "StandardNameTable":
         """read from yaml file"""
-        mdyd = MetaDataYamlDict(yaml_filename)
-        if 'table' in mdyd.meta:
-            return StandardNameTable(**mdyd.meta)
-        elif 'table_dict' in mdyd.meta:
-            raise DeprecationWarning('Dont use "table_dict" key word but "table"')
-            mdyd.meta['table'] = mdyd.meta.pop('table_dict')
-            return StandardNameTable(**mdyd.meta)
-        return StandardNameTable(**mdyd.meta, table=mdyd)
+        try:
+            oc = OmegaConf.load(yaml_filename)
+        except yaml.composer.ComposerError:
+            with open(yaml_filename, 'r') as f:
+                _dict = {}
+                for d in yaml.full_load_all(f):
+                    _dict.update(d)
+                oc = DictConfig(_dict)
+        return StandardNameTable(**oc)
 
     @staticmethod
     def from_web(url: str, known_hash: str = None,
@@ -586,7 +593,7 @@ class StandardNameTable:
         gl = gitlab.Gitlab(url, private_token=private_token)
         pl = gl.projects.get(id=project_id)
 
-        tmpfilename = generate_temporary_filename(suffix=file_path.rsplit('.', 1)[1])
+        tmpfilename = generate_temporary_filename(suffix=f".{file_path.rsplit('.', 1)[1]}")
         with open(tmpfilename, 'wb') as f:
             pl.files.raw(file_path=file_path, ref=ref_name, streamed=True, action=f.write)
 
@@ -614,7 +621,8 @@ class StandardNameTable:
                     valid_characters=self.valid_characters,
                     pattern=self.pattern,
                     url=self.url,
-                    table=self.table
+                    table=self.table,
+                    alias=self.alias
                     )
 
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:

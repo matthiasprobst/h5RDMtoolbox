@@ -246,7 +246,7 @@ class TestH5File(unittest.TestCase):
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            from h5rdmtoolbox.conventions.standard_attributes.standard_name import StandardNameTable
+            from h5rdmtoolbox.conventions.standard_name import StandardNameTable
             convention = StandardNameTable(name='empty',
                                            table={'x_velocity': {'description': '',
                                                                  'units': 'm/s'}},
@@ -258,7 +258,7 @@ class TestH5File(unittest.TestCase):
             ds = h5.create_dataset('ds', shape=(), long_name='x_velocity', units='m/s')
             with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = ' x_velocity'
-            from h5rdmtoolbox.conventions.standard_attributes import standard_name
+            from h5rdmtoolbox.conventions import standard_name
             standard_name.STRICT = False
             ds.attrs['standard_name'] = 'x_velocityyy'
             with self.assertRaises(StandardNameError):
@@ -301,38 +301,68 @@ class TestH5File(unittest.TestCase):
 
     def test_attrs_find(self):
         with H5File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['/grp_1'],
-                             h5.find_one({'$group': {'$regex': 'grp_[0-9]'}}))
-            self.assertListEqual([h5['/grp_1'], h5['/grp_2'], h5['/grp_3']],
-                                 h5.find({'$group': {'$regex': 'grp_[0-9]'}}))
-            self.assertListEqual([h5['/ds1'], h5['/ds2'], ],
-                                 h5.find({'$dataset': {'$regex': 'ds[0-9]'}}))
-            self.assertEqual(h5['/ds'], h5.find_one({'one': 1}))
-            self.assertEqual([h5['/ds'], h5['grp_1']], h5.find({'one': 1}))
-            self.assertListEqual([], h5.find({'one': {'$gt': 1}}))
-            self.assertListEqual([h5['ds'], h5['grp_1']], h5.find({'one': {'$gte': 1}}))
+            self.assertEqual(
+                h5['/grp_1'],
+                h5.find_one(
+                    {
+                        '$basename': {
+                            '$regex': 'grp_[0-9]'
+                        }
+                    },
+                    '$group'
+                )
+            )
+            #
+            self.assertListEqual(
+                [h5['/grp_1'], h5['/grp_2'], h5['/grp_3']],
+                sorted(
+                    h5.find(
+                        {'$basename': {'$regex': 'grp_[0-9]'}
+                         },
+                        '$group'
+                    )
+                )
+            )
+            self.assertListEqual(
+                [h5['/ds1'], h5['/ds2'], ],
+                sorted(
+                    h5.find(
+                        {'$basename': {'$regex': 'ds[0-9]'}},
+                        '$dataset')
+                )
+            )
+            self.assertEqual(
+                h5['/ds'], h5.find_one({'one': 1}, '$dataset')
+            )
+            self.assertEqual(
+                [h5['/'], h5['/ds'], h5['grp_1']],
+                sorted(h5.find({'one': 1}))
+            )
+            self.assertListEqual(
+                [], h5.find({'one': {'$gt': 1}})
+            )
+            self.assertListEqual(
+                [h5['/'], h5['ds'], h5['grp_1']],
+                sorted(h5.find({'one': {'$gte': 1}}))
+            )
 
     def test_find_group_data(self):
         with H5File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['grp_1'], h5.find_one({'$group': 'grp_1'}))
-            self.assertEqual([h5['grp_1'], ], h5.find({'$group': 'grp_1'}))
-            self.assertEqual(h5['grp_2'], h5.find_one({'$group': {'$basename': 'grp_2'}}))
-            self.assertEqual([h5['grp_2'], ], h5.find({'$group': {'$basename': 'grp_2'}}))
-            with self.assertRaises(RuntimeError):
-                self.assertEqual(h5['grp_2'], h5.find_one({'$group': {'$shape': (2,)}}))
-            with self.assertRaises(RuntimeError):
-                self.assertEqual(h5['grp_2'], h5.find_one({'$group': {'$ndim': 2}}))
+            self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}, '$group'))
+            self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
+            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}))
+            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}))
 
     def test_find_dataset_data(self):
         with H5File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': 'ds'}))
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': {'$basename': 'ds'}}))
-            self.assertEqual([h5['ds'], ], h5.find({'$dataset': 'ds'}))
-            self.assertEqual([h5['ds'], ], h5.find({'$dataset': {'$shape': (4,)}}))
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': {'$shape': (4,)}}))
-            self.assertEqual(h5['ds'], h5.find_one({'$dataset': {'$ndim': 1}}))
+            self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
+            self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
+            self.assertEqual([h5['ds'], ], h5.find({'$basename': 'ds'}))
+            self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}))
+            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}))
+            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}))
             self.assertEqual([h5['ds'], h5['ds1'], h5['ds2'], h5['dsY']],
-                             h5.find({'$dataset': {'$ndim': 1}}))
+                             sorted(h5.find({'$ndim': 1})))
 
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):

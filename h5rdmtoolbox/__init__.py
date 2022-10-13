@@ -4,7 +4,7 @@ import atexit
 import pathlib
 import shutil
 
-from . import conventions
+from h5rdmtoolbox import conventions
 from ._user import user_dirs
 from ._version import __version__
 from .wrapper import H5File, H5Flow, H5PIV, open_wrapper

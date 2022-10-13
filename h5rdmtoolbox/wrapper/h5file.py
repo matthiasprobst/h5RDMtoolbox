@@ -102,7 +102,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         self._parent = parent
         # self.identifier_convention = identifier_convention  # standard_name_convention
 
-
     def find_one(self, flt: Union[Dict, str],
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
                  rec: bool = True):
@@ -481,6 +480,10 @@ class H5Dataset(h5py.Dataset):
     def __repr__(self) -> str:
         return self.__str__()
 
+    def __lt__(self, other):
+        """Call __lt__() on group names"""
+        return self.name < other.name
+
     def dump(self) -> None:
         """Call sdump()"""
         self.sdump()
@@ -750,6 +753,9 @@ class H5Group(h5py.Group):
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    def __lt__(self, other):
+        return self.name < other.name
 
     def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
@@ -1101,10 +1107,20 @@ class H5Group(h5py.Group):
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
                  rec: bool = True):
         """See find()"""
-        from ..database import files
-        return files.find(self, flt, recursive=rec, h5type=None, find_one=True)
+        from ..database import filequery
+        objfilter = utils._process_obj_filter_input(objfilter)
+        return filequery.find(
+            self,
+            flt,
+            objfilter=objfilter,
+            recursive=rec,
+            find_one=True
+        )
 
-    def distinct(self, key, objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None) -> List:
+    def distinct(self,
+                 key,
+                 objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None
+                 ) -> List:
         """Find a distinct key"""
         from ..database.filequery import distinct
         objfilter = utils._process_obj_filter_input(objfilter)
@@ -1131,8 +1147,14 @@ class H5Group(h5py.Group):
         -------
         h5obj: h5py.Dataset or h5py.Group
         """
-        from ..database import files
-        return files.find(self, flt, recursive=rec, h5type=None, find_one=False)
+        from ..database import filequery
+        objfilter = utils._process_obj_filter_input(objfilter)
+        return filequery.find(
+            h5obj=self,
+            flt=flt,
+            objfilter=objfilter,
+            recursive=rec,
+            find_one=False)
 
     def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:
         """Return the dataset with a specific standard_name within the current group.

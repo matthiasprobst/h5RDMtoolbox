@@ -6,17 +6,9 @@ from importlib.metadata import metadata
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import errors
 from h5rdmtoolbox.conventions import software
-from h5rdmtoolbox.conventions.standard_name import StandardNameTable
-from h5rdmtoolbox.conventions.standard_name import merge
 
 
 class TestOptAccessors(unittest.TestCase):
-
-    def test_merge(self):
-        registered_snts = StandardNameTable.get_registered()
-        new_snt = merge(registered_snts, name='newtable', institution=None,
-                        version_number=1, contact='matthias.probst@kit.edu')
-        self.assertTrue(new_snt.name, 'newtable')
 
     def test_software(self):
         meta = metadata('numpy')

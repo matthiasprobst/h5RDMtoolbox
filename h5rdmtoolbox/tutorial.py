@@ -1,3 +1,6 @@
+"""
+Tutorial module providing easy access to particular data.
+"""
 import os
 import pathlib
 import shutil
@@ -133,7 +136,7 @@ def get_xr_dataset(name):
         return poiseuille2D(np.linspace(0, 4, 2), np.linspace(0, 4, 10), 2)
 
 
-def get_H5PIV(name: str, mode: str = 'r') -> pathlib.Path:
+def get_H5PIV(name: str, mode: str = 'r') -> "H5PIV":
     """Return the HDF filename of a tutoral case."""
     from .wrapper import H5PIV
     if name == 'vortex_snapshot':
@@ -219,7 +222,7 @@ class Database:
             # create folder if not exist:
             os.makedirs(folders[ifolder], exist_ok=True)
 
-            filename = os.path.join(folders[ifolder], f'repofile_{fid:05d}.hdf')
+            filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
             with H5File(filename, 'w') as h5:
                 h5.attrs['operator'] = operators[np.random.randint(4)]
                 __ftype__ = db_file_type[np.random.randint(2)]

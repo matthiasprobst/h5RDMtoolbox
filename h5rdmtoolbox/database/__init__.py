@@ -64,7 +64,7 @@ def set_loglevel(level):
         handler.setLevel(level)
 
 
-from .files import H5Files
+from .filequery import H5Files
 
 if not user_yaml_filename.exists():
     write_default_user_yaml_file()

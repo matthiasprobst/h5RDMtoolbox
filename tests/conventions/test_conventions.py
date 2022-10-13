@@ -47,7 +47,7 @@ class TestConventions(unittest.TestCase):
                               version_number=999,
                               contact='wrongemail',
                               institution='dummyexample')
-        with self.assertRaises(KeyError):
+        with self.assertRaises(TypeError):
             StandardNameTable(name='NoSpaceInName',
                               table={'a': 'amplitude'},
                               version_number=999,
@@ -55,7 +55,7 @@ class TestConventions(unittest.TestCase):
                               institution='dummyexample')
         snc = StandardNameTable(name='NoSpaceInName',
                                 table={'x_velocity': {'description': 'x velocity',
-                                                      'canoncical_units': 'm/s'}},
+                                                      'canonical_units': 'm/s'}},
                                 version_number=999,
                                 contact='a.b@dummy.com',
                                 institution='dummyexample')
@@ -67,7 +67,7 @@ class TestConventions(unittest.TestCase):
         with self.assertRaises(KeyError):
             # table dict is missing entry "description"
             _ = StandardNameTable(name='NoSpaceInName',
-                                  table={'x_velocity': {'canoncical_units': 'm/s'}},
+                                  table={'x_velocity': {'canonical_units': 'm/s'}},
                                   version_number=999,
                                   contact='a.b@dummy.com',
                                   institution='dummyexample')
