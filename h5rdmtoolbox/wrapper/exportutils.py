@@ -123,6 +123,7 @@ class _Visitor:
         #                            filename=target_directory / f'{os.path.basename(obj.name)}.txt',
         #                            overwrite=self.overwrite)
 
+
 def grp_to_txt(h5: h5py.Group, recursive: bool = True, target_directory: Union[str, pathlib.Path] = None,
                overwrite: bool = False):
     """Export a group (recursively) to text files organized in folders"""

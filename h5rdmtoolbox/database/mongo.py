@@ -9,11 +9,12 @@ import h5py
 import numpy as np
 import pymongo.collection
 from pymongo.errors import InvalidDocument
-from ..wrapper import open_wrapper
-from ..wrapper.accessory import register_special_dataset
-from ..wrapper.h5file import H5Dataset, H5Group
 
-H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST')
+from ..wrapper.accessory import register_special_dataset
+from ..wrapper.h5attr import H5_DIM_ATTRS
+from ..wrapper.h5ds import H5Dataset
+from ..wrapper.h5file import H5File
+from ..wrapper.h5grp import H5Group
 
 
 def get_file_creation_time(filename: str) -> datetime:
@@ -293,14 +294,6 @@ class H5Result:
     def __post_init__(self):
         self.file = None
 
-    # def dump(self):
-    #     """Dump the content ofthe dataset/group to screen"""
-    #     with self as h5:
-    #         h5.dump()
-    # def sdump(self):
-    #     """Dump the content ofthe dataset/group to screen"""
-    #     with self as h5:
-    #         h5.sdump()
     def __getitem__(self, item):
         """Return sliced xarray for dataset. For group this will raise an error"""
         with self as h5:
@@ -320,7 +313,7 @@ class H5Result:
     def open(self):
         """open the file"""
         try:
-            self.file = open_wrapper(self.rdict['filename'])
+            self.file = H5File(self.rdict['filename'])
         except RuntimeError as e:
             if self.file is not None:
                 print('closing file')

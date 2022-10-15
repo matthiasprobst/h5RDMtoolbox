@@ -28,7 +28,8 @@ https://jsfiddle.net/tay08cn9/4/ (xarray package)
 SDUMP_TABLE_SPACING = 30, 20, 8, 30
 
 
-class bcolors:
+class BColors:
+    """Color class o color text"""
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
@@ -47,22 +48,22 @@ def make_italic(string):
 
 def make_bold(string):
     """make string bold"""
-    return f"{bcolors.BOLD}{string}{bcolors.ENDC}"
+    return f"{BColors.BOLD}{string}{BColors.ENDC}"
 
 
 def warningtext(string):
     """make string orange"""
-    return f"{bcolors.WARNING}{string}{bcolors.ENDC}"
+    return f"{BColors.WARNING}{string}{BColors.ENDC}"
 
 
 def failtext(string):
     """make string red"""
-    return f"{bcolors.FAIL}{string}{bcolors.ENDC}"
+    return f"{BColors.FAIL}{string}{BColors.ENDC}"
 
 
 def oktext(string):
     """make string green"""
-    return f"{bcolors.OKGREEN}{string}{bcolors.ENDC}"
+    return f"{BColors.OKGREEN}{string}{BColors.ENDC}"
 
 
 def sdump(h5grp, ret=False,
@@ -293,7 +294,7 @@ def _html_repr_dataset(h5dataset, max_attr_length: Union[int, None],
         _shape_repr = ''
     else:
         _shape = h5dataset.shape
-        if config.advanced_shape_repr:
+        if config.ADVANCED_SHAPE_REPR:
             _shape_repr = '('
             ndim = h5dataset.ndim
             for i in range(ndim):

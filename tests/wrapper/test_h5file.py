@@ -16,13 +16,15 @@ from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.conventions.standard_name import StandardNameTable
 from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
-from h5rdmtoolbox.wrapper import H5File, set_loglevel
-from h5rdmtoolbox.wrapper.h5file import H5Dataset, H5Group
+from h5rdmtoolbox.wrapper import set_loglevel
+from h5rdmtoolbox.wrapper.h5ds import H5Dataset
+from h5rdmtoolbox.wrapper.h5grp import H5Group
+from h5rdmtoolbox.wrapper.h5file import H5File
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
-ureg.default_format = config.ureg_format
+ureg.default_format = config.UREG_FORMAT
 
 
 class TestH5File(unittest.TestCase):
@@ -268,12 +270,12 @@ class TestH5File(unittest.TestCase):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
-            config.natural_naming = False
+            config.NATURAL_NAMING = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.natural_naming = True
+            config.NATURAL_NAMING = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -374,7 +376,7 @@ class TestH5File(unittest.TestCase):
     def test_open(self):
         with H5File(mode='w') as h5:
             pass
-        h5.open('r+')
+        h5.reopen('r+')
         self.assertEqual(h5.mode, 'r+')
         h5.close()
 
@@ -469,17 +471,16 @@ class TestH5File(unittest.TestCase):
 
     def test_sdump(self):
         with H5File(mode='w') as h5:
-            h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
+            h5.attrs['__wrcls__'] = 'H5File'
             sdump_str = h5.sdump(ret=True)
             _str = f"""> H5File: Group name: /.
 \x1B[3m
 a: __h5rdmtoolbox_version__:      {__version__}\x1B[0m\x1B[3m
-a: __wrcls__:                     H5File\x1B[0m\x1B[3m
-a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
+a: __wrcls__:                     H5File\x1b[0m
 """
             self.assertEqual(sdump_str, _str)
         with H5File(mode='w') as h5:
-            h5.attrs['creation_time'] = '2022-07-19T17:01:41Z+0200'
+            h5.attrs['__wrcls__'] = 'H5File'
             h5.create_dataset('test', shape=(), long_name='a long name', units='')
             grp = h5.create_group('grp')
             grp.create_dataset('test', shape=(), long_name='a long name', units='')
@@ -487,8 +488,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             _str = f"""> H5File: Group name: /.
 \x1B[3m
 a: __h5rdmtoolbox_version__:      {__version__}\x1B[0m\x1B[3m
-a: __wrcls__:                     H5File\x1B[0m\x1B[3m
-a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
+a: __wrcls__:                     H5File\x1b[0m
 \x1B[1mtest\x1B[0m                   ()                            
 \x1B[3m\x1B[1m/grp\x1B[0m\x1B[0m
   \x1B[1mtest\x1B[0m                   ()                            
@@ -529,7 +529,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             self.assertEqual(h5['x'].attrs['long_name'], 'long_name')
             self.assertEqual(h5['x'].attrs['standard_name'], 'standard_name')
             from h5rdmtoolbox import config
-            self.assertEqual(h5['x'].compression_opts, config.hdf_compression_opts)
+            self.assertEqual(h5['x'].compression_opts, config.HDF_COMPRESSION_OPTS)
 
         with H5File() as h5:
             h5['x'] = ([1, 2, 3], dict(units='m/s', long_name='long_name',
@@ -543,12 +543,12 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            config.natural_naming = False
+            config.NATURAL_NAMING = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.natural_naming = True
+            config.NATURAL_NAMING = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -603,7 +603,7 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
             self.assertEqual(grp.long_name, 'long name of group')
 
     def test_create_dataset(self):
-        config.natural_naming = True
+        config.NATURAL_NAMING = True
         sc = StandardNameTable(table={}, name='Test_SNC', version_number=1,
                                contact='contact@python.com', institution='my_institution')
         sc.set('time', canonical_units='s', description='physical time')
@@ -633,24 +633,24 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 
             dset = h5.create_dataset('default_compression', data=[1, 2, 3], long_name='default long_name of dset',
                                      units='')
-            self.assertEqual(dset.compression, config.hdf_compression)
-            self.assertEqual(dset.compression_opts, config.hdf_compression_opts)
-            config.hdf_compression = 'gzip'
-            config.hdf_compression_opts = 2
+            self.assertEqual(dset.compression, config.HDF_COMPRESSION)
+            self.assertEqual(dset.compression_opts, config.HDF_COMPRESSION_OPTS)
+            config.HDF_COMPRESSION = 'gzip'
+            config.HDF_COMPRESSION_OPTS = 2
             dset = h5.create_dataset('other_compression', data=[1, 2, 3], long_name='default long_name of dset',
                                      units='')
             self.assertEqual(dset.compression, 'gzip')
             self.assertEqual(dset.compression_opts, 2)
 
     def test_assign_data_to_existing_dset(self):
-        config.natural_naming = True
+        config.NATURAL_NAMING = True
         with H5File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name', units='')
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
 
     def test_create_dataset_from_xarray(self):
-        config.natural_naming = True
+        config.NATURAL_NAMING = True
         with H5File(mode='w') as h5:
             z = xr.DataArray(name='z', data=-1,
                              attrs=dict(units='m', standard_name='z_coordinate'))
@@ -720,20 +720,20 @@ a: creation_time:                 2022-07-19T17:01:41Z+0200\x1B[0m
 
     def test_get_by_attribute(self):
         with H5File(mode='w') as h5:
-            l = h5.get_datasets_by_attribute('long_name')
-            self.assertEqual(l, [])
+            lname = h5.get_datasets_by_attribute('long_name')
+            self.assertEqual(lname, [])
 
             h5.create_dataset('test', data=2, units='m',
                               long_name='a long name')
-            l = h5.get_datasets_by_attribute('long_name')
-            self.assertEqual(l, [h5['test'], ])
+            lname = h5.get_datasets_by_attribute('long_name')
+            self.assertEqual(lname, [h5['test'], ])
             h5.create_dataset('grp/test', data=2, units='m',
                               long_name='a long name 2')
-            l = h5.get_datasets_by_attribute('long_name')
-            self.assertEqual(l, [h5['grp/test'], h5['test']])
-            l = h5.get_datasets_by_attribute('long_name',
+            lname = h5.get_datasets_by_attribute('long_name')
+            self.assertEqual(lname, [h5['grp/test'], h5['test']])
+            lname = h5.get_datasets_by_attribute('long_name',
                                              'a long name')
-            self.assertEqual(l, [h5['test'], ])
+            self.assertEqual(lname, [h5['test'], ])
 
             h5['grp'].long_name = 'grp1'
             r = h5.get_groups_by_attribute('long_name')

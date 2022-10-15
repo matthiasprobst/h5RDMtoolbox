@@ -9,9 +9,9 @@ from typing import List
 import numpy as np
 import xarray as xr
 
-from h5rdmtoolbox import H5File
 from ._user import testdir
 from .utils import generate_temporary_directory, generate_temporary_filename
+from .wrapper.h5file import H5File
 
 
 def get_xr_dataset(name):

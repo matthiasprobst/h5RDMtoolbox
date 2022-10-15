@@ -5,9 +5,9 @@ from pint_xarray import unit_registry as ureg
 
 from .registration import register_standard_attribute
 from .. import config
-from ..wrapper.h5file import H5Dataset
+from ..wrapper.h5ds import H5Dataset
 
-ureg.default_format = config.ureg_format
+ureg.default_format = config.UREG_FORMAT
 
 
 @register_standard_attribute(H5Dataset, name='units')

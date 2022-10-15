@@ -7,7 +7,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions.standard_name import verify_unit_object, StandardNameTable, Empty_Standard_Name_Table
 from h5rdmtoolbox.errors import EmailError, StandardNameTableError
 from h5rdmtoolbox.errors import StandardNameError
-from h5rdmtoolbox.wrapper import H5PIV
+from h5rdmtoolbox.wrapper import H5File
 
 
 class TestConventions(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestConventions(unittest.TestCase):
         self.assertEqual(h5tbx.conventions.logger.level, logging.CRITICAL)
 
     def test_pivview(self):
-        with H5PIV(mode='w', standard_name_table='Test-v1') as h5:
+        with H5File(mode='w', standard_name_table='Test-v1') as h5:
             ds = h5.create_dataset('u', shape=(), long_name='x_velocity', units='m/s')
             self.assertFalse('standard_name' in ds.attrs)
             from h5rdmtoolbox.conventions import StandardNameTableTranslation
@@ -28,7 +28,7 @@ class TestConventions(unittest.TestCase):
             translation.translate_dataset(ds)
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
-        with H5PIV(mode='w', standard_name_table='Test-v1') as h5:
+        with H5File(mode='w', standard_name_table='Test-v1') as h5:
             ds = h5.create_dataset('u', shape=(), long_name='x_velocity', units='m/s')
             self.assertFalse('standard_name' in ds.attrs)
             translation = StandardNameTableTranslation.load_registered('test-to-Test-v1')

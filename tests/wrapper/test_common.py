@@ -6,20 +6,19 @@ from datetime import datetime
 import h5py
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox._user import testdir
+from h5rdmtoolbox.conventions import StandardNameTable
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.conventions.standard_name import StandardName
 from h5rdmtoolbox.wrapper.h5file import H5Group
 from h5rdmtoolbox.wrapper.h5file import WrapperAttributeManager
-from h5rdmtoolbox.wrapper.h5flow import H5FlowGroup
-from h5rdmtoolbox.wrapper.h5piv import H5PIVGroup
-from h5rdmtoolbox.conventions import StandardNameTable
-from h5rdmtoolbox._user import testdir
+
 
 class TestCommon(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.wrapper_classes = (h5tbx.H5File, h5tbx.H5Flow, h5tbx.H5PIV)
-        self.wrapper_grouclasses = (H5Group, H5FlowGroup, H5PIVGroup)
+        self.wrapper_classes = (h5tbx.H5File,)
+        self.wrapper_grouclasses = (H5Group,)
 
     def test_layout(self):
         for wc in self.wrapper_classes:
@@ -165,6 +164,8 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.data_source_type, DataSourceType.none)
                 h5.attrs['data_source_type'] = 'experimental'
                 self.assertEqual(h5.data_source_type, DataSourceType.experimental)
+                h5.data_source_type = 'numerical'
+                self.assertEqual(h5.data_source_type, DataSourceType.numerical)
                 self.assertEqual(h5.title, None)
                 h5.title = 'my title'
                 self.assertEqual(h5.title, 'my title')
@@ -173,42 +174,6 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.filesize.units, ureg.byte)
                 self.assertIsInstance(h5.hdf_filename, pathlib.Path)
 
-    def test_open_wrapper(self):
-        from h5rdmtoolbox.utils import generate_temporary_filename
-        from h5rdmtoolbox.wrapper import open_wrapper
-        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            with CLS() as h5:
-                old_filename = h5.hdf_filename
-                new_filename = generate_temporary_filename(suffix='.hdf')
-                self.assertFalse(new_filename.exists())
-                new_filename = h5.moveto(new_filename)
-                self.assertTrue(new_filename.exists())
-                self.assertNotEqual(old_filename, h5.filename)
-                self.assertNotEqual(old_filename, h5.hdf_filename)
-                with self.assertRaises(FileExistsError):
-                    h5.moveto(new_filename)
-                self.assertTrue(new_filename.exists())
-                self.assertFalse(old_filename.exists())
-
-            with CLS() as h5:
-                old_filename = h5.hdf_filename
-                new_filename = generate_temporary_filename(suffix='.hdf')
-                new_instance = h5.saveas(new_filename)
-                self.assertTrue(new_instance.hdf_filename.exists())
-                self.assertTrue(old_filename.exists())
-                new_instance.close()
-
-            with CLS() as h5:
-                filename = h5.hdf_filename
-            obj = open_wrapper(filename)
-            self.assertIsInstance(obj, CLS)
-
-            with CLS() as h5:
-                del h5.attrs['__wrcls__']
-                filename = h5.hdf_filename
-        obj = open_wrapper(filename)
-        self.assertIsInstance(obj, h5tbx.H5File)
-
     def test_create_dataset(self):
         from h5rdmtoolbox.errors import UnitsError
         from h5rdmtoolbox.conventions.standard_name import Empty_Standard_Name_Table
@@ -216,12 +181,12 @@ class TestCommon(unittest.TestCase):
         for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with wc(standard_name_table=Empty_Standard_Name_Table) as h5:
                 self.assertEqual(h5.standard_name_table.name, Empty_Standard_Name_Table.name)
-                config.require_units = True
+                config.REQUIRE_UNITS = True
                 with self.assertRaises(UnitsError):
                     h5.create_dataset(name='x', standard_name='x_coordinate', data=1)
-                config.require_units = False
+                config.REQUIRE_UNITS = False
                 h5.create_dataset(name='x', standard_name='x_coordinate', data=1, units=None)
-                config.require_units = True
+                config.REQUIRE_UNITS = True
                 h5.create_dataset(name='x1', standard_name='x_coordinate', data=1, units='m')
                 h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
                 h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')

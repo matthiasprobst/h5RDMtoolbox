@@ -3,7 +3,8 @@ from typing import Union
 
 from .registration import register_standard_attribute
 from ..errors import LongNameError
-from ..wrapper.h5file import H5Dataset, H5Group
+from ..wrapper.h5ds import H5Dataset
+from ..wrapper.h5grp import H5Group
 
 
 class LongName(str):

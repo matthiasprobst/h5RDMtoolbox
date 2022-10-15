@@ -1,14 +1,13 @@
-"""config file for h5wrapper classes"""
+"""config file for wrapper classes"""
 
-return_xarray = True
-advanced_shape_repr = True
-NA_unit = 'N.A.'
-natural_naming = True,
-hdf_compression = 'gzip'
-hdf_compression_opts = 5
-html_max_string_length = 40  # used for HTML representation of strings (.dump())
-mpl_style = 'h5rdmtoolbox'
-xarray_unit_repr_in_plots = '/'
-require_units = True  # datasets require units
-ureg_format = 'C~'
-standard_name_table_attribute_name = '__standard_name_table__'
+RETURN_XARRAY = True
+ADVANCED_SHAPE_REPR = True
+NATURAL_NAMING = True,
+HDF_COMPRESSION = 'gzip'
+HDF_COMPRESSION_OPTS = 5
+HTML_MAX_STRING_LENGTH = 40  # used for HTML representation of strings (.dump())
+MPL_STYLE = 'h5rdmtoolbox'  # TODO: seems not to be used
+XARRAY_UNIT_REPR_IN_PLOTS = '/'
+REQUIRE_UNITS = True  # datasets require units
+UREG_FORMAT = 'C~'
+STANDARD_NAME_TABLE_ATTRIBUTE_NAME = '__standard_name_table__'

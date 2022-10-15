@@ -1,4 +1,9 @@
+import warnings
 from enum import Enum
+
+from .registration import register_standard_attribute
+from ..wrapper.h5ds import H5Dataset
+from ..wrapper.h5grp import H5Group
 
 
 class DataSourceType(Enum):
@@ -24,3 +29,30 @@ class DataSource(Enum):
     def get_attr_name():
         """Atribute name to be used in HDF5 files"""
         return 'data_source'
+
+
+@register_standard_attribute(H5Group, name='data_source_type')
+@register_standard_attribute(H5Dataset, name='data_source_type')
+class DataSourceTypeAttribute:
+    """Long name attribute"""
+
+    def set(self, data_source_type) -> None:
+        """Return data source type as DataSourceType"""
+        if data_source_type is None:
+            return DataSourceType.none
+        try:
+            self.attrs.create('data_source_type', DataSourceType[data_source_type.lower()].name)
+        except KeyError:
+            warnings.warn(f'Data source type is unknown to meta convention: "{data_source_type}"')
+            return DataSourceType.unknown
+
+    def get(self) -> DataSourceType:
+        """Get the data_source_type"""
+        dst = self.attrs.get('data_source_type')
+        if dst is None:
+            return DataSourceType['none']
+        return DataSourceType[dst]
+
+    def delete(self) -> None:
+        """Delete the data_source_type"""
+        self.attrs.__delitem__('data_source_type')

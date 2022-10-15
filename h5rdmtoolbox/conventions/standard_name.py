@@ -41,7 +41,8 @@ from .._logger import logger
 from .._user import user_dirs
 from ..errors import StandardNameError, EmailError, StandardNameTableError
 from ..utils import generate_temporary_filename
-from ..wrapper.h5file import H5Dataset, H5Group
+from ..wrapper.h5ds import H5Dataset
+from ..wrapper.h5grp import H5Group
 
 STRICT = True
 
@@ -964,26 +965,26 @@ class StandardNameTableAttribute:
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.url)
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name,
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
                                                  snt.to_dict())
             else:
-                self.rootparent.attrs.modify(config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
+                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
         if snt.STORE_AS == StandardNameTableStoreOption.versionname:
-            self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.versionname)
+            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.versionname)
         elif snt.STORE_AS == StandardNameTableStoreOption.dict:
-            self.rootparent.attrs.modify(config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
+            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
         elif snt.STORE_AS == StandardNameTableStoreOption.url:
             if snt.url is not None:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.url)
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.to_dict())
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.to_dict())
             else:  # else fall back to writing dict. better than versionname because cannot get lost
-                self.rootparent.attrs.modify(config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
+                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
         _SNT_CACHE[self.id.id] = snt
 
     def get(self) -> StandardNameTable:
@@ -998,7 +999,7 @@ class StandardNameTableAttribute:
             return _SNT_CACHE[self.file.id.id]
         except KeyError:
             pass  # not cached
-        snt = self.rootparent.attrs.get(config.standard_name_table_attribute_name, None)
+        snt = self.rootparent.attrs.get(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, None)
         if snt is not None:
             # snt is a string
             if isinstance(snt, dict):
@@ -1013,4 +1014,4 @@ class StandardNameTableAttribute:
 
     def delete(self):
         """Delete standard name table from root attributes"""
-        self.attrs.__delitem__(config.standard_name_table_attribute_name)
+        self.attrs.__delitem__(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME)

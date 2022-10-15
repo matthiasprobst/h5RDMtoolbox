@@ -4,11 +4,18 @@ import atexit
 import pathlib
 import shutil
 
-from h5rdmtoolbox import conventions
+from . import conventions
+from . import tutorial
+from ._user import _root_tmp_dir
 from ._user import user_dirs
 from ._version import __version__
-from .wrapper import H5File, H5Flow, H5PIV, open_wrapper
+from .conventions import set_loglevel as conventions_set_loglevel
+from .database import set_loglevel as database_set_loglevel
 from .utils import generate_temporary_filename, generate_temporary_directory
+from .wrapper import set_loglevel as wrapper_set_loglevel
+from .wrapper.h5file import H5File
+# from .wrapper.h5flow import H5Flow
+# from .wrapper.h5piv import H5PIV
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
@@ -16,18 +23,14 @@ __author__ = 'Matthias Probst'
 
 def set_loglevel(level):
     """setting logging level of all modules"""
-    from .wrapper import set_loglevel as h5wrapper_set_loglevel
-    from .database import set_loglevel as h5database_set_loglevel
-    from .conventions import set_loglevel as conventions_set_loglevel
-    h5wrapper_set_loglevel(level)
-    h5database_set_loglevel(level)
+    wrapper_set_loglevel(level)
+    database_set_loglevel(level)
     conventions_set_loglevel(level)
 
 
 @atexit.register
 def clean_temp_data():
     """cleaning up the tmp directory"""
-    from ._user import _root_tmp_dir
     failed_dirs = []
     failed_dirs_file = _root_tmp_dir / 'failed.txt'
     if user_dirs['tmp'].exists():
@@ -57,8 +60,5 @@ def clean_temp_data():
                 failed_dirs_file.unlink(missing_ok=True)
 
 
-from . import tutorial
-
 __all__ = ['tutorial', '__version__', '__author__', 'user_dirs', 'conventions', 'H5File', 'H5Flow', 'H5PIV',
-           'open_wrapper',
            'generate_temporary_filename', 'generate_temporary_directory']

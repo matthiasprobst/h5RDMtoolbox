@@ -16,7 +16,7 @@ from .utils import dict2xml, is_valid_email_address
 
 
 def set_loglevel(level):
-    """setting the logging level of sub-package h5wrapper"""
+    """setting the logging level of sub-package wrapper"""
     logger.setLevel(level)
     for handler in logger.handlers:
         handler.setLevel(level)
