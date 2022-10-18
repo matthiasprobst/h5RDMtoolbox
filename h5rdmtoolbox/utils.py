@@ -97,7 +97,7 @@ def generate_time_str(dtime: datetime, fmt: str) -> str:
         return dtime.strftime(fmt)
     elif len(zsplit) == 2:
         return dtime.strftime(zsplit[0]) + datetime.now(tzlocal()).strftime('%z') + dtime.strftime(zsplit[1])
-    raise ValueError(f'Invalid formatting string. Can only handle one %z formatter')
+    raise ValueError('Invalid formatting string. Can only handle one %z formatter')
 
 
 def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:

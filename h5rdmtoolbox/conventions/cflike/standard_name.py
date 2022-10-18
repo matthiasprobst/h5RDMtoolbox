@@ -501,7 +501,7 @@ class StandardNameTable:
         try:
             import pooch
         except ImportError:
-            raise ImportError(f'Package "pooch" is needed to download the file cf-standard-name-table.xml')
+            raise ImportError('Package "pooch" is needed to download the file cf-standard-name-table.xml')
         file_path = pooch.retrieve(
             url=url,
             known_hash=known_hash,
@@ -562,7 +562,7 @@ class StandardNameTable:
         if file_path.endswith('.xml'):
             return StandardNameTable.from_xml(tmpfilename)
         raise NotImplementedError(f'Cannot handle file name extention {file_path.rsplit(".", 1)[1]}. '
-                                  f'Expected yml/yaml or xml')
+                                  'Expected yml/yaml or xml')
 
     @staticmethod
     def from_versionname(version_name: str):
@@ -637,22 +637,22 @@ class StandardNameTable:
             strict = STRICT
 
         if not len(name) > 0:
-            raise errors.StandardNameError(f'Name too short!')
+            raise errors.StandardNameError('Name too short!')
 
         if name[0] == ' ':
-            raise errors.StandardNameError(f'Name must not start with a space!')
+            raise errors.StandardNameError('Name must not start with a space!')
 
         if name[-1] == ' ':
-            raise errors.StandardNameError(f'Name must not end with a space!')
+            raise errors.StandardNameError('Name must not end with a space!')
 
         if re.sub(self.valid_characters, '', name) != name:
-            raise errors.StandardNameError(
-                f'Invalid special characters in name "{name}": Only "{self.valid_characters}" '
-                'is allowed.')
+            raise errors.StandardNameError('Invalid special characters in name '
+                                           f'"{name}": Only "{self.valid_characters}" '
+                                           'is allowed.')
 
         if self.pattern != '' and self.pattern is not None:
             if re.match(self.pattern, name):
-                raise errors.StandardNameError(f'Name must not start with a number!')
+                raise errors.StandardNameError('Name must not start with a number!')
 
         if strict:
             if name not in self.table:
@@ -696,7 +696,7 @@ class StandardNameTable:
                         if raise_error:
                             raise errors.StandardNameError(e)
                         else:
-                            logger.error(f' > ds: {node.name}: {e}')
+                            logger.error(' > ds: %s: %s', node.name, e)
 
         if recursive:
             h5grp.visititems(_check_ds)
@@ -720,7 +720,7 @@ class StandardNameTable:
         if len(candidates) == 0:
             raise FileNotFoundError(f'No file found under the name {name}')
         list_of_reg_names = [snt.versionname for snt in StandardNameTable.get_registered()]
-        raise FileNotFoundError(f'File {name} could not be found or passed name was not unique. '
+        raise FileNotFoundError('File {name} could not be found or passed name was not unique. '
                                 f'Registered tables are: {list_of_reg_names}')
 
     @staticmethod
@@ -813,7 +813,7 @@ class StandardNameTableTranslation:
                 if node.name in self.translation_dict:
                     sn = self.translation_dict[node.name]
                     node.attrs['standard_name'] = sn
-                    logger.debug(f'translate name {name} to standard name {sn}')
+                    logger.debug(f'translate name %s to standard name %s', name, sn)
                 elif os.path.basename(node.name) in self.translation_dict:
                     sn = self.translation_dict[os.path.basename(node.name)]
                     node.attrs['standard_name'] = sn

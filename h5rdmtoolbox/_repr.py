@@ -253,13 +253,13 @@ def _group_repr_html(h5group, max_attr_length: Union[int, None], collapsed: bool
                     {_groupname}<span>({nkeys})</span></label>
               """
 
-    _html += f"""\n
+    _html += """\n
                 <ul class="h5tb-attr-list">"""
     # write attributes:
     for k, v in h5group.attrs.items():
         _html += _attribute_repr_html(k, v, max_attr_length)
     # close attribute section
-    _html += f"""
+    _html += """
                 </ul>"""
 
     datasets = [(k, v) for k, v in h5group.items() if isinstance(v, h5py.Dataset) or isinstance(v, h5py.Dataset)]
@@ -344,17 +344,17 @@ def _html_repr_dataset(h5dataset, max_attr_length: Union[int, None],
                     <span class="h5tb-unit">{_unit}</span>]"""
     # now all attributes of the dataset:
     # open attribute section:
-    _html_ds_attrs = f"""\n<ul class="h5tb-attr-list">"""
+    _html_ds_attrs = """\n<ul class="h5tb-attr-list">"""
     # write attributes:
     for k, v in h5dataset.attrs.items():
         if k not in _ignore_attrs:
             _html_ds_attrs += _attribute_repr_html(k, v, max_attr_length)
     # close attribute section
-    _html_ds_attrs += f"""\n
+    _html_ds_attrs += """\n
                 </ul>"""
 
     # close dataset section
-    _html_post = f"""\n
+    _html_post = """\n
              </ul>
              """
     _html_ds = _html_pre + _html_ds_attrs + _html_post
@@ -380,7 +380,7 @@ def h5file_html_repr(h5, max_attr_length: Union[int, None], preamble: str = None
         If True, all groups are shown collapsed.
     """
     if not h5.id:
-        raise ValueError(f'Can only explore opened HDF files!')
+        raise ValueError('Can only explore opened HDF files!')
 
     if isinstance(h5, h5py.Group) or isinstance(h5, h5py.Group):
         h5group = h5

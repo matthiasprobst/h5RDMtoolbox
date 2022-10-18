@@ -23,13 +23,13 @@ class HDFArrayAccessor:
         """
         h5group = h5py.Group(h5group.id)
         if not self._obj.name and name is None:
-            raise AttributeError(f'Data Array has no name and no name is passed as function parameter.')
+            raise AttributeError('Data Array has no name and no name is passed as function parameter.')
         if self._obj.name and name is None:
             name = self._obj.name
         if name in h5group and overwrite:
             del h5group[name]
         elif name in h5group and not overwrite:
-            raise ValueError(f'A dataset with that name already exists and overwrite is set to false.')
+            raise ValueError('A dataset with that name already exists and overwrite is set to false.')
 
         ds_attrs = kwargs.pop('attrs', {})
         ds_attrs.update(self._obj.attrs)
