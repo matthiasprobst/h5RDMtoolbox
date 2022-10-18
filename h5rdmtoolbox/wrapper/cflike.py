@@ -1,13 +1,11 @@
 """Implementation of wrapper classes using the CF-like conventions
 """
-import json
 import logging
 import pathlib
 import warnings
 from typing import Union, List
 
 import h5py
-import pint
 import xarray as xr
 from pint_xarray import unit_registry as ureg
 
@@ -18,8 +16,6 @@ from .. import utils
 from .. import wrapper
 from .._logger import logger
 from ..conventions import cflike
-from ..conventions.cflike.long_name import LongName
-from ..conventions.registration import register_standard_attribute
 
 ureg.default_format = config.UREG_FORMAT
 
@@ -450,6 +446,7 @@ class H5File(wrapper.core.H5File, H5Group):
 
 
 class H5Dataset(wrapper.core.H5Dataset):
+    """Dataset class following the CF-like conventions"""
     pass
 
 
@@ -459,166 +456,23 @@ H5Dataset._h5ds = H5Dataset
 H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
 
+# standard name
+register_attribute_class(cflike.standard_name.StandardNameDatasetAttribute,
+                         H5Dataset,
+                         name='standard_name',
+                         overwrite=True)
+register_attribute_class(cflike.standard_name.StandardNameGroupAttribute, H5Group, name='standard_name', overwrite=True)
+register_attribute_class(cflike.standard_name.StandardNameTableAttribute, H5Dataset, name='standard_name_table',
+                         overwrite=True)
+register_attribute_class(cflike.standard_name.StandardNameTableAttribute, H5Group, name='standard_name_table',
+                         overwrite=True)
 
-@register_standard_attribute(H5Dataset, name='standard_name_table')
-@register_standard_attribute(H5Group, name='standard_name_table')
-class StandardNameTableAttribute:
-    """Standard Name Table attribute"""
+# units:
+register_attribute_class(cflike.units.UnitsAttribute, H5Dataset, name='units', overwrite=True)
 
-    def set(self, snt: Union[str, cflike.standard_name.StandardNameTable]):
-        """Set (write to root group) Standard Name Table
+# long name:
+register_attribute_class(cflike.long_name.LongNameAttribute, H5Group, name='long_name', overwrite=True)
+register_attribute_class(cflike.long_name.LongNameAttribute, H5Dataset, name='long_name', overwrite=True)
 
-        Raises
-        ------
-        errors.StandardNameTableError
-            If no write intent on file.
-
-        """
-        if isinstance(snt, str):
-            cflike.standard_name.StandardNameTable.print_registered()
-            snt = cflike.standard_name.StandardNameTable.load_registered(snt)
-        if self.mode == 'r':
-            raise errors.StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
-        if snt.STORE_AS == cflike.standard_name.StandardNameTableStoreOption.none:
-            if snt.url:
-                if cflike.standard_name.url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
-                else:
-                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
-                                                 snt.to_dict())
-            else:
-                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
-        if snt.STORE_AS == cflike.standard_name.StandardNameTableStoreOption.versionname:
-            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.versionname)
-        elif snt.STORE_AS == cflike.standard_name.StandardNameTableStoreOption.dict:
-            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
-        elif snt.STORE_AS == cflike.standard_name.StandardNameTableStoreOption.url:
-            if snt.url is not None:
-                if cflike.standard_name.url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
-                else:
-                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.to_dict())
-            else:  # else fall back to writing dict. better than versionname because cannot get lost
-                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
-        cflike.standard_name._SNT_CACHE[self.id.id] = snt
-
-    def get(self) -> cflike.standard_name.StandardNameTable:
-        """Get (if exists) Standard Name Table from file
-
-        Raises
-        ------
-        KeyError
-            If cannot load SNT from registration.
-        """
-        try:
-            return cflike.standard_name._SNT_CACHE[self.file.id.id]
-        except KeyError:
-            pass  # not cached
-        snt = self.rootparent.attrs.get(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, None)
-        if snt is not None:
-            # snt is a string
-            if isinstance(snt, dict):
-                return cflike.standard_name.StandardNameTable(**snt)
-            if snt[0] == '{':
-                return cflike.standard_name.StandardNameTable(**json.loads(snt))
-            elif snt[0:4] in ('http', 'wwww.'):
-                return cflike.standard_name.StandardNameTable.from_web(snt)
-            else:
-                return cflike.standard_name.StandardNameTable.from_versionname(snt)
-        return cflike.standard_name.Empty_Standard_Name_Table
-
-    def delete(self):
-        """Delete standard name table from root attributes"""
-        self.attrs.__delitem__(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME)
-
-
-@register_standard_attribute(H5Group, name='standard_name')
-class StandardNameGroupAttribute:
-    def set(self, new_standard_name):
-        raise RuntimeError('A standard name attribute is used for datasets only')
-
-
-@register_standard_attribute(H5Dataset, name='standard_name')
-class StandardNameDatasetAttribute:
-    """Standard Name attribute"""
-
-    def set(self, new_standard_name):
-        """Writes attribute standard_name if passed string is not None.
-        The rules for the standard_name is checked before writing to file."""
-        if new_standard_name:
-            if self.standard_name_table.check_name(new_standard_name):
-                if cflike.standard_name.STRICT:
-                    if 'units' in self.attrs:
-                        self.standard_name_table.check_units(new_standard_name,
-                                                             self.attrs['units'])
-                self.attrs.create('standard_name', new_standard_name)
-
-    def get(self):
-        """Return the standardized name of the dataset. The attribute name is `standard_name`.
-        Returns `None` if it does not exist."""
-        val = self.attrs.get('standard_name', None)
-        if val is None:
-            return None
-        return self.standard_name_table[val]
-
-    def delete(self):
-        """Delete attribute"""
-        self.attrs.__delitem__('standard_name')
-
-
-@register_standard_attribute(H5Dataset, name='units')
-class UnitsAttribute:
-    """Units attribute"""
-
-    def set(self, new_units: Union[str, pint.Unit]):
-        """Sets the attribute units to attribute 'units'
-        default unit registry format of pint is used."""
-        if new_units:
-            if isinstance(new_units, str):
-                _new_units = ureg.Unit(new_units).__format__(ureg.default_format)
-            elif isinstance(new_units, pint.Unit):
-                _new_units = new_units.__format__(ureg.default_format)
-            else:
-                raise TypeError(f'Unit must be a string or pint.Unit but not {type(new_units)}')
-        else:
-            _new_units = new_units
-        standard_name = self.attrs.get('standard_name')
-        if standard_name:
-            self.standard_name_table.check_units(standard_name, _new_units)
-
-        self.attrs.create('units', _new_units)
-
-    def get(self):
-        """Return the standardized name of the dataset. The attribute name is `standard_name`.
-        Returns `None` if it does not exist."""
-        return self.attrs.get('units', None)
-
-    def delete(self):
-        """Delete attribute units"""
-        self.attrs.__delitem__('units')
-
-
-# @register_standard_attribute(H5Group, name='long_name')
-# @register_standard_attribute(H5Dataset, name='long_name')
-class LongNameAttribute:
-    """Long name attribute"""
-
-    def set(self, value):
-        """Set the long_name"""
-        ln = LongName(value)  # runs check automatically during initialization
-        self.attrs.create('long_name', ln.__str__())
-
-    def get(self) -> Union[str, None]:
-        """Get the long_name"""
-        return self.attrs.get('long_name', None)
-
-    def delete(self):
-        """Delete the long_name"""
-        self.attrs.__delitem__('long_name')
-
-
-register_attribute_class(LongNameAttribute, H5Group, name='long_name', overwrite=True)
-register_attribute_class(LongNameAttribute, H5Dataset, name='long_name', overwrite=True)
+# title:
 register_attribute_class(cflike.title.TitleAttribute, H5File, name='title', overwrite=True)

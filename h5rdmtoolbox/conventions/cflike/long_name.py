@@ -1,4 +1,5 @@
 import re
+from typing import Union
 
 from .errors import LongNameError
 
@@ -26,3 +27,20 @@ class LongOrStandardNameWarning(Warning):
 
     def __str__(self):
         return repr(self.message)
+
+
+class LongNameAttribute:
+    """Long name attribute"""
+
+    def set(self, value):
+        """Set the long_name"""
+        ln = LongName(value)  # runs check automatically during initialization
+        self.attrs.create('long_name', ln.__str__())
+
+    def get(self) -> Union[str, None]:
+        """Get the long_name"""
+        return self.attrs.get('long_name', None)
+
+    def delete(self):
+        """Delete the long_name"""
+        self.attrs.__delitem__('long_name')

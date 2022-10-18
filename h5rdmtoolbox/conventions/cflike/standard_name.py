@@ -11,9 +11,11 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
+import json
 import os
 import pathlib
 import re
+import warnings
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
@@ -30,9 +32,10 @@ from pint.errors import UndefinedUnitError
 from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
-from .errors import StandardNameError, EmailError
+from . import errors
 from .._logger import logger
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
+from ... import config
 from ..._user import user_dirs
 from ...utils import generate_temporary_filename
 
@@ -273,7 +276,7 @@ class StandardNameTable:
         if not isinstance(contact, str):
             raise ValueError(f'Invalid type for contact Expcting str but got {type(contact)}')
         if not is_valid_email_address(contact):
-            raise EmailError(f'Invalid email address: {contact}')
+            raise errors.EmailError(f'Invalid email address: {contact}')
         self._contact = contact
 
     @property
@@ -354,8 +357,8 @@ class StandardNameTable:
     def set(self, name: str, description: str, canonical_units: str):
         """Set the value of a standard name"""
         if name in self.table:
-            raise StandardNameError(f'name "{name}" already exists in table. Use modify() '
-                                    f'to change the content')
+            raise errors.StandardNameError(f'name "{name}" already exists in table. Use modify() '
+                                           f'to change the content')
         verify_unit_object(canonical_units)
         self._table[name] = dict(description=description, canonical_units=canonical_units)
 
@@ -634,21 +637,22 @@ class StandardNameTable:
             strict = STRICT
 
         if not len(name) > 0:
-            raise StandardNameError(f'Name too short!')
+            raise errors.StandardNameError(f'Name too short!')
 
         if name[0] == ' ':
-            raise StandardNameError(f'Name must not start with a space!')
+            raise errors.StandardNameError(f'Name must not start with a space!')
 
         if name[-1] == ' ':
-            raise StandardNameError(f'Name must not end with a space!')
+            raise errors.StandardNameError(f'Name must not end with a space!')
 
         if re.sub(self.valid_characters, '', name) != name:
-            raise StandardNameError(f'Invalid special characters in name "{name}": Only "{self.valid_characters}" '
-                                    'is allowed.')
+            raise errors.StandardNameError(
+                f'Invalid special characters in name "{name}": Only "{self.valid_characters}" '
+                'is allowed.')
 
         if self.pattern != '' and self.pattern is not None:
             if re.match(self.pattern, name):
-                raise StandardNameError(f'Name must not start with a number!')
+                raise errors.StandardNameError(f'Name must not start with a number!')
 
         if strict:
             if name not in self.table:
@@ -658,7 +662,7 @@ class StandardNameTable:
                         similar_names = self.find_similar_names(name)
                         if similar_names:
                             err_msg += f'\nSimilar names are {similar_names}'
-                        raise StandardNameError(err_msg)
+                        raise errors.StandardNameError(err_msg)
         return True
 
     def find_similar_names(self, key):
@@ -670,8 +674,8 @@ class StandardNameTable:
         self.check_name(name, strict=True)  # will raise an error if name not in self._table
         if name in self.table:
             if not equal_base_units(_units_power_fix(self.table[name]['canonical_units']), units):
-                raise StandardNameError(f'Unit of standard name "{name}" not as expected: '
-                                        f'"{units}" != "{self[name].canonical_units}"')
+                raise errors.StandardNameError(f'Unit of standard name "{name}" not as expected: '
+                                               f'"{units}" != "{self[name].canonical_units}"')
         return True
 
     def check_file(self, filename, recursive: bool = True, raise_error: bool = True):
@@ -688,9 +692,9 @@ class StandardNameTable:
                     units = node.attrs['units']
                     try:
                         self.check_units(node.attrs['standard_name'], units=units)
-                    except StandardNameError as e:
+                    except errors.StandardNameError as e:
                         if raise_error:
-                            raise StandardNameError(e)
+                            raise errors.StandardNameError(e)
                         else:
                             logger.error(f' > ds: {node.name}: {e}')
 
@@ -896,3 +900,107 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               contact='none@none.none',
                                               last_modified=None,
                                               valid_characters='')
+
+
+class StandardNameDatasetAttribute:
+    """Standard Name attribute"""
+
+    def set(self, new_standard_name):
+        """Writes attribute standard_name if passed string is not None.
+        The rules for the standard_name is checked before writing to file."""
+        if new_standard_name:
+            if self.standard_name_table.check_name(new_standard_name):
+                if STRICT:
+                    if 'units' in self.attrs:
+                        self.standard_name_table.check_units(new_standard_name,
+                                                             self.attrs['units'])
+                self.attrs.create('standard_name', new_standard_name)
+
+    def get(self):
+        """Return the standardized name of the dataset. The attribute name is `standard_name`.
+        Returns `None` if it does not exist."""
+        val = self.attrs.get('standard_name', None)
+        if val is None:
+            return None
+        return self.standard_name_table[val]
+
+    def delete(self):
+        """Delete attribute"""
+        self.attrs.__delitem__('standard_name')
+
+
+class StandardNameGroupAttribute:
+    def set(self, new_standard_name):
+        raise RuntimeError('A standard name attribute is used for datasets only')
+
+
+class StandardNameTableAttribute:
+    """Standard Name Table attribute"""
+
+    def set(self, snt: Union[str, StandardNameTable]):
+        """Set (write to root group) Standard Name Table
+
+        Raises
+        ------
+        errors.StandardNameTableError
+            If no write intent on file.
+
+        """
+        if isinstance(snt, str):
+            StandardNameTable.print_registered()
+            snt = StandardNameTable.load_registered(snt)
+        if self.mode == 'r':
+            raise errors.StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
+        if snt.STORE_AS == StandardNameTableStoreOption.none:
+            if snt.url:
+                if url_exists(snt.url):
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
+                else:
+                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
+                                                 snt.to_dict())
+            else:
+                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+        if snt.STORE_AS == StandardNameTableStoreOption.versionname:
+            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.versionname)
+        elif snt.STORE_AS == StandardNameTableStoreOption.dict:
+            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+        elif snt.STORE_AS == StandardNameTableStoreOption.url:
+            if snt.url is not None:
+                if url_exists(snt.url):
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
+                else:
+                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
+                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.to_dict())
+            else:  # else fall back to writing dict. better than versionname because cannot get lost
+                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+        _SNT_CACHE[self.id.id] = snt
+
+    def get(self) -> StandardNameTable:
+        """Get (if exists) Standard Name Table from file
+
+        Raises
+        ------
+        KeyError
+            If cannot load SNT from registration.
+        """
+        try:
+            return _SNT_CACHE[self.file.id.id]
+        except KeyError:
+            pass  # not cached
+        snt = self.rootparent.attrs.get(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, None)
+        if snt is not None:
+            # snt is a string
+            if isinstance(snt, dict):
+                return StandardNameTable(**snt)
+            if snt[0] == '{':
+                return StandardNameTable(**json.loads(snt))
+            elif snt[0:4] in ('http', 'wwww.'):
+                return StandardNameTable.from_web(snt)
+            else:
+                return StandardNameTable.from_versionname(snt)
+        return Empty_Standard_Name_Table
+
+    def delete(self):
+        """Delete standard name table from root attributes"""
+        self.attrs.__delitem__(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME)
