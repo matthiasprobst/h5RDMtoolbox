@@ -1,3 +1,4 @@
+"""Module to register attributes of wrapper classes without touching the implementation"""
 from typing import List, Tuple
 from typing import Union
 

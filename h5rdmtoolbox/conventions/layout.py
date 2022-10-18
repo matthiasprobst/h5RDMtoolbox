@@ -16,7 +16,7 @@ from .registration import register_standard_attribute
 from .utils import equal_base_units
 from .. import _repr
 from .._user import user_dirs
-from ..wrapper.h5file import H5File
+from ..wrapper.core import H5File
 
 logger = logging.getLogger(__package__)
 
@@ -127,7 +127,7 @@ class LayoutGroup(h5py.Group):
         ret = super().__getitem__(name)
         if isinstance(ret, h5py.Dataset):
             return LayoutDataset(ret.id)
-        elif isinstance(ret, h5py.Group):
+        if isinstance(ret, h5py.Group):
             return LayoutGroup(ret.id)
         return ret
 

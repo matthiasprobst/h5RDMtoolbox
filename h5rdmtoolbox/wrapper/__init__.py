@@ -5,9 +5,7 @@ Contains wrapper classes
 
 from . import _logger
 from .accessory import register_special_property, register_special_dataset
-from .h5file import H5File
-
-wrapper_classes = {'h5file': H5File}
+from .core import H5File
 
 
 def set_loglevel(level):

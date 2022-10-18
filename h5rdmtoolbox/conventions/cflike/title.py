@@ -1,14 +1,7 @@
 import re
 
-from .registration import register_standard_attribute
-from ..wrapper.h5file import H5File
+from .errors import TitleError
 
-
-class TitleError(ValueError):
-    """An error associated with the title property"""
-
-
-@register_standard_attribute(H5File, name='title')
 class TitleAttribute:
     """Title attribute"""
 

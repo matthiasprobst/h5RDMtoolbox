@@ -13,6 +13,7 @@ try:
     CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
 except FileNotFoundError:
     import pathlib
+
     with open(pathlib.Path(__file__).parent / 'data/style.css') as f:
         CSS_STR = f.read().rstrip()
 
@@ -137,7 +138,7 @@ def sdump(h5grp, ret=False,
             else:
                 shape = ds.shape
                 if ds.dtype.char == 'S':
-                    pass
+                    out += f'\n{spaces}{varname:{sp_name}} {ds.dtype}'
                 else:
                     units = h5grp[dataset_name].units
                     if units is None:
@@ -150,8 +151,8 @@ def sdump(h5grp, ret=False,
 
             if not hide_attributes:
                 # write attributes:
-                for ak, av in h5grp[dataset_name].attrs.items():
-                    if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
+                for ak, av in ds.attrs.items():
+                    if ak not in ('units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
                         _ak = f'{ak}:'
                         if isinstance(av, (h5py.Dataset, h5py.Group)):
                             _av = av.name
@@ -182,8 +183,7 @@ def sdump(h5grp, ret=False,
                          hide_attributes=hide_attributes)
     if ret:
         return out
-    else:
-        print(out)
+    print(out)
 
 
 def _attribute_repr_html(name, value, max_attr_length: Union[int, None]):
@@ -231,8 +231,7 @@ def _attribute_repr_html(name, value, max_attr_length: Union[int, None]):
         #         </ul>
         #
         #     </ul>"""
-    else:
-        return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
+    return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 
 def _group_repr_html(h5group, max_attr_length: Union[int, None], collapsed: bool):

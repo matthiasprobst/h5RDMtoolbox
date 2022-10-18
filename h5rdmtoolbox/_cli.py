@@ -6,8 +6,8 @@ from pprint import pprint
 
 import h5py
 
+from . import H5File
 from ._version import __version__
-from .wrapper import open_wrapper
 
 
 def main():
@@ -107,7 +107,7 @@ def main():
         pprint(user_dirs)
         return
     if args.dump:
-        with open_wrapper(args.dump) as h5:
+        with H5File(args.dump) as h5:
             h5.sdump()
     argvars = vars(args)
 
@@ -123,7 +123,7 @@ def main():
 
             if args.db:
                 if len(list_of_databases) == 0:
-                    print(f' > No connection to a client found')
+                    print(' > No connection to a client found')
                     return
                 db = client[args.db]
 
@@ -152,7 +152,7 @@ def main():
 
             if args.add:
                 if collection is None:
-                    print(f'No collection selected or found')
+                    print('No collection selected or found')
                     return
                 try:
                     with h5py.File(args.add):
@@ -162,13 +162,13 @@ def main():
                           'opened/is not corrupt')
                     return
                 print(f' > Adding hdf file: {args.add} to collection {collection.name} of database {db.name}')
-                with open_wrapper(args.add) as h5:
+                with H5File(args.add) as h5:
                     # noinspection PyUnresolvedReferences
                     from h5rdmtoolbox.database import mongo
                     h5.mongo.insert(collection=collection, recursive=True, update=True)
             return
-        elif args.cmd == 'standard_name':
-            from .conventions.standard_attributes.standard_name import StandardNameTable
+        if args.cmd == 'standard_name':
+            from .conventions.cflike.standard_name import StandardNameTable
             import pathlib
             if args.list_registered:
                 StandardNameTable.print_registered()
@@ -180,10 +180,10 @@ def main():
                 else:
                     snt = StandardNameTable.load_registered(args.table)
                 print(f' > Checking file "{args.file}" with standard name table "{snt.versionname}"')
-                with open_wrapper(args.file) as h5:
+                with H5File(args.file) as h5:
                     snt.check_grp(h5, recursive=True, raise_error=False)
                 return
-        elif args.cmd == 'layout':
+        if args.cmd == 'layout':
             from .conventions.layout import H5Layout
             import pathlib
             if args.list_registered:
@@ -209,4 +209,3 @@ def main():
                 hdf_filename = pathlib.Path(args.register)
                 h5lay = H5Layout(hdf_filename)
                 h5lay.register()
-                

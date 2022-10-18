@@ -1,37 +1,48 @@
+"""Core wrapper module containing basic wrapper implementation of H5File, H5Dataset and H5Group
+"""
+import datetime
 import logging
 import os
+import pathlib
+import shutil
 import warnings
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Tuple, Dict
-from typing import Union
+from typing import List, Dict, Union, Tuple
 
 import h5py
 import numpy as np
-# noinspection PyUnresolvedReferences
-import pint_xarray
 # noinspection PyUnresolvedReferences
 import pint_xarray
 import xarray as xr
 import yaml
 from IPython.display import HTML, display
 from h5py._hl.base import phil
+from h5py._objects import ObjectID
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
-# noinspection PyUnresolvedReferences
-from . import xr2hdf
-from .h5attr import WrapperAttributeManager, H5_DIM_ATTRS
+from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
+from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name
 from .. import _repr
 from .. import config
-from .. import conventions
-from .. import errors
 from .. import utils
 from .._repr import h5file_html_repr
+from .._user import user_dirs
+from .._version import __version__
+from ..database import filequery
+
+# from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
+
+ureg.default_format = config.UREG_FORMAT
+
+H5File_layout_filename = Path.joinpath(user_dirs['layouts'],
+                                       'H5File.hdf')
 
 
 class H5Group(h5py.Group):
@@ -83,10 +94,13 @@ class H5Group(h5py.Group):
             search(parent)
             return found
 
+        if self.name == '/':
+            return self
         return get_root(self.parent)
 
     @property
-    def basename(self):
+    def basename(self) -> str:
+        """Basename of dataset (path without leading forward slash)"""
         return os.path.basename(self.name)
 
     def get_datasets(self, pattern=None) -> List[h5py.Dataset]:
@@ -119,9 +133,11 @@ class H5Group(h5py.Group):
         else:
             ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
 
-    def __setitem__(self, name: str, obj: Union[xr.DataArray, List, Tuple, Dict]) -> None:
+    def __setitem__(self,
+                    name: str,
+                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> None:
         """
-        Lazy creating datasets. More difficult than using h5py as mandatoy
+        Lazy creating datasets. More difficult than using h5py as mandatory
         parameters must be provided.
 
         Parameters
@@ -149,17 +165,10 @@ class H5Group(h5py.Group):
         if isinstance(obj, xr.DataArray):
             _ = obj.hdf.to_group(H5Group(self), name)
         elif isinstance(obj, (list, tuple)):
-            _keys = ('data', 'units', 'long_name', 'standard_name', 'kwargs')
-            _values = {}
-            kwargs = {}
-            # first enty must be data:
-            for i, (_obj, _key) in enumerate(zip(obj, _keys)):
-                if isinstance(_obj, dict):
-                    kwargs = _obj
-                    break
-                if not isinstance(_obj, dict):
-                    _values[_key] = _obj
-            self.create_dataset(name, **_values, **kwargs)
+            if not isinstance(obj[1], dict):
+                raise TypeError(f'Secod item must be type dict but is {type(obj[1])}')
+            kwargs = obj[1]
+            self.create_dataset(name, data=obj[0], **kwargs)
         elif isinstance(obj, dict):
             self.create_dataset(**obj)
         else:
@@ -228,8 +237,11 @@ class H5Group(h5py.Group):
                     tree[k] = v.get_tree_structure(recursive)
         return tree
 
-    def create_group(self, name, long_name=None, overwrite=None,
-                     attrs=None, track_order=None):
+    def create_group(self,
+                     name,
+                     overwrite=None,
+                     attrs=None,
+                     track_order=None):
         """
         Overwrites parent methods. Additional parameters are "long_name" and "attrs".
         Besides, it does and behaves the same. Differently to dataset creating
@@ -277,15 +289,12 @@ class H5Group(h5py.Group):
             for k, v in attrs.items():
                 subgrp.attrs[k] = v
 
-        if attrs is not None:
-            long_name = attrs.pop('long_name', long_name)
-        if long_name is not None:
-            subgrp.attrs['long_name'] = long_name
         return self._h5grp(subgrp)
 
-    def create_string_dataset(self, name: str, data: Union[str, List[str]], overwrite=False,
-                              standard_name=None,
-                              long_name=None,
+    def create_string_dataset(self,
+                              name: str,
+                              data: Union[str, List[str]],
+                              overwrite=False,
                               attrs=None):
         """Create a string dataset. In this version only one string is allowed.
         In future version a list of strings may be allowed, too.
@@ -302,19 +311,21 @@ class H5Group(h5py.Group):
         ds = super().create_dataset(name, dtype=dtype, data=data)
         if attrs is None:
             attrs = {}
-        if long_name:
-            attrs.update({'long_name': long_name})
-        if standard_name:
-            attrs.update({'standard_name': long_name})
         for ak, av in attrs.items():
             ds.attrs[ak] = av
+        # TODO: H5StingDataset
         return ds
 
-    def create_dataset(self, name, shape=None, dtype=None, data=None,
-                       units=None, long_name=None,
-                       standard_name: Union[str, "StandardName"] = None,
-                       overwrite=None, chunks=True,
-                       attrs=None, attach_scales=None, make_scale=False,
+    def create_dataset(self,
+                       name,
+                       shape=None,
+                       dtype=None,
+                       data=None,
+                       overwrite=None,
+                       chunks=True,
+                       attrs=None,
+                       attach_scales=None,
+                       make_scale=False,
                        **kwargs):
         """
         Adapting parent dataset creation:
@@ -334,14 +345,6 @@ class H5Group(h5py.Group):
             Provide data to initialize the dataset.  If not used,
             provide shape and optionally dtype via kwargs (see more in
             h5py documentation regarding arguments for create_dataset
-        long_name : str
-            The long name (human readable description of the dataset).
-            If None, standard_name must be provided
-        standard_name: str or conventions.StandardName
-            The standard name of the dataset. If None, long_name must be provided
-        units : str, default=None
-            Physical units of the data. Can only be None if data is not attached with such attribute,
-            e.g. through xarray.
         overwrite : bool, default=None
             If the dataset does not already exist, the new dataset is written and this parameter has no effect.
             If the dataset exists and ...
@@ -377,77 +380,6 @@ class H5Group(h5py.Group):
         else:
             if isinstance(data, xr.DataArray):
                 data.attrs.update(attrs)
-
-        if isinstance(data, xr.DataArray):
-            if units is None:  # maybe DataArray has pint accessor
-                try:
-                    data = data.pint.dequantify()
-                except:
-                    pass
-                if 'units' in data.attrs:
-                    data.attrs['units'] = ureg.Unit(data.attrs['units']).__format__(ureg.default_format)
-                    units = data.attrs.get('units')
-
-                if units is None:  # xr.DataArray had no units!
-                    units = attrs.get('units', None)  # is it in function parameter attrs?
-                    if units is None:  # let's check for a typo:
-                        units = kwargs.get('unit', None)
-                else:  # xr.DataArray had units ...
-                    if 'units' in attrs:  # ...but also there is units in attrs!
-                        units = attrs.get('units')
-                        warnings.warn(
-                            '"units" is over-defined. Your data array is associated with the attribute "units" and '
-                            'you passed the parameter "units". Will use the units that has been passed via the '
-                            f'function call: {units}')
-            else:
-                data.attrs['units'] = units
-
-            if long_name is not None and 'long_name' in data.attrs:
-                warnings.warn(
-                    f'"long_name" is over-defined in dataset "{name}". \nYour data array is already associated '
-                    f'with the attribute "long_name" and you passed the parameter "long_name".\n'
-                    f'The latter will overwrite the data array attribute long_name!'
-                )
-
-            if 'standard_name' in data.attrs:
-                attrs['standard_name'] = data.attrs['standard_name']
-            if 'long_name' in data.attrs:
-                attrs['long_name'] = data.attrs['long_name']
-
-        if units is None:
-            if attrs:
-                units = attrs.get('units', None)
-            else:
-                units = kwargs.get('unit', None)  # forgive the typo!
-        else:
-            if 'units' in attrs:
-                warnings.warn('"units" is over-defined. Your data array is associated with the attribute "units" and '
-                              'you passed the parameter "units". The latter will overwrite the data array units!')
-        if units is None:
-            if config.REQUIRE_UNITS:
-                raise errors.UnitsError('Units cannot be None. A dimensionless dataset has units "''"')
-            attrs['units'] = ''
-        else:
-            attrs['units'] = units
-
-        if 'long_name' in attrs and long_name is not None:
-            warnings.warn('"long_name" is over-defined.\nYour data array is already associated with the attribute '
-                          '"long_name" and you passed the parameter "long_name".\nThe latter will overwrite '
-                          'the data array units!')
-        if long_name is not None:
-            attrs['long_name'] = long_name
-
-        if 'standard_name' in attrs and standard_name is not None:
-            warnings.warn(f'"standard_name" is over-defined for dataset "{name}". '
-                          f'Your data array is associated with the attribute '
-                          '"standard_name" and you passed the parameter "standard_name". The latter will overwrite '
-                          'the data array units!')
-        if standard_name is not None:
-            self.standard_name_table.check_units(standard_name, attrs['units'])
-            attrs['standard_name'] = standard_name
-
-        if attrs.get('standard_name') is None and attrs.get('long_name') is None:
-            raise RuntimeError('No long_name or standard_name is given. Either must be provided')
 
         if name:
             if name in self:
@@ -511,10 +443,16 @@ class H5Group(h5py.Group):
 
         if _data is not None:
             if _data.ndim == 0:
-                _ds = super().create_dataset(name, shape=shape, dtype=dtype, data=_data,
+                _ds = super().create_dataset(name,
+                                             shape=shape,
+                                             dtype=dtype,
+                                             data=_data,
                                              **kwargs)
             else:
-                _ds = super().create_dataset(name, shape=shape, dtype=dtype, data=_data,
+                _ds = super().create_dataset(name,
+                                             shape=shape,
+                                             dtype=dtype,
+                                             data=_data,
                                              chunks=chunks,
                                              compression=compression,
                                              compression_opts=compression_opts,
@@ -924,24 +862,25 @@ class H5Group(h5py.Group):
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
         and handles the dimension scales."""
-        """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
-        and handles the dimension scales."""
         ds_coords = {}
         for coord in dataset.coords.keys():
-            ds = self.create_dataset(coord, data=dataset.coords[coord].values,
-                                     attrs=dataset.coords[coord].attrs, overwrite=False)
+            ds = self.create_dataset(coord,
+                                     data=dataset.coords[coord].values,
+                                     attrs=dataset.coords[coord].attrs,
+                                     overwrite=False)
             ds.make_scale()
             ds_coords[coord] = ds
         for data_var in dataset.data_vars.keys():
-            ds = self.create_dataset(data_var, data=dataset[data_var].values,
-                                     attrs=dataset[data_var].attrs, overwrite=False)
+            ds = self.create_dataset(data_var,
+                                     data=dataset[data_var].values,
+                                     attrs=dataset[data_var].attrs,
+                                     overwrite=False)
             for idim, dim in enumerate(dataset[data_var].dims):
                 if dim not in ds_coords:
                     # warnings.warn(f'xr-dimension {dim} was skipped because no units and long_name/standard_name '
                     #               'are available and cannot be set anyhow. This is due to the package xarray.')
                     # xarray does not let me add attributes to this dimension
-                    self.create_dataset(name=dim, data=dataset[data_var][dim].values, units='',
-                                        long_name='xarray dimension')
+                    h5py.Group(self.id).create_dataset(name=dim, data=dataset[data_var][dim].values)
                 else:
                     ds.dims[idim].attach_scale(ds_coords[dim])
 
@@ -1177,3 +1116,504 @@ class H5Group(h5py.Group):
     def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
         """stng representation of group"""
         return _repr.sdump(self, ret, nspaces, grp_only, hide_attributes, color_code_verification)
+
+
+class DatasetValues:
+    """helper class to work around xarray"""
+
+    def __init__(self, h5dataset):
+        self.h5dataset = h5dataset
+
+    def __getitem__(self, args, new_dtype=None):
+        return self.h5dataset.__getitem__(args, new_dtype=new_dtype, nparray=True)
+
+    def __setitem__(self, args, val):
+        return self.h5dataset.__setitem__(args, val)
+
+
+class H5Dataset(h5py.Dataset):
+    """Subclass of h5py.Dataset implementing a model.
+    This core version enforces the user to use units and
+    long_name or standard_name when creating datasets.
+    The property standard_name return a standard name
+    model.
+    """
+
+    @property
+    def attrs(self):
+        """Exact copy of parent class:
+        Attributes attached to this object """
+        with phil:
+            return WrapperAttributeManager(self)
+
+    @property
+    def parent(self) -> "H5Group":
+        """Return the parent group of this dataset
+
+        Returns
+        -------
+        H5Group
+            Parent group of this dataset"""
+
+        return self._h5grp(super().parent)
+
+    @property
+    def rootparent(self) -> "H5Group":
+        """Return the root group of the file.
+
+        Returns
+        -------
+        H5Group
+            Root group object.
+        """
+
+        def get_root(parent):
+            global found
+            found = parent.parent
+
+            def search(parent):
+                global found
+                parent = parent.parent
+                if parent.name == '/':
+                    found = parent
+                else:
+                    _ = search(parent)
+
+            search(parent)
+            return found
+
+        if self.name == '/':
+            return self._h5grp(self)
+        return self._h5grp(get_root(super().parent))
+
+    @property
+    def basename(self) -> str:
+        """Basename of the dataset, which is the name without the
+        internal file path
+
+        Returns
+        -------
+        str
+            The basename.
+        """
+        return os.path.basename(self.name)
+
+    @property
+    def values(self) -> DatasetValues:
+        """Mimic the h5py behaviour and return a numpy array instead
+        of a xarray object.
+
+        Returns
+        -------
+        DatasetValues
+            Helper class mimicing the h5py behaviour of returning a numpy array.
+        """
+        return DatasetValues(self)
+
+    def __getattr__(self, item):
+        if item not in self.__dict__:
+            for d in self.dims:
+                if len(d) > 0:
+                    for i in range(len(d)):
+                        if item == os.path.basename(d[i].name):
+                            return d[i]
+        return super().__getattribute__(item)
+
+    def __setitem__(self, key, value):
+        if isinstance(value, xr.DataArray):
+            self.attrs.update(value.attrs)
+            super().__setitem__(key, value.data)
+        else:
+            super().__setitem__(key, value)
+
+    def __getitem__(self, args, new_dtype=None, nparray=False) -> Union[xr.DataArray, np.ndarray]:
+        """Return sliced HDF dataset. If global setting `RETURN_XARRAY`
+        is set to True, a `xr.DataArray` is returned, otherwise the default
+        behaviour of the h5p-package is used and a np.ndarray is returend.
+        Note, that even if `RETURN_XARRAY` is True, there is another way to
+        receive  numpy array. This is by calling .values[:] on the dataset."""
+        args = args if isinstance(args, tuple) else (args,)
+        if not config.RETURN_XARRAY or nparray:
+            return super().__getitem__(args, new_dtype=new_dtype)
+        if Ellipsis in args:
+            warnings.warn(
+                'Ellipsis not supported at this stage. returning numpy array')
+            return super().__getitem__(args, new_dtype=new_dtype)
+        else:
+            arr = super().__getitem__(args, new_dtype=new_dtype)
+            attrs = pop_hdf_attributes(self.attrs)
+
+            if 'DIMENSION_LIST' in self.attrs:
+                # there are coordinates to attach...
+
+                myargs = [slice(None) for _ in range(self.ndim)]
+                for ia, a in enumerate(args):
+                    myargs[ia] = a
+
+                # remember the first dimension name for all axis:
+                dims_names = [Path(d[0].name).stem if len(
+                    d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
+
+                coords = {}
+                used_dims = []
+                for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
+                    for iax, _ in enumerate(dim):
+                        dim_ds = dim[iax]
+                        coord_name = Path(dim[iax].name).stem
+                        if dim_ds.ndim == 0:
+                            if isinstance(arg, int):
+                                coords[coord_name] = xr.DataArray(name=coord_name,
+                                                                  dims=(
+                                                                  ), data=dim_ds[()],
+                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
+                            else:
+                                coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
+                                                                  data=[
+                                                                      dim_ds[()], ],
+                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
+                        else:
+                            used_dims.append(dim_name)
+                            _data = dim_ds[arg]
+                            if isinstance(_data, np.ndarray):
+                                coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
+                                                                  data=_data,
+                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
+                            else:
+                                coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
+                                                                  data=_data,
+                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
+
+                used_dims = [dim_name for arg, dim_name in zip(
+                    myargs, dims_names) if isinstance(arg, slice)]
+
+                COORDINATES = self.attrs.get('COORDINATES')
+                if COORDINATES is not None:
+                    if isinstance(COORDINATES, str):
+                        COORDINATES = [COORDINATES, ]
+                    for c in COORDINATES:
+                        if c[0] == '/':
+                            _data = self.rootparent[c]
+                        else:
+                            _data = self.parent[c]
+                        _name = Path(c).stem
+                        coords.update({_name: xr.DataArray(name=_name, dims=(),
+                                                           data=_data,
+                                                           attrs=pop_hdf_attributes(self.parent[c].attrs))})
+                return xr.DataArray(name=Path(self.name).stem, data=arr, dims=used_dims,
+                                    coords=coords, attrs=attrs)
+            return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
+
+    def __str__(self):
+        return f'<HDF5 wrapper dataset shape "{self.shape}" (<{self.dtype}>)>'
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __lt__(self, other):
+        """Call __lt__() on group names"""
+        return self.name < other.name
+
+    def dump(self) -> None:
+        """Call sdump()"""
+        self.sdump()
+
+    def sdump(self) -> None:
+        """Print the dataset content in a more comprehensive way"""
+        out = f'{self.__class__.__name__} "{self.name}"'
+        out += f'\n{"-" * len(out)}'
+        out += f'\n{"shape:":14} {self.shape}'
+        out += f'\n{"long_name:":14} {self.long_name}'
+        out += f'\n{"standard_name:":14} {self.attrs.get("standard_name")}'
+        out += f'\n{"units:":14} {self.units}'
+
+        has_dim = False
+        dim_str = f'\n\nDimensions'
+        for _id, d in enumerate(self.dims):
+            naxis = len(d)
+            if naxis > 0:
+                has_dim = True
+                for iaxis in range(naxis):
+                    if naxis > 1:
+                        dim_str += f'\n   [{_id}({iaxis})] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                    else:
+                        dim_str += f'\n   [{_id}] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
+                    dim_str += f'\n       long_name:     {d[iaxis].attrs.get("long_name")}'
+                    dim_str += f'\n       standard_name: {d[iaxis].attrs.get("standard_name")}'
+                    dim_str += f'\n       units:         {d[iaxis].attrs.get("units")}'
+        if has_dim:
+            out += dim_str
+        print(out)
+
+    def __init__(self, _id):
+        if isinstance(_id, h5py.Dataset):
+            _id = _id.id
+        if isinstance(_id, h5py.h5d.DatasetID):
+            super().__init__(_id)
+        else:
+            ValueError('Could not initialize Dataset. A h5py.h5f.FileID object must be passed')
+
+        super().__init__(_id)
+
+    def to_units(self, new_units: str):
+        """Changes the physical unit of the dataset using pint_xarray.
+        Loads to full dataset into RAM!"""
+        self[()] = self[()].pint.quantify().pint.to(new_units).pint.dequantify()
+
+    def rename(self, newname):
+        """renames the dataset. Note this may be a process that kills your RAM"""
+        # hard copy:
+        if 'CLASS' and 'NAME' in self.attrs:
+            raise RuntimeError(
+                'Cannot rename {self.name} because it is a dimension scale!')
+
+        self.parent[newname] = self
+        del self.parent[self.name]
+
+    def set_primary_scale(self, axis, iscale: int):
+        """define the axis for which the first scale should be set. iscale is the index
+        of the available scales to be set as primary.
+        Make sure you have write intent on file"""
+        nscales = len(self.dims[axis])
+        if iscale >= nscales:
+            raise ValueError(
+                f'The target scale index "iscale" is out of range [0, {nscales - 1}]')
+        backup_scales = self.dims[axis].items()
+        for _, ds in backup_scales:
+            self.dims[axis].detach_scale(ds)
+        ils = [iscale, *[i for i in range(nscales) if i != iscale]]
+        for i in ils:
+            self.dims[axis].attach_scale(backup_scales[i][1])
+        logger.debug(f'new primary scale: {self.dims[axis][0]}')
+
+
+class H5File(h5py.File, H5Group):
+    """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
+    It enables additional features and adds new methods streamlining the work with
+    HDF5 files and incorporates usage of so-called naming-conventions and layouts.
+    All features from h5py packages are preserved."""
+
+    @property
+    def attrs(self) -> 'WrapperAttributeManager':
+        """Return an attribute manager that is inherited from h5py's attribute manager"""
+        with phil:
+            return WrapperAttributeManager(self)
+
+    @property
+    def version(self) -> str:
+        """Return version stored in file"""
+        return self.attrs.get('__h5rdmtoolbox_version__')
+
+    @property
+    def modification_time(self) -> datetime:
+        """Return creation time from file"""
+        return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
+                                      tz=timezone.utc).astimezone()
+
+    @property
+    def creation_time(self) -> datetime:
+        """Return creation time from file"""
+        return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
+                                      tz=timezone.utc).astimezone()
+
+    @property
+    def filesize(self):
+        """
+        Returns file size in bytes (or other units if asked)
+
+        Returns
+        -------
+        _bytes
+            file size in byte
+
+        """
+        _bytes = os.path.getsize(self.filename)
+        return _bytes * ureg.byte
+
+    def __init__(self,
+                 name: Path = None,
+                 mode='r',
+                 layout: Union[Path, str, 'H5Layout'] = 'H5File',
+                 driver=None,
+                 libver=None,
+                 userblock_size=None,
+                 swmr=False,
+                 rdcc_nslots=None,
+                 rdcc_nbytes=None,
+                 rdcc_w0=None,
+                 track_order=None,
+                 fs_strategy=None,
+                 fs_persist=False,
+                 fs_threshold=1,
+                 **kwds):
+        _tmp_init = False
+        if name is None:
+            _tmp_init = True
+            logger.debug("An empty H5File class is initialized")
+            name = utils.touch_tmp_hdf5_file()
+        elif isinstance(name, ObjectID):
+            pass
+        elif not isinstance(name, (str, Path)):
+            raise ValueError(
+                f'It seems that no proper file name is passed: type of {name} is {type(name)}')
+        else:
+            if mode == 'r+':
+                if not Path(name).exists():
+                    _tmp_init = True
+                    # "touch" the file, so it exists
+                    with h5py.File(name, mode='w', driver=driver,
+                                   libver=libver, userblock_size=userblock_size, swmr=swmr,
+                                   rdcc_nslots=rdcc_nslots, rdcc_nbytes=rdcc_nbytes, rdcc_w0=rdcc_w0,
+                                   track_order=track_order, fs_strategy=fs_strategy, fs_persist=fs_persist,
+                                   fs_threshold=fs_threshold,
+                                   **kwds) as _h5:
+                        pass  # just touching the file
+
+        if _tmp_init:
+            mode = 'r+'
+        if not isinstance(name, ObjectID):
+            self.hdf_filename = Path(name)
+        super().__init__(name=name, mode=mode, driver=driver,
+                         libver=libver, userblock_size=userblock_size, swmr=swmr,
+                         rdcc_nslots=rdcc_nslots, rdcc_nbytes=rdcc_nbytes, rdcc_w0=rdcc_w0,
+                         track_order=track_order, fs_strategy=fs_strategy, fs_persist=fs_persist,
+                         fs_threshold=fs_threshold,
+                         **kwds)
+
+        if self.mode != 'r':
+            # update file toolbox version, wrapper version
+            self.attrs['__h5rdmtoolbox_version__'] = __version__
+            self.attrs['__wrcls__'] = self.__class__.__name__
+
+        self.layout = layout
+
+    def check(self, grp: Union[str, h5py.Group] = '/') -> int:
+        """Run layout check. This method may be overwritten to add conditional
+         checking.
+
+         Parameters
+         ----------
+         grp: str or h5py.Group, default='/'
+            Group from where to start the layout check.
+            Per default starts at root level
+
+         Returns
+         -------
+         int
+            Number of detected issues.
+         """
+        return self.layout.check(self[grp])
+
+    def moveto(self, destination: Path, overwrite: bool = False) -> Path:
+        """Move the opened file to a new destination.
+
+        Parameters
+        ----------
+        destination : Path
+            New filename.
+        overwrite : bool
+            Whether to overwrite an existing file.
+
+        Return
+        ------
+        new_filepath : Path
+            Path to new file locationRaises
+
+        Raises
+        ------
+        FileExistsError
+            If destination file exists and overwrite is False.
+        """
+        dest_fname = Path(destination)
+        if dest_fname.exists() and not overwrite:
+            raise FileExistsError(f'The target file "{dest_fname}" already exists and overwriting is set to False.'
+                                  ' Not moving the file!')
+        logger.debug(f'Moving file {self.hdf_filename} to {dest_fname}')
+
+        if not dest_fname.parent.exists():
+            Path.mkdir(dest_fname.parent, parents=True)
+            logger.debug(f'Created directory {dest_fname.parent}')
+
+        mode = self.mode
+        self.close()
+        shutil.move(self.hdf_filename, dest_fname)
+        super().__init__(dest_fname, mode=mode)
+        new_filepath = dest_fname.absolute()
+        self.hdf_filename = new_filepath
+        return new_filepath
+
+    def saveas(self, filename: Path, overwrite: bool = False) -> "H5File":
+        """
+        Save this file under a new name (effectively a copy). This file is closed and re-opened
+        from the new destination usng the previous file mode.
+
+        Parameters
+        ----------
+        filename: Path
+            New filename.
+        overwrite: bool, default=False
+            Whether to not to overwrite an existing filename.
+
+        Returns
+        -------
+        H5File
+            Instance of moved H5File
+
+        """
+        _filename = Path(filename)
+        if _filename.is_file():
+            if overwrite:
+                os.remove(_filename)
+            else:
+                raise FileExistsError("Note: File was not moved to new location as a file already exists with this name"
+                                      " and overwriting was disabled")
+
+        src = self.filename
+        mode = self.mode
+        self.close()  # close this instance
+
+        shutil.copy2(src, _filename)
+        self.hdf_filename = _filename
+        return H5File(_filename, mode=mode)
+
+    def reopen(self, mode: str = 'r+') -> None:
+        """Open the closed file"""
+        self.__init__(self.hdf_filename, mode=mode)
+
+    @staticmethod
+    def open(filename: Union[str, pathlib.Path], mode: str = "r+") -> 'H5File':
+        """Open the closed file and use the correct wrapper class
+
+        Parameters
+        ----------
+        mode: str
+            Mode used to open the file: r, r+, w, w-, x, a
+
+        Returns
+        -------
+        Subclass of H5File
+        """
+        return H5File(filename, mode)
+
+
+class H5Files(filequery.Files):
+    def __enter__(self):
+        for filename in self._list_of_filenames:
+            try:
+                h5file = H5File(filename, mode='r')
+                self._opened_files[str(filename)] = h5file
+            except RuntimeError as e:
+                print(f'RuntimeError: {e}')
+                for h5file in self._opened_files.values():
+                    h5file.close()
+                self._opened_files = {}
+        return self
+
+
+H5Dataset._h5grp = H5Group
+H5Dataset._h5ds = H5Dataset
+
+H5Group._h5grp = H5Group
+H5Group._h5ds = H5Dataset
+
+# # noinspection PyUnresolvedReferences
+# from ..conventions import standard_name, units, title, software, long_name, data

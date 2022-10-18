@@ -1,33 +1,21 @@
 import datetime
-import pathlib
 import unittest
 import warnings
-from typing import List
 
 import numpy as np
 import pymongo.collection
 from pymongo import MongoClient
 
+from h5rdmtoolbox import use_wrapper_convention
+
+use_wrapper_convention('cflike')
+
 import h5rdmtoolbox as h5tbx
-import h5rdmtoolbox.database as h5db
 from h5rdmtoolbox import H5File
 from h5rdmtoolbox import tutorial
 # noinspection PyUnresolvedReferences
 from h5rdmtoolbox.database import mongo
 from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
-
-
-def read_many_from_database(db_entry: pymongo.collection.Cursor) -> List[any]:
-    with h5db.H5Files(*[entry['filename'] for entry in db_entry.rewind()]) as h5files:
-        arrs = []
-        for entry in db_entry.rewind():
-            ds = h5files[pathlib.Path(entry['filename']).stem][entry['path']]
-
-            _slice = [slice(*s) for s in entry['slice']]
-            if _slice[0].stop - _slice[0].start == 1:
-                _slice[0] = _slice[0].start
-            arrs.append(ds[tuple(_slice)])
-        return arrs
 
 
 class TestH5Mongo(unittest.TestCase):
@@ -57,7 +45,7 @@ class TestH5Mongo(unittest.TestCase):
             company = ('bikeCompany', 'shoeCompany', 'bikeCompany', 'shoeCompany')
             filenames = []
             for i, (username, company) in enumerate(zip(usernames, company)):
-                with h5tbx.H5File(h5tbx.generate_temporary_filename(), 'w') as h5:
+                with H5File(h5tbx.generate_temporary_filename(), 'w') as h5:
                     filenames.append(h5.hdf_filename)
                     h5.attrs['username'] = username
                     h5.attrs['company'] = company
@@ -71,7 +59,7 @@ class TestH5Mongo(unittest.TestCase):
                     ds.dims[0].attach_scale(h5['ds_at_root'])
                     ds.attrs['id'] = i
 
-            with h5tbx.H5File(filenames[0]) as h5:
+            with H5File(filenames[0]) as h5:
                 tree = h5.get_tree_structure(True)
             self.collection.insert_one(make_dict_mongo_compatible(tree))
 
@@ -150,7 +138,8 @@ class TestH5Mongo(unittest.TestCase):
                     h5.z.mongo.insert(axis=None, collection=self.collection, update=False)
                 self.assertEqual(self.collection.count_documents({}), 4)
                 for r in self.collection.find({}):
-                    print(r)
+                    self.assertEqual(r['filename'], str(h5.hdf_filename))
+                    self.assertEqual(r['name'], '/z')
 
     def test_insert_group(self):
         if self.mongodb_running:
@@ -180,7 +169,7 @@ class TestH5Mongo(unittest.TestCase):
 
             repo_filenames = tutorial.Database.generate_test_files()
             for fname in repo_filenames:
-                with h5tbx.H5File(fname) as h5:
+                with H5File(fname) as h5:
                     h5.mongo.insert(collection=self.collection, recursive=True, flatten_tree=True)
             now = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
             for r in self.collection.find({}):

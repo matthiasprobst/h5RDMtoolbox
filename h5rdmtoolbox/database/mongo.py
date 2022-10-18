@@ -11,10 +11,8 @@ import pymongo.collection
 from pymongo.errors import InvalidDocument
 
 from ..wrapper.accessory import register_special_dataset
+from ..wrapper.core import H5Dataset, H5File, H5Group
 from ..wrapper.h5attr import H5_DIM_ATTRS
-from ..wrapper.h5ds import H5Dataset
-from ..wrapper.h5file import H5File
-from ..wrapper.h5grp import H5Group
 
 
 def get_file_creation_time(filename: str) -> datetime:
@@ -53,8 +51,7 @@ def type2mongo(value: any) -> any:
     try:
         if np.issubdtype(value, np.floating):
             return float(value)
-        else:
-            return int(value)
+        return int(value)
     except Exception as e:
         warnings.warn(f'Could not determine/convert {value}. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')
@@ -243,9 +240,8 @@ class MongoDatasetAccessor:
                                 doc[ak] = av
                 docs.append(doc)
             return docs
-        else:
-            raise NotImplementedError('This method is under heavy construction. Currently, '
-                                      'only accepts axis==0 in this developmet stage.')
+        raise NotImplementedError('This method is under heavy construction. Currently, '
+                                  'only accepts axis==0 in this developmet stage.')
 
     def insert(self, axis, collection: pymongo.collection.Collection,
                update: bool = True,

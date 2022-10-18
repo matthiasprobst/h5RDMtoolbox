@@ -4,28 +4,54 @@ import atexit
 import pathlib
 import shutil
 
+from . import config
 from . import conventions
-from . import tutorial
 from ._user import _root_tmp_dir
 from ._user import user_dirs
 from ._version import __version__
-from .conventions import set_loglevel as conventions_set_loglevel
-from .database import set_loglevel as database_set_loglevel
 from .utils import generate_temporary_filename, generate_temporary_directory
-from .wrapper import set_loglevel as wrapper_set_loglevel
-from .wrapper.h5file import H5File
-# from .wrapper.h5flow import H5Flow
-# from .wrapper.h5piv import H5PIV
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
 
+global H5File, H5Dataset, H5Group
 
-def set_loglevel(level):
-    """setting logging level of all modules"""
-    wrapper_set_loglevel(level)
-    database_set_loglevel(level)
-    conventions_set_loglevel(level)
+
+def use_wrapper_convention(cname: str):
+    """Select the convention for the HDF5 wrapper class(es)"""
+    global H5File, H5Dataset, H5Group
+    if cname == 'default':
+        from .wrapper import core
+
+        H5File = core.H5File
+        H5Dataset = core.H5Dataset
+        H5Group = core.H5Group
+
+    elif cname == 'cflike':
+        from .wrapper import cflike
+
+        H5File = cflike.H5File
+        H5Dataset = cflike.H5Dataset
+        H5Group = cflike.H5Group
+
+
+# select the default convention:
+use_wrapper_convention(config.CONVENTION)
+
+
+# if config.CONVENTION == 'default':
+#     from . import wrapper
+#
+#     H5File = wrapper.H5File
+#     H5Dataset = wrapper.h5file.H5Dataset
+#     H5Group = wrapper.h5file.H5Group
+#
+# elif config.CONVENTION == 'cflike':
+#     from .wrapper import cflike
+#
+#     H5File = cflike.H5File
+#     H5Dataset = cflike.H5Dataset
+#     H5Group = cflike.H5Group
 
 
 @atexit.register
@@ -60,5 +86,5 @@ def clean_temp_data():
                 failed_dirs_file.unlink(missing_ok=True)
 
 
-__all__ = ['tutorial', '__version__', '__author__', 'user_dirs', 'conventions', 'H5File', 'H5Flow', 'H5PIV',
+__all__ = ['__version__', '__author__', 'user_dirs', 'conventions', 'H5File',
            'generate_temporary_filename', 'generate_temporary_directory']

@@ -11,38 +11,30 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
-import json
 import os
 import pathlib
 import re
-import warnings
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Union, List
-from typing import Tuple
+from typing import Dict, Union, List, Tuple
 
 import h5py
 import pandas as pd
 import yaml
 from IPython.display import display, HTML
-from omegaconf import DictConfig
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 from pint.errors import UndefinedUnitError
 from pint_xarray import unit_registry as ureg
 from tabulate import tabulate
 
-from .registration import register_standard_attribute
-from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
-from .. import config
+from .errors import StandardNameError, EmailError
 from .._logger import logger
-from .._user import user_dirs
-from ..errors import StandardNameError, EmailError, StandardNameTableError
-from ..utils import generate_temporary_filename
-from ..wrapper.h5ds import H5Dataset
-from ..wrapper.h5grp import H5Group
+from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
+from ..._user import user_dirs
+from ...utils import generate_temporary_filename
 
 STRICT = True
 
@@ -97,40 +89,6 @@ def _units_power_fix(_str: str):
     return _str
 
 
-@register_standard_attribute(H5Group, name='standard_name')
-class StandardNameGroupAttribute:
-    def set(self, new_standard_name):
-        raise RuntimeError('A standard name attribute is used for datasets only')
-
-
-@register_standard_attribute(H5Dataset, name='standard_name')
-class StandardNameDatasetAttribute:
-    """Standard Name attribute"""
-
-    def set(self, new_standard_name):
-        """Writes attribute standard_name if passed string is not None.
-        The rules for the standard_name is checked before writing to file."""
-        if new_standard_name:
-            if self.standard_name_table.check_name(new_standard_name):
-                if STRICT:
-                    if 'units' in self.attrs:
-                        self.standard_name_table.check_units(new_standard_name,
-                                                             self.attrs['units'])
-                self.attrs.create('standard_name', new_standard_name)
-
-    def get(self):
-        """Return the standardized name of the dataset. The attribute name is `standard_name`.
-        Returns `None` if it does not exist."""
-        val = self.attrs.get('standard_name', None)
-        if val is None:
-            return None
-        return self.standard_name_table[val]
-
-    def delete(self):
-        """Delete attribute"""
-        self.attrs.__delitem__('standard_name')
-
-
 @dataclass
 class StandardName:
     """basic stndardized name class"""
@@ -152,11 +110,10 @@ class StandardName:
     def __eq__(self, other):
         if isinstance(other, str):
             return self.name == other
-        else:
-            return any([self.name != other.name,
-                        self.description != other.description,
-                        self.canonical_units != other.canonical_units,
-                        self.snt != other.snt])
+        return any([self.name != other.name,
+                    self.description != other.description,
+                    self.canonical_units != other.canonical_units,
+                    self.snt != other.snt])
 
     def check(self):
         """Run the name check of the standard name."""
@@ -372,13 +329,12 @@ class StandardNameTable:
             return StandardName(item, self.table[item]['description'],
                                 self.table[item]['canonical_units'],
                                 snt=self)
-        elif item in self.alias:
+        if item in self.alias:
             return StandardName(item, self.table[self.alias[item]]['description'],
                                 self.table[self.alias[item]]['canonical_units'],
                                 snt=self)
-        else:
-            # return a standard name that is not in the table
-            return StandardName(item, None, None, snt=self)
+        # return a standard name that is not in the table
+        return StandardName(item, None, None, snt=self)
 
     def __contains__(self, item):
         return item in self.table
@@ -600,7 +556,7 @@ class StandardNameTable:
 
         if file_path.endswith('.yaml') or file_path.endswith('.yml'):
             return StandardNameTable.from_yaml(tmpfilename)
-        elif file_path.endswith('.xml'):
+        if file_path.endswith('.xml'):
             return StandardNameTable.from_xml(tmpfilename)
         raise NotImplementedError(f'Cannot handle file name extention {file_path.rsplit(".", 1)[1]}. '
                                   f'Expected yml/yaml or xml')
@@ -757,12 +713,11 @@ class StandardNameTable:
         candidates = list(user_dirs['standard_name_tables'].glob(f'{name}.yml'))
         if len(candidates) == 1:
             return StandardNameTable.from_yaml(candidates[0])
-        elif len(candidates) == 0:
+        if len(candidates) == 0:
             raise FileNotFoundError(f'No file found under the name {name}')
-        else:
-            list_of_reg_names = [snt.versionname for snt in StandardNameTable.get_registered()]
-            raise FileNotFoundError(f'File {name} could not be found or passed name was not unique. '
-                                    f'Registered tables are: {list_of_reg_names}')
+        list_of_reg_names = [snt.versionname for snt in StandardNameTable.get_registered()]
+        raise FileNotFoundError(f'File {name} could not be found or passed name was not unique. '
+                                f'Registered tables are: {list_of_reg_names}')
 
     @staticmethod
     def get_registered() -> List["StandardNameTable"]:
@@ -941,77 +896,3 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               contact='none@none.none',
                                               last_modified=None,
                                               valid_characters='')
-
-
-@register_standard_attribute(H5Dataset, name='standard_name_table')
-@register_standard_attribute(H5Group, name='standard_name_table')
-class StandardNameTableAttribute:
-    """Standard Name Table attribute"""
-
-    def set(self, snt: Union[str, StandardNameTable]):
-        """Set (write to root group) Standard Name Table
-
-        Raises
-        ------
-        StandardNameTableError
-            If no write intent on file.
-
-        """
-        if isinstance(snt, str):
-            StandardNameTable.print_registered()
-            snt = StandardNameTable.load_registered(snt)
-        if self.mode == 'r':
-            raise StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
-        if snt.STORE_AS == StandardNameTableStoreOption.none:
-            if snt.url:
-                if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
-                else:
-                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
-                                                 snt.to_dict())
-            else:
-                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
-        if snt.STORE_AS == StandardNameTableStoreOption.versionname:
-            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.versionname)
-        elif snt.STORE_AS == StandardNameTableStoreOption.dict:
-            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
-        elif snt.STORE_AS == StandardNameTableStoreOption.url:
-            if snt.url is not None:
-                if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
-                else:
-                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.to_dict())
-            else:  # else fall back to writing dict. better than versionname because cannot get lost
-                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
-        _SNT_CACHE[self.id.id] = snt
-
-    def get(self) -> StandardNameTable:
-        """Get (if exists) Standard Name Table from file
-
-        Raises
-        ------
-        KeyError
-            If cannot load SNT from registration.
-        """
-        try:
-            return _SNT_CACHE[self.file.id.id]
-        except KeyError:
-            pass  # not cached
-        snt = self.rootparent.attrs.get(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, None)
-        if snt is not None:
-            # snt is a string
-            if isinstance(snt, dict):
-                return StandardNameTable(**snt)
-            if snt[0] == '{':
-                return StandardNameTable(**json.loads(snt))
-            elif snt[0:4] in ('http', 'wwww.'):
-                return StandardNameTable.from_web(snt)
-            else:
-                return StandardNameTable.from_versionname(snt)
-        return Empty_Standard_Name_Table
-
-    def delete(self):
-        """Delete standard name table from root attributes"""
-        self.attrs.__delitem__(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME)

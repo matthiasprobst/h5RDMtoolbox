@@ -8,10 +8,8 @@ are provided by this sub-packages (fluid and piv). As the projec is under develo
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
 
-from . import data
 from ._logger import logger
 from .layout import H5Layout
-from .standard_name import StandardNameTable, StandardName, StandardNameTableTranslation
 from .utils import dict2xml, is_valid_email_address
 
 
@@ -23,5 +21,4 @@ def set_loglevel(level):
 
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['H5Layout', 'datetime_str', 'set_loglevel', 'StandardName', 'StandardNameTableTranslation',
-           'StandardNameTable']
+__all__ = ['H5Layout', 'datetime_str', 'set_loglevel']

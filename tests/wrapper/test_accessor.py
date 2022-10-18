@@ -2,7 +2,7 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions.registration import register_standard_attribute
-from h5rdmtoolbox.wrapper.h5file import H5Group
+from h5rdmtoolbox.wrapper.core import H5Group
 
 
 class TestAccessor(unittest.TestCase):

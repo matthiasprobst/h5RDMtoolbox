@@ -1,24 +1,25 @@
 """Testing common funcitonality across all wrapper classs"""
 
+import datetime
+import pathlib
 import unittest
 from datetime import datetime
 
 import h5py
+from pint_xarray import unit_registry as ureg
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox._user import testdir
-from h5rdmtoolbox.conventions import StandardNameTable
+from h5rdmtoolbox import __version__
 from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.conventions.standard_name import StandardName
-from h5rdmtoolbox.wrapper.h5file import H5Group
-from h5rdmtoolbox.wrapper.h5file import WrapperAttributeManager
+from h5rdmtoolbox.wrapper import core, cflike
+from h5rdmtoolbox.wrapper.h5attr import WrapperAttributeManager
 
 
 class TestCommon(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.wrapper_classes = (h5tbx.H5File,)
-        self.wrapper_grouclasses = (H5Group,)
+        self.wrapper_classes = (core.H5File, cflike.H5File)
+        self.wrapper_grouclasses = (core.H5Group, cflike.H5Group)
 
     def test_layout(self):
         for wc in self.wrapper_classes:
@@ -34,27 +35,6 @@ class TestCommon(unittest.TestCase):
             with self.assertRaises(TypeError):
                 with wc(mode='w', layout=123.3):
                     pass
-
-    def test_title_at_init(self):
-        for wc in self.wrapper_classes:
-            # with wc(mode='r', title='mytitle') as h5:
-            #     self.assertEqual(h5.attrs['title'], 'mytitle')
-            #     self.assertEqual(h5.mode, 'r')
-            # with wc(mode='r+', title='mytitle') as h5:
-            #     self.assertEqual(h5.attrs['title'], 'mytitle')
-            #     self.assertEqual(h5.mode, 'r+')
-            # with wc(mode='w', title='mytitle') as h5:
-            #     self.assertEqual(h5.attrs['title'], 'mytitle')
-            #     self.assertEqual(h5.mode, 'r+')
-            with wc(mode='w', title=None) as h5touch:
-                pass
-            # # try to set a tilte when file is in read-only but already exist:
-            with self.assertRaises(RuntimeError):
-                with wc(h5touch.hdf_filename, mode='r', title='mytitle'):
-                    pass
-            with wc(h5touch.hdf_filename, mode='r+', title='mytitle') as h5:
-                self.assertEqual(h5.attrs['title'], 'mytitle')
-                self.assertEqual(h5.mode, 'r+')
 
     def test_file_times(self):
         for wc in self.wrapper_classes:
@@ -79,25 +59,16 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.attrs['an_attr'], 'a_string')
                 h5.attrs['mean'] = 1.2
                 self.assertEqual(h5.attrs['mean'], 1.2)
-                # with self.assertRaises(AttributeError):
-                #     h5.attrs['standard_name'] = 'a_string'
-                with self.assertRaises(ValueError):
-                    h5.attrs['long_name'] = '1alongname'
-                with self.assertRaises(ValueError):
-                    h5.attrs['long_name'] = ' 1alongname'
-                with self.assertRaises(ValueError):
-                    h5.attrs['long_name'] = '1alongname '
 
                 self.assertEqual(h5.attrs.get('non_existing_attribute'), None)
 
+            hdf_filename = h5.hdf_filename
+            with h5py.File(hdf_filename, 'r+') as h5:
                 # dataset attibutes
-                ds = h5.create_dataset('ds', shape=(), long_name='a long name', units='m/s')
-                with self.assertRaises(ValueError):
-                    ds.attrs['long_name'] = '1alongname'
-                with self.assertRaises(ValueError):
-                    ds.attrs['long_name'] = ' 1alongname'
-                with self.assertRaises(ValueError):
-                    ds.attrs['long_name'] = '1alongname '
+                ds = h5.create_dataset('ds', shape=())
+
+            with CLS(hdf_filename, 'r+') as h5:
+                ds = h5['ds']
                 ds.attrs['an_attr'] = 'a_string'
                 self.assertEqual(ds.attrs['an_attr'], 'a_string')
                 ds.attrs['mean'] = 1.2
@@ -129,16 +100,6 @@ class TestCommon(unittest.TestCase):
                 self.assertTrue(isinstance(ds.attrs, WrapperAttributeManager))
                 self.assertTrue(isinstance(gr.attrs, WrapperAttributeManager))
 
-                # TODO Fix the following issue:
-                h5.non_existing_attribute = 1
-                h5.non_existing_attribute
-
-                # self.assertEqual(ds.standard_name, h5tbx.conventions.Empty_Standard_Name_Table)
-                ds.standard_name = 'x_velocity'
-                self.assertIsInstance(ds.standard_name, StandardName)
-                self.assertIsInstance(ds.attrs['standard_name'], str)
-                self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
-
     def test_Layout(self):
 
         with h5tbx.H5File() as h5:
@@ -151,55 +112,10 @@ class TestCommon(unittest.TestCase):
                 self.assertTrue(n_issuess > 0)
 
     def test_properties(self):
-        import datetime
-        from h5rdmtoolbox.conventions.data import DataSourceType
-        from h5rdmtoolbox import __version__
-        from pint_xarray import unit_registry as ureg
-        import pathlib
-
         for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
             with CLS() as h5:
-                self.assertIsInstance(h5.creation_time, datetime.datetime)
-                self.assertIsInstance(h5.data_source_type, DataSourceType)
-                self.assertEqual(h5.data_source_type, DataSourceType.none)
-                h5.attrs['data_source_type'] = 'experimental'
-                self.assertEqual(h5.data_source_type, DataSourceType.experimental)
-                h5.data_source_type = 'numerical'
-                self.assertEqual(h5.data_source_type, DataSourceType.numerical)
-                self.assertEqual(h5.title, None)
-                h5.title = 'my title'
-                self.assertEqual(h5.title, 'my title')
+                self.assertIsInstance(h5.creation_time, datetime)
                 self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
                 self.assertEqual(h5.version, __version__)
                 self.assertEqual(h5.filesize.units, ureg.byte)
                 self.assertIsInstance(h5.hdf_filename, pathlib.Path)
-
-    def test_create_dataset(self):
-        from h5rdmtoolbox.errors import UnitsError
-        from h5rdmtoolbox.conventions.standard_name import Empty_Standard_Name_Table
-        from h5rdmtoolbox import config
-        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            with wc(standard_name_table=Empty_Standard_Name_Table) as h5:
-                self.assertEqual(h5.standard_name_table.name, Empty_Standard_Name_Table.name)
-                config.REQUIRE_UNITS = True
-                with self.assertRaises(UnitsError):
-                    h5.create_dataset(name='x', standard_name='x_coordinate', data=1)
-                config.REQUIRE_UNITS = False
-                h5.create_dataset(name='x', standard_name='x_coordinate', data=1, units=None)
-                config.REQUIRE_UNITS = True
-                h5.create_dataset(name='x1', standard_name='x_coordinate', data=1, units='m')
-                h5.create_dataset(name='x2', standard_name='XCoord', data=1, units='m')
-                h5.create_dataset(name='x3', standard_name='CoordinateX', data=1, units='m')
-                h5.create_dataset(name='x4', standard_name='NoRealStdName', data=1, units='m')
-
-    def test_assign_snt(self):
-        table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
-        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            with wc() as h5:
-                h5.standard_name_table = table
-                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
-        table = StandardNameTable.from_yaml(testdir / 'sntable_with_split.yml')
-        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
-            with wc() as h5:
-                h5.standard_name_table = table
-                self.assertIsInstance(h5.standard_name_table, StandardNameTable)

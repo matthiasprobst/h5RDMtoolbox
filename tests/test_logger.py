@@ -1,7 +1,6 @@
 import logging
 import unittest
 
-from h5rdmtoolbox import set_loglevel
 from h5rdmtoolbox.conventions import set_loglevel as set_loglevel_conventions
 from h5rdmtoolbox.database import set_loglevel as set_loglevel_database
 from h5rdmtoolbox.wrapper import set_loglevel as set_loglevel_wrapper
@@ -38,6 +37,3 @@ class TestLogger(unittest.TestCase):
                       'h5rdmtoolbox.conventions'):
             logger = logging.getLogger(lname)
             self.assertEqual(lname, logger.name)
-            for level in levels:
-                set_loglevel(level)
-                self.assertEqual(logger.level, levels[level])

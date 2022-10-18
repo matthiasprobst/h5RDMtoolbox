@@ -19,6 +19,8 @@ def get_rootparent(obj):
         search(parent)
         return found
 
+    if obj.name == '/':
+        return obj
     return get_root(obj.parent)
 
 
@@ -27,5 +29,4 @@ def _is_not_valid_natural_name(instance, name: str, is_natural_naming_enabled: b
     if is_natural_naming_enabled:
         if isinstance(name, str):
             return hasattr(instance, name)
-        else:
-            return hasattr(instance, name.decode("utf-8"))
+        return hasattr(instance, name.decode("utf-8"))

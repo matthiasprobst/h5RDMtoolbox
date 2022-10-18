@@ -126,7 +126,8 @@ class _Visitor:
 
 def grp_to_txt(h5: h5py.Group, recursive: bool = True, target_directory: Union[str, pathlib.Path] = None,
                overwrite: bool = False):
-    """Export a group (recursively) to text files organized in folders"""
+    """Export a group (recursively) to text files organized in folders
+    TODO: recursive parameter has no effect!"""
     if not isinstance(h5, h5py.Group):
         raise TypeError(f'Expected type h5py.Group but got {type(h5)}')
     if target_directory is None:
@@ -136,7 +137,6 @@ def grp_to_txt(h5: h5py.Group, recursive: bool = True, target_directory: Union[s
     filename = pathlib.Path(h5.file.filename)
 
     target_directory = target_directory / filename.name / h5.name[1:]
-    print(target_directory)
 
     if not target_directory.exists():
         target_directory.mkdir(parents=True)

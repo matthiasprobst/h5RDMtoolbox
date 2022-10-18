@@ -4,15 +4,15 @@ import unittest
 
 import numpy as np
 import pandas as pd
-
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.wrapper import exportutils
+from h5rdmtoolbox.wrapper.cflike import H5File
 
 
 class TestExportUtils(unittest.TestCase):
 
     def setUp(self) -> None:
-        with h5tbx.H5File() as h5:
+        with H5File() as h5:
             h5.attrs['roota'] = 'root_attribute'
             grp = h5.create_group('grp')
             grp.attrs['roota'] = 'grp_attribute'
@@ -33,7 +33,7 @@ class TestExportUtils(unittest.TestCase):
             self.hdf_filename = h5.hdf_filename
 
     def test_to_dataset_to_txt(self):
-        with h5tbx.H5File(self.hdf_filename, 'r') as h5:
+        with H5File(self.hdf_filename, 'r') as h5:
             exportutils.dataset_to_txt(h5['mydataset1'], filename=h5tbx.generate_temporary_filename(suffix='.txt'),
                                        overwrite=True)
             exportutils.dataset_to_txt(h5['mydataset2'], filename=h5tbx.generate_temporary_filename(suffix='.txt'),
@@ -51,11 +51,10 @@ class TestExportUtils(unittest.TestCase):
         test_folder = pathlib.Path('test')
         if test_folder.exists():
             shutil.rmtree(test_folder)
-        with h5tbx.H5File(self.hdf_filename, 'r') as h5:
+        with H5File(self.hdf_filename, 'r') as h5:
             exportutils.hdf_to_txt(h5, target_directory=h5tbx.generate_temporary_directory(), recursive=False)
 
     def test_grp_to_txt(self):
-        with h5tbx.H5File(self.hdf_filename) as h5:
+        with H5File(self.hdf_filename) as h5:
             exportutils.hdf_to_txt(h5, target_directory=h5tbx.generate_temporary_directory(),
                                    recursive=True, overwrite=True)
-        print('dwa')
