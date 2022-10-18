@@ -12,11 +12,9 @@ import numpy as np
 import pint_xarray
 from IPython.display import HTML, display
 
-from .registration import register_standard_attribute
 from .utils import equal_base_units
 from .. import _repr
 from .._user import user_dirs
-from ..wrapper.core import H5File
 
 logger = logging.getLogger(__package__)
 
@@ -450,8 +448,7 @@ class H5Layout:
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')
 
-
-@register_standard_attribute(H5File, name='layout')
+# @register_standard_attribute(H5File, name='layout')
 class LayoutAttribute:
     """Layout attribute"""
 

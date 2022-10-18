@@ -33,9 +33,9 @@ from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_dirs
 from .._version import __version__
+from ..conventions.layout import LayoutAttribute, H5Layout
+from ..conventions.registration import register_attribute_class
 from ..database import filequery
-
-# from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
 
@@ -154,11 +154,12 @@ class H5Group(h5py.Group):
 
         Examples
         --------
-        >>> with h5tbx.H5File() as h5:
+        >>> from h5rdmtoolbox import H5File
+        >>> with H5File() as h5:
         >>>     h5['x'] = [1,2,3], 'm/s', {'long_name':'hallo'}
-        >>> with h5tbx.H5File() as h5:
+        >>> with H5File() as h5:
         >>>     h5['x'] = ([1,2,3], 'm/s', 'long_name', 'standard_name')
-        >>> with h5tbx.H5File() as h5:
+        >>> with H5File() as h5:
         >>>     h5['x'] = ([1,2,3],
         >>>                dict(units='m/s', long_name='long_name', attrs={'hello': 'world'}, compression='gzip'))
         """
@@ -251,9 +252,6 @@ class H5Group(h5py.Group):
         ----------
         name : str
             Name of group
-        long_name : str
-            The long name of the group. Rules for long_name is checked in method
-            check_long_name
         overwrite : bool, default=None
             If the group does not already exist, the new group is written and this parameter has no effect.
             If the group exists and ...
@@ -303,6 +301,8 @@ class H5Group(h5py.Group):
             n_letter = len(data)
         elif isinstance(data, (tuple, list)):
             n_letter = max([len(d) for d in data])
+        else:
+            raise TypeError(f'Unexpeced type for parameter "data": {type(data)}. Expected str or List/Tuple of str')
         dtype = f'S{n_letter}'
         if name in self:
             if overwrite is True:
@@ -804,8 +804,7 @@ class H5Group(h5py.Group):
                                     _maxshape = (*img_shape, None)
                                     _chunks = (*img_shape, 1)
                                 else:
-                                    raise ValueError(
-                                        f'Other axis than 0 or -1 not accepted!')
+                                    raise ValueError('Other axis than 0 or -1 not accepted!')
                                 ds = self.create_dataset(name, shape=dataset_shape, overwrite=overwrite,
                                                          maxshape=_maxshape, dtype=dtype, compression=compression,
                                                          compression_opts=compression_opts, chunks=_chunks)
@@ -824,7 +823,7 @@ class H5Group(h5py.Group):
                 elif axis == -1:
                     dataset_shape = (*img_shape, nimg)
                 else:
-                    raise ValueError(f'Other axis than 0 or -1 not accepted!')
+                    raise ValueError('Other axis than 0 or -1 not accepted!')
 
                 # pre-allocate dataset with shape:
                 ds = self.create_dataset(name, shape=dataset_shape, overwrite=overwrite,
@@ -841,7 +840,8 @@ class H5Group(h5py.Group):
                             else:
                                 logger.critical(
                                     f'Shape of {img_fname} has wrong shape {img.shape}. Expected shape: {img_shape}'
-                                    f' Dataset will be deleted again!')
+                                    ' Dataset will be deleted again!'
+                                )
                                 del self[ds.name]
                     elif axis == -1:
                         ds[..., 0] = img
@@ -1432,7 +1432,7 @@ class H5File(h5py.File, H5Group):
     def __init__(self,
                  name: Path = None,
                  mode='r',
-                 layout: Union[Path, str, 'H5Layout'] = 'H5File',
+                 layout: Union[Path, str, H5Layout] = 'H5File',
                  driver=None,
                  libver=None,
                  userblock_size=None,
@@ -1615,5 +1615,7 @@ H5Dataset._h5ds = H5Dataset
 H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
 
-# # noinspection PyUnresolvedReferences
-# from ..conventions import standard_name, units, title, software, long_name, data
+register_attribute_class(LayoutAttribute,
+                         H5File,
+                         name='layout',
+                         overwrite=True)
