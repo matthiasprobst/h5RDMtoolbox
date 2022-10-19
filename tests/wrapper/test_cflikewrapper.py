@@ -9,9 +9,9 @@ import xarray as xr
 import yaml
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox import use_wrapper_convention
+from h5rdmtoolbox.wrapper import use
 
-use_wrapper_convention('cflike')
+use('cflike')
 from h5rdmtoolbox import config
 from h5rdmtoolbox.conventions.cflike import StandardNameTable
 from h5rdmtoolbox.conventions.layout import H5Layout

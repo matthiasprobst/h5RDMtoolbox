@@ -1167,19 +1167,21 @@ class H5Dataset(h5py.Dataset):
             Root group object.
         """
 
-        def get_root(parent):
+        def get_root(p):
+            """get the root parent"""
             global found
-            found = parent.parent
+            found = p.parent
 
-            def search(parent):
+            def search(_parent):
+                """recursive search function"""
                 global found
-                parent = parent.parent
+                parent = _parent.parent
                 if parent.name == '/':
                     found = parent
                 else:
-                    _ = search(parent)
+                    search(parent)
 
-            search(parent)
+            search(p)
             return found
 
         if self.name == '/':
@@ -1585,6 +1587,8 @@ class H5File(h5py.File, H5Group):
 
         Parameters
         ----------
+        filename: str ot pathlib.Path
+            Path to file to be opended
         mode: str
             Mode used to open the file: r, r+, w, w-, x, a
 

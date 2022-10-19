@@ -6,9 +6,9 @@ import numpy as np
 import pymongo.collection
 from pymongo import MongoClient
 
-from h5rdmtoolbox import use_wrapper_convention
+from h5rdmtoolbox.wrapper import use
 
-use_wrapper_convention('cflike')
+use('cflike')
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import H5File

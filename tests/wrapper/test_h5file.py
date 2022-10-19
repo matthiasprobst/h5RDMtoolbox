@@ -7,9 +7,9 @@ import numpy as np
 import yaml
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox import use_wrapper_convention
+from h5rdmtoolbox.wrapper import use
 
-use_wrapper_convention('default')
+use('default')
 from h5rdmtoolbox import config
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
