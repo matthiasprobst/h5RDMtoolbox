@@ -6,16 +6,15 @@ import numpy as np
 import pymongo.collection
 from pymongo import MongoClient
 
-from h5rdmtoolbox.wrapper import use
-
-use('cflike')
-
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import H5File
 from h5rdmtoolbox import tutorial
+from h5rdmtoolbox import use
 # noinspection PyUnresolvedReferences
 from h5rdmtoolbox.database import mongo
 from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
+
+use('cflike')
 
 
 class TestH5Mongo(unittest.TestCase):

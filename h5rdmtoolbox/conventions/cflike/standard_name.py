@@ -358,7 +358,7 @@ class StandardNameTable:
         """Set the value of a standard name"""
         if name in self.table:
             raise errors.StandardNameError(f'name "{name}" already exists in table. Use modify() '
-                                           f'to change the content')
+                                           'to change the content')
         verify_unit_object(canonical_units)
         self._table[name] = dict(description=description, canonical_units=canonical_units)
 
@@ -367,7 +367,7 @@ class StandardNameTable:
         if name not in self.table:
             if not description or not canonical_units:
                 raise ValueError(f'Name {name} does not exist yet. You must provide string values '
-                                 f'for both description and canonical_units')
+                                 'for both description and canonical_units')
             self.table[name] = dict(description=description, canonical_units=canonical_units)
         else:
             if description:
@@ -954,26 +954,26 @@ class StandardNameTableAttribute:
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
+                    self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
+                    self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
                                                  snt.to_dict())
             else:
-                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+                self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
         if snt.STORE_AS == StandardNameTableStoreOption.versionname:
-            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.versionname)
+            self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.versionname)
         elif snt.STORE_AS == StandardNameTableStoreOption.dict:
-            self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+            self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
         elif snt.STORE_AS == StandardNameTableStoreOption.url:
             if snt.url is not None:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
+                    self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.to_dict())
+                    self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.to_dict())
             else:  # else fall back to writing dict. better than versionname because cannot get lost
-                self.rootparent.attrs.modify(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+                self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
         _SNT_CACHE[self.id.id] = snt
 
     def get(self) -> StandardNameTable:
@@ -988,7 +988,7 @@ class StandardNameTableAttribute:
             return _SNT_CACHE[self.file.id.id]
         except KeyError:
             pass  # not cached
-        snt = self.rootparent.attrs.get(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, None)
+        snt = self.rootparent.attrs.get(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, None)
         if snt is not None:
             # snt is a string
             if isinstance(snt, dict):
@@ -1003,4 +1003,4 @@ class StandardNameTableAttribute:
 
     def delete(self):
         """Delete standard name table from root attributes"""
-        self.attrs.__delitem__(config.STANDARD_NAME_TABLE_ATTRIBUTE_NAME)
+        self.attrs.__delitem__(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME)

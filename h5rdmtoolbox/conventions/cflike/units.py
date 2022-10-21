@@ -3,7 +3,7 @@ from typing import Union
 import pint
 from pint_xarray import unit_registry as ureg
 
-from ... import config
+from ...config import CONFIG as config
 
 ureg.default_format = config.UREG_FORMAT
 

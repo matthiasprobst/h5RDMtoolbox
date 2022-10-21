@@ -144,7 +144,7 @@ def load_img(img_filepath: pathlib.Path):
     return cv2_imread(str(img_filepath), -1)
 
 
-def _process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:
+def process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:
     if isinstance(objfilter, str):
         if objfilter.lower() == 'group':
             return h5py.Group

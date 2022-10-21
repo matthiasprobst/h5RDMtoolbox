@@ -13,6 +13,7 @@ IGNORE_ATTRS = ('REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST')
 
 
 def attribute_to_txt(attrs, filename, mode: str = 'w'):
+    """Translate/Write attributes to a text file"""
     if len(attrs) > 0:
         if not filename.parent.exists():
             filename.parent.mkdir(parents=True)
@@ -37,16 +38,16 @@ def dataset_to_txt(ds: h5py.Dataset, filename: Union[None, str, pathlib.Path] = 
     print(f'ds: {filename}')
     dsbasename = f'{os.path.basename(ds.name)} [{ds.attrs["units"]}]'
     with open(filename, 'w') as f:
-        f.write(f'# h5type: dataset')
+        f.write('# h5type: dataset')
         f.write(f'\n# filename: {ds.file.filename}')
         f.write(f'\n# name: {ds.name}')
         f.write(f'\n# shape: {ds.shape}')
-        f.write(f'\n# attributes:')
+        f.write('\n# attributes:')
         for ak, av in ds.attrs.items():
             if ak not in IGNORE_ATTRS:
                 if isinstance(av, (int, float, str)):
                     f.write(f'\n# {ak}:{av}')
-        f.write(f'\n#----:\n')
+        f.write('\n#----:\n')
     if ds.ndim < 1:
         pd.DataFrame({dsbasename: ds.values[()].ravel()}).to_csv(filename, header=dsbasename, index=False, mode='a')
     else:
@@ -60,7 +61,7 @@ def dataset_to_txt(ds: h5py.Dataset, filename: Union[None, str, pathlib.Path] = 
                     dimname += f' [{dim_ds.attrs["units"]}]'
                     dimdata = dim[idim]
                     if dimdata.ndim != 1:
-                        raise ValueError(f'At this stage I can only handle 1D data')
+                        raise ValueError('At this stage I can only handle 1D data')
                     coords[dimname] = dimdata
             if ds.ndim > 1:
                 grid_coords = np.meshgrid(*[c[()] for c in coords.values()])

@@ -10,19 +10,17 @@ import xarray as xr
 from pint_xarray import unit_registry as ureg
 
 from h5rdmtoolbox.conventions.registration import register_attribute_class
-from .. import config
+from . import core
 from .. import errors
-from .. import utils
-from .. import wrapper
-from .._logger import logger
+from ..config import CONFIG
 from ..conventions import cflike
 
-ureg.default_format = config.UREG_FORMAT
+ureg.default_format = CONFIG.UREG_FORMAT
 
 logger = logging.getLogger(__package__)
 
 
-class H5Group(wrapper.core.H5Group):
+class H5Group(core.H5Group):
     """
     It enforces the usage of units
     and standard_names for every dataset and informative metadata at
@@ -204,7 +202,7 @@ class H5Group(wrapper.core.H5Group):
                 warnings.warn('"units" is over-defined. Your data array is associated with the attribute "units" and '
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
-            if config.REQUIRE_UNITS:
+            if CONFIG.REQUIRE_UNITS:
                 raise errors.UnitsError('Units cannot be None. A dimensionless dataset has units "''"')
             attrs['units'] = ''
         else:
@@ -272,124 +270,8 @@ class H5Group(wrapper.core.H5Group):
             else:
                 raise NameError(f'Could not find standard_name "{standard_name}"')
 
-    def create_datasets_from_csv(self, csv_filename, shape=None, overwrite=False,
-                                 combine_opt='stack', axis=0, chunks=None, **kwargs):
-        """
-        Reads data from a csv and adds a dataset according to column names.
-        Pandas.read_csv() is used. So all arguments for this function may be passed.
 
-        Parameters
-        ----------
-        csv_filename : pathlib.Path or list of pathlib.Path
-            CSV filename or list of filenames.
-            If list is passed, structure must be the same for all
-        shape : tuple
-            Target shape of data. Default is None.
-            As data is column data. it can be reshaped to desired shape.
-        overwrite : bool
-            Whether to overwrite an existing dataset. Default is False.
-        combine_opt : str
-            Defines the method how to combine data from multiple files.
-            Therefore, csv_filename must be a list. Default is stack.
-            If set, make sure, axis is set accordingly.
-            Other input can be concatenate
-        axis : int
-            Stacking or concatenating according to combine_opt along
-            if multiple csv files are passes
-        chunks : tuple
-            Chunking option for HDF5 dataset creation. Equal for all
-            datasets
-
-        Returns
-        -------
-        ds : HDF Dataset
-            The created dataset
-
-        """
-        from pandas import read_csv as pd_read_csv
-        if 'names' in kwargs.keys():
-            if 'header' not in kwargs.keys():
-                raise RuntimeError('if you pass names also pass header=...')
-
-        if isinstance(csv_filename, (list, tuple)):
-            # depending on the meaning of multiple csv_filename axis can be 0 (z-plane)
-            # or 1 (time-plane)
-            axis = kwargs.pop('axis', 0)
-            csv_fname = csv_filename[0]
-            is_single_file = False
-        elif isinstance(csv_filename, (str, pathlib.Path)):
-            is_single_file = True
-            csv_fname = csv_filename
-        else:
-            raise ValueError(
-                f'Wrong input for "csv_filename: {type(csv_filename)}')
-
-        df = pd_read_csv(csv_fname, **kwargs)
-        # ncols = len(df.columns)
-
-        compression, compression_opts = config.HDF_COMPRESSION, config.HDF_COMPRESSION_OPTS
-
-        if is_single_file:
-            for variable_name in df.columns:
-                ds_name = utils.remove_special_chars(str(variable_name))
-                data = df[str(variable_name)].values.reshape(shape)
-                try:
-                    self.create_dataset(name=ds_name,
-                                        data=data,
-                                        overwrite=overwrite, compression=compression,
-                                        compression_opts=compression_opts)
-                except RuntimeError as e:
-                    logger.error(
-                        f'Could not read {variable_name} from csv file due to: {e}')
-        else:
-            _data = df[df.columns[0]].values.reshape(shape)
-            nfiles = len(csv_filename)
-            for variable_name in df.columns:
-                ds_name = utils.remove_special_chars(str(variable_name))
-                if combine_opt == 'concatenate':
-                    _shape = list(_data.shape)
-                    _shape[axis] = nfiles
-                    self.create_dataset(name=ds_name, shape=_shape,
-                                        compression=compression,
-                                        compression_opts=compression_opts,
-                                        chunks=chunks)
-                elif combine_opt == 'stack':
-                    if axis == 0:
-                        self.create_dataset(name=ds_name, shape=(nfiles, *_data.shape),
-                                            compression=compression,
-                                            compression_opts=compression_opts,
-                                            chunks=chunks)
-                    elif axis == 1:
-                        self.create_dataset(name=ds_name, shape=(_data.shape[0], nfiles, *_data.shape[1:]),
-                                            compression=compression,
-                                            compression_opts=compression_opts,
-                                            chunks=chunks)
-                    else:
-                        raise ValueError('axis must be 0 or -1')
-
-                else:
-                    raise ValueError(
-                        f'"combine_opt" must be "concatenate" or "stack", not {combine_opt}')
-
-            for i, csv_fname in enumerate(csv_filename):
-                df = pd_read_csv(csv_fname, **kwargs)
-                for c in df.columns:
-                    ds_name = utils.remove_special_chars(str(c))
-                    data = df[str(c)].values.reshape(shape)
-
-                    if combine_opt == 'concatenate':
-                        if axis == 0:
-                            self[ds_name][i, ...] = data[0, ...]
-                        elif axis == 1:
-                            self[ds_name][:, i, ...] = data[0, ...]
-                    elif combine_opt == 'stack':
-                        if axis == 0:
-                            self[ds_name][i, ...] = data
-                        elif axis == 1:
-                            self[ds_name][:, i, ...] = data
-
-
-class H5File(wrapper.core.H5File, H5Group):
+class H5File(core.H5File, H5Group):
     """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
     It enables additional features and adds new methods streamlining the work with
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
@@ -445,7 +327,7 @@ class H5File(wrapper.core.H5File, H5Group):
         self.layout = layout
 
 
-class H5Dataset(wrapper.core.H5Dataset):
+class H5Dataset(core.H5Dataset):
     """Dataset class following the CF-like conventions"""
     pass
 

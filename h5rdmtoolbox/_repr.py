@@ -6,7 +6,7 @@ import h5py
 import pkg_resources
 from numpy import ndarray
 
-from . import config
+from .config import CONFIG as config
 
 IGNORE_ATTRS = ('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:

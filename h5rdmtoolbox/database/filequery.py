@@ -298,6 +298,7 @@ class H5Objects:
 
 class Files:
     """H5File-like interface for multiple HDF Files"""
+    fileinstance = h5py.File
 
     def __init__(self, *filenames):
         if isinstance(filenames[0], (list, tuple)):
@@ -318,7 +319,7 @@ class Files:
     def __enter__(self):
         for filename in self._list_of_filenames:
             try:
-                h5file = h5py.File(filename, mode='r')
+                h5file = self.fileinstance(filename, mode='r')
                 self._opened_files[str(filename)] = h5file
             except RuntimeError as e:
                 print(f'RuntimeError: {e}')

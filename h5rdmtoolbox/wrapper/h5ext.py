@@ -1,10 +1,14 @@
 import h5py
 
-from . import H5File
+from .. import H5File
 
 
 class ExternalLink(h5py.ExternalLink):
     """External Link wrapper class"""
+
+    def __init__(self, filename, path):
+        super().__init__(filename, path)
+        self._file = None
 
     def __enter__(self):
         self._file = H5File(self.filename)

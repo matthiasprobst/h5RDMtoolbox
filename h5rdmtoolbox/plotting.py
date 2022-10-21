@@ -2,7 +2,7 @@
 import matplotlib.projections as proj
 import matplotlib.pyplot as plt
 
-from . import config
+from .config import CONFIG as config
 
 
 class XarrayLabelManipulation(plt.Axes):

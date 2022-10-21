@@ -7,24 +7,24 @@ import numpy as np
 import yaml
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox.wrapper import use
-
-use('default')
 from h5rdmtoolbox import config
+from h5rdmtoolbox import use
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.core import H5Dataset, H5File, H5Group
 
+use('default')
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
-ureg.default_format = config.UREG_FORMAT
+ureg.default_format = config.CONFIG.UREG_FORMAT
 
 
 class TestH5File(unittest.TestCase):
 
     def setUp(self) -> None:
+        """setup"""
         with H5File(mode='w') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')

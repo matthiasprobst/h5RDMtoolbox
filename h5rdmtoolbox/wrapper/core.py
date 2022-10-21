@@ -26,47 +26,27 @@ from tqdm import tqdm
 from . import xr2hdf
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
-from .h5utils import _is_not_valid_natural_name
+from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
-from .. import config
 from .. import utils
 from .._repr import h5file_html_repr
 from .._user import user_dirs
 from .._version import __version__
+from ..config import CONFIG
 from ..conventions.layout import LayoutAttribute, H5Layout
 from ..conventions.registration import register_attribute_class
 from ..database import filequery
 
 logger = logging.getLogger(__package__)
 
-ureg.default_format = config.UREG_FORMAT
+ureg.default_format = CONFIG.UREG_FORMAT
 
 H5File_layout_filename = Path.joinpath(user_dirs['layouts'],
                                        'H5File.hdf')
 
 
 class H5Group(h5py.Group):
-    """
-    It enforces the usage of units
-    and standard_names for every dataset and informative metadata at
-    root level (creation time etc).
-
-     It provides and long_name for every group.
-    Furthermore, methods that facilitate the work with HDF files are provided,
-    such as
-    * create_dataset_from_image
-    * create_dataset_from_csv
-    * stack()
-    * concatenate()
-    * ...
-
-    Automatic generation of root attributes:
-    - __h5rdmtoolbox_version__: version of this package
-    - __wrcls__ wrapper class indication
-
-    providing additional features through
-    specific properties such as units and long_name or through special or
-    adapted methods like create_dataset, create_external_link.
+    """Inherited Group of the package h5py
     """
 
     @property
@@ -78,25 +58,9 @@ class H5Group(h5py.Group):
     @property
     def rootparent(self):
         """Return the root group instance."""
-
-        def get_root(parent):
-            global found
-            found = None
-
-            def search(parent):
-                global found
-                parent = parent.parent
-                if parent.name == '/':
-                    found = parent
-                else:
-                    _ = search(parent)
-
-            search(parent)
-            return found
-
         if self.name == '/':
             return self
-        return get_root(self.parent)
+        return get_rootparent(self.parent)
 
     @property
     def basename(self) -> str:
@@ -151,17 +115,6 @@ class H5Group(h5py.Group):
         Returns
         -------
         None
-
-        Examples
-        --------
-        >>> from h5rdmtoolbox import H5File
-        >>> with H5File() as h5:
-        >>>     h5['x'] = [1,2,3], 'm/s', {'long_name':'hallo'}
-        >>> with H5File() as h5:
-        >>>     h5['x'] = ([1,2,3], 'm/s', 'long_name', 'standard_name')
-        >>> with H5File() as h5:
-        >>>     h5['x'] = ([1,2,3],
-        >>>                dict(units='m/s', long_name='long_name', attrs={'hello': 'world'}, compression='gzip'))
         """
         if isinstance(obj, xr.DataArray):
             _ = obj.hdf.to_group(H5Group(self), name)
@@ -184,7 +137,7 @@ class H5Group(h5py.Group):
         return ret
 
     def __getattr__(self, item):
-        if config.NATURAL_NAMING:
+        if CONFIG.NATURAL_NAMING:
             if item in self.__dict__:
                 return super().__getattribute__(item)
             try:
@@ -273,7 +226,7 @@ class H5Group(h5py.Group):
                     # let h5py.Group raise the error...
                     h5py.Group.create_group(self, name, track_order=track_order)
 
-        if _is_not_valid_natural_name(self, name, config.NATURAL_NAMING):
+        if _is_not_valid_natural_name(self, name, CONFIG.NATURAL_NAMING):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
                              f'attribute of the class and cannot be used '
                              f'while natural naming is enabled')
@@ -328,10 +281,7 @@ class H5Group(h5py.Group):
                        make_scale=False,
                        **kwargs):
         """
-        Adapting parent dataset creation:
-        Additional parameters are
-            - long_name or standard_name (either is required. possible to pass both though)
-            - units
+        Creating a dataset. Allows to attach/make scale, overwriting and setting attributes simultaneously.
 
         Parameters
         ----------
@@ -392,8 +342,8 @@ class H5Group(h5py.Group):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        compression = kwargs.pop('compression', config.HDF_COMPRESSION)
-        compression_opts = kwargs.pop('compression_opts', config.HDF_COMPRESSION_OPTS)
+        compression = kwargs.pop('compression', CONFIG.HDF_COMPRESSION)
+        compression_opts = kwargs.pop('compression_opts', CONFIG.HDF_COMPRESSION_OPTS)
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
@@ -414,7 +364,7 @@ class H5Group(h5py.Group):
             attach_scales = kwargs.pop('attach_scale', None)
 
         if name:
-            if _is_not_valid_natural_name(self, name, config.NATURAL_NAMING):
+            if _is_not_valid_natural_name(self, name, CONFIG.NATURAL_NAMING):
                 raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
                                  f'attribute of the class and cannot be used '
                                  f'while natural naming is enabled')
@@ -499,7 +449,7 @@ class H5Group(h5py.Group):
                  rec: bool = True):
         """See find()"""
         from ..database import filequery
-        objfilter = utils._process_obj_filter_input(objfilter)
+        objfilter = utils.process_obj_filter_input(objfilter)
         return filequery.find(
             self,
             flt,
@@ -514,7 +464,7 @@ class H5Group(h5py.Group):
                  ) -> List:
         """Find a distinct key"""
         from ..database.filequery import distinct
-        objfilter = utils._process_obj_filter_input(objfilter)
+        objfilter = utils.process_obj_filter_input(objfilter)
         return distinct(self, key, objfilter)
 
     def find(self, flt: Union[Dict, str],
@@ -525,7 +475,6 @@ class H5Group(h5py.Group):
         filter = {'long_name': 'any objects long name'} --> searches in attribtues only
         filter = {'$name': 'name'}  --> searches in goups and datasets for the (path)name
         filter = {'basename': 'name'}  --> searches in goups and datasets for the basename (without path)
-        filter = {'standard_name': {'$regex': '^x_'} --> searches for attribtues "standard_name" starting with 'x_'
 
         Parameters
         ----------
@@ -539,34 +488,13 @@ class H5Group(h5py.Group):
         h5obj: h5py.Dataset or h5py.Group
         """
         from ..database import filequery
-        objfilter = utils._process_obj_filter_input(objfilter)
+        objfilter = utils.process_obj_filter_input(objfilter)
         return filequery.find(
             h5obj=self,
             flt=flt,
             objfilter=objfilter,
             recursive=rec,
             find_one=False)
-
-    def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:
-        """Return the dataset with a specific standard_name within the current group.
-        Raises error if multiple datasets are found!
-        To recursive scan through all datasets, use
-        get_by_attribute('standard_name', <your_value>, 'ds').
-        Returns None if no matching dataset has been found."""
-        candidats = self.get_datasets_by_attribute('standard_name', standard_name, False)
-        if n is None:
-            if len(candidats) == 0:
-                return None
-            if len(candidats) > 1:
-                raise ValueError(f'Multiple datasets found with standard name "{standard_name}": {candidats}')
-            return candidats[0]
-        else:
-            if len(candidats) == n:
-                if len(candidats) == 1:
-                    return candidats[0]
-                return candidats
-            else:
-                raise NameError(f'Could not find standard_name "{standard_name}"')
 
     def create_datasets_from_csv(self, csv_filename, shape=None, overwrite=False,
                                  combine_opt='stack', axis=0, chunks=None, **kwargs):
@@ -623,7 +551,7 @@ class H5Group(h5py.Group):
         df = pd_read_csv(csv_fname, **kwargs)
         # ncols = len(df.columns)
 
-        compression, compression_opts = config.HDF_COMPRESSION, config.HDF_COMPRESSION_OPTS
+        compression, compression_opts = CONFIG.HDF_COMPRESSION, CONFIG.HDF_COMPRESSION_OPTS
 
         if is_single_file:
             for variable_name in df.columns:
@@ -718,7 +646,7 @@ class H5Group(h5py.Group):
         """
 
         # take compression from kwargs or config:
-        _compression, _compression_opts = config.HDF_COMPRESSION, config.HDF_COMPRESSION_OPTS
+        _compression, _compression_opts = CONFIG.HDF_COMPRESSION, CONFIG.HDF_COMPRESSION_OPTS
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
         units = kwargs.pop('units', 'pixel')
@@ -877,8 +805,6 @@ class H5Group(h5py.Group):
                                      overwrite=False)
             for idim, dim in enumerate(dataset[data_var].dims):
                 if dim not in ds_coords:
-                    # warnings.warn(f'xr-dimension {dim} was skipped because no units and long_name/standard_name '
-                    #               'are available and cannot be set anyhow. This is due to the package xarray.')
                     # xarray does not let me add attributes to this dimension
                     h5py.Group(self.id).create_dataset(name=dim, data=dataset[data_var][dim].values)
                 else:
@@ -933,8 +859,6 @@ class H5Group(h5py.Group):
         datasets:
           grp/supgrp/y:
             data: 2
-            standard_name: y_coordinate
-            units: m
             overwrite: True
         groups:
           grp/supgrp:
@@ -1099,7 +1023,7 @@ class H5Group(h5py.Group):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used"""
         if max_attr_length is None:
-            max_attr_length = config.HTML_MAX_STRING_LENGTH
+            max_attr_length = CONFIG.HTML_MAX_STRING_LENGTH
         if self.name == '/':
             preamble = f'<p>{Path(self.filename).name}</p>\n'
         else:
@@ -1111,7 +1035,7 @@ class H5Group(h5py.Group):
                                       build_debug_html_page=build_debug_html_page)))
 
     def _repr_html_(self):
-        return h5file_html_repr(self, config.HTML_MAX_STRING_LENGTH)
+        return h5file_html_repr(self, CONFIG.HTML_MAX_STRING_LENGTH)
 
     def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
         """stng representation of group"""
@@ -1132,12 +1056,7 @@ class DatasetValues:
 
 
 class H5Dataset(h5py.Dataset):
-    """Subclass of h5py.Dataset implementing a model.
-    This core version enforces the user to use units and
-    long_name or standard_name when creating datasets.
-    The property standard_name return a standard name
-    model.
-    """
+    """Inherted Dataset group of the h5py package"""
 
     @property
     def attrs(self):
@@ -1235,7 +1154,7 @@ class H5Dataset(h5py.Dataset):
         Note, that even if `RETURN_XARRAY` is True, there is another way to
         receive  numpy array. This is by calling .values[:] on the dataset."""
         args = args if isinstance(args, tuple) else (args,)
-        if not config.RETURN_XARRAY or nparray:
+        if not CONFIG.RETURN_XARRAY or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
         if Ellipsis in args:
             warnings.warn(
@@ -1324,12 +1243,9 @@ class H5Dataset(h5py.Dataset):
         out = f'{self.__class__.__name__} "{self.name}"'
         out += f'\n{"-" * len(out)}'
         out += f'\n{"shape:":14} {self.shape}'
-        out += f'\n{"long_name:":14} {self.long_name}'
-        out += f'\n{"standard_name:":14} {self.attrs.get("standard_name")}'
-        out += f'\n{"units:":14} {self.units}'
 
         has_dim = False
-        dim_str = f'\n\nDimensions'
+        dim_str = '\n\nDimensions'
         for _id, d in enumerate(self.dims):
             naxis = len(d)
             if naxis > 0:
@@ -1339,9 +1255,6 @@ class H5Dataset(h5py.Dataset):
                         dim_str += f'\n   [{_id}({iaxis})] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
                     else:
                         dim_str += f'\n   [{_id}] {_repr.make_bold(d[iaxis].name)} {d[iaxis].shape}'
-                    dim_str += f'\n       long_name:     {d[iaxis].attrs.get("long_name")}'
-                    dim_str += f'\n       standard_name: {d[iaxis].attrs.get("standard_name")}'
-                    dim_str += f'\n       units:         {d[iaxis].attrs.get("units")}'
         if has_dim:
             out += dim_str
         print(out)
@@ -1385,7 +1298,7 @@ class H5Dataset(h5py.Dataset):
         ils = [iscale, *[i for i in range(nscales) if i != iscale]]
         for i in ils:
             self.dims[axis].attach_scale(backup_scales[i][1])
-        logger.debug(f'new primary scale: {self.dims[axis][0]}')
+        logger.debug('new primary scale: %s', self.dims[axis][0])
 
 
 class H5File(h5py.File, H5Group):
@@ -1395,7 +1308,7 @@ class H5File(h5py.File, H5Group):
     All features from h5py packages are preserved."""
 
     @property
-    def attrs(self) -> 'WrapperAttributeManager':
+    def attrs(self) -> WrapperAttributeManager:
         """Return an attribute manager that is inherited from h5py's attribute manager"""
         with phil:
             return WrapperAttributeManager(self)
@@ -1600,17 +1513,7 @@ class H5File(h5py.File, H5Group):
 
 
 class H5Files(filequery.Files):
-    def __enter__(self):
-        for filename in self._list_of_filenames:
-            try:
-                h5file = H5File(filename, mode='r')
-                self._opened_files[str(filename)] = h5file
-            except RuntimeError as e:
-                print(f'RuntimeError: {e}')
-                for h5file in self._opened_files.values():
-                    h5file.close()
-                self._opened_files = {}
-        return self
+    fileinstance = H5File
 
 
 H5Dataset._h5grp = H5Group

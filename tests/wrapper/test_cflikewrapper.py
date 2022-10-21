@@ -9,28 +9,30 @@ import xarray as xr
 import yaml
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox.wrapper import use
-
-use('cflike')
-from h5rdmtoolbox import config
+from h5rdmtoolbox import use
+from h5rdmtoolbox.config import CONFIG
 from h5rdmtoolbox.conventions.cflike import StandardNameTable
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
+from h5rdmtoolbox.wrapper import core
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.cflike import H5Dataset
 from h5rdmtoolbox.wrapper.cflike import H5File
 from h5rdmtoolbox.wrapper.cflike import H5Group
 
+use('cflike')
+assert H5File != core.H5File
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
-ureg.default_format = config.UREG_FORMAT
+ureg.default_format = CONFIG.UREG_FORMAT
 
 
 class TestH5CFLikeFile(unittest.TestCase):
 
     def setUp(self) -> None:
+        """setup"""
         with H5File(mode='w') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
@@ -270,12 +272,12 @@ class TestH5CFLikeFile(unittest.TestCase):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
-            config.NATURAL_NAMING = False
+            CONFIG.NATURAL_NAMING = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.NATURAL_NAMING = True
+            CONFIG.NATURAL_NAMING = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -486,12 +488,12 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            config.NATURAL_NAMING = False
+            CONFIG.NATURAL_NAMING = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.NATURAL_NAMING = True
+            CONFIG.NATURAL_NAMING = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -546,14 +548,14 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(grp.long_name, 'long name of group')
 
     def test_assign_data_to_existing_dset(self):
-        config.NATURAL_NAMING = True
+        CONFIG.NATURAL_NAMING = True
         with H5File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name', units='')
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
 
     def test_create_dataset_from_xarray(self):
-        config.NATURAL_NAMING = True
+        CONFIG.NATURAL_NAMING = True
         with H5File(mode='w') as h5:
             z = xr.DataArray(name='z', data=-1,
                              attrs=dict(units='m', standard_name='z_coordinate'))

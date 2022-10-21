@@ -8,13 +8,11 @@
 *.iml
 *.pyc
 *-checkpoint.ipynb*
-#*.nc
 *.vtr
 *.hdf
 *.tiff
 *.par
 *.coverage
-*.pylintrc
 *.pylint
 
 # build
