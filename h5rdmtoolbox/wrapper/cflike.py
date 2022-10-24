@@ -9,7 +9,7 @@ import h5py
 import xarray as xr
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox.conventions.registration import register_attribute_class
+from h5rdmtoolbox.conventions.registration import register_hdf_attribute
 from . import core
 from .. import errors
 from ..config import CONFIG
@@ -37,12 +37,13 @@ class H5Group(core.H5Group):
 
     Automatic generation of root attributes:
     - __h5rdmtoolbox_version__: version of this package
-    - __wrcls__ wrapper class indication
 
     providing additional features through
     specific properties such as units and long_name or through special or
     adapted methods like create_dataset, create_external_link.
     """
+
+    convention = 'cflike'
 
     def create_group(self,
                      name,
@@ -276,6 +277,7 @@ class H5File(core.H5File, H5Group):
     It enables additional features and adds new methods streamlining the work with
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
+    convention = 'cflike'
 
     def __init__(self,
                  name: pathlib.Path = None,
@@ -329,7 +331,7 @@ class H5File(core.H5File, H5Group):
 
 class H5Dataset(core.H5Dataset):
     """Dataset class following the CF-like conventions"""
-    pass
+    convention = 'cflike'
 
 
 H5Dataset._h5grp = H5Group
@@ -339,22 +341,22 @@ H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
 
 # standard name
-register_attribute_class(cflike.standard_name.StandardNameDatasetAttribute,
-                         H5Dataset,
-                         name='standard_name',
-                         overwrite=True)
-register_attribute_class(cflike.standard_name.StandardNameGroupAttribute, H5Group, name='standard_name', overwrite=True)
-register_attribute_class(cflike.standard_name.StandardNameTableAttribute, H5Dataset, name='standard_name_table',
-                         overwrite=True)
-register_attribute_class(cflike.standard_name.StandardNameTableAttribute, H5Group, name='standard_name_table',
-                         overwrite=True)
+register_hdf_attribute(cflike.standard_name.StandardNameDatasetAttribute,
+                       H5Dataset,
+                       name='standard_name',
+                       overwrite=True)
+register_hdf_attribute(cflike.standard_name.StandardNameGroupAttribute, H5Group, name='standard_name', overwrite=True)
+register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute, H5Dataset, name='standard_name_table',
+                       overwrite=True)
+register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute, H5Group, name='standard_name_table',
+                       overwrite=True)
 
 # units:
-register_attribute_class(cflike.units.UnitsAttribute, H5Dataset, name='units', overwrite=True)
+register_hdf_attribute(cflike.units.UnitsAttribute, H5Dataset, name='units', overwrite=True)
 
 # long name:
-register_attribute_class(cflike.long_name.LongNameAttribute, H5Group, name='long_name', overwrite=True)
-register_attribute_class(cflike.long_name.LongNameAttribute, H5Dataset, name='long_name', overwrite=True)
+register_hdf_attribute(cflike.long_name.LongNameAttribute, H5Group, name='long_name', overwrite=True)
+register_hdf_attribute(cflike.long_name.LongNameAttribute, H5Dataset, name='long_name', overwrite=True)
 
 # title:
-register_attribute_class(cflike.title.TitleAttribute, H5File, name='title', overwrite=True)
+register_hdf_attribute(cflike.title.TitleAttribute, H5File, name='title', overwrite=True)

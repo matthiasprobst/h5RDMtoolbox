@@ -8,7 +8,7 @@ from h5py._objects import ObjectID
 
 from .h5utils import get_rootparent
 from .. import config
-from ..conventions.registration import STANDARD_ATTRIBUTE_NAMES
+from ..conventions.registration import REGISTRATED_ATTRIBUTE_NAMES
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
@@ -104,7 +104,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
-        if name in STANDARD_ATTRIBUTE_NAMES:
+        if name in REGISTRATED_ATTRIBUTE_NAMES:
             if hasattr(self._parent, name):
                 setattr(self._parent, name, value)
                 return
@@ -143,7 +143,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return outstr[:-1]
 
     def __getattr__(self, item):
-        if config.NATURAL_NAMING:
+        if config.CONFIG.NATURAL_NAMING:
             if item in self.__dict__:
                 return super().__getattribute__(item)
             if item in self.keys():

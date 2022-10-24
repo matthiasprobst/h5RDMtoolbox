@@ -298,9 +298,8 @@ class H5Objects:
 
 class Files:
     """H5File-like interface for multiple HDF Files"""
-    fileinstance = h5py.File
 
-    def __init__(self, *filenames):
+    def __init__(self, *filenames, fileinstance=h5py.File):
         if isinstance(filenames[0], (list, tuple)):
             if len(filenames) != 1:
                 raise ValueError('Expecting filenames to be passe separately or in alist/tuple')
@@ -308,6 +307,7 @@ class Files:
         else:
             self._list_of_filenames = [pathlib.Path(f) for f in filenames]
         self._opened_files = {}
+        self._fileinstance = fileinstance
 
     def __getitem__(self, item) -> Union[h5py.Group, H5Objects]:
         """If integer, returns item-th root-group. If string,
@@ -319,7 +319,7 @@ class Files:
     def __enter__(self):
         for filename in self._list_of_filenames:
             try:
-                h5file = self.fileinstance(filename, mode='r')
+                h5file = self._fileinstance(filename, mode='r')
                 self._opened_files[str(filename)] = h5file
             except RuntimeError as e:
                 print(f'RuntimeError: {e}')

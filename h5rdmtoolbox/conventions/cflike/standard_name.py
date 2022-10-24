@@ -25,6 +25,8 @@ from typing import Dict, Union, List, Tuple
 
 import h5py
 import pandas as pd
+import requests
+import xmltodict
 import yaml
 from IPython.display import display, HTML
 from omegaconf import DictConfig, OmegaConf
@@ -123,66 +125,6 @@ class StandardName:
         self.snt.check_name(self.name)
 
 
-class MetaDataYamlDict:
-    """A yaml interface that reads data only when requested the first time.
-    The yml file might be organized in multiple splits."""
-
-    def __init__(self, filename):
-        self._filename = filename
-        self._data = {}
-        self._alias = {}
-        self._meta = {}
-        self._data_is_read = False
-        self._meta_is_read = False
-
-    def __getitem__(self, item):
-        return self.data[item]
-
-    def __contains__(self, item):
-        return item in self.data
-
-    @property
-    def data(self):
-        """Return second split or if more all other"""
-        if not self._data_is_read:
-            with open(self._filename, 'r') as f:
-                g = yaml.full_load_all(f)
-                next(g)  # skip meta secion
-                for item in g:
-                    if len(item) == 1:
-                        grp = list(item.keys())[0]
-                        if grp == 'table':
-                            self._data = item[list(item.keys())[0]]
-                        elif grp == 'alias':
-                            self._alias = item[list(item.keys())[0]]
-                    else:
-                        self._data = item
-            self._data_is_read = True
-        return self._data
-
-    @property
-    def alias(self) -> Dict:
-        if not self._data_is_read:
-            _ = self.data
-        return self._alias
-
-    @property
-    def meta(self):
-        """First split in the yaml file is expected to be the meta data"""
-        if not self._meta_is_read:
-            with open(self._filename, 'r') as f:
-                g = yaml.full_load_all(f)
-                self._meta = next(g)
-            self._meta_is_read = True
-        return self._meta
-
-    def keys(self):
-        return self.data.keys()
-
-    def values(self):
-        return self.data.values()
-
-
 class StandardNameTableStoreOption(Enum):
     """Enum class to define how to store standard name tables in files"""
     url = 1
@@ -193,7 +135,6 @@ class StandardNameTableStoreOption(Enum):
 
 def url_exists(url: str) -> bool:
     """Return True if URL exist"""
-    import requests
     response = requests.head(url)
     return response.status_code == 200
 
@@ -202,11 +143,15 @@ class StandardNameTable:
     """Base class of Standard Name Tables"""
     STORE_AS: StandardNameTableStoreOption = StandardNameTableStoreOption.none
 
-    def __init__(self, name: str, table: Union[MetaDataYamlDict, Dict, None],
+    def __init__(self,
+                 name: str,
+                 table: Union[DictConfig, Dict, None],
                  version_number: int,
-                 institution: str, contact: str,
+                 institution: str,
+                 contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '', pattern: str = '',
+                 valid_characters: str = '',
+                 pattern: str = '',
                  url: str = None,
                  alias: Dict = None):
 
@@ -310,7 +255,8 @@ class StandardNameTable:
         return self._version_number
 
     @property
-    def filename(self):
+    def filename(self) -> Union[None, pathlib.Path]:
+        """Return the filename if exists else return None"""
         return self._filename
 
     def __repr__(self) -> str:
@@ -329,8 +275,9 @@ class StandardNameTable:
 
     def __getitem__(self, item) -> StandardName:
         if item in self.table:
-            return StandardName(item, self.table[item]['description'],
-                                self.table[item]['canonical_units'],
+            return StandardName(name=item,
+                                description=self.table[item]['description'],
+                                canonical_units=self.table[item]['canonical_units'],
                                 snt=self)
         if item in self.alias:
             return StandardName(item, self.table[self.alias[item]]['description'],
@@ -439,7 +386,6 @@ class StandardNameTable:
     @staticmethod
     def from_xml(xml_filename, name: str = None) -> "StandardNameTable":
         """read from xml file"""
-        import xmltodict
         with open(xml_filename, 'r', encoding='utf-8') as file:
             my_xml = file.read()
         xmldict = xmltodict.parse(my_xml)
@@ -735,23 +681,12 @@ class StandardNameTable:
             print(f' > {f.versionname}')
 
 
-class H5StandardNameUpdate:
-    def __init__(self, translation_dict):
-        self._translation_dict = translation_dict
-
-    def __call__(self, name, h5obj):
-        if isinstance(h5obj, h5py.Dataset):
-            name = Path(h5obj.name).name.lower()
-            if name in self._translation_dict:  # pivview_to_standardnames_dict:
-                h5obj.attrs.modify('standard_name', self._translation_dict[name])
-
-
 class StandardNameTableTranslation:
     """Translation Interface which translates a name into a standard name based on a
     translation dictionary"""
     raise_error: bool = False
 
-    def __init__(self, application_name: str, translation_dict: Union[Dict, MetaDataYamlDict]):
+    def __init__(self, application_name: str, translation_dict: Union[Dict, DictConfig]):
         self.application_name = application_name
         self.translation_dict = translation_dict
         self.filename = None
@@ -765,18 +700,24 @@ class StandardNameTableTranslation:
     @staticmethod
     def from_yaml(yaml_filename: pathlib.Path) -> "StandardNameTableTranslation":
         """read from yaml file"""
+
         with open(yaml_filename, 'r') as f:
             g = yaml.safe_load_all(f)
-            first_split = next(g)
+            while True:
+                try:
+                    splitdata = next(g)
+                except StopIteration:
+                    break
+                if 'table' in splitdata:
+                    break
 
         yaml_filename = pathlib.Path(yaml_filename)
         application_name = yaml_filename.stem.split('-to-', 1)[0]
-        if 'translation_dict' in first_split:
+        if 'table' in splitdata:
             sntt = StandardNameTableTranslation(application_name=application_name,
-                                                translation_dict=first_split['translation_dict'])
+                                                translation_dict=DictConfig(splitdata['table']))
         else:
-            sntt = StandardNameTableTranslation(application_name=application_name,
-                                                translation_dict=MetaDataYamlDict(yaml_filename))
+            raise KeyError('Not key "table" found in yaml file.')
         sntt.filename = yaml_filename
         return sntt
 
@@ -960,7 +901,8 @@ class StandardNameTableAttribute:
                     self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
                                                  snt.to_dict())
             else:
-                self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+                self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
+                                             json.dumps(snt.to_dict()))
         if snt.STORE_AS == StandardNameTableStoreOption.versionname:
             self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.versionname)
         elif snt.STORE_AS == StandardNameTableStoreOption.dict:
@@ -973,7 +915,8 @@ class StandardNameTableAttribute:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
                     self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, snt.to_dict())
             else:  # else fall back to writing dict. better than versionname because cannot get lost
-                self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME, json.dumps(snt.to_dict()))
+                self.rootparent.attrs.modify(config.CONFIG.STANDARD_NAME_TABLE_ATTRIBUTE_NAME,
+                                             json.dumps(snt.to_dict()))
         _SNT_CACHE[self.id.id] = snt
 
     def get(self) -> StandardNameTable:

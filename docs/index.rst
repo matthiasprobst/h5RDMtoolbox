@@ -62,8 +62,8 @@ You may install optional dependencies:
 
     Getting Started <gettingstarted/index>
     Conventions <conventions/index>
-    H5wrapper <wrapper/index>
-    H5Database <database/index>
+    HDF5-Wrapper <wrapper/index>
+    HDF5-Database <database/index>
     HowTo <howto/howto.ipynb>
     Glossary <glossary/index>
     References <references>

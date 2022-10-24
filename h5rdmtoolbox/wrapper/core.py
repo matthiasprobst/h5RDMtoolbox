@@ -34,20 +34,19 @@ from .._user import user_dirs
 from .._version import __version__
 from ..config import CONFIG
 from ..conventions.layout import LayoutAttribute, H5Layout
-from ..conventions.registration import register_attribute_class
-from ..database import filequery
+from ..conventions.registration import register_hdf_attribute
 
 logger = logging.getLogger(__package__)
 
 ureg.default_format = CONFIG.UREG_FORMAT
 
-H5File_layout_filename = Path.joinpath(user_dirs['layouts'],
-                                       'H5File.hdf')
+H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
 
 
 class H5Group(h5py.Group):
     """Inherited Group of the package h5py
     """
+    convention = 'default'
 
     @property
     def attrs(self):
@@ -162,10 +161,7 @@ class H5Group(h5py.Group):
             return super().__getattribute__(item)
 
     def __str__(self) -> str:
-        if self.name == '/':
-            return f'<HDF5 wrapper file "{self.hdf_filename.name}" (mode {self.mode})>'
-        else:
-            return f'<HDF5 wrapper group "{self.name}" (members {len(self)})>'
+        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{self.convention}")>'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -1057,6 +1053,7 @@ class DatasetValues:
 
 class H5Dataset(h5py.Dataset):
     """Inherted Dataset group of the h5py package"""
+    convention = 'default'
 
     @property
     def attrs(self):
@@ -1224,11 +1221,12 @@ class H5Dataset(h5py.Dataset):
                                     coords=coords, attrs=attrs)
             return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
-    def __str__(self):
-        return f'<HDF5 wrapper dataset shape "{self.shape}" (<{self.dtype}>)>'
-
     def __repr__(self) -> str:
-        return self.__str__()
+        r = super().__repr__()
+        if not self:
+            return r[:-1] + f' (convention "{self.convention}")>'
+        else:
+            return r[:-1] + f', convention "{self.convention}">'
 
     def __lt__(self, other):
         """Call __lt__() on group names"""
@@ -1306,6 +1304,8 @@ class H5File(h5py.File, H5Group):
     It enables additional features and adds new methods streamlining the work with
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
+
+    convention = 'default'
 
     @property
     def attrs(self) -> WrapperAttributeManager:
@@ -1397,9 +1397,15 @@ class H5File(h5py.File, H5Group):
         if self.mode != 'r':
             # update file toolbox version, wrapper version
             self.attrs['__h5rdmtoolbox_version__'] = __version__
-            self.attrs['__wrcls__'] = self.__class__.__name__
 
         self.layout = layout
+
+    def __repr__(self) -> str:
+        r = super().__repr__()
+        return r.replace('HDF5', f'HDF5 (convention {self.convention})')
+
+    def __str__(self) -> str:
+        return f"<class 'h5rdmtoolbox.H5File' convention: {self.convention}>"
 
     def check(self, grp: Union[str, h5py.Group] = '/') -> int:
         """Run layout check. This method may be overwritten to add conditional
@@ -1512,17 +1518,13 @@ class H5File(h5py.File, H5Group):
         return H5File(filename, mode)
 
 
-class H5Files(filequery.Files):
-    fileinstance = H5File
-
-
 H5Dataset._h5grp = H5Group
 H5Dataset._h5ds = H5Dataset
 
 H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
 
-register_attribute_class(LayoutAttribute,
-                         H5File,
-                         name='layout',
-                         overwrite=True)
+register_hdf_attribute(LayoutAttribute,
+                       H5File,
+                       name='layout',
+                       overwrite=True)

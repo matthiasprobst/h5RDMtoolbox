@@ -42,7 +42,4 @@ def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, lo
     # Log messages collected above
     _logger.debug(_logFolderMsg)
 
-    return _logger, _file_handler, _stream_handler
-
-
-logger, file_handler, stream_handler = create_package_logger(name='h5rdmtoolbox')
+    return _logger

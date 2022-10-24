@@ -6,18 +6,20 @@ the python filename and accessor class name must not be identical!
 
 from typing import Union
 
-STANDARD_ATTRIBUTE_NAMES = []
+from ._logger import logger
+
+REGISTRATED_ATTRIBUTE_NAMES = []
 
 
-def _register_standard_attribute(cls, name: str = None, overwrite: bool = False):
+def _register_hdf_attribute(cls, name: str = None, overwrite: bool = False):
     def decorator(accessor):
         """decorator"""
-        return register_attribute_class(accessor, cls, name, overwrite)
+        return register_hdf_attribute(accessor, cls, name, overwrite)
 
     return decorator
 
 
-def register_standard_attribute(cls: Union["H5Dataset", "H5Group"], overwrite=False, name: str = None):
+def register_hdf_attr(cls: Union["H5Dataset", "H5Group"], overwrite=False, name: str = None):
     """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
     also docstring is optional but strongly recommended!
 
@@ -32,19 +34,19 @@ def register_standard_attribute(cls: Union["H5Dataset", "H5Group"], overwrite=Fa
     """
     # if not isinstance(cls, (H5Dataset, H5Group)):
     #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
-    return _register_standard_attribute(cls, name=name, overwrite=overwrite)
+    return _register_hdf_attribute(cls, name=name, overwrite=overwrite)
 
 
-def register_attribute_class(attribute_class, cls, name, overwrite):
+def register_hdf_attribute(attribute_class, cls, name, overwrite):
     """register an attribute defined in `attribute_class` to `cls`"""
     if name is None:
         attrname = attribute_class.__name__
     else:
         attrname = name
-    STANDARD_ATTRIBUTE_NAMES.append(attrname)
+    REGISTRATED_ATTRIBUTE_NAMES.append(attrname)
     if hasattr(cls, attrname):
         if overwrite:
-            print(f'Overwriting existing property {attrname}.')
+            logger.debug(f'Overwriting existing property "{attrname}" of {cls}.')
             delattr(cls, attrname)
         else:
             raise AttributeError(f'Cannot register property {attrname} to {cls} because it has already a property '
@@ -58,5 +60,6 @@ def register_attribute_class(attribute_class, cls, name, overwrite):
         fdel = attribute_class.delete
     if hasattr(attribute_class, 'doc'):
         doc = attribute_class.doc
+    logger.debug(f'Register special hdf attribute {name} to {cls}')
     setattr(cls, attrname, property(fget, fset, fdel, doc))
     return attribute_class

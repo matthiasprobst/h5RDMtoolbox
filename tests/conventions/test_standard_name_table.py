@@ -9,7 +9,7 @@ from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTable,
                                                            StandardNameTableTranslation,
                                                            StandardName)
-from h5rdmtoolbox.conventions.cflike.standard_name import merge, MetaDataYamlDict
+from h5rdmtoolbox.conventions.cflike.standard_name import merge
 from h5rdmtoolbox.wrapper.cflike import H5File
 
 
@@ -25,9 +25,7 @@ class TestStandardNameTable(unittest.TestCase):
         del translation
         translation = StandardNameTableTranslation.load_registered('test-to-Test-v1')
         self.assertIsInstance(translation, StandardNameTableTranslation)
-        self.assertIsInstance(translation.translation_dict, MetaDataYamlDict)
-        self.assertDictEqual(translation.translation_dict.meta, {'snt': 'Test-v1'})
-        self.assertDictEqual(translation.translation_dict.data, {'u': 'x_velocity'})
+        self.assertIsInstance(translation.translation_dict, DictConfig)
 
     def test_StandardNameTableFromYaml(self):
         table = StandardNameTable.from_yaml(testdir / 'sntable.yml')

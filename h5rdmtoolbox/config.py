@@ -4,6 +4,7 @@ from typing import Union
 
 import yaml
 from omegaconf import OmegaConf, DictConfig
+
 from ._user import user_dirs
 
 config_yaml_filename = user_dirs['root'] / 'user_config.yaml'
@@ -44,8 +45,9 @@ else:
 
 def set_config_parameter(parameter_name: str, value: Union[float, int, str]):
     """Set value in user configuration"""
+    _parameter_name = parameter_name.upper()
     cfg = read_user_config()
-    if parameter_name not in cfg:
-        raise ValueError(f'Name {parameter_name} not in config')
-    CONFIG[parameter_name.upper()] = value
+    if _parameter_name not in cfg:
+        raise ValueError(f'Name "{_parameter_name}" not in config')
+    CONFIG[_parameter_name] = value
     write_user_config()

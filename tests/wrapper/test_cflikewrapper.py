@@ -9,6 +9,7 @@ import xarray as xr
 import yaml
 from pint_xarray import unit_registry as ureg
 
+from h5rdmtoolbox import H5File
 from h5rdmtoolbox import use
 from h5rdmtoolbox.config import CONFIG
 from h5rdmtoolbox.conventions.cflike import StandardNameTable
@@ -18,11 +19,12 @@ from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import core
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.cflike import H5Dataset
-from h5rdmtoolbox.wrapper.cflike import H5File
 from h5rdmtoolbox.wrapper.cflike import H5Group
 
 use('cflike')
-assert H5File != core.H5File
+h5file = H5File()
+assert h5file != core.H5File
+h5file.close()
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
@@ -50,6 +52,10 @@ class TestH5CFLikeFile(unittest.TestCase):
 
         self.lay_filename = generate_temporary_filename(prefix='lay', suffix='.hdf')
         self.other_filename = generate_temporary_filename(prefix='other', suffix='.hdf')
+
+    def test_str(self):
+        strrepr = H5File().__str__()
+        self.assertEqual(strrepr, "<class 'h5rdmtoolbox.H5File' convention: cflike>")
 
     def test_layout(self):
         lay = H5Layout(self.lay_filename)

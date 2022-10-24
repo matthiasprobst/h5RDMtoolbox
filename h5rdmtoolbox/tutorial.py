@@ -8,8 +8,8 @@ from typing import List
 import numpy as np
 import xarray as xr
 
-from . import H5File
 from .utils import generate_temporary_directory
+from .wrapper.cflike import H5File as CFH5File
 
 
 def get_xr_dataset(name):
@@ -179,7 +179,7 @@ class Database:
             os.makedirs(folders[ifolder], exist_ok=True)
 
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
-            with H5File(filename, 'w') as h5:
+            with CFH5File(filename, 'w') as h5:
                 h5.attrs['operator'] = operators[np.random.randint(4)]
                 __ftype__ = db_file_type[np.random.randint(2)]
                 h5.attrs['__db_file_type__'] = __ftype__

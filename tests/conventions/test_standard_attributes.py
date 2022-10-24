@@ -6,14 +6,16 @@ from importlib.metadata import metadata
 from typing import Union, Dict, List
 
 from h5rdmtoolbox.conventions.cflike import software, user, errors
-from h5rdmtoolbox.conventions.registration import register_standard_attribute
+from h5rdmtoolbox.conventions.registration import register_hdf_attr
 from h5rdmtoolbox.wrapper.cflike import H5File, H5Dataset, H5Group
 
 
 class TestOptAccessors(unittest.TestCase):
 
     def setUp(self) -> None:
-        @register_standard_attribute(H5Group, name='software', overwrite=True)
+        """setup"""
+
+        @register_hdf_attr(H5Group, name='software', overwrite=True)
         class SoftwareAttribute:
             """property attach to a H5Group"""
 
@@ -59,8 +61,8 @@ class TestOptAccessors(unittest.TestCase):
                 """Delete attribute"""
                 self.attrs.__delitem__('standard_name')
 
-        @register_standard_attribute(H5Group, name='user', overwrite=True)
-        @register_standard_attribute(H5Dataset, name='user', overwrite=True)
+        @register_hdf_attr(H5Group, name='user', overwrite=True)
+        @register_hdf_attr(H5Dataset, name='user', overwrite=True)
         class UserAttribute:
             """User can be one or multiple persons in charge or related to the
             file, group or dataset"""
