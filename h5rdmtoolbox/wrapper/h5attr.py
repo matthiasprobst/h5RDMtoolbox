@@ -137,7 +137,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         key_lens = [len(k) for k in adict.keys()]
         if len(key_lens) == 0:
             return None
-        keylen = max([len(k) for k in adict.keys()])
+        keylen = max(key_lens)
         for k, v in adict.items():
             outstr += f'{k:{keylen}}  {v}\n'
         return outstr[:-1]

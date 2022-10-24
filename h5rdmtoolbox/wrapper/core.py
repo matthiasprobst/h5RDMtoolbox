@@ -835,14 +835,14 @@ class H5Group(h5py.Group):
                 self[name] = h5py.ExternalLink(filename, path)
                 return self[name]
             else:
-                logger.debug(f'External link {name} was not created. A Dataset with this name'
-                             f' already exists and overwrite is set to False! '
-                             f'You can pass overwrite=True in order to overwrite the '
-                             f'existing dataset')
+                logger.debug('External link %s was not created. A Dataset with this name'
+                             ' already exists and overwrite is set to False! '
+                             'You can pass overwrite=True in order to overwrite the '
+                             'existing dataset', name)
                 raise ValueError(f'External link {name} was not created. A Dataset with this name'
-                                 f' already exists and overwrite is set to False! '
-                                 f'You can pass overwrite=True in order to overwrite the '
-                                 f'existing dataset')
+                                 ' already exists and overwrite is set to False! '
+                                 'You can pass overwrite=True in order to overwrite the '
+                                 'existing dataset')
         else:
             self[name] = h5py.ExternalLink(filename, path)
             return self[name]
@@ -869,24 +869,20 @@ class H5Group(h5py.Group):
         if 'groups' in data:
             for grp in data['groups']:
                 kwargs = data['groups'][grp]
-                logger.debug(
-                    f"dumping group defined by yaml file. name: {grp}, kwargs: {kwargs}")
+                logger.debug("dumping group defined by yaml file. name: %s, kwargs: %s", grp, kwargs)
                 try:
                     self.create_group(grp, **kwargs)
                 except Exception as e:
-                    logger.critical(
-                        f'Group {grp} from yaml definition not written due to {e}')
+                    logger.critical('Group %s from yaml definition not written due to %s', grp, grp)
 
         if 'datasets' in data:
             for ds in data['datasets']:
                 kwargs = data['datasets'][ds]
-                logger.debug(
-                    f"dumping dataset defined by yaml file. name: {ds}, kwargs: {kwargs}")
+                logger.debug("dumping dataset defined by yaml file. name: %s, kwargs: %s", ds, kwargs)
                 try:
                     self.create_dataset(ds, **kwargs)
                 except Exception as e:
-                    logger.critical(
-                        f'Dataset {ds} from yaml definition not written due to {e}')
+                    logger.critical('Dataset %s from yaml definition not written due to %s', ds, e)
 
         if 'attrs' in data:
             for objname in data['attrs']:
@@ -897,8 +893,7 @@ class H5Group(h5py.Group):
                     try:
                         self[objname].attrs[ak] = av
                     except Exception as e:
-                        logger.critical(
-                            f'Could not write attribute {ak} to {objname} due to {e}')
+                        logger.critical('Could not write attribute %s to %s due to %s', ak, objname, e)
 
     def get_by_attribute(self, attribute_name, attribute_value=None,
                          h5type=None, recursive=True) -> List[Union[h5py.Dataset, h5py.Group]]:
@@ -1448,11 +1443,11 @@ class H5File(h5py.File, H5Group):
         if dest_fname.exists() and not overwrite:
             raise FileExistsError(f'The target file "{dest_fname}" already exists and overwriting is set to False.'
                                   ' Not moving the file!')
-        logger.debug(f'Moving file {self.hdf_filename} to {dest_fname}')
+        logger.debug('Moving file %s to %s', {self.hdf_filename}, dest_fname)
 
         if not dest_fname.parent.exists():
             Path.mkdir(dest_fname.parent, parents=True)
-            logger.debug(f'Created directory {dest_fname.parent}')
+            logger.debug('Created directory %s', dest_fname.parent)
 
         mode = self.mode
         self.close()
