@@ -9,7 +9,7 @@
 *.pyc
 *-checkpoint.ipynb*
 *.vtr
-*.hdf
+#*.hdf
 *.tiff
 *.par
 *.coverage

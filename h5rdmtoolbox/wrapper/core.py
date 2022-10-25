@@ -41,6 +41,8 @@ logger = logging.getLogger(__package__)
 ureg.default_format = CONFIG.UREG_FORMAT
 
 H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
+if not H5File_layout_filename.exists():
+    shutil.copy2(pathlib.Path(__file__).parent / '../data/H5File.hdf', H5File_layout_filename)
 
 
 class H5Group(h5py.Group):
