@@ -2,14 +2,11 @@ import os
 import pathlib
 import re
 from itertools import chain
-from typing import List
-from typing import Union, Dict, Callable
+from typing import List, Union, Dict, Callable
 
 import h5py
 import numpy as np
 import pandas as pd
-
-from ..wrapper import open_wrapper
 
 
 # implementation similar to pymongo:
@@ -129,16 +126,6 @@ class RecAttrCollect:
                     self.found_objects.append(obj.attrs[self._attribute_name])
 
 
-def _find_in_external_link(el: h5py.ExternalLink, operator: Callable, name, value, found_objs):
-    with open_wrapper(el.filename) as h5el:
-        rf = RecFind(operator, name, value)
-        h5el[el.path].visititems(rf)
-        for found_obj in rf.found_objects:
-            # add external link object:
-            found_objs.append(h5py.ExternalLink(el.filename, el.path + found_obj.name[1:]))
-    return
-
-
 def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
     """
 
@@ -184,7 +171,10 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
             for hk, hv in h5obj.items():
                 if isinstance(hv, h5py.Dataset):
                     try:
-                        objattr = hv.__getattribute__(qk[1:])
+                        if qk == '$basename':
+                            objattr = hv.__getattribute__('name')[1:]
+                        else:
+                            objattr = hv.__getattribute__(qk[1:])
                         if _operator[ok](objattr, ov):
                             found_objs.append(hv)
                     except AttributeError:
@@ -306,10 +296,10 @@ class H5Objects:
         raise TypeError('Cannot slice hdf group objects')
 
 
-class H5Files:
+class Files:
     """H5File-like interface for multiple HDF Files"""
 
-    def __init__(self, *filenames, h5wrapper=None):
+    def __init__(self, *filenames, fileinstance=h5py.File):
         if isinstance(filenames[0], (list, tuple)):
             if len(filenames) != 1:
                 raise ValueError('Expecting filenames to be passe separately or in alist/tuple')
@@ -317,7 +307,7 @@ class H5Files:
         else:
             self._list_of_filenames = [pathlib.Path(f) for f in filenames]
         self._opened_files = {}
-        self._h5wrapper = h5wrapper
+        self._fileinstance = fileinstance
 
     def __getitem__(self, item) -> Union[h5py.Group, H5Objects]:
         """If integer, returns item-th root-group. If string,
@@ -329,10 +319,7 @@ class H5Files:
     def __enter__(self):
         for filename in self._list_of_filenames:
             try:
-                if self._h5wrapper is None:
-                    h5file = open_wrapper(filename, mode='r')
-                else:
-                    h5file = self._h5wrapper(filename, mode='r')
+                h5file = self._fileinstance(filename, mode='r')
                 self._opened_files[str(filename)] = h5file
             except RuntimeError as e:
                 print(f'RuntimeError: {e}')

@@ -19,9 +19,9 @@ The package is divided into three sub-packages, each of which concerning a separ
 data workflow. Note, that dependencies among the sub-packages exists, however a clear description for each 
 sub-package can be found:
   - `conventions`: Naming standards mostly for attributes in the HDF5 files. Used by wrapper classes
-  - `h5wrapper`: Implementaiton of wrapper classes: Interacting/working with HDF5 files including many useful features 
+  - `wrapper`: Implementaiton of wrapper classes: Interacting/working with HDF5 files including many useful features 
      and user-defined methods including static and dynamic layout definition
-  - `h5database`: Practical and easy searching in multiple HDF5 files
+  - `database`: Practical and easy searching in multiple HDF5 files
 
 The sub-packages are described in detail in the [documentation](https://matthiasprobst.github.io/h5RDMtoolbox/). 
 `Jupyter Notebooks` as tutorials are provided in the respective documentation folder (/doc/<sub-package>).
@@ -54,7 +54,6 @@ Documentation can be build following the README.md in the doc/ folder
 ## Testing
 Go to the repository directory. For running all tests call
 
-    cd h5RDMtoolbox
     pytest
 
 To get a coverage report run (you need the package `pytest-cov`):
@@ -62,6 +61,10 @@ To get a coverage report run (you need the package `pytest-cov`):
     pytest --cov --cov-report html
     
 This will create a folder `covhtml/` with an `index.html` file in it.
+
+Also you might want to run `pylint` (static code analysis):
+
+    pylint h5rdmtoolbox --output=.pylint
 
 Please request testdata from the author as long it is not shipped with the repo.
 

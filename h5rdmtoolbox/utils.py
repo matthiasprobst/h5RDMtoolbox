@@ -97,8 +97,7 @@ def generate_time_str(dtime: datetime, fmt: str) -> str:
         return dtime.strftime(fmt)
     elif len(zsplit) == 2:
         return dtime.strftime(zsplit[0]) + datetime.now(tzlocal()).strftime('%z') + dtime.strftime(zsplit[1])
-    else:
-        raise ValueError(f'Invalid formatting string. Can only handle one %z formatter')
+    raise ValueError('Invalid formatting string. Can only handle one %z formatter')
 
 
 def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
@@ -145,15 +144,15 @@ def load_img(img_filepath: pathlib.Path):
     return cv2_imread(str(img_filepath), -1)
 
 
-def _process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:
+def process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:
     if isinstance(objfilter, str):
         if objfilter.lower() == 'group':
             return h5py.Group
-        elif objfilter.lower() == 'dataset':
+        if objfilter.lower() == 'dataset':
             return h5py.Dataset
-        elif objfilter.lower() == '$group':
+        if objfilter.lower() == '$group':
             return h5py.Group
-        elif objfilter.lower() == '$dataset':
+        if objfilter.lower() == '$dataset':
             return h5py.Dataset
         raise NameError(
             f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')

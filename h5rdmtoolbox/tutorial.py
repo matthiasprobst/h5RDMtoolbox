@@ -3,15 +3,13 @@ Tutorial module providing easy access to particular data.
 """
 import os
 import pathlib
-import shutil
 from typing import List
 
 import numpy as np
 import xarray as xr
 
-from h5rdmtoolbox import H5File
-from ._user import testdir
-from .utils import generate_temporary_directory, generate_temporary_filename
+from .utils import generate_temporary_directory
+from .wrapper.cflike import H5File as CFH5File
 
 
 def get_xr_dataset(name):
@@ -136,55 +134,13 @@ def get_xr_dataset(name):
         return poiseuille2D(np.linspace(0, 4, 2), np.linspace(0, 4, 10), 2)
 
 
-def get_H5PIV(name: str, mode: str = 'r') -> "H5PIV":
-    """Return the HDF filename of a tutoral case."""
-    from .wrapper import H5PIV
-    if name == 'vortex_snapshot':
-
-        def _rgb2gray(rgb):
-            """turns a rgb image (3D array) into a grayscale image (2D). If input is 2D array is just returned"""
-            if rgb.ndim == 2:
-                # logger.info('Input image is already grayscale!')
-                return rgb
-            if not rgb.ndim == 3:
-                raise ValueError(f'Not a RGB image. Expecting a 3D image, not {rgb.ndim}D.')
-            r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
-            gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
-            return gray
-
-        vortex1_hdf_fname = testdir / 'PIV/vortexpair/vortex1.hdf'
-        tmp_fname = shutil.copy2(vortex1_hdf_fname, generate_temporary_filename(suffix='.hdf'))
-
-        # add the images to the hdf file:
-        with H5PIV(tmp_fname, 'r+') as h5:
-            h5.create_dataset_from_image(testdir / 'PIV/vortexpair/vp1a.tif', 'imgA',
-                                         long_name='piv_image_a',
-                                         ufunc=_rgb2gray)
-            h5.create_dataset_from_image(testdir / 'PIV/vortexpair/vp1b.tif', 'imgB',
-                                         long_name='piv_image_b',
-                                         ufunc=_rgb2gray)
-        return H5PIV(tmp_fname, mode=mode)
-    elif name == 'piv_challenge':
-        piv_challenge1_E_hdf_fname = testdir / 'PIV/piv_challenge1_E/piv_challenge1_E.hdf'
-        with H5PIV(piv_challenge1_E_hdf_fname, 'r+') as h5:
-            from h5rdmtoolbox.conventions.software import Software
-            h5.software = Software(name='PIVview',
-                                   version='3.8.6',
-                                   url='www.pivtec.com/pivview.html',
-                                   description='PIV processing software')
-        tmp_fname = shutil.copy2(piv_challenge1_E_hdf_fname, generate_temporary_filename(suffix='.hdf'))
-        return H5PIV(tmp_fname, mode=mode)
-    else:
-        raise NameError(f'Invalid name')
-
-
 class Conventions:
     """Tutorial methods for package conventions"""
 
     @staticmethod
     def fetch_cf_standard_name_table():
         """download cf-standard-name-table"""
-        from h5rdmtoolbox.conventions import StandardNameTable
+        from h5rdmtoolbox.conventions.cflike.standard_name import StandardNameTable
         url = "https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml"
         return StandardNameTable.from_web(url)
 
@@ -223,7 +179,7 @@ class Database:
             os.makedirs(folders[ifolder], exist_ok=True)
 
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
-            with H5File(filename, 'w') as h5:
+            with CFH5File(filename, 'w') as h5:
                 h5.attrs['operator'] = operators[np.random.randint(4)]
                 __ftype__ = db_file_type[np.random.randint(2)]
                 h5.attrs['__db_file_type__'] = __ftype__

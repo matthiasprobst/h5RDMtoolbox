@@ -1,12 +1,16 @@
 import unittest
+import warnings
 
+import requests
 from omegaconf import DictConfig
 
-import h5rdmtoolbox
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
-from h5rdmtoolbox.conventions import StandardNameTable, StandardNameTableTranslation, StandardName
-from h5rdmtoolbox.conventions.standard_name import merge, MetaDataYamlDict
+from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTable,
+                                                           StandardNameTableTranslation,
+                                                           StandardName)
+from h5rdmtoolbox.conventions.cflike.standard_name import merge
+from h5rdmtoolbox.wrapper.cflike import H5File
 
 
 class TestStandardNameTable(unittest.TestCase):
@@ -21,9 +25,7 @@ class TestStandardNameTable(unittest.TestCase):
         del translation
         translation = StandardNameTableTranslation.load_registered('test-to-Test-v1')
         self.assertIsInstance(translation, StandardNameTableTranslation)
-        self.assertIsInstance(translation.translation_dict, MetaDataYamlDict)
-        self.assertDictEqual(translation.translation_dict.meta, {'snt': 'Test-v1'})
-        self.assertDictEqual(translation.translation_dict.data, {'u': 'x_velocity'})
+        self.assertIsInstance(translation.translation_dict, DictConfig)
 
     def test_StandardNameTableFromYaml(self):
         table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
@@ -46,14 +48,20 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertIsInstance(table._table, DictConfig)
         self.assertDictEqual(
             table.table,
-            {'synthetic_particle_image': {'canonical_units': 'counts',
-                                          'description':
-                                              'Synthetic particle image velocimetry image containing image particles '
-                                              'of a single synthetic recording.'},
-             'mean_particle_diameter': {'canonical_units': 'pixel',
-                                        'description':
-                                            'The mean particle diameter of an image particle. The diameter is defined '
-                                            'as the 2 sigma with of the gaussian intensity profile of the particle image.'}})
+            {
+                'synthetic_particle_image': {
+                    'canonical_units': 'counts',
+                    'description':
+                        'Synthetic particle image velocimetry image containing image particles '
+                        'of a single synthetic recording.'
+                },
+                'mean_particle_diameter': {
+                    'canonical_units': 'pixel',
+                    'description':
+                        'The mean particle diameter of an image particle. The diameter is defined '
+                        'as the 2 sigma with of the gaussian intensity profile of the particle image.'
+                }
+            })
         self.assertDictEqual(table.alias, {'particle_image': 'synthetic_particle_image'}
                              )
         self.assertTrue(table.check_name('synthetic_particle_image'))
@@ -67,12 +75,21 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertEqual(cf.name, 'standard_name_table')
         self.assertEqual(cf.versionname, 'standard_name_table-v79')
 
-        opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                 file_path='open_centrifugal_fan_database-v1.yaml',
-                                                 project_id='35443',
-                                                 ref_name='main')
-        self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
-        self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+        try:
+            requests.get('https://git.scc.kit.edu', timeout=5)
+            connected = True
+        except (requests.ConnectionError,
+                requests.Timeout) as e:
+            connected = False
+            warnings.warn('Cannot check Standard name table from '
+                          f'fitlab: {e}')
+        if connected:
+            opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                     file_path='open_centrifugal_fan_database-v1.yaml',
+                                                     project_id='35443',
+                                                     ref_name='main')
+            self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
+            self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
 
     def test_from_yaml(self):
         table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
@@ -93,7 +110,7 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertNotEqual(table, table2)
 
     def test_tranlsate_group(self):
-        with h5rdmtoolbox.H5File() as h5:
+        with H5File() as h5:
             ds1 = h5.create_dataset('ds1', shape=(2,), units='', long_name='a long name')
             ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='', long_name='a long name')
             translation = {'ds1': 'dataset_one', 'ds2': 'dataset_two'}

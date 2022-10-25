@@ -5,6 +5,8 @@ from typing import Tuple
 
 import appdirs
 
+DEFAULT_LOGGING_LEVEL = logging.INFO
+
 
 def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, logging.StreamHandler]:
     """Create logger based on name"""
@@ -19,7 +21,6 @@ def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, lo
 
     # Initialize logger, set high level to prevent ipython debugs. File level is
     # set below
-    DEFAULT_LOGGING_LEVEL = logging.INFO
     _logger = logging.getLogger(name)
     _logger.setLevel(DEFAULT_LOGGING_LEVEL)
 
@@ -41,7 +42,4 @@ def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, lo
     # Log messages collected above
     _logger.debug(_logFolderMsg)
 
-    return _logger, _file_handler, _stream_handler
-
-
-logger, file_handler, stream_handler = create_package_logger(name='h5rdmtoolbox')
+    return _logger

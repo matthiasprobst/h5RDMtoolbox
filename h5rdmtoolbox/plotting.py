@@ -2,11 +2,11 @@
 import matplotlib.projections as proj
 import matplotlib.pyplot as plt
 
-from .. import config
+from .config import CONFIG as config
 
 
 class XarrayLabelManipulation(plt.Axes):
-    def _adjust_units_label(self, label, units_format=config.xarray_unit_repr_in_plots):
+    def _adjust_units_label(self, label, units_format=config.XARRAY_UNIT_REPR_IN_PLOTS):
         # other formats: '(', '[', '/', 'in'
         if label:
             if not label[-1] == ']':

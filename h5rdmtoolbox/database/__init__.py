@@ -4,8 +4,9 @@ import warnings
 import yaml
 
 from ._logger import logger
+from .filequery import Files
 
-name = 'h5database'
+name = 'database'
 
 user_config_dir = pathlib.Path.home() / ".config" / __package__.replace('.', '/')
 if not user_config_dir.exists():
@@ -29,7 +30,7 @@ def write_default_user_yaml_file(overwrite=False, filename=user_yaml_filename) -
         warnings.warn('Could not write yaml user file. It already exists and overwrite is set to False')
         return _filename
 
-    logger.info(f'Writing h5database yaml to: {_filename}')
+    logger.info(f'Writing database yaml to: {_filename}')
     with open(_filename, 'w') as f:
         yaml.dump(default_dict, f, sort_keys=False)
     return _filename
@@ -58,15 +59,13 @@ def use(yaml_file):
 
 
 def set_loglevel(level):
-    """setting the logging level of sub-package h5wrapper"""
+    """setting the logging level of sub-package wrapper"""
     logger.setLevel(level)
     for handler in logger.handlers:
         handler.setLevel(level)
 
 
-from .filequery import H5Files
-
 if not user_yaml_filename.exists():
     write_default_user_yaml_file()
 
-__all__ = ['config', 'user_config_dir', 'set_loglevel', 'H5Files']
+__all__ = ['config', 'user_config_dir', 'set_loglevel', 'Files']

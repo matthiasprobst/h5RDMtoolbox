@@ -6,13 +6,14 @@ import h5py
 import pkg_resources
 from numpy import ndarray
 
-from . import config
+from .config import CONFIG as config
 
 IGNORE_ATTRS = ('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
     CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
 except FileNotFoundError:
     import pathlib
+
     with open(pathlib.Path(__file__).parent / 'data/style.css') as f:
         CSS_STR = f.read().rstrip()
 
@@ -28,7 +29,8 @@ https://jsfiddle.net/tay08cn9/4/ (xarray package)
 SDUMP_TABLE_SPACING = 30, 20, 8, 30
 
 
-class bcolors:
+class BColors:
+    """Color class o color text"""
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
@@ -47,22 +49,22 @@ def make_italic(string):
 
 def make_bold(string):
     """make string bold"""
-    return f"{bcolors.BOLD}{string}{bcolors.ENDC}"
+    return f"{BColors.BOLD}{string}{BColors.ENDC}"
 
 
 def warningtext(string):
     """make string orange"""
-    return f"{bcolors.WARNING}{string}{bcolors.ENDC}"
+    return f"{BColors.WARNING}{string}{BColors.ENDC}"
 
 
 def failtext(string):
     """make string red"""
-    return f"{bcolors.FAIL}{string}{bcolors.ENDC}"
+    return f"{BColors.FAIL}{string}{BColors.ENDC}"
 
 
 def oktext(string):
     """make string green"""
-    return f"{bcolors.OKGREEN}{string}{bcolors.ENDC}"
+    return f"{BColors.OKGREEN}{string}{BColors.ENDC}"
 
 
 def sdump(h5grp, ret=False,
@@ -136,7 +138,7 @@ def sdump(h5grp, ret=False,
             else:
                 shape = ds.shape
                 if ds.dtype.char == 'S':
-                    pass
+                    out += f'\n{spaces}{varname:{sp_name}} {ds.dtype}'
                 else:
                     units = h5grp[dataset_name].units
                     if units is None:
@@ -149,8 +151,8 @@ def sdump(h5grp, ret=False,
 
             if not hide_attributes:
                 # write attributes:
-                for ak, av in h5grp[dataset_name].attrs.items():
-                    if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
+                for ak, av in ds.attrs.items():
+                    if ak not in ('units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
                         _ak = f'{ak}:'
                         if isinstance(av, (h5py.Dataset, h5py.Group)):
                             _av = av.name
@@ -181,8 +183,7 @@ def sdump(h5grp, ret=False,
                          hide_attributes=hide_attributes)
     if ret:
         return out
-    else:
-        print(out)
+    print(out)
 
 
 def _attribute_repr_html(name, value, max_attr_length: Union[int, None]):
@@ -230,8 +231,7 @@ def _attribute_repr_html(name, value, max_attr_length: Union[int, None]):
         #         </ul>
         #
         #     </ul>"""
-    else:
-        return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
+    return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 
 def _group_repr_html(h5group, max_attr_length: Union[int, None], collapsed: bool):
@@ -253,13 +253,13 @@ def _group_repr_html(h5group, max_attr_length: Union[int, None], collapsed: bool
                     {_groupname}<span>({nkeys})</span></label>
               """
 
-    _html += f"""\n
+    _html += """\n
                 <ul class="h5tb-attr-list">"""
     # write attributes:
     for k, v in h5group.attrs.items():
         _html += _attribute_repr_html(k, v, max_attr_length)
     # close attribute section
-    _html += f"""
+    _html += """
                 </ul>"""
 
     datasets = [(k, v) for k, v in h5group.items() if isinstance(v, h5py.Dataset) or isinstance(v, h5py.Dataset)]
@@ -293,7 +293,7 @@ def _html_repr_dataset(h5dataset, max_attr_length: Union[int, None],
         _shape_repr = ''
     else:
         _shape = h5dataset.shape
-        if config.advanced_shape_repr:
+        if config.ADVANCED_SHAPE_REPR:
             _shape_repr = '('
             ndim = h5dataset.ndim
             for i in range(ndim):
@@ -344,17 +344,17 @@ def _html_repr_dataset(h5dataset, max_attr_length: Union[int, None],
                     <span class="h5tb-unit">{_unit}</span>]"""
     # now all attributes of the dataset:
     # open attribute section:
-    _html_ds_attrs = f"""\n<ul class="h5tb-attr-list">"""
+    _html_ds_attrs = """\n<ul class="h5tb-attr-list">"""
     # write attributes:
     for k, v in h5dataset.attrs.items():
         if k not in _ignore_attrs:
             _html_ds_attrs += _attribute_repr_html(k, v, max_attr_length)
     # close attribute section
-    _html_ds_attrs += f"""\n
+    _html_ds_attrs += """\n
                 </ul>"""
 
     # close dataset section
-    _html_post = f"""\n
+    _html_post = """\n
              </ul>
              """
     _html_ds = _html_pre + _html_ds_attrs + _html_post
@@ -380,7 +380,7 @@ def h5file_html_repr(h5, max_attr_length: Union[int, None], preamble: str = None
         If True, all groups are shown collapsed.
     """
     if not h5.id:
-        raise ValueError(f'Can only explore opened HDF files!')
+        raise ValueError('Can only explore opened HDF files!')
 
     if isinstance(h5, h5py.Group) or isinstance(h5, h5py.Group):
         h5group = h5

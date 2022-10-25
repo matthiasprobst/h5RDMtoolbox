@@ -1,14 +1,53 @@
-"""config file for h5wrapper classes"""
+"""config file for wrapper classes"""
 
-return_xarray = True
-advanced_shape_repr = True
-NA_unit = 'N.A.'
-natural_naming = True,
-hdf_compression = 'gzip'
-hdf_compression_opts = 5
-html_max_string_length = 40  # used for HTML representation of strings (.dump())
-mpl_style = 'h5rdmtoolbox'
-xarray_unit_repr_in_plots = '/'
-require_units = True  # datasets require units
-ureg_format = 'C~'
-standard_name_table_attribute_name = '__standard_name_table__'
+from typing import Union
+
+import yaml
+from omegaconf import OmegaConf, DictConfig
+
+from ._user import user_dirs
+
+config_yaml_filename = user_dirs['root'] / 'user_config.yaml'
+
+DEFAULT_CONFIG = dict(
+    RETURN_XARRAY=True,
+    ADVANCED_SHAPE_REPR=True,
+    NATURAL_NAMING=True,
+    HDF_COMPRESSION='gzip',
+    HDF_COMPRESSION_OPTS=5,
+    HTML_MAX_STRING_LENGTH=40,  # used for HTML representation of strings (.dump())
+    MPL_STYLE='h5rdmtoolbox',  # TODO: seems not to be used
+    XARRAY_UNIT_REPR_IN_PLOTS='/',
+    REQUIRE_UNITS=True,  # datasets require units
+    UREG_FORMAT='C~',
+    STANDARD_NAME_TABLE_ATTRIBUTE_NAME='__standard_name_table__',
+    CONVENTION='default'
+)
+
+
+def read_user_config() -> DictConfig:
+    """Read user configuration"""
+    return OmegaConf.load(config_yaml_filename)
+
+
+def write_user_config():
+    """Write config to user direcotr"""
+    with open(config_yaml_filename, 'w') as f:
+        yaml.dump(OmegaConf.to_yaml(CONFIG), f)
+
+
+if not config_yaml_filename.exists():
+    CONFIG = OmegaConf.create(DEFAULT_CONFIG)
+    write_user_config()
+else:
+    CONFIG = read_user_config()
+
+
+def set_config_parameter(parameter_name: str, value: Union[float, int, str]):
+    """Set value in user configuration"""
+    _parameter_name = parameter_name.upper()
+    cfg = read_user_config()
+    if _parameter_name not in cfg:
+        raise ValueError(f'Name "{_parameter_name}" not in config')
+    CONFIG[_parameter_name] = value
+    write_user_config()

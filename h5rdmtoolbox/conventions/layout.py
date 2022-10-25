@@ -125,7 +125,7 @@ class LayoutGroup(h5py.Group):
         ret = super().__getitem__(name)
         if isinstance(ret, h5py.Dataset):
             return LayoutDataset(ret.id)
-        elif isinstance(ret, h5py.Group):
+        if isinstance(ret, h5py.Group):
             return LayoutGroup(ret.id)
         return ret
 
@@ -345,16 +345,18 @@ class H5Layout:
         candidates = list(user_dirs['layouts'].glob(f'{name}.*'))
         if len(candidates) == 1:
             return pathlib.Path(candidates[0])
-        raise FileNotFoundError('File could not be found or passed name was not unique. Check the user layout dir '
-                                f'{user_dirs["layouts"]}')
+        raise FileNotFoundError(
+            f'File {name} could not be found or passed name was not unique. Check the user layout dir '
+            f'{user_dirs["layouts"]}'
+        )
 
     @staticmethod
     def load_registered(name: str, filename: Path = None) -> 'H5Layout':
         """Load from user data dir, copy to filename. If filename is None a tmp file is created"""
         src_filename = H5Layout.find_registered_filename(name)
         if filename is None:
-            from ..utils import generate_temporary_directory
-            filename = generate_temporary_directory() / f'{name}.hdf'
+            from ..utils import generate_temporary_filename
+            filename = generate_temporary_filename(suffix='.hdf')
         shutil.copy2(src_filename, filename)
         return H5Layout(filename)
 
@@ -445,3 +447,28 @@ class H5Layout:
         print(f'@ {user_dirs["layouts"]}:')
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')
+
+# @register_standard_attribute(H5File, name='layout')
+class LayoutAttribute:
+    """Layout attribute"""
+
+    def set(self, layout: Union[str, Path, H5Layout]) -> None:
+        """Set layout"""
+        if isinstance(layout, str):
+            _layout = H5Layout.load_registered(layout)
+        elif isinstance(layout, Path):
+            _layout = H5Layout(layout)
+        elif isinstance(layout, H5Layout):
+            _layout = layout
+        else:
+            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or H5Layout but got '
+                            f'{type(layout)}')
+        self._layout = _layout
+
+    def get(self) -> H5Layout:
+        """Get layout"""
+        return self._layout
+
+    def delete(self) -> None:
+        """Get layout attribute"""
+        self.attrs.__delitem__('layout')
