@@ -619,9 +619,14 @@ class StandardNameTable:
         """Raises an error if units is wrong. """
         self.check_name(name, strict=True)  # will raise an error if name not in self._table
         if name in self.table:
-            if not equal_base_units(_units_power_fix(self.table[name]['canonical_units']), units):
+            canonical_units = self.table[name]['canonical_units']
+            if canonical_units is None:
+                canonical_units = ''
+                logger.error('The standard name table has a units with value "None" for name %s. Adjusting to "". '
+                             'Consider change the entry', name)
+            if not equal_base_units(_units_power_fix(canonical_units), units):
                 raise errors.StandardNameError(f'Unit of standard name "{name}" not as expected: '
-                                               f'"{units}" != "{self[name].canonical_units}"')
+                                               f'"{units}" != "{canonical_units}"')
         return True
 
     def check_file(self, filename, recursive: bool = True, raise_error: bool = True):
@@ -636,6 +641,9 @@ class StandardNameTable:
             if isinstance(node, h5py.Dataset):
                 if 'standard_name' in node.attrs:
                     units = node.attrs['units']
+                    if units is None:
+                        logger.warning(f'Dataset %s has not attribute %s! Assuming it is dimensionless', name, 'units')
+                        units = ''
                     try:
                         self.check_units(node.attrs['standard_name'], units=units)
                     except errors.StandardNameError as e:
@@ -717,7 +725,8 @@ class StandardNameTableTranslation:
             sntt = StandardNameTableTranslation(application_name=application_name,
                                                 translation_dict=DictConfig(splitdata['table']))
         else:
-            raise KeyError('Not key "table" found in yaml file.')
+            raise KeyError(f'Key "table" not found in yaml file {yaml_filename}. It seems that the yaml file is not '
+                           'built as expected.')
         sntt.filename = yaml_filename
         return sntt
 

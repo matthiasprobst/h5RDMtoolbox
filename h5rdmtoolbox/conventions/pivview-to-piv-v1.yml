@@ -1,6 +1,6 @@
 snt: piv-v1
 ---
-translation_dict:
+table:
   time: time
   u: x_velocity
   v: y_velocity
