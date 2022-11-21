@@ -1,4 +1,4 @@
-"""Utilities (mostly helper funcitons) for interaction with HDF5"""
+"""Utilities (mostly helper functions) for interaction with HDF5"""
 
 
 def get_rootparent(obj):

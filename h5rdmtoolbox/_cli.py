@@ -51,7 +51,7 @@ def main():
                            help='Register the passed HDF file as a layout.')
 
     # STANDARD NAME
-    sp_standardname = subparsers.add_parser('standard_name', help='standrad name menu')
+    sp_standardname = subparsers.add_parser('standard_name', help='standard name menu')
     sp_standardname.set_defaults(cmd='standard_name')
     sp_standardname.add_argument('--list-registered', action='store_true',
                                  help='List all registered standard name tables.')

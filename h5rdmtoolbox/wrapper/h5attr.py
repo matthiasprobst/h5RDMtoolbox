@@ -32,7 +32,7 @@ def pop_hdf_attributes(attrs: Dict) -> Dict:
 class WrapperAttributeManager(h5py.AttributeManager):
     """
     Subclass of h5py's Attribute Manager.
-    Allows to store dictionaries as json strings and to store a dataset or a group as an
+    Allows storing dictionaries as json strings and to store a dataset or a group as an
     attribute. The latter uses the name of the object. When __getitem__() is called and
     the name (string) is identified as a dataset or group, then this object is returned.
     """

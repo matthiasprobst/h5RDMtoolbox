@@ -279,7 +279,7 @@ class H5Group(h5py.Group):
                        make_scale=False,
                        **kwargs):
         """
-        Creating a dataset. Allows to attach/make scale, overwriting and setting attributes simultaneously.
+        Creating a dataset. Allows attaching/making scale, overwriting and setting attributes simultaneously.
 
         Parameters
         ----------
@@ -470,14 +470,16 @@ class H5Group(h5py.Group):
              rec: bool = True):
         """
         Examples for filter parameters:
-        filter = {'long_name': 'any objects long name'} --> searches in attribtues only
-        filter = {'$name': 'name'}  --> searches in goups and datasets for the (path)name
-        filter = {'basename': 'name'}  --> searches in goups and datasets for the basename (without path)
+        filter = {'long_name': 'any objects long name'} --> searches in attributes only
+        filter = {'$name': 'name'}  --> searches in groups and datasets for the (path)name
+        filter = {'basename': 'name'}  --> searches in groups and datasets for the basename (without path)
 
         Parameters
         ----------
         flt: Dict
             Filter request
+        objfilter: str | h5py.Dataset | h5py.Group | None
+            Filter. Default is None. Otherwise, only dataset or group types are returned.
         rec: bool, optional
             Recursive search. Default is True
 
@@ -514,7 +516,7 @@ class H5Group(h5py.Group):
             Defines the method how to combine data from multiple files.
             Therefore, csv_filename must be a list. Default is stack.
             If set, make sure, axis is set accordingly.
-            Other input can be concatenate
+            Other input can be concatenated
         axis : int
             Stacking or concatenating according to combine_opt along
             if multiple csv files are passes
@@ -825,7 +827,7 @@ class H5Group(h5py.Group):
         overwrite : bool, optional
             Whether to overwrite an existing dataset. Default is False.
         keep_relative : bool, optional
-            If true, path is untouched. If False, it os.path.abspath() is applied.
+            If true, path is untouched. If False, os.path.abspath() is applied.
         """
         logger.debug(f'Trying to create external link group with name "{name}". Source is filename="{filename}" and '
                      f'path="{path}". Overwrite is set to {overwrite} and keep_relative to {keep_relative}')
@@ -850,8 +852,8 @@ class H5Group(h5py.Group):
             return self[name]
 
     def from_yaml(self, yamlfile: Path):
-        """creates groups, datasets and attributes defined in a yaml file. Creations
-        is performed relative to the current group level.
+        """creates groups, datasets and attributes defined in a yaml file.
+        Creation is performed relative to the current group level.
 
         Note the required yaml file structure, e.g.
         datasets:
@@ -875,7 +877,7 @@ class H5Group(h5py.Group):
                 try:
                     self.create_group(grp, **kwargs)
                 except Exception as e:
-                    logger.critical('Group %s from yaml definition not written due to %s', grp, grp)
+                    logger.critical('Group %s from yaml definition not written due to %s', grp, e)
 
         if 'datasets' in data:
             for ds in data['datasets']:
@@ -1022,7 +1024,7 @@ class H5Group(h5py.Group):
         else:
             preamble = f'<p>Group: {self.name}</p>\n'
         if check:
-            preamble += f'<p>Check resuted in {self.check()} issues.</p>\n'
+            preamble += f'<p>Check resulted in {self.check()} issues.</p>\n'
         build_debug_html_page = kwargs.pop('build_debug_html_page', False)
         display(HTML(h5file_html_repr(self, max_attr_length, preamble=preamble,
                                       build_debug_html_page=build_debug_html_page)))
@@ -1031,7 +1033,7 @@ class H5Group(h5py.Group):
         return h5file_html_repr(self, CONFIG.HTML_MAX_STRING_LENGTH)
 
     def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
-        """stng representation of group"""
+        """string representation of group"""
         return _repr.sdump(self, ret, nspaces, grp_only, hide_attributes, color_code_verification)
 
 
@@ -1049,7 +1051,7 @@ class DatasetValues:
 
 
 class H5Dataset(h5py.Dataset):
-    """Inherted Dataset group of the h5py package"""
+    """Inherited Dataset group of the h5py package"""
     convention = 'default'
 
     @property
@@ -1144,7 +1146,7 @@ class H5Dataset(h5py.Dataset):
     def __getitem__(self, args, new_dtype=None, nparray=False) -> Union[xr.DataArray, np.ndarray]:
         """Return sliced HDF dataset. If global setting `RETURN_XARRAY`
         is set to True, a `xr.DataArray` is returned, otherwise the default
-        behaviour of the h5p-package is used and a np.ndarray is returend.
+        behaviour of the h5p-package is used and a np.ndarray is returned.
         Note, that even if `RETURN_XARRAY` is True, there is another way to
         receive  numpy array. This is by calling .values[:] on the dataset."""
         args = args if isinstance(args, tuple) else (args,)
@@ -1282,7 +1284,7 @@ class H5Dataset(h5py.Dataset):
     def set_primary_scale(self, axis, iscale: int):
         """define the axis for which the first scale should be set. iscale is the index
         of the available scales to be set as primary.
-        Make sure you have write intent on file"""
+        Make sure you have written intent on file"""
         nscales = len(self.dims[axis])
         if iscale >= nscales:
             raise ValueError(
@@ -1462,14 +1464,14 @@ class H5File(h5py.File, H5Group):
     def saveas(self, filename: Path, overwrite: bool = False) -> "H5File":
         """
         Save this file under a new name (effectively a copy). This file is closed and re-opened
-        from the new destination usng the previous file mode.
+        from the new destination using the previous file mode.
 
         Parameters
         ----------
         filename: Path
             New filename.
         overwrite: bool, default=False
-            Whether to not to overwrite an existing filename.
+            Whether not to overwrite an existing filename.
 
         Returns
         -------
@@ -1504,7 +1506,7 @@ class H5File(h5py.File, H5Group):
         Parameters
         ----------
         filename: str ot pathlib.Path
-            Path to file to be opended
+            Path to file to be opened
         mode: str
             Mode used to open the file: r, r+, w, w-, x, a
 

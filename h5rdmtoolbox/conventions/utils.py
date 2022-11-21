@@ -14,6 +14,7 @@ EMAIL_REGREX = re.compile(r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"(
 
 
 def get_similar_names_ratio(a, b):
+    """get the similarity of two strings. measure is between [0, 1]"""
     return SequenceMatcher(None, a, b).ratio()
 
 

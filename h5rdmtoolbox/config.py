@@ -31,7 +31,7 @@ def read_user_config() -> DictConfig:
 
 
 def write_user_config():
-    """Write config to user direcotr"""
+    """Write config to user direcotry"""
     with open(config_yaml_filename, 'w') as f:
         yaml.dump(OmegaConf.to_yaml(CONFIG), f)
 

@@ -16,7 +16,7 @@ def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     or letter. Per default, underscores and forward slashes
     are kept and spaces are replaced with underscores.
 
-    Typically used to clean up dataset names that contain special
+    Typically, used to clean up dataset names that contain special
     characters or spaces which are not allowed for usage in
     natural naming. For this matter, spaces are not allowed in the
     name and should be replaced.
@@ -102,7 +102,7 @@ def generate_time_str(dtime: datetime, fmt: str) -> str:
 
 def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     """
-    Generates a file path in directory h5wrapperclasses/.tmp
+    Generates a file path in directory h5rdmtoolbox/.tmp
     with filename dsXXXX.hdf where XXXX is more or less a
     random number leading to a unique filename in the tmp
     location. The file is created and the file path is returned
