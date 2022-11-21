@@ -1,4 +1,4 @@
-"""collection of command line interfce functions"""
+"""collection of command line interface functions"""
 
 import argparse
 import webbrowser
@@ -21,7 +21,7 @@ def main():
     parser.add_argument('-u', '--user-dirs',
                         action='store_true',
                         default=False,
-                        help='Print user direcotries.')
+                        help='Print user directories.')
     parser.add_argument('-d', '--dump',
                         type=str,
                         required=False,

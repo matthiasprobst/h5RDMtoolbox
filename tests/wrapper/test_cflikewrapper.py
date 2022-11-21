@@ -35,7 +35,7 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        with H5File(mode='w') as h5:
+        with H5File(mode='w', title='dwa') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
             g.attrs['one'] = 1

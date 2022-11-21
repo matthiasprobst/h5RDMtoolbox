@@ -200,11 +200,13 @@ class H5Group(core.H5Group):
                 units = kwargs.get('unit', None)  # forgive the typo!
         else:
             if 'units' in attrs:
-                warnings.warn('"units" is over-defined. Your data array is associated with the attribute "units" and '
+                warnings.warn(f'Parameter "units" of dataset "{name}" is over-defined. Your data array is '
+                              'associated with the attribute "units" and '
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
             if CONFIG.REQUIRE_UNITS:
-                raise errors.UnitsError('Units cannot be None. A dimensionless dataset has units "''"')
+                raise errors.UnitsError(f'Units of dataset "{name}" cannot be None.'
+                                        ' A dimensionless dataset has units "''"')
             attrs['units'] = ''
         else:
             attrs['units'] = units

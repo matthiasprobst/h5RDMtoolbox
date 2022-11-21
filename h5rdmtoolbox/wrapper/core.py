@@ -253,7 +253,7 @@ class H5Group(h5py.Group):
         elif isinstance(data, (tuple, list)):
             n_letter = max([len(d) for d in data])
         else:
-            raise TypeError(f'Unexpeced type for parameter "data": {type(data)}. Expected str or List/Tuple of str')
+            raise TypeError(f'Unexpected type for parameter "data": {type(data)}. Expected str or List/Tuple of str')
         dtype = f'S{n_letter}'
         if name in self:
             if overwrite is True:

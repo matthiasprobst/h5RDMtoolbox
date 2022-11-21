@@ -194,7 +194,7 @@ class StandardNameTable:
             return {}
         if isinstance(self._table, DictConfig):
             return OmegaConf.to_container(self._table)
-        return self._table  # asuming it is a dict
+        return self._table  # assuming it is a dict
 
     @property
     def alias(self) -> Union[Dict, DictConfig]:
@@ -207,7 +207,7 @@ class StandardNameTable:
 
     @property
     def versionname(self) -> str:
-        """Return version name which is constructed like this: <name>-v<verions_number>"""
+        """Return version name which is constructed like this: <name>-v<version_number>"""
         return f'{self._name}-v{self._version_number}'
 
     @property
@@ -486,6 +486,13 @@ class StandardNameTable:
         Returns
         -------
         StandardNameTable
+
+        Examples
+        --------
+        >>> StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+        >>>                               file_path='open_centrifugal_fan_database-v1.yaml',
+        >>>                               project_id='35443',
+        >>>                               ref_name='main')
 
         Notes
         -----

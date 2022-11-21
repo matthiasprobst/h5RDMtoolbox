@@ -2,6 +2,7 @@ import re
 
 from .errors import TitleError
 
+
 class TitleAttribute:
     """Title attribute"""
 

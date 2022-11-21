@@ -10,13 +10,12 @@ DEFAULT_LOGGING_LEVEL = logging.INFO
 
 def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, logging.StreamHandler]:
     """Create logger based on name"""
-    _logdir = appdirs.user_log_dir(name)
-    _log = pathlib.Path(_logdir)  # Currently, this is unversioned
+    _logdir = pathlib.Path(appdirs.user_log_dir(name))
 
-    if _log.exists():
+    if _logdir.exists():
         _logFolderMsg = f'{name} log folder available: {_logdir}'
     else:
-        pathlib.Path.mkdir(_log, parents=True)
+        pathlib.Path.mkdir(_logdir, parents=True)
         _logFolderMsg = f'{name} log folder created at {_logdir}'
 
     # Initialize logger, set high level to prevent ipython debugs. File level is
@@ -28,7 +27,7 @@ def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, lo
         '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
         datefmt='%Y-%m-%d_%H:%M:%S')
 
-    _file_handler = RotatingFileHandler(_log / f'{name}.log', maxBytes=int(5e6), backupCount=2)
+    _file_handler = RotatingFileHandler(_logdir / f'{name}.log', maxBytes=int(5e6), backupCount=2)
     _file_handler.setLevel(DEFAULT_LOGGING_LEVEL)
     _file_handler.setFormatter(_formatter)
 

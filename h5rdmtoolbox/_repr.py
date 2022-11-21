@@ -30,7 +30,7 @@ SDUMP_TABLE_SPACING = 30, 20, 8, 30
 
 
 class BColors:
-    """Color class o color text"""
+    """Color class to color text"""
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
