@@ -679,9 +679,10 @@ class StandardNameTable:
         if len(candidates) == 1:
             return StandardNameTable.from_yaml(candidates[0])
         if len(candidates) == 0:
-            raise FileNotFoundError(f'No file found under the name {name}')
+            raise FileNotFoundError(f'No file found under the name {name} at this location: '
+                                    f'{user_dirs["standard_name_tables"]}')
         list_of_reg_names = [snt.versionname for snt in StandardNameTable.get_registered()]
-        raise FileNotFoundError('File {name} could not be found or passed name was not unique. '
+        raise FileNotFoundError(f'File {name} could not be found or passed name was not unique. '
                                 f'Registered tables are: {list_of_reg_names}')
 
     @staticmethod
