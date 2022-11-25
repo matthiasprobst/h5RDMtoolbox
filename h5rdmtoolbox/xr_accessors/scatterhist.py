@@ -63,16 +63,14 @@ class ScatterHist:
 
         # now determine nice limits by hand:
         bins = kwargs.get('bins', 10)
-        xmean = x.mean()
-        dx = x.max() - x.min()
+        xmean = np.nanmean(x)
+        dx = np.nanmax(x) - np.nanmin(x)
         xbinwidth = dx / bins
         _xlim = (xmean - dx / 2, xmean + dx / 2)
-        ymean = y.mean()
-        dy = y.max() - y.min()
+        ymean = np.nanmean(y)
+        dy = np.nanmax(y) - np.nanmin(y)
         ybinwidth = dy / bins
         _ylim = (ymean - dy / 2, ymean + dy / 2)
-        # xlim = np.ceil(np.abs(x).max() / binwidth) * binwidth
-        # ylim = np.ceil(np.abs(y).max() / binwidth) * binwidth
         ax_scatter.set_xlim(kwargs.get('xlim', _xlim))
         ax_scatter.set_ylim(kwargs.get('ylim', _ylim))
 
