@@ -1,12 +1,11 @@
+import h5py
+import numpy as np
 import os
+import pandas as pd
 import pathlib
 import re
 from itertools import chain
 from typing import List, Union, Dict, Callable
-
-import h5py
-import numpy as np
-import pandas as pd
 
 
 # implementation similar to pymongo:
@@ -299,7 +298,22 @@ class H5Objects:
 class Files:
     """H5File-like interface for multiple HDF Files"""
 
-    def __init__(self, *filenames, fileinstance=h5py.File):
+    def __init__(self, *filenames, file_instance=h5py.File, **kwargs):
+        """
+        Parameters
+        ----------
+        filenames: Tuple[str] or Tuple[pathlib.Path]
+            A list of hdf5 filenames or path to a directory contining hdf files.
+            If a directory is passed, the glob-str can be specified via **kwargs.
+            Default is glob='*.hdf'.
+        file_instance: h5py.File, optional=h5py.File
+            The HDF5 file instance
+        """
+        if len(filenames) == 1 and pathlib.Path(filenames[0]).is_dir():
+            _filenames = list(pathlib.Path(filenames[0]).glob(kwargs.pop('glob', '*.hdf')))
+            if len(_filenames) == 0:
+                raise FileNotFoundError(f'No files found in directory: {filenames[0]}')
+            filenames = _filenames
         if isinstance(filenames[0], (list, tuple)):
             if len(filenames) != 1:
                 raise ValueError('Expecting filenames to be passe separately or in alist/tuple')
@@ -307,7 +321,7 @@ class Files:
         else:
             self._list_of_filenames = [pathlib.Path(f) for f in filenames]
         self._opened_files = {}
-        self._fileinstance = fileinstance
+        self._file_instance = file_instance
 
     def __getitem__(self, item) -> Union[h5py.Group, H5Objects]:
         """If integer, returns item-th root-group. If string,
@@ -319,7 +333,7 @@ class Files:
     def __enter__(self):
         for filename in self._list_of_filenames:
             try:
-                h5file = self._fileinstance(filename, mode='r')
+                h5file = self._file_instance(filename, mode='r')
                 self._opened_files[str(filename)] = h5file
             except RuntimeError as e:
                 print(f'RuntimeError: {e}')

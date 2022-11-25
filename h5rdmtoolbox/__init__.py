@@ -38,7 +38,8 @@ def use(convention_name: str) -> None:
     """
 
     if convention_name == 'default' or convention_name is None:
-        logger.info(f'Switched to {convention_name}')
+        if h5tbxParams['convention'] != convention_name:
+            logger.info(f'Switched to {convention_name}')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['H5File'] = core.H5File
         h5tbxParams['H5Dataset'] = core.H5Dataset
@@ -46,7 +47,8 @@ def use(convention_name: str) -> None:
         return
 
     elif convention_name == 'cflike':
-        logger.info(f'Switched to {convention_name}')
+        if h5tbxParams['convention'] != convention_name:
+            logger.info(f'Switched to {convention_name}')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['H5File'] = cflike.H5File
         h5tbxParams['H5Dataset'] = cflike.H5Dataset
@@ -82,9 +84,9 @@ class H5Files:
 
     def __new__(cls, *args, **kwargs):
         use(config.CONFIG['CONVENTION'])
-        fileinstance = kwargs.get('fileinstance', None)
-        if fileinstance is None:
-            kwargs['fileinstance'] = h5tbxParams['H5File']
+        file_instance = kwargs.get('file_instance', None)
+        if file_instance is None:
+            kwargs['file_instance'] = h5tbxParams['H5File']
         return filequery.Files(*args, **kwargs)
 
 
