@@ -47,25 +47,25 @@ class _CachedAccessor:
         return accessor_obj
 
 
-def _register_special_dataset(name, cls, overwrite):
-    def decorator(accessor):
-        """decorator"""
-        if hasattr(cls, name):
-            if overwrite:
-                pass
-                # warnings.warn(
-                #     f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
-                #     "overriding a preexisting attribute with the same name.",
-                #     SpecialDatasetRegistrationWarning,
-                #     stacklevel=2,
-                # )
-            else:
-                raise RuntimeError(f'Cannot register the accessor {accessor!r} under name {name!r} '
-                                   f'because it already exists and overwrite is set to {overwrite}')
-        setattr(cls, name, _CachedAccessor(name, accessor))
-        return accessor
-
-    return decorator
+# def _register_special_dataset(name, cls, overwrite):
+#     def decorator(accessor):
+#         """decorator"""
+#         if hasattr(cls, name):
+#             if overwrite:
+#                 pass
+#                 # warnings.warn(
+#                 #     f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
+#                 #     "overriding a preexisting attribute with the same name.",
+#                 #     SpecialDatasetRegistrationWarning,
+#                 #     stacklevel=2,
+#                 # )
+#             else:
+#                 raise RuntimeError(f'Cannot register the accessor {accessor!r} under name {name!r} '
+#                                    f'because it already exists and overwrite is set to {overwrite}')
+#         setattr(cls, name, _CachedAccessor(name, accessor))
+#         return accessor
+#
+#     return decorator
 
 
 PROPERTY_ACCESSOR_NAMES = []
@@ -109,11 +109,50 @@ def register_special_property(cls: Union["H5Dataset", "H5Group"], overwrite=Fals
     return _register_special_property(cls, overwrite)
 
 
+def _register_special_dataset(name, cls, special_dataset, overwrite):
+    if hasattr(cls, name):
+        if overwrite:
+            pass
+            # warnings.warn(
+            #     f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
+            #     "overriding a preexisting attribute with the same name.",
+            #     SpecialDatasetRegistrationWarning,
+            #     stacklevel=2,
+            # )
+        else:
+            raise RuntimeError(f'Cannot register the accessor {special_dataset!r} under name {name!r} '
+                               f'because it already exists and overwrite is set to {overwrite}')
+    setattr(cls, name, _CachedAccessor(name, special_dataset))
+    return special_dataset
+
+
 def register_special_dataset(name, cls: Union["H5Dataset", "H5Group"], overwrite=False):
     """registers a special dataset to a wrapper class"""
+
     # if not isinstance(cls, (H5Dataset, H5Group)):
     #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
-    return _register_special_dataset(name, cls, overwrite)  # grpcls --> e.g. H5FlowGroup
+
+    def decorator(accessor):
+        """decorator"""
+        return _register_special_dataset(name, cls, accessor, overwrite)
+        # if hasattr(cls, name):
+        #     if overwrite:
+        #         pass
+        #         # warnings.warn(
+        #         #     f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
+        #         #     "overriding a preexisting attribute with the same name.",
+        #         #     SpecialDatasetRegistrationWarning,
+        #         #     stacklevel=2,
+        #         # )
+        #     else:
+        #         raise RuntimeError(f'Cannot register the accessor {accessor!r} under name {name!r} '
+        #                            f'because it already exists and overwrite is set to {overwrite}')
+        # setattr(cls, name, _CachedAccessor(name, accessor))
+        # return accessor
+
+    return decorator
+
+    # return _register_special_dataset(name, cls, overwrite)  # grpcls --> e.g. H5FlowGroup
 
 
 # sample class:
