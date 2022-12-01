@@ -228,7 +228,7 @@ class H5Group(core.H5Group):
             attrs['standard_name'] = standard_name
 
         if attrs.get('standard_name') is None and attrs.get('long_name') is None:
-            raise RuntimeError('No long_name or standard_name is given. Either must be provided')
+            raise RuntimeError(f'No long_name or standard_name is given for dataset "{name}". Either must be provided')
 
         ds = super().create_dataset(name, shape, dtype, data, overwrite,
                                     chunks, attrs, attach_scales, make_scale, **kwargs)
