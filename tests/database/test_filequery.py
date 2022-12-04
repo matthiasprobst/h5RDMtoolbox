@@ -1,3 +1,4 @@
+import pathlib
 import unittest
 
 from h5rdmtoolbox.database import Files
@@ -17,12 +18,20 @@ class TestFileQuery(unittest.TestCase):
                 fnames.append(h52.filename)
 
                 with Files(fnames) as h5s:
+                    self.assertTrue(len(h5s._list_of_filenames) == 2)
                     res = h5s.find({'$basename': 'ds'})
                     self.assertEqual([h51.ds, h52.ds], res)
                     # self.assertEqual(res[0].long_name[-1], '1')
                     # self.assertEqual(res[1].long_name[-1], '2')
                     res = h5s.find_one({'$basename': 'ds'})
                     self.assertEqual(h51.ds, res)
+
+                with self.assertRaises(ValueError):
+                    with Files(fnames[0]):
+                        pass
+
+                with Files(pathlib.Path(fnames[0]).parent) as h5s:
+                    self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
 
     def test_getitem(self):
         fnames = []

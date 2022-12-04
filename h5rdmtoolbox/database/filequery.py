@@ -1,11 +1,12 @@
-import h5py
-import numpy as np
 import os
-import pandas as pd
 import pathlib
 import re
 from itertools import chain
 from typing import List, Union, Dict, Callable
+
+import h5py
+import numpy as np
+import pandas as pd
 
 
 # implementation similar to pymongo:
@@ -298,28 +299,46 @@ class H5Objects:
 class Files:
     """H5File-like interface for multiple HDF Files"""
 
-    def __init__(self, *filenames, file_instance=h5py.File, **kwargs):
+    def __init__(self, filenames: List[Union[str, pathlib.Path]], file_instance=h5py.File, **kwargs):
         """
         Parameters
         ----------
-        filenames: Tuple[str] or Tuple[pathlib.Path]
-            A list of hdf5 filenames or path to a directory contining hdf files.
+        filenames: List[Union[str, pathlib.Path]]
+            A list of hdf5 filenames or path to a directory containing hdf files.
             If a directory is passed, the glob-str can be specified via **kwargs.
             Default is glob='*.hdf'.
         file_instance: h5py.File, optional=h5py.File
             The HDF5 file instance
         """
-        if len(filenames) == 1 and pathlib.Path(filenames[0]).is_dir():
-            _filenames = list(pathlib.Path(filenames[0]).glob(kwargs.pop('glob', '*.hdf')))
+
+        def _check_dir(fname: pathlib.Path):
+            if not fname.is_dir():
+                raise ValueError('A single value passed for the parameter "filenames" must be '
+                                 'a directory.')
+            return True
+
+        isdir = False
+        if isinstance(filenames, (str, pathlib.Path)):
+            filenames = pathlib.Path(filenames)
+            # must be a directory
+            isdir = _check_dir(filenames)
+        elif isinstance(filenames, (list, tuple)):
+            if len(filenames) == 1:
+                filenames = pathlib.Path(filenames[0])
+                # must be a directory
+                isdir = _check_dir(filenames)
+
+        if isdir:
+            _filenames = list(pathlib.Path(filenames).glob(kwargs.pop('glob', '*.hdf')))
             if len(_filenames) == 0:
-                raise FileNotFoundError(f'No files found in directory: {filenames[0]}')
-            filenames = _filenames
-        if isinstance(filenames[0], (list, tuple)):
-            if len(filenames) != 1:
-                raise ValueError('Expecting filenames to be passe separately or in alist/tuple')
-            self._list_of_filenames = [pathlib.Path(f) for f in filenames[0]]
+                raise FileNotFoundError(f'No files found in directory: {filenames}')
+            self._list_of_filenames = _filenames
         else:
             self._list_of_filenames = [pathlib.Path(f) for f in filenames]
+            for fname in self._list_of_filenames:
+                if fname.is_dir():
+                    raise ValueError(f'Expecting filenames not directory names but "{fname}" is.')
+
         self._opened_files = {}
         self._file_instance = file_instance
 
