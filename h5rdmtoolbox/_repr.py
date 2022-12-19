@@ -1,10 +1,9 @@
-import os
-from time import perf_counter_ns
-from typing import Union
-
 import h5py
+import os
 import pkg_resources
 from numpy import ndarray
+from time import perf_counter_ns
+from typing import Union
 
 from .config import CONFIG as config
 
@@ -67,123 +66,50 @@ def oktext(string):
     return f"{BColors.OKGREEN}{string}{BColors.ENDC}"
 
 
-def sdump(h5grp, ret=False,
-          nspaces=0, grp_only=False,
-          hide_attributes=False,
-          color_code_verification=True,
-          is_layout=False):
-    """
-    Generates string representation of the hdf5 file content (name, shape, units, long_name)
+# TODO: ask ChatGPT:
+"""I would like to run recursively through an HDF5 file and print the content to the screen.
 
-    Parameters
-    ----------
-    h5grp: h5py.Group
-        Group to print content of (recursively)
-    ret : bool, optional
-        Whether to return the information string or
-        print it. Default is False, which prints the string
-    nspaces : int, optional
-        number of spaces used as indentation. Default is 0
-    grp_only : bool, optional=False
-        Only gets group information
-    hide_attributes : bool, optional=False
-        Hides attributes in output string.
-    color_code_verification: bool, optional=True
-    is_layout: bool, optional=False
-        Flag for specific dataset representation. Shape is irrelevant.
+Dataset representations should include he type and shape.
+Attributes should also be used.
+Use indentation.
+"""
 
-    Returns
-    -------
-    out : str
-        Information string if asked
 
-    Notes
-    -----
-    Working under notebooks, explore() gives a greater representation, including attributes.
-    """
-
-    sp_name, sp_shape, sp_unit, sp_desc = SDUMP_TABLE_SPACING
-    out = ''
-    spaces = ' ' * nspaces
-
-    if h5grp.name == '/':  # only for root
-        if isinstance(h5grp, h5py.Group):
-            out += f'> {h5grp.__class__.__name__}: Group name: {h5grp.name}.\n'
+class HDF5Printer:
+    def __init__(self, root: h5py.Group = None, ignore_attrs=None):
+        self.root = root
+        self.base_intent = '  '
+        if ignore_attrs is None:
+            self.ignore_attrs = []
         else:
-            out += f'> {h5grp.__class__.__name__}: {h5grp.filename}.\n'
+            self.ignore_attrs = ignore_attrs
 
-    if not hide_attributes:
-        # write attributes:
-        for ak, av in h5grp.attrs.items():
-            if ak not in ('long_name', 'units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                _ak = f'{ak}:'
-                if isinstance(av, (h5py.Dataset, h5py.Group)):
-                    _av = av.name
-                else:
-                    _av = f'{av}'
-                if len(_av) > sp_desc:
-                    _av = f'{_av[0:sp_desc]}...'
-                out += make_italic(f'\n{spaces}a: {_ak:{sp_name}} {_av}')
+    def __dataset_str__(self, key, item) -> str:
+        return f"\033[1m{key}\033[0m: {item.shape} dtype: {item.dtype}"
 
-    grp_keys = [k for k in h5grp.keys() if isinstance(h5grp[k], h5py.Group)]
-    if not grp_only:
-        dataset_names = [k for k in h5grp.keys(
-        ) if isinstance(h5grp[k], h5py.Dataset)]
-        for dataset_name in dataset_names:
-            # varname = utils._make_bold(os.path.basename(h5grp._h5ds(h5grp[dataset_name]).name))
-            ds = h5grp[dataset_name]
-            varname = make_bold(os.path.basename(ds.name))
-            if is_layout:
-                out += f'\n{spaces}{varname:{sp_name}} '
-            else:
-                shape = ds.shape
-                if ds.dtype.char == 'S':
-                    out += f'\n{spaces}{varname:{sp_name}} {ds.dtype}'
-                else:
-                    units = h5grp[dataset_name].units
-                    if units is None:
-                        units = 'NA'
-                    else:
-                        if units == ' ':
-                            units = '-'
+    def __group_str__(self, key, item) -> str:
+        return f"/\033[1m{key}\033[0m"
 
-                    out += f'\n{spaces}{varname:{sp_name}} {str(shape):<{sp_shape}}  {units:<{sp_unit}}'
+    def __attr_str__(self, key, value) -> str:
+        return f'\033[3ma: {key}\033[0m: {value}'
 
-            if not hide_attributes:
-                # write attributes:
-                for ak, av in ds.attrs.items():
-                    if ak not in ('units', 'REFERENCE_LIST', 'NAME', 'CLASS', 'DIMENSION_LIST'):
-                        _ak = f'{ak}:'
-                        if isinstance(av, (h5py.Dataset, h5py.Group)):
-                            _av = av.name
-                        else:
-                            _av = f'{av}'
-                        if len(_av) > sp_desc:
-                            _av = f'{_av[0:sp_desc]}...'
-                        out += make_italic(f'\n\t{spaces}a: {_ak:{sp_name}} {_av}')
-        out += '\n'
-    nspaces += 2
-    for k in grp_keys:
-        _grp_name = make_italic(make_bold(f'{spaces}/{k}'))
-        _grp_long_name = h5grp[k].get('long_name')
-        if grp_only:
-            if _grp_long_name is None:
-                out += f'\n{_grp_name}'
-            else:
-                out += f'\n{_grp_name}  ({h5grp[k].long_name})'
-        else:
-            if _grp_long_name is None:
-                out += f'{_grp_name}'
-            else:
-                out += f'{_grp_name}  ({h5grp[k].long_name})'
-
-        if isinstance(h5grp, h5py.Group):
-            out += sdump(h5grp[k], ret=True, nspaces=nspaces, grp_only=grp_only,
-                         color_code_verification=color_code_verification,
-                         hide_attributes=hide_attributes)
-    if ret:
-        return out
-    print(out)
+    def print_structure(self, group, indent=0) -> None:
+        """print the HDF5 structure"""
+        for attr_name, attr_value in group.attrs.items():
+            if not attr_name.isupper():
+                print(self.base_intent * indent + self.__attr_str__(attr_name, attr_value))
+        for key, item in group.items():
+            if isinstance(item, h5py.Dataset):
+                print(self.base_intent * indent + self.__dataset_str__(key, item))
+                for attr_name, attr_value in item.attrs.items():
+                    if not attr_name.isupper() and attr_name not in self.ignore_attrs:
+                        print(self.base_intent * (indent + 2) + self.__attr_str__(attr_name, attr_value))
+            elif isinstance(item, h5py.Group):
+                print(self.base_intent * indent + self.__group_str__(key, item))
+                self.print_structure(item, indent + 1)
+                # for attr_name, attr_value in item.attrs.items():
+                #     if not attr_name.isupper() and attr_name not in self.ignore_attrs:
+                #         print(self.base_intent * (indent + 2) + self.__attr_str__(attr_name, attr_value))
 
 
 def _attribute_repr_html(name, value, max_attr_length: Union[int, None]):

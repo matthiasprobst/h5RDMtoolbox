@@ -1,26 +1,25 @@
 """Core wrapper module containing basic wrapper implementation of H5File, H5Dataset and H5Group
 """
 import datetime
+import h5py
 import logging
+import numpy as np
 import os
 import pathlib
-import shutil
-import warnings
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import List, Dict, Union, Tuple
-
-import h5py
-import numpy as np
 # noinspection PyUnresolvedReferences
 import pint_xarray
+import shutil
+import warnings
 import xarray as xr
 import yaml
 from IPython.display import HTML, display
+from datetime import datetime, timezone
 from h5py._hl.base import phil
 from h5py._objects import ObjectID
+from pathlib import Path
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
+from typing import List, Dict, Union, Tuple
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -29,7 +28,7 @@ from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
 from .. import utils
-from .._repr import h5file_html_repr
+from .._repr import h5file_html_repr, HDF5Printer
 from .._user import user_dirs
 from .._version import __version__
 from ..config import CONFIG
@@ -49,6 +48,7 @@ class H5Group(h5py.Group):
     """Inherited Group of the package h5py
     """
     convention = 'default'
+    HDF5printer = HDF5Printer()
 
     @property
     def attrs(self):
@@ -420,7 +420,12 @@ class H5Group(h5py.Group):
 
         # make scale
         if make_scale:
-            ds.make_scale()
+            if isinstance(make_scale, bool):
+                ds.make_scale('')
+            elif isinstance(make_scale, str):
+                ds.make_scale(make_scale)
+            else:
+                raise TypeError('Parameter "make_scale" must be a string.')
 
         # attach scales:
         if attach_scales:
@@ -1032,9 +1037,9 @@ class H5Group(h5py.Group):
     def _repr_html_(self):
         return h5file_html_repr(self, CONFIG.HTML_MAX_STRING_LENGTH)
 
-    def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
+    def sdump(self):
         """string representation of group"""
-        return _repr.sdump(self, ret, nspaces, grp_only, hide_attributes, color_code_verification)
+        return self.HDF5printer.print_structure(self)
 
 
 class DatasetValues:

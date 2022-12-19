@@ -1,17 +1,17 @@
 """Implementation of wrapper classes using the CF-like conventions
 """
+import h5py
 import logging
 import pathlib
 import warnings
-from typing import Union, List
-
-import h5py
 import xarray as xr
 from pint_xarray import unit_registry as ureg
+from typing import Union, List
 
 from h5rdmtoolbox.conventions.registration import register_hdf_attribute
 from . import core
 from .. import errors
+from .._repr import HDF5Printer
 from ..config import CONFIG
 from ..conventions import cflike
 
@@ -24,7 +24,7 @@ class H5Group(core.H5Group):
     """
     It enforces the usage of units
     and standard_names for every dataset and informative metadata at
-    root level (creation time etc).
+    root level (creation time etc.).
 
      It provides and long_name for every group.
     Furthermore, methods that facilitate the work with HDF files are provided,
@@ -274,12 +274,24 @@ class H5Group(core.H5Group):
                 raise NameError(f'Could not find standard_name "{standard_name}"')
 
 
+class CFLikeHDF5Printer(HDF5Printer):
+    """Takes care of printing the HDF5 Strucure"""
+
+    def __dataset_str__(self, key, item):
+        try:
+            units = item.attrs['units']
+        except KeyError:
+            units = 'ERR:NOUNITS'
+        return f"\033[1m{key}\033[0m [{units}]: {item.shape}, dtype: {item.dtype}"
+
+
 class H5File(core.H5File, H5Group):
     """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
     It enables additional features and adds new methods streamlining the work with
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
     convention = 'cflike'
+    HDF5printer = CFLikeHDF5Printer(ignore_attrs=['units', ])
 
     def __init__(self,
                  name: pathlib.Path = None,
