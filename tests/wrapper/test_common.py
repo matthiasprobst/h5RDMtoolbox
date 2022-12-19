@@ -1,11 +1,10 @@
 """Testing common funcitonality across all wrapper classs"""
 
 import datetime
+import h5py
 import pathlib
 import unittest
 from datetime import datetime
-
-import h5py
 from pint_xarray import unit_registry as ureg
 
 import h5rdmtoolbox as h5tbx
