@@ -1037,7 +1037,7 @@ class H5Group(h5py.Group):
         #                               build_debug_html_page=build_debug_html_page)))
 
     def _repr_html_(self):
-        return h5file_html_repr(self, CONFIG.HTML_MAX_STRING_LENGTH)
+        return self.HDF5printer.html_dump(self)
 
     def sdump(self):
         """string representation of group"""
