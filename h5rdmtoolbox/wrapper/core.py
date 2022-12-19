@@ -28,7 +28,7 @@ from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
 from .. import utils
-from .._repr import h5file_html_repr, HDF5Printer
+from .._repr import HDF5Printer
 from .._user import user_dirs
 from .._version import __version__
 from ..config import CONFIG
@@ -1022,17 +1022,19 @@ class H5Group(h5py.Group):
     def dump(self, max_attr_length=None, check=False, **kwargs):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used"""
-        if max_attr_length is None:
-            max_attr_length = CONFIG.HTML_MAX_STRING_LENGTH
-        if self.name == '/':
-            preamble = f'<p>{Path(self.filename).name}</p>\n'
-        else:
-            preamble = f'<p>Group: {self.name}</p>\n'
-        if check:
-            preamble += f'<p>Check resulted in {self.check()} issues.</p>\n'
-        build_debug_html_page = kwargs.pop('build_debug_html_page', False)
-        display(HTML(h5file_html_repr(self, max_attr_length, preamble=preamble,
-                                      build_debug_html_page=build_debug_html_page)))
+        self.HDF5printer.max_attr_length = max_attr_length
+        display(HTML(self.HDF5printer.html_dump(self)))
+        # if max_attr_length is None:
+        #     max_attr_length = CONFIG.HTML_MAX_STRING_LENGTH
+        # if self.name == '/':
+        #     preamble = f'<p>{Path(self.filename).name}</p>\n'
+        # else:
+        #     preamble = f'<p>Group: {self.name}</p>\n'
+        # if check:
+        #     preamble += f'<p>Check resulted in {self.check()} issues.</p>\n'
+        # build_debug_html_page = kwargs.pop('build_debug_html_page', False)
+        # display(HTML(h5file_html_repr(self, max_attr_length, preamble=preamble,
+        #                               build_debug_html_page=build_debug_html_page)))
 
     def _repr_html_(self):
         return h5file_html_repr(self, CONFIG.HTML_MAX_STRING_LENGTH)
