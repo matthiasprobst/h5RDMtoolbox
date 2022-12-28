@@ -1,10 +1,9 @@
-import os
-from time import perf_counter_ns
-from typing import Union
-
 import h5py
+import os
 import pkg_resources
 from numpy import ndarray
+from time import perf_counter_ns
+from typing import Union
 
 from .config import CONFIG as config
 
@@ -217,20 +216,6 @@ def _attribute_repr_html(name, value, max_attr_length: Union[int, None]):
         # TODO give standard name a dropdown which shows description and canonical_units
         return f"""<li style="list-style-type: none; font-style:
          italic">{name} : {_value_str}</li>"""
-
-        # _id_int = perf_counter_ns().__str__()
-        # return f"""<ul id="ds-sn-{_id_int}" class="standard-name">
-        #         <input id="sn-{_id_int}" class="standard-name" type="checkbox">
-        #         <label class='standard-name'; font-style: italic;
-        #                for="sn-{_id_int}">{name}: {_value_str}</label>
-        #         <ul class="standard-name">
-        #             <li style="list-style-type: none; font-style: italic">
-        #             description: {standard_names_dict[_value_str]['description']}</li>
-        #             <li style="list-style-type: none; font-style: italic">
-        #             canonical units: {standard_names_dict[_value_str]['canonical_units']}</li>
-        #         </ul>
-        #
-        #     </ul>"""
     return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 
