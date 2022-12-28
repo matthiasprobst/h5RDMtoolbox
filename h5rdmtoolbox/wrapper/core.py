@@ -361,6 +361,9 @@ class H5Group(h5py.Group):
                                      compression_opts=compression_opts, attrs=attrs)
             return dset
 
+        if not isinstance(make_scale, (bool, str)):
+            raise TypeError(f'Make scale must be a boolean or a string not {type(make_scale)}')
+
         if attach_scales is None:
             # maybe there's a typo:
             attach_scales = kwargs.pop('attach_scale', None)
@@ -424,7 +427,10 @@ class H5Group(h5py.Group):
 
         # make scale
         if make_scale:
-            ds.make_scale()
+            if isinstance(make_scale, str):
+                ds.make_scale(make_scale)
+            else:
+                ds.make_scale()
 
         # attach scales:
         if attach_scales:

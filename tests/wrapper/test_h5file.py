@@ -355,8 +355,8 @@ class TestH5File(unittest.TestCase):
     def test_dimension_scales(self):
         with H5File(mode='w') as h5:
             _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=True)
-            with self.assertRaises(ValueError):
-                _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=[1, 2])
+            with self.assertRaises(ValueError):  # because name already exists
+                _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=True)
             del h5['x']
             with self.assertRaises(TypeError):
                 _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=[1, 2])

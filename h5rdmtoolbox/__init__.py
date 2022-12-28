@@ -87,12 +87,11 @@ class H5Files:
         file_instance = kwargs.get('file_instance', None)
         fileinstance = kwargs.pop('fileinstance', None)
         if fileinstance is not None:
-            warnings.warn('Please use file_isntance instead of fileinstance', DeprecationWarning)
+            warnings.warn('Please use file_instance instead of fileinstance', DeprecationWarning)
             file_instance = fileinstance
         if file_instance is None:
             kwargs['file_instance'] = h5tbxParams['H5File']
         return filequery.Files(*args, **kwargs)
-
 
 
 @atexit.register

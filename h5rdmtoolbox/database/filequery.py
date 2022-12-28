@@ -369,6 +369,12 @@ class Files:
     def __len__(self):
         return len(self.keys())
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__} ({self.__len__()} files)>'
+
+    def __str__(self):
+        return f'<{self.__class__.__name__} ({self.__len__()} files)>'
+
     def find_one(self, flt: Union[Dict, str],
                  objfilter=None,
                  rec: bool = True) -> Union[h5py.Group, h5py.Dataset, None]:
