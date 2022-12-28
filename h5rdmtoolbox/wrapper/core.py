@@ -51,7 +51,7 @@ class H5Group(h5py.Group):
 
     @property
     def attrs(self):
-        """Calls the wrapper attibute manager"""
+        """Calls the wrapper attribute manager"""
         with phil:
             return WrapperAttributeManager(self)
 
@@ -120,7 +120,7 @@ class H5Group(h5py.Group):
             _ = obj.hdf.to_group(H5Group(self), name)
         elif isinstance(obj, (list, tuple)):
             if not isinstance(obj[1], dict):
-                raise TypeError(f'Secod item must be type dict but is {type(obj[1])}')
+                raise TypeError(f'Second item must be type dict but is {type(obj[1])}')
             kwargs = obj[1]
             self.create_dataset(name, data=obj[0], **kwargs)
         elif isinstance(obj, dict):
@@ -559,7 +559,6 @@ class H5Group(h5py.Group):
                 f'Wrong input for "csv_filename: {type(csv_filename)}')
 
         df = pd_read_csv(csv_fname, **kwargs)
-        # ncols = len(df.columns)
 
         compression, compression_opts = CONFIG.HDF_COMPRESSION, CONFIG.HDF_COMPRESSION_OPTS
 
@@ -795,7 +794,7 @@ class H5Group(h5py.Group):
                     return ds
                 else:
                     logger.critical(
-                        'Could not create dataset because it already exists and overwritr=False.')
+                        'Could not create dataset because it already exists and overwrite=False.')
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
@@ -1133,7 +1132,7 @@ class H5Dataset(h5py.Dataset):
         Returns
         -------
         DatasetValues
-            Helper class mimicing the h5py behaviour of returning a numpy array.
+            Helper class mimicking the h5py behaviour of returning a numpy array.
         """
         return DatasetValues(self)
 
