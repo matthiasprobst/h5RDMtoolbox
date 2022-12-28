@@ -1,11 +1,10 @@
 """Testing common funcitonality across all wrapper classs"""
 
 import datetime
+import h5py
 import pathlib
 import unittest
 from datetime import datetime
-
-import h5py
 from pint_xarray import unit_registry as ureg
 
 import h5rdmtoolbox as h5tbx
@@ -84,17 +83,17 @@ class TestCommon(unittest.TestCase):
                 # special attributes:
                 for obj in (h5, ds, gr):
                     obj.attrs['link_to_group'] = h5['/']
-                    self.assertEqual(obj.attrs['link_to_group'].name, '/')
-                    self.assertIsInstance(obj.attrs['link_to_group'], h5py.Group)
+                    self.assertEqual(obj.attrs['link_to_group'], '/')
+                    self.assertIsInstance(obj.attrs['link_to_group'], str)
                     obj.attrs['link_to_ds'] = ds
-                    self.assertEqual(obj.attrs['link_to_ds'].name, ds.name)
-                    self.assertIsInstance(obj.attrs['link_to_ds'], h5py.Dataset)
-                    obj.attrs['attibute_of_links_to_ds'] = {'ds': ds, 'gr': gr, 'astr': 'test', 'afloat': 3.1}
-                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds'], dict)
-                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['ds'], h5py.Dataset)
-                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['gr'], h5py.Group)
-                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['astr'], str)
-                    self.assertIsInstance(obj.attrs['attibute_of_links_to_ds']['afloat'], float)
+                    self.assertEqual(obj.attrs['link_to_ds'], ds.name)
+                    self.assertIsInstance(obj.attrs['link_to_ds'], str)
+                    obj.attrs['attribute_of_links_to_ds'] = {'ds': ds, 'gr': gr, 'astr': 'test', 'afloat': 3.1}
+                    self.assertIsInstance(obj.attrs['attribute_of_links_to_ds'], dict)
+                    self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['ds'], h5py.Dataset)
+                    self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['gr'], h5py.Group)
+                    self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['astr'], str)
+                    self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['afloat'], float)
 
                 self.assertTrue(isinstance(h5.attrs, WrapperAttributeManager))
                 self.assertTrue(isinstance(ds.attrs, WrapperAttributeManager))

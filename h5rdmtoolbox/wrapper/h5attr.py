@@ -69,10 +69,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     if isinstance(self._id, h5py.h5g.GroupID):
                         # call like this, otherwise recursive call!
                         rootgrp = get_rootparent(h5py.Group(self._id))
-                        return rootgrp.get(ret)
+                        return rootgrp.get(ret).name
                     else:
                         rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                        return rootgrp.get(ret)
+                        return rootgrp.get(ret).name
                 elif ret[0] == '(':
                     if ret[-1] == ')':
                         return eval(ret)

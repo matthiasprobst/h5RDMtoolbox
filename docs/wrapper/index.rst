@@ -28,6 +28,7 @@ Specialized classes associated with a convention get a dedicated section (:ref:`
     DatasetCreation.ipynb
     DatasetSlicing.ipynb
     GroupCreation.ipynb
+    DumpFile.ipynb
     NaturalNaming.ipynb
     SpecialIO.ipynb
     Visualization.ipynb

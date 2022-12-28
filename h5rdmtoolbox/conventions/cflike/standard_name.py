@@ -203,7 +203,7 @@ class StandardNameTable:
             return {}
         if isinstance(self._alias, DictConfig):
             return OmegaConf.to_container(self._alias)
-        return self._alias  # asuming it is a dict
+        return self._alias  # assuming it is a dict
 
     @property
     def versionname(self) -> str:

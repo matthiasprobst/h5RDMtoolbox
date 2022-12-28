@@ -1,12 +1,11 @@
+import h5py
+import numpy as np
 import os
+import pandas as pd
 import pathlib
 import re
 from itertools import chain
 from typing import List, Union, Dict, Callable
-
-import h5py
-import numpy as np
-import pandas as pd
 
 
 # implementation similar to pymongo:
@@ -172,7 +171,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
                 if isinstance(hv, h5py.Dataset):
                     try:
                         if qk == '$basename':
-                            objattr = hv.__getattribute__('name')[1:]
+                            objattr = pathlib.Path(hv.__getattribute__('name')).name
                         else:
                             objattr = hv.__getattribute__(qk[1:])
                         if _operator[ok](objattr, ov):
@@ -342,11 +341,13 @@ class Files:
         self._opened_files = {}
         self._file_instance = file_instance
 
-    def __getitem__(self, item) -> Union[h5py.Group, H5Objects]:
-        """If integer, returns item-th root-group. If string,
+    def __getitem__(self, item) -> Union[h5py.Group, H5Objects, List[h5py.Group]]:
+        """If integer, returns item-th root-group. If item is string,
         a list of objects of that item is returned"""
         if isinstance(item, int):
             return self._opened_files[list(self.keys())[item]]
+        elif isinstance(item, (tuple, list)):
+            return [self._opened_files[list(self.keys())[i]] for i in item]
         return H5Objects({f'{key}/item': rgrp[item] for key, rgrp in zip(self.keys(), self.values()) if item in rgrp})
 
     def __enter__(self):
@@ -364,6 +365,15 @@ class Files:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._opened_files = {}
         self.close()
+
+    def __len__(self):
+        return len(self.keys())
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} ({self.__len__()} files)>'
+
+    def __str__(self):
+        return f'<{self.__class__.__name__} ({self.__len__()} files)>'
 
     def find_one(self, flt: Union[Dict, str],
                  objfilter=None,

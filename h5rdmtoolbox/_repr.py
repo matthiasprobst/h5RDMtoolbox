@@ -66,15 +66,6 @@ def oktext(string):
     return f"{BColors.OKGREEN}{string}{BColors.ENDC}"
 
 
-# TODO: ask ChatGPT:
-"""I would like to run recursively through an HDF5 file and print the content to the screen.
-
-Dataset representations should include he type and shape.
-Attributes should also be used.
-Use indentation.
-"""
-
-
 class HDF5Printer:
     def __init__(self, root: h5py.Group = None, ignore_attrs=None):
         self.root = root
