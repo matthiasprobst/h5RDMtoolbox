@@ -171,7 +171,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
                 if isinstance(hv, h5py.Dataset):
                     try:
                         if qk == '$basename':
-                            objattr = hv.__getattribute__('name')[1:]
+                            objattr = pathlib.Path(hv.__getattribute__('name')).name
                         else:
                             objattr = hv.__getattribute__(qk[1:])
                         if _operator[ok](objattr, ov):
