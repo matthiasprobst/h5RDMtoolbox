@@ -1,26 +1,25 @@
 """Core wrapper module containing basic wrapper implementation of H5File, H5Dataset and H5Group
 """
 import datetime
+import h5py
 import logging
+import numpy as np
 import os
 import pathlib
-import shutil
-import warnings
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import List, Dict, Union, Tuple
-
-import h5py
-import numpy as np
 # noinspection PyUnresolvedReferences
 import pint_xarray
+import shutil
+import warnings
 import xarray as xr
 import yaml
 from IPython.display import HTML, display
+from datetime import datetime, timezone
 from h5py._hl.base import phil
 from h5py._objects import ObjectID
+from pathlib import Path
 from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
+from typing import List, Dict, Union, Tuple
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -323,6 +322,11 @@ class H5Group(h5py.Group):
         ds : h5py.Dataset
             created dataset
         """
+        if isinstance(data, str):
+            return self.create_string_dataset(name=name,
+                                              data=data,
+                                              overwrite=overwrite,
+                                              attrs=attrs, **kwargs)
         if attrs is None:
             attrs = {}
         else:

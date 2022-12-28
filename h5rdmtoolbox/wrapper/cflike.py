@@ -1,13 +1,12 @@
 """Implementation of wrapper classes using the CF-like conventions
 """
+import h5py
 import logging
 import pathlib
 import warnings
-from typing import Union, List
-
-import h5py
 import xarray as xr
 from pint_xarray import unit_registry as ureg
+from typing import Union, List
 
 from h5rdmtoolbox.conventions.registration import register_hdf_attribute
 from . import core
@@ -115,7 +114,7 @@ class H5Group(core.H5Group):
             provide shape and optionally dtype via kwargs (see more in
             h5py documentation regarding arguments for create_dataset
         long_name : str
-            The long name (human readable description of the dataset).
+            The long name (human-readable description of the dataset).
             If None, standard_name must be provided
         standard_name: str or conventions.StandardName
             The standard name of the dataset. If None, long_name must be provided
@@ -152,7 +151,13 @@ class H5Group(core.H5Group):
         ds : h5py.Dataset
             created dataset
         """
-
+        if isinstance(data, str):
+            return self.create_string_dataset(name=name,
+                                              data=data,
+                                              overwrite=overwrite,
+                                              standard_name=standard_name,
+                                              long_name=long_name,
+                                              attrs=attrs, **kwargs)
         if attrs is None:
             attrs = {}
         if isinstance(data, xr.DataArray):
@@ -252,26 +257,16 @@ class H5Group(core.H5Group):
             attrs.update({'standard_name': long_name})
         return super().create_string_dataset(name, data, overwrite, attrs)
 
-    def get_dataset_by_standard_name(self, standard_name: str, n: int = None) -> h5py.Dataset or None:
+    def get_dataset_by_standard_name(self, standard_name: str, n: int = None, rec: bool = True) -> h5py.Dataset or None:
         """Return the dataset with a specific standard_name within the current group.
         Raises error if multiple datasets are found!
         To recursive scan through all datasets, use
         get_by_attribute('standard_name', <your_value>, 'ds').
-        Returns None if no matching dataset has been found."""
-        candidats = self.get_datasets_by_attribute('standard_name', standard_name, False)
-        if n is None:
-            if len(candidats) == 0:
-                return None
-            if len(candidats) > 1:
-                raise ValueError(f'Multiple datasets found with standard name "{standard_name}": {candidats}')
-            return candidats[0]
-        else:
-            if len(candidats) == n:
-                if len(candidats) == 1:
-                    return candidats[0]
-                return candidats
-            else:
-                raise NameError(f'Could not find standard_name "{standard_name}"')
+        Returns None if no matching dataset has been found.
+        """
+        if n == 1:
+            return self.find_one({'standard_name': standard_name}, objfilter=h5py.Dataset, rec=rec)
+        return self.find({'standard_name': standard_name}, objfilter=h5py.Dataset, rec=rec)
 
 
 class H5File(core.H5File, H5Group):
