@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, ]
+        os: [ubuntu-latest, windows-latest]
         python-version: ['3.8', '3.9']
 
     steps:
@@ -26,4 +26,5 @@ jobs:
         pip install tox tox-gh-actions
 
     - name: Run pytest with tox
-      run: tox
+      run: |
+        tox
