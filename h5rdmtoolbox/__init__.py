@@ -19,7 +19,17 @@ __author__ = 'Matthias Probst'
 
 logger = create_package_logger('h5rdmtoolbox')
 
+
+def set_loglevel(level):
+    """set the loglevel of the whole package"""
+    logger.setLevel(level.upper())
+    for h in logger.handlers:
+        h.setLevel(level.upper())
+
+
 CONFIG = config.CONFIG
+
+set_loglevel(CONFIG.INIT_LOGGER_LEVEL)
 
 # global instance:
 h5tbxParams = {'convention': config.CONFIG['CONVENTION'],
@@ -39,7 +49,7 @@ def use(convention_name: str) -> None:
 
     if convention_name == 'default' or convention_name is None:
         if h5tbxParams['convention'] != convention_name:
-            logger.info(f'Switched to {convention_name}')
+            logger.info(f'Switched to "default"')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['H5File'] = core.H5File
         h5tbxParams['H5Dataset'] = core.H5Dataset
@@ -48,14 +58,14 @@ def use(convention_name: str) -> None:
 
     elif convention_name == 'cflike':
         if h5tbxParams['convention'] != convention_name:
-            logger.info(f'Switched to {convention_name}')
+            logger.info(f'Switched to "{convention_name}"')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['H5File'] = cflike.H5File
         h5tbxParams['H5Dataset'] = cflike.H5Dataset
         h5tbxParams['H5Group'] = cflike.H5Group
         return
 
-    raise ValueError(f'Unknown convention name: {convention_name}')
+    raise ValueError(f'Unknown convention name: "{convention_name}"')
 
 
 class H5File:

@@ -21,7 +21,8 @@ DEFAULT_CONFIG = dict(
     REQUIRE_UNITS=True,  # datasets require units
     UREG_FORMAT='C~',
     STANDARD_NAME_TABLE_ATTRIBUTE_NAME='__standard_name_table__',
-    CONVENTION='default'
+    CONVENTION='default',
+    INIT_LOGGER_LEVEL='DEBUG'
 )
 
 

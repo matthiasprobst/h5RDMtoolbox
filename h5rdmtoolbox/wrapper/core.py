@@ -12,7 +12,6 @@ import shutil
 import warnings
 import xarray as xr
 import yaml
-from IPython.display import HTML, display
 from datetime import datetime, timezone
 from h5py._hl.base import phil
 from h5py._objects import ObjectID
@@ -28,12 +27,11 @@ from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
 from .. import utils
-from .._repr import HDF5Printer
+from .._repr import H5Repr
 from .._user import user_dirs
 from .._version import __version__
 from ..config import CONFIG
-from ..conventions.layout import LayoutAttribute, H5Layout
-from ..conventions.registration import register_hdf_attribute
+from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
 
@@ -48,7 +46,7 @@ class H5Group(h5py.Group):
     """Inherited Group of the package h5py
     """
     convention = 'default'
-    HDF5printer = HDF5Printer()
+    HDF5printer = H5Repr()
 
     @property
     def attrs(self):
@@ -190,9 +188,11 @@ class H5Group(h5py.Group):
         return tree
 
     def create_group(self,
-                     name,
-                     overwrite=None,
-                     attrs=None,
+                     name: str,
+                     overwrite: bool = None,
+                     attrs: Dict = None,
+                     *,
+                     update_attrs: bool = False,
                      track_order=None):
         """
         Overwrites parent methods. Additional parameters are "long_name" and "attrs".
@@ -215,14 +215,20 @@ class H5Group(h5py.Group):
             Track creation order under this group. Default is None.
         """
         if name in self:
-            if isinstance(self[name], h5py.Group):
-                if overwrite is True:
-                    del self[name]
-                elif overwrite is False:
-                    return self[name]
-                else:
-                    # let h5py.Group raise the error...
-                    h5py.Group.create_group(self, name, track_order=track_order)
+            if name in self:
+                if isinstance(self[name], h5py.Group):
+                    if overwrite is True:
+                        del self[name]
+                    elif update_attrs:
+                        g = self[name]
+                        for ak, av in attrs.items():
+                            g.attrs[ak] = av
+                        return g
+                    else:
+                        # let h5py.Group raise the error...
+                        h5py.Group.create_group(self, name, track_order=track_order)
+                else:  # isinstance(self[name], h5py.Dataset):
+                    raise RuntimeError('The name you passed is already ued for a dataset!')
 
         if _is_not_valid_natural_name(self, name, CONFIG.NATURAL_NAMING):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
@@ -1026,11 +1032,14 @@ class H5Group(h5py.Group):
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
-    def dump(self, max_attr_length=None, check=False, **kwargs):
+    def dump(self, max_attr_length=None):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used"""
-        self.HDF5printer.max_attr_length = max_attr_length
-        display(HTML(self.HDF5printer.html_dump(self)))
+        if max_attr_length:
+            self.HDF5printer.max_attr_length = max_attr_length
+        return self.HDF5printer.__html__(self)
+        # self.HDF5printer.max_attr_length = max_attr_length
+        # display(HTML(self.HDF5printer.html_dump(self)))
         # if max_attr_length is None:
         #     max_attr_length = CONFIG.HTML_MAX_STRING_LENGTH
         # if self.name == '/':
@@ -1048,7 +1057,7 @@ class H5Group(h5py.Group):
 
     def sdump(self):
         """string representation of group"""
-        return self.HDF5printer.print_structure(self)
+        return self.HDF5printer.__str__(self)
 
 
 class DatasetValues:
@@ -1357,9 +1366,29 @@ class H5File(h5py.File, H5Group):
         _bytes = os.path.getsize(self.filename)
         return _bytes * ureg.byte
 
+    @property
+    def layout(self) -> H5Layout:
+        """return H5Layout object"""
+        return self._layout
+
+    @layout.setter
+    def layout(self, layout: Union[Path, str, H5Layout]):
+        if isinstance(layout, str):
+            self._layout = H5Layout.load_registered(name=layout, hdf5printer=self.HDF5printer)
+        elif isinstance(layout, Path):
+            self._layout = H5Layout(layout, self.HDF5printer)
+        elif layout is None:
+            self._layout = H5Layout.load_registered(name=self.__class__.__name__, hdf5printer=self.HDF5printer)
+        elif isinstance(layout, H5Layout):
+            pass
+        else:
+            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or H5Layout but got '
+                            f'{type(self._layout)}')
+
     def __init__(self,
                  name: Path = None,
                  mode='r',
+                 *,
                  layout: Union[Path, str, H5Layout] = 'H5File',
                  driver=None,
                  libver=None,
@@ -1400,10 +1429,18 @@ class H5File(h5py.File, H5Group):
             mode = 'r+'
         if not isinstance(name, ObjectID):
             self.hdf_filename = Path(name)
-        super().__init__(name=name, mode=mode, driver=driver,
-                         libver=libver, userblock_size=userblock_size, swmr=swmr,
-                         rdcc_nslots=rdcc_nslots, rdcc_nbytes=rdcc_nbytes, rdcc_w0=rdcc_w0,
-                         track_order=track_order, fs_strategy=fs_strategy, fs_persist=fs_persist,
+        super().__init__(name=name,
+                         mode=mode,
+                         driver=driver,
+                         libver=libver,
+                         userblock_size=userblock_size,
+                         swmr=swmr,
+                         rdcc_nslots=rdcc_nslots,
+                         rdcc_nbytes=rdcc_nbytes,
+                         rdcc_w0=rdcc_w0,
+                         track_order=track_order,
+                         fs_strategy=fs_strategy,
+                         fs_persist=fs_persist,
                          fs_threshold=fs_threshold,
                          **kwds)
 
@@ -1536,8 +1573,3 @@ H5Dataset._h5ds = H5Dataset
 
 H5Group._h5grp = H5Group
 H5Group._h5ds = H5Dataset
-
-register_hdf_attribute(LayoutAttribute,
-                       H5File,
-                       name='layout',
-                       overwrite=True)

@@ -2,20 +2,20 @@
 """
 import h5py
 import logging
+import os
 import pathlib
 import warnings
 import xarray as xr
 from pint_xarray import unit_registry as ureg
+from time import perf_counter_ns
 from typing import Union, List
 
-from time import perf_counter_ns
 from h5rdmtoolbox.conventions.registration import register_hdf_attribute
 from . import core
+from .. import _repr
 from .. import errors
-from .._repr import HDF5Printer
 from ..config import CONFIG
 from ..conventions import cflike
-import os
 
 ureg.default_format = CONFIG.UREG_FORMAT
 
@@ -52,6 +52,7 @@ class H5Group(core.H5Group):
                      long_name=None,
                      overwrite=None,
                      attrs=None,
+                     *,
                      track_order=None) -> 'H5Group':
         """
         Overwrites parent methods. Additional parameters are "long_name" and "attrs".
@@ -76,7 +77,7 @@ class H5Group(core.H5Group):
         track_order : bool or None
             Track creation order under this group. Default is None.
         """
-        subgrp = super().create_group(name, overwrite, attrs, track_order)
+        subgrp = super().create_group(name, overwrite, attrs, track_order=track_order)
 
         if attrs is not None:
             long_name = attrs.pop('long_name', long_name)
@@ -272,23 +273,64 @@ class H5Group(core.H5Group):
         return self.find({'standard_name': standard_name}, objfilter=h5py.Dataset, rec=rec)
 
 
-class CFLikeHDF5Printer(HDF5Printer):
-    """Takes care of printing the HDF5 Strucure"""
+class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
 
-    def __dataset_str__(self, key, item):
-        try:
-            units = item.attrs['units']
-        except KeyError:
-            units = 'ERR:NOUNITS'
-        return f"\033[1m{key}\033[0m [{units}]: {item.shape}, dtype: {item.dtype}"
+    def __0Ddataset_str__(self, name: str, h5dataset: h5py.Dataset) -> str:
+        """string representation of a 0D dataset"""
+        value = h5dataset.values[()]
+        if isinstance(value, float):
+            value = f'{float(value)} '
+        elif isinstance(value, int):
+            value = f'{int(value)} '
+        units = self.get_string_repr_of_unit(h5dataset)
+        return f"\033[1m{name}\033[0m {value} [{units}], dtype: {h5dataset.dtype}"
+
+    def __NDdataset_str__(self, name, h5dataset):
+        """string representation of a ND dataset"""
+        units = self.get_string_repr_of_unit(h5dataset)
+        return f"\033[1m{name}\033[0m [{units}]: {h5dataset.shape}, dtype: {h5dataset.dtype}"
+
+    @staticmethod
+    def get_string_repr_of_unit(h5dataset: h5py.Dataset) -> str:
+        """Get the unit attribute from the dataset and adjust the string
+        according to the found/not found data"""
+        if 'units' in h5dataset.attrs:
+            try:
+                _unit = h5dataset.attrs['units']
+            except KeyError:
+                return 'ERR:NOUNITS'
+
+            if _unit in ('', ' '):
+                return '-'
+            return _unit
+        return 'N.A.'
+
+
+class CFLikeHDF5Printer(_repr.H5Repr):
+    """Takes care of printing the HDF5 Structure"""
+
+    def __dataset_str__(self, name, h5dataset) -> str:
+        """overwrite the H5Repr parent method"""
+        if h5dataset.dtype.char == 'S':
+            # handel string datasets:
+            return self.__str_stringdataset__(name, h5dataset)
+        if h5dataset.ndim == 0:
+            return self.__0Ddataset_str__(name, h5dataset)
+        return self.__NDdataset_str__(name, h5dataset)
 
     def __dataset_html__(self, ds_name, h5dataset, max_attr_length: Union[int, None],
                          _ignore_attrs=('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')):
-        _value0d = ''
+        is_numeric = True
+        is_0d = False
+
         if h5dataset.dtype.char == 'S':
-            pass
+            # handel string datasets:
+            is_numeric = False
+            _value0d = str(h5dataset.values[()])
         else:
+            # handel numerical dataset:
             if h5dataset.ndim == 0:
+                is_0d = True
                 _value0d = h5dataset.values[()]
                 if isinstance(_value0d, float):
                     _value0d = f'{float(_value0d)} '
@@ -296,6 +338,7 @@ class CFLikeHDF5Printer(HDF5Printer):
                     _value0d = f'{int(_value0d)} '
             else:
                 _value0d = ''
+
             if 'units' in h5dataset.attrs:
                 _unit = h5dataset.attrs['units']
                 if _unit in ('', ' '):
@@ -304,58 +347,54 @@ class CFLikeHDF5Printer(HDF5Printer):
                 _unit = 'N.A.'
 
         ds_dirname = os.path.dirname(h5dataset.name)
-        if h5dataset.ndim == 0:
-            _shape_repr = ''
-        else:
-            _shape = h5dataset.shape
-            if CONFIG.ADVANCED_SHAPE_REPR:
-                _shape_repr = '('
-                ndim = h5dataset.ndim
-                for i in range(ndim):
-                    try:
-                        orig_dim_name = h5dataset.dims[i][0].name
-                        if os.path.dirname(orig_dim_name) == ds_dirname:
-                            dim_name = os.path.basename(orig_dim_name)
-                        else:
-                            dim_name = orig_dim_name
-                        if i == 0:
-                            _shape_repr += f'{dim_name}: {_shape[i]}'
-                        else:
-                            _shape_repr += f', {dim_name}: {_shape[i]}'
-                    except RuntimeError:
-                        pass
-                _shape_repr += ')'
-                if _shape_repr == '()' and ndim > 0:
+
+        _shape_repr = ''
+        if is_numeric:
+            if not is_0d:
+                # dimension is not a float or integer --> build the string indicating the shape of the dtaset
+                _shape = h5dataset.shape
+                if CONFIG.ADVANCED_SHAPE_REPR:
+                    _shape_repr = '('
+                    ndim = h5dataset.ndim
+                    for i in range(ndim):
+                        try:
+                            orig_dim_name = h5dataset.dims[i][0].name
+                            if os.path.dirname(orig_dim_name) == ds_dirname:
+                                dim_name = os.path.basename(orig_dim_name)
+                            else:
+                                dim_name = orig_dim_name
+                            if i == 0:
+                                _shape_repr += f'{dim_name}: {_shape[i]}'
+                            else:
+                                _shape_repr += f', {dim_name}: {_shape[i]}'
+                        except RuntimeError:
+                            pass
+                    _shape_repr += ')'
+                    if _shape_repr == '()' and ndim > 0:
+                        _shape_repr = _shape
+                else:
                     _shape_repr = _shape
-            else:
-                _shape_repr = _shape
-                # print(h5dataset.name, _shape_dim_names)
 
         _id1 = f'ds-1-{h5dataset.name}-{perf_counter_ns().__str__()}'
         _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
-        if h5dataset.dtype.char == 'S':
-            if h5dataset.ndim == 0:
-                _html_pre = f"""\n
-                            <ul id="{_id1}" class="h5tb-var-list">
-                            <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                            <label class='h5tb-varname' 
-                                for="{_id2}">{ds_name}</label>
-                            <span class="h5tb-dims">{_shape_repr}</span>: {_value0d}"""
-            else:
-                _html_pre = f"""\n
-                            <ul id="{_id1}" class="h5tb-var-list">
-                            <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                            <label class='h5tb-varname' 
-                                for="{_id2}">{ds_name}</label>
-                            <span class="h5tb-dims">{_shape_repr}</span>"""
+
+        if is_numeric:
+            _html_pre = f"""\n
+                        <ul id="{_id1}" class="h5tb-var-list">
+                        <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                        <label class='h5tb-varname' 
+                            for="{_id2}">{ds_name}</label>
+                        <span class="h5tb-dims">{_shape_repr}</span> 
+                        <span class="h5tb-unit">{_value0d}</span> 
+                         [<span class="h5tb-unit">{_unit}</span>]"""
         else:
             _html_pre = f"""\n
                         <ul id="{_id1}" class="h5tb-var-list">
                         <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
                         <label class='h5tb-varname' 
                             for="{_id2}">{ds_name}</label>
-                        <span class="h5tb-dims">{_shape_repr}</span>  [
-                        <span class="h5tb-unit">{_value0d}{_unit}</span>]"""
+                        <span class="h5tb-dims">{_value0d}</span>"""
+
         # now all attributes of the dataset:
         # open attribute section:
         _html_ds_attrs = """\n<ul class="h5tb-attr-list">"""
@@ -375,17 +414,34 @@ class CFLikeHDF5Printer(HDF5Printer):
         return _html_ds
 
 
+class CFLikeHDF5StructureHTMLRepr(_repr.HDF5StructureHTMLRepr):
+
+    def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
+        _html = super().__0Ddataset__(name, h5dataset)
+        _unit = CFLikeHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
+        _html += f' [{_unit}]'
+        return _html
+
+    def __NDdataset__(self, name, h5dataset):
+        _html = super().__NDdataset__(name, h5dataset)
+        _unit = CFLikeHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
+        _html += f' [{_unit}]'
+        return _html
+
+
 class H5File(core.H5File, H5Group):
     """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
     It enables additional features and adds new methods streamlining the work with
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
     convention = 'cflike'
-    HDF5printer = CFLikeHDF5Printer(ignore_attrs=['units', ])
+    HDF5printer = _repr.H5Repr(str_repr=CFLikeHDF5StructureStrRepr(),
+                               html_repr=CFLikeHDF5StructureHTMLRepr())
 
     def __init__(self,
                  name: pathlib.Path = None,
                  mode='r',
+                 *,
                  title=None,
                  standard_name_table=None,
                  layout: Union[pathlib.Path, str, 'H5Layout'] = 'H5File',
@@ -403,18 +459,18 @@ class H5File(core.H5File, H5Group):
                  **kwds):
         super().__init__(name,
                          mode,
-                         layout,
-                         driver,
-                         libver,
-                         userblock_size,
-                         swmr,
-                         rdcc_nslots,
-                         rdcc_nbytes,
-                         rdcc_w0,
-                         track_order,
-                         fs_strategy,
-                         fs_persist,
-                         fs_threshold,
+                         layout=layout,
+                         driver=driver,
+                         libver=libver,
+                         userblock_size=userblock_size,
+                         swmr=swmr,
+                         rdcc_nslots=rdcc_nslots,
+                         rdcc_nbytes=rdcc_nbytes,
+                         rdcc_w0=rdcc_w0,
+                         track_order=track_order,
+                         fs_strategy=fs_strategy,
+                         fs_persist=fs_persist,
+                         fs_threshold=fs_threshold,
                          **kwds)
 
         if self.mode != 'r':

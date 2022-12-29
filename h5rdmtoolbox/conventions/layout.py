@@ -1,20 +1,20 @@
+import h5py
 import logging
+import numpy as np
 import os
 import pathlib
-import re
-import shutil
-from pathlib import Path
-from typing import Union, Dict, List
-
-import h5py
-import numpy as np
 # noinspection PyUnresolvedReferences
 import pint_xarray
+import re
+import shutil
 from IPython.display import HTML, display
+from pathlib import Path
+from typing import Union, Dict, List
 
 from .utils import equal_base_units
 from .. import _repr
 from .._user import user_dirs
+from ..utils import generate_temporary_filename
 
 logger = logging.getLogger(__package__)
 
@@ -282,7 +282,7 @@ class H5FileLayout(h5py.File, LayoutGroup):
         """Compare this file content to another hHDF5 file.
         Note, as this is a layout class, the comparion is special because
         HDF object names may hav prefixes like 'any:' or 'pergroup:'
-        indiating a conditional check"""
+        indicating a conditional check"""
         pass
 
 
@@ -294,8 +294,9 @@ class H5Layout:
         """Return number of found issues"""
         return len(self._issues_list)
 
-    def __init__(self, filename: Path):
+    def __init__(self, filename: Path, hdf5printer: _repr.H5Repr):
         self.filename = Path(filename)
+        self.HDF5printer = hdf5printer
         self._issues_list = []
         if not self.filename.exists():
             # touch file:
@@ -351,35 +352,36 @@ class H5Layout:
         )
 
     @staticmethod
-    def load_registered(name: str, filename: Path = None) -> 'H5Layout':
+    def load_registered(*, name: str, hdf5printer: _repr.H5Repr) -> 'H5Layout':
         """Load from user data dir, copy to filename. If filename is None a tmp file is created"""
         src_filename = H5Layout.find_registered_filename(name)
-        if filename is None:
-            from ..utils import generate_temporary_filename
-            filename = generate_temporary_filename(suffix='.hdf')
+        filename = generate_temporary_filename(suffix='.hdf')
         shutil.copy2(src_filename, filename)
-        return H5Layout(filename)
+        return H5Layout(filename, hdf5printer=hdf5printer)
 
     def File(self, mode='r') -> H5FileLayout:
         """File instance"""
         self._file = H5FileLayout(self.filename, mode=mode)
         return self._file
 
-    def _repr_html_(self):
+    def _repr_html_(self, max_attr_length=None):
         preamble = f'<p>H5FileLayout File "{self.filename.stem}"</p>\n'
         with h5py.File(self.filename, mode='r') as h5:
-            return _repr.h5file_html_repr(h5, max_attr_length=None, preamble=preamble,
-                                          build_debug_html_page=False)
+            if max_attr_length:
+                self.HDF5printer.__html__.max_attr_length = max_attr_length
+            self.HDF5printer.__html__(h5, preamble=preamble)
 
-    def sdump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
+    def sdump(self):
         """string representation of file content"""
         with H5FileLayout(self.filename) as lay:
-            return lay.sdump(ret, nspaces, grp_only, hide_attributes, color_code_verification)
+            return self.HDF5printer.__str__(lay)
 
-    def dump(self, ret=False, nspaces=0, grp_only=False, hide_attributes=False, color_code_verification=True):
+    def dump(self, max_attr_length=None):
         """string representation of file content"""
         with H5FileLayout(self.filename) as lay:
-            return lay.sdump(ret, nspaces, grp_only, hide_attributes, color_code_verification)
+            if max_attr_length:
+                self.HDF5printer.__html__.max_attr_length = max_attr_length
+            self.HDF5printer.__html__(lay)
 
     def write(self) -> pathlib.Path:
         """write the static layout file to user data dir"""
@@ -448,27 +450,27 @@ class H5Layout:
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')
 
-# @register_standard_attribute(H5File, name='layout')
-class LayoutAttribute:
-    """Layout attribute"""
-
-    def set(self, layout: Union[str, Path, H5Layout]) -> None:
-        """Set layout"""
-        if isinstance(layout, str):
-            _layout = H5Layout.load_registered(layout)
-        elif isinstance(layout, Path):
-            _layout = H5Layout(layout)
-        elif isinstance(layout, H5Layout):
-            _layout = layout
-        else:
-            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or H5Layout but got '
-                            f'{type(layout)}')
-        self._layout = _layout
-
-    def get(self) -> H5Layout:
-        """Get layout"""
-        return self._layout
-
-    def delete(self) -> None:
-        """Get layout attribute"""
-        self.attrs.__delitem__('layout')
+# # @register_standard_attribute(H5File, name='layout')
+# class LayoutAttribute:
+#     """Layout attribute"""
+#
+#     def set(self, layout: Union[str, Path, H5Layout]) -> None:
+#         """Set layout"""
+#         if isinstance(layout, str):
+#             _layout = H5Layout.load_registered(layout)
+#         elif isinstance(layout, Path):
+#             _layout = H5Layout(layout)
+#         elif isinstance(layout, H5Layout):
+#             _layout = layout
+#         else:
+#             raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or H5Layout but got '
+#                             f'{type(layout)}')
+#         self._layout = _layout
+#
+#     def get(self) -> H5Layout:
+#         """Get layout"""
+#         return self._layout
+#
+#     def delete(self) -> None:
+#         """Get layout attribute"""
+#         self.attrs.__delitem__('layout')
