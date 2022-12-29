@@ -28,7 +28,7 @@ The packages comes with three sub-packages:
 
 Installation
 ------------
-The repository requires python 3.8. or higher (tested for 3.8 and 3.9).
+The repository requires python 3.8. or higher (tested for 3.8, 3.9, 3.10).
 
 Install from source from github:
 
