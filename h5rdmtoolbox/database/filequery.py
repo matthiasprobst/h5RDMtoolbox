@@ -31,8 +31,13 @@ def _lte(a, b):
     return a <= b
 
 
-def _regex(value, pattern):
-    return re.search(pattern, value)
+def _regex(value, pattern) -> bool:
+    match = re.search(pattern, value)
+    if match is None:
+        return False
+    if match.group() == '':
+        return False
+    return True
 
 
 def _eq_name(node, name):
@@ -161,23 +166,16 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
                     found_objs.append(found_obj)
     else:
         for ok, ov in qv.items():
-            # try:
-            #     objattr = h5obj.__getattribute__(qk[1:])
-            #     if _operator[ok](objattr, ov):
-            #         found_objs.append(h5obj)
-            # except AttributeError:
-            #     pass
             for hk, hv in h5obj.items():
-                if isinstance(hv, h5py.Dataset):
-                    try:
-                        if qk == '$basename':
-                            objattr = pathlib.Path(hv.__getattribute__('name')).name
-                        else:
-                            objattr = hv.__getattribute__(qk[1:])
-                        if _operator[ok](objattr, ov):
-                            found_objs.append(hv)
-                    except AttributeError:
-                        pass
+                try:
+                    if qk == '$basename':
+                        objattr = pathlib.Path(hv.__getattribute__('name')).name
+                    else:
+                        objattr = hv.__getattribute__(qk[1:])
+                    if _operator[ok](objattr, ov):
+                        found_objs.append(hv)
+                except AttributeError:
+                    pass
 
             if recursive:
                 rf = RecFind(_operator[ok], qk[1:], ov)
@@ -192,6 +190,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
          objfilter: Union[h5py.Group, h5py.Dataset, None],
          recursive: bool,
          find_one: bool):
+    """find objects in `h5obj` based on the filter request (-dictionary) `flt`"""
     # start with some input checks:
     if not isinstance(flt, Dict):
         raise TypeError(f'Filter must be a dictionary not {type(flt)}')
