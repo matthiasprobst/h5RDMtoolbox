@@ -1,0 +1,109 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "96c4d52c-3704-474c-baaa-8feb0fa019ab",
+   "metadata": {},
+   "source": [
+    "# File content inspection\n",
+    "\n",
+    "To get an overview of the file content a tree-view representation is provided. It can be called usin `.dump()`. This, however, is only possible in notebooks. Outside of it (e.g. in a normal python console) call `.sdump()` (string-dump) to get a \"raw\", non-interactive, treeview:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "d0f77ed6-6668-41b2-9ceb-8487e7141cc5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import h5rdmtoolbox as h5tbx\n",
+    "from h5rdmtoolbox import tutorial\n",
+    "\n",
+    "h5tbx.use('default')\n",
+    "\n",
+    "# get some example files:\n",
+    "list_of_hdf_filenames = tutorial.Database.generate_test_files()\n",
+    "\n",
+    "# dump the content of the first file in the list:\n",
+    "with h5tbx.H5File(list_of_hdf_filenames[0]) as h5:\n",
+    "    h5.dump()\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "baa082a3-77b9-4665-8131-bcf7843d5469",
+   "metadata": {},
+   "source": [
+    "## User-defined representation\n",
+    "\n",
+    "Every convention that is selected (for now 'default' or 'cflike' is availabale) may have a different way of displaying the content. For the `cflike`-convention, the attribute \"units\" is put in square brackets behind the dataset name and thus is not listed as an attribute:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ea58d4b0-6820-4665-a4a3-874240410159",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "h5tbx.use('cflike')\n",
+    "\n",
+    "with h5tbx.H5File(list_of_hdf_filenames[0]) as h5:\n",
+    "    h5.dump()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "71accad5-9c9e-4bb6-80e6-c526725ff3de",
+   "metadata": {},
+   "source": [
+    "## Multi-file inspection\n",
+    "\n",
+    "To inspect multiple files simultaneous, use `H5Files` instead of `H5File`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b06989f9-7094-4a7f-bbcd-c570005e3159",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with h5tbx.H5Files(list_of_hdf_filenames[0:2]) as h5files:\n",
+    "    print(h5files)\n",
+    "    h5files[0].dump()\n",
+    "    h5files[1].dump()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3130e055-6329-46b0-920d-de5e599ad8a8",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.13"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

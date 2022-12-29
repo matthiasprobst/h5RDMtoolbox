@@ -14,7 +14,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 6,
+   "execution_count": null,
    "id": "97f1f3a5-5f93-4e1b-b7a4-e3d9b296dd00",
    "metadata": {
     "tags": []
@@ -34,70 +34,65 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 7,
+   "execution_count": null,
    "id": "44fc86eb-608d-4254-873d-6d4dabd74997",
    "metadata": {},
    "outputs": [],
    "source": [
-    "h5tbx.config.natural_naming = True"
+    "h5tbx.CONFIG.NATURAL_NAMING = True"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 8,
+   "execution_count": null,
+   "id": "7744ba20-d902-4205-90ee-541832394f2e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "h5tbx.CONFIG.CONVENTION = 'default'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
    "id": "c5b94c36-c5c2-4c09-b5a8-a4a45ccd401e",
    "metadata": {
     "tags": []
    },
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "H5Dataset \"/test\"\n",
-      "-----------------\n",
-      "shape:         (3,)\n",
-      "long_name:     pressure\n",
-      "standard_name: None\n",
-      "units:         Pa\n",
-      "me\n"
-     ]
-    }
-   ],
+   "outputs": [],
    "source": [
     "with h5tbx.H5File() as h5:\n",
-    "    ds = h5.create_dataset('test', shape=(3,), units='Pa', long_name='pressure', attrs={'user': 'me'})\n",
-    "    print(h5.test)\n",
-    "    print(ds.attrs.user)"
+    "    ds = h5.create_dataset('test', shape=(3,))\n",
+    "    print(h5.test)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d2b6c0a6-db9d-4b01-80de-3ac8f07aba77",
+   "metadata": {},
+   "source": [
+    "Disabeling the natural naming configuration will raise an `AttributeError` when running the above code:"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 9,
+   "execution_count": null,
    "id": "b2d56e3a-78d8-4149-94dc-1377a0bd0cd6",
    "metadata": {},
    "outputs": [],
    "source": [
-    "h5tbx.config.natural_naming = False"
+    "h5tbx.CONFIG.NATURAL_NAMING = False"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 10,
+   "execution_count": null,
    "id": "8e030d3d-b0f7-4cb6-b473-d337724953ef",
    "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "'H5File' object has no attribute 'test'\n"
-     ]
-    }
-   ],
+   "outputs": [],
    "source": [
     "with h5tbx.H5File() as h5:\n",
-    "    ds = h5.create_dataset('test', shape=(3,), units='Pa', long_name='pressure', attrs={'user': 'me'})\n",
+    "    ds = h5.create_dataset('test', shape=(3,))\n",
     "    try:\n",
     "        print(h5.test)\n",
     "    except AttributeError as e:\n",
@@ -107,7 +102,7 @@
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "0c6a1de9-e694-4a43-a05f-3d8a8fdbad5b",
+   "id": "c5bc6305-0f3d-42e4-84f9-243c4f50ba4d",
    "metadata": {},
    "outputs": [],
    "source": []

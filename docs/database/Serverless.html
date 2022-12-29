@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>HDF File as a Database &#8212; h5RDMtoolbox  documentation</title>
+    <title>Serverless HDF Database &#8212; h5RDMtoolbox  documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -121,8 +121,8 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../conventions/index.html">
-   Conventions
+  <a class="reference internal" href="../wrapper/index.html">
+   HDF5-Wrapper
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
@@ -131,30 +131,8 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/conventions.html">
-     Standard Name Convention
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/layouts.html">
-     Layouts
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../wrapper/index.html">
-   Wrapper
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
     <a class="reference internal" href="../wrapper/CreateFile.html">
-     Create a HDF file
+     Create an HDF file
     </a>
    </li>
    <li class="toctree-l2">
@@ -173,18 +151,13 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/FileExploration.html">
-     File exploration
+    <a class="reference internal" href="../wrapper/DumpFile.html">
+     File content inspection
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../wrapper/NaturalNaming.html">
      Natural Naming
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/Conventions.html">
-     (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
@@ -202,16 +175,28 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/SpecializedWrappers.html">
-     Specialized Wrappers
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../wrapper/wrapper_and_conventions/index.html">
+     Wrapper &amp; Conventions
     </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../wrapper/wrapper_and_conventions/cflike.html">
+       CF-like
+      </a>
+     </li>
+    </ul>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="index.html">
-   Database
+   HDF5-Database
   </a>
   <input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -221,12 +206,34 @@
   <ul class="current">
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
-     HDF File as a Database
+     Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="h5mongo.html">
      HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../conventions/index.html">
+   Conventions
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/conventions.html">
+     Standard Name Convention
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/layouts.html">
+     Layouts
     </a>
    </li>
   </ul>
@@ -431,37 +438,27 @@ title="Print to PDF"
     </div>
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
- <li class="toc-h2 nav-item toc-entry">
+ <li class="toc-h1 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#">
+   Serverless HDF Database
+  </a>
+ </li>
+ <li class="toc-h1 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Filtering-a-single-file-with-pymongo-syntax">
    Filtering a single file with pymongo-syntax
   </a>
-  <ul class="nav section-nav flex-column">
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Query-syntax">
-     Query syntax
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h2 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-based-on-name/basename">
+     Find based on name/basename
     </a>
    </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Basic-search">
-     Basic search
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Advanced-search">
-     Advanced search
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Only-get-dataset-or-group-as-return">
-     Only get dataset or group as return
+   <li class="toc-h2 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-a-dataset-based-on-shape-or-dimension:">
+     Find a dataset based on shape or dimension:
     </a>
    </li>
   </ul>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#H5Files---Accessing-multiple-HDF-files">
-   H5Files - Accessing multiple HDF files
-  </a>
  </li>
 </ul>
 
@@ -472,7 +469,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>HDF File as a Database</h1>
+                <h1>Serverless HDF Database</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -482,37 +479,27 @@ title="Print to PDF"
                         </div>
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
- <li class="toc-h2 nav-item toc-entry">
+ <li class="toc-h1 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#">
+   Serverless HDF Database
+  </a>
+ </li>
+ <li class="toc-h1 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Filtering-a-single-file-with-pymongo-syntax">
    Filtering a single file with pymongo-syntax
   </a>
-  <ul class="nav section-nav flex-column">
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Query-syntax">
-     Query syntax
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h2 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-based-on-name/basename">
+     Find based on name/basename
     </a>
    </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Basic-search">
-     Basic search
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Advanced-search">
-     Advanced search
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#Only-get-dataset-or-group-as-return">
-     Only get dataset or group as return
+   <li class="toc-h2 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#Find-a-dataset-based-on-shape-or-dimension:">
+     Find a dataset based on shape or dimension:
     </a>
    </li>
   </ul>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#H5Files---Accessing-multiple-HDF-files">
-   H5Files - Accessing multiple HDF files
-  </a>
  </li>
 </ul>
 
@@ -634,10 +621,11 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars on prompts */
+/* disable scrollbars and line breaks on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
+    white-space: pre;
 }
 
 /* input/output area */
@@ -780,54 +768,330 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="HDF-File-as-a-Database">
-<h1>HDF File as a Database<a class="headerlink" href="#HDF-File-as-a-Database" title="Permalink to this headline">#</a></h1>
-<p>As many information can be stored in an HDF5 files. By using goups, the structure can be quite nested and sometime it could be helpful to just search for an attribute, a dataset name or a specific property of it, or instance. Thus, an HDF5 file itself is a kind of database in itself.</p>
-<p>The h5rdmtoolbox provides methods for H5File (and its subclasses) to find datasets and groups. The query syntax is tried to be as close as possible to the one pymongo uses.</p>
-<section id="Filtering-a-single-file-with-pymongo-syntax">
-<h2>Filtering a single file with pymongo-syntax<a class="headerlink" href="#Filtering-a-single-file-with-pymongo-syntax" title="Permalink to this headline">#</a></h2>
-<div class="nbinput nblast docutils container">
+<section id="Serverless-HDF-Database">
+<h1>Serverless HDF Database<a class="headerlink" href="#Serverless-HDF-Database" title="Permalink to this headline">#</a></h1>
+<p>No classic server client-client concept is used. Instead a HDF file is created with external links to root groups of HDF files that included to the database.</p>
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">database</span> <span class="k">as</span> <span class="n">h5db</span>
+<span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">tutorial</span>
 <span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
+<span class="kn">from</span> <span class="nn">h5rdmtoolbox.config</span> <span class="kn">import</span> <span class="n">set_config_parameter</span>
+
+<span class="n">h5tbx</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;cflike&#39;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
 </pre></div>
 </div>
 </div>
-<p>Let’s build an example file:</p>
-<div class="nbinput nblast docutils container">
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-12-29_16:41:07,289 INFO     [__init__.py:61] Switched to &#34;cflike&#34;
+</pre></div></div>
+</div>
+</section>
+<section id="Filtering-a-single-file-with-pymongo-syntax">
+<h1>Filtering a single file with pymongo-syntax<a class="headerlink" href="#Filtering-a-single-file-with-pymongo-syntax" title="Permalink to this headline">#</a></h1>
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">test_filename</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
-
-<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;a float&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">4.1</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;root_attr3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;a string&#39;</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;a group&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">attrvalue</span><span class="o">=</span><span class="mf">14.3</span><span class="p">))</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_coordinate&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">attrvalue</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;y_coordinate&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;project&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;tutorial&#39;</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;sub&#39;</span><span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span>
 </pre></div>
 </div>
 </div>
-<section id="Query-syntax">
-<h3>Query syntax<a class="headerlink" href="#Query-syntax" title="Permalink to this headline">#</a></h3>
-<p>The method to be called to find something in an HDF5 file is find() (or find_one()). What can be foud are datasets or groups. It can also be limited to one of the both objects.</p>
-<p>The syntax is very similar to that of pymongo. There’s a basic search and a advanced search.</p>
-</section>
-<section id="Basic-search">
-<h3>Basic search<a class="headerlink" href="#Basic-search" title="Permalink to this headline">#</a></h3>
-<p>The basic search queries attributes, only. To find an object, a dictionary is passed containing the name of an attribute and the value, e.g.:</p>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<head><style>/*
+CSS inspired by xarray: https://github.com/pydata/xarray
+*/
+.h5tb-header > div,
+.h5tb-header > ul {
+    display: inline;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.h5tb-dataarray-cls,
+.h5tb-dataarray-name {
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+.h5tb-dataarray-name {
+    color: #000;
+}
+
+.h5grp-sections {
+    list-style: none;
+    padding: 3px;
+    margin: 0;
+}
+
+.h5grp-sections input {
+    display: none;
+}
+
+.h5grp-sections label {
+    display: inline;
+}
+
+.h5grp-sections > li > input + label > span {
+    display: inline;
+    margin-left: 4px;
+}
+
+.h5grp-sections > li > input:checked + label > span {
+    display: none;
+}
+
+.h5grp-sections input:enabled + label {
+    cursor: pointer;
+}
+
+.h5grp-sections input:not(.h5tb-values-in) ~ ul {
+    display: none;
+}
+
+.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
+    display: block;
+}
+
+.h5grp-sections > li > input + label {
+    width: 140px;
+    color: #555;
+    font-weight: 500;
+    padding: 4px 0 2px 0;
+}
+
+
+.h5grp-sections > li > input + label:before {
+    display: inline-block;
+    content: '+';
+    font-size: 11px;
+    width: 15px;
+    text-align: center;
+}
+
+.h5grp-sections > li > input:disabled + label:before {
+    color: #777;
+}
+
+.h5grp-sections > li > input:checked + label:before {
+    content: '-';
+}
+
+.h5tb-dim-list {
+    display: inline-block !important;
+    list-style: none;
+    padding: 0;
+}
+
+.h5tb-dim-list li {
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-dim-list:before {
+    content: '(';
+}
+
+.h5tb-dim-list:after {
+    content: ')';
+}
+
+.h5tb-dim-list li:not(:last-child):after {
+    content: ',';
+}
+
+.h5tb-has-index {
+    text-decoration: underline;
+}
+
+.h5tb-var-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-var-list > li {
+    background-color: #fcfcfc;
+    overflow: hidden;
+}
+
+.h5tb-var-list > li:nth-child(odd) {
+    background-color: #efefef;
+}
+
+.h5tb-var-list li:hover {
+    background-color: rgba(3, 169, 244, .2);
+}
+
+.h5tb-var-list li > span {
+    display: inline-block;
+}
+
+input.h5tb-varname-in + label {
+    width: 140px;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+.h5tb-dataset {
+    width: 100px;
+}
+
+.h5tb-attributevalue {
+    width: 100px;
+    text-align: left;
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+input.h5tb-varname-in + label:before {
+    content: ' ';
+    display: inline-block;
+    font-size: 11px;
+    width: 15px;
+    padding-left: 2px;
+    padding-right: 2px;
+    text-align: center;
+    color: #aaa;
+    text-decoration: none !important;
+}
+
+input.h5tb-varname-in:enabled + label:hover:before {
+    color: #000;
+}
+
+input.h5tb-varname-in:checked + label:before {
+    color: #ccc;
+}
+
+.h5tb-dims {
+    width: 280px;
+    white-space: nowrap;
+}
+
+
+.h5tb-unit {
+    width: 96px;
+    white-space: nowrap;
+    padding-right: 2px;
+    text-align: right;
+    color: #555;
+    font-style: italic;
+}
+
+.h5tb-attr-list {
+    list-style: none;
+    background-color: #fff;
+    padding-bottom: 6px;
+    color: #555;
+}
+
+.h5tb-attr-list li,
+.h5tb-attr-list li:hover {
+    background-color: #fff;
+}
+
+.h5tb-dim-highlight {
+    background-color: rgba(3, 169, 244, .2);
+    cursor: pointer;
+}</style></head>
+<div class='h5tb-warp'>
+
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds--4396862400" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--4396862400">
+                        /<span>(2)</span></label>
+
+
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style="list-style-type: none; font-style: italic">project : tutorial</li>
+                    </ul>
+
+                <ul id="ds-1-/velocity-4398955800" class="h5tb-var-list">
+                <input id="ds-2-/velocity-4398964700" class="h5tb-varname-in" type="checkbox">
+                <label class='h5tb-varname'
+                    for="ds-2-/velocity-4398964700">velocity</label>
+                <span class="h5tb-dims">(3,) (int32)</span> [m/s]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
+             italic">standard_name : x_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+
+                    </ul>
+
+                 </ul>
+
+
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds-sub-4399817500" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds-sub-4399817500">
+                        sub<span>(1)</span></label>
+
+
+                    <ul class="h5tb-attr-list">
+                    </ul>
+
+                <ul id="ds-1-/sub/velocity-4400402700" class="h5tb-var-list">
+                <input id="ds-2-/sub/velocity-4400405400" class="h5tb-varname-in" type="checkbox">
+                <label class='h5tb-varname'
+                    for="ds-2-/sub/velocity-4400405400">velocity</label>
+                <span class="h5tb-dims">(5,) (int32)</span> [m/s]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
+             italic">standard_name : x_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+
+                    </ul>
+
+                 </ul>
+
+</li>
+</ul>
+</li>
+</ul>
+</div></div>
+</div>
+<section id="Find-based-on-name/basename">
+<h2>Find based on name/basename<a class="headerlink" href="#Find-based-on-name/basename" title="Permalink to this headline">#</a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">name</span></code> is the path within the file, the basename is the raw dataset or group name itself:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}))</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">})</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;find basename=velocity in root:&#39;</span><span class="p">)</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;velocity&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">find name=/velocity in root:&#39;</span><span class="p">)</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$name&#39;</span><span class="p">:</span> <span class="s1">&#39;/velocity&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">find name=/sub/velocity in root:&#39;</span><span class="p">)</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$name&#39;</span><span class="p">:</span> <span class="s1">&#39;/sub/velocity&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">find basename=velocity in sub/:&#39;</span><span class="p">)</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;sub&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;velocity&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">,</span> <span class="n">rec</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">find basename=velocity in root:&#39;</span><span class="p">)</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;velocity&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">,</span> <span class="n">rec</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">find basename=velocity in root:&#39;</span><span class="p">)</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;velocity&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">,</span> <span class="n">rec</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -836,25 +1100,33 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&lt;HDF5 file &#34;tmp0&#34; (mode r)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
-&lt;HDF5 wrapper file &#34;tmp0&#34; (mode r)&gt;
+find basename=velocity in root:
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (5,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;,
+ &lt;HDF5 dataset &#34;velocity&#34;: shape (3,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
+
+find name=/velocity in root:
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (3,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
+
+find name=/sub/velocity in root:
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (5,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
+
+find basename=velocity in sub/:
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (5,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
+
+find basename=velocity in root:
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (3,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
+
+find basename=velocity in root:
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (5,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;,
+ &lt;HDF5 dataset &#34;velocity&#34;: shape (3,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
 </pre></div></div>
 </div>
-<p>The above query finds to objects (root group and dataset ‘x’) based on the attribute “attrvalue”, which matches 3.</p>
-</section>
-<section id="Advanced-search">
-<h3>Advanced search<a class="headerlink" href="#Advanced-search" title="Permalink to this headline">#</a></h3>
-<p>The advanced search involveds special keywords starting with a dollar sign. For the key of the dictionary this is intepreted as a class property: <code class="docutils literal notranslate"><span class="pre">$&lt;class-property&gt;</span></code>. A typical property-keyword would be <code class="docutils literal notranslate"><span class="pre">$basename</span></code>, which matches all base-names (name without parent-path). The dictionary value can also be adjusted. This allows other comparisons than “is equal to” as it is the case with the basic search. Let’s perform some advanced searches:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;{&#39;attrvalue&#39;: {&#39;$gt&#39;: 0}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;attrvalue&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$gt&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}}))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">{&#39;standard_name&#39;:  {&#39;$regex&#39;: &#39;_coordinate$&#39;}}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;standard_name&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$regex&#39;</span><span class="p">:</span> <span class="s1">&#39;_coordinate$&#39;</span><span class="p">}}))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">{&#39;$basename&#39;: &#39;x&#39;}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;x&#39;</span><span class="p">}))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">{&#39;$ndim&#39;: 1)}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$ndim&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">{&#39;$shape&#39;: (2, )}:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$shape&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="p">)}))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$regex&#39;</span><span class="p">:</span> <span class="s1">&#39;sub&#39;</span><span class="p">}},</span> <span class="s1">&#39;$group&#39;</span><span class="p">,</span> <span class="n">rec</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -863,41 +1135,16 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;attrvalue&#39;: {&#39;$gt&#39;: 0}:
-         [&lt;HDF5 file &#34;tmp0&#34; (mode r)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper group &#34;/a group&#34; (members 0)&gt;]
-
-{&#39;standard_name&#39;:  {&#39;$regex&#39;: &#39;_coordinate$&#39;}}:
-         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
-
-{&#39;$basename&#39;: &#39;x&#39;}:
-         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
-
-{&#39;$ndim&#39;: 1)}:
-         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
-
-{&#39;$shape&#39;: (2, )}:
-         [&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;, &lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
+[&lt;HDF5 wrapper group &#34;/sub&#34; (members: 1, convention: &#34;cflike&#34;)&gt;]
 </pre></div></div>
 </div>
-<p>All query operators (that’s what it is called in pymongo) implemented are:</p>
-<ul class="simple">
-<li><p>$gt : greater than</p></li>
-<li><p>$gte : geater than equal</p></li>
-<li><p>$lt : less than</p></li>
-<li><p>$lte : less than equal</p></li>
-<li><p>$eq : equal to</p></li>
-<li><p>$regex : Filter with regular expression</p></li>
-</ul>
-</section>
-<section id="Only-get-dataset-or-group-as-return">
-<h3>Only get dataset or group as return<a class="headerlink" href="#Only-get-dataset-or-group-as-return" title="Permalink to this headline">#</a></h3>
-<p>Pass <code class="docutils literal notranslate"><span class="pre">$dataset</span></code> or <code class="docutils literal notranslate"><span class="pre">$group</span></code> as the second argument</p>
+<p><code class="docutils literal notranslate"><span class="pre">find_one</span></code> returns the object, not a list of objects:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">test_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;x&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s1">&#39;$basename&#39;</span><span class="p">:</span> <span class="s1">&#39;velocity&#39;</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -906,584 +1153,30 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&lt;HDF5 wrapper dataset shape &#34;(2,)&#34; (&lt;float32&gt;)&gt;]
+&lt;HDF5 dataset &#34;velocity&#34;: shape (3,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;
 </pre></div></div>
 </div>
 </section>
-</section>
-<section id="H5Files---Accessing-multiple-HDF-files">
-<h2>H5Files - Accessing multiple HDF files<a class="headerlink" href="#H5Files---Accessing-multiple-HDF-files" title="Permalink to this headline">#</a></h2>
-<p>This concepts assumes that we already know the HDF files. We can apply the <code class="docutils literal notranslate"><span class="pre">find</span></code> or <code class="docutils literal notranslate"><span class="pre">find_one</span></code> methods, too:</p>
+<section id="Find-a-dataset-based-on-shape-or-dimension:">
+<h2>Find a dataset based on shape or dimension:<a class="headerlink" href="#Find-a-dataset-based-on-shape-or-dimension:" title="Permalink to this headline">#</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox</span> <span class="kn">import</span> <span class="n">tutorial</span>
-<span class="n">list_of_hdf_filenames</span> <span class="o">=</span> <span class="n">tutorial</span><span class="o">.</span><span class="n">Database</span><span class="o">.</span><span class="n">generate_test_files</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-<span class="k">with</span> <span class="n">h5db</span><span class="o">.</span><span class="n">H5Files</span><span class="p">(</span><span class="o">*</span><span class="n">list_of_hdf_filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span> <span class="k">as</span> <span class="n">h5files</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5files</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-    <span class="n">h5files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
-    <span class="n">h5files</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">h5files</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$name&#39;</span><span class="p">:</span> <span class="s1">&#39;/u&#39;</span><span class="p">}))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$shape&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">5</span><span class="p">,)},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">))</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s1">&#39;$ndim&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span> <span class="s1">&#39;$dataset&#39;</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-dict_keys([&#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp35\\test_repo5\\d1\\repofile_00001.hdf&#39;, &#39;C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp35\\test_repo5\\d2\\d21\\repofile_00000.hdf&#39;])
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area rendered_html docutils container">
-<head><style>/*
-CSS inspired by xarray: https://github.com/pydata/xarray
-*/
-.h5tb-header > div,
-.h5tb-header > ul {
-    display: inline;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.h5tb-dataarray-cls,
-.h5tb-dataarray-name {
-    margin-left: 2px;
-    margin-right: 10px;
-}
-
-.h5tb-dataarray-name {
-    color: #000;
-}
-
-.h5grp-sections {
-    list-style: none;
-    padding: 3px;
-    margin: 0;
-}
-
-.h5grp-sections input {
-    display: none;
-}
-
-.h5grp-sections label {
-    display: inline;
-}
-
-.h5grp-sections > li > input + label > span {
-    display: inline;
-    margin-left: 4px;
-}
-
-.h5grp-sections > li > input:checked + label > span {
-    display: none;
-}
-
-.h5grp-sections input:enabled + label {
-    cursor: pointer;
-}
-
-.h5grp-sections input:not(.h5tb-values-in) ~ ul {
-    display: none;
-}
-
-.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
-    display: block;
-}
-
-.h5grp-sections > li > input + label {
-    width: 140px;
-    color: #555;
-    font-weight: 500;
-    padding: 4px 0 2px 0;
-}
-
-
-.h5grp-sections > li > input + label:before {
-    display: inline-block;
-    content: '+';
-    font-size: 11px;
-    width: 15px;
-    text-align: center;
-}
-
-.h5grp-sections > li > input:disabled + label:before {
-    color: #777;
-}
-
-.h5grp-sections > li > input:checked + label:before {
-    content: '-';
-}
-
-.h5tb-dim-list {
-    display: inline-block !important;
-    list-style: none;
-    padding: 0;
-}
-
-.h5tb-dim-list li {
-    display: inline-block;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-dim-list:before {
-    content: '(';
-}
-
-.h5tb-dim-list:after {
-    content: ')';
-}
-
-.h5tb-dim-list li:not(:last-child):after {
-    content: ',';
-}
-
-.h5tb-has-index {
-    text-decoration: underline;
-}
-
-.h5tb-var-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-var-list > li {
-    background-color: #fcfcfc;
-    overflow: hidden;
-}
-
-.h5tb-var-list > li:nth-child(odd) {
-    background-color: #efefef;
-}
-
-.h5tb-var-list li:hover {
-    background-color: rgba(3, 169, 244, .2);
-}
-
-.h5tb-var-list li > span {
-    display: inline-block;
-}
-
-input.h5tb-varname-in + label {
-    width: 140px;
-    padding-left: 0;
-    font-weight: bold;
-}
-
-.h5tb-dataset {
-    width: 100px;
-}
-
-.h5tb-attributevalue {
-    width: 100px;
-    text-align: left;
-    color: #888;
-    white-space: nowrap;
-    font-size: 12px;
-}
-
-input.h5tb-varname-in + label:before {
-    content: ' ';
-    display: inline-block;
-    font-size: 11px;
-    width: 15px;
-    padding-left: 2px;
-    padding-right: 2px;
-    text-align: center;
-    color: #aaa;
-    text-decoration: none !important;
-}
-
-input.h5tb-varname-in:enabled + label:hover:before {
-    color: #000;
-}
-
-input.h5tb-varname-in:checked + label:before {
-    color: #ccc;
-}
-
-.h5tb-dims {
-    width: 280px;
-    white-space: nowrap;
-}
-
-
-.h5tb-unit {
-    width: 96px;
-    white-space: nowrap;
-    padding-right: 2px;
-    text-align: right;
-    color: #555;
-    font-style: italic;
-}
-
-.h5tb-attr-list {
-    list-style: none;
-    background-color: #fff;
-    padding-bottom: 6px;
-    color: #555;
-}
-
-.h5tb-attr-list li,
-.h5tb-attr-list li:hover {
-    background-color: #fff;
-}
-
-.h5tb-dim-highlight {
-    background-color: rgba(3, 169, 244, .2);
-    cursor: pointer;
-}</style></head>
-<p>repofile_00001.hdf</p>
-
-<div class='h5tb-warp'>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/-6851557100" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-6851557100">
-                    /<span>(1)</span></label>
-
-
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : fan_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.2.0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li><li style="list-style-type: none; font-style: italic">operator : Mike</li>
-                </ul>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/operation_point-6852882200" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/operation_point-6852882200">
-                    operation_point<span>(2)</span></label>
-
-
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Operation point data group</li>
-                </ul>
-
-                    <ul id="ds-1-/operation_point/ptot-6858317200" class="h5tb-var-list">
-                    <input id="ds-2-/operation_point/ptot-6858328800" class="h5tb-varname-in" type="checkbox">
-                    <label class='h5tb-varname'
-                        for="ds-2-/operation_point/ptot-6858328800">ptot</label>
-                    <span class="h5tb-dims">(100,)</span>  [
-                    <span class="h5tb-unit">Pa</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Pressure increase</li><li style="list-style-type: none; font-style: italic">mean : 11.893422563334388</li><li style="list-style-type: none; font-style: italic">std : 0.27598239502573496</li>
-
-                </ul>
-
-             </ul>
-
-
-                    <ul id="ds-1-/operation_point/vfr-6859739000" class="h5tb-var-list">
-                    <input id="ds-2-/operation_point/vfr-6859746100" class="h5tb-varname-in" type="checkbox">
-                    <label class='h5tb-varname'
-                        for="ds-2-/operation_point/vfr-6859746100">vfr</label>
-                    <span class="h5tb-dims">(100,)</span>  [
-                    <span class="h5tb-unit">m**3/s</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : volume flow_utils rate</li><li style="list-style-type: none; font-style: italic">mean : 0.11029332643203003</li><li style="list-style-type: none; font-style: italic">std : 0.2933749745014524</li>
-
-                </ul>
-
-             </ul>
-
-</li>
-</ul>
-</li>
-</ul>
-</div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area rendered_html docutils container">
-<head><style>/*
-CSS inspired by xarray: https://github.com/pydata/xarray
-*/
-.h5tb-header > div,
-.h5tb-header > ul {
-    display: inline;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.h5tb-dataarray-cls,
-.h5tb-dataarray-name {
-    margin-left: 2px;
-    margin-right: 10px;
-}
-
-.h5tb-dataarray-name {
-    color: #000;
-}
-
-.h5grp-sections {
-    list-style: none;
-    padding: 3px;
-    margin: 0;
-}
-
-.h5grp-sections input {
-    display: none;
-}
-
-.h5grp-sections label {
-    display: inline;
-}
-
-.h5grp-sections > li > input + label > span {
-    display: inline;
-    margin-left: 4px;
-}
-
-.h5grp-sections > li > input:checked + label > span {
-    display: none;
-}
-
-.h5grp-sections input:enabled + label {
-    cursor: pointer;
-}
-
-.h5grp-sections input:not(.h5tb-values-in) ~ ul {
-    display: none;
-}
-
-.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
-    display: block;
-}
-
-.h5grp-sections > li > input + label {
-    width: 140px;
-    color: #555;
-    font-weight: 500;
-    padding: 4px 0 2px 0;
-}
-
-
-.h5grp-sections > li > input + label:before {
-    display: inline-block;
-    content: '+';
-    font-size: 11px;
-    width: 15px;
-    text-align: center;
-}
-
-.h5grp-sections > li > input:disabled + label:before {
-    color: #777;
-}
-
-.h5grp-sections > li > input:checked + label:before {
-    content: '-';
-}
-
-.h5tb-dim-list {
-    display: inline-block !important;
-    list-style: none;
-    padding: 0;
-}
-
-.h5tb-dim-list li {
-    display: inline-block;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-dim-list:before {
-    content: '(';
-}
-
-.h5tb-dim-list:after {
-    content: ')';
-}
-
-.h5tb-dim-list li:not(:last-child):after {
-    content: ',';
-}
-
-.h5tb-has-index {
-    text-decoration: underline;
-}
-
-.h5tb-var-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.h5tb-var-list > li {
-    background-color: #fcfcfc;
-    overflow: hidden;
-}
-
-.h5tb-var-list > li:nth-child(odd) {
-    background-color: #efefef;
-}
-
-.h5tb-var-list li:hover {
-    background-color: rgba(3, 169, 244, .2);
-}
-
-.h5tb-var-list li > span {
-    display: inline-block;
-}
-
-input.h5tb-varname-in + label {
-    width: 140px;
-    padding-left: 0;
-    font-weight: bold;
-}
-
-.h5tb-dataset {
-    width: 100px;
-}
-
-.h5tb-attributevalue {
-    width: 100px;
-    text-align: left;
-    color: #888;
-    white-space: nowrap;
-    font-size: 12px;
-}
-
-input.h5tb-varname-in + label:before {
-    content: ' ';
-    display: inline-block;
-    font-size: 11px;
-    width: 15px;
-    padding-left: 2px;
-    padding-right: 2px;
-    text-align: center;
-    color: #aaa;
-    text-decoration: none !important;
-}
-
-input.h5tb-varname-in:enabled + label:hover:before {
-    color: #000;
-}
-
-input.h5tb-varname-in:checked + label:before {
-    color: #ccc;
-}
-
-.h5tb-dims {
-    width: 280px;
-    white-space: nowrap;
-}
-
-
-.h5tb-unit {
-    width: 96px;
-    white-space: nowrap;
-    padding-right: 2px;
-    text-align: right;
-    color: #555;
-    font-style: italic;
-}
-
-.h5tb-attr-list {
-    list-style: none;
-    background-color: #fff;
-    padding-bottom: 6px;
-    color: #555;
-}
-
-.h5tb-attr-list li,
-.h5tb-attr-list li:hover {
-    background-color: #fff;
-}
-
-.h5tb-dim-highlight {
-    background-color: rgba(3, 169, 244, .2);
-    cursor: pointer;
-}</style></head>
-<p>repofile_00000.hdf</p>
-
-<div class='h5tb-warp'>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/-6872634200" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-6872634200">
-                    /<span>(3)</span></label>
-
-
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : piv_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.2.0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li><li style="list-style-type: none; font-style: italic">operator : Susi</li>
-                </ul>
-
-                    <ul id="ds-1-/u-6878320300" class="h5tb-var-list">
-                    <input id="ds-2-/u-6878327600" class="h5tb-varname-in" type="checkbox">
-                    <label class='h5tb-varname'
-                        for="ds-2-/u-6878327600">u</label>
-                    <span class="h5tb-dims">(2, 5, 64, 86, 2)</span>  [
-                    <span class="h5tb-unit">m/s</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : u-component</li>
-
-                </ul>
-
-             </ul>
-
-
-                    <ul id="ds-1-/v-6879293300" class="h5tb-var-list">
-                    <input id="ds-2-/v-6879302000" class="h5tb-varname-in" type="checkbox">
-                    <label class='h5tb-varname'
-                        for="ds-2-/v-6879302000">v</label>
-                    <span class="h5tb-dims">(2, 5, 64, 86, 2)</span>  [
-                    <span class="h5tb-unit">m/s</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : v-component</li>
-
-                </ul>
-
-             </ul>
-
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/timeAverages-6879687800" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/timeAverages-6879687800">
-                    timeAverages<span>(2)</span></label>
-
-
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : time averaged data</li>
-                </ul>
-
-                    <ul id="ds-1-/timeAverages/u-6881642200" class="h5tb-var-list">
-                    <input id="ds-2-/timeAverages/u-6881648700" class="h5tb-varname-in" type="checkbox">
-                    <label class='h5tb-varname'
-                        for="ds-2-/timeAverages/u-6881648700">u</label>
-                    <span class="h5tb-dims">(2, 64, 86, 2)</span>  [
-                    <span class="h5tb-unit">m/s</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : mean u-component</li>
-
-                </ul>
-
-             </ul>
-
-
-                    <ul id="ds-1-/timeAverages/v-6882430300" class="h5tb-var-list">
-                    <input id="ds-2-/timeAverages/v-6882436400" class="h5tb-varname-in" type="checkbox">
-                    <label class='h5tb-varname'
-                        for="ds-2-/timeAverages/v-6882436400">v</label>
-                    <span class="h5tb-dims">(2, 64, 86, 2)</span>  [
-                    <span class="h5tb-unit">m/s</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : mean v-component</li>
-
-                </ul>
-
-             </ul>
-
-</li>
-</ul>
-</li>
-</ul>
-</div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[&lt;HDF5 wrapper dataset shape &#34;(2, 5, 64, 86, 2)&#34; (&lt;float32&gt;)&gt;]
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (5,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
+[&lt;HDF5 dataset &#34;velocity&#34;: shape (5,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;,
+ &lt;HDF5 dataset &#34;velocity&#34;: shape (3,), type &#34;&lt;i4&#34;, convention &#34;cflike&#34;&gt;]
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">

@@ -32,4 +32,4 @@ View `build/index.html` with your browser.
 
 * error message: ```no theme named 'sphinx_rtd_theme' found (missing theme.conf?)```
   <br>Maybe theme is not installed. Try: ```python3 -m pip install sphinx_rtd_theme```
-* quckref of rst files: https://docutils.sourceforge.io/docs/user/rst/quickref.html
+* quickref of rst files: https://docutils.sourceforge.io/docs/user/rst/quickref.html

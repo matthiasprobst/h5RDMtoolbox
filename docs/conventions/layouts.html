@@ -39,7 +39,7 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="HDF5-Wrapper" href="../wrapper/index.html" />
+    <link rel="next" title="How to …. ?" href="../howto/howto.html" />
     <link rel="prev" title="Standard Name Convention" href="conventions.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -120,41 +120,19 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1 current active has-children">
-  <a class="reference internal" href="index.html">
-   Conventions
-  </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul class="current">
-   <li class="toctree-l2">
-    <a class="reference internal" href="conventions.html">
-     Standard Name Convention
-    </a>
-   </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
-     Layouts
-    </a>
-   </li>
-  </ul>
- </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../wrapper/index.html">
-   Wrapper
+   HDF5-Wrapper
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
   <ul>
    <li class="toctree-l2">
     <a class="reference internal" href="../wrapper/CreateFile.html">
-     Create a HDF file
+     Create an HDF file
     </a>
    </li>
    <li class="toctree-l2">
@@ -173,18 +151,13 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/FileExploration.html">
-     File exploration
+    <a class="reference internal" href="../wrapper/DumpFile.html">
+     File content inspection
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../wrapper/NaturalNaming.html">
      Natural Naming
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/Conventions.html">
-     (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
@@ -202,16 +175,28 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/SpecializedWrappers.html">
-     Specialized Wrappers
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../wrapper/wrapper_and_conventions/index.html">
+     Wrapper &amp; Conventions
     </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../wrapper/wrapper_and_conventions/cflike.html">
+       CF-like
+      </a>
+     </li>
+    </ul>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../database/index.html">
-   Database
+   HDF5-Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -221,12 +206,34 @@
   <ul>
    <li class="toctree-l2">
     <a class="reference internal" href="../database/Serverless.html">
-     HDF File as a Database
+     Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="index.html">
+   Conventions
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="conventions.html">
+     Standard Name Convention
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Layouts
     </a>
    </li>
   </ul>
@@ -624,10 +631,11 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars on prompts */
+/* disable scrollbars and line breaks on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
+    white-space: pre;
 }
 
 /* input/output area */
@@ -1064,14 +1072,14 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>H5FileLayout File "H5File"</p>
+<p>H5FileLayout File "tmp1"</p>
 
 <div class='h5tb-warp'>
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-11657906000" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-11657906000">
+                    <input id="group-ds-/-6450441600" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-6450441600">
                     /<span>(0)</span></label>
 
 
@@ -1112,10 +1120,10 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-09-29_22:16:08,73 ERROR    [layout.py:94] Attribute title missing in group /
-2022-09-29_22:16:08,73 ERROR    [layout.py:94] Attribute title missing in group /
-2022-09-29_22:16:08,81 ERROR    [layout.py:94] Attribute title missing in group /
-2022-09-29_22:16:08,81 ERROR    [layout.py:94] Attribute title missing in group /
+2022-10-21_17:39:24,538 ERROR    [layout.py:94] Attribute title missing in group /
+2022-10-21_17:39:24,538 ERROR    [layout.py:94] Attribute title missing in group /
+2022-10-21_17:39:24,538 ERROR    [layout.py:94] Attribute title missing in group /
+2022-10-21_17:39:24,538 ERROR    [layout.py:94] Attribute title missing in group /
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1136,17 +1144,25 @@ repr of layout:
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout -s H5File -c <span class="s2">&quot;{filename}&quot;</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span> h5tbx layout -l H5File -c <span class="s2">&quot;{filename}&quot;</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Checking C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\tmp\tmp155\tmp2 with layout H5File
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-usage: h5tbx [-h] [-V] [-D] [-u] [-d DUMP] {layout,standard_name,mongodb} ...
-h5tbx: error: unrecognized arguments: -s H5File
+2022-10-21_17:39:26,412 ERROR    [layout.py:94] Attribute title missing in group /
+2022-10-21_17:39:26,412 ERROR    [layout.py:94] Attribute title missing in group /
 </pre></div></div>
 </div>
 </section>
@@ -1158,7 +1174,8 @@ h5tbx: error: unrecognized arguments: -s H5File
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;A test file&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;A test file&#39;</span>
     <span class="n">hdf_filename</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span>
 </pre></div>
 </div>
@@ -1384,8 +1401,8 @@ input.h5tb-varname-in:checked + label:before {
 
           <ul style="list-style-type: none;" class="h5grp-sections">
                 <li>
-                    <input id="group-ds-/-18064625700" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-18064625700">
+                    <input id="group-ds-/-8647271800" type="checkbox" checked>
+                    <label style="font-weight: bold" for="group-ds-/-8647271800">
                     /<span>(0)</span></label>
 
 
@@ -1417,8 +1434,8 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-09-29_22:16:14,451 ERROR    [layout.py:94] Attribute type missing in group /
-2022-09-29_22:16:14,451 ERROR    [layout.py:94] Attribute type missing in group /
+2022-10-21_17:39:26,730 ERROR    [layout.py:94] Attribute type missing in group /
+2022-10-21_17:39:26,730 ERROR    [layout.py:94] Attribute type missing in group /
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1485,14 +1502,14 @@ H5FileLayout issue report (1 issues)
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-09-29_22:16:14,571 ERROR    [layout.py:31] Wrong shape of dataset /data: (20, 30) != (20, 32)
-2022-09-29_22:16:14,571 ERROR    [layout.py:31] Wrong shape of dataset /data: (20, 30) != (20, 32)
-2022-09-29_22:16:14,571 ERROR    [layout.py:77] Neither of the attribute standard_name, long_name exist in /data
-2022-09-29_22:16:14,571 ERROR    [layout.py:77] Neither of the attribute standard_name, long_name exist in /data
-2022-09-29_22:16:14,581 ERROR    [layout.py:68] Base-units check failed for /data: kg != m
-2022-09-29_22:16:14,581 ERROR    [layout.py:68] Base-units check failed for /data: kg != m
-2022-09-29_22:16:14,594 ERROR    [layout.py:71] Attribute units missing in /x
-2022-09-29_22:16:14,594 ERROR    [layout.py:71] Attribute units missing in /x
+2022-10-21_17:39:26,767 ERROR    [layout.py:31] Wrong shape of dataset /data: (20, 30) != (20, 32)
+2022-10-21_17:39:26,767 ERROR    [layout.py:31] Wrong shape of dataset /data: (20, 30) != (20, 32)
+2022-10-21_17:39:26,770 ERROR    [layout.py:77] Neither of the attribute standard_name, long_name exist in /data
+2022-10-21_17:39:26,770 ERROR    [layout.py:77] Neither of the attribute standard_name, long_name exist in /data
+2022-10-21_17:39:26,770 ERROR    [layout.py:68] Base-units check failed for /data: kg != m
+2022-10-21_17:39:26,770 ERROR    [layout.py:68] Base-units check failed for /data: kg != m
+2022-10-21_17:39:26,774 ERROR    [layout.py:71] Attribute units missing in /x
+2022-10-21_17:39:26,774 ERROR    [layout.py:71] Attribute units missing in /x
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1512,6 +1529,14 @@ H5FileLayout issue report (4 issues)
 <section id="Groups">
 <h3>Groups<a class="headerlink" href="#Groups" title="Permalink to this headline">#</a></h3>
 <p>Defining groups is straight forward and similar to datasets, just without the option to define shape/dim and similar.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
 </section>
 </section>
 </section>
@@ -1531,10 +1556,10 @@ H5FileLayout issue report (4 issues)
             <p class="prev-next-title">Standard Name Convention</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="../wrapper/index.html" title="next page">
+    <a class='right-next' id="next-link" href="../howto/howto.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title"> HDF5-Wrapper</p>
+        <p class="prev-next-title">How to …. ?</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

@@ -39,8 +39,8 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="(Naming) Conventions" href="Conventions.html" />
-    <link rel="prev" title="File exploration" href="FileExploration.html" />
+    <link rel="next" title="Special I/O" href="SpecialIO.html" />
+    <link rel="prev" title="File content inspection" href="DumpFile.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -120,41 +120,19 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../conventions/index.html">
-   Conventions
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/conventions.html">
-     Standard Name Convention
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/layouts.html">
-     Layouts
-    </a>
-   </li>
-  </ul>
- </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="index.html">
-   Wrapper
+   HDF5-Wrapper
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
   <ul class="current">
    <li class="toctree-l2">
     <a class="reference internal" href="CreateFile.html">
-     Create a HDF file
+     Create an HDF file
     </a>
    </li>
    <li class="toctree-l2">
@@ -173,18 +151,13 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="FileExploration.html">
-     File exploration
+    <a class="reference internal" href="DumpFile.html">
+     File content inspection
     </a>
    </li>
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
      Natural Naming
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="Conventions.html">
-     (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
@@ -202,16 +175,28 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="SpecializedWrappers.html">
-     Specialized Wrappers
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="wrapper_and_conventions/index.html">
+     Wrapper &amp; Conventions
     </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="wrapper_and_conventions/cflike.html">
+       CF-like
+      </a>
+     </li>
+    </ul>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../database/index.html">
-   Database
+   HDF5-Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -221,12 +206,34 @@
   <ul>
    <li class="toctree-l2">
     <a class="reference internal" href="../database/Serverless.html">
-     HDF File as a Database
+     Serverless HDF Database
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../conventions/index.html">
+   Conventions
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/conventions.html">
+     Standard Name Convention
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/layouts.html">
+     Layouts
     </a>
    </li>
   </ul>
@@ -543,10 +550,11 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars on prompts */
+/* disable scrollbars and line breaks on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
+    white-space: pre;
 }
 
 /* input/output area */
@@ -693,7 +701,7 @@ div.rendered_html tbody tr:hover {
 <h1>Natural Naming<a class="headerlink" href="#Natural-Naming" title="Permalink to this headline">#</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> supports attribute style access (natural naming) on datasets, groups and attributes instead of the known dictionary style. This means that HDF objects must not be named as existing attributes of used instances, e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
@@ -702,21 +710,28 @@ div.rendered_html tbody tr:hover {
 </div>
 <p>You can enable natural naming by the following line. However, <code class="docutils literal notranslate"><span class="pre">True</span></code> is the default.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">natural_naming</span> <span class="o">=</span> <span class="kc">True</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">CONFIG</span><span class="o">.</span><span class="n">NATURAL_NAMING</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">CONFIG</span><span class="o">.</span><span class="n">CONVENTION</span> <span class="o">=</span> <span class="s1">&#39;default&#39;</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;Pa&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;pressure&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;user&#39;</span><span class="p">:</span> <span class="s1">&#39;me&#39;</span><span class="p">})</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,))</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">test</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -725,29 +740,24 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-H5Dataset &#34;/test&#34;
------------------
-shape:         (3,)
-long_name:     pressure
-standard_name: None
-units:         Pa
-me
+&lt;HDF5 dataset &#34;test&#34;: shape (3,), type &#34;&lt;f4&#34;, convention &#34;default&#34;&gt;
 </pre></div></div>
 </div>
+<p>Disabeling the natural naming configuration will raise an <code class="docutils literal notranslate"><span class="pre">AttributeError</span></code> when running the above code:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">natural_naming</span> <span class="o">=</span> <span class="kc">False</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">CONFIG</span><span class="o">.</span><span class="n">NATURAL_NAMING</span> <span class="o">=</span> <span class="kc">False</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;Pa&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;pressure&#39;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;user&#39;</span><span class="p">:</span> <span class="s1">&#39;me&#39;</span><span class="p">})</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,))</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">test</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -781,17 +791,17 @@ me
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="FileExploration.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="DumpFile.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">File exploration</p>
+            <p class="prev-next-title">File content inspection</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="Conventions.html" title="next page">
+    <a class='right-next' id="next-link" href="SpecialIO.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">(Naming) Conventions</p>
+        <p class="prev-next-title">Special I/O</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>
