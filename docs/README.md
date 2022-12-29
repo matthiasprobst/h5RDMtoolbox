@@ -1,5 +1,11 @@
 # Documentation
 
+Make sure to have installed all required dependencies in order to 
+build the documentation
+```bash
+pip install -e "h5rdmtoolbox[docs]"
+```
+
 https://www.sphinx-doc.org/en/master/usage/installation.html
 
 Run
