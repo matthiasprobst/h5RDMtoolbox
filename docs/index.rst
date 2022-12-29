@@ -34,7 +34,7 @@ Install from source from github:
 
 .. code:: sh
 
-   python3.8 -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
+   python -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
 
 Clone and install from source:
 
