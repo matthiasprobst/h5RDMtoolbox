@@ -294,9 +294,12 @@ class H5Layout:
         """Return number of found issues"""
         return len(self._issues_list)
 
-    def __init__(self, filename: Path, hdf5printer: _repr.H5Repr):
+    def __init__(self, filename: Path, h5repr: _repr.H5Repr = None):
         self.filename = Path(filename)
-        self.HDF5printer = hdf5printer
+        if h5repr is None:
+            self.h5repr = _repr.H5Repr()
+        else:
+            self.h5repr = h5repr
         self._issues_list = []
         if not self.filename.exists():
             # touch file:
@@ -352,12 +355,12 @@ class H5Layout:
         )
 
     @staticmethod
-    def load_registered(*, name: str, hdf5printer: _repr.H5Repr) -> 'H5Layout':
+    def load_registered(name: str, *, h5repr: _repr.H5Repr) -> 'H5Layout':
         """Load from user data dir, copy to filename. If filename is None a tmp file is created"""
         src_filename = H5Layout.find_registered_filename(name)
         filename = generate_temporary_filename(suffix='.hdf')
         shutil.copy2(src_filename, filename)
-        return H5Layout(filename, hdf5printer=hdf5printer)
+        return H5Layout(filename, h5repr=h5repr)
 
     def File(self, mode='r') -> H5FileLayout:
         """File instance"""
@@ -368,20 +371,20 @@ class H5Layout:
         preamble = f'<p>H5FileLayout File "{self.filename.stem}"</p>\n'
         with h5py.File(self.filename, mode='r') as h5:
             if max_attr_length:
-                self.HDF5printer.__html__.max_attr_length = max_attr_length
-            self.HDF5printer.__html__(h5, preamble=preamble)
+                self.h5repr.__html__.max_attr_length = max_attr_length
+            self.h5repr.__html__(h5, preamble=preamble)
 
     def sdump(self):
         """string representation of file content"""
         with H5FileLayout(self.filename) as lay:
-            return self.HDF5printer.__str__(lay)
+            return self.h5repr.__str__(lay)
 
     def dump(self, max_attr_length=None):
         """string representation of file content"""
         with H5FileLayout(self.filename) as lay:
             if max_attr_length:
-                self.HDF5printer.__html__.max_attr_length = max_attr_length
-            self.HDF5printer.__html__(lay)
+                self.h5repr.__html__.max_attr_length = max_attr_length
+            self.h5repr.__html__(lay)
 
     def write(self) -> pathlib.Path:
         """write the static layout file to user data dir"""

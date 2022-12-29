@@ -1,13 +1,12 @@
 import pathlib
 import unittest
-
 from psutil._compat import FileExistsError
 
-from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox import H5File
+from h5rdmtoolbox.conventions.layout import H5Layout
 
 
-class TestCnventions(unittest.TestCase):
+class TestConventions(unittest.TestCase):
 
     def setUp(self) -> None:
         """before tests"""
@@ -25,7 +24,7 @@ class TestCnventions(unittest.TestCase):
             h5.attrs['hello'] = 'world'
         self.filenames.append(h5.hdf_filename)
 
-        layout = H5Layout(h5.hdf_filename)
+        layout = H5Layout(h5.hdf_filename, h5repr=None)
         registered_filename = layout.register()
         self.filenames.append(registered_filename)
 
@@ -43,15 +42,15 @@ class TestCnventions(unittest.TestCase):
         self.filenames.append(registered_filename)
         registered_filename.unlink()
 
-        layout = H5Layout(h5.hdf_filename)
+        layout = H5Layout(h5.hdf_filename, h5repr=None)
         registered_filename = layout.register(name='mylayout.hdf')
         self.filenames.append(registered_filename)
 
-        h5lay = H5Layout.load_registered('mylayout.hdf')
+        h5lay = H5Layout.load_registered('mylayout.hdf', h5repr=None)
         self.assertTrue(h5lay.filename.exists())
 
-        h5lay = H5Layout.load_registered('mylayout')
+        h5lay = H5Layout.load_registered('mylayout', h5repr=None)
         self.assertTrue(h5lay.filename.exists())
 
         with self.assertRaises(FileNotFoundError):
-            H5Layout.load_registered('helloworld')
+            H5Layout.load_registered('helloworld', h5repr=None)

@@ -34,7 +34,7 @@ Layouts
     
     
 
-- Check an HDF5 file (my_file) usign a registered layout (my_layout):
+- Check an HDF5 file (my_file) using a registered layout (my_layout):
 
 .. code-block:: bash
 
@@ -42,7 +42,7 @@ Layouts
     
     
 
-- Check an HDF5 file (my_file) usign a layout file (my_layout.hdf):
+- Check an HDF5 file (my_file) using a layout file (my_layout.hdf):
 
 .. code-block:: bash
 

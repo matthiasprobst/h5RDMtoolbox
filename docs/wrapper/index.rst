@@ -34,4 +34,3 @@ Specialized classes associated with a convention get a dedicated section (:ref:`
     Visualization.ipynb
     Extensions.ipynb
     Wrapper & Conventions <wrapper_and_conventions/index>
-

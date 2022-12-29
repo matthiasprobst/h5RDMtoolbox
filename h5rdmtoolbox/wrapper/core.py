@@ -46,7 +46,7 @@ class H5Group(h5py.Group):
     """Inherited Group of the package h5py
     """
     convention = 'default'
-    HDF5printer = H5Repr()
+    hdfrepr = H5Repr()
 
     @property
     def attrs(self):
@@ -77,16 +77,14 @@ class H5Group(h5py.Group):
         import re
         return [ds for ds in dsets if re.search(pattern, os.path.basename(ds.name))]
 
-    def get_groups(self, pattern=None) -> List[h5py.Group]:
+    def get_groups(self, pattern: str = '.*', rec: bool = False) -> List[h5py.Group]:
         """Return list of groups in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the groups."""
-        grps = [v for v in self.values() if isinstance(v, h5py.Group)]
-        if pattern is None:
-            return grps
-        import re
-        return [grp for grp in grps if re.search(pattern, os.path.basename(grp.name))]
+        if pattern == '.*' and not rec:
+            return [v for v in self.values() if isinstance(v, h5py.Group)]
+        return self.find({'$basename': {'$regex': pattern}}, rec=rec)
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
@@ -136,29 +134,34 @@ class H5Group(h5py.Group):
         return ret
 
     def __getattr__(self, item):
-        if CONFIG.NATURAL_NAMING:
-            if item in self.__dict__:
-                return super().__getattribute__(item)
-            try:
-                if item in self:
-                    if isinstance(self[item], h5py.Group):
-                        return self._h5grp(self[item].id)
-                    else:
-                        return self._h5ds(self[item].id)
-                else:
-                    # try replacing underscores with spaces:
-                    _item = item.replace('_', ' ')
-                    if _item in self:
-                        if isinstance(self[_item], h5py.Group):
-                            return self.__class__(self[_item].id)
-                        else:
-                            return self._h5ds(self[_item].id)
-                    else:
-                        return super().__getattribute__(item)
-            except AttributeError:
-                raise AttributeError(item)
-        else:
+        try:
             return super().__getattribute__(item)
+        except AttributeError as e:
+            if CONFIG.NATURAL_NAMING:
+                pass
+            else:
+                raise AttributeError(e)
+
+        if item in self.__dict__:
+            return super().__getattribute__(item)
+        try:
+            if item in self:
+                if isinstance(self[item], h5py.Group):
+                    return self._h5grp(self[item].id)
+                else:
+                    return self._h5ds(self[item].id)
+            else:
+                # try replacing underscores with spaces:
+                _item = item.replace('_', ' ')
+                if _item in self:
+                    if isinstance(self[_item], h5py.Group):
+                        return self.__class__(self[_item].id)
+                    else:
+                        return self._h5ds(self[_item].id)
+                else:
+                    return super().__getattribute__(item)
+        except AttributeError:
+            raise AttributeError(item)
 
     def __str__(self) -> str:
         return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{self.convention}")>'
@@ -1036,28 +1039,15 @@ class H5Group(h5py.Group):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used"""
         if max_attr_length:
-            self.HDF5printer.max_attr_length = max_attr_length
-        return self.HDF5printer.__html__(self)
-        # self.HDF5printer.max_attr_length = max_attr_length
-        # display(HTML(self.HDF5printer.html_dump(self)))
-        # if max_attr_length is None:
-        #     max_attr_length = CONFIG.HTML_MAX_STRING_LENGTH
-        # if self.name == '/':
-        #     preamble = f'<p>{Path(self.filename).name}</p>\n'
-        # else:
-        #     preamble = f'<p>Group: {self.name}</p>\n'
-        # if check:
-        #     preamble += f'<p>Check resulted in {self.check()} issues.</p>\n'
-        # build_debug_html_page = kwargs.pop('build_debug_html_page', False)
-        # display(HTML(h5file_html_repr(self, max_attr_length, preamble=preamble,
-        #                               build_debug_html_page=build_debug_html_page)))
+            self.hdfrepr.max_attr_length = max_attr_length
+        return self.hdfrepr.__html__(self)
 
     def _repr_html_(self):
-        return self.HDF5printer.html_dump(self)
+        return self.hdfrepr.html_dump(self)
 
     def sdump(self):
         """string representation of group"""
-        return self.HDF5printer.__str__(self)
+        return self.hdfrepr.__str__(self)
 
 
 class DatasetValues:
@@ -1374,16 +1364,16 @@ class H5File(h5py.File, H5Group):
     @layout.setter
     def layout(self, layout: Union[Path, str, H5Layout]):
         if isinstance(layout, str):
-            self._layout = H5Layout.load_registered(name=layout, hdf5printer=self.HDF5printer)
+            self._layout = H5Layout.load_registered(name=layout, h5repr=self.hdfrepr)
         elif isinstance(layout, Path):
-            self._layout = H5Layout(layout, self.HDF5printer)
+            self._layout = H5Layout(layout, self.hdfrepr)
         elif layout is None:
-            self._layout = H5Layout.load_registered(name=self.__class__.__name__, hdf5printer=self.HDF5printer)
+            self._layout = H5Layout.load_registered(name=self.__class__.__name__, h5repr=self.hdfrepr)
         elif isinstance(layout, H5Layout):
-            pass
+            self._layout = layout
         else:
             raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or H5Layout but got '
-                            f'{type(self._layout)}')
+                            f'{type(layout)}')
 
     def __init__(self,
                  name: Path = None,
@@ -1452,7 +1442,7 @@ class H5File(h5py.File, H5Group):
 
     def __repr__(self) -> str:
         r = super().__repr__()
-        return r.replace('HDF5', f'HDF5 (convention {self.convention})')
+        return r.replace('HDF5', f'HDF5 (convention: {self.convention})')
 
     def __str__(self) -> str:
         return f"<class 'h5rdmtoolbox.H5File' convention: {self.convention}>"

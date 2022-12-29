@@ -148,11 +148,19 @@ def process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:
     if isinstance(objfilter, str):
         if objfilter.lower() == 'group':
             return h5py.Group
+        if objfilter.lower() == 'groups':
+            return h5py.Group
         if objfilter.lower() == 'dataset':
+            return h5py.Dataset
+        if objfilter.lower() == 'datasets':
             return h5py.Dataset
         if objfilter.lower() == '$group':
             return h5py.Group
+        if objfilter.lower() == '$groups':
+            return h5py.Group
         if objfilter.lower() == '$dataset':
+            return h5py.Dataset
+        if objfilter.lower() == '$datasets':
             return h5py.Dataset
         raise NameError(
             f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')

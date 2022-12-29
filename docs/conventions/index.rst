@@ -21,14 +21,14 @@ long_name
 standard_name
     A string respecting more or less strict rules defined by a community and defined in a name table.
 
-Note, that the `long_name` attribute does not guarentee interoperability but `standard_name` does, if
+Note, that the `long_name` attribute does not guarantee interoperability but `standard_name` does, if
 the convention is known to each user.
 In addition to this, an additional attribute is required, namely `units`. As we work with scientific
 data, each dataset has a physical unit, e.g. [m]. If no physical unit can be set, it might because the
-vairable is dimensionless, which is an information about the unit anyhowe, so we set `units=''`.
+variable is dimensionless, which is an information about the unit anyhow, so we set `units=''`.
 
 If the `standard_name` is provided in the dataset creation method and a standard name table (snt) is
-available, then `units` is verified by that table. The table holds the base-units (canoncical units) for
+available, then `units` is verified by that table. The table holds the base-units (canonical units) for
 each standard name (check is performed on basic SI-units).
 
 Standardized Name Table

@@ -1,10 +1,9 @@
-import logging
-import unittest
-from pathlib import Path
-
 import h5py
+import logging
 import numpy as np
+import unittest
 import yaml
+from pathlib import Path
 from pint_xarray import unit_registry as ureg
 
 from h5rdmtoolbox import config
@@ -312,8 +311,10 @@ class TestH5File(unittest.TestCase):
             h5.create_group('grpXYZ', attrs=dict(b=2))
             h5.create_group('mygrp_2')
             groups = h5.get_groups()
+            self.assertEqual(len(groups), 4)
             self.assertEqual(groups, [h5['grpXYZ'], h5['grp_1'], h5['grp_2'], h5['mygrp_2']])
             groups = h5.get_groups('^grp_[0-9]$')
+            self.assertEqual(len(groups), 2)
             self.assertEqual(groups, [h5['grp_1'], h5['grp_2']])
             self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=True))
 

@@ -18,7 +18,7 @@ class TestCommon(unittest.TestCase):
 
     def setUp(self) -> None:
         self.wrapper_classes = (core.H5File, cflike.H5File)
-        self.wrapper_grouclasses = (core.H5Group, cflike.H5Group)
+        self.wrapper_group_classes = (core.H5Group, cflike.H5Group)
 
     def test_layout(self):
         for wc in self.wrapper_classes:
@@ -44,14 +44,14 @@ class TestCommon(unittest.TestCase):
 
     def test_create_group(self):
         """testing the creation of groups"""
-        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_group_classes):
             with wc() as h5:
                 self.assertEqual(h5.mode, 'r+')
                 grp = h5.create_group('testgrp')
                 self.assertIsInstance(grp, gc)
 
     def test_attrs(self):
-        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
+        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_group_classes):
             with CLS() as h5:
                 # root attributes
                 h5.attrs['an_attr'] = 'a_string'
@@ -104,14 +104,14 @@ class TestCommon(unittest.TestCase):
         with h5tbx.H5File() as h5:
             h5.attrs['mandatory_attribute'] = 1
 
-        for wc, gc in zip(self.wrapper_classes, self.wrapper_grouclasses):
+        for wc, gc in zip(self.wrapper_classes, self.wrapper_group_classes):
             with wc() as h5:
                 n_issuess = h5.check()
                 self.assertIsInstance(n_issuess, int)
                 self.assertTrue(n_issuess > 0)
 
     def test_properties(self):
-        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_grouclasses):
+        for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_group_classes):
             with CLS() as h5:
                 self.assertIsInstance(h5.creation_time, datetime)
                 self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
