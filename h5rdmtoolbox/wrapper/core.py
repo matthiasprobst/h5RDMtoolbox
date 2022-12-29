@@ -1043,7 +1043,7 @@ class H5Group(h5py.Group):
         return self.hdfrepr.__html__(self)
 
     def _repr_html_(self):
-        return self.hdfrepr.html_dump(self)
+        return self.hdfrepr.__html__(self)
 
     def sdump(self):
         """string representation of group"""
