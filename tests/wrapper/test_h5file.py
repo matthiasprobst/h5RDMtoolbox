@@ -315,7 +315,7 @@ class TestH5File(unittest.TestCase):
             self.assertEqual(groups, [h5['grpXYZ'], h5['grp_1'], h5['grp_2'], h5['mygrp_2']])
             groups = h5.get_groups('^grp_[0-9]$')
             self.assertEqual(len(groups), 2)
-            self.assertEqual(groups, [h5['grp_1'], h5['grp_2']])
+            self.assertEqual(sorted(groups), sorted([h5['grp_1'], h5['grp_2']]))
             self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=True))
 
             h5.create_group('grpXYZ/grp123', attrs=dict(a=1))
