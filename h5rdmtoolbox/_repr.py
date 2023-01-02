@@ -2,12 +2,13 @@ import h5py
 import os
 import pkg_resources
 from IPython.display import HTML, display
+from abc import abstractmethod
 from numpy import ndarray
 from time import perf_counter_ns
 
 from .config import CONFIG as config
 
-IGNORE_ATTRS = ('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
+H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
     CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
 except FileNotFoundError:
@@ -66,17 +67,14 @@ def oktext(string):
     return f"{BColors.OKGREEN}{string}{BColors.ENDC}"
 
 
-from abc import abstractmethod
-
-
 class _HDF5StructureRepr:
 
     def __init__(self, ignore_attrs=None):
         self.base_intent = '  '
         self.max_attr_length = None
-        self.collapsed = False
+        self.collapsed = True
         if ignore_attrs is None:
-            self.ignore_attrs = []
+            self.ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
         else:
             self.ignore_attrs = ignore_attrs
 
@@ -130,7 +128,12 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
                 #         print(self.base_intent * (indent + 2) + self.__attr_str__(attr_name, attr_value))
 
     def __dataset__(self, key, item) -> str:
-        return f"\033[1m{key}\033[0m: {item.shape} dtype: {item.dtype}"
+        if item.dtype.char == 'S':
+            # handel string datasets:
+            return self.__stringdataset__(key, item)
+        if item.ndim == 0:
+            return self.__0Ddataset__(key, item)
+        return self.__NDdataset__(key, item)
 
     def __stringdataset__(self, name, h5dataset) -> str:
         """string representation of a string dataset"""
@@ -158,11 +161,13 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
 
 class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
-    def __call__(self, group, preamble: str = None, indent: int = 0):
+    def __call__(self, group, collapsed: bool = True, preamble: str = None, indent: int = 0):
         if isinstance(group, h5py.Group):
             h5group = group
         else:
             h5group = group['/']
+
+        self.collapsed = collapsed
 
         _id = h5group.name + perf_counter_ns().__str__()
 
@@ -336,6 +341,7 @@ class H5Repr:
     """Class managing the sting/html output of HDF5 content"""
 
     def __init__(self, str_repr: _HDF5StructureRepr = None, html_repr: _HDF5StructureRepr = None):
+        print(f'str_repr: {str_repr}')
         if str_repr is None:
             self.str_repr = HDF5StructureStrRepr()
         else:
@@ -346,8 +352,8 @@ class H5Repr:
         else:
             self.html_repr = html_repr
 
-    def __str__(self, group):
+    def __str__(self, group) -> str:
         return self.str_repr(group=group)
 
-    def __html__(self, group, preamble: str = None):
-        display(HTML(self.html_repr(group=group, preamble=preamble)))
+    def __html__(self, group, collapsed: bool = True, preamble: str = None):
+        display(HTML(self.html_repr(group=group, collapsed=collapsed, preamble=preamble)))

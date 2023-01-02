@@ -27,7 +27,7 @@ from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
 from .. import utils
-from .._repr import H5Repr
+from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._user import user_dirs
 from .._version import __version__
 from ..config import CONFIG
@@ -175,7 +175,7 @@ class H5Group(h5py.Group):
     def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
-            ignore_attrs = []
+            ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
         tree = {ak: av for ak, av in self.attrs.items()}
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
@@ -1035,12 +1035,12 @@ class H5Group(h5py.Group):
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
-    def dump(self, max_attr_length=None):
+    def dump(self, collapsed: bool = True, max_attr_length=None):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used"""
         if max_attr_length:
             self.hdfrepr.max_attr_length = max_attr_length
-        return self.hdfrepr.__html__(self)
+        return self.hdfrepr.__html__(self, collapsed=collapsed)
 
     def _repr_html_(self):
         return self.hdfrepr.__html__(self)

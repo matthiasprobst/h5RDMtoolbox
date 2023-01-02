@@ -1,4 +1,4 @@
-"""Testing common funcitonality across all wrapper classs"""
+"""Testing common functionality across all wrapper class"""
 
 import datetime
 import h5py

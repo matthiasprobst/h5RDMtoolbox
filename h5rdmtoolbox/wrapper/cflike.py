@@ -2,12 +2,10 @@
 """
 import h5py
 import logging
-import os
 import pathlib
 import warnings
 import xarray as xr
 from pint_xarray import unit_registry as ureg
-from time import perf_counter_ns
 from typing import Union, List
 
 from h5rdmtoolbox.conventions.registration import register_hdf_attribute
@@ -275,7 +273,7 @@ class H5Group(core.H5Group):
 
 class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
 
-    def __0Ddataset_str__(self, name: str, h5dataset: h5py.Dataset) -> str:
+    def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
         """string representation of a 0D dataset"""
         value = h5dataset.values[()]
         if isinstance(value, float):
@@ -285,9 +283,10 @@ class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
         units = self.get_string_repr_of_unit(h5dataset)
         return f"\033[1m{name}\033[0m {value} [{units}], dtype: {h5dataset.dtype}"
 
-    def __NDdataset_str__(self, name, h5dataset):
+    def __NDdataset__(self, name, h5dataset):
         """string representation of a ND dataset"""
         units = self.get_string_repr_of_unit(h5dataset)
+        print(units)
         return f"\033[1m{name}\033[0m [{units}]: {h5dataset.shape}, dtype: {h5dataset.dtype}"
 
     @staticmethod
@@ -304,114 +303,6 @@ class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
                 return '-'
             return _unit
         return 'N.A.'
-
-
-class CFLikeHDF5Printer(_repr.H5Repr):
-    """Takes care of printing the HDF5 Structure"""
-
-    def __dataset_str__(self, name, h5dataset) -> str:
-        """overwrite the H5Repr parent method"""
-        if h5dataset.dtype.char == 'S':
-            # handel string datasets:
-            return self.__str_stringdataset__(name, h5dataset)
-        if h5dataset.ndim == 0:
-            return self.__0Ddataset_str__(name, h5dataset)
-        return self.__NDdataset_str__(name, h5dataset)
-
-    def __dataset_html__(self, ds_name, h5dataset, max_attr_length: Union[int, None],
-                         _ignore_attrs=('units', 'DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')):
-        is_numeric = True
-        is_0d = False
-
-        if h5dataset.dtype.char == 'S':
-            # handel string datasets:
-            is_numeric = False
-            _value0d = str(h5dataset.values[()])
-        else:
-            # handel numerical dataset:
-            if h5dataset.ndim == 0:
-                is_0d = True
-                _value0d = h5dataset.values[()]
-                if isinstance(_value0d, float):
-                    _value0d = f'{float(_value0d)} '
-                elif isinstance(_value0d, int):
-                    _value0d = f'{int(_value0d)} '
-            else:
-                _value0d = ''
-
-            if 'units' in h5dataset.attrs:
-                _unit = h5dataset.attrs['units']
-                if _unit in ('', ' '):
-                    _unit = '-'
-            else:
-                _unit = 'N.A.'
-
-        ds_dirname = os.path.dirname(h5dataset.name)
-
-        _shape_repr = ''
-        if is_numeric:
-            if not is_0d:
-                # dimension is not a float or integer --> build the string indicating the shape of the dtaset
-                _shape = h5dataset.shape
-                if CONFIG.ADVANCED_SHAPE_REPR:
-                    _shape_repr = '('
-                    ndim = h5dataset.ndim
-                    for i in range(ndim):
-                        try:
-                            orig_dim_name = h5dataset.dims[i][0].name
-                            if os.path.dirname(orig_dim_name) == ds_dirname:
-                                dim_name = os.path.basename(orig_dim_name)
-                            else:
-                                dim_name = orig_dim_name
-                            if i == 0:
-                                _shape_repr += f'{dim_name}: {_shape[i]}'
-                            else:
-                                _shape_repr += f', {dim_name}: {_shape[i]}'
-                        except RuntimeError:
-                            pass
-                    _shape_repr += ')'
-                    if _shape_repr == '()' and ndim > 0:
-                        _shape_repr = _shape
-                else:
-                    _shape_repr = _shape
-
-        _id1 = f'ds-1-{h5dataset.name}-{perf_counter_ns().__str__()}'
-        _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
-
-        if is_numeric:
-            _html_pre = f"""\n
-                        <ul id="{_id1}" class="h5tb-var-list">
-                        <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                        <label class='h5tb-varname' 
-                            for="{_id2}">{ds_name}</label>
-                        <span class="h5tb-dims">{_shape_repr}</span> 
-                        <span class="h5tb-unit">{_value0d}</span> 
-                         [<span class="h5tb-unit">{_unit}</span>]"""
-        else:
-            _html_pre = f"""\n
-                        <ul id="{_id1}" class="h5tb-var-list">
-                        <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                        <label class='h5tb-varname' 
-                            for="{_id2}">{ds_name}</label>
-                        <span class="h5tb-dims">{_value0d}</span>"""
-
-        # now all attributes of the dataset:
-        # open attribute section:
-        _html_ds_attrs = """\n<ul class="h5tb-attr-list">"""
-        # write attributes:
-        for k, v in h5dataset.attrs.items():
-            if k not in _ignore_attrs:
-                _html_ds_attrs += self.__attr_html__(k, v, max_attr_length)
-        # close attribute section
-        _html_ds_attrs += """\n
-                    </ul>"""
-
-        # close dataset section
-        _html_post = """\n
-                 </ul>
-                 """
-        _html_ds = _html_pre + _html_ds_attrs + _html_post
-        return _html_ds
 
 
 class CFLikeHDF5StructureHTMLRepr(_repr.HDF5StructureHTMLRepr):
@@ -435,8 +326,8 @@ class H5File(core.H5File, H5Group):
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
     convention = 'cflike'
-    HDF5printer = _repr.H5Repr(str_repr=CFLikeHDF5StructureStrRepr(),
-                               html_repr=CFLikeHDF5StructureHTMLRepr())
+    hdfrepr = _repr.H5Repr(str_repr=CFLikeHDF5StructureStrRepr(),
+                           html_repr=CFLikeHDF5StructureHTMLRepr())
 
     def __init__(self,
                  name: pathlib.Path = None,
