@@ -8,15 +8,15 @@ Overview
 ========
 
 The HDF5 Research Data Management Toolbox (h5RDMtoolbox) supports the data creation, processing and sharing
-of data using the HDF5 file format pursuing the `FAIR priciples <https://www.nature.com/articles/sdata201618>`_.
+of data using the HDF5 file format pursuing the `FAIR principles <https://www.nature.com/articles/sdata201618>`_.
 
 
 .. note::
 
-   This project is under current development! The first stable release is expected for Oktober 2022.
+   This project is under current development! The first stable release is expected for January 2023.
 
 
-The packges comes with three sub-packages:
+The packages comes with three sub-packages:
   - :doc:`convention <conventions/index>`: Naming standards mostly for attributes in the HDF5 files
   - :doc:`wrapper <wrapper/index>`: Interacting/working with HDF5 files including many useful features and user-defined methods including static and dynamic layout definition
   - :doc:`database <database/index>`: Practical and easy searching in multiple HDF5 files
@@ -28,13 +28,13 @@ The packges comes with three sub-packages:
 
 Installation
 ------------
-The repository requires python 3.8. or higher (tested for 3.8 and 3.9).
+The repository requires python 3.8. or higher (tested for 3.8, 3.9, 3.10).
 
 Install from source from github:
 
 .. code:: sh
 
-   python3.8 -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
+   python -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
 
 Clone and install from source:
 
@@ -47,10 +47,17 @@ You may install optional dependencies:
 
 .. code:: sh
 
-   python3.8 -m pip install "h5RDMtoolbox[mongodb]"  # installs dependencies to use the database mongoDB
-   python3.8 -m pip install "h5RDMtoolbox[test]"  # installs dependencies for testing
-   python3.8 -m pip install "h5RDMtoolbox[docs]"  # installs dependencies needed to build this documentation
-   python3.8 -m pip install "h5RDMtoolbox[complete]"  # installs all above dependencies
+   # install dependencies to use the database mongoDB
+   python3.8 -m pip install "h5RDMtoolbox[mongodb]"
+
+   # install dependencies for testing
+   python3.8 -m pip install "h5RDMtoolbox[test]"
+
+   # install dependencies needed to build this documentation
+   python3.8 -m pip install "h5RDMtoolbox[docs]"
+
+   # install all above dependencies
+   python3.8 -m pip install "h5RDMtoolbox[complete]"
 
 
 
@@ -61,9 +68,9 @@ You may install optional dependencies:
    :caption: Documentation
 
     Getting Started <gettingstarted/index>
+    HDF5-Wrapper <wrapper/index>
+    HDF5-Database <database/index>
     Conventions <conventions/index>
-    H5wrapper <wrapper/index>
-    H5Database <database/index>
     HowTo <howto/howto.ipynb>
     Glossary <glossary/index>
     References <references>

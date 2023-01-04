@@ -39,7 +39,7 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Specialized Wrappers" href="SpecializedWrappers.html" />
+    <link rel="next" title="Wrapper + Conventions" href="wrapper_and_conventions/index.html" />
     <link rel="prev" title="Visualization" href="Visualization.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -120,41 +120,19 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../conventions/index.html">
-   Conventions
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/conventions.html">
-     Standard Name Convention
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/layouts.html">
-     Layouts
-    </a>
-   </li>
-  </ul>
- </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="index.html">
-   H5wrapper
+   HDF5-Wrapper
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
   <ul class="current">
    <li class="toctree-l2">
     <a class="reference internal" href="CreateFile.html">
-     Create a HDF file
+     Create an HDF file
     </a>
    </li>
    <li class="toctree-l2">
@@ -173,18 +151,13 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="FileExploration.html">
-     File exploration
+    <a class="reference internal" href="DumpFile.html">
+     File content inspection
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="NaturalNaming.html">
      Natural Naming
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="Conventions.html">
-     (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
@@ -202,16 +175,28 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="SpecializedWrappers.html">
-     Specialized Wrappers
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="wrapper_and_conventions/index.html">
+     Wrapper &amp; Conventions
     </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="wrapper_and_conventions/cflike.html">
+       CF-like
+      </a>
+     </li>
+    </ul>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../database/index.html">
-   H5Database
+   HDF5-Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -227,6 +212,28 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../conventions/index.html">
+   Conventions
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/conventions.html">
+     Standard Name Convention
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/layouts.html">
+     Layouts
     </a>
    </li>
   </ul>
@@ -460,11 +467,6 @@ title="Print to PDF"
    </li>
   </ul>
  </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Accessors">
-   Accessors
-  </a>
- </li>
 </ul>
 
     </nav>
@@ -512,11 +514,6 @@ title="Print to PDF"
     </a>
    </li>
   </ul>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#Accessors">
-   Accessors
-  </a>
  </li>
 </ul>
 
@@ -638,10 +635,11 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars on prompts */
+/* disable scrollbars and line breaks on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
+    white-space: pre;
 }
 
 /* input/output area */
@@ -794,13 +792,22 @@ div.rendered_html tbody tr:hover {
 <h3>Registration of properties<a class="headerlink" href="#Registration-of-properties" title="Permalink to this headline">#</a></h3>
 <p>To facilitate and speed up certain tasks and workflows, it might be usefull to have additional properties. Let’s assume we want to store a username as an attribute in the HDF5 file. Let’s further assume that a user name has a firstname and a surname and both must start with a capitalized letter. To catch possible errerneous input by the user, we would need an additional method, e.g. “set_username” or a property “username” of <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.<strong>Two</strong> possible ways to achieve this: <strong>inheritance or
 composition</strong>. The quick and recommended way to add a new class property is to use composition by “registering” the property. Like this we don’t have to rewrite (inherite at least) the API but only simply write the porperty class. Let’s first write a property class “username”. It needs <strong>three methods</strong>: <code class="docutils literal notranslate"><span class="pre">get</span></code>, <code class="docutils literal notranslate"><span class="pre">set</span></code> and <code class="docutils literal notranslate"><span class="pre">delete</span></code>:</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
+<span class="n">h5tbx</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;default&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-12-29_17:22:46,71 INFO     [__init__.py:52] Switched to &#34;default&#34;
+</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
@@ -809,7 +816,7 @@ composition</strong>. The quick and recommended way to add a new class property 
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
 
 <span class="c1"># register a property with setter and getter method:</span>
-<span class="nd">@h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">register_special_property</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@h5tbx</span><span class="o">.</span><span class="n">conventions</span><span class="o">.</span><span class="n">register_hdf_attr</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">cflike</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">username</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;User Name Property. Requires name and ORCID&quot;&quot;&quot;</span>
 
@@ -835,13 +842,13 @@ composition</strong>. The quick and recommended way to add a new class property 
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;standard_test&#39;</span><span class="p">)</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
     <span class="n">ds</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="s1">&#39;First User&#39;</span><span class="p">,</span> <span class="s1">&#39;0000-0001-8729-0482&#39;</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">ds</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="s1">&#39;Second User&#39;</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span> <span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Could not add user due to: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
@@ -853,8 +860,7 @@ composition</strong>. The quick and recommended way to add a new class property 
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 (&#39;First User&#39;, &#39;0000-0001-8729-0482&#39;)
-Expecting a tuple of name and orcid but got &lt;class &#39;str&#39;&gt;
-(&#39;First User&#39;, &#39;0000-0001-8729-0482&#39;)
+Second User
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1060,32 +1066,28 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp0.hdf</p>
-
 <div class='h5tb-warp'>
 
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/-2762892800" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-2762892800">
-                    /<span>(1)</span></label>
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds--4461707200" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--4461707200">
+                        /<span>(1)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.2.0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li>
-                </ul>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    </ul>
 
-                    <ul id="ds-1-/test-2764468800" class="h5tb-var-list">
-                    <input id="ds-2-/test-2764471700" class="h5tb-varname-in" type="checkbox">
-                    <label class='h5tb-varname'
-                        for="ds-2-/test-2764471700">test</label>
-                    <span class="h5tb-dims">(2,)</span>  [
-                    <span class="h5tb-unit">-</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
-         italic">standard_name : standard_test</li><li style="list-style-type: none; font-style: italic">user_name : First User</li><li style="list-style-type: none; font-style: italic">user_orcid : 0000-0001-8729-0482</li>
+                <ul id="ds-1-/test-4463819100" class="h5tb-var-list">
+                <input id="ds-2-/test-4463822400" class="h5tb-varname-in" type="checkbox">
+                <label class='h5tb-varname'
+                    for="ds-2-/test-4463822400">test</label>
+                <span class="h5tb-dims">(2,) (float32)</span>
+<ul class="h5tb-attr-list">
 
-                </ul>
+                    </ul>
 
-             </ul>
+                 </ul>
 
 </li>
 </ul>
@@ -1099,7 +1101,8 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">register_special_dataset</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.wrapper.accessory</span> <span class="kn">import</span> <span class="n">register_special_dataset</span>
+<span class="nd">@register_special_dataset</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">(),</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">DeviceProperty</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Device Accessor class&quot;&quot;&quot;</span>
 
@@ -1122,7 +1125,8 @@ input.h5tb-varname-in:checked + label:before {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;standard_test&#39;</span><span class="p">)</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">ds</span><span class="p">))</span>
     <span class="n">ds</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;my device&#39;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 </pre></div>
@@ -1133,6 +1137,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
+&lt;class &#39;h5rdmtoolbox.wrapper.core.H5Dataset&#39;&gt;
 my device
 </pre></div></div>
 </div>
@@ -1156,7 +1161,7 @@ my device
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyDataset</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyDataset</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="si">}</span><span class="s1">&#39;</span>
 
@@ -1169,23 +1174,24 @@ my device
 </div>
 <p>Next we create a group class with a special method, hat returns all datasets of that group. Also the <code class="docutils literal notranslate"><span class="pre">create_dataset</span></code> method is overwritten. Take care to return <code class="docutils literal notranslate"><span class="pre">MyDataset</span></code> at the end of the method, otherwise dataset class of the parent class is taken.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyGroup</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Group</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyGroup</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">H5Group</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;My group. It prints a logger-like info to the screen and</span>
+<span class="sd">    requires a user when creating datasets&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">get_all_datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;returns all datasets of this group&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">h5py</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)]</span>
 
-    <span class="k">def</span> <span class="nf">create_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">return</span> <span class="vm">__class__</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-    <span class="c1"># def create_dataset(self, *args, **kwargs):</span>
-    <span class="c1">#     return __class__(super().create_dataset(*args, **kwargs).id)</span>
+    <span class="k">def</span> <span class="nf">create_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;creating a group named </span><span class="si">{</span><span class="n">g</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="vm">__class__</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">create_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">ds</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;creating a dataset named </span><span class="si">{</span><span class="n">ds</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">modify</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_h5ds</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
 </pre></div>
@@ -1193,10 +1199,10 @@ my device
 </div>
 <p>The main file wrapper inherites from <code class="docutils literal notranslate"><span class="pre">H5File</span></code> (“root” parent was <code class="docutils literal notranslate"><span class="pre">h5py.File</span></code>) and the new group class. Next, we have set the group and dataset class again, since some methods in the file wrapper class will need that information when returning instances of those classes (e.g. dataset or group creation). Finally we define a new method which sets the user name to the root attributes:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyWrapper</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">,</span> <span class="n">MyGroup</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyWrapper</span><span class="p">(</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">H5File</span><span class="p">,</span> <span class="n">MyGroup</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">set_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_name</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">modify</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="n">user_name</span><span class="p">)</span>
@@ -1205,7 +1211,7 @@ my device
 </div>
 <p>register the dataset and group class in all classes. This is needed, so all return objects are of the newly defined types</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">MyGroup</span><span class="o">.</span><span class="n">_h5ds</span> <span class="o">=</span> <span class="n">MyDataset</span>
@@ -1217,7 +1223,7 @@ my device
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span> <span class="o">=</span> <span class="n">MyWrapper</span><span class="p">()</span>
@@ -1225,7 +1231,7 @@ my device
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">h5</span><span class="p">)</span>
@@ -1233,7 +1239,7 @@ my device
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -1241,127 +1247,308 @@ my device
 __main__.MyWrapper
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[38]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;grp&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+<span class="n">gg</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;grp&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-__main__.MyGroup
+creating a group named /grp
+creating a group named /grp
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span> <span class="o">=</span> <span class="n">gg</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">user</span><span class="o">=</span><span class="s1">&#39;Max&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+creating a dataset named /grp/grp/hello
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gg</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;grp&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">gg</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-__main__.MyGroup
-</pre></div></div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span> <span class="o">=</span> <span class="n">gg</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="s1">&#39;test user&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;a long name&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span><span class="o">.</span><span class="n">set_user</span><span class="p">(</span><span class="s1">&#39;new_user&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<head><style>/*
+CSS inspired by xarray: https://github.com/pydata/xarray
+*/
+.h5tb-header > div,
+.h5tb-header > ul {
+    display: inline;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.h5tb-dataarray-cls,
+.h5tb-dataarray-name {
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+.h5tb-dataarray-name {
+    color: #000;
+}
+
+.h5grp-sections {
+    list-style: none;
+    padding: 3px;
+    margin: 0;
+}
+
+.h5grp-sections input {
+    display: none;
+}
+
+.h5grp-sections label {
+    display: inline;
+}
+
+.h5grp-sections > li > input + label > span {
+    display: inline;
+    margin-left: 4px;
+}
+
+.h5grp-sections > li > input:checked + label > span {
+    display: none;
+}
+
+.h5grp-sections input:enabled + label {
+    cursor: pointer;
+}
+
+.h5grp-sections input:not(.h5tb-values-in) ~ ul {
+    display: none;
+}
+
+.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
+    display: block;
+}
+
+.h5grp-sections > li > input + label {
+    width: 140px;
+    color: #555;
+    font-weight: 500;
+    padding: 4px 0 2px 0;
+}
+
+
+.h5grp-sections > li > input + label:before {
+    display: inline-block;
+    content: '+';
+    font-size: 11px;
+    width: 15px;
+    text-align: center;
+}
+
+.h5grp-sections > li > input:disabled + label:before {
+    color: #777;
+}
+
+.h5grp-sections > li > input:checked + label:before {
+    content: '-';
+}
+
+.h5tb-dim-list {
+    display: inline-block !important;
+    list-style: none;
+    padding: 0;
+}
+
+.h5tb-dim-list li {
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-dim-list:before {
+    content: '(';
+}
+
+.h5tb-dim-list:after {
+    content: ')';
+}
+
+.h5tb-dim-list li:not(:last-child):after {
+    content: ',';
+}
+
+.h5tb-has-index {
+    text-decoration: underline;
+}
+
+.h5tb-var-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-var-list > li {
+    background-color: #fcfcfc;
+    overflow: hidden;
+}
+
+.h5tb-var-list > li:nth-child(odd) {
+    background-color: #efefef;
+}
+
+.h5tb-var-list li:hover {
+    background-color: rgba(3, 169, 244, .2);
+}
+
+.h5tb-var-list li > span {
+    display: inline-block;
+}
+
+input.h5tb-varname-in + label {
+    width: 140px;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+.h5tb-dataset {
+    width: 100px;
+}
+
+.h5tb-attributevalue {
+    width: 100px;
+    text-align: left;
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+input.h5tb-varname-in + label:before {
+    content: ' ';
+    display: inline-block;
+    font-size: 11px;
+    width: 15px;
+    padding-left: 2px;
+    padding-right: 2px;
+    text-align: center;
+    color: #aaa;
+    text-decoration: none !important;
+}
+
+input.h5tb-varname-in:enabled + label:hover:before {
+    color: #000;
+}
+
+input.h5tb-varname-in:checked + label:before {
+    color: #ccc;
+}
+
+.h5tb-dims {
+    width: 280px;
+    white-space: nowrap;
+}
+
+
+.h5tb-unit {
+    width: 96px;
+    white-space: nowrap;
+    padding-right: 2px;
+    text-align: right;
+    color: #555;
+    font-style: italic;
+}
+
+.h5tb-attr-list {
+    list-style: none;
+    background-color: #fff;
+    padding-bottom: 6px;
+    color: #555;
+}
+
+.h5tb-attr-list li,
+.h5tb-attr-list li:hover {
+    background-color: #fff;
+}
+
+.h5tb-dim-highlight {
+    background-color: rgba(3, 169, 244, .2);
+    cursor: pointer;
+}</style></head>
+<div class='h5tb-warp'>
+
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds--276721695600" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--276721695600">
+                        /<span>(1)</span></label>
+
+
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style="list-style-type: none; font-style: italic">user : new_user</li>
+                    </ul>
+
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds-grp-276722396200" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds-grp-276722396200">
+                        grp<span>(1)</span></label>
+
+
+                    <ul class="h5tb-attr-list">
+                    </ul>
+
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds-grp-276722646100" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds-grp-276722646100">
+                        grp<span>(0)</span></label>
+
+
+                    <ul class="h5tb-attr-list">
+                    </ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-/grp/grp/hello
-long_name  a long name
-units
-user       test user
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-__main__.MyDataset
+&lt;HDF5 (convention: default) file &#34;tmp8.hdf&#34; (mode r+)&gt;
 </pre></div></div>
 </div>
 </section>
-</section>
-<section id="Accessors">
-<h2>Accessors<a class="headerlink" href="#Accessors" title="Permalink to this headline">#</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">register_special_dataset</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">wrapper</span><span class="o">.</span><span class="n">h5file</span><span class="o">.</span><span class="n">H5Dataset</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">DeviceProperty</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Device Accessor class&quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span> <span class="o">=</span> <span class="n">ds</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_device_name</span> <span class="o">=</span> <span class="s1">&#39;NoDeviceName&#39;</span>
-
-    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_device_name</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;adds the attribute device_name to the dataset&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;device_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_device_name</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;device_name&#39;</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
 </section>
 </section>
 
@@ -1380,10 +1567,10 @@ __main__.MyDataset
             <p class="prev-next-title">Visualization</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="SpecializedWrappers.html" title="next page">
+    <a class='right-next' id="next-link" href="wrapper_and_conventions/index.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Specialized Wrappers</p>
+        <p class="prev-next-title"> Wrapper + Conventions</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

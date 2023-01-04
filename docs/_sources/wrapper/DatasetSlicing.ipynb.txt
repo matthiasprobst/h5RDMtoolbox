@@ -31,9 +31,15 @@
    "outputs": [],
    "source": [
     "with h5tbx.H5File() as h5:\n",
-    "    dsx = h5.create_dataset('x', data=np.linspace(0, 10, 5), units='mm', long_name='x', make_scale=True)\n",
-    "    dsy = h5.create_dataset('y', data=np.linspace(0, 5, 3), units='mm', long_name='y', make_scale=True)\n",
-    "    h5.create_dataset('data', data=np.random.random((3, 5)), units='m/s', long_name='velocity', attach_scales=(dsy, dsx))\n",
+    "    dsx = h5.create_dataset('x', data=np.linspace(0, 10, 5),\n",
+    "                            attrs=dict(units='mm', long_name='x'),\n",
+    "                            make_scale=True)\n",
+    "    dsy = h5.create_dataset('y', data=np.linspace(0, 5, 3),\n",
+    "                            attrs=dict(units='mm', long_name='y'),\n",
+    "                            make_scale=True)\n",
+    "    h5.create_dataset('data', data=np.random.random((3, 5)),\n",
+    "                      attrs=dict(units='m/s', long_name='velocity'),\n",
+    "                      attach_scales=(dsy, dsx))\n",
     "    data_arr = h5['data'][:]\n",
     "data_arr"
    ]

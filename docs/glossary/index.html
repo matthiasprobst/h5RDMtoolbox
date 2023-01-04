@@ -119,8 +119,8 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../conventions/index.html">
-   Conventions
+  <a class="reference internal" href="../wrapper/index.html">
+   HDF5-Wrapper
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
@@ -129,30 +129,8 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/conventions.html">
-     Standard Name Convention
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/layouts.html">
-     Layouts
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../wrapper/index.html">
-   H5wrapper
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
     <a class="reference internal" href="../wrapper/CreateFile.html">
-     Create a HDF file
+     Create an HDF file
     </a>
    </li>
    <li class="toctree-l2">
@@ -171,18 +149,13 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/FileExploration.html">
-     File exploration
+    <a class="reference internal" href="../wrapper/DumpFile.html">
+     File content inspection
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../wrapper/NaturalNaming.html">
      Natural Naming
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/Conventions.html">
-     (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
@@ -200,16 +173,28 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../wrapper/SpecializedWrappers.html">
-     Specialized Wrappers
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="../wrapper/wrapper_and_conventions/index.html">
+     Wrapper &amp; Conventions
     </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="../wrapper/wrapper_and_conventions/cflike.html">
+       CF-like
+      </a>
+     </li>
+    </ul>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../database/index.html">
-   H5Database
+   HDF5-Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -225,6 +210,28 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../conventions/index.html">
+   Conventions
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/conventions.html">
+     Standard Name Convention
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/layouts.html">
+     Layouts
     </a>
    </li>
   </ul>
@@ -436,14 +443,14 @@ title="Print to PDF"
 <dl class="glossary simple">
 <dt id="term-metadata">metadata<a class="headerlink" href="#term-metadata" title="Permalink to this term">#</a></dt><dd><p>“Information about data” (<a class="reference internal" href="#michener2006" id="id1"><span>[MICHENER2006]</span></a>) o higher level descriptions of data sets. In HDF5
 files, attributes are used to describe data. Standardized attribute names like <strong>long_name</strong> or
-<strong>standard_name</strong> are special meta data describtors that follow a specific standard and allow
+<strong>standard_name</strong> are special meta data descriptors that follow a specific standard and allow
 automated exploration and analysis.</p>
 </dd>
 <dt id="term-long_name">long_name<a class="headerlink" href="#term-long_name" title="Permalink to this term">#</a></dt><dd><p>A human-readable string. Attribute of a dataset. Must be given if <strong>standard_name</strong> is not set.</p>
 </dd>
-<dt id="term-Standard-Name-table">Standard Name table<a class="headerlink" href="#term-Standard-Name-table" title="Permalink to this term">#</a></dt><dd><p>Tablular content, which contains the standard name and (at least) a description and a
+<dt id="term-Standard-Name-Table-SNT">Standard Name Table (SNT)<a class="headerlink" href="#term-Standard-Name-Table-SNT" title="Permalink to this term">#</a></dt><dd><p>Tabular content, which contains the standard name and (at least) a description and a
 canonical unit for a it. The respective python class <cite>StandardNameTable</cite> is linked to an HDF5 file and
-can performe consistensy checks (checks syntax, name and unit). A table as a file may be a XML document
+can perform consistency checks (checks syntax, name and unit). A table as a file may be a XML document
 or a YAML file.</p>
 </dd>
 <dt id="term-standard_name">standard_name<a class="headerlink" href="#term-standard_name" title="Permalink to this term">#</a></dt><dd><p>A string respecting more or less strict rules defined by a community and defined in a name table.
@@ -455,7 +462,7 @@ have units=’’</p>
 <dt id="term-Layout">Layout<a class="headerlink" href="#term-Layout" title="Permalink to this term">#</a></dt><dd><p>A layout defines the structure of an HDF5 file. It may define exact content, e.g. attribute name and value or
 define expected dataset dimensions or shape. Also some limited conditional layout definition is possible, e.g.
 that dataset may be in another group if the expected does not exist. Layout definitions are attached to a wrapper
-HDF file and epeciall assists during data collection as it defines the final content of a file which was prior
+HDF file and epecially assists during data collection as it defines the final content of a file which was prior
 defined by a community or project.</p>
 </dd>
 </dl>

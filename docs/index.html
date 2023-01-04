@@ -118,8 +118,8 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="conventions/index.html">
-   Conventions
+  <a class="reference internal" href="wrapper/index.html">
+   HDF5-Wrapper
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
@@ -128,30 +128,8 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="conventions/conventions.html">
-     Standard Name Convention
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="conventions/layouts.html">
-     Layouts
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="wrapper/index.html">
-   H5wrapper
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
     <a class="reference internal" href="wrapper/CreateFile.html">
-     Create a HDF file
+     Create an HDF file
     </a>
    </li>
    <li class="toctree-l2">
@@ -170,18 +148,13 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="wrapper/FileExploration.html">
-     File exploration
+    <a class="reference internal" href="wrapper/DumpFile.html">
+     File content inspection
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="wrapper/NaturalNaming.html">
      Natural Naming
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="wrapper/Conventions.html">
-     (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2">
@@ -199,16 +172,28 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="wrapper/SpecializedWrappers.html">
-     Specialized Wrappers
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="wrapper/wrapper_and_conventions/index.html">
+     Wrapper &amp; Conventions
     </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="wrapper/wrapper_and_conventions/cflike.html">
+       CF-like
+      </a>
+     </li>
+    </ul>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="database/index.html">
-   H5Database
+   HDF5-Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -224,6 +209,28 @@
    <li class="toctree-l2">
     <a class="reference internal" href="database/h5mongo.html">
      HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="conventions/index.html">
+   Conventions
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="conventions/conventions.html">
+     Standard Name Convention
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="conventions/layouts.html">
+     Layouts
     </a>
    </li>
   </ul>
@@ -475,13 +482,13 @@ title="Print to PDF"
 <section id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">#</a></h1>
 <p>The HDF5 Research Data Management Toolbox (h5RDMtoolbox) supports the data creation, processing and sharing
-of data using the HDF5 file format pursuing the <a class="reference external" href="https://www.nature.com/articles/sdata201618">FAIR priciples</a>.</p>
+of data using the HDF5 file format pursuing the <a class="reference external" href="https://www.nature.com/articles/sdata201618">FAIR principles</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This project is under current development! The first stable release is expected for Oktober 2022.</p>
+<p>This project is under current development! The first stable release is expected for January 2023.</p>
 </div>
 <dl class="simple">
-<dt>The packges comes with three sub-packages:</dt><dd><ul class="simple">
+<dt>The packages comes with three sub-packages:</dt><dd><ul class="simple">
 <li><p><a class="reference internal" href="conventions/index.html"><span class="doc">convention</span></a>: Naming standards mostly for attributes in the HDF5 files</p></li>
 <li><p><a class="reference internal" href="wrapper/index.html"><span class="doc">wrapper</span></a>: Interacting/working with HDF5 files including many useful features and user-defined methods including static and dynamic layout definition</p></li>
 <li><p><a class="reference internal" href="database/index.html"><span class="doc">database</span></a>: Practical and easy searching in multiple HDF5 files</p></li>
@@ -491,9 +498,9 @@ of data using the HDF5 file format pursuing the <a class="reference external" hr
 <a class="reference internal image-reference" href="_images/package_overview.svg"><img alt="Alternative text" class="align-center" src="_images/package_overview.svg" width="350" /></a>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">#</a></h2>
-<p>The repository requires python 3.8. or higher (tested for 3.8 and 3.9).</p>
+<p>The repository requires python 3.8. or higher (tested for 3.8, 3.9, 3.10).</p>
 <p>Install from source from github:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
 </pre></div>
 </div>
 <p>Clone and install from source:</p>
@@ -502,10 +509,17 @@ python3.8 -m pip install h5RDMtoolbox/
 </pre></div>
 </div>
 <p>You may install optional dependencies:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[mongodb]&quot;</span>  <span class="c1"># installs dependencies to use the database mongoDB</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[test]&quot;</span>  <span class="c1"># installs dependencies for testing</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[docs]&quot;</span>  <span class="c1"># installs dependencies needed to build this documentation</span>
-python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[complete]&quot;</span>  <span class="c1"># installs all above dependencies</span>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># install dependencies to use the database mongoDB</span>
+python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[mongodb]&quot;</span>
+
+<span class="c1"># install dependencies for testing</span>
+python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[test]&quot;</span>
+
+<span class="c1"># install dependencies needed to build this documentation</span>
+python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[docs]&quot;</span>
+
+<span class="c1"># install all above dependencies</span>
+python3.8 -m pip install <span class="s2">&quot;h5RDMtoolbox[complete]&quot;</span>
 </pre></div>
 </div>
 <div class="toctree-wrapper compound">

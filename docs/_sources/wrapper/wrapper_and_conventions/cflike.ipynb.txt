@@ -2,96 +2,102 @@
  "cells": [
   {
    "cell_type": "markdown",
-   "id": "91c4ae4d-2b0e-4de5-b759-4c9fc9d072b1",
+   "id": "29478d33-dadc-47ba-8848-d23b488642bd",
    "metadata": {},
    "source": [
-    "# Extensions\n",
+    "# CF-like\n",
     "\n",
-    "The wrapper class functionalities can be extended using composition or inheritance.\n",
+    "The cf-conventions ([cfconventions.org]) promote the usage of specific attributes in order to fully describe a variable (dataset). The `h5rdmtoolbox` at this stage implements the CF convention in a very simlar way. As it is probably not the 100% equivilant yet, we call the convention `cflike`. More details used naming within the convention can also be found [here](../../conventions/conventions.ipynb)\n",
     "\n",
-    "## Composition\n",
+    "The convention can be switched durng runtime. The default convention (means using no convention) is `default`, to switch to the CF-like call `use('cflike')`:\n",
     "\n",
-    "The concept of composition adds a component to a composite class. The relationship is such, that the composite class does not know the component class but wise versa. This allows to add additional functionality without changing the original code. Adding components to an existing wrapper class will be called \"registering\" here.\n",
-    "\n",
-    "### Registration of properties\n",
-    "To facilitate and speed up certain tasks and workflows, it might be usefull to have additional properties. Let's assume we want to store a username as an attribute in the HDF5 file. Let's further assume that a user name has a firstname and a surname and both must start with a capitalized letter. To catch possible errerneous input by the user, we would need an additional method, e.g. \"set_username\" or a property \"username\" of `H5File`.<br>**Two** possible ways to achieve this: **inheritance or composition**. The quick and recommended way to add a new class property is to use composition by \"registering\" the property. Like this we don't have to rewrite (inherite at least) the API but only simply write the porperty class.<br>\n",
-    "Let's first write a property class \"username\". It needs **three methods**: `get`, `set` and `delete`:"
+    "[cfconventions.org]: http://cfconventions.org/"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": 1,
-   "id": "a1cbc998-a747-4370-b362-d04c4d6508be",
+   "id": "07f28bd5-1be7-454a-92fa-10233fb0e8e1",
    "metadata": {},
    "outputs": [
     {
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "2022-12-29_17:22:46,71 INFO     [__init__.py:52] Switched to \"default\"\n"
+      "2022-12-29_15:15:37,122 INFO     [__init__.py:61] Switched to \"cflike\"\n"
      ]
     }
    ],
    "source": [
     "import h5rdmtoolbox as h5tbx\n",
-    "h5tbx.use('default')"
+    "h5tbx.use('cflike')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c52fb328-23d6-4098-9db7-17697e7c8fd6",
+   "metadata": {},
+   "source": [
+    "Let's check the `__str__()` method. It should tell which convention is used:"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": 2,
-   "id": "98270fc1-d0d1-4d46-99d0-76691da2ad64",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "from typing import Tuple\n",
-    "\n",
-    "# register a property with setter and getter method:\n",
-    "@h5tbx.conventions.register_hdf_attr(h5tbx.wrapper.cflike.H5Dataset, overwrite=True, name='username')\n",
-    "class username:\n",
-    "    \"\"\"User Name Property. Requires name and ORCID\"\"\"\n",
-    "\n",
-    "    def set(self, user_name_data: Tuple[str, str]):\n",
-    "        \"\"\"setter method\"\"\"\n",
-    "        if not isinstance(user_name_data, (tuple, list)):\n",
-    "            raise ValueError(f'Expecting a tuple of name and orcid but got {type(user_name_data)}')\n",
-    "        if not len(user_name_data) == 2:\n",
-    "            raise ValueError(f'Expecting two entries (name and orcid) but got {len(user_name_data)}: {user_name_data}')\n",
-    "        self.attrs['user_name'] = user_name_data[0]\n",
-    "        self.attrs['user_orcid'] = user_name_data[1]\n",
-    "\n",
-    "    def get(self):\n",
-    "        \"\"\"getter method\"\"\"\n",
-    "        return self.attrs['user_name'], self.attrs['user_orcid']"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "fc6fe738-3acc-47c4-860a-19d4de3d4d65",
-   "metadata": {},
-   "source": [
-    "Some words about above lines:\n",
-    "- `@h5tbx.wrapper.register_special_property(h5tbx.H5File)`: registering the below class (only) to the class `H5File`\n",
-    "- don't use existing property names. An error will be raised anyhow. You may however pass `overwrite=True` in the registration method. Be careful though!\n",
-    "- provide `set` and optionally also `get` and `delete`. The method `get` makes sense though, while `delete` is not really needed most of the times.\n",
-    "\n",
-    "Let's check if it worked out:"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 3,
-   "id": "f1723f32-2916-431f-af6b-5b96cc6e9526",
+   "id": "98c483cb-0eda-4fae-ad58-8a835bdeba08",
    "metadata": {},
    "outputs": [
     {
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "('First User', '0000-0001-8729-0482')\n",
-      "Second User\n"
+      "<class 'h5rdmtoolbox.H5File' convention: cflike>\n"
      ]
-    },
+    }
+   ],
+   "source": [
+    "h5 = h5tbx.H5File()\n",
+    "print(h5)\n",
+    "h5.close()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d9c2fcb2-132d-4ab0-a192-2a86e70cddd2",
+   "metadata": {},
+   "source": [
+    "## Working with HDF5 files following the cf-like convention\n",
+    "\n",
+    "Some attributes are obligatory to provide with a dataset:\n",
+    "- `units`\n",
+    "- `standard_name`\n",
+    "- `long_name` (not needed if `standard_name` exists and vise versa)\n",
+    "\n",
+    "**units**<br>\n",
+    "We expect that each data set written to the HDF5 file has a physical unit or no unit at all. It is registered in the attribute `units`.\n",
+    "\n",
+    "**standard_name and long_name**<br>\n",
+    "For the sake of improved readability and interpretability we suggest to use `long_name` or `standard_name` as additional attributes. While `long_name` is human-readable and interpretable attribute, `standard_name` is intended to be read by a machine (other software). This allows to automate exploration and processing work.\n",
+    "\n",
+    "The `standard_name` generally should not be chosen freely but must follow a certain convention. Such a naming convention may be defined by a project or a community, e.g. the climate and forecast community [cfconventions.org], from which the concept of standard names is adoped. A convention is described in an **XML** file and associated with the wrapper file `H5File`. Again this is adoped from [cfconventions.org]. The XML file contains the standard name, a description for each one and the respective unit. Thus, if a convention is associated with a wrapper class, the standard name and unit cannot be freely be chsen but is verified."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "74e23701-6ed4-4d66-9eca-9f1f3cd982a7",
+   "metadata": {},
+   "source": [
+    "## File creation\n",
+    "\n",
+    "During file initialization, a `title` and `standard_name_table` can be passed:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "c71846c9-8cae-46f0-b144-88dc62eef6f8",
+   "metadata": {},
+   "outputs": [
     {
      "data": {
       "text/html": [
@@ -298,20 +304,317 @@
        "\n",
        "              <ul style=\"list-style-type: none;\" class=\"h5grp-sections\">\n",
        "                    <li>\n",
-       "                        <input id=\"group-ds--4461707200\" type=\"checkbox\" checked>\n",
-       "                        <label style=\"font-weight: bold\" for=\"group-ds--4461707200\">\n",
-       "                        /<span>(1)</span></label>\n",
+       "                        <input id=\"group-ds--4398998300\" type=\"checkbox\" checked>\n",
+       "                        <label style=\"font-weight: bold\" for=\"group-ds--4398998300\">\n",
+       "                        /<span>(0)</span></label>\n",
        "                  \n",
        "\n",
-       "                    <ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style: italic\">__h5rdmtoolbox_version__ : 0.3.0a1</li>\n",
+       "                    <ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style: italic\">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style=\"list-style-type: none; font-style: italic\">title : MyFile</li>\n",
+       "                    </ul>\n",
+       "</li>\n",
+       "</ul>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "<IPython.core.display.HTML object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "with h5tbx.H5File(title='MyFile') as h5:\n",
+    "    h5.dump()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6bcc789b-2181-48b6-abc0-ef50a4389d03",
+   "metadata": {},
+   "source": [
+    "The standard name table (SNT) holds the definitions for the standard names. Per default, no specific standard is set (`EmptyStandardNameTable`). THis means that only basic naming rules are applied, such as that no spaces are allowe in standard names:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "2d585105-b80e-4f3c-8476-92e90895bfc4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "EmptyStandardNameTable\n"
+     ]
+    }
+   ],
+   "source": [
+    "with h5tbx.H5File(title='MyFile') as h5:\n",
+    "    print(h5.standard_name_table)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "36710f58-f300-4591-b9fb-a9d928a3a94a",
+   "metadata": {},
+   "source": [
+    "## Dataset Creation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "bd1fe8c7-2f3c-409e-8da4-cb2d78d1a5a5",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<head><style>/*\r\n",
+       "CSS inspired by xarray: https://github.com/pydata/xarray\r\n",
+       "*/\r\n",
+       ".h5tb-header > div,\r\n",
+       ".h5tb-header > ul {\r\n",
+       "    display: inline;\r\n",
+       "    margin-top: 0;\r\n",
+       "    margin-bottom: 0;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dataarray-cls,\r\n",
+       ".h5tb-dataarray-name {\r\n",
+       "    margin-left: 2px;\r\n",
+       "    margin-right: 10px;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dataarray-name {\r\n",
+       "    color: #000;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections {\r\n",
+       "    list-style: none;\r\n",
+       "    padding: 3px;\r\n",
+       "    margin: 0;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections input {\r\n",
+       "    display: none;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections label {\r\n",
+       "    display: inline;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections > li > input + label > span {\r\n",
+       "    display: inline;\r\n",
+       "    margin-left: 4px;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections > li > input:checked + label > span {\r\n",
+       "    display: none;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections input:enabled + label {\r\n",
+       "    cursor: pointer;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections input:not(.h5tb-values-in) ~ ul {\r\n",
+       "    display: none;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections input:not(.h5tb-values-in):checked ~ ul {\r\n",
+       "    display: block;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections > li > input + label {\r\n",
+       "    width: 140px;\r\n",
+       "    color: #555;\r\n",
+       "    font-weight: 500;\r\n",
+       "    padding: 4px 0 2px 0;\r\n",
+       "}\r\n",
+       "\r\n",
+       "\r\n",
+       ".h5grp-sections > li > input + label:before {\r\n",
+       "    display: inline-block;\r\n",
+       "    content: '+';\r\n",
+       "    font-size: 11px;\r\n",
+       "    width: 15px;\r\n",
+       "    text-align: center;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections > li > input:disabled + label:before {\r\n",
+       "    color: #777;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5grp-sections > li > input:checked + label:before {\r\n",
+       "    content: '-';\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dim-list {\r\n",
+       "    display: inline-block !important;\r\n",
+       "    list-style: none;\r\n",
+       "    padding: 0;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dim-list li {\r\n",
+       "    display: inline-block;\r\n",
+       "    padding: 0;\r\n",
+       "    margin: 0;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dim-list:before {\r\n",
+       "    content: '(';\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dim-list:after {\r\n",
+       "    content: ')';\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dim-list li:not(:last-child):after {\r\n",
+       "    content: ',';\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-has-index {\r\n",
+       "    text-decoration: underline;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-var-list {\r\n",
+       "    list-style: none;\r\n",
+       "    padding: 0;\r\n",
+       "    margin: 0;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-var-list > li {\r\n",
+       "    background-color: #fcfcfc;\r\n",
+       "    overflow: hidden;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-var-list > li:nth-child(odd) {\r\n",
+       "    background-color: #efefef;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-var-list li:hover {\r\n",
+       "    background-color: rgba(3, 169, 244, .2);\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-var-list li > span {\r\n",
+       "    display: inline-block;\r\n",
+       "}\r\n",
+       "\r\n",
+       "input.h5tb-varname-in + label {\r\n",
+       "    width: 140px;\r\n",
+       "    padding-left: 0;\r\n",
+       "    font-weight: bold;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dataset {\r\n",
+       "    width: 100px;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-attributevalue {\r\n",
+       "    width: 100px;\r\n",
+       "    text-align: left;\r\n",
+       "    color: #888;\r\n",
+       "    white-space: nowrap;\r\n",
+       "    font-size: 12px;\r\n",
+       "}\r\n",
+       "\r\n",
+       "input.h5tb-varname-in + label:before {\r\n",
+       "    content: ' ';\r\n",
+       "    display: inline-block;\r\n",
+       "    font-size: 11px;\r\n",
+       "    width: 15px;\r\n",
+       "    padding-left: 2px;\r\n",
+       "    padding-right: 2px;\r\n",
+       "    text-align: center;\r\n",
+       "    color: #aaa;\r\n",
+       "    text-decoration: none !important;\r\n",
+       "}\r\n",
+       "\r\n",
+       "input.h5tb-varname-in:enabled + label:hover:before {\r\n",
+       "    color: #000;\r\n",
+       "}\r\n",
+       "\r\n",
+       "input.h5tb-varname-in:checked + label:before {\r\n",
+       "    color: #ccc;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dims {\r\n",
+       "    width: 280px;\r\n",
+       "    white-space: nowrap;\r\n",
+       "}\r\n",
+       "\r\n",
+       "\r\n",
+       ".h5tb-unit {\r\n",
+       "    width: 96px;\r\n",
+       "    white-space: nowrap;\r\n",
+       "    padding-right: 2px;\r\n",
+       "    text-align: right;\r\n",
+       "    color: #555;\r\n",
+       "    font-style: italic;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-attr-list {\r\n",
+       "    list-style: none;\r\n",
+       "    background-color: #fff;\r\n",
+       "    padding-bottom: 6px;\r\n",
+       "    color: #555;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-attr-list li,\r\n",
+       ".h5tb-attr-list li:hover {\r\n",
+       "    background-color: #fff;\r\n",
+       "}\r\n",
+       "\r\n",
+       ".h5tb-dim-highlight {\r\n",
+       "    background-color: rgba(3, 169, 244, .2);\r\n",
+       "    cursor: pointer;\r\n",
+       "}</style></head>\n",
+       "<div class='h5tb-warp'>\n",
+       "\n",
+       "              <ul style=\"list-style-type: none;\" class=\"h5grp-sections\">\n",
+       "                    <li>\n",
+       "                        <input id=\"group-ds--4452626000\" type=\"checkbox\" checked>\n",
+       "                        <label style=\"font-weight: bold\" for=\"group-ds--4452626000\">\n",
+       "                        /<span>(3)</span></label>\n",
+       "                  \n",
+       "\n",
+       "                    <ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style: italic\">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style=\"list-style-type: none; font-style: italic\">title : MyFile</li>\n",
        "                    </ul>\n",
        "\n",
-       "                <ul id=\"ds-1-/test-4463819100\" class=\"h5tb-var-list\">\n",
-       "                <input id=\"ds-2-/test-4463822400\" class=\"h5tb-varname-in\" type=\"checkbox\">\n",
+       "                <ul id=\"ds-1-/method-4453513200\" class=\"h5tb-var-list\">\n",
+       "                <input id=\"ds-2-/method-4453518100\" class=\"h5tb-varname-in\" type=\"checkbox\">\n",
        "                <label class='h5tb-varname' \n",
-       "                    for=\"ds-2-/test-4463822400\">test</label>\n",
-       "                <span class=\"h5tb-dims\">(2,) (float32)</span>\n",
-       "<ul class=\"h5tb-attr-list\">\n",
+       "                for=\"ds-2-/method-4453518100\">method</label>: b'linear_interpolation'\n",
+       "                \n",
+       "<ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style: italic\">long_name : The inteprolation method used for something.</li>\n",
+       "\n",
+       "                    </ul>\n",
+       "\n",
+       "                 </ul>\n",
+       "                 \n",
+       "\n",
+       "                <ul id=\"ds-1-/u-4453897300\" class=\"h5tb-var-list\">\n",
+       "                <input id=\"ds-2-/u-4453901300\" class=\"h5tb-varname-in\" type=\"checkbox\">\n",
+       "                <label class='h5tb-varname' \n",
+       "                    for=\"ds-2-/u-4453901300\">u</label>\n",
+       "                <span class=\"h5tb-dims\">1.2 (float64)</span> [m/s]\n",
+       "<ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style:\n",
+       "             italic\">standard_name : x_velocity</li><li style=\"list-style-type: none; font-style: italic\">units : m/s</li>\n",
+       "\n",
+       "                    </ul>\n",
+       "\n",
+       "                 </ul>\n",
+       "                 \n",
+       "\n",
+       "                <ul id=\"ds-1-/v-4457963600\" class=\"h5tb-var-list\">\n",
+       "                <input id=\"ds-2-/v-4457968800\" class=\"h5tb-varname-in\" type=\"checkbox\">\n",
+       "                <label class='h5tb-varname' \n",
+       "                    for=\"ds-2-/v-4457968800\">v</label>\n",
+       "                <span class=\"h5tb-dims\">(3,) (int32)</span> [m/s]\n",
+       "<ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style:\n",
+       "             italic\">standard_name : y_velocity</li><li style=\"list-style-type: none; font-style: italic\">units : m/s</li>\n",
        "\n",
        "                    </ul>\n",
        "\n",
@@ -330,540 +633,46 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
-    "    ds = h5.create_dataset('test', shape=(2,))    \n",
-    "    ds.username = 'First User', '0000-0001-8729-0482'\n",
-    "    print(ds.username)\n",
-    "    try:\n",
-    "        ds.username = 'Second User'\n",
-    "    except ValueError as e :\n",
-    "        print(f'Could not add user due to: {e}')\n",
-    "    print(ds.username)\n",
+    "with h5tbx.H5File(title='MyFile') as h5:\n",
+    "    h5.create_dataset('u', data=1.2, units='m/s', standard_name='x_velocity')\n",
+    "    h5.create_dataset('v', data=[1,2,3], units='m/s', standard_name='y_velocity')\n",
+    "    h5.create_dataset('method', data=\"linear_interpolation\",\n",
+    "                      long_name='The inteprolation method used for something.')\n",
     "    h5.dump()"
    ]
   },
   {
    "cell_type": "markdown",
-   "id": "b7730172-11e8-47f0-93b1-9bc47aa0e1dd",
+   "id": "1842beb1-10ed-404c-af69-4674ab9c255f",
    "metadata": {},
    "source": [
-    "### Registration of datasets\n",
-    "We can also \"register\" dataset accessors. In the following example we add \"device\" as a \"property with methods\". So \"device\" seems to be a property which has a method \"add\". Such an implementation faclitates the interaction with HDF data, too. Note, that this \"property-like\" accessor is available for all `H5Dataset` objects from know on in this session:"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 4,
-   "id": "41f5c2c1-7de5-4e1c-b44e-4d350328f7ef",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "from h5rdmtoolbox.wrapper.accessory import register_special_dataset\n",
-    "@register_special_dataset('device', h5tbx.H5File.H5Dataset(), overwrite=True)\n",
-    "class DeviceProperty:\n",
-    "    \"\"\"Device Accessor class\"\"\"\n",
+    "## Group creation\n",
     "\n",
-    "    def __init__(self, ds):\n",
-    "        self._ds = ds\n",
-    "        self._device_name = 'NoDeviceName'\n",
-    "        \n",
-    "    def add(self, new_device_name):\n",
-    "        \"\"\"adds the attribute device_name to the dataset\"\"\"\n",
-    "        self._ds.attrs['device_name'] = new_device_name\n",
-    "        \n",
-    "    @property\n",
-    "    def name(self):\n",
-    "        return self._ds.attrs['device_name']"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 5,
-   "id": "2af29af0-aa80-4887-bd6f-8c93d719f2e8",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "<class 'h5rdmtoolbox.wrapper.core.H5Dataset'>\n",
-      "my device\n"
-     ]
-    }
-   ],
-   "source": [
-    "with h5tbx.H5File() as h5:\n",
-    "    ds = h5.create_dataset('test', shape=(2,))\n",
-    "    print(type(ds))\n",
-    "    ds.device.add('my device')\n",
-    "    print(ds.device.name)"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "b144ceb1-f9e0-4a24-943a-004aa917e829",
-   "metadata": {
-    "tags": []
-   },
-   "source": [
-    "## Inheritance \n",
-    "\n",
-    "### New Wrapper Class\n",
-    "\n",
-    "The main wrapper class around a HDF5 file in this package is `H5File` which uses the wrapper class `H5Group` for `h5py.Group` and `H5Dataset` for wrapping `h5py.Dataset`"
+    "In addition to the standard way of creating groups, a `long_name` can be passed. It is optional, though:"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": 6,
-   "id": "2a9e583e-b5a9-4c41-9f44-37be82808b46",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import h5rdmtoolbox as h5tbx\n",
-    "import h5py"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 7,
-   "id": "238bccd4-b623-42e0-b4e7-5bb8cd61e42f",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "class MyDataset(h5tbx.wrapper.core.H5Dataset):\n",
-    "    def __repr__(self):\n",
-    "        return f'{self.name}\\n{self.attrs}'\n",
-    "    \n",
-    "    @property\n",
-    "    def is_2d(self):\n",
-    "        \"\"\"returns whether dataset is two-dimensional or not\"\"\"\n",
-    "        return self.ndim == 2"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "02178fd3-2319-4382-941d-487545b77721",
-   "metadata": {},
-   "source": [
-    "Next we create a group class with a special method, hat returns all datasets of that group. Also the `create_dataset` method is overwritten. Take care to return `MyDataset` at the end of the method, otherwise dataset class of the parent class is taken."
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 28,
-   "id": "ae1b660a-c370-4e29-9467-64d1272a3daa",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "class MyGroup(h5tbx.wrapper.core.H5Group):\n",
-    "    \"\"\"My group. It prints a logger-like info to the screen and \n",
-    "    requires a user when creating datasets\"\"\"\n",
-    "    \n",
-    "    def get_all_datasets(self):\n",
-    "        \"\"\"returns all datasets of this group\"\"\"\n",
-    "        return [k for k in self if isinstance(self[k], h5py.Dataset)]\n",
-    "    \n",
-    "    def create_group(self, name, *args, **kwargs):\n",
-    "        print(f'creating a group named {g.name}')\n",
-    "        return __class__(super().create_group(name, *args, **kwargs).id)\n",
-    "    \n",
-    "    def create_dataset(self, name, user, *args, **kwargs):\n",
-    "        ds = super().create_dataset(name, *args, **kwargs)\n",
-    "        print(f'creating a dataset named {ds.name}')\n",
-    "        ds.attrs.modify('user', user)\n",
-    "        return self._h5ds(ds.id)"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "09e135e0-ce76-4c77-90eb-8ec7fe811f40",
-   "metadata": {},
-   "source": [
-    "The main file wrapper inherites from `H5File` (\"root\" parent was `h5py.File`) and the new group class. Next, we have set the group and dataset class again, since some methods in the file wrapper class will need that information when returning instances of those classes (e.g. dataset or group creation). Finally we define a new method which sets the user name to the root attributes:"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 29,
-   "id": "21bcc1fe-1fbc-49f8-942f-14b7b87f08bf",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "class MyWrapper(h5tbx.wrapper.core.H5File, MyGroup):\n",
-    "    \n",
-    "    def set_user(self, user_name):\n",
-    "        self.attrs.modify('user', user_name)"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "f764f4ba-2339-41d6-b57a-b6e2197e24e1",
-   "metadata": {},
-   "source": [
-    "register the dataset and group class in all classes. This is needed, so all return objects are of the newly defined types"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 30,
-   "id": "bb4c50eb-4cf7-4a26-8b88-0c2185c681fb",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "MyGroup._h5ds = MyDataset\n",
-    "MyGroup._h5grp = MyGroup\n",
-    "\n",
-    "MyDataset._h5ds = MyDataset\n",
-    "MyDataset._h5grp = MyGroup"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 31,
-   "id": "bc3a2495-9167-4d4d-8c45-6280a5951b36",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "h5 = MyWrapper()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 32,
-   "id": "b3b00f9f-5801-4c3e-b92a-db12d883b8cf",
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "__main__.MyWrapper"
-      ]
-     },
-     "execution_count": 32,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "type(h5)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 38,
-   "id": "7d729bbe-89eb-46af-8cee-d46e700356a5",
+   "id": "8516e747-447b-4d13-806a-7e1b11cbdada",
    "metadata": {},
    "outputs": [
     {
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "creating a group named /grp\n",
-      "creating a group named /grp\n"
+      "\u001b[3ma: __h5rdmtoolbox_version__\u001b[0m: 0.3.0a1\n",
+      "/\u001b[1mmygrp\u001b[0m\n",
+      "/\u001b[1mothergrp\u001b[0m\n",
+      "  \u001b[3ma: long_name\u001b[0m: my other group\n"
      ]
     }
    ],
    "source": [
-    "g = h5.create_group('grp', overwrite=True)\n",
-    "gg = g.create_group('grp', overwrite=True)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 37,
-   "id": "ff52f8fe-f255-4fcb-a5cf-af54f97597e1",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "creating a dataset named /grp/grp/hello\n"
-     ]
-    }
-   ],
-   "source": [
-    "ds = gg.create_dataset('hello', shape=(2,3), user='Max', overwrite=True)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 39,
-   "id": "e14dedfa-bbf8-44e1-891e-e0455da3c70c",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "h5.set_user('new_user')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 40,
-   "id": "2df29018-f4d3-477b-bed3-a470514a0bac",
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/html": [
-       "<head><style>/*\r\n",
-       "CSS inspired by xarray: https://github.com/pydata/xarray\r\n",
-       "*/\r\n",
-       ".h5tb-header > div,\r\n",
-       ".h5tb-header > ul {\r\n",
-       "    display: inline;\r\n",
-       "    margin-top: 0;\r\n",
-       "    margin-bottom: 0;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dataarray-cls,\r\n",
-       ".h5tb-dataarray-name {\r\n",
-       "    margin-left: 2px;\r\n",
-       "    margin-right: 10px;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dataarray-name {\r\n",
-       "    color: #000;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections {\r\n",
-       "    list-style: none;\r\n",
-       "    padding: 3px;\r\n",
-       "    margin: 0;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections input {\r\n",
-       "    display: none;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections label {\r\n",
-       "    display: inline;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections > li > input + label > span {\r\n",
-       "    display: inline;\r\n",
-       "    margin-left: 4px;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections > li > input:checked + label > span {\r\n",
-       "    display: none;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections input:enabled + label {\r\n",
-       "    cursor: pointer;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections input:not(.h5tb-values-in) ~ ul {\r\n",
-       "    display: none;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections input:not(.h5tb-values-in):checked ~ ul {\r\n",
-       "    display: block;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections > li > input + label {\r\n",
-       "    width: 140px;\r\n",
-       "    color: #555;\r\n",
-       "    font-weight: 500;\r\n",
-       "    padding: 4px 0 2px 0;\r\n",
-       "}\r\n",
-       "\r\n",
-       "\r\n",
-       ".h5grp-sections > li > input + label:before {\r\n",
-       "    display: inline-block;\r\n",
-       "    content: '+';\r\n",
-       "    font-size: 11px;\r\n",
-       "    width: 15px;\r\n",
-       "    text-align: center;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections > li > input:disabled + label:before {\r\n",
-       "    color: #777;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5grp-sections > li > input:checked + label:before {\r\n",
-       "    content: '-';\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dim-list {\r\n",
-       "    display: inline-block !important;\r\n",
-       "    list-style: none;\r\n",
-       "    padding: 0;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dim-list li {\r\n",
-       "    display: inline-block;\r\n",
-       "    padding: 0;\r\n",
-       "    margin: 0;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dim-list:before {\r\n",
-       "    content: '(';\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dim-list:after {\r\n",
-       "    content: ')';\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dim-list li:not(:last-child):after {\r\n",
-       "    content: ',';\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-has-index {\r\n",
-       "    text-decoration: underline;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-var-list {\r\n",
-       "    list-style: none;\r\n",
-       "    padding: 0;\r\n",
-       "    margin: 0;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-var-list > li {\r\n",
-       "    background-color: #fcfcfc;\r\n",
-       "    overflow: hidden;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-var-list > li:nth-child(odd) {\r\n",
-       "    background-color: #efefef;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-var-list li:hover {\r\n",
-       "    background-color: rgba(3, 169, 244, .2);\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-var-list li > span {\r\n",
-       "    display: inline-block;\r\n",
-       "}\r\n",
-       "\r\n",
-       "input.h5tb-varname-in + label {\r\n",
-       "    width: 140px;\r\n",
-       "    padding-left: 0;\r\n",
-       "    font-weight: bold;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dataset {\r\n",
-       "    width: 100px;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-attributevalue {\r\n",
-       "    width: 100px;\r\n",
-       "    text-align: left;\r\n",
-       "    color: #888;\r\n",
-       "    white-space: nowrap;\r\n",
-       "    font-size: 12px;\r\n",
-       "}\r\n",
-       "\r\n",
-       "input.h5tb-varname-in + label:before {\r\n",
-       "    content: ' ';\r\n",
-       "    display: inline-block;\r\n",
-       "    font-size: 11px;\r\n",
-       "    width: 15px;\r\n",
-       "    padding-left: 2px;\r\n",
-       "    padding-right: 2px;\r\n",
-       "    text-align: center;\r\n",
-       "    color: #aaa;\r\n",
-       "    text-decoration: none !important;\r\n",
-       "}\r\n",
-       "\r\n",
-       "input.h5tb-varname-in:enabled + label:hover:before {\r\n",
-       "    color: #000;\r\n",
-       "}\r\n",
-       "\r\n",
-       "input.h5tb-varname-in:checked + label:before {\r\n",
-       "    color: #ccc;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dims {\r\n",
-       "    width: 280px;\r\n",
-       "    white-space: nowrap;\r\n",
-       "}\r\n",
-       "\r\n",
-       "\r\n",
-       ".h5tb-unit {\r\n",
-       "    width: 96px;\r\n",
-       "    white-space: nowrap;\r\n",
-       "    padding-right: 2px;\r\n",
-       "    text-align: right;\r\n",
-       "    color: #555;\r\n",
-       "    font-style: italic;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-attr-list {\r\n",
-       "    list-style: none;\r\n",
-       "    background-color: #fff;\r\n",
-       "    padding-bottom: 6px;\r\n",
-       "    color: #555;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-attr-list li,\r\n",
-       ".h5tb-attr-list li:hover {\r\n",
-       "    background-color: #fff;\r\n",
-       "}\r\n",
-       "\r\n",
-       ".h5tb-dim-highlight {\r\n",
-       "    background-color: rgba(3, 169, 244, .2);\r\n",
-       "    cursor: pointer;\r\n",
-       "}</style></head>\n",
-       "<div class='h5tb-warp'>\n",
-       "\n",
-       "              <ul style=\"list-style-type: none;\" class=\"h5grp-sections\">\n",
-       "                    <li>\n",
-       "                        <input id=\"group-ds--276721695600\" type=\"checkbox\" checked>\n",
-       "                        <label style=\"font-weight: bold\" for=\"group-ds--276721695600\">\n",
-       "                        /<span>(1)</span></label>\n",
-       "                  \n",
-       "\n",
-       "                    <ul class=\"h5tb-attr-list\"><li style=\"list-style-type: none; font-style: italic\">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style=\"list-style-type: none; font-style: italic\">user : new_user</li>\n",
-       "                    </ul>\n",
-       "\n",
-       "              <ul style=\"list-style-type: none;\" class=\"h5grp-sections\">\n",
-       "                    <li>\n",
-       "                        <input id=\"group-ds-grp-276722396200\" type=\"checkbox\" checked>\n",
-       "                        <label style=\"font-weight: bold\" for=\"group-ds-grp-276722396200\">\n",
-       "                        grp<span>(1)</span></label>\n",
-       "                  \n",
-       "\n",
-       "                    <ul class=\"h5tb-attr-list\">\n",
-       "                    </ul>\n",
-       "\n",
-       "              <ul style=\"list-style-type: none;\" class=\"h5grp-sections\">\n",
-       "                    <li>\n",
-       "                        <input id=\"group-ds-grp-276722646100\" type=\"checkbox\" checked>\n",
-       "                        <label style=\"font-weight: bold\" for=\"group-ds-grp-276722646100\">\n",
-       "                        grp<span>(0)</span></label>\n",
-       "                  \n",
-       "\n",
-       "                    <ul class=\"h5tb-attr-list\">\n",
-       "                    </ul>\n",
-       "</li>\n",
-       "</ul>\n",
-       "</li>\n",
-       "</ul>\n",
-       "</li>\n",
-       "</ul>\n",
-       "</div>"
-      ],
-      "text/plain": [
-       "<IPython.core.display.HTML object>"
-      ]
-     },
-     "metadata": {},
-     "output_type": "display_data"
-    },
-    {
-     "data": {
-      "text/plain": [
-       "<HDF5 (convention: default) file \"tmp8.hdf\" (mode r+)>"
-      ]
-     },
-     "execution_count": 40,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "h5"
+    "with h5tbx.H5File() as h5:\n",
+    "    h5.create_group('mygrp')\n",
+    "    h5.create_group('othergrp', long_name='my other group')\n",
+    "    h5.sdump()"
    ]
   }
  ],

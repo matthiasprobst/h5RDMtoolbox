@@ -181,7 +181,10 @@ class Database:
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
             with CFH5File(filename, 'w') as h5:
                 h5.attrs['operator'] = operators[np.random.randint(4)]
-                __ftype__ = db_file_type[np.random.randint(2)]
+                if fid % 2:
+                    __ftype__ = db_file_type[0]
+                else:
+                    __ftype__ = db_file_type[1]
                 h5.attrs['__db_file_type__'] = __ftype__
 
                 if __ftype__ == 'fan_case':
@@ -213,8 +216,8 @@ class Database:
                                      shape=(zplanes, 64, 86, 2))
 
     @staticmethod
-    def generate_test_files() -> List[pathlib.Path]:
+    def generate_test_files(n_files: int = 5) -> List[pathlib.Path]:
         """Generate a nested filestructure of hdf files and return list of the filenames"""
         tocdir = generate_temporary_directory('test_repo')
-        Database.build_test_repo(tocdir)
+        Database.build_test_repo(tocdir, n_files=n_files)
         return sorted(tocdir.rglob('*.hdf'))

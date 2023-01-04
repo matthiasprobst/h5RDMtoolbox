@@ -40,7 +40,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Visualization" href="Visualization.html" />
-    <link rel="prev" title="(Naming) Conventions" href="Conventions.html" />
+    <link rel="prev" title="Natural Naming" href="NaturalNaming.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -120,41 +120,19 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../conventions/index.html">
-   Conventions
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/conventions.html">
-     Standard Name Convention
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../conventions/layouts.html">
-     Layouts
-    </a>
-   </li>
-  </ul>
- </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="index.html">
-   H5wrapper
+   HDF5-Wrapper
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
   <ul class="current">
    <li class="toctree-l2">
     <a class="reference internal" href="CreateFile.html">
-     Create a HDF file
+     Create an HDF file
     </a>
    </li>
    <li class="toctree-l2">
@@ -173,18 +151,13 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="FileExploration.html">
-     File exploration
+    <a class="reference internal" href="DumpFile.html">
+     File content inspection
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="NaturalNaming.html">
      Natural Naming
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="Conventions.html">
-     (Naming) Conventions
     </a>
    </li>
    <li class="toctree-l2 current active">
@@ -202,16 +175,28 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="SpecializedWrappers.html">
-     Specialized Wrappers
+   <li class="toctree-l2 has-children">
+    <a class="reference internal" href="wrapper_and_conventions/index.html">
+     Wrapper &amp; Conventions
     </a>
+    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+    <label for="toctree-checkbox-3">
+     <i class="fas fa-chevron-down">
+     </i>
+    </label>
+    <ul>
+     <li class="toctree-l3">
+      <a class="reference internal" href="wrapper_and_conventions/cflike.html">
+       CF-like
+      </a>
+     </li>
+    </ul>
    </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../database/index.html">
-   H5Database
+   HDF5-Database
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
   <label for="toctree-checkbox-4">
@@ -227,6 +212,28 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../database/h5mongo.html">
      HDF5 + mongoDB
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../conventions/index.html">
+   Conventions
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+  <label for="toctree-checkbox-5">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/conventions.html">
+     Standard Name Convention
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../conventions/layouts.html">
+     Layouts
     </a>
    </li>
   </ul>
@@ -590,10 +597,11 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars on prompts */
+/* disable scrollbars and line breaks on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
+    white-space: pre;
 }
 
 /* input/output area */
@@ -770,6 +778,17 @@ div.rendered_html tbody tr:hover {
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-12-29_20:48:00,291 CRITICAL [core.py:901] Group test/grp from yaml definition not written due to create_group() got an unexpected keyword argument &#39;long_name&#39;
+2022-12-29_20:48:00,291 CRITICAL [core.py:901] Group test/grp from yaml definition not written due to create_group() got an unexpected keyword argument &#39;long_name&#39;
+2022-12-29_20:48:00,291 CRITICAL [core.py:910] Dataset boundary/outlet/y from yaml definition not written due to make_new_dset() got an unexpected keyword argument &#39;standard_name&#39;
+2022-12-29_20:48:00,291 CRITICAL [core.py:910] Dataset boundary/outlet/y from yaml definition not written due to make_new_dset() got an unexpected keyword argument &#39;standard_name&#39;
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -974,78 +993,37 @@ input.h5tb-varname-in:checked + label:before {
     background-color: rgba(3, 169, 244, .2);
     cursor: pointer;
 }</style></head>
-<p>tmp24.hdf</p>
-<p>Check resuted in 1 issues.</p>
-
 <div class='h5tb-warp'>
 
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/-3322628000" type="checkbox" checked>
-                    <label style="font-weight: bold" for="group-ds-/-3322628000">
-                    /<span>(2)</span></label>
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds--3121978400" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--3121978400">
+                        /<span>(1)</span></label>
 
 
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.1.0</li><li style="list-style-type: none; font-style: italic">__standard_name_table__ : EmptyStandardizedNameTable-v0</li><li style="list-style-type: none; font-style: italic">__wrcls__ : H5File</li><li style="list-style-type: none; font-style: italic">creation_time : 2022-08-12T16:11:25Z</li>
-                </ul>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    </ul>
 
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/boundary-3322930500" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/boundary-3322930500">
-                    boundary<span>(1)</span></label>
-
-
-                <ul class="h5tb-attr-list">
-                </ul>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/boundary/outlet-3323023600" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/boundary/outlet-3323023600">
-                    outlet<span>(1)</span></label>
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds-boundary-3122367300" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds-boundary-3122367300">
+                        boundary<span>(1)</span></label>
 
 
-                <ul class="h5tb-attr-list">
-                </ul>
+                    <ul class="h5tb-attr-list">
+                    </ul>
 
-                <ul id="ds-1-/boundary/outlet/y-3323306800" class="h5tb-var-list">
-                <input id="ds-2-/boundary/outlet/y-3323308900" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/boundary/outlet/y-3323308900">y</label>
-                <span class="h5tb-dims"></span>  [
-                <span class="h5tb-unit">m</span>]
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">another_attr : 100.2</li><li style="list-style-type: none; font-style: italic">array : [1 2 3]</li><li style="list-style-type: none; font-style: italic">comment : test</li><li style="list-style-type: none; font-style:
-         italic">standard_name : y_coordinate</li>
-
-                </ul>
-
-             </ul>
-
-</li>
-</ul>
-</li>
-</ul>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/test-3323616400" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/test-3323616400">
-                    test<span>(1)</span></label>
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds-outlet-3122482700" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds-outlet-3122482700">
+                        outlet<span>(0)</span></label>
 
 
-                <ul class="h5tb-attr-list">
-                </ul>
-
-          <ul style="list-style-type: none;" class="h5grp-sections">
-                <li>
-                    <input id="group-ds-/test/grp-3323716600" type="checkbox" >
-                    <label style="font-weight: bold" for="group-ds-/test/grp-3323716600">
-                    grp<span>(0)</span></label>
-
-
-                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : a test group</li>
-                </ul>
+                    <ul class="h5tb-attr-list">
+                    </ul>
 </li>
 </ul>
 </li>
@@ -1072,11 +1050,11 @@ input.h5tb-varname-in:checked + label:before {
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="Conventions.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="NaturalNaming.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">(Naming) Conventions</p>
+            <p class="prev-next-title">Natural Naming</p>
         </div>
     </a>
     <a class='right-next' id="next-link" href="Visualization.html" title="next page">
