@@ -341,7 +341,6 @@ class H5Repr:
     """Class managing the sting/html output of HDF5 content"""
 
     def __init__(self, str_repr: _HDF5StructureRepr = None, html_repr: _HDF5StructureRepr = None):
-        print(f'str_repr: {str_repr}')
         if str_repr is None:
             self.str_repr = HDF5StructureStrRepr()
         else:
