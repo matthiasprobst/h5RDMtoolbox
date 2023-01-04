@@ -47,7 +47,6 @@ def use(convention_name: str) -> None:
     convention_name: str
         Name of the convention
     """
-
     if convention_name == 'default' or convention_name is None:
         if h5tbxParams['convention'] != convention_name:
             logger.info(f'Switched to "default"')

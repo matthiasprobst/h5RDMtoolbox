@@ -1,6 +1,8 @@
+import numpy as np
 import pathlib
 import unittest
 
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.database import Files
 from h5rdmtoolbox.wrapper.cflike import H5File
 
@@ -32,6 +34,18 @@ class TestFileQuery(unittest.TestCase):
 
                 with Files(pathlib.Path(fnames[0]).parent) as h5s:
                     self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
+
+    def test_recursive_find(self):
+        h5tbx.use('default')
+        with h5tbx.H5File() as h5:
+            gd = h5.create_group('trn_datacubes')
+            gd.create_dataset('u', data=np.random.random((3, 5, 10, 20)))
+            g = h5.create_group('monitors')
+            g.create_dataset('pressure1', data=[1, 2, 3], attrs={'long_name': 'Pressure'})
+            g.create_dataset('pressure2', data=[1, 2, 3], attrs={'long_name': 'Pressure'})
+
+            self.assertEqual(gd.find({'long_name': 'Pressure'}, rec=True), [])
+            self.assertEqual(gd.find({'long_name': 'Pressure'}, rec=False), [])
 
     def test_getitem(self):
         fnames = []

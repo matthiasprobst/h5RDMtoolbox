@@ -1,30 +1,25 @@
-import logging
-import unittest
-from pathlib import Path
-
 import h5py
+import logging
 import numpy as np
 import pint.errors
+import unittest
 import xarray as xr
 import yaml
+from pathlib import Path
 from pint_xarray import unit_registry as ureg
 
-from h5rdmtoolbox import H5File
-from h5rdmtoolbox import use
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.config import CONFIG
 from h5rdmtoolbox.conventions.cflike import StandardNameTable
+from h5rdmtoolbox.conventions.cflike import standard_name as sn
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
-from h5rdmtoolbox.wrapper import core
+from h5rdmtoolbox.wrapper import cflike
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.cflike import H5Dataset
 from h5rdmtoolbox.wrapper.cflike import H5Group
 
-use('cflike')
-h5file = H5File()
-assert h5file != core.H5File
-h5file.close()
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
@@ -35,7 +30,11 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        with H5File(mode='w', title='dwa') as h5:
+        h5tbx.use('cflike')
+        with h5tbx.H5File() as h5:
+            print(type(h5))
+            self.assertIsInstance(h5, cflike.H5File)
+        with h5tbx.H5File(mode='w', title='dwa') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
             g.attrs['one'] = 1
@@ -54,7 +53,7 @@ class TestH5CFLikeFile(unittest.TestCase):
         self.other_filename = generate_temporary_filename(prefix='other', suffix='.hdf')
 
     def test_str(self):
-        strrepr = H5File().__str__()
+        strrepr = h5tbx.H5File().__str__()
         self.assertEqual(strrepr, "<class 'h5rdmtoolbox.H5File' convention: cflike>")
 
     def test_layout(self):
@@ -206,57 +205,57 @@ class TestH5CFLikeFile(unittest.TestCase):
         # self.assertEqual(lay.n_issues, 0)
 
     def test_empty_convention(self):
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             self.assertIsInstance(h5.standard_name_table, StandardNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 0)
             self.assertEqual(h5.standard_name_table.name, 'EmptyStandardNameTable')
 
     def test_create_dataset(self):
         """H5File has more parameters to pass as H5Base"""
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             with self.assertRaises(RuntimeError):
                 _ = h5.create_dataset('u', shape=(), units='m/s')
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             ds = h5.create_dataset('u', shape=(), long_name='velocity', units='')
             self.assertEqual(ds.name, '/u')
             self.assertEqual(ds.attrs['units'], '')
             self.assertEqual(ds.attrs['long_name'], 'velocity')
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             ds = h5.create_dataset('velocity', shape=(), standard_name='x_velocity', units='')
             self.assertEqual(ds.attrs['units'], '')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             ds = h5.create_dataset('velocity', shape=(),
                                    standard_name='x_velocity',
                                    units='m/s')
             self.assertEqual(ds.attrs['units'], 'm/s')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
         da = xr.DataArray(data=[1, 2, 3], attrs={'units': 'm/s'})
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             with self.assertRaises(RuntimeError):
                 _ = h5.create_dataset('velocity', data=da)
 
         da = xr.DataArray(data=[1, 2, 3], attrs={'units': 'm/s', 'standard_name': 'x_velocity'})
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             ds = h5.create_dataset('velocity', data=da)
             self.assertEqual(ds.attrs['units'], 'm/s')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
     def test_create_group(self):
         """testing the creation of groups"""
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             grp = h5.create_group('testgrp2', long_name='a long name')
             self.assertEqual(grp.attrs['long_name'], 'a long name')
             self.assertEqual(grp.long_name, 'a long name')
 
     def test_Layout(self):
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             h5.create_dataset('test', shape=(3,), long_name='daadw', units='')
             h5.create_dataset('testgrp/ds2', shape=(30,), long_name='daadw', units='')
             n_issuess = h5.check()
 
     def test_attrs(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             convention = StandardNameTable(name='empty',
                                            table={'x_velocity': {'description': '',
                                                                  'units': 'm/s'}},
@@ -268,12 +267,11 @@ class TestH5CFLikeFile(unittest.TestCase):
             ds = h5.create_dataset('ds', shape=(), long_name='x_velocity', units='m/s')
             with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = ' x_velocity'
-            from h5rdmtoolbox.conventions import cf
-            cf.STRICT = False
+            sn.STRICT = False
             ds.attrs['standard_name'] = 'x_velocityyy'
             with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = '!x_velocityyy'
-            cf.STRICT = True
+            sn.STRICT = True
             with self.assertRaises(StandardNameError):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
@@ -310,7 +308,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
 
     def test_attrs_find(self):
-        with H5File(self.test_filename, mode='r') as h5:
+        with h5tbx.H5File(self.test_filename, mode='r') as h5:
             self.assertEqual(
                 h5['/grp_1'],
                 h5.find_one(
@@ -357,14 +355,14 @@ class TestH5CFLikeFile(unittest.TestCase):
             )
 
     def test_find_group_data(self):
-        with H5File(self.test_filename, mode='r') as h5:
+        with h5tbx.H5File(self.test_filename, mode='r') as h5:
             self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}, '$group'))
             self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
             self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}))
             self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}))
 
     def test_find_dataset_data(self):
-        with H5File(self.test_filename, mode='r') as h5:
+        with h5tbx.H5File(self.test_filename, mode='r') as h5:
             self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
             self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
             self.assertEqual([h5['ds'], ], h5.find({'$basename': 'ds'}))
@@ -376,27 +374,27 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):
-            with H5File(mode='w', standard_name_table='wrong file name'):
+            with h5tbx.H5File(mode='w', standard_name_table='wrong file name'):
                 pass
-        with H5File(mode='w', standard_name_table=None) as h5:
+        with h5tbx.H5File(mode='w', standard_name_table=None) as h5:
             self.assertIsInstance(h5.standard_name_table, StandardNameTable)
 
     def test_open(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             pass
         h5.reopen('r+')
         self.assertEqual(h5.mode, 'r+')
         h5.close()
 
     def test_create_group(self):
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             grp = h5.create_group('test_grp')
             self.assertIsInstance(grp, H5Group)
             grp = grp.create_group('test_grp')
             self.assertIsInstance(grp, H5Group)
 
     def test_groups(self):
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             groups = h5.get_groups()
             self.assertEqual(groups, [])
             h5.create_group('grp_1', attrs=dict(a=1))
@@ -406,16 +404,17 @@ class TestH5CFLikeFile(unittest.TestCase):
             groups = h5.get_groups()
             self.assertEqual(groups, [h5['grpXYZ'], h5['grp_1'], h5['grp_2'], h5['mygrp_2']])
             groups = h5.get_groups('^grp_[0-9]$')
-            self.assertEqual(groups, [h5['grp_1'], h5['grp_2']])
-            self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=True))
+            self.assertEqual(sorted(groups), sorted([h5['grp_1'], h5['grp_2']]))
+            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]), sorted(h5.get_by_attribute('a', 1, recursive=True)))
 
             h5.create_group('grpXYZ/grp123', attrs=dict(a=1))
-            self.assertEqual([h5['grpXYZ/grp123'], h5['grp_1'], h5['grp_2'], ],
-                             h5.get_by_attribute('a', 1, recursive=True))
-            self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=False))
+            self.assertEqual(sorted([h5['grpXYZ/grp123'], h5['grp_1'], h5['grp_2'], ]),
+                             sorted(h5.get_by_attribute('a', 1, recursive=True)))
+            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]),
+                             sorted(h5.get_by_attribute('a', 1, recursive=False)))
 
     def test_tree_structure(self):
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             h5.attrs['one'] = 1
             h5.attrs['two'] = 2
             h5.create_dataset('rootds', shape=(2, 40, 3), units='', long_name='long name',
@@ -433,7 +432,7 @@ class TestH5CFLikeFile(unittest.TestCase):
                 fname.unlink()
 
     def test_rootparent(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             grp = h5.create_group('grp1/grp2/grp3')
             self.assertIsInstance(grp, H5Group)
             dset = grp.create_dataset('test', data=1, units='', long_name='some long name')
@@ -441,7 +440,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(dset.rootparent, h5['/'])
 
     def test_rename(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             h5.create_dataset('testds', units='', long_name='random', data=np.random.rand(10, 10))
             h5.testds.rename('newname')
             ds = h5.create_dataset('testds_scale', units='', long_name='random long name', data=np.random.rand(10, 10))
@@ -450,7 +449,7 @@ class TestH5CFLikeFile(unittest.TestCase):
                 ds.rename('newname2')
 
     def test_to_unit(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
@@ -469,7 +468,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(float(dset[()].values[1]), 303)
 
     def test_scale_manipulation(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             h5.create_dataset('x', long_name='x-coordinate', units='m', data=np.random.rand(10))
             h5.create_dataset('time', long_name='time', units='s', data=np.random.rand(10))
             h5.create_dataset('temp', long_name='temperature', units='K', data=np.random.rand(10),
@@ -489,11 +488,11 @@ class TestH5CFLikeFile(unittest.TestCase):
         ds.baz.attrs['units'] = 'm'
         ds.baz.attrs['long_name'] = 'baz'
 
-        with H5File() as h5:
+        with h5tbx.H5File() as h5:
             h5.create_dataset_from_xarray_dataset(ds)
 
     def test_attrs(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             CONFIG.NATURAL_NAMING = False
 
             with self.assertRaises(AttributeError):
@@ -527,7 +526,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
     def test_units(self):
-        with H5File(mode='w', title='semantic test file') as h5:
+        with h5tbx.H5File(mode='w', title='semantic test file') as h5:
             ds = h5.create_dataset(name='x', standard_name='x_coordinate', shape=(10, 20), units='')
             self.assertEqual(ds.units, '')
             ds.units = 'm'
@@ -542,12 +541,12 @@ class TestH5CFLikeFile(unittest.TestCase):
                               standard_name='x_velocity', shape=(10, 20))
 
     def test_rootparent(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             grp = h5.create_group('grp1/grp2/grp3')
             self.assertEqual(grp.rootparent, h5['/'])
 
     def test_create_group(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             grp = h5.create_group('group')
             self.assertEqual(h5.long_name, None)
             grp.long_name = 'long name of group'
@@ -555,14 +554,14 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_assign_data_to_existing_dset(self):
         CONFIG.NATURAL_NAMING = True
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name', units='')
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
 
     def test_create_dataset_from_xarray(self):
         CONFIG.NATURAL_NAMING = True
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             z = xr.DataArray(name='z', data=-1,
                              attrs=dict(units='m', standard_name='z_coordinate'))
             x = xr.DataArray(name='x', data=[1, 2, 3], dims='x',
@@ -623,14 +622,14 @@ class TestH5CFLikeFile(unittest.TestCase):
             yaml.safe_dump(dictionary, f)
 
         hdf_filename = generate_temporary_filename(suffix='.hdf')
-        with H5File(hdf_filename, 'w') as h5:
+        with h5tbx.H5File(hdf_filename, 'w') as h5:
             h5.from_yaml(yaml_file)
             self.assertIn('test/grp', h5)
             self.assertIn('boundary/outlet boundary/y', h5)
             self.assertTrue(h5['boundary/outlet boundary/y'].units, 'm')
 
     def test_get_by_attribute(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             lname = h5.get_datasets_by_attribute('long_name')
             self.assertEqual(lname, [])
 
@@ -651,7 +650,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(r, [h5['grp'], ])
 
     def test_get_group_names(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             g = h5.create_group('one', 'one')
             g.create_group('two', 'two')
             g = g.create_group('three', 'three')
@@ -659,7 +658,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(h5['one'].get_group_names(), ['three', 'three/four', 'two'])
 
     def test_get_dataset_names(self):
-        with H5File(mode='w') as h5:
+        with h5tbx.H5File(mode='w') as h5:
             h5.create_dataset('one', data=1, long_name='long name', units='')
             h5.create_dataset('two', data=1, long_name='long name', units='')
             h5.create_dataset('grp/three', data=1, long_name='long name', units='')
@@ -672,7 +671,7 @@ class TestH5CFLikeFile(unittest.TestCase):
         tmpfile = touch_tmp_hdf5_file()
         with h5py.File(tmpfile, mode='w') as h5:
             h5.create_dataset(name='test', data=1)
-        with H5File(tmpfile, mode='r') as h5:
+        with h5tbx.H5File(tmpfile, mode='r') as h5:
             n = h5.check()
             # missing at root level:
             # title
@@ -684,7 +683,7 @@ class TestH5CFLikeFile(unittest.TestCase):
         with h5py.File(tmpfile, mode='w') as h5:
             h5.attrs['title'] = 'testfile'
             h5.create_dataset(name='test', data=1)
-        with H5File(tmpfile, mode='r') as h5:
+        with h5tbx.H5File(tmpfile, mode='r') as h5:
             n = h5.check()
             self.assertEqual(n, 0)
         return
@@ -693,7 +692,7 @@ class TestH5CFLikeFile(unittest.TestCase):
         with h5py.File(tmpfile, mode='w') as h5:
             h5.create_group(name='test')
 
-        with H5File(tmpfile, mode='r') as h5:
+        with h5tbx.H5File(tmpfile, mode='r') as h5:
             n = h5.check()
             self.assertEqual(n, 2)
 
@@ -717,7 +716,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             signal.dims[1].attach_scale(h5['y'])
             signal.dims[1].attach_scale(h5['iy'])
 
-        with H5File(fname) as h5:
+        with h5tbx.H5File(fname) as h5:
             x = h5['x'][:]
             ix = h5['ix'][:]
             s = h5['signal'][:, :]

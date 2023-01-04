@@ -161,7 +161,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
                         found_objs.append(hv)
             if recursive:
                 rf = RecAttrFind(_operator[ok], qk, ov)
-                h5obj['/'].visititems(rf)
+                h5obj.visititems(rf)
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
     else:
