@@ -1,9 +1,41 @@
+import ipyvolume as ipv
 import matplotlib.cm
+import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 import xarray as xr
+from matplotlib.colors import BoundaryNorm, Normalize
 
-import ipyvolume as ipv
+
+def _color_from_values(arr, cmap="jet", levels=None, vmin=None, vmax=None,
+                       alpha=1):
+    if vmin is None:
+        vmin = np.nanmin(arr)
+    if vmax is None:
+        vmax = np.nanmax(arr)
+
+    if isinstance(levels, int):
+        boundaries = np.linspace(vmin, vmax, levels + 1)
+    elif isinstance(levels, np.ndarray):
+        boundaries = levels
+    elif levels is None:
+        # make continuous colors (contourf)
+        norm = Normalize(vmin, vmax)
+    else:
+        raise TypeError(f'levels has wrong type: {type(levels)}. Must be int or np.ndarray.')
+    cmap = plt.get_cmap(cmap)
+
+    if levels is not None:
+        norm = BoundaryNorm(boundaries, ncolors=256, clip=True)
+
+    colormap = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    colors = colormap.to_rgba(arr)
+
+    nan_flag = np.isnan(arr)
+    colors[nan_flag, -1] = 0.
+    if alpha != 1.:
+        colors[~nan_flag, -1] = alpha
+    return colors
 
 
 @xr.register_dataarray_accessor('ipyvolume')
@@ -41,22 +73,42 @@ class Ipyvolume_DataArray_Accessor:
             self._build_meshgrid()
         return self._zz
 
-    def plot(self, figure=None, cmap='viridis', wireframe: bool = False, surface: bool = True):
+    def plot(self, figure=None, z='values', cmap='viridis',
+             wireframe: bool = False, surface: bool = True,
+             color=None, vmin=None, vmax=None, levels=None,
+             alpha=1.0):
         """Surface and wireframe plot"""
-        _cmap = matplotlib.cm.get_cmap(cmap)
         if figure is None:
             fig = ipv.figure()
         else:
             fig = figure
         xx, yy = self.xx, self.yy
         assert xx.shape == self._obj.values.shape
+
+        if z == 'values':
+            zval = self._obj.values
+        else:
+            if self._obj[z].ndim == 0:
+                zval = np.ones_like(xx) * self._obj[z].values
+            else:
+                zval = self._obj[z].values
+
+        if color is None:
+            if z != 'values':
+                color = _color_from_values(arr=self._obj.values, cmap=cmap, vmin=vmin, vmax=vmax, levels=levels,
+                                           alpha=alpha)
+            else:
+                color = _color_from_values(arr=zval, cmap=cmap, vmin=vmin, vmax=vmax, levels=levels, alpha=alpha)
+        else:
+            color = color
         if surface:
-            surface = ipv.plot_surface(yy, xx, self._obj.values, color="red")
-            colors = _cmap(self._obj.values)
-            surface.color = colors.ravel()
+            surface = ipv.plot_surface(xx, yy, zval, color=color)
             surface.color_map = cmap
+            surface.material.transparent = True
+            surface.material.shade = True
         if wireframe:
-            wireframe = ipv.plot_wireframe(yy, xx, self._obj.values, color="red")
+            wireframe = ipv.plot_wireframe(xx, yy, zval, color=color)
+            wireframe.color_map = cmap
         return ipv
 
 
@@ -95,7 +147,8 @@ class Ipyvolume_Dataset_Accessor:
             self._build_meshgrid()
         return self._zz
 
-    def quiver(self, x, y, z, u: str, v: str, w: str, figure=None, cmap='viridis'):
+    def quiver(self, x, y, z, u: str, v: str, w: str, figure=None, cmap='viridis',
+               vmin=None, vmax=None, levels=None, alpha=1.0):
         _cmap = matplotlib.cm.get_cmap(cmap)
         ndim = self._obj.data_vars[list(self._obj.data_vars.keys())[0]].ndim
         if ndim != 3:
@@ -110,7 +163,7 @@ class Ipyvolume_Dataset_Accessor:
         vectors = ipv.quiver(xx.ravel(), yy.ravel(), zz.ravel(),
                              _u, _v, _w)
         abs_val = np.sqrt(np.square(_u) + np.square(_v) + np.square(_w))
-        colors = _cmap(abs_val)
-        vectors.color = colors.ravel()
+        vectors.color = _color_from_values(arr=abs_val, cmap=cmap, vmin=vmin, vmax=vmax, levels=levels,
+                                           alpha=alpha).ravel()
         vectors.color_map = cmap
         return ipv
