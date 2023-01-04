@@ -1049,6 +1049,10 @@ class H5Group(h5py.Group):
         """string representation of group"""
         return self.hdfrepr.__str__(self)
 
+    def build_xr_dataset(self, *dataset):
+        from ..xr.dataset import HDFXrDataset
+        return HDFXrDataset(*dataset)
+
 
 class DatasetValues:
     """helper class to work around xarray"""
