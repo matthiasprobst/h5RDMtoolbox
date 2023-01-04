@@ -104,4 +104,4 @@ def set_config_parameter(parameter_name: str, value: Union[float, int, str]):
     if _parameter_name not in cfg:
         raise ValueError(f'Name "{_parameter_name}" not in config')
     CONFIG[_parameter_name] = value
-    write_user_config()
+    write_user_config(CONFIG)
