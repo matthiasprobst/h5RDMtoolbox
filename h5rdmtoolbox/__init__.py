@@ -9,6 +9,7 @@ from . import wrapper
 from ._logger import create_package_logger
 from ._user import _root_tmp_dir, user_dirs
 from ._version import __version__
+from .config import user_config_filename
 from .database import filequery
 from .utils import generate_temporary_filename, generate_temporary_directory
 from .wrapper import cflike
@@ -136,5 +137,5 @@ def clean_temp_data():
                 failed_dirs_file.unlink(missing_ok=True)
 
 
-__all__ = ['__version__', '__author__', 'user_dirs', 'use', 'logger',
+__all__ = ['__version__', '__author__', 'user_dirs', 'use', 'logger', 'user_config_filename',
            'generate_temporary_filename', 'generate_temporary_directory']

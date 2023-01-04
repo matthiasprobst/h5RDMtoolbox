@@ -1,13 +1,12 @@
 """config file for wrapper classes"""
-
-from typing import Union
-
-import yaml
+import warnings
 from omegaconf import OmegaConf, DictConfig
+from typing import Union
 
 from ._user import user_dirs
 
-config_yaml_filename = user_dirs['root'] / 'user_config.yaml'
+user_config_dir = user_dirs['root']
+user_config_filename = user_dirs['root'] / 'user_config.yaml'
 
 DEFAULT_CONFIG = dict(
     RETURN_XARRAY=True,
@@ -28,20 +27,74 @@ DEFAULT_CONFIG = dict(
 
 def read_user_config() -> DictConfig:
     """Read user configuration"""
-    return OmegaConf.load(config_yaml_filename)
+    return OmegaConf.load(user_config_filename)
 
 
-def write_user_config():
-    """Write config to user direcotry"""
-    with open(config_yaml_filename, 'w') as f:
-        yaml.dump(OmegaConf.to_yaml(CONFIG), f)
+def write_user_config(cfg: DictConfig):
+    """Write config to user directory"""
+    with open(user_config_filename, 'w') as f:
+        f.write(OmegaConf.to_yaml(cfg))
 
 
-if not config_yaml_filename.exists():
+if not user_config_filename.exists():
+    # generate new config file
     CONFIG = OmegaConf.create(DEFAULT_CONFIG)
-    write_user_config()
+    write_user_config(cfg=CONFIG)
 else:
+    # read from file
     CONFIG = read_user_config()
+
+
+def check_config(cfg: DictConfig = None,
+                 write_to_file: bool = False,
+                 remove_wrong: bool = False) -> DictConfig:
+    """check configuration.
+
+    Parameters
+    ----------
+    cfg: DictConfig, optional=None
+        The configuration to be checked. If None, it takes
+        the current one.
+    write_to_file: bool, optional=False
+        Update the user file if a change is made
+    remove_wrong: bool, optional=False
+        Removes wrong configuration entries that are
+        not in DEFAULT_CONFIG
+
+    Returns
+    -------
+    cfg: DictConfig
+        The current configuration if now keys were missing or the
+        updated configuration now including the missing key-value pairs
+    """
+    if cfg is None:
+        cfg = CONFIG
+    if set(DEFAULT_CONFIG).issubset(cfg):
+        if remove_wrong:
+            for k, v in cfg.items():
+                if k not in DEFAULT_CONFIG:
+                    warnings.warn('Removing config entry "{k}: {v}"', UserWarning)
+                    cfg.pop(k)
+            write_user_config(cfg)
+        return cfg  # The default configuration is at least a subset of the default one
+    # keys in the new config seem to be missing frm the DEFAULT configuration. write a new one!
+    warnings.warn('There are entries missing in your configuration. It is updated now. The correct '
+                  'entries are kept though.', UserWarning)
+    new_cfg = DEFAULT_CONFIG
+    for k, v in DEFAULT_CONFIG.items():
+        if k in new_cfg:
+            new_cfg[k] = v
+        else:
+            if remove_wrong:
+                warnings.warn('Removing config entry "{k}: {v}"', UserWarning)
+                new_cfg.pop(k)
+    cfg = DictConfig(new_cfg)
+    if write_to_file or remove_wrong:
+        write_user_config(cfg)
+    return cfg
+
+
+CONFIG = check_config(CONFIG, write_to_file=True, remove_wrong=True)
 
 
 def set_config_parameter(parameter_name: str, value: Union[float, int, str]):
