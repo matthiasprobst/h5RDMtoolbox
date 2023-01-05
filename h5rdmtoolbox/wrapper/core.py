@@ -828,6 +828,7 @@ class H5Group(h5py.Group):
                 if dim not in ds_coords:
                     # xarray does not let me add attributes to this dimension
                     h5py.Group(self.id).create_dataset(name=dim, data=dataset[data_var][dim].values)
+                    ds_coords[dim] = ds
                 else:
                     ds.dims[idim].attach_scale(ds_coords[dim])
 
