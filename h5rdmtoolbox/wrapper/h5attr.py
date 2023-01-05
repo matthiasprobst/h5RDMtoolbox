@@ -65,10 +65,14 @@ class WrapperAttributeManager(h5py.AttributeManager):
                                         rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
                                         dictionary[k] = rootgrp.get(v)
                     return dictionary
-                elif ret[0] == '/':  # it may be group or dataset path
+                elif ret[0] == '/':
+                    # it may be group or dataset path or actually just a filepath stored by the user
                     if isinstance(self._id, h5py.h5g.GroupID):
                         # call like this, otherwise recursive call!
                         rootgrp = get_rootparent(h5py.Group(self._id))
+                        if rootgrp.get(ret) is None:
+                            # not a dataset or group, maybe just a filename that has been stored
+                            return ret
                         return rootgrp.get(ret).name
                     else:
                         rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
