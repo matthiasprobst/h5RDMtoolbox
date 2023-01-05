@@ -14,6 +14,7 @@ from .database import filequery
 from .utils import generate_temporary_filename, generate_temporary_directory
 from .wrapper import cflike
 from .wrapper import core
+from .wrapper.core import lower
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'

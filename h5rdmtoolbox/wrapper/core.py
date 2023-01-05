@@ -42,6 +42,18 @@ if not H5File_layout_filename.exists():
     shutil.copy2(pathlib.Path(__file__).parent / '../data/H5File.hdf', H5File_layout_filename)
 
 
+class Lower(str):
+    """Lower"""
+
+    def __new__(cls, string):
+        instance = super().__new__(cls, string.lower())
+        return instance
+
+
+def lower(string: str):
+    return Lower(string)
+
+
 class H5Group(h5py.Group):
     """Inherited Group of the package h5py
     """
@@ -126,6 +138,11 @@ class H5Group(h5py.Group):
             super().__setitem__(name, obj)
 
     def __getitem__(self, name):
+        if isinstance(name, Lower):
+            for k in self.keys():
+                if name == k.lower():
+                    name = k
+                    break
         ret = super().__getitem__(name)
         if isinstance(ret, h5py.Dataset):
             return self._h5ds(ret.id)
