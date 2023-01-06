@@ -286,7 +286,6 @@ class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
     def __NDdataset__(self, name, h5dataset):
         """string representation of a ND dataset"""
         units = self.get_string_repr_of_unit(h5dataset)
-        print(units)
         return f"\033[1m{name}\033[0m [{units}]: {h5dataset.shape}, dtype: {h5dataset.dtype}"
 
     @staticmethod
