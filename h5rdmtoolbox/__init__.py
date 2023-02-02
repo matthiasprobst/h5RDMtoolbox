@@ -111,16 +111,25 @@ class H5Files:
 
 
 @atexit.register
-def clean_temp_data():
+def clean_temp_data(full: bool = False):
     """cleaning up the tmp directory"""
     failed_dirs = []
     failed_dirs_file = _root_tmp_dir / 'failed.txt'
-    if user_dirs['tmp'].exists():
+    if full:
+        if _root_tmp_dir.exists():
+            shutil.rmtree(_root_tmp_dir)
+            _root_tmp_dir.mkdir(exist_ok=True, parents=True)
+        return
+    _tmp_session_dir = user_dirs["tmp"]
+    if _tmp_session_dir.exists():
         try:
+            # logger not available anymore
+            # core_logger.debug(f'Attempting to delete {_tmp_session_dir}')
             shutil.rmtree(user_dirs['tmp'])
+            # core_logger.debug(f'Successfully deleted {_tmp_session_dir}')
         except PermissionError as e:
             failed_dirs.append(user_dirs['tmp'])
-            print(f'removing tmp folder "{user_dirs["tmp"]}" failed due to "{e}". Best is you '
+            print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
                   f'manually delete the directory.')
         finally:
             lines = []
@@ -140,7 +149,9 @@ def clean_temp_data():
                         f.writelines(f'{fd}\n')
             else:
                 failed_dirs_file.unlink(missing_ok=True)
+    else:
+        core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
 
 
-__all__ = ['__version__', '__author__', 'user_dirs', 'use', 'logger', 'user_config_filename',
+__all__ = ['__version__', '__author__', 'user_dirs', 'use', 'core_logger', 'user_config_filename',
            'generate_temporary_filename', 'generate_temporary_directory']
