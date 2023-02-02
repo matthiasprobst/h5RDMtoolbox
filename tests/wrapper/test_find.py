@@ -7,7 +7,6 @@ from h5rdmtoolbox import config
 from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper import set_loglevel
 
-use('cflike')
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
@@ -18,6 +17,7 @@ class TestFind(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
+        use('cflike')
         with h5tbx.H5File() as h5:
             h5.attrs['project'] = 'tutorial'
             h5.create_dataset('velocity', data=[1, 2, -1], units='m/s', standard_name='x_velocity')

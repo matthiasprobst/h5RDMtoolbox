@@ -1,9 +1,8 @@
 import datetime
-import unittest
-import warnings
-
 import numpy as np
 import pymongo.collection
+import unittest
+import warnings
 from pymongo import MongoClient
 
 import h5rdmtoolbox as h5tbx
@@ -14,12 +13,11 @@ from h5rdmtoolbox import use
 from h5rdmtoolbox.database import mongo
 from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
 
-use('cflike')
-
 
 class TestH5Mongo(unittest.TestCase):
 
     def setUp(self) -> None:
+        use('cflike')
         self.mongodb_running = True
         try:
             client = MongoClient(serverSelectionTimeoutMS=1.)

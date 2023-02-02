@@ -445,24 +445,29 @@ class TestH5CFLikeFile(unittest.TestCase):
             h5.testds.rename('newname')
             ds = h5.create_dataset('testds_scale', units='', long_name='random long name', data=np.random.rand(10, 10))
             ds.make_scale()
-            with self.assertRaises(RuntimeError):
-                ds.rename('newname2')
+            with self.assertRaises(KeyError):
+                ds.rename('newname')
 
     def test_to_unit(self):
         with h5tbx.H5File(mode='w') as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
-            dset.to_units('K')
+            dset.to_units('K', inplace=True)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
             self.assertEqual(float(dset[()].values), 293)
+            dset.to_units('degC', inplace=True)
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
+            dset_K= dset.to_units('K', inplace=False)
+            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
+            self.assertEqual(ureg.Unit(dset_K.units), ureg.Unit('K'))
 
             dset = h5.create_dataset('temp2', units='degC',
                                      long_name='temperature dataset', data=[20, 30])
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values[0]), 20)
             self.assertEqual(float(dset[()].values[1]), 30)
-            dset.to_units('K')
+            dset.to_units('K', inplace=True)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
             self.assertEqual(float(dset[()].values[0]), 293)
             self.assertEqual(float(dset[()].values[1]), 303)

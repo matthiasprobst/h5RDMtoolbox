@@ -13,7 +13,6 @@ from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.core import H5Dataset, H5File, H5Group
 
-use('default')
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
@@ -24,6 +23,7 @@ class TestH5File(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
+        use('default')
         with H5File(mode='w') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
@@ -350,8 +350,8 @@ class TestH5File(unittest.TestCase):
             ds = h5.create_dataset('testds_scale',
                                    data=np.random.rand(10, 10))
             ds.make_scale()
-            with self.assertRaises(RuntimeError):
-                ds.rename('newname2')
+            with self.assertRaises(KeyError):
+                ds.rename('newname')
 
     def test_dimension_scales(self):
         with H5File(mode='w') as h5:

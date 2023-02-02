@@ -13,10 +13,11 @@ set_loglevel('ERROR')
 
 ureg.default_format = CONFIG.UREG_FORMAT
 
-h5tbx.use('default')
-
 
 class TestCore(unittest.TestCase):
+
+    def setUp(self) -> None:
+        h5tbx.use('default')
 
     def test_from_csv(self):
         df = pd.DataFrame({'x': [1, 5, 10], 'y': [-3, 20, 0]})
