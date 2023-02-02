@@ -1,5 +1,6 @@
 """h5rdtoolbox repository"""
 import atexit
+import logging
 import pathlib
 import shutil
 import warnings
@@ -19,19 +20,23 @@ from .wrapper.core import lower
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
 
-logger = create_package_logger('h5rdmtoolbox')
+core_logger = create_package_logger('h5rdmtoolbox')
 
 
-def set_loglevel(level):
+def set_loglevel(logger, level):
     """set the loglevel of the whole package"""
+    if isinstance(logger, str):
+        logger = logging.getLogger(logger)
+    old_level = logger.level
     logger.setLevel(level.upper())
     for h in logger.handlers:
         h.setLevel(level.upper())
+    logger.debug(f'changed logger level for {logger.name} from {old_level} to {level}')
 
 
 CONFIG = config.CONFIG
 
-set_loglevel(CONFIG.INIT_LOGGER_LEVEL)
+set_loglevel(core_logger, CONFIG.INIT_LOGGER_LEVEL)
 
 # global instance:
 h5tbxParams = {'convention': config.CONFIG['CONVENTION'],
@@ -50,7 +55,7 @@ def use(convention_name: str) -> None:
     """
     if convention_name == 'default' or convention_name is None:
         if h5tbxParams['convention'] != convention_name:
-            logger.info(f'Switched to "default"')
+            core_logger.info(f'Switched to "default"')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['H5File'] = core.H5File
         h5tbxParams['H5Dataset'] = core.H5Dataset
@@ -59,7 +64,7 @@ def use(convention_name: str) -> None:
 
     elif convention_name == 'cflike':
         if h5tbxParams['convention'] != convention_name:
-            logger.info(f'Switched to "{convention_name}"')
+            core_logger.info(f'Switched to "{convention_name}"')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['H5File'] = cflike.H5File
         h5tbxParams['H5Dataset'] = cflike.H5Dataset

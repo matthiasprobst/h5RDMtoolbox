@@ -34,6 +34,7 @@ from ..config import CONFIG
 from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
+print(__package__)
 
 ureg.default_format = CONFIG.UREG_FORMAT
 
@@ -50,7 +51,9 @@ class Lower(str):
         return instance
 
 
-def lower(string: str):
+def lower(string: str) -> Lower:
+    """return object Lower(string). Used when a dataset
+    is called, but the upper/lower case should be irrelevant."""
     return Lower(string)
 
 
@@ -535,8 +538,15 @@ class H5Group(h5py.Group):
             recursive=rec,
             find_one=False)
 
-    def create_datasets_from_csv(self, csv_filename, shape=None, overwrite=False,
-                                 combine_opt='stack', axis=0, chunks=None, **kwargs):
+    def create_datasets_from_csv(self,
+                                 csv_filename,
+                                 dim_column: Union[int, str] = 0,
+                                 shape=None,
+                                 overwrite=False,
+                                 combine_opt='stack',
+                                 axis=0, chunks=None,
+                                 attrs: Dict = None,
+                                 **pandas_kwargs):
         """
         Reads data from a csv and adds a dataset according to column names.
         Pandas.read_csv() is used. So all arguments for this function may be passed.
@@ -546,6 +556,9 @@ class H5Group(h5py.Group):
         csv_filename : Path or list of Path
             CSV filename or list of filenames.
             If list is passed, structure must be the same for all
+        dim_column : Union[int, str], optional=0
+            The column index or name to be used as dimension. All other
+            datasets get this dimension attached as coordinate.
         shape : tuple
             Target shape of data. Default is None.
             As data is column data. it can be reshaped to desired shape.
@@ -562,22 +575,26 @@ class H5Group(h5py.Group):
         chunks : tuple
             Chunking option for HDF5 dataset creation. Equal for all
             datasets
+        attrs : Dict
+            Dictionary containing attributes for the columns. The keys
+            must match the column names of the csv.
 
         Returns
         -------
-        ds : HDF Dataset
-            The created dataset
+        None
 
         """
         from pandas import read_csv as pd_read_csv
-        if 'names' in kwargs.keys():
-            if 'header' not in kwargs.keys():
+        if attrs is None:
+            attrs = {}
+        if 'names' in pandas_kwargs.keys():
+            if 'header' not in pandas_kwargs.keys():
                 raise RuntimeError('if you pass names also pass header=...')
 
         if isinstance(csv_filename, (list, tuple)):
             # depending on the meaning of multiple csv_filename axis can be 0 (z-plane)
             # or 1 (time-plane)
-            axis = kwargs.pop('axis', 0)
+            axis = pandas_kwargs.pop('axis', 0)
             csv_fname = csv_filename[0]
             is_single_file = False
         elif isinstance(csv_filename, (str, Path)):
@@ -587,7 +604,7 @@ class H5Group(h5py.Group):
             raise ValueError(
                 f'Wrong input for "csv_filename: {type(csv_filename)}')
 
-        df = pd_read_csv(csv_fname, **kwargs)
+        df = pd_read_csv(csv_fname, **pandas_kwargs)
 
         compression, compression_opts = CONFIG.HDF_COMPRESSION, CONFIG.HDF_COMPRESSION_OPTS
 
@@ -598,6 +615,7 @@ class H5Group(h5py.Group):
                 try:
                     self.create_dataset(name=ds_name,
                                         data=data,
+                                        attrs=attrs.get(ds_name, None),
                                         overwrite=overwrite, compression=compression,
                                         compression_opts=compression_opts)
                 except RuntimeError as e:
@@ -612,17 +630,20 @@ class H5Group(h5py.Group):
                     _shape = list(_data.shape)
                     _shape[axis] = nfiles
                     self.create_dataset(name=ds_name, shape=_shape,
+                                        attrs=attrs.get(ds_name, None),
                                         compression=compression,
                                         compression_opts=compression_opts,
                                         chunks=chunks)
                 elif combine_opt == 'stack':
                     if axis == 0:
                         self.create_dataset(name=ds_name, shape=(nfiles, *_data.shape),
+                                            attrs=attrs.get(ds_name, None),
                                             compression=compression,
                                             compression_opts=compression_opts,
                                             chunks=chunks)
                     elif axis == 1:
                         self.create_dataset(name=ds_name, shape=(_data.shape[0], nfiles, *_data.shape[1:]),
+                                            attrs=attrs.get(ds_name, None),
                                             compression=compression,
                                             compression_opts=compression_opts,
                                             chunks=chunks)
@@ -634,7 +655,7 @@ class H5Group(h5py.Group):
                         f'"combine_opt" must be "concatenate" or "stack", not {combine_opt}')
 
             for i, csv_fname in enumerate(csv_filename):
-                df = pd_read_csv(csv_fname, **kwargs)
+                df = pd_read_csv(csv_fname, **pandas_kwargs)
                 for c in df.columns:
                     ds_name = utils.remove_special_chars(str(c))
                     data = df[str(c)].values.reshape(shape)
@@ -1301,10 +1322,17 @@ class H5Dataset(h5py.Dataset):
 
         super().__init__(_id)
 
-    def to_units(self, new_units: str):
+    def to_units(self, new_units: str, inplace: bool = False):
         """Changes the physical unit of the dataset using pint_xarray.
-        Loads to full dataset into RAM!"""
-        self[()] = self[()].pint.quantify().pint.to(new_units).pint.dequantify()
+        If `inplace`=True, it loads to full dataset into RAM, which may
+        not recommended for very large datasets.
+        TODO: think about RAM check or perform it based on chunks"""
+        if inplace:
+            old_units = self[()].attrs['units']
+            self[()] = self[()].pint.quantify().pint.to(new_units).pint.dequantify()
+            new_units = self[()].attrs['units']
+            logger.debug(f'Changed units of {self.name} from {old_units} to {new_units}.')
+        return self[()].pint.quantify().pint.to(new_units).pint.dequantify()
 
     def rename(self, newname):
         """renames the dataset. Note this may be a process that kills your RAM"""
