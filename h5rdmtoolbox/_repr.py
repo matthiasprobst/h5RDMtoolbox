@@ -161,13 +161,21 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
 
 class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
-    def __call__(self, group, collapsed: bool = True, preamble: str = None, indent: int = 0):
+    def __call__(self,
+                 group,
+                 collapsed: bool = True,
+                 preamble: str = None,
+                 indent: int = 0,
+                 chunks: bool = False,
+                 maxshape: bool = False):
         if isinstance(group, h5py.Group):
             h5group = group
         else:
             h5group = group['/']
 
         self.collapsed = collapsed
+        self.chunks = chunks
+        self.maxshape = maxshape
 
         _id = h5group.name + perf_counter_ns().__str__()
 
@@ -225,6 +233,17 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 _shape_repr = _shape
         else:
             _shape_repr = _shape
+
+        if self.chunks:
+            chunks_str = f' chunks={h5dataset.chunks}'
+        else:
+            chunks_str = ''
+
+        if self.maxshape:
+            maxshape_str = f' maxshape={h5dataset.maxshape}'
+        else:
+            maxshape_str = ''
+
         _id1 = f'ds-1-{h5dataset.name}-{perf_counter_ns().__str__()}'
         _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
         _html = f"""\n
@@ -232,7 +251,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname' 
                     for="{_id2}">{name}</label>
-                <span class="h5tb-dims">{_shape_repr} ({h5dataset.dtype})</span>"""
+                <span class="h5tb-dims">{_shape_repr} [{h5dataset.dtype}]{chunks_str}{maxshape_str}</span>"""
         return _html
 
     def __dataset__(self, name, h5dataset) -> str:
@@ -354,5 +373,7 @@ class H5Repr:
     def __str__(self, group) -> str:
         return self.str_repr(group=group)
 
-    def __html__(self, group, collapsed: bool = True, preamble: str = None):
-        display(HTML(self.html_repr(group=group, collapsed=collapsed, preamble=preamble)))
+    def __html__(self, group, collapsed: bool = True, preamble: str = None,
+                 chunks: bool = False, maxshape: bool = False):
+        display(
+            HTML(self.html_repr(group=group, collapsed=collapsed, preamble=preamble, chunks=chunks, maxshape=maxshape)))
