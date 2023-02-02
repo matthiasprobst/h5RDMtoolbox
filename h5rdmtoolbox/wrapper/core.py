@@ -34,7 +34,6 @@ from ..config import CONFIG
 from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
-print(__package__)
 
 ureg.default_format = CONFIG.UREG_FORMAT
 
@@ -100,6 +99,51 @@ class H5Group(h5py.Group):
         if pattern == '.*' and not rec:
             return [v for v in self.values() if isinstance(v, h5py.Group)]
         return self.find({'$basename': {'$regex': pattern}}, rec=rec)
+
+    def _modify_static_dataset_properties(self, dataset, **dataset_parameters):
+        """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
+        and then copy it back with the new properties. 'static' properties are considered properties
+        that cannot be changed once the dataset has been written, such as max_shape, dtype etc."""
+        dataset_basename = dataset.basename
+
+        name = dataset_parameters.get('name', dataset_basename)
+        if name != dataset_basename and name in self:
+            raise KeyError('Renaming the dataset is not possible because new name already exists in group'
+                           f' {self.name}')
+
+        with H5File() as temp_h5dest:
+            self.copy(dataset_basename, temp_h5dest)
+            tmp_ds = temp_h5dest[dataset_basename]
+
+            # delete dataset from this file
+            del self[dataset_basename]
+
+            # get porperties
+            chunks = dataset_parameters.get('chunks', tmp_ds.chunks)
+            compression = dataset_parameters.get('compression', tmp_ds.compression)
+            compression_opts = dataset_parameters.get('compression_opts', tmp_ds.compression_opts)
+            dtype = dataset_parameters.get('dtype', tmp_ds.dtype)
+            maxshape = dataset_parameters.get('maxshape', tmp_ds.maxshape)
+            new_attrs = dataset_parameters.get('attrs', None)
+            attrs = dict(tmp_ds.attrs.items())
+            if new_attrs is not None:
+                attrs.update(new_attrs)
+
+            # create new dataset with same name but different chunks:
+            new_ds = self.create_dataset(name=name,
+                                         dtype=dtype,
+                                         shape=tmp_ds.shape,
+                                         chunks=chunks,
+                                         maxshape=maxshape,
+                                         attrs=attrs,
+                                         compression=compression,
+                                         compression_opts=compression_opts)
+
+            # copy the data chunk-wise
+            for chunk_slice in tmp_ds.iter_chunks():
+                new_ds[chunk_slice] = tmp_ds[chunk_slice]
+
+        return new_ds
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
@@ -1074,12 +1118,25 @@ class H5Group(h5py.Group):
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
-    def dump(self, collapsed: bool = True, max_attr_length=None):
+    def dump(self, collapsed: bool = True, max_attr_length: Union[int, None] = None,
+             chunks: bool = False, maxshape: bool = False):
         """Outputs xarray-inspired _html representation of the file content if a
-        notebook environment is used"""
+        notebook environment is used
+
+        Parameters
+        ----------
+        collapsed: bool, optional=True
+            Initial tree view is collapsed
+        max_attr_length: Union[int, None], optional=None
+            Max string length to display.
+        chunks: bool, optional=False
+            Show chunk
+        maxshape: bool, optional=False
+            Show maxshape
+        """
         if max_attr_length:
             self.hdfrepr.max_attr_length = max_attr_length
-        return self.hdfrepr.__html__(self, collapsed=collapsed)
+        return self.hdfrepr.__html__(self, collapsed=collapsed, chunks=chunks, maxshape=maxshape)
 
     def _repr_html_(self):
         return self.hdfrepr.__html__(self)
@@ -1182,6 +1239,27 @@ class H5Dataset(h5py.Dataset):
             Helper class mimicking the h5py behaviour of returning a numpy array.
         """
         return DatasetValues(self)
+
+    def modify_chunks(self, new_chunks) -> "H5Dataset":
+        """Changing the chunk shape of the dataset.
+        Not possible without rewriting the dataset.
+        Make a temporary copy of the dataset with new chunk size
+        and then rename the dataset (which again will require
+        some data shuffling"""
+        # lazy way:
+        # copy the dataset to new tmp file:
+        return self.parent._modify_static_dataset_properties(self, chunks=new_chunks)
+
+    def rename(self, new_name):
+        return self.parent._modify_static_dataset_properties(self, name=new_name)
+
+    def modify_compression(self, compression, compression_opts):
+        return self.parent._modify_static_dataset_properties(self,
+                                                             compression=compression,
+                                                             compression_opts=compression_opts)
+
+    def modify_dtype(self, dtype):
+        return self.parent._modify_static_dataset_properties(self, dtype=dtype)
 
     def __getattr__(self, item):
         if item not in self.__dict__:
@@ -1334,7 +1412,7 @@ class H5Dataset(h5py.Dataset):
             logger.debug(f'Changed units of {self.name} from {old_units} to {new_units}.')
         return self[()].pint.quantify().pint.to(new_units).pint.dequantify()
 
-    def rename(self, newname):
+    def rename2(self, newname):
         """renames the dataset. Note this may be a process that kills your RAM"""
         # hard copy:
         if 'CLASS' and 'NAME' in self.attrs:
