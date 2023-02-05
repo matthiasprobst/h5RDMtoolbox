@@ -118,7 +118,7 @@ class H5Group(h5py.Group):
             # delete dataset from this file
             del self[dataset_basename]
 
-            # get porperties
+            # get properties
             chunks = dataset_parameters.get('chunks', tmp_ds.chunks)
             compression = dataset_parameters.get('compression', tmp_ds.compression)
             compression_opts = dataset_parameters.get('compression_opts', tmp_ds.compression_opts)
@@ -141,7 +141,7 @@ class H5Group(h5py.Group):
 
             # copy the data chunk-wise
             for chunk_slice in tmp_ds.iter_chunks():
-                new_ds[chunk_slice] = tmp_ds[chunk_slice]
+                new_ds.values[chunk_slice] = tmp_ds.values[chunk_slice]
 
         return new_ds
 
