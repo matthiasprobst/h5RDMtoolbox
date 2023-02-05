@@ -30,7 +30,10 @@ class XarrayLabelManipulation(plt.Axes):
                 return label
             idx0 = label.rfind('[', 1)
             units_string = label[idx0:]
-            _raw_unit = f"${units_string[1:-1].replace('**', '^')}$"
+            if units_string[1:-1] in ('', ' ', None):
+                _raw_unit = '-'
+            else:
+                _raw_unit = f"${units_string[1:-1].replace('**', '^')}$"
 
             if units_format == 'in':
                 return label.replace(units_string, f' in {_raw_unit}')
