@@ -35,8 +35,8 @@ from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
 
-MODIFIABLE_PROPERTIES_OF_A_DATASET = ('chunks', 'compression', 'compression_opts',
-                                      'dtype')
+MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
+                                      'dtype', 'maxshape')
 ureg.default_format = CONFIG.UREG_FORMAT
 
 H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
@@ -102,16 +102,35 @@ class H5Group(h5py.Group):
             return [v for v in self.values() if isinstance(v, h5py.Group)]
         return self.find({'$basename': {'$regex': pattern}}, rec=rec)
 
-    def modify_dataset_properties(self, dataset, **dataset_parameters):
+    def modify_dataset_properties(self, dataset, **dataset_properties):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
         and then copy it back with the new properties. 'static' properties are considered properties
         that cannot be changed once the dataset has been written, such as max_shape, dtype etc."""
+        if not isinstance(dataset_properties, dict):
+            raise TypeError(f'Expecting type dict for "properties" but got {type(dataset_properties)}')
+        for k in dataset_properties.keys():
+            if k not in MODIFIABLE_PROPERTIES_OF_A_DATASET:
+                raise KeyError(f'Property "{k}" not in list of modifiable properties: '
+                               f'{MODIFIABLE_PROPERTIES_OF_A_DATASET}')
+
         dataset_basename = dataset.basename
 
-        name = dataset_parameters.get('name', dataset_basename)
+        name = dataset_properties.get('name', dataset_basename)
         if name != dataset_basename and name in self:
             raise KeyError('Renaming the dataset is not possible because new name already exists in group'
                            f' {self.name}')
+
+        # get properties or source dataset
+        _orig_dataset_properties = {k: dataset.__getattr__(k) for k in MODIFIABLE_PROPERTIES_OF_A_DATASET}
+        worth_changing = False
+        for k, v in dataset_properties.items():
+            if v != _orig_dataset_properties[k]:
+                worth_changing = True
+                _orig_dataset_properties.update({k: v})
+
+        if not worth_changing:
+            warnings.warn(f'No changes were applied because new properties a no different to present ones', UserWarning)
+            return dataset
 
         with H5File() as temp_h5dest:
             self.copy(dataset_basename, temp_h5dest)
@@ -120,26 +139,12 @@ class H5Group(h5py.Group):
             # delete dataset from this file
             del self[dataset_basename]
 
-            # get properties
-            chunks = dataset_parameters.get('chunks', tmp_ds.chunks)
-            compression = dataset_parameters.get('compression', tmp_ds.compression)
-            compression_opts = dataset_parameters.get('compression_opts', tmp_ds.compression_opts)
-            dtype = dataset_parameters.get('dtype', tmp_ds.dtype)
-            maxshape = dataset_parameters.get('maxshape', tmp_ds.maxshape)
-            new_attrs = dataset_parameters.get('attrs', None)
             attrs = dict(tmp_ds.attrs.items())
-            if new_attrs is not None:
-                attrs.update(new_attrs)
-
             # create new dataset with same name but different chunks:
-            new_ds = self.create_dataset(name=name,
-                                         dtype=dtype,
+            new_ds = self.create_dataset(name=_orig_dataset_properties.pop('name'),
                                          shape=tmp_ds.shape,
-                                         chunks=chunks,
-                                         maxshape=maxshape,
                                          attrs=attrs,
-                                         compression=compression,
-                                         compression_opts=compression_opts)
+                                         **_orig_dataset_properties)
 
             # copy the data chunk-wise
             for chunk_slice in tmp_ds.iter_chunks():
@@ -1242,17 +1247,11 @@ class H5Dataset(h5py.Dataset):
         """
         return DatasetValues(self)
 
-    def modify(self, **properties: Dict) -> "H5Dataset":
+    def modify(self, **properties) -> "H5Dataset":
         """modify property of dataset such as `chunks` or `dtpye`. This is
         not possible with the original implementation in `h5py`. Note, that
         this may be a time-consuming task for large datasets! Better to set
         the properties correct already during dataset creation!"""
-        if not isinstance(properties, dict):
-            raise TypeError(f'Expecting type dict for "properties" but got {type(properties)}')
-        for k in properties.keys():
-            if k not in MODIFIABLE_PROPERTIES_OF_A_DATASET:
-                raise KeyError(f'Property {k} not in list of modifiable properties: '
-                               f'{MODIFIABLE_PROPERTIES_OF_A_DATASET}')
         return self.parent.modify_dataset_properties(self, **properties)
 
     def rename(self, new_name):
