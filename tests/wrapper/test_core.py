@@ -41,6 +41,10 @@ class TestCore(unittest.TestCase):
             self.assertEqual(ds.chunks, (1, 20, 30))
             self.assertEqual(new_ds.chunks, (2, 5, 6))
 
+            with self.assertWarns(UserWarning):
+                # this will only raise a warning. nothing to change
+                new_ds.modify(chunks=(2, 5, 6))
+
         self.assertTrue(np.all(ds1 == ds0))
 
         with h5tbx.H5File() as h5:
