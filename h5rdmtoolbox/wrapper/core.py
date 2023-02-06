@@ -133,22 +133,35 @@ class H5Group(h5py.Group):
             return dataset
 
         with H5File() as temp_h5dest:
+            progress_bar = tqdm(total=4, desc='Progress')
+            progress_bar.desc = 'Copy dataset to temporary file'
+
             self.copy(dataset_basename, temp_h5dest)
+            progress_bar.update(1)
+
             tmp_ds = temp_h5dest[dataset_basename]
 
+            progress_bar.desc = 'Delete old dataset'
             # delete dataset from this file
             del self[dataset_basename]
+            progress_bar.update(1)
 
+            progress_bar.desc = 'Creating new dataset'
             attrs = dict(tmp_ds.attrs.items())
             # create new dataset with same name but different chunks:
             new_ds = self.create_dataset(name=_orig_dataset_properties.pop('name'),
                                          shape=tmp_ds.shape,
                                          attrs=attrs,
                                          **_orig_dataset_properties)
+            progress_bar.update(1)
 
+            progress_bar.desc = 'Writing the data chunk-wise'
             # copy the data chunk-wise
             for chunk_slice in tmp_ds.iter_chunks():
                 new_ds.values[chunk_slice] = tmp_ds.values[chunk_slice]
+            progress_bar.update(1)
+
+            progress_bar.close()
 
         return new_ds
 
