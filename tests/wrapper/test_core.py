@@ -36,9 +36,8 @@ class TestCore(unittest.TestCase):
                                    attach_scales=(ds_scale,))
             ds0 = ds[:]
 
-            new_ds = ds.modify_chunks((2, 5, 6))
+            new_ds = ds.modify(chunks=(2, 5, 6))
             ds1 = new_ds[:]
-
             self.assertEqual(ds.chunks, (1, 20, 30))
             self.assertEqual(new_ds.chunks, (2, 5, 6))
 
@@ -50,7 +49,7 @@ class TestCore(unittest.TestCase):
                                    chunks=(1, 20, 30))
             ds0 = ds[:]
 
-            new_ds = ds.modify_chunks((2, 5, 6))
+            new_ds = ds.modify(chunks=(2, 5, 6))
             ds1 = new_ds[:]
 
             self.assertEqual(ds.chunks, (1, 20, 30))
@@ -62,14 +61,14 @@ class TestCore(unittest.TestCase):
                                    data=np.random.rand(10, 20, 30),
                                    chunks=(1, 20, 30),
                                    dtype=int)
-            new_ds = h5['/']._modify_static_dataset_properties(dataset=ds,
-                                                               dtype=float)
+            new_ds = h5['/'].modify_dataset_properties(dataset=ds,
+                                                       dtype=float)
             self.assertEqual(ds.dtype, int)
             self.assertEqual(new_ds.dtype, float)
 
             ds1 = new_ds[:]
-            new_ds2 = h5['/']._modify_static_dataset_properties(dataset=new_ds,
-                                                                name='data2')
+            new_ds2 = h5['/'].modify_dataset_properties(dataset=new_ds,
+                                                        name='data2')
             ds2 = new_ds2[:]
             self.assertEqual(new_ds2.name, '/data2')
             self.assertTrue('data' not in h5)
@@ -80,10 +79,10 @@ class TestCore(unittest.TestCase):
             ds = h5.create_dataset('data', shape=(10, 20, 30),
                                    data=np.random.rand(10, 20, 30),
                                    chunks=(1, 20, 30),
-                                   dtype=int)
-            new_ds = ds.modify_dtype(float)
-            self.assertEqual(ds.dtype, int)
-            self.assertEqual(new_ds.dtype, float)
+                                   dtype='int16')
+            new_ds = ds.modify(dtype='float32')
+            self.assertEqual(ds.dtype, 'int16')
+            self.assertEqual(new_ds.dtype, 'float32')
 
             ds1 = new_ds[:]
             new_ds2 = new_ds.rename('data2')

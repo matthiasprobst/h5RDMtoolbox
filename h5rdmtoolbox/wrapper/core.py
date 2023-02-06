@@ -35,6 +35,8 @@ from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
 
+MODIFIABLE_PROPERTIES_OF_A_DATASET = ('chunks', 'compression', 'compression_opts',
+                                      'dtype')
 ureg.default_format = CONFIG.UREG_FORMAT
 
 H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
@@ -100,7 +102,7 @@ class H5Group(h5py.Group):
             return [v for v in self.values() if isinstance(v, h5py.Group)]
         return self.find({'$basename': {'$regex': pattern}}, rec=rec)
 
-    def _modify_static_dataset_properties(self, dataset, **dataset_parameters):
+    def modify_dataset_properties(self, dataset, **dataset_parameters):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
         and then copy it back with the new properties. 'static' properties are considered properties
         that cannot be changed once the dataset has been written, such as max_shape, dtype etc."""
@@ -1240,26 +1242,23 @@ class H5Dataset(h5py.Dataset):
         """
         return DatasetValues(self)
 
-    def modify_chunks(self, new_chunks) -> "H5Dataset":
-        """Changing the chunk shape of the dataset.
-        Not possible without rewriting the dataset.
-        Make a temporary copy of the dataset with new chunk size
-        and then rename the dataset (which again will require
-        some data shuffling"""
-        # lazy way:
-        # copy the dataset to new tmp file:
-        return self.parent._modify_static_dataset_properties(self, chunks=new_chunks)
+    def modify(self, **properties: Dict) -> "H5Dataset":
+        """modify property of dataset such as `chunks` or `dtpye`. This is
+        not possible with the original implementation in `h5py`. Note, that
+        this may be a time-consuming task for large datasets! Better to set
+        the properties correct already during dataset creation!"""
+        if not isinstance(properties, dict):
+            raise TypeError(f'Expecting type dict for "properties" but got {type(properties)}')
+        for k in properties.keys():
+            if k not in MODIFIABLE_PROPERTIES_OF_A_DATASET:
+                raise KeyError(f'Property {k} not in list of modifiable properties: '
+                               f'{MODIFIABLE_PROPERTIES_OF_A_DATASET}')
+        return self.parent.modify_dataset_properties(self, **properties)
 
     def rename(self, new_name):
-        return self.parent._modify_static_dataset_properties(self, name=new_name)
-
-    def modify_compression(self, compression, compression_opts):
-        return self.parent._modify_static_dataset_properties(self,
-                                                             compression=compression,
-                                                             compression_opts=compression_opts)
-
-    def modify_dtype(self, dtype):
-        return self.parent._modify_static_dataset_properties(self, dtype=dtype)
+        """Rename the dataset. This may be time and data intensive as
+        a new dataset is created first!"""
+        return self.parent.modify_dataset_properties(self, name=new_name)
 
     def __getattr__(self, item):
         if item not in self.__dict__:
