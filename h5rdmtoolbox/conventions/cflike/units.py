@@ -1,11 +1,7 @@
+import pint
 from typing import Union
 
-import pint
-from pint_xarray import unit_registry as ureg
-
-from ...config import CONFIG as config
-
-ureg.default_format = config.UREG_FORMAT
+from ...config import ureg
 
 
 class UnitsAttribute:

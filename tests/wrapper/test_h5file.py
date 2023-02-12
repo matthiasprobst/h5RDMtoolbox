@@ -4,7 +4,7 @@ import numpy as np
 import unittest
 import yaml
 from pathlib import Path
-from pint_xarray import unit_registry as ureg
+
 
 from h5rdmtoolbox import config
 from h5rdmtoolbox import use
@@ -16,7 +16,7 @@ from h5rdmtoolbox.wrapper.core import H5Dataset, H5File, H5Group
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
-ureg.default_format = config.CONFIG.UREG_FORMAT
+
 
 
 class TestH5File(unittest.TestCase):
@@ -323,7 +323,7 @@ class TestH5File(unittest.TestCase):
                              h5.get_by_attribute('a', 1, recursive=True))
             self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=False))
 
-    def test_tree_structure(self):
+    def test_tree_structur(self):
         with H5File() as h5:
             h5.attrs['one'] = 1
             h5.attrs['two'] = 2

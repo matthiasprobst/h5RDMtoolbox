@@ -1,10 +1,10 @@
-import json
-from pathlib import Path
-from typing import Dict
-
 import h5py
+import json
+import pint.util
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
+from pathlib import Path
+from typing import Dict
 
 from .h5utils import get_rootparent
 from .. import config
@@ -29,6 +29,14 @@ def pop_hdf_attributes(attrs: Dict) -> Dict:
     return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
 
 
+class AttributeString(str):
+    """String with special methods such as `to_pint()`"""
+
+    def to_pint(self) -> "pint.util.Quantity":
+        """Returns a pint.Quantity object"""
+        return config.ureg(self)
+
+
 class WrapperAttributeManager(h5py.AttributeManager):
     """
     Subclass of h5py's Attribute Manager.
@@ -49,7 +57,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         if isinstance(ret, str):
-            if ret:
+            if ret:  # not really needed, is it?
                 if ret[0] == '{':
                     dictionary = json.loads(ret)
                     for k, v in dictionary.items():
@@ -89,7 +97,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                             return ret
                     return ret
                 else:
-                    return ret
+                    return AttributeString(ret)
             else:
                 return ret
         else:
@@ -122,6 +130,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
             _value = str(value)
         elif isinstance(value, (h5py.Dataset, h5py.Group)):
             return self.create(name, data=value.name)
+        elif isinstance(value, pint.Quantity):
+            _value = str(value)
         else:
             _value = value
         try:

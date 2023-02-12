@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, Union
 
-from pint_xarray import unit_registry as ureg
+from ..config import ureg
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
 

@@ -7,7 +7,7 @@ import numpy as np
 import os
 import pathlib
 # noinspection PyUnresolvedReferences
-import pint_xarray
+import pint
 import shutil
 import warnings
 import xarray as xr
@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from h5py._hl.base import phil
 from h5py._objects import ObjectID
 from pathlib import Path
-from pint_xarray import unit_registry as ureg
 from tqdm import tqdm
 from typing import List, Dict, Union, Tuple
 
@@ -30,14 +29,14 @@ from .. import utils
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._user import user_dirs
 from .._version import __version__
-from ..config import CONFIG
+from .. import config
 from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
-ureg.default_format = CONFIG.UREG_FORMAT
+
 
 H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
 if not H5File_layout_filename.exists():
@@ -221,7 +220,7 @@ class H5Group(h5py.Group):
         try:
             return super().__getattribute__(item)
         except AttributeError as e:
-            if CONFIG.NATURAL_NAMING:
+            if config.CONFIG.NATURAL_NAMING:
                 pass
             else:
                 raise AttributeError(e)
@@ -317,7 +316,7 @@ class H5Group(h5py.Group):
                 else:  # isinstance(self[name], h5py.Dataset):
                     raise RuntimeError('The name you passed is already ued for a dataset!')
 
-        if _is_not_valid_natural_name(self, name, CONFIG.NATURAL_NAMING):
+        if _is_not_valid_natural_name(self, name, config.CONFIG.NATURAL_NAMING):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
                              f'attribute of the class and cannot be used '
                              f'while natural naming is enabled')
@@ -438,8 +437,8 @@ class H5Group(h5py.Group):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        compression = kwargs.pop('compression', CONFIG.HDF_COMPRESSION)
-        compression_opts = kwargs.pop('compression_opts', CONFIG.HDF_COMPRESSION_OPTS)
+        compression = kwargs.pop('compression', config.CONFIG.HDF_COMPRESSION)
+        compression_opts = kwargs.pop('compression_opts', config.CONFIG.HDF_COMPRESSION_OPTS)
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
@@ -463,7 +462,7 @@ class H5Group(h5py.Group):
             attach_scales = kwargs.pop('attach_scale', None)
 
         if name:
-            if _is_not_valid_natural_name(self, name, CONFIG.NATURAL_NAMING):
+            if _is_not_valid_natural_name(self, name, config.CONFIG.NATURAL_NAMING):
                 raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
                                  f'attribute of the class and cannot be used '
                                  f'while natural naming is enabled')
@@ -670,7 +669,7 @@ class H5Group(h5py.Group):
 
         df = pd_read_csv(csv_fname, **pandas_kwargs)
 
-        compression, compression_opts = CONFIG.HDF_COMPRESSION, CONFIG.HDF_COMPRESSION_OPTS
+        compression, compression_opts = config.CONFIG.HDF_COMPRESSION, config.CONFIG.HDF_COMPRESSION_OPTS
 
         if is_single_file:
             for variable_name in df.columns:
@@ -769,7 +768,7 @@ class H5Group(h5py.Group):
         """
 
         # take compression from kwargs or config:
-        _compression, _compression_opts = CONFIG.HDF_COMPRESSION, CONFIG.HDF_COMPRESSION_OPTS
+        _compression, _compression_opts = config.CONFIG.HDF_COMPRESSION, config.CONFIG.HDF_COMPRESSION_OPTS
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
         units = kwargs.pop('units', 'pixel')
@@ -1295,7 +1294,7 @@ class H5Dataset(h5py.Dataset):
         Note, that even if `RETURN_XARRAY` is True, there is another way to
         receive  numpy array. This is by calling .values[:] on the dataset."""
         args = args if isinstance(args, tuple) else (args,)
-        if not CONFIG.RETURN_XARRAY or nparray:
+        if not config.CONFIG.RETURN_XARRAY or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
         if Ellipsis in args:
             warnings.warn(
@@ -1493,7 +1492,7 @@ class H5File(h5py.File, H5Group):
 
         """
         _bytes = os.path.getsize(self.filename)
-        return _bytes * ureg.byte
+        return _bytes * config.ureg.byte
 
     @property
     def layout(self) -> H5Layout:

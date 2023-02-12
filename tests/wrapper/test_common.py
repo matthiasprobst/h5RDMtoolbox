@@ -5,10 +5,10 @@ import h5py
 import pathlib
 import unittest
 from datetime import datetime
-from pint_xarray import unit_registry as ureg
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
+from h5rdmtoolbox.config import ureg
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.wrapper import core, cflike
 from h5rdmtoolbox.wrapper.h5attr import WrapperAttributeManager
@@ -58,6 +58,15 @@ class TestCommon(unittest.TestCase):
                 self.assertEqual(h5.attrs['an_attr'], 'a_string')
                 h5.attrs['mean'] = 1.2
                 self.assertEqual(h5.attrs['mean'], 1.2)
+
+                test_vals = ('1.2m', '1.2 m', '1.2 [m]', '1.2 (m)')
+                for test_val in test_vals:
+                    h5.attrs['mean_with_unit'] = test_val
+                    self.assertEqual(h5.attrs['mean_with_unit'], test_val)
+                    attrs_with_unit = h5.attrs['mean_with_unit'].to_pint()
+                    self.assertEqual(attrs_with_unit, ureg(test_val))
+                    h5.attrs['mean_with_unit'] = attrs_with_unit
+                    self.assertEqual(h5.attrs['mean_with_unit'], str(ureg(test_val)))
 
                 self.assertEqual(h5.attrs.get('non_existing_attribute'), None)
 

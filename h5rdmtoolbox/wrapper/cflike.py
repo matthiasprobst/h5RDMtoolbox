@@ -5,17 +5,14 @@ import logging
 import pathlib
 import warnings
 import xarray as xr
-from pint_xarray import unit_registry as ureg
 from typing import Union, List
 
 from h5rdmtoolbox.conventions.registration import register_hdf_attribute
 from . import core
 from .. import _repr
 from .. import errors
-from ..config import CONFIG
+from ..config import CONFIG, ureg
 from ..conventions import cflike
-
-ureg.default_format = CONFIG.UREG_FORMAT
 
 logger = logging.getLogger(__package__)
 
@@ -171,7 +168,7 @@ class H5Group(core.H5Group):
                 except:
                     pass
                 if 'units' in data.attrs:
-                    data.attrs['units'] = ureg.Unit(data.attrs['units']).__format__(ureg.default_format)
+                    data.attrs['units'] = ureg.Unit(data.attrs['units']).__format__(CONFIG.UREG_FORMAT)
                     units = data.attrs.get('units')
 
                 if units is None:  # xr.DataArray had no units!

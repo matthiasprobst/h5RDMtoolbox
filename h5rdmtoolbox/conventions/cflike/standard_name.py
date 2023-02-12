@@ -31,7 +31,7 @@ import yaml
 from IPython.display import display, HTML
 from omegaconf import DictConfig, OmegaConf
 from pint.errors import UndefinedUnitError
-from pint_xarray import unit_registry as ureg
+
 from tabulate import tabulate
 
 from . import errors
@@ -57,7 +57,7 @@ def read_yaml(yaml_filename: str) -> Dict:
 def verify_unit_object(_units):
     """Raise error if _units is not processable by pint package"""
     try:
-        ureg.Unit(_units)
+        config.ureg.Unit(_units)
     except UndefinedUnitError as e:
         raise UndefinedUnitError(f'Units cannot be understood using pint_xarray package: {_units}. --> {e}')
 
@@ -104,7 +104,7 @@ class StandardName:
 
     def __post_init__(self):
         if self.canonical_units:
-            self.canonical_units = ureg.Unit(_units_power_fix(self.canonical_units))
+            self.canonical_units = config.ureg.Unit(_units_power_fix(self.canonical_units))
 
     def __format__(self, spec):
         return self.name.__format__(spec)

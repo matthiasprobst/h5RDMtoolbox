@@ -6,10 +6,10 @@ import unittest
 import xarray as xr
 import yaml
 from pathlib import Path
-from pint_xarray import unit_registry as ureg
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.config import CONFIG
+from h5rdmtoolbox.config import ureg
 from h5rdmtoolbox.conventions.cflike import StandardNameTable
 from h5rdmtoolbox.conventions.cflike import standard_name as sn
 from h5rdmtoolbox.conventions.layout import H5Layout
@@ -22,8 +22,6 @@ from h5rdmtoolbox.wrapper.cflike import H5Group
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
-
-ureg.default_format = CONFIG.UREG_FORMAT
 
 
 class TestH5CFLikeFile(unittest.TestCase):
@@ -451,6 +449,7 @@ class TestH5CFLikeFile(unittest.TestCase):
     def test_to_unit(self):
         with h5tbx.H5File(mode='w') as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
+            print(dset.units)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
             dset.to_units('K', inplace=True)
@@ -458,7 +457,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(float(dset[()].values), 293)
             dset.to_units('degC', inplace=True)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
-            dset_K= dset.to_units('K', inplace=False)
+            dset_K = dset.to_units('K', inplace=False)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(ureg.Unit(dset_K.units), ureg.Unit('K'))
 

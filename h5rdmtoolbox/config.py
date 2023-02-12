@@ -1,9 +1,12 @@
 """config file for wrapper classes"""
 import warnings
 from omegaconf import OmegaConf, DictConfig
+from pint_xarray import unit_registry
 from typing import Union
 
 from ._user import user_dirs
+
+ureg = unit_registry
 
 user_config_dir = user_dirs['root']
 user_config_filename = user_dirs['root'] / 'user_config.yaml'
@@ -95,6 +98,7 @@ def check_config(cfg: DictConfig = None,
 
 
 CONFIG = check_config(CONFIG, write_to_file=True, remove_wrong=True)
+ureg.default_format = CONFIG.UREG_FORMAT
 
 
 def set_config_parameter(parameter_name: str, value: Union[float, int, str]):

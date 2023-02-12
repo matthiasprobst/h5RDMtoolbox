@@ -1,16 +1,12 @@
 import logging
 import unittest
-from pint_xarray import unit_registry as ureg
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import config
 from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper import set_loglevel
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
-
-ureg.default_format = config.CONFIG.UREG_FORMAT
 
 
 class TestFind(unittest.TestCase):
