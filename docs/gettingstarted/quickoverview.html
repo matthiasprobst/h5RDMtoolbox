@@ -35,6 +35,7 @@
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -637,11 +638,10 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars and line breaks on prompts */
+/* disable scrollbars on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
-    white-space: pre;
 }
 
 /* input/output area */
@@ -1115,32 +1115,32 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--145828888700" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--145828888700">
+                        <input id="group-ds--3239448200" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--3239448200">
                         /<span>(3)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/signal-145830579100" class="h5tb-var-list">
-                <input id="ds-2-/signal-145830583200" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/signal-3240392000" class="h5tb-var-list">
+                <input id="ds-2-/signal-3240394300" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/signal-145830583200">signal</label>
-                <span class="h5tb-dims">(time: 101) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">DIMENSION_LIST : [array([&#60;HDF5 object reference&#62;], dtype=object)]</li><li style="list-style-type: none; font-style: italic">units : V</li>
+                    for="ds-2-/signal-3240394300">signal</label>
+                <span class="h5tb-dims">(time: 101) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">units : V</li>
 
                     </ul>
 
                  </ul>
 
 
-                <ul id="ds-1-/time-145831268200" class="h5tb-var-list">
-                <input id="ds-2-/time-145831271800" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/time-3240679500" class="h5tb-var-list">
+                <input id="ds-2-/time-3240681800" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/time-145831271800">time</label>
-                <span class="h5tb-dims">(101,) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">CLASS : b'DIMENSION_SCALE'</li><li style="list-style-type: none; font-style: italic">NAME : b''</li><li style="list-style-type: none; font-style: italic">REFERENCE_LIST : [(&#60;HDF5 object reference&#62;, 0)]</li><li style="list-style-type: none; font-style: italic">units : s</li>
+                    for="ds-2-/time-3240681800">time</label>
+                <span class="h5tb-dims">(101,) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">units : s</li>
 
                     </ul>
 
@@ -1149,8 +1149,8 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-mygroup-145831846100" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-mygroup-145831846100">
+                        <input id="group-ds-mygroup-3240921400" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-mygroup-3240921400">
                         mygroup<span>(0)</span></label>
 
 
@@ -1161,6 +1161,44 @@ input.h5tb-varname-in:checked + label:before {
 </li>
 </ul>
 </div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">signal_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">sdump</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+a: __h5rdmtoolbox_version__: 0.3.0a4
+/<span class="ansi-bold">mygroup</span>
+<span class="ansi-bold">signal</span>: (101,), dtype: float64
+    a: units: V
+<span class="ansi-bold">time</span>: (101,), dtype: float64
+    a: units: s
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
 </div>
 </section>
 </section>

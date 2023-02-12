@@ -35,6 +35,7 @@
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -597,11 +598,10 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars and line breaks on prompts */
+/* disable scrollbars on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
-    white-space: pre;
 }
 
 /* input/output area */
@@ -765,14 +765,6 @@ div.rendered_html tbody tr:hover {
 <br/></pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2022-12-29_20:47:46,814 INFO     [__init__.py:52] Switched to &#34;default&#34;
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
@@ -980,42 +972,42 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--3011023500" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--3011023500">
+                        <input id="group-ds--2982721900" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2982721900">
                         /<span>(1)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : fan_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style="list-style-type: none; font-style: italic">operator : Mike</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : fan_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li><li style="list-style-type: none; font-style: italic">operator : Mike</li>
                     </ul>
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-operation_point-3011438500" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-operation_point-3011438500">
+                        <input id="group-ds-operation_point-2983127900" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-operation_point-2983127900">
                         operation_point<span>(2)</span></label>
 
 
                     <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Operation point data group</li>
                     </ul>
 
-                <ul id="ds-1-/operation_point/ptot-3012654300" class="h5tb-var-list">
-                <input id="ds-2-/operation_point/ptot-3012656800" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/operation_point/ptot-2984423500" class="h5tb-var-list">
+                <input id="ds-2-/operation_point/ptot-2984426000" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/operation_point/ptot-3012656800">ptot</label>
-                <span class="h5tb-dims">(100,) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Pressure increase</li><li style="list-style-type: none; font-style: italic">mean : 2.987986346516986</li><li style="list-style-type: none; font-style: italic">std : 0.2800745787871698</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
+                    for="ds-2-/operation_point/ptot-2984426000">ptot</label>
+                <span class="h5tb-dims">(100,) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Pressure increase</li><li style="list-style-type: none; font-style: italic">mean : 3.362684211553575</li><li style="list-style-type: none; font-style: italic">std : 0.26995940521657913</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
 
                     </ul>
 
                  </ul>
 
 
-                <ul id="ds-1-/operation_point/vfr-3012987000" class="h5tb-var-list">
-                <input id="ds-2-/operation_point/vfr-3012989300" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/operation_point/vfr-2984805100" class="h5tb-var-list">
+                <input id="ds-2-/operation_point/vfr-2984807400" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/operation_point/vfr-3012989300">vfr</label>
-                <span class="h5tb-dims">(100,) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : volume flow_utils rate</li><li style="list-style-type: none; font-style: italic">mean : 0.06245805974527265</li><li style="list-style-type: none; font-style: italic">std : 0.3019035833269481</li><li style="list-style-type: none; font-style: italic">units : m**3/s</li>
+                    for="ds-2-/operation_point/vfr-2984807400">vfr</label>
+                <span class="h5tb-dims">(100,) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : volume flow_utils rate</li><li style="list-style-type: none; font-style: italic">mean : 0.1046449456907672</li><li style="list-style-type: none; font-style: italic">std : 0.2800844776444559</li><li style="list-style-type: none; font-style: italic">units : m**3/s</li>
 
                     </ul>
 
@@ -1041,14 +1033,6 @@ input.h5tb-varname-in:checked + label:before {
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2022-12-29_20:47:46,896 INFO     [__init__.py:61] Switched to &#34;cflike&#34;
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
@@ -1256,42 +1240,42 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--3042727500" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--3042727500">
+                        <input id="group-ds--3015882800" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--3015882800">
                         /<span>(1)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : fan_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style="list-style-type: none; font-style: italic">operator : Mike</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : fan_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li><li style="list-style-type: none; font-style: italic">operator : Mike</li>
                     </ul>
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-operation_point-3043153300" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-operation_point-3043153300">
+                        <input id="group-ds-operation_point-3016481700" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-operation_point-3016481700">
                         operation_point<span>(2)</span></label>
 
 
                     <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Operation point data group</li>
                     </ul>
 
-                <ul id="ds-1-/operation_point/ptot-3043846000" class="h5tb-var-list">
-                <input id="ds-2-/operation_point/ptot-3043848400" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/operation_point/ptot-3017279600" class="h5tb-var-list">
+                <input id="ds-2-/operation_point/ptot-3017282200" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/operation_point/ptot-3043848400">ptot</label>
-                <span class="h5tb-dims">(100,) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Pressure increase</li><li style="list-style-type: none; font-style: italic">mean : 2.987986346516986</li><li style="list-style-type: none; font-style: italic">std : 0.2800745787871698</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
+                    for="ds-2-/operation_point/ptot-3017282200">ptot</label>
+                <span class="h5tb-dims">(100,) [float64]</span> [Pa]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Pressure increase</li><li style="list-style-type: none; font-style: italic">mean : 3.362684211553575</li><li style="list-style-type: none; font-style: italic">std : 0.26995940521657913</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
 
                     </ul>
 
                  </ul>
 
 
-                <ul id="ds-1-/operation_point/vfr-3044168500" class="h5tb-var-list">
-                <input id="ds-2-/operation_point/vfr-3044170900" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/operation_point/vfr-3017692500" class="h5tb-var-list">
+                <input id="ds-2-/operation_point/vfr-3017695300" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/operation_point/vfr-3044170900">vfr</label>
-                <span class="h5tb-dims">(100,) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : volume flow_utils rate</li><li style="list-style-type: none; font-style: italic">mean : 0.06245805974527265</li><li style="list-style-type: none; font-style: italic">std : 0.3019035833269481</li><li style="list-style-type: none; font-style: italic">units : m**3/s</li>
+                    for="ds-2-/operation_point/vfr-3017695300">vfr</label>
+                <span class="h5tb-dims">(100,) [float64]</span> [m**3/s]
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : volume flow_utils rate</li><li style="list-style-type: none; font-style: italic">mean : 0.1046449456907672</li><li style="list-style-type: none; font-style: italic">std : 0.2800844776444559</li><li style="list-style-type: none; font-style: italic">units : m**3/s</li>
 
                     </ul>
 
@@ -1533,42 +1517,42 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--3078495900" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--3078495900">
+                        <input id="group-ds--3043803400" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--3043803400">
                         /<span>(1)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : fan_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style="list-style-type: none; font-style: italic">operator : Mike</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : fan_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li><li style="list-style-type: none; font-style: italic">operator : Mike</li>
                     </ul>
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-operation_point-3079047500" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-operation_point-3079047500">
+                        <input id="group-ds-operation_point-3044486600" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-operation_point-3044486600">
                         operation_point<span>(2)</span></label>
 
 
                     <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Operation point data group</li>
                     </ul>
 
-                <ul id="ds-1-/operation_point/ptot-3080099900" class="h5tb-var-list">
-                <input id="ds-2-/operation_point/ptot-3080102900" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/operation_point/ptot-3045302400" class="h5tb-var-list">
+                <input id="ds-2-/operation_point/ptot-3045305200" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/operation_point/ptot-3080102900">ptot</label>
-                <span class="h5tb-dims">(100,) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Pressure increase</li><li style="list-style-type: none; font-style: italic">mean : 2.987986346516986</li><li style="list-style-type: none; font-style: italic">std : 0.2800745787871698</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
+                    for="ds-2-/operation_point/ptot-3045305200">ptot</label>
+                <span class="h5tb-dims">(100,) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : Pressure increase</li><li style="list-style-type: none; font-style: italic">mean : 3.362684211553575</li><li style="list-style-type: none; font-style: italic">std : 0.26995940521657913</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
 
                     </ul>
 
                  </ul>
 
 
-                <ul id="ds-1-/operation_point/vfr-3080436600" class="h5tb-var-list">
-                <input id="ds-2-/operation_point/vfr-3080439000" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/operation_point/vfr-3045698800" class="h5tb-var-list">
+                <input id="ds-2-/operation_point/vfr-3045701400" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/operation_point/vfr-3080439000">vfr</label>
-                <span class="h5tb-dims">(100,) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : volume flow_utils rate</li><li style="list-style-type: none; font-style: italic">mean : 0.06245805974527265</li><li style="list-style-type: none; font-style: italic">std : 0.3019035833269481</li><li style="list-style-type: none; font-style: italic">units : m**3/s</li>
+                    for="ds-2-/operation_point/vfr-3045701400">vfr</label>
+                <span class="h5tb-dims">(100,) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : volume flow_utils rate</li><li style="list-style-type: none; font-style: italic">mean : 0.1046449456907672</li><li style="list-style-type: none; font-style: italic">std : 0.2800844776444559</li><li style="list-style-type: none; font-style: italic">units : m**3/s</li>
 
                     </ul>
 
@@ -1787,19 +1771,19 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--3082403800" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--3082403800">
+                        <input id="group-ds--3049656100" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--3049656100">
                         /<span>(3)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : piv_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li><li style="list-style-type: none; font-style: italic">operator : Susi</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__db_file_type__ : piv_case</li><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li><li style="list-style-type: none; font-style: italic">operator : Ellen</li>
                     </ul>
 
-                <ul id="ds-1-/u-3083399700" class="h5tb-var-list">
-                <input id="ds-2-/u-3083402300" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/u-3050973100" class="h5tb-var-list">
+                <input id="ds-2-/u-3050975800" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/u-3083402300">u</label>
-                <span class="h5tb-dims">(2, 5, 64, 86, 2) (float32)</span>
+                    for="ds-2-/u-3050975800">u</label>
+                <span class="h5tb-dims">(2, 5, 64, 86, 2) [float32]</span>
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : u-component</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
 
                     </ul>
@@ -1807,11 +1791,11 @@ input.h5tb-varname-in:checked + label:before {
                  </ul>
 
 
-                <ul id="ds-1-/v-3083740700" class="h5tb-var-list">
-                <input id="ds-2-/v-3083743100" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/v-3051369000" class="h5tb-var-list">
+                <input id="ds-2-/v-3051371600" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/v-3083743100">v</label>
-                <span class="h5tb-dims">(2, 5, 64, 86, 2) (float32)</span>
+                    for="ds-2-/v-3051371600">v</label>
+                <span class="h5tb-dims">(2, 5, 64, 86, 2) [float32]</span>
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : v-component</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
 
                     </ul>
@@ -1821,19 +1805,19 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-timeAverages-3083866900" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-timeAverages-3083866900">
+                        <input id="group-ds-timeAverages-3051516100" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-timeAverages-3051516100">
                         timeAverages<span>(2)</span></label>
 
 
                     <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : time averaged data</li>
                     </ul>
 
-                <ul id="ds-1-/timeAverages/u-3084530700" class="h5tb-var-list">
-                <input id="ds-2-/timeAverages/u-3084533000" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/timeAverages/u-3052633700" class="h5tb-var-list">
+                <input id="ds-2-/timeAverages/u-3052638000" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/timeAverages/u-3084533000">u</label>
-                <span class="h5tb-dims">(2, 64, 86, 2) (float32)</span>
+                    for="ds-2-/timeAverages/u-3052638000">u</label>
+                <span class="h5tb-dims">(2, 64, 86, 2) [float32]</span>
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : mean u-component</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
 
                     </ul>
@@ -1841,11 +1825,11 @@ input.h5tb-varname-in:checked + label:before {
                  </ul>
 
 
-                <ul id="ds-1-/timeAverages/v-3084813500" class="h5tb-var-list">
-                <input id="ds-2-/timeAverages/v-3084815700" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/timeAverages/v-3053062800" class="h5tb-var-list">
+                <input id="ds-2-/timeAverages/v-3053065300" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/timeAverages/v-3084815700">v</label>
-                <span class="h5tb-dims">(2, 64, 86, 2) (float32)</span>
+                    for="ds-2-/timeAverages/v-3053065300">v</label>
+                <span class="h5tb-dims">(2, 64, 86, 2) [float32]</span>
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : mean v-component</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
 
                     </ul>

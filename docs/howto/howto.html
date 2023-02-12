@@ -35,6 +35,7 @@
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -478,6 +479,11 @@ title="Print to PDF"
      during dataset creation
     </a>
    </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#…-change-my-personal-config">
+     … change my personal config
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -537,6 +543,11 @@ title="Print to PDF"
       </span>
      </code>
      during dataset creation
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#…-change-my-personal-config">
+     … change my personal config
     </a>
    </li>
   </ul>
@@ -661,11 +672,10 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars and line breaks on prompts */
+/* disable scrollbars on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
-    white-space: pre;
 }
 
 /* input/output area */
@@ -822,7 +832,7 @@ div.rendered_html tbody tr:hover {
 
 <span class="n">h5tbx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">return_xarray</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
-    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;a long name&#39;</span><span class="p">)</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;a long name&#39;</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">][:]))</span>
     <span class="n">h5tbx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">return_xarray</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">][:]))</span>
@@ -836,7 +846,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;class &#39;numpy.ndarray&#39;&gt;
+&lt;class &#39;xarray.core.dataarray.DataArray&#39;&gt;
 &lt;class &#39;xarray.core.dataarray.DataArray&#39;&gt;
 &lt;class &#39;numpy.ndarray&#39;&gt;
 </pre></div></div>
@@ -844,6 +854,64 @@ div.rendered_html tbody tr:hover {
 <section id="…-avoid-having-to-provide-units-and-long_name-or-standard_name-during-dataset-creation">
 <h3>… avoid having to provide <code class="docutils literal notranslate"><span class="pre">units</span></code> and <code class="docutils literal notranslate"><span class="pre">long_name</span></code> or <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> during dataset creation<a class="headerlink" href="#…-avoid-having-to-provide-units-and-long_name-or-standard_name-during-dataset-creation" title="Permalink to this headline">#</a></h3>
 <p>This cannot be avoided as we believe these are minimal auxiliary information (meta data) required with every dataset. If unitless, pass <code class="docutils literal notranslate"><span class="pre">units='</span> <span class="pre">'</span></code> and if you are not using any naming standard provide <code class="docutils literal notranslate"><span class="pre">long_name</span></code> which is just a description of your dataset and should be easy to think of.</p>
+</section>
+<section id="…-change-my-personal-config">
+<h3>… change my personal config<a class="headerlink" href="#…-change-my-personal-config" title="Permalink to this headline">#</a></h3>
+<p>When the package is installed for the first time, a configuration <code class="docutils literal notranslate"><span class="pre">yaml</span></code>-file is copied to your local user directory. To find out where this is exactly, call:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">h5rdmtoolbox</span> <span class="k">as</span> <span class="nn">h5tbx</span>
+<span class="n">my_config</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">user_config_filename</span>
+</pre></div>
+</div>
+</div>
+<p>Best is to check if your configuration file is complete by calling <code class="docutils literal notranslate"><span class="pre">check_config</span></code>. The returned configuration is the corrected one:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.config</span> <span class="kn">import</span> <span class="n">check_config</span><span class="p">,</span> <span class="n">read_user_config</span>
+<span class="n">check_config</span><span class="p">(</span><span class="n">remove_wrong</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;RETURN_XARRAY&#39;: True, &#39;ADVANCED_SHAPE_REPR&#39;: True, &#39;NATURAL_NAMING&#39;: True, &#39;HDF_COMPRESSION&#39;: &#39;gzip&#39;, &#39;HDF_COMPRESSION_OPTS&#39;: 5, &#39;HTML_MAX_STRING_LENGTH&#39;: 40, &#39;MPL_STYLE&#39;: &#39;h5rdmtoolbox&#39;, &#39;XARRAY_UNIT_REPR_IN_PLOTS&#39;: &#39;/&#39;, &#39;REQUIRE_UNITS&#39;: True, &#39;UREG_FORMAT&#39;: &#39;C~&#39;, &#39;STANDARD_NAME_TABLE_ATTRIBUTE_NAME&#39;: &#39;__standard_name_table__&#39;, &#39;CONVENTION&#39;: &#39;cflike&#39;, &#39;INIT_LOGGER_LEVEL&#39;: &#39;DEBUG&#39;}
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;TEST&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="p">[</span><span class="n">h5tbx</span><span class="o">.</span><span class="n">lower</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;HDF5 dataset &#34;TEST&#34;: shape (), type &#34;&lt;i4&#34;, convention &#34;default&#34;&gt;
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
 </section>
 </section>
 </section>

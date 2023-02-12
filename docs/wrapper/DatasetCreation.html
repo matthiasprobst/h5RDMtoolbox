@@ -35,6 +35,7 @@
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -439,6 +440,11 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Attributes">
+   Attributes
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Dimension-scales">
    Dimension scales
   </a>
@@ -474,6 +480,11 @@ title="Print to PDF"
                         </div>
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Attributes">
+   Attributes
+  </a>
+ </li>
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#Dimension-scales">
    Dimension scales
@@ -611,11 +622,10 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars and line breaks on prompts */
+/* disable scrollbars on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
-    white-space: pre;
 }
 
 /* input/output area */
@@ -761,7 +771,7 @@ div.rendered_html tbody tr:hover {
 <section id="Dataset-creation">
 <h1>Dataset creation<a class="headerlink" href="#Dataset-creation" title="Permalink to this headline">#</a></h1>
 <p>Dataset creation works almost as known from <code class="docutils literal notranslate"><span class="pre">h5py</span></code>. However, to facilitate and streamline the work with HDF5 files further some featurs are added. Note, that <code class="docutils literal notranslate"><span class="pre">xarray</span></code> objects are returned when <a class="reference internal" href="DatasetSlicing.html"><span class="doc">slicing datasets</span></a>, thus passing <code class="docutils literal notranslate"><span class="pre">units</span></code> and <code class="docutils literal notranslate"><span class="pre">long_name</span></code> as attributes is worth considering to make the most of it.</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
@@ -772,14 +782,6 @@ div.rendered_html tbody tr:hover {
 <span class="n">h5tbx</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2022-12-29_15:16:07,862 INFO     [__init__.py:52] Switched to &#34;default&#34;
-</pre></div></div>
 </div>
 <p>Mandatory parameters during dataset creation know fro <code class="docutils literal notranslate"><span class="pre">h5py</span></code> are <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">data</span></code> or <code class="docutils literal notranslate"><span class="pre">shape</span></code>. Additionally, attributes can be passed during dataset creation right away:</p>
 <div class="nbinput docutils container">
@@ -1000,19 +1002,19 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4457276100" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4457276100">
+                        <input id="group-ds--2757535100" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2757535100">
                         /<span>(1)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/x-4458513900" class="h5tb-var-list">
-                <input id="ds-2-/x-4458516500" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-2759030700" class="h5tb-var-list">
+                <input id="ds-2-/x-2759033600" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-4458516500">x</label>
-                <span class="h5tb-dims">(4,) (float32)</span>
+                    for="ds-2-/x-2759033600">x</label>
+                <span class="h5tb-dims">(4,) [float32]</span>
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">description : x coordinate</li>
 
                     </ul>
@@ -1241,18 +1243,18 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4488706100" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4488706100">
+                        <input id="group-ds--2786515900" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2786515900">
                         /<span>(1)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-grp-4489124700" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-grp-4489124700">
+                        <input id="group-ds-grp-2786789300" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-grp-2786789300">
                         grp<span>(1)</span></label>
 
 
@@ -1261,19 +1263,19 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-subgrp-4489285600" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-subgrp-4489285600">
+                        <input id="group-ds-subgrp-2786907800" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-subgrp-2786907800">
                         subgrp<span>(1)</span></label>
 
 
                     <ul class="h5tb-attr-list">
                     </ul>
 
-                <ul id="ds-1-/grp/subgrp/x-4489851900" class="h5tb-var-list">
-                <input id="ds-2-/grp/subgrp/x-4489856100" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/grp/subgrp/x-2787256000" class="h5tb-var-list">
+                <input id="ds-2-/grp/subgrp/x-2787258100" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/grp/subgrp/x-4489856100">x</label>
-                <span class="h5tb-dims">(4,) (float32)</span>
+                    for="ds-2-/grp/subgrp/x-2787258100">x</label>
+                <span class="h5tb-dims">(4,) [float32]</span>
 <ul class="h5tb-attr-list">
 
                     </ul>
@@ -1288,11 +1290,34 @@ input.h5tb-varname-in:checked + label:before {
 </ul>
 </div></div>
 </div>
+<section id="Attributes">
+<h2>Attributes<a class="headerlink" href="#Attributes" title="Permalink to this headline">#</a></h2>
+<p>There is given some more flexibilities and additional features also to attributes. One of the main ones to mention is the ability to intepret the attribute strings such that value and quantity can be distinguished. Let’s say we store the attribute <code class="docutils literal notranslate"><span class="pre">length</span></code> then most probably it will inlcude the unit,e.g. <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">m</span></code>. We could also saved it as a dataset, but we did not. By calling <code class="docutils literal notranslate"><span class="pre">.to_pint()</span></code> on the return object (which is a subclass of <code class="docutils literal notranslate"><span class="pre">str</span></code>) we receive a <code class="docutils literal notranslate"><span class="pre">pint.Qunatity</span></code> (see
+<a class="reference external" href="https://pint.readthedocs.io/en/stable/getting/tutorial.html">https://pint.readthedocs.io/en/stable/getting/tutorial.html</a> for more info):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1 m&#39;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">to_pint</span><span class="p">()</span>
+<span class="n">p</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+1 m</div>
+</div>
+</section>
 <section id="Dimension-scales">
 <h2>Dimension scales<a class="headerlink" href="#Dimension-scales" title="Permalink to this headline">#</a></h2>
 <p>Dimension scales can be defined during dataset creation. Let <code class="docutils literal notranslate"><span class="pre">time</span></code> be the dimension scale and <code class="docutils literal notranslate"><span class="pre">pressure</span></code> be the dataset to which it is attached.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fname_dimcales</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
@@ -1514,32 +1539,32 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4526556100" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4526556100">
+                        <input id="group-ds--2850642300" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2850642300">
                         /<span>(2)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/pressure-4527533100" class="h5tb-var-list">
-                <input id="ds-2-/pressure-4527535500" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/pressure-2851274500" class="h5tb-var-list">
+                <input id="ds-2-/pressure-2851276800" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/pressure-4527535500">pressure</label>
-                <span class="h5tb-dims">(time: 6) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">DIMENSION_LIST : [array([&#60;HDF5 object reference&#62;], dtype=object)]</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
+                    for="ds-2-/pressure-2851276800">pressure</label>
+                <span class="h5tb-dims">(time: 6) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">units : Pa</li>
 
                     </ul>
 
                  </ul>
 
 
-                <ul id="ds-1-/time-4528443900" class="h5tb-var-list">
-                <input id="ds-2-/time-4528446600" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/time-2851524300" class="h5tb-var-list">
+                <input id="ds-2-/time-2851526500" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/time-4528446600">time</label>
-                <span class="h5tb-dims">(6,) (int32)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">CLASS : b'DIMENSION_SCALE'</li><li style="list-style-type: none; font-style: italic">NAME : b''</li><li style="list-style-type: none; font-style: italic">REFERENCE_LIST : [(&#60;HDF5 object reference&#62;, 0)]</li><li style="list-style-type: none; font-style: italic">units : s</li>
+                    for="ds-2-/time-2851526500">time</label>
+                <span class="h5tb-dims">(6,) [int32]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">units : s</li>
 
                     </ul>
 
@@ -1551,7 +1576,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <p>In order to be compliant with xarrays, single value “dimension scales” are set via the attribute <code class="docutils literal notranslate"><span class="pre">COORDINATES</span></code>. An example is the location of the pressure sensor in our case. Let’s first create the datasets and then add them as attributes to “pressure”:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">fname_dimcales</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -1769,42 +1794,42 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4553421200" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4553421200">
+                        <input id="group-ds--2881211000" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2881211000">
                         /<span>(4)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/pressure-4554467700" class="h5tb-var-list">
-                <input id="ds-2-/pressure-4554470000" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/pressure-2882612900" class="h5tb-var-list">
+                <input id="ds-2-/pressure-2882615300" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/pressure-4554470000">pressure</label>
-                <span class="h5tb-dims">(time: 6) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">COORDINATES : ['x', 'y']</li><li style="list-style-type: none; font-style: italic">DIMENSION_LIST : [array([&#60;HDF5 object reference&#62;], dtype=object)]</li><li style="list-style-type: none; font-style: italic">units : Pa</li>
-
-                    </ul>
-
-                 </ul>
-
-
-                <ul id="ds-1-/time-4554877300" class="h5tb-var-list">
-                <input id="ds-2-/time-4554879500" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname'
-                    for="ds-2-/time-4554879500">time</label>
-                <span class="h5tb-dims">(6,) (int32)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">CLASS : b'DIMENSION_SCALE'</li><li style="list-style-type: none; font-style: italic">NAME : b''</li><li style="list-style-type: none; font-style: italic">REFERENCE_LIST : [(&#60;HDF5 object reference&#62;, 0)]</li><li style="list-style-type: none; font-style: italic">units : s</li>
+                    for="ds-2-/pressure-2882615300">pressure</label>
+                <span class="h5tb-dims">(time: 6) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">units : Pa</li>
 
                     </ul>
 
                  </ul>
 
 
-                <ul id="ds-1-/x-4555271800" class="h5tb-var-list">
-                <input id="ds-2-/x-4555275700" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/time-2882958000" class="h5tb-var-list">
+                <input id="ds-2-/time-2882960300" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-4555275700">x</label>
+                    for="ds-2-/time-2882960300">time</label>
+                <span class="h5tb-dims">(6,) [int32]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">units : s</li>
+
+                    </ul>
+
+                 </ul>
+
+
+                <ul id="ds-1-/x-2883207500" class="h5tb-var-list">
+                <input id="ds-2-/x-2883209800" class="h5tb-varname-in" type="checkbox">
+                <label class='h5tb-varname'
+                    for="ds-2-/x-2883209800">x</label>
                 <span class="h5tb-dims">5.32 (float64)</span>
 <ul class="h5tb-attr-list">
 
@@ -1813,10 +1838,10 @@ input.h5tb-varname-in:checked + label:before {
                  </ul>
 
 
-                <ul id="ds-1-/y-4555517600" class="h5tb-var-list">
-                <input id="ds-2-/y-4555519900" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/y-2883412400" class="h5tb-var-list">
+                <input id="ds-2-/y-2883414700" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/y-4555519900">y</label>
+                    for="ds-2-/y-2883414700">y</label>
                 <span class="h5tb-dims">-3.1 (float64)</span>
 <ul class="h5tb-attr-list">
 
@@ -1832,7 +1857,7 @@ input.h5tb-varname-in:checked + label:before {
 <h3>String datasets<a class="headerlink" href="#String-datasets" title="Permalink to this headline">#</a></h3>
 <p>String datasets can be created very quickly. No standard_name, long_name or units <em>must</em> be given. As units generally anyhow makes no sense, there is still the option to pass long and standard name via the method parameters. The dump method will display single strings but not lists of strings. The return value when sliced will still be a <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> as attributes should still be attached to the object. Use <code class="docutils literal notranslate"><span class="pre">.values</span></code> to get the raw string:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -2055,18 +2080,18 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4586939600" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4586939600">
+                        <input id="group-ds--2911345000" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2911345000">
                         /<span>(2)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/astr-4587890800" class="h5tb-var-list">
-                <input id="ds-2-/astr-4587895300" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/astr-2911974600" class="h5tb-var-list">
+                <input id="ds-2-/astr-2911978400" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                for="ds-2-/astr-4587895300">astr</label>: b'hello_world'
+                for="ds-2-/astr-2911978400">astr</label>: b'hello_world'
 
 <ul class="h5tb-attr-list">
 
@@ -2075,10 +2100,10 @@ input.h5tb-varname-in:checked + label:before {
                  </ul>
 
 
-                <ul id="ds-1-/string_list-4588283400" class="h5tb-var-list">
-                <input id="ds-2-/string_list-4588287500" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/string_list-2912339800" class="h5tb-var-list">
+                <input id="ds-2-/string_list-2912344000" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                for="ds-2-/string_list-4588287500">string_list</label>: [b'hello' b'world']
+                for="ds-2-/string_list-2912344000">string_list</label>: [b'hello' b'world']
 
 <ul class="h5tb-attr-list">
 
@@ -2113,7 +2138,7 @@ Dimensions without coordinates: dim_0
 <h3>Advanced dataset creation<a class="headerlink" href="#Advanced-dataset-creation" title="Permalink to this headline">#</a></h3>
 <p>There is more to dataset creation. You can: - add attributes</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -2125,7 +2150,7 @@ Dimensions without coordinates: dim_0
 <li><p>make and attach scales (Note the output using <code class="docutils literal notranslate"><span class="pre">dump()</span></code>: the scale “link” is shown)</p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -2351,20 +2376,20 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4648678000" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4648678000">
+                        <input id="group-ds--2961688500" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2961688500">
                         /<span>(2)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/t-4649823200" class="h5tb-var-list">
-                <input id="ds-2-/t-4649826200" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/t-2965389100" class="h5tb-var-list">
+                <input id="ds-2-/t-2965392200" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/t-4649826200">t</label>
-                <span class="h5tb-dims">(x: 3) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">DIMENSION_LIST : [array([&#60;HDF5 object reference&#62;], dtype=object)]</li><li style="list-style-type: none; font-style:
+                    for="ds-2-/t-2965392200">t</label>
+                <span class="h5tb-dims">(x: 3) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
              italic">standard_name : temperature</li><li style="list-style-type: none; font-style: italic">units : degC</li>
 
                     </ul>
@@ -2372,12 +2397,12 @@ input.h5tb-varname-in:checked + label:before {
                  </ul>
 
 
-                <ul id="ds-1-/x-4651220800" class="h5tb-var-list">
-                <input id="ds-2-/x-4651223700" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-2965743300" class="h5tb-var-list">
+                <input id="ds-2-/x-2965745600" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-4651223700">x</label>
-                <span class="h5tb-dims">(3,) (int32)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">CLASS : b'DIMENSION_SCALE'</li><li style="list-style-type: none; font-style: italic">NAME : b''</li><li style="list-style-type: none; font-style: italic">REFERENCE_LIST : [(&#60;HDF5 object reference&#62;, 0)]</li><li style="list-style-type: none; font-style:
+                    for="ds-2-/x-2965745600">x</label>
+                <span class="h5tb-dims">(3,) [int32]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
              italic">standard_name : x_coordinate</li><li style="list-style-type: none; font-style: italic">units : m</li>
 
                     </ul>
@@ -2392,7 +2417,7 @@ input.h5tb-varname-in:checked + label:before {
 <li><p>add <code class="docutils literal notranslate"><span class="pre">xarry.DataArrays</span></code></p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span>  <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">),</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
@@ -2619,33 +2644,32 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4681951200" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4681951200">
+                        <input id="group-ds--2994274300" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2994274300">
                         /<span>(3)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/temperature-4683930300" class="h5tb-var-list">
-                <input id="ds-2-/temperature-4683933700" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/temperature-2995259500" class="h5tb-var-list">
+                <input id="ds-2-/temperature-2995262300" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/temperature-4683933700">temperature</label>
-                <span class="h5tb-dims">(y: 3, x: 2) (float64)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">DIMENSION_LIST : [array([&#60;HDF5 object reference&#62;], dtype=object)
- array([&#60;HDF5 object reference&#62;], dtype=object)]</li><li style="list-style-type: none; font-style: italic">long_name : a long name</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                    for="ds-2-/temperature-2995262300">temperature</label>
+                <span class="h5tb-dims">(y: 3, x: 2) [float64]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : a long name</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
 
                     </ul>
 
                  </ul>
 
 
-                <ul id="ds-1-/x-4684781900" class="h5tb-var-list">
-                <input id="ds-2-/x-4684784900" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-2995781000" class="h5tb-var-list">
+                <input id="ds-2-/x-2995785800" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-4684784900">x</label>
-                <span class="h5tb-dims">(2,) (int32)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">CLASS : b'DIMENSION_SCALE'</li><li style="list-style-type: none; font-style: italic">NAME : b''</li><li style="list-style-type: none; font-style: italic">REFERENCE_LIST : [(&#60;HDF5 object reference&#62;, 1)]</li><li style="list-style-type: none; font-style:
+                    for="ds-2-/x-2995785800">x</label>
+                <span class="h5tb-dims">(2,) [int32]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
              italic">standard_name : x_coordinate</li>
 
                     </ul>
@@ -2653,12 +2677,12 @@ input.h5tb-varname-in:checked + label:before {
                  </ul>
 
 
-                <ul id="ds-1-/y-4685317600" class="h5tb-var-list">
-                <input id="ds-2-/y-4685320100" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/y-2996547100" class="h5tb-var-list">
+                <input id="ds-2-/y-2996551500" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/y-4685320100">y</label>
-                <span class="h5tb-dims">(3,) (int32)</span>
-<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">CLASS : b'DIMENSION_SCALE'</li><li style="list-style-type: none; font-style: italic">NAME : b''</li><li style="list-style-type: none; font-style: italic">REFERENCE_LIST : [(&#60;HDF5 object reference&#62;, 0)]</li><li style="list-style-type: none; font-style:
+                    for="ds-2-/y-2996551500">y</label>
+                <span class="h5tb-dims">(3,) [int32]</span>
+<ul class="h5tb-attr-list"><li style="list-style-type: none; font-style:
              italic">standard_name : y_coordinate</li><li style="list-style-type: none; font-style: italic">units : m</li>
 
                     </ul>
@@ -2673,7 +2697,7 @@ input.h5tb-varname-in:checked + label:before {
 <li><p>add <code class="docutils literal notranslate"><span class="pre">xarry.Dataset</span></code></p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">({</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;bar&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="s1">&#39;baz&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">})</span>
@@ -2682,7 +2706,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -3045,10 +3069,10 @@ Coordinates:
 Dimensions without coordinates: x
 Data variables:
     bar      (x) int32 1 2
-    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-0a411982-9215-43c4-b278-c939a4d5a676' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-0a411982-9215-43c4-b278-c939a4d5a676' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-eeda3f71-e1ce-4356-b3da-aca5462fb2c3' class='xr-section-summary-in' type='checkbox'  checked><label for='section-eeda3f71-e1ce-4356-b3da-aca5462fb2c3' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-16579a39-8de1-4995-bc27-7caeb03a1eb2' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-16579a39-8de1-4995-bc27-7caeb03a1eb2' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-95e50627-b150-4d0b-b862-eb31542891ae' class='xr-var-data-in' type='checkbox'><label for='data-95e50627-b150-4d0b-b862-eb31542891ae' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-602cd70b-1d78-490f-ac26-8ee50bd52b37' class='xr-section-summary-in' type='checkbox'  checked><label for='section-602cd70b-1d78-490f-ac26-8ee50bd52b37' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-0e81be1a-da7b-4f5c-993f-0150045f113a' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-0e81be1a-da7b-4f5c-993f-0150045f113a' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-f31fd329-af39-441e-8f29-87658dac751d' class='xr-var-data-in' type='checkbox'><label for='data-f31fd329-af39-441e-8f29-87658dac751d' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-7efe36d6-8019-4a64-bad1-e529d931b980' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-7efe36d6-8019-4a64-bad1-e529d931b980' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-f18f1207-6aa7-46c4-b539-a2391ace1fcf' class='xr-var-data-in' type='checkbox'><label for='data-f18f1207-6aa7-46c4-b539-a2391ace1fcf' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-95d847ff-47d1-42ab-aafe-789e17a1bec7' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-95d847ff-47d1-42ab-aafe-789e17a1bec7' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
+    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-f8916557-1121-4d2a-9959-20d71e9030c5' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-f8916557-1121-4d2a-9959-20d71e9030c5' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-336bbe5c-53bc-4eeb-9fec-c6e545f8b8f7' class='xr-section-summary-in' type='checkbox'  checked><label for='section-336bbe5c-53bc-4eeb-9fec-c6e545f8b8f7' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-2860ffed-80a0-457b-868c-7daa594015de' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-2860ffed-80a0-457b-868c-7daa594015de' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-406e8cd1-0a4f-45be-8a50-99777a5f7f41' class='xr-var-data-in' type='checkbox'><label for='data-406e8cd1-0a4f-45be-8a50-99777a5f7f41' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-101dc57a-8118-42aa-8d9e-9076cb0714b4' class='xr-section-summary-in' type='checkbox'  checked><label for='section-101dc57a-8118-42aa-8d9e-9076cb0714b4' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-b729c617-7444-410b-8acd-9138445eff2b' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-b729c617-7444-410b-8acd-9138445eff2b' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-31ad60da-b7b7-43ce-9bf1-1d94c57d0197' class='xr-var-data-in' type='checkbox'><label for='data-31ad60da-b7b7-43ce-9bf1-1d94c57d0197' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-fbce7d9c-220c-4137-8348-863962f83ebe' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-fbce7d9c-220c-4137-8348-863962f83ebe' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-0138f523-79ab-46dc-8b81-d9626236c5b2' class='xr-var-data-in' type='checkbox'><label for='data-0138f523-79ab-46dc-8b81-d9626236c5b2' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-7f2e6946-6e56-411e-85d2-499620adc4b6' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-7f2e6946-6e56-411e-85d2-499620adc4b6' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
@@ -3060,7 +3084,7 @@ Data variables:
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ds</span><span class="o">.</span><span class="n">foo</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;m&#39;</span>
@@ -3077,7 +3101,7 @@ Data variables:
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -3440,10 +3464,10 @@ Coordinates:
 Dimensions without coordinates: x
 Data variables:
     bar      (x) int32 1 2
-    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-d9307df8-cd3f-47a1-8996-b04a2cdb0684' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-d9307df8-cd3f-47a1-8996-b04a2cdb0684' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-d910c4c3-5984-4c24-b7ff-f8177c68f9b6' class='xr-section-summary-in' type='checkbox'  checked><label for='section-d910c4c3-5984-4c24-b7ff-f8177c68f9b6' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-0b6a180a-94e2-477f-b1bb-8b9291b3c447' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-0b6a180a-94e2-477f-b1bb-8b9291b3c447' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-57b0ec12-ea13-4427-8671-7d4233ec0a14' class='xr-var-data-in' type='checkbox'><label for='data-57b0ec12-ea13-4427-8671-7d4233ec0a14' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>foo</dd></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-36caccfe-a38e-4101-ae8b-af7176d949df' class='xr-section-summary-in' type='checkbox'  checked><label for='section-36caccfe-a38e-4101-ae8b-af7176d949df' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-f2546726-c2db-4741-9c78-b491b11bd7c5' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-f2546726-c2db-4741-9c78-b491b11bd7c5' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-d74b8c75-746f-49dd-b76c-22d37c468fda' class='xr-var-data-in' type='checkbox'><label for='data-d74b8c75-746f-49dd-b76c-22d37c468fda' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>bar</dd></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-5ebe9dd2-0ad2-454d-8a95-b1faefa5e951' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-5ebe9dd2-0ad2-454d-8a95-b1faefa5e951' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-49751e44-779f-4894-a05d-f10baf681471' class='xr-var-data-in' type='checkbox'><label for='data-49751e44-779f-4894-a05d-f10baf681471' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>baz</dd></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-11a58d5e-e40a-4363-881d-da57c2798a32' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-11a58d5e-e40a-4363-881d-da57c2798a32' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
+    baz      float64 3.142</pre><div class='xr-wrap' style='display:none'><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-5fbc7966-a60a-4b5e-a750-bed545b66209' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-5fbc7966-a60a-4b5e-a750-bed545b66209' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span class='xr-has-index'>foo</span>: 3</li><li><span>x</span>: 2</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-9ab4ea98-eea6-43de-8414-ae3f13469400' class='xr-section-summary-in' type='checkbox'  checked><label for='section-9ab4ea98-eea6-43de-8414-ae3f13469400' class='xr-section-summary' >Coordinates: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2 3</div><input id='attrs-c34e92b8-6867-4716-8b4e-b8f5c81c5a88' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-c34e92b8-6867-4716-8b4e-b8f5c81c5a88' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-b1ae9cbd-5f1f-4d96-84ef-dc8cacac1093' class='xr-var-data-in' type='checkbox'><label for='data-b1ae9cbd-5f1f-4d96-84ef-dc8cacac1093' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>foo</dd></dl></div><div class='xr-var-data'><pre>array([1, 2, 3])</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-6a22d7d0-6ede-41a8-8dba-4793f7244c24' class='xr-section-summary-in' type='checkbox'  checked><label for='section-6a22d7d0-6ede-41a8-8dba-4793f7244c24' class='xr-section-summary' >Data variables: <span>(2)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>bar</span></div><div class='xr-var-dims'>(x)</div><div class='xr-var-dtype'>int32</div><div class='xr-var-preview xr-preview'>1 2</div><input id='attrs-9e5da8c3-96f6-455b-890a-d14d57aaa87e' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-9e5da8c3-96f6-455b-890a-d14d57aaa87e' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-b8dea736-b762-4bc9-be1f-7c9c6d7a38fb' class='xr-var-data-in' type='checkbox'><label for='data-b8dea736-b762-4bc9-be1f-7c9c6d7a38fb' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>bar</dd></dl></div><div class='xr-var-data'><pre>array([1, 2])</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>baz</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>3.142</div><input id='attrs-238e8c9f-c396-406f-834a-2e5725508915' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-238e8c9f-c396-406f-834a-2e5725508915' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-b45aaf5e-46b4-4055-8071-05935568c4cc' class='xr-var-data-in' type='checkbox'><label for='data-b45aaf5e-46b4-4055-8071-05935568c4cc' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>units :</span></dt><dd>m</dd><dt><span>long_name :</span></dt><dd>baz</dd></dl></div><div class='xr-var-data'><pre>array(3.14159265)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-ddbe842d-c3bf-4e31-84a2-3128ccc344c9' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-ddbe842d-c3bf-4e31-84a2-3128ccc344c9' class='xr-section-summary'  title='Expand/collapse section'>Attributes: <span>(0)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'></dl></div></li></ul></div></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -3453,7 +3477,7 @@ Data variables:
 </div>
 <p>We may also create a dataset by using the <code class="docutils literal notranslate"><span class="pre">__setitem__</span></code>:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
@@ -3669,19 +3693,19 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--4824705400" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--4824705400">
+                        <input id="group-ds--3100826500" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--3100826500">
                         /<span>(1)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
-                <ul id="ds-1-/x-4825439300" class="h5tb-var-list">
-                <input id="ds-2-/x-4825441500" class="h5tb-varname-in" type="checkbox">
+                <ul id="ds-1-/x-3101321400" class="h5tb-var-list">
+                <input id="ds-2-/x-3101323700" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname'
-                    for="ds-2-/x-4825441500">x</label>
-                <span class="h5tb-dims">(3,) (int32)</span>
+                    for="ds-2-/x-3101323700">x</label>
+                <span class="h5tb-dims">(3,) [int32]</span>
 <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">hello : world</li>
 
                     </ul>

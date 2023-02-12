@@ -35,6 +35,7 @@
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -597,11 +598,10 @@ div.nboutput.container div.prompt > div {
     }
 }
 
-/* disable scrollbars and line breaks on prompts */
+/* disable scrollbars on prompts */
 div.nbinput.container div.prompt pre,
 div.nboutput.container div.prompt pre {
     overflow: hidden;
-    white-space: pre;
 }
 
 /* input/output area */
@@ -784,10 +784,10 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-12-29_20:48:00,291 CRITICAL [core.py:901] Group test/grp from yaml definition not written due to create_group() got an unexpected keyword argument &#39;long_name&#39;
-2022-12-29_20:48:00,291 CRITICAL [core.py:901] Group test/grp from yaml definition not written due to create_group() got an unexpected keyword argument &#39;long_name&#39;
-2022-12-29_20:48:00,291 CRITICAL [core.py:910] Dataset boundary/outlet/y from yaml definition not written due to make_new_dset() got an unexpected keyword argument &#39;standard_name&#39;
-2022-12-29_20:48:00,291 CRITICAL [core.py:910] Dataset boundary/outlet/y from yaml definition not written due to make_new_dset() got an unexpected keyword argument &#39;standard_name&#39;
+2023-02-12_19:26:36,35 CRITICAL [core.py:1003] Group test/grp from yaml definition not written due to create_group() got an unexpected keyword argument &#39;long_name&#39;
+2023-02-12_19:26:36,35 CRITICAL [core.py:1003] Group test/grp from yaml definition not written due to create_group() got an unexpected keyword argument &#39;long_name&#39;
+2023-02-12_19:26:36,37 CRITICAL [core.py:1012] Dataset boundary/outlet/y from yaml definition not written due to make_new_dset() got an unexpected keyword argument &#39;standard_name&#39;
+2023-02-12_19:26:36,37 CRITICAL [core.py:1012] Dataset boundary/outlet/y from yaml definition not written due to make_new_dset() got an unexpected keyword argument &#39;standard_name&#39;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -997,18 +997,18 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds--3121978400" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds--3121978400">
+                        <input id="group-ds--2813805200" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--2813805200">
                         /<span>(1)</span></label>
 
 
-                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a1</li>
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a4</li>
                     </ul>
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-boundary-3122367300" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-boundary-3122367300">
+                        <input id="group-ds-boundary-2814181200" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-boundary-2814181200">
                         boundary<span>(1)</span></label>
 
 
@@ -1017,8 +1017,8 @@ input.h5tb-varname-in:checked + label:before {
 
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
-                        <input id="group-ds-outlet-3122482700" type="checkbox" checked>
-                        <label style="font-weight: bold" for="group-ds-outlet-3122482700">
+                        <input id="group-ds-outlet-2814303300" type="checkbox" >
+                        <label style="font-weight: bold" for="group-ds-outlet-2814303300">
                         outlet<span>(0)</span></label>
 
 

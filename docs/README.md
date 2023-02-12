@@ -26,7 +26,7 @@ To update the pdf, run
 
 and after that run the make file in the source folder to build the actual pdf.
 
-View `build/index.html` with your browser.
+View `_build/index.html` with your browser.
 
 ## Generating docs for github:
 

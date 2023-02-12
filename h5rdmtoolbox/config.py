@@ -24,7 +24,7 @@ DEFAULT_CONFIG = dict(
     UREG_FORMAT='C~',
     STANDARD_NAME_TABLE_ATTRIBUTE_NAME='__standard_name_table__',
     CONVENTION='default',
-    INIT_LOGGER_LEVEL='DEBUG'
+    INIT_LOGGER_LEVEL='ERROR'
 )
 
 

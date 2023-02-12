@@ -163,7 +163,9 @@ class Ipyvolume_Dataset_Accessor:
         vectors = ipv.quiver(xx.ravel(), yy.ravel(), zz.ravel(),
                              _u, _v, _w)
         abs_val = np.sqrt(np.square(_u) + np.square(_v) + np.square(_w))
-        vectors.color = _color_from_values(arr=abs_val, cmap=cmap, vmin=vmin, vmax=vmax, levels=levels,
-                                           alpha=alpha).ravel()
+        # vectors.color = _color_from_values(arr=abs_val, cmap=cmap,
+        #                                    vmin=vmin, vmax=vmax,
+        #                                    levels=levels,
+        #                                    alpha=alpha).ravel()
         vectors.color_map = cmap
         return ipv
