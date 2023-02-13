@@ -1,3 +1,4 @@
+"""utilities of package conventions"""
 import pathlib
 import re
 import xml.etree.ElementTree as ET

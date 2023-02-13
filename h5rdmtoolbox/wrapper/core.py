@@ -212,7 +212,7 @@ class H5Group(h5py.Group):
         ret = super().__getitem__(name)
         if isinstance(ret, h5py.Dataset):
             return self._h5ds(ret.id)
-        elif isinstance(ret, h5py.Group):
+        if isinstance(ret, h5py.Group):
             return self._h5grp(ret.id)
         return ret
 
@@ -231,16 +231,14 @@ class H5Group(h5py.Group):
             if item in self:
                 if isinstance(self[item], h5py.Group):
                     return self._h5grp(self[item].id)
-                else:
-                    return self._h5ds(self[item].id)
+                return self._h5ds(self[item].id)
             else:
                 # try replacing underscores with spaces:
                 _item = item.replace('_', ' ')
                 if _item in self:
                     if isinstance(self[_item], h5py.Group):
                         return self.__class__(self[_item].id)
-                    else:
-                        return self._h5ds(self[_item].id)
+                    return self._h5ds(self[_item].id)
                 else:
                     return super().__getattribute__(item)
         except AttributeError:
@@ -259,7 +257,7 @@ class H5Group(h5py.Group):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
             ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
-        tree = {ak: av for ak, av in self.attrs.items()}
+        tree = dict(self.attrs.items())
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
                 ds_dict = {'shape': v.shape, 'ndim': v.ndim}
@@ -785,7 +783,7 @@ class H5Group(h5py.Group):
                     _ufunc_param = ufunc[1:]
                     raise NotImplementedError(
                         'user function with parameter not implemented yet')
-                elif hasattr(ufunc, '__call__'):
+                if hasattr(ufunc, '__call__'):
                     try:
                         img_processed = ufunc(img)
                     except RuntimeError as e:
@@ -961,18 +959,16 @@ class H5Group(h5py.Group):
                 del self[name]
                 self[name] = h5py.ExternalLink(filename, path)
                 return self[name]
-            else:
-                logger.debug('External link %s was not created. A Dataset with this name'
+            logger.debug('External link %s was not created. A Dataset with this name'
+                         ' already exists and overwrite is set to False! '
+                         'You can pass overwrite=True in order to overwrite the '
+                         'existing dataset', name)
+            raise ValueError(f'External link {name} was not created. A Dataset with this name'
                              ' already exists and overwrite is set to False! '
                              'You can pass overwrite=True in order to overwrite the '
-                             'existing dataset', name)
-                raise ValueError(f'External link {name} was not created. A Dataset with this name'
-                                 ' already exists and overwrite is set to False! '
-                                 'You can pass overwrite=True in order to overwrite the '
-                                 'existing dataset')
-        else:
-            self[name] = h5py.ExternalLink(filename, path)
-            return self[name]
+                             'existing dataset')
+        self[name] = h5py.ExternalLink(filename, path)
+        return self[name]
 
     def from_yaml(self, yamlfile: Path):
         """creates groups, datasets and attributes defined in a yaml file.
@@ -1294,75 +1290,77 @@ class H5Dataset(h5py.Dataset):
         Note, that even if `RETURN_XARRAY` is True, there is another way to
         receive  numpy array. This is by calling .values[:] on the dataset."""
         args = args if isinstance(args, tuple) else (args,)
+
         if not config.CONFIG.RETURN_XARRAY or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
+
         if Ellipsis in args:
             warnings.warn(
                 'Ellipsis not supported at this stage. returning numpy array')
             return super().__getitem__(args, new_dtype=new_dtype)
-        else:
-            arr = super().__getitem__(args, new_dtype=new_dtype)
-            attrs = pop_hdf_attributes(self.attrs)
 
-            if 'DIMENSION_LIST' in self.attrs:
-                # there are coordinates to attach...
+        arr = super().__getitem__(args, new_dtype=new_dtype)
+        attrs = pop_hdf_attributes(self.attrs)
 
-                myargs = [slice(None) for _ in range(self.ndim)]
-                for ia, a in enumerate(args):
-                    myargs[ia] = a
+        if 'DIMENSION_LIST' in self.attrs:
+            # there are coordinates to attach...
 
-                # remember the first dimension name for all axis:
-                dims_names = [Path(d[0].name).stem if len(
-                    d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
+            myargs = [slice(None) for _ in range(self.ndim)]
+            for ia, a in enumerate(args):
+                myargs[ia] = a
 
-                coords = {}
-                used_dims = []
-                for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
-                    for iax, _ in enumerate(dim):
-                        dim_ds = dim[iax]
-                        coord_name = Path(dim[iax].name).stem
-                        if dim_ds.ndim == 0:
-                            if isinstance(arg, int):
-                                coords[coord_name] = xr.DataArray(name=coord_name,
-                                                                  dims=(
-                                                                  ), data=dim_ds[()],
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
-                            else:
-                                coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
-                                                                  data=[
-                                                                      dim_ds[()], ],
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
+            # remember the first dimension name for all axis:
+            dims_names = [Path(d[0].name).stem if len(
+                d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
+
+            coords = {}
+            used_dims = []
+            for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
+                for iax, _ in enumerate(dim):
+                    dim_ds = dim[iax]
+                    coord_name = Path(dim[iax].name).stem
+                    if dim_ds.ndim == 0:
+                        if isinstance(arg, int):
+                            coords[coord_name] = xr.DataArray(name=coord_name,
+                                                              dims=(
+                                                              ), data=dim_ds[()],
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
                         else:
-                            used_dims.append(dim_name)
-                            _data = dim_ds[arg]
-                            if isinstance(_data, np.ndarray):
-                                coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
-                                                                  data=_data,
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
-                            else:
-                                coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
-                                                                  data=_data,
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
-
-                used_dims = [dim_name for arg, dim_name in zip(
-                    myargs, dims_names) if isinstance(arg, slice)]
-
-                COORDINATES = self.attrs.get('COORDINATES')
-                if COORDINATES is not None:
-                    if isinstance(COORDINATES, str):
-                        COORDINATES = [COORDINATES, ]
-                    for c in COORDINATES:
-                        if c[0] == '/':
-                            _data = self.rootparent[c]
+                            coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
+                                                              data=[
+                                                                  dim_ds[()], ],
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+                    else:
+                        used_dims.append(dim_name)
+                        _data = dim_ds[arg]
+                        if isinstance(_data, np.ndarray):
+                            coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
+                                                              data=_data,
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
                         else:
-                            _data = self.parent[c]
-                        _name = Path(c).stem
-                        coords.update({_name: xr.DataArray(name=_name, dims=(),
-                                                           data=_data,
-                                                           attrs=pop_hdf_attributes(self.parent[c].attrs))})
-                return xr.DataArray(name=Path(self.name).stem, data=arr, dims=used_dims,
-                                    coords=coords, attrs=attrs)
-            return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
+                            coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
+                                                              data=_data,
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+
+            used_dims = [dim_name for arg, dim_name in zip(
+                myargs, dims_names) if isinstance(arg, slice)]
+
+            COORDINATES = self.attrs.get('COORDINATES')
+            if COORDINATES is not None:
+                if isinstance(COORDINATES, str):
+                    COORDINATES = [COORDINATES, ]
+                for c in COORDINATES:
+                    if c[0] == '/':
+                        _data = self.rootparent[c]
+                    else:
+                        _data = self.parent[c]
+                    _name = Path(c).stem
+                    coords.update({_name: xr.DataArray(name=_name, dims=(),
+                                                       data=_data,
+                                                       attrs=pop_hdf_attributes(self.parent[c].attrs))})
+            return xr.DataArray(name=Path(self.name).stem, data=arr, dims=used_dims,
+                                coords=coords, attrs=attrs)
+        return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
     def __repr__(self) -> str:
         r = super().__repr__()

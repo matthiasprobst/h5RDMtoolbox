@@ -1,3 +1,6 @@
+"""
+xarray accessor for ipyvolume
+"""
 import ipyvolume as ipv
 import matplotlib.cm
 import matplotlib.pyplot as plt

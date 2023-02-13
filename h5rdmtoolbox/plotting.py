@@ -1,4 +1,8 @@
-# xarray does not allow to change the unit representation in axis labels. The following is a work around:
+"""plotting module
+Matplotlib labels are manipulated to set the units representation correctly. See build_label_unit_str
+"""
+
+# xarray does not allow to change the unit representation in axis labels. The following is a workaround:
 import matplotlib.projections as proj
 import matplotlib.pyplot as plt
 
@@ -11,15 +15,17 @@ def build_label_unit_str(name: str, units: str,
     units = units.replace("**", "^")
     if units_format == 'in':
         return f'{name} in ${units}$'
-    elif units_format == '/':
+    if units_format == '/':
         return f'{name} / ${units}$'
-    elif units_format in ('[', ']', '[]'):
+    if units_format in ('[', ']', '[]'):
         return f'{name} [${units}$]'
-    elif units_format in ('(', ')', '()'):
+    if units_format in ('(', ')', '()'):
         return f'{name} (${units}$)'
 
 
 class XarrayLabelManipulation(plt.Axes):
+    """Label manipulation axis class"""
+
     @staticmethod
     def _adjust_units_label(label, units_format=config.XARRAY_UNIT_REPR_IN_PLOTS):
         # other formats: '(', '[', '/', 'in'
@@ -41,8 +47,8 @@ class XarrayLabelManipulation(plt.Axes):
                 return label.replace(units_string, f' / {_raw_unit}')
             if units_format in ('(', ')', '()'):
                 return label.replace(units_string, f' ({_raw_unit})')
-            else:
-                return label
+            return label
+        return label
 
     def set_xlabel(self, xlabel, *args, **kwargs):
         """set the (adjusted) xlabel"""
@@ -53,4 +59,5 @@ class XarrayLabelManipulation(plt.Axes):
         super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
 
 
+# register the axis class
 proj.register_projection(XarrayLabelManipulation)

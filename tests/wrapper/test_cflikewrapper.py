@@ -30,7 +30,6 @@ class TestH5CFLikeFile(unittest.TestCase):
         """setup"""
         h5tbx.use('cflike')
         with h5tbx.H5File() as h5:
-            print(type(h5))
             self.assertIsInstance(h5, cflike.H5File)
         with h5tbx.H5File(mode='w', title='dwa') as h5:
             h5.attrs['one'] = 1
@@ -449,7 +448,6 @@ class TestH5CFLikeFile(unittest.TestCase):
     def test_to_unit(self):
         with h5tbx.H5File(mode='w') as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
-            print(dset.units)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
             dset.to_units('K', inplace=True)

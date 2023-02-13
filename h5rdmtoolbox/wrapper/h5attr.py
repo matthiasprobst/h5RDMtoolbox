@@ -1,6 +1,6 @@
 import h5py
 import json
-import pint.util
+import pint
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
@@ -57,51 +57,48 @@ class WrapperAttributeManager(h5py.AttributeManager):
         #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         if isinstance(ret, str):
-            if ret:  # not really needed, is it?
-                if ret[0] == '{':
-                    dictionary = json.loads(ret)
-                    for k, v in dictionary.items():
-                        if isinstance(v, str):
-                            if not v:
-                                dictionary[k] = ''
-                            else:
-                                if v[0] == '/':
-                                    if isinstance(self._id, h5py.h5g.GroupID):
-                                        rootgrp = get_rootparent(h5py.Group(self._id))
-                                        dictionary[k] = rootgrp.get(v)
-                                    elif isinstance(self._id, h5py.h5d.DatasetID):
-                                        rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                                        dictionary[k] = rootgrp.get(v)
-                    return dictionary
-                elif ret[0] == '/':
-                    # it may be group or dataset path or actually just a filepath stored by the user
-                    if isinstance(self._id, h5py.h5g.GroupID):
-                        # call like this, otherwise recursive call!
-                        rootgrp = get_rootparent(h5py.Group(self._id))
-                        if rootgrp.get(ret) is None:
-                            # not a dataset or group, maybe just a filename that has been stored
-                            return ret
-                        return rootgrp.get(ret).name
-                    else:
-                        rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                        return rootgrp.get(ret).name
-                elif ret[0] == '(':
-                    if ret[-1] == ')':
-                        return eval(ret)
-                    return ret
-                elif ret[0] == '[':
-                    if ret[-1] == ']':
-                        try:
-                            return eval(ret)
-                        except NameError:
-                            return ret
-                    return ret
-                else:
-                    return AttributeString(ret)
-            else:
+            if ret == '':
                 return ret
-        else:
-            return ret
+            if ret[0] == '{':
+                dictionary = json.loads(ret)
+                for k, v in dictionary.items():
+                    if isinstance(v, str):
+                        if not v:
+                            dictionary[k] = ''
+                        else:
+                            if v[0] == '/':
+                                if isinstance(self._id, h5py.h5g.GroupID):
+                                    rootgrp = get_rootparent(h5py.Group(self._id))
+                                    dictionary[k] = rootgrp.get(v)
+                                elif isinstance(self._id, h5py.h5d.DatasetID):
+                                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+                                    dictionary[k] = rootgrp.get(v)
+                return dictionary
+            if ret[0] == '/':
+                # it may be group or dataset path or actually just a filepath stored by the user
+                if isinstance(self._id, h5py.h5g.GroupID):
+                    # call like this, otherwise recursive call!
+                    rootgrp = get_rootparent(h5py.Group(self._id))
+                    if rootgrp.get(ret) is None:
+                        # not a dataset or group, maybe just a filename that has been stored
+                        return ret
+                    return rootgrp.get(ret).name
+                else:
+                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+                    return rootgrp.get(ret).name
+            if ret[0] == '(':
+                if ret[-1] == ')':
+                    return eval(ret)
+                return ret
+            if ret[0] == '[':
+                if ret[-1] == ']':
+                    try:
+                        return eval(ret)
+                    except NameError:
+                        return ret
+                return ret
+            return AttributeString(ret)
+        return ret
 
     @with_phil
     def __setitem__(self, name, value):

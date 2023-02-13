@@ -1,3 +1,4 @@
+"""layout module to manage/check layout of HDF files"""
 import h5py
 import logging
 import numpy as np
@@ -73,7 +74,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
             continue
         keys = ak.split('.alt:')
         if len(keys) > 1:
-            if not any([k in otherobj.attrs for k in keys]):
+            if not any(k in otherobj.attrs for k in keys):
                 logger.error(f'Neither of the attribute {", ".join(keys)} exist in {otherobj.name}')
                 issues.append(
                     {'path': obj.name, 'obj_type': 'attribute', 'name': ' or '.join(keys), 'issue': 'missing'})
@@ -268,8 +269,7 @@ class H5FileLayout(h5py.File, LayoutGroup):
     def _repr_html_(self):
         preamble = f'<p>H5FileLayout File "{self.filename.stem}"</p>\n'
         with h5py.File(self.filename, mode='r') as h5:
-            return _repr.h5file_html_repr(h5, max_attr_length=None, preamble=preamble,
-                                          build_debug_html_page=False)
+            return _repr.HDF5StructureStrRepr(h5)(preamble=preamble)
 
     # @abc.abstractmethod
     def write(self) -> pathlib.Path:

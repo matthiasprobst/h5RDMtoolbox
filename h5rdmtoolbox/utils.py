@@ -1,11 +1,11 @@
+"""utilities of the h5rdmtoolbox"""
+import h5py
 import pathlib
 from datetime import datetime
-from re import sub as re_sub
-from typing import Union
-
-import h5py
 from dateutil.tz import tzlocal
 from h5py import File
+from re import sub as re_sub
+from typing import Union
 
 from . import _user
 from ._version import __version__
@@ -96,7 +96,7 @@ def generate_time_str(dtime: datetime, fmt: str) -> str:
     zsplit = fmt.split('%z')
     if len(zsplit) == 1:
         return dtime.strftime(fmt)
-    elif len(zsplit) == 2:
+    if len(zsplit) == 2:
         return dtime.strftime(zsplit[0]) + datetime.now(tzlocal()).strftime('%z') + dtime.strftime(zsplit[1])
     raise ValueError('Invalid formatting string. Can only handle one %z formatter')
 

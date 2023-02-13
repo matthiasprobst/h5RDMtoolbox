@@ -13,7 +13,6 @@ from ._version import __version__
 from .config import user_config_filename
 from .database import filequery
 from .utils import generate_temporary_filename, generate_temporary_directory
-from .wrapper import cflike
 from .wrapper import core
 from .wrapper.core import lower
 
@@ -55,14 +54,20 @@ def use(convention_name: str) -> None:
     """
     if convention_name == 'default' or convention_name is None:
         if h5tbxParams['convention'] != convention_name:
-            core_logger.info(f'Switched to "default"')
+            core_logger.info('Switched to "default"')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['H5File'] = core.H5File
         h5tbxParams['H5Dataset'] = core.H5Dataset
         h5tbxParams['H5Group'] = core.H5Group
         return
 
-    elif convention_name == 'cflike':
+    if convention_name == 'cflike':
+        # only now import the cflike sub-package if its dependencies are installed
+        try:
+            from .wrapper import cflike
+        except ImportError:
+            raise ImportError('It seems like the dependencies for the cflike package are missing. Consider '
+                              'installing them. Get all dependencies by calling "pip install h5rdmtoolbox[cflike]"')
         if h5tbxParams['convention'] != convention_name:
             core_logger.info(f'Switched to "{convention_name}"')
         h5tbxParams['convention'] = convention_name
@@ -81,17 +86,19 @@ class H5File:
         return h5tbxParams['H5File'](*args, **kwargs)
 
     def __str__(self) -> str:
-        return h5tbxParams['H5File'].__str__()
+        return h5tbxParams['H5File'].__str__(self)
 
     def __repr__(self) -> str:
-        return h5tbxParams['H5File'].__repr__()
+        return h5tbxParams['H5File'].__repr__(self)
 
     @staticmethod
     def H5Dataset():
+        """Return hdf dataset class  of set convention wrapper"""
         return h5tbxParams['H5Dataset']
 
     @staticmethod
     def H5Group():
+        """Return hdf group class  of set convention wrapper"""
         return h5tbxParams['H5Group']
 
 

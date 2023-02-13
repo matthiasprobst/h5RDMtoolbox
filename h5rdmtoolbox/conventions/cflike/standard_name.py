@@ -11,28 +11,23 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
+import h5py
 import json
 import os
+import pandas as pd
 import pathlib
 import re
 import warnings
 import xml.etree.ElementTree as ET
+import yaml
+from IPython.display import display, HTML
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
-from typing import Dict, Union, List, Tuple
-
-import h5py
-import pandas as pd
-import requests
-import xmltodict
-import yaml
-from IPython.display import display, HTML
 from omegaconf import DictConfig, OmegaConf
+from pathlib import Path
 from pint.errors import UndefinedUnitError
-
-from tabulate import tabulate
+from typing import Dict, Union, List, Tuple
 
 from . import errors
 from .._logger import logger
@@ -40,6 +35,15 @@ from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_simi
 from ... import config
 from ..._user import user_dirs
 from ...utils import generate_temporary_filename
+
+try:
+    from tabulate import tabulate
+    import requests
+    import xmltodict
+except ImportError:
+    from ...errors import CFLikeImportError
+
+    raise CFLikeImportError()
 
 STRICT = True
 

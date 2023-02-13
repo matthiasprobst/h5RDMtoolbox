@@ -4,7 +4,6 @@ import pandas as pd
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.config import CONFIG
 from h5rdmtoolbox.wrapper import set_loglevel
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')

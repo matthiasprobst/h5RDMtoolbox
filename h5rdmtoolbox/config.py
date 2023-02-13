@@ -18,7 +18,6 @@ DEFAULT_CONFIG = dict(
     HDF_COMPRESSION='gzip',
     HDF_COMPRESSION_OPTS=5,
     HTML_MAX_STRING_LENGTH=40,  # used for HTML representation of strings (.dump())
-    MPL_STYLE='h5rdmtoolbox',  # TODO: seems not to be used
     XARRAY_UNIT_REPR_IN_PLOTS='/',
     REQUIRE_UNITS=True,  # datasets require units
     UREG_FORMAT='C~',
@@ -35,7 +34,7 @@ def read_user_config() -> DictConfig:
 
 def write_user_config(cfg: DictConfig):
     """Write config to user directory"""
-    with open(user_config_filename, 'w') as f:
+    with open(user_config_filename, 'w', encoding="utf-8") as f:
         f.write(OmegaConf.to_yaml(cfg))
 
 

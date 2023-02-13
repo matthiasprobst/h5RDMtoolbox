@@ -110,7 +110,9 @@ class _HDF5StructureRepr:
 
 class HDF5StructureStrRepr(_HDF5StructureRepr):
 
-    def __call__(self, group, indent=0):
+    def __call__(self, group, indent=0, preamble=None):
+        if preamble:
+            print(preamble)
         for attr_name, attr_value in group.attrs.items():
             if not attr_name.isupper():
                 print(self.base_intent * indent + self.__attrs__(attr_name, attr_value))
