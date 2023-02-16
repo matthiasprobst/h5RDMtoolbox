@@ -25,18 +25,17 @@ from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
+from .. import config
 from .. import utils
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._user import user_dirs
 from .._version import __version__
-from .. import config
 from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
-
 
 H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
 if not H5File_layout_filename.exists():
@@ -1159,10 +1158,6 @@ class H5Group(h5py.Group):
     def sdump(self):
         """string representation of group"""
         return self.hdfrepr.__str__(self)
-
-    def build_xr_dataset(self, **dataset):
-        from ..xr.dataset import HDFXrDataset
-        return HDFXrDataset(**dataset)
 
 
 class DatasetValues:

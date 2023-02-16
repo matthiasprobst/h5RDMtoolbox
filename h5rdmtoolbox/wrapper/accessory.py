@@ -1,10 +1,9 @@
 """Module to register attributes of wrapper classes without touching the implementation"""
-from typing import List, Tuple
-from typing import Union
-
 import h5py
 import xarray as xr
 from IPython.display import HTML, display
+from typing import List, Tuple
+from typing import Union
 
 
 class SpecialDatasetRegistrationWarning(Warning):
@@ -294,3 +293,30 @@ class SpecialDataset:
             h5grp = self._grp
         # TODO:
         # h5grp.from_xarray_dataset(self._dset, drop='conflicts')
+
+
+from ..xr.dataset import HDFXrDataset
+
+from .core import H5Group
+
+
+@register_special_dataset("Vector", H5Group)
+class VectorDataset(SpecialDataset):
+    """Vector class with xarray.Dataset-like behaviour"""
+
+    def __call__(self, *args, **kwargs):
+        hdf_datasets = {}
+        for arg in args:
+            if isinstance(arg, str):
+                ds = self._grp[arg]
+            elif isinstance(arg, h5py.Dataset):
+                ds = arg
+            else:
+                raise TypeError(f'Invalid type: {type(arg)}')
+            hdf_datasets[ds.name.strip('/')] = ds
+        for name, ds in kwargs.items():
+            if not isinstance(ds, h5py.Dataset):
+                raise TypeError(f'Invalid type: {type(ds)}')
+            hdf_datasets[name.strip('/')] = ds
+
+        return HDFXrDataset(**hdf_datasets)

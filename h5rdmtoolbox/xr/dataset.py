@@ -1,6 +1,5 @@
 import xarray as xr
 
-
 class HDFXrDataset:
     """HDF interface to a Xr.Dataset which is returned on demand when sliced"""
 
@@ -23,3 +22,5 @@ class HDFXrDataset:
     @property
     def shape(self):
         return self._shape
+
+
