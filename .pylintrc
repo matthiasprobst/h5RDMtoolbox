@@ -1,5 +1,7 @@
 [MAIN]
 
+# call this: pylint --rc='.pylintrc' --output
+
 # Analyse import fallback blocks. This can be used to support both Python 2 and
 # 3 compatible code, which means that the block might have code that exists
 # only in one or another interpreter, leading to false positives when analysed.
@@ -156,7 +158,8 @@ disable=raw-checker-failed,
         use-symbolic-message-instead,
         invalid-name,
         logging-format-interpolation,
-        wrong-import-order
+        wrong-import-order,
+        too-many-locals
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

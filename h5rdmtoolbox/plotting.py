@@ -31,23 +31,20 @@ class XarrayLabelManipulation(plt.Axes):
         # other formats: '(', '[', '/', 'in'
         if label:
             if not label[-1] == ']':
-                return label
+                return label.replace('**', '^')
             if units_format == '[':
-                return label
+                name, units_string = label.rsplit('[', 1)
+                if units_string in ('', ' ', None):
+                    _raw_unit = '-'
+                else:
+                    _raw_unit = f"${units_string.replace('**', '^')}$"
+                return f"{name} [${_raw_unit.replace('**', '^')}$]"
+
             idx0 = label.rfind('[', 1)
             units_string = label[idx0:]
             if units_string[1:-1] in ('', ' ', None):
-                _raw_unit = '-'
-            else:
-                _raw_unit = f"${units_string[1:-1].replace('**', '^')}$"
-
-            if units_format == 'in':
-                return label.replace(units_string, f' in {_raw_unit}')
-            if units_format == '/':
-                return label.replace(units_string, f' / {_raw_unit}')
-            if units_format in ('(', ')', '()'):
-                return label.replace(units_string, f' ({_raw_unit})')
-            return label
+                return build_label_unit_str(label[:idx0], '-', units_format)
+            return build_label_unit_str(label[:idx0], units_string[1:-1], units_format)
         return label
 
     def set_xlabel(self, xlabel, *args, **kwargs):

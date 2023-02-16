@@ -137,7 +137,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             try:
                 self.create(name, data=str(_value))
             except Exception as e2:
-                raise RuntimeError(f'Could not set attribute due to: {e2}')
+                raise RuntimeError(f'Could not set attribute due to: {e2}') from e2
 
     def __repr__(self):
         return super().__repr__()

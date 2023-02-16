@@ -23,7 +23,7 @@ DEFAULT_CONFIG = dict(
     UREG_FORMAT='C~',
     STANDARD_NAME_TABLE_ATTRIBUTE_NAME='__standard_name_table__',
     CONVENTION='default',
-    INIT_LOGGER_LEVEL='DEBUG'
+    INIT_LOGGER_LEVEL='INFO'
 )
 
 
@@ -36,6 +36,11 @@ def write_user_config(cfg: DictConfig):
     """Write config to user directory"""
     with open(user_config_filename, 'w', encoding="utf-8") as f:
         f.write(OmegaConf.to_yaml(cfg))
+    CONFIG = cfg
+
+def write_default_config():
+    """Write default configuration"""
+    write_user_config(DEFAULT_CONFIG)
 
 
 if not user_config_filename.exists():

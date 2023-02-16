@@ -156,7 +156,7 @@ class LayoutGroup(h5py.Group):
                     ds_name = obj_name
                     # first check if the dataset exist:
                     if ds_name in other:
-                        issues.append(self[obj_name].check(other[ds_name]))
+                        issues.append(obj.check(other[ds_name]))
                     else:
                         # now check alternative:
                         # does the alternative group exist?
@@ -165,7 +165,7 @@ class LayoutGroup(h5py.Group):
                                 if isinstance(other_grp, h5py.Group):
                                     if re.match(alt_grp_name[3:], other_grp_name):
                                         if ds_name in other_grp:
-                                            issues.append(self[obj_name].check(other_grp[ds_name]))
+                                            issues.append(obj.check(other_grp[ds_name]))
                                         else:
                                             issues.append({'path': os.path.join(other.name, alt_grp_name, ds_name),
                                                            'obj_type': 'dataset',
@@ -176,7 +176,7 @@ class LayoutGroup(h5py.Group):
                         else:
                             if alt_grp_name in other.keys():
                                 if ds_name in other[alt_grp_name]:
-                                    issues.append(self[obj_name].check(other[alt_grp_name][ds_name]))
+                                    issues.append(obj.check(other[alt_grp_name][ds_name]))
                                 else:
                                     issues.append(
                                         {'path': os.path.join(other, alt_grp_name, ds_name), 'obj_type': 'dataset',
@@ -190,7 +190,7 @@ class LayoutGroup(h5py.Group):
 
                 else:
                     if obj_name in other:
-                        issues.append(self[obj_name].check(other[obj_name]))
+                        issues.append(obj.check(other[obj_name]))
                     else:
                         if '__optional__' not in obj.attrs:
                             issues.append({'path': obj.name, 'obj_type': 'dataset', 'issue': 'missing'})
@@ -218,7 +218,7 @@ class LayoutGroup(h5py.Group):
 
                                 if n_found == 0 and not obj.attrs.get('__check_isoptional__', False):
                                     logger.error(f'Group name "{obj_name}" missing in {other.name}.')
-                                    issues.append({'path': self[obj_name].name,
+                                    issues.append({'path': obj.name,
                                                    'obj_type': 'group',
                                                    'issue': 'missing'})
                             else:
@@ -241,7 +241,7 @@ class LayoutGroup(h5py.Group):
                                         issues.append(LayoutGroup(obj.id).check(other_grp))
                             if n_found == 0 and not obj.attrs.get('__check_isoptional__', False):
                                 logger.error(f'Group name "{obj_name}" missing in {other.name}.')
-                                issues.append({'path': self[obj_name].name,
+                                issues.append({'path': obj.name,
                                                'obj_type': 'group',
                                                'issue': 'missing'})
                         else:
@@ -251,7 +251,7 @@ class LayoutGroup(h5py.Group):
                                 is_optional = obj.attrs.get('__check_isoptional__', False)
                                 if not is_optional:
                                     logger.error(f'Group name "{obj_name}" missing in {other.name}.')
-                                    issues.append({'path': self[obj_name].name,
+                                    issues.append({'path': obj.name,
                                                    'obj_type': 'group',
                                                    'issue': 'missing'})
 
