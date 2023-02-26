@@ -168,7 +168,7 @@ class H5Group(core.H5Group):
                 except:
                     pass
                 if 'units' in data.attrs:
-                    data.attrs['units'] = ureg.Unit(data.attrs['units']).__format__(CONFIG.UREG_FORMAT)
+                    data.attrs['units'] = f"{ureg.Unit(data.attrs['units'])}"
                     units = data.attrs.get('units')
 
                 if units is None:  # xr.DataArray had no units!
@@ -269,6 +269,7 @@ class H5Group(core.H5Group):
 
 
 class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
+    """String representation class for sdump()"""
 
     def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
         """string representation of a 0D dataset"""

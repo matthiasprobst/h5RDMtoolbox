@@ -88,12 +88,12 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     return rootgrp.get(ret).name
             if ret[0] == '(':
                 if ret[-1] == ')':
-                    return eval(ret)
+                    return ret.literal_eval()
                 return ret
             if ret[0] == '[':
                 if ret[-1] == ']':
                     try:
-                        return eval(ret)
+                        return ret.literal_eval()
                     except NameError:
                         return ret
                 return ret

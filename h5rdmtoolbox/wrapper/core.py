@@ -13,7 +13,7 @@ import warnings
 import xarray as xr
 import yaml
 from datetime import datetime, timezone
-from h5py._hl.base import phil
+from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
 from tqdm import tqdm
@@ -127,7 +127,7 @@ class H5Group(h5py.Group):
                 _orig_dataset_properties.update({k: v})
 
         if not worth_changing:
-            warnings.warn(f'No changes were applied because new properties a no different to present ones', UserWarning)
+            warnings.warn('No changes were applied because new properties a no different to present ones', UserWarning)
             return dataset
 
         with H5File() as temp_h5dest:
@@ -169,7 +169,7 @@ class H5Group(h5py.Group):
         if isinstance(_id, h5py.h5g.GroupID):
             super().__init__(_id)
         else:
-            ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
+            raise ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
 
     def __setitem__(self,
                     name: str,
@@ -219,9 +219,8 @@ class H5Group(h5py.Group):
         try:
             return super().__getattribute__(item)
         except AttributeError as e:
-            if config.CONFIG.NATURAL_NAMING:
-                pass
-            else:
+            if not config.CONFIG.NATURAL_NAMING:
+                # raise an error if natural naming is NOT enabled
                 raise AttributeError(e)
 
         if item in self.__dict__:
@@ -1044,7 +1043,7 @@ class H5Group(h5py.Group):
         """
         names = []
 
-        def _get_grp(name, node):
+        def _get_grp(_, node):
             if isinstance(node, h5py.Group):
                 if attribute_name in node.attrs:
                     if attribute_value is None:
@@ -1053,7 +1052,7 @@ class H5Group(h5py.Group):
                         if node.attrs[attribute_name] == attribute_value:
                             names.append(node)
 
-        def _get_ds(name, node):
+        def _get_ds(_, node):
             if isinstance(node, h5py.Dataset):
                 if attribute_name in node.attrs:
                     if attribute_value is None:
@@ -1062,7 +1061,7 @@ class H5Group(h5py.Group):
                         if node.attrs[attribute_name] == attribute_value:
                             names.append(node)
 
-        def _get_ds_grp(name, node):
+        def _get_ds_grp(_, node):
             if attribute_name in node.attrs:
                 if attribute_value is None:
                     names.append(node)
@@ -1070,14 +1069,7 @@ class H5Group(h5py.Group):
                     if node.attrs[attribute_name] == attribute_value:
                         names.append(node)
 
-        if recursive:
-            if h5type is None:
-                self.visititems(_get_ds_grp)
-            elif h5type.lower() in ('dataset', 'ds'):
-                self.visititems(_get_ds)
-            elif h5type.lower() in ('group', 'grp', 'gr'):
-                self.visititems(_get_grp)
-        else:
+        if not recursive:
             if h5type is None:
                 for ds in self.values():
                     if attribute_name in ds.attrs:
@@ -1095,6 +1087,13 @@ class H5Group(h5py.Group):
                         if attribute_name in ds.attrs:
                             if ds.attrs[attribute_name] == attribute_value:
                                 names.append(ds)
+        else:
+            if h5type is None:
+                self.visititems(_get_ds_grp)
+            elif h5type.lower() in ('dataset', 'ds'):
+                self.visititems(_get_ds)
+            elif h5type.lower() in ('group', 'grp', 'gr'):
+                self.visititems(_get_grp)
         return names
 
     def get_datasets_by_attribute(self, attribute_name, attribute_value=None,
@@ -1173,9 +1172,60 @@ class DatasetValues:
         return self.h5dataset.__setitem__(args, val)
 
 
+def only1d(obj):
+    def wrapper(*args, **kwargs):
+        if args[0].ndim != 1:
+            raise ValueError('Only applicable to 1D datasets!')
+
+    return obj
+
+
 class H5Dataset(h5py.Dataset):
     """Inherited Dataset group of the h5py package"""
     convention = 'default'
+
+    @only1d
+    def __lt__(self, other: Union[int, float]):
+        if isinstance(other, (int, float)):
+            data = self.values[:]
+            if data.ndim == 1:
+                return np.where(data < other)[0]
+            return np.where(data < other)
+        return self.name < other.name
+
+    @only1d
+    def __le__(self, value: Union[int, float]):
+        data = self.values[:]
+        if data.ndim == 1:
+            return np.where(data <= value)[0]
+        return np.where(data <= value)
+
+    @only1d
+    def __gt__(self, value: Union[int, float]):
+        data = self.values[:]
+        if data.ndim == 1:
+            return np.where(data > value)[0]
+        return np.where(data > value)
+
+    @only1d
+    def __ge__(self, value: Union[int, float]):
+        data = self.values[:]
+        if data.ndim == 1:
+            return np.where(data >= value)[0]
+        return np.where(data >= value)
+
+    @only1d
+    def __eq__(self, other):
+        if isinstance(other, (int, float)):
+            data = self.values[:]
+            if data.ndim == 1:
+                return np.where(data == other)[0]
+            return np.where(data == other)
+        return self.id == other.id
+
+    @with_phil
+    def __hash__(self):
+        return hash(self.id)
 
     @property
     def attrs(self):
@@ -1268,7 +1318,7 @@ class H5Dataset(h5py.Dataset):
                 if len(d) > 0:
                     for i in range(len(d)):
                         if item == os.path.basename(d[i].name):
-                            return d[i]
+                            return self.__class__(d[i])
         return super().__getattribute__(item)
 
     def __setitem__(self, key, value):
@@ -1289,10 +1339,12 @@ class H5Dataset(h5py.Dataset):
         if not config.CONFIG.RETURN_XARRAY or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
 
-        if Ellipsis in args:
-            warnings.warn(
-                'Ellipsis not supported at this stage. returning numpy array')
-            return super().__getitem__(args, new_dtype=new_dtype)
+        for arg in args:
+            if not isinstance(arg, np.ndarray):
+                if arg == Ellipsis:
+                    warnings.warn(
+                        'Ellipsis not supported at this stage. returning numpy array')
+                    return super().__getitem__(args, new_dtype=new_dtype)
 
         arr = super().__getitem__(args, new_dtype=new_dtype)
         attrs = pop_hdf_attributes(self.attrs)
@@ -1337,13 +1389,18 @@ class H5Dataset(h5py.Dataset):
                                                               data=_data,
                                                               attrs=pop_hdf_attributes(dim_ds.attrs))
 
-            used_dims = [dim_name for arg, dim_name in zip(
-                myargs, dims_names) if isinstance(arg, slice)]
+            # used_dims = [dim_name for arg, dim_name in zip(
+            #     myargs, dims_names) if isinstance(arg, slice)]
+
+            used_dims = [dim_name for arg, dim_name in zip(myargs, dims_names)]
 
             COORDINATES = self.attrs.get('COORDINATES')
             if COORDINATES is not None:
                 if isinstance(COORDINATES, str):
                     COORDINATES = [COORDINATES, ]
+                else:
+                    COORDINATES = list(COORDINATES)
+
                 for c in COORDINATES:
                     if c[0] == '/':
                         _data = self.rootparent[c]
@@ -1353,7 +1410,9 @@ class H5Dataset(h5py.Dataset):
                     coords.update({_name: xr.DataArray(name=_name, dims=(),
                                                        data=_data,
                                                        attrs=pop_hdf_attributes(self.parent[c].attrs))})
-            return xr.DataArray(name=Path(self.name).stem, data=arr, dims=used_dims,
+            return xr.DataArray(name=Path(self.name).stem,
+                                data=arr,
+                                dims=used_dims,
                                 coords=coords, attrs=attrs)
         return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
@@ -1363,10 +1422,6 @@ class H5Dataset(h5py.Dataset):
             return r[:-1] + f' (convention "{self.convention}")>'
         else:
             return r[:-1] + f', convention "{self.convention}">'
-
-    def __lt__(self, other):
-        """Call __lt__() on group names"""
-        return self.name < other.name
 
     def dump(self) -> None:
         """Call sdump()"""
@@ -1399,7 +1454,7 @@ class H5Dataset(h5py.Dataset):
         if isinstance(_id, h5py.h5d.DatasetID):
             super().__init__(_id)
         else:
-            ValueError('Could not initialize Dataset. A h5py.h5f.FileID object must be passed')
+            raise ValueError('Could not initialize Dataset. A h5py.h5f.FileID object must be passed')
 
         super().__init__(_id)
 

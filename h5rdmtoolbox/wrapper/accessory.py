@@ -5,6 +5,9 @@ from IPython.display import HTML, display
 from typing import List, Tuple
 from typing import Union
 
+from .core import H5Group
+from ..xr.dataset import HDFXrDataset
+
 
 class SpecialDatasetRegistrationWarning(Warning):
     """Warning in case special dataset overwrites existing one."""
@@ -36,11 +39,11 @@ class _CachedAccessor:
 
         try:
             accessor_obj = self._accessor(obj)
-        except AttributeError:
+        except AttributeError as exc:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError(f"error initializing {self._name!r} accessor.")
+            raise RuntimeError(f"error initializing {self._name!r} accessor.") from exc
 
         cache[self._name] = accessor_obj
         return accessor_obj
@@ -235,8 +238,8 @@ class SpecialDataset:
     def __setitem__(self, key, value):
         try:
             self._dset[key] = value
-        except AttributeError as exr:
-            raise AttributeError(exr)
+        except AttributeError as exc:
+            raise AttributeError(exc) from exc
 
     @property
     def data_vars(self):
@@ -293,11 +296,6 @@ class SpecialDataset:
             h5grp = self._grp
         # TODO:
         # h5grp.from_xarray_dataset(self._dset, drop='conflicts')
-
-
-from ..xr.dataset import HDFXrDataset
-
-from .core import H5Group
 
 
 @register_special_dataset("Vector", H5Group)

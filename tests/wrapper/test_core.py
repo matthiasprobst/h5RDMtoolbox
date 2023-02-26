@@ -91,3 +91,18 @@ class TestCore(unittest.TestCase):
             self.assertTrue('data' not in h5)
             self.assertTrue('data2' in h5)
             self.assertTrue(np.all(ds1 == ds2))
+
+    def test_conditional_slicing(self):
+        with h5tbx.H5File() as h5:
+            h5.create_dataset('time', data=range(0, 100), make_scale=True)
+            h5.create_dataset('x', data=range(0, 100), make_scale=True)
+            h5.create_dataset('y', data=range(0, 200), make_scale=True)
+            h5.create_dataset('data', np.random.rand(100, 200, 100), attach_scale=('time', 'y', 'x'))
+            self.assertEqual(h5.data[h5.data.time > 66, :, :].shape, (33, 200, 100))
+            np.testing.assert_equal(h5.data.time > 66, np.arange(67, 100, 1))
+            np.testing.assert_equal(h5.data.time >= 66, np.arange(66, 100, 1))
+            np.testing.assert_equal(h5.data.time < 66, np.arange(0, 66, 1))
+            np.testing.assert_equal(h5.data.time <= 66, np.arange(0, 67, 1))
+            self.assertEqual(h5.data[h5.data.time == 66, :, :].shape, (1, 200, 100))
+            np.testing.assert_equal(h5.data[h5.data.time == 66, :, :], h5.data.values[66, :, :].reshape(1, 200, 100))
+            np.testing.assert_equal(h5.data.time == 66, np.array(66))
