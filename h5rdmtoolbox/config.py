@@ -38,6 +38,7 @@ def write_user_config(cfg: DictConfig):
         f.write(OmegaConf.to_yaml(cfg))
     CONFIG = cfg
 
+
 def write_default_config():
     """Write default configuration"""
     write_user_config(DEFAULT_CONFIG)
@@ -80,7 +81,7 @@ def check_config(cfg: DictConfig = None,
         if remove_wrong:
             for k, v in cfg.items():
                 if k not in DEFAULT_CONFIG:
-                    warnings.warn('Removing config entry "{k}: {v}"', UserWarning)
+                    warnings.warn(f'Removing config entry "{k}: {v}"', UserWarning)
                     cfg.pop(k)
             write_user_config(cfg)
         return cfg  # The default configuration is at least a subset of the default one
@@ -93,7 +94,7 @@ def check_config(cfg: DictConfig = None,
             new_cfg[k] = v
         else:
             if remove_wrong:
-                warnings.warn('Removing config entry "{k}: {v}"', UserWarning)
+                warnings.warn(f'Removing config entry "{k}: {v}"', UserWarning)
                 new_cfg.pop(k)
     cfg = DictConfig(new_cfg)
     if write_to_file or remove_wrong:
