@@ -88,13 +88,15 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     return rootgrp.get(ret).name
             if ret[0] == '(':
                 if ret[-1] == ')':
+                    # might be a tuple object
                     return ret.literal_eval()
                 return ret
             if ret[0] == '[':
                 if ret[-1] == ']':
+                    # might be a list object
                     try:
                         return ret.literal_eval()
-                    except NameError:
+                    except (NameError, AttributeError):
                         return ret
                 return ret
             return AttributeString(ret)
@@ -123,21 +125,25 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 if isinstance(v, (h5py.Dataset, h5py.Group)):
                     value[k] = v.name
             _value = json.dumps(value)
-        elif isinstance(value, Path):
-            _value = str(value)
         elif isinstance(value, (h5py.Dataset, h5py.Group)):
             return self.create(name, data=value.name)
+        elif isinstance(value, str):
+            _value = str(value)
         elif isinstance(value, pint.Quantity):
+            _value = str(value)
+        elif isinstance(value, Path):
             _value = str(value)
         else:
             _value = value
         try:
             self.create(name, data=_value)
-        except TypeError:
+        except TypeError as e:
             try:
                 self.create(name, data=str(_value))
-            except Exception as e2:
-                raise RuntimeError(f'Could not set attribute due to: {e2}') from e2
+            except TypeError as e2:
+                raise RuntimeError(f'Error setting attribute to HDF object {self._parent}:'
+                                   f'\n  name: {name}\n  value: {value} \n  type: {type(value)}\n'
+                                   f'Original error: {e2}') from e2
 
     def __repr__(self):
         return super().__repr__()

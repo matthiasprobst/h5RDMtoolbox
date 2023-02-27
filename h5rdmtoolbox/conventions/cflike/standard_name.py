@@ -100,7 +100,7 @@ def _units_power_fix(_str: str):
 
 @dataclass
 class StandardName:
-    """basic stndardized name class"""
+    """basic standardized name class"""
     name: str
     description: Union[str, None]
     canonical_units: Union[str, None]
@@ -109,6 +109,7 @@ class StandardName:
     def __post_init__(self):
         if self.canonical_units:
             self.canonical_units = config.ureg.Unit(_units_power_fix(self.canonical_units))
+        self.name = str(self.name)
 
     def __format__(self, spec):
         return self.name.__format__(spec)
@@ -876,7 +877,7 @@ class StandardNameDatasetAttribute:
                     if 'units' in self.attrs:
                         self.standard_name_table.check_units(new_standard_name,
                                                              self.attrs['units'])
-                self.attrs.create('standard_name', new_standard_name)
+                self.attrs.create('standard_name', str(new_standard_name))
 
     def get(self):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.

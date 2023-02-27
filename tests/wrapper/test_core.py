@@ -5,7 +5,7 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.wrapper import set_loglevel
-
+from h5rdmtoolbox.wrapper.h5attr import AttributeString
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
@@ -14,6 +14,22 @@ class TestCore(unittest.TestCase):
 
     def setUp(self) -> None:
         h5tbx.use('default')
+
+    def test_subclassstr_attrs(self):
+        class MyString(str):
+            def some_method(self):
+                return True
+        with h5tbx.H5File() as h5:
+            h5.attrs['mystr'] = MyString('test')
+            attr_str = h5.attrs['mystr']
+            self.assertIsInstance(attr_str, AttributeString)
+            h5.attrs['mystr'] = attr_str
+
+            grp = h5.create_group('grp')
+            grp.attrs['mystr'] = MyString('test')
+            attr_str = grp.attrs['mystr']
+            self.assertIsInstance(attr_str, AttributeString)
+            grp.attrs['mystr'] = attr_str
 
     def test_from_csv(self):
         df = pd.DataFrame({'x': [1, 5, 10], 'y': [-3, 20, 0]})

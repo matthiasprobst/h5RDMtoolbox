@@ -6,6 +6,7 @@ import unittest
 import xarray as xr
 import yaml
 from pathlib import Path
+from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.config import CONFIG
@@ -48,6 +49,29 @@ class TestH5CFLikeFile(unittest.TestCase):
 
         self.lay_filename = generate_temporary_filename(prefix='lay', suffix='.hdf')
         self.other_filename = generate_temporary_filename(prefix='other', suffix='.hdf')
+
+    def test_subclassstr_attrs(self):
+        class MyString(str):
+            def some_method(self):
+                return True
+
+        with h5tbx.H5File() as h5:
+            h5.attrs['mystr'] = MyString('test')
+            attr_str = h5.attrs['mystr']
+            self.assertIsInstance(attr_str, AttributeString)
+            h5.attrs['mystr'] = attr_str
+
+            grp = h5.create_group('grp')
+            grp.attrs['mystr'] = MyString('test')
+            attr_str = grp.attrs['mystr']
+            self.assertIsInstance(attr_str, AttributeString)
+            grp.attrs['mystr'] = attr_str
+
+            h5.create_dataset('ds', data=1, standard_name='x_coordinate', units='m')
+            sn = h5['ds'].attrs['standard_name']
+            h5.attrs['sn'] = sn
+            sn = h5['ds'].standard_name
+            h5.attrs['sn'] = sn
 
     def test_str(self):
         strrepr = h5tbx.H5File().__str__()

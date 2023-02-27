@@ -78,7 +78,15 @@ class HDFArrayAccessor:
 
         dset = h5group.create_dataset(name, data=self._obj.data)
         for k, v in ds_attrs.items():
-            dset.attrs[k] = v
+            try:
+                if isinstance(v, str):
+                    dset.attrs[k] = str(v)
+                else:
+                    dset.attrs[k] = v
+            except Exception as e:
+                raise Exception(f'Error setting attribute to HDF dataset {dset}:'
+                                f'\n  name: {k}\n  value: {v} \n  type: {type(v)}\n'
+                                f'Original error: {e}')
 
         # TODO check that there are "intermediate" coords like ix(x), iy(y)
         for i, s in enumerate(self._obj.dims):
