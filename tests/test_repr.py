@@ -16,7 +16,7 @@ class TestRepr(unittest.TestCase):
         # test h5rdmtoolbox._repr.DataSetRepr
         with H5File(h5tbx.generate_temporary_filename(), 'w') as h5:
             h5.create_dataset('ds', data=3, dtype='int64')
-            h5.create_dataset('dsfloat', data=3., dtype='float64'
+            h5.create_dataset('dsfloat', data=3., dtype='float64')
             h5.create_dataset('str', data='str')
 
             ssr = _repr.HDF5StructureStrRepr()
