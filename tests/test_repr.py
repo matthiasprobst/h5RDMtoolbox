@@ -29,7 +29,7 @@ class TestRepr(unittest.TestCase):
             self.assertEqual(s, '\x1b[1mdsfloat\x1b[0m 3.0 , dtype: float64')
 
             s = ssr.__dataset__('str', h5['str'])
-            self.assertEqual(s, "[1mstr[0m: b'str'")
+            self.assertEqual(s, "\x1b[1mstr\x1b[0m: b'str'")
 
             shr = _repr.HDF5StructureHTMLRepr()
             shr(h5)
