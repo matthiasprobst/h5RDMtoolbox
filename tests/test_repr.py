@@ -15,15 +15,15 @@ class TestRepr(unittest.TestCase):
     def test_repr(self):
         # test h5rdmtoolbox._repr.DataSetRepr
         with H5File(h5tbx.generate_temporary_filename(), 'w') as h5:
-            h5.create_dataset('ds', data=3)
-            h5.create_dataset('dsfloat', data=3.)
+            h5.create_dataset('ds', data=3, dtype='int64')
+            h5.create_dataset('dsfloat', data=3., dtype='float64'
             h5.create_dataset('str', data='str')
 
             ssr = _repr.HDF5StructureStrRepr()
             ssr(h5)
 
             s = ssr.__dataset__('ds', h5['ds'])
-            self.assertEqual(s, '\x1b[1mds\x1b[0m 3, dtype: int32')
+            self.assertEqual(s, '\x1b[1mds\x1b[0m 3, dtype: int64')
 
             s = ssr.__dataset__('dsfloat', h5['dsfloat'])
             self.assertEqual(s, '\x1b[1mdsfloat\x1b[0m 3.0 , dtype: float64')
