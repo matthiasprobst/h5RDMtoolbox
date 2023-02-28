@@ -6,7 +6,6 @@ import unittest
 import xarray as xr
 import yaml
 from pathlib import Path
-from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.config import CONFIG
@@ -20,6 +19,7 @@ from h5rdmtoolbox.wrapper import cflike
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.cflike import H5Dataset
 from h5rdmtoolbox.wrapper.cflike import H5Group
+from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
@@ -49,6 +49,13 @@ class TestH5CFLikeFile(unittest.TestCase):
 
         self.lay_filename = generate_temporary_filename(prefix='lay', suffix='.hdf')
         self.other_filename = generate_temporary_filename(prefix='other', suffix='.hdf')
+
+    def test_H5File(self):
+        self.assertEqual(str(h5tbx.H5File), "<class 'h5rdmtoolbox.H5File'>")
+        with h5tbx.H5File() as h5:
+            self.assertEqual(h5.__str__(), "<class 'h5rdmtoolbox.H5File' convention: cflike>")
+        self.assertEqual(h5tbx.H5File.H5Dataset(), cflike.H5Dataset)
+        self.assertEqual(h5tbx.H5File.H5Group(), cflike.H5Group)
 
     def test_subclassstr_attrs(self):
         class MyString(str):

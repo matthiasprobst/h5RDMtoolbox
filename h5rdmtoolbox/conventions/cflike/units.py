@@ -2,6 +2,7 @@ import pint
 from typing import Union
 
 from ... import config
+from .errors import UnitsError
 
 
 class UnitsAttribute:
@@ -16,7 +17,7 @@ class UnitsAttribute:
             elif isinstance(new_units, pint.Unit):
                 _new_units = f'{new_units}'
             else:
-                raise TypeError(f'Unit must be a string or pint.Unit but not {type(new_units)}')
+                raise UnitsError(f'Unit must be a string or pint.Unit but not {type(new_units)}')
         else:
             _new_units = new_units
         standard_name = self.attrs.get('standard_name')

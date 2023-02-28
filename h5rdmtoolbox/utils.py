@@ -1,13 +1,15 @@
 """utilities of the h5rdmtoolbox"""
+import datetime
 import h5py
+import json
 import pathlib
-from datetime import datetime
-from dateutil.tz import tzlocal
+import pint
 from h5py import File
 from re import sub as re_sub
 from typing import Union
 
 from . import _user
+from . import config
 from ._version import __version__
 
 
@@ -89,18 +91,6 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     return _dir
 
 
-def generate_time_str(dtime: datetime, fmt: str) -> str:
-    """Converts datetime to string. Needed to fix bug in datetime module for
-    UTC offset.
-    """
-    zsplit = fmt.split('%z')
-    if len(zsplit) == 1:
-        return dtime.strftime(fmt)
-    if len(zsplit) == 2:
-        return dtime.strftime(zsplit[0]) + datetime.now(tzlocal()).strftime('%z') + dtime.strftime(zsplit[1])
-    raise ValueError('Invalid formatting string. Can only handle one %z formatter')
-
-
 def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     """
     Generates a file path in directory h5rdmtoolbox/.tmp
@@ -122,27 +112,42 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
             h5touch.attrs['__h5rdmtoolbox_version__'] = __version__
             if attrs is not None:
                 for ak, av in attrs.items():
-                    h5touch.attrs[ak] = av
+                    create_special_attribute(h5touch.attrs, ak, av)
     return hdf_filepath
 
 
-def load_img(img_filepath: pathlib.Path):
-    """
-    loads b16 or other file format
-    """
-    img_filepath = pathlib.Path(img_filepath)
-    if not img_filepath.exists():
-        raise FileExistsError(f'Image "{img_filepath}" not found.')
+def create_special_attribute(h5obj: h5py.AttributeManager,
+                             name: str,
+                             value):
+    """Allows writing more than the usual hdf5 attributes"""
+    if isinstance(value, dict):
+        # some value might be changed to a string first, like h5py objects
+        for k, v in value.items():
+            if isinstance(v, (h5py.Dataset, h5py.Group)):
+                value[k] = v.name
+        _value = json.dumps(value)
+    elif isinstance(value, (h5py.Dataset, h5py.Group)):
+        _value = value.name
+    elif isinstance(value, str):
+        _value = str(value)
+    elif isinstance(value, pint.Quantity):
+        _value = str(value)
+    elif isinstance(value, pathlib.Path):
+        _value = str(value)
+    elif isinstance(value, datetime.datetime):
+        _value = value.strftime(config.CONFIG.DTIME_FMT)
+    else:
+        _value = value
 
-    if img_filepath.suffix == '.b16':
+    try:
+        h5obj.create(name, data=_value)
+    except TypeError:
         try:
-            from pco_tools import pco_reader as pco
-        except ImportError:
-            ImportError('Cannot read the b16 image because pco_tools is not installed. Either install it '
-                        'separately or install the repository with pip install h5RDMtolbox [b16]')
-        return pco.load(str(img_filepath))
-    from cv2 import imread as cv2_imread
-    return cv2_imread(str(img_filepath), -1)
+            h5obj.create(name, data=str(_value))
+        except TypeError as e2:
+            raise RuntimeError(f'Error setting attribute to HDF object {self._parent}:'
+                               f'\n  name: {name}\n  value: {value} \n  type: {type(value)}\n'
+                               f'Original error: {e2}') from e2
 
 
 def process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:

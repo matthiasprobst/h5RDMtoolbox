@@ -1,21 +1,22 @@
+import pathlib
+import requests
 import unittest
 import warnings
-
-import requests
 from omegaconf import DictConfig
 
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTable,
                                                            StandardNameTableTranslation,
-                                                           StandardName)
+                                                           StandardName,
+                                                           url_exists)
 from h5rdmtoolbox.conventions.cflike.standard_name import merge
 from h5rdmtoolbox.wrapper.cflike import H5File
 
 
 class TestStandardNameTable(unittest.TestCase):
 
-    def test_translationtable(self):
+    def test_translation_table(self):
         translation = StandardNameTableTranslation('pytest', {'u': 'x_velocity'})
         self.assertIsInstance(translation, StandardNameTableTranslation)
         self.assertDictEqual(translation.translation_dict, {'u': 'x_velocity'})
@@ -74,6 +75,8 @@ class TestStandardNameTable(unittest.TestCase):
             name='standard_name_table')
         self.assertEqual(cf.name, 'standard_name_table')
         self.assertEqual(cf.versionname, 'standard_name_table-v79')
+        self.assertTrue(url_exists(cf.url))
+        self.assertFalse(url_exists(cf.url + '123'))
 
         try:
             requests.get('https://git.scc.kit.edu', timeout=5)
@@ -82,7 +85,7 @@ class TestStandardNameTable(unittest.TestCase):
                 requests.Timeout) as e:
             connected = False
             warnings.warn('Cannot check Standard name table from '
-                          f'fitlab: {e}')
+                          f'gitlab: {e}')
         if connected:
             opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
                                                      file_path='open_centrifugal_fan_database-v1.yaml',
@@ -93,6 +96,22 @@ class TestStandardNameTable(unittest.TestCase):
 
     def test_from_yaml(self):
         table = StandardNameTable.from_yaml(testdir / 'sntable.yml')
+        self.assertIsInstance(table.filename, pathlib.Path)
+        self.assertIsInstance(table['synthetic_particle_image'], StandardName)
+
+        with self.assertRaises(ValueError):
+            table.modify('not_in_table',
+                         description=None,
+                         canonical_units=None)
+
+        table.modify('synthetic_particle_image',
+                     description='changed the description',
+                     canonical_units='m')
+
+        self.assertTrue(table.has_valid_structure())
+        table2 = table.copy()
+        self.assertTrue(table == table2)
+        self.assertFalse(table is table2)
 
         snttrans = StandardNameTableTranslation('test', {'images': 'invalid_synthetic_particle_image'})
         with self.assertRaises(KeyError):
@@ -109,7 +128,7 @@ class TestStandardNameTable(unittest.TestCase):
         table2.set('other', 'desc', 'm')
         self.assertNotEqual(table, table2)
 
-    def test_tranlsate_group(self):
+    def test_translate_group(self):
         with H5File() as h5:
             ds1 = h5.create_dataset('ds1', shape=(2,), units='', long_name='a long name')
             ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='', long_name='a long name')
@@ -123,3 +142,20 @@ class TestStandardNameTable(unittest.TestCase):
         new_snt = merge(registered_snts, name='newtable', institution=None,
                         version_number=1, contact='matthias.probst@kit.edu')
         self.assertTrue(new_snt.name, 'newtable')
+
+    def test_empty_SNT(self):
+        snt = StandardNameTable('test_snt',
+                                table=None,
+                                version_number=1,
+                                institution='my_institution',
+                                contact='mycontact@gmail.com')
+        self.assertIsInstance(snt.table, dict)
+        self.assertEqual(snt.filename, None)
+
+    def test_wrong_contact(self):
+        with self.assertRaises(ValueError):
+            StandardNameTable('test_snt',
+                              table=None,
+                              version_number=1,
+                              institution='my_institution',
+                              contact='mycontact')

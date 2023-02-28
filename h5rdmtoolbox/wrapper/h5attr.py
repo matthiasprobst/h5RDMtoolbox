@@ -1,13 +1,14 @@
+import ast
 import h5py
 import json
 import pint
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
-from pathlib import Path
 from typing import Dict
 
 from .h5utils import get_rootparent
 from .. import config
+from .. import utils
 from ..conventions.registration import REGISTRATED_ATTRIBUTE_NAMES
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
@@ -89,13 +90,13 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if ret[0] == '(':
                 if ret[-1] == ')':
                     # might be a tuple object
-                    return ret.literal_eval()
+                    return ast.literal_eval(ret)
                 return ret
             if ret[0] == '[':
                 if ret[-1] == ']':
                     # might be a list object
                     try:
-                        return ret.literal_eval()
+                        return ast.literal_eval(ret)
                     except (NameError, AttributeError):
                         return ret
                 return ret
@@ -119,31 +120,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if hasattr(self._parent, name):
                 setattr(self._parent, name, value)
                 return
-        if isinstance(value, dict):
-            # some value might be changed to a string first, like h5py objects
-            for k, v in value.items():
-                if isinstance(v, (h5py.Dataset, h5py.Group)):
-                    value[k] = v.name
-            _value = json.dumps(value)
-        elif isinstance(value, (h5py.Dataset, h5py.Group)):
-            return self.create(name, data=value.name)
-        elif isinstance(value, str):
-            _value = str(value)
-        elif isinstance(value, pint.Quantity):
-            _value = str(value)
-        elif isinstance(value, Path):
-            _value = str(value)
-        else:
-            _value = value
-        try:
-            self.create(name, data=_value)
-        except TypeError as e:
-            try:
-                self.create(name, data=str(_value))
-            except TypeError as e2:
-                raise RuntimeError(f'Error setting attribute to HDF object {self._parent}:'
-                                   f'\n  name: {name}\n  value: {value} \n  type: {type(value)}\n'
-                                   f'Original error: {e2}') from e2
+        utils.create_special_attribute(self, name, value)
 
     def __repr__(self):
         return super().__repr__()

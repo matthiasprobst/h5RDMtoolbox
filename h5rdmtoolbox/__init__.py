@@ -108,10 +108,6 @@ class H5Files:
     def __new__(cls, *args, **kwargs):
         use(config.CONFIG['CONVENTION'])
         file_instance = kwargs.get('file_instance', None)
-        fileinstance = kwargs.pop('fileinstance', None)
-        if fileinstance is not None:
-            warnings.warn('Please use file_instance instead of fileinstance', DeprecationWarning)
-            file_instance = fileinstance
         if file_instance is None:
             kwargs['file_instance'] = h5tbxParams['H5File']
         return filequery.Files(*args, **kwargs)

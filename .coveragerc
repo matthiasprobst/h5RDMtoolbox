@@ -1,6 +1,8 @@
 [run]
 omit =
-    h5rdmtoolbox/tests/*
+    tests/*
+    h5rdmtoolbox/tutorial.py
+    h5rdmtoolbox/errors.py
 relative_files = true
 
 [report]
@@ -11,8 +13,15 @@ exclude_lines =
     except AttributeError
     raise NotImplementedError
     except TypeError
+    except ImportError
+    except FileNotFoundError
     return f"{bcolors.*
     def _attribute_repr_html
     def _group_repr_html
     def _html_repr_dataset
     def h5file_html_repr
+    def make_italic
+    def make_bold
+    def warningtext
+    def failtext
+    def oktext

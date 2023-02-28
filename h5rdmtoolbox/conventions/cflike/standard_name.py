@@ -51,13 +51,6 @@ CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
 _SNT_CACHE = {}
 
 
-def read_yaml(yaml_filename: str) -> Dict:
-    """Read yaml file and return dictionary"""
-    with open(yaml_filename, 'r') as f:
-        ymldict = yaml.safe_load(f)
-    return ymldict
-
-
 def verify_unit_object(_units):
     """Raise error if _units is not processable by pint package"""
     try:
@@ -83,13 +76,6 @@ def xmlsnt2dict(xml_filename: Path) -> Tuple[dict, dict]:
     return standard_names, meta
 
 
-def meta_from_xml(xml_filename):
-    _dict, meta = xmlsnt2dict(xml_filename)
-    meta.update(dict(table=_dict))
-    meta.pop('alias')
-    return meta
-
-
 def _units_power_fix(_str: str):
     """Fixes strings like 'm s-1' to 'm s^-1'"""
     s = re.search('[a-zA-Z][+|-]', _str)
@@ -108,7 +94,7 @@ class StandardName:
 
     def __post_init__(self):
         if self.canonical_units:
-            self.canonical_units = config.ureg.Unit(_units_power_fix(self.canonical_units))
+            self.canonical_units = f'{config.ureg.Unit(_units_power_fix(self.canonical_units))}'
         self.name = str(self.name)
 
     def __format__(self, spec):
@@ -120,10 +106,10 @@ class StandardName:
     def __eq__(self, other):
         if isinstance(other, str):
             return self.name == other
-        return any([self.name != other.name,
-                    self.description != other.description,
-                    self.canonical_units != other.canonical_units,
-                    self.snt != other.snt])
+        return all([self.name == other.name,
+                    self.description == other.description,
+                    self.canonical_units == other.canonical_units,
+                    self.snt == other.snt])
 
     def check(self):
         """Run the name check of the standard name."""
@@ -295,9 +281,11 @@ class StandardNameTable:
         return item in self.table
 
     def __eq__(self, other):
-        eq1 = self.table == other.table
-        eq2 = self.versionname == other.versionname
-        return eq1 and eq2
+        return all([self.name == other.name,
+                    self.contact == other.contact,
+                    self.institution == other.institution,
+                    self.table == other.table,
+                    self.versionname == other.versionname])
 
     def __neg__(self, other):
         return not self.__eq__(other)
@@ -380,7 +368,15 @@ class StandardNameTable:
 
     def copy(self):
         """Return a copy of the object"""
-        return StandardNameTable(self.table)
+        return StandardNameTable(name=self.name,
+                                 table=self.table,
+                                 version_number=self.version_number,
+                                 institution=self.institution,
+                                 contact=self.contact,
+                                 last_modified=self.last_modified,
+                                 pattern=self.pattern,
+                                 url=self.url,
+                                 alias=self.alias)
 
     def update(self, data: Union[Dict, "StandardNameTable"]):
         if isinstance(data, StandardNameTable):
@@ -440,7 +436,9 @@ class StandardNameTable:
                 for d in yaml.full_load_all(f):
                     _dict.update(d)
                 oc = DictConfig(_dict)
-        return StandardNameTable(**oc)
+        snt = StandardNameTable(**oc)
+        snt._filename = yaml_filename
+        return snt
 
     @staticmethod
     def from_web(url: str, known_hash: str = None,

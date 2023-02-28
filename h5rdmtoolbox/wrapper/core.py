@@ -12,12 +12,13 @@ import shutil
 import warnings
 import xarray as xr
 import yaml
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
 from tqdm import tqdm
-from typing import List, Dict, Union, Tuple
+from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -730,25 +731,25 @@ class H5Group(h5py.Group):
                         elif axis == 1:
                             self[ds_name][:, i, ...] = data
 
-    def create_dataset_from_image(self, img_filename, name=None,
-                                  overwrite=False, dtype=None, ufunc=None,
-                                  axis=0, **kwargs):
+    def create_dataset_from_image(self,
+                                  imgdata: Union[Callable, np.ndarray, List[np.ndarray]],
+                                  name,
+                                  chunks=None,
+                                  dtype=None,
+                                  axis=0,
+                                  **kwargs):
         """
         Creates a dataset for a single or multiple files. If a list of filenames is passed
         All images are stacked (thus shape of all images must be equal!)
 
         Parameters
         ----------
-        img_filename : {Path, list}
+        imgdata : np.ndarray or list of np.ndarray
             Image filename or list of image file names. See also axis in case of multiple files
         name : str
             Name of create dataset
-        units : string
-            Unit of image. Typically, pixels which is also default.
-        long_name : str
-            long_name of dataset
-        overwrite : bool
-            Whether to overwrite an existing dataset with this name
+        chunks : Tuple or None
+            Data chunking
         dtype : str
             Data type used for hdf dataset creation
         axis: int, optional
@@ -767,143 +768,67 @@ class H5Group(h5py.Group):
         _compression, _compression_opts = config.CONFIG.HDF_COMPRESSION, config.CONFIG.HDF_COMPRESSION_OPTS
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
-        units = kwargs.pop('units', 'pixel')
-        ds = None
 
-        if isinstance(img_filename, (str, Path)):
-            if name is None:
-                name = utils.remove_special_chars(
-                    os.path.basename(img_filename).rsplit('.', 1)[0])
-            img = utils.load_img(img_filename)
-            if ufunc is not None:
-                if isinstance(ufunc, (list, tuple)):
-                    _ufunc = ufunc[0]
-                    _ufunc_param = ufunc[1:]
-                    raise NotImplementedError(
-                        'user function with parameter not implemented yet')
-                if hasattr(ufunc, '__call__'):
-                    try:
-                        img_processed = ufunc(img)
-                    except RuntimeError as e:
-                        raise logger.error(f'Failed running user function {ufunc} '
-                                           f'with this error: {e}')
-                    if img_processed is not None:
-                        ds = self.create_dataset(name=name, data=img_processed,
-                                                 overwrite=overwrite,
-                                                 dtype=dtype, compression=compression,
-                                                 compression_opts=compression_opts,
-                                                 units=units,
-                                                 **kwargs)
-                        return ds
+        if axis not in (0, -1):
+            raise ValueError(f'Value for parameter axis can only be 0 or 1 but not {axis}')
 
+        is_list_tuple_or_numpy = isinstance(imgdata, (list, tuple, np.ndarray))
+        if not is_list_tuple_or_numpy:
+            if not isinstance(imgdata, Iterable):
+                raise ValueError('imgdata must be iterable')
+            # check if imgdata has method __len__():
+            if not hasattr(imgdata, '__len__'):
+                raise ValueError('imgdata must have method __len__()')
+            # get first element of imgdata:
+            first_image = next(imgdata)
+            single_img_shape = first_image.shape
+            if axis == 0:
+                shape = (len(imgdata), *single_img_shape)
+                chunks = (1, *single_img_shape)
             else:
-                ds = self.create_dataset(name=name, data=img,
-                                         overwrite=overwrite, dtype=dtype,
-                                         compression=compression, compression_opts=compression_opts)
-                return ds
-        elif isinstance(img_filename, (list, tuple)):
-            if not name:  # take the first image name
-                name = os.path.commonprefix(img_filename)
-            nimg = len(img_filename)
-
-            if ufunc is not None:  # user function given. final size of dataset unknown
-                if isinstance(ufunc, (list, tuple)):
-                    _ufunc = ufunc[0]
-                    _ufunc_param = ufunc[1:]
-                    # raise NotImplementedError('user function with parameter not implemented yet')
-                else:
-                    _ufunc = ufunc
-                    _ufunc_param = list()
-
-                if hasattr(_ufunc, '__call__'):
-                    for i, img_fname in tqdm(enumerate(img_filename)):
-                        img = utils.load_img(img_fname)
-                        img_shape = img.shape
-                        try:
-                            if hasattr(ufunc, '__call__'):
-                                img_processed = _ufunc(img)
-                            else:
-                                img_processed = _ufunc(img, *_ufunc_param)
-                        except RuntimeError as e:
-                            raise logger.error(f'Failed running user function {_ufunc} '
-                                               f'with this error: {e}')
-                        if img_processed is not None:
-                            if name in self:  # dataset already exists
-                                ds = self[name]
-                                ds_shape = list(ds.shape)
-                                if axis == 0:
-                                    ds_shape[0] += 1
-                                else:
-                                    ds_shape[-1] += 1
-                                ds.resize(tuple(ds_shape))
-                                if axis == 0:
-                                    ds[-1, ...] = img_processed
-                                else:
-                                    ds[..., -1] = img_processed
-                            else:  # dataset must be created first
-                                if axis == 0:
-                                    dataset_shape = (1, *img_shape)
-                                    _maxshape = (None, *img_shape)
-                                    _chunks = (1, *img_shape)
-                                elif axis == -1:
-                                    dataset_shape = (*img_shape, 1)
-                                    _maxshape = (*img_shape, None)
-                                    _chunks = (*img_shape, 1)
-                                else:
-                                    raise ValueError('Other axis than 0 or -1 not accepted!')
-                                ds = self.create_dataset(name, shape=dataset_shape, overwrite=overwrite,
-                                                         maxshape=_maxshape, dtype=dtype, compression=compression,
-                                                         compression_opts=compression_opts, chunks=_chunks)
-                                if axis == 0:
-                                    ds[0, ...] = img
-                                else:
-                                    ds[..., 0] = img
-                else:
-                    raise ValueError(f'Wrong ufunc type: {type(ufunc)}')
-                return ds
-            else:  # no user function passed. shape of dataset is known and can be pre-allocated
-                img = utils.load_img(img_filename[0])
-                img_shape = img.shape
+                shape = (*single_img_shape, len(imgdata))
+                chunks = (*single_img_shape, 1)
+        else:
+            is_np_ndarray = isinstance(imgdata, np.ndarray)
+            if is_np_ndarray:
+                shape = imgdata.shape
+            else:
+                single_img_shape = imgdata[0].shape
+                if not all([img.shape == single_img_shape for img in imgdata]):
+                    raise ValueError('All images must have the same shape to fit into the same dataset!')
                 if axis == 0:
-                    dataset_shape = (nimg, *img_shape)
-                elif axis == -1:
-                    dataset_shape = (*img_shape, nimg)
+                    shape = (len(imgdata), *single_img_shape)
+                    if chunks is None:
+                        chunks = (1, *single_img_shape)
                 else:
-                    raise ValueError('Other axis than 0 or -1 not accepted!')
+                    shape = (*single_img_shape, len(imgdata))
+                    if chunks is None:
+                        chunks = (*single_img_shape, 1)
 
-                # pre-allocate dataset with shape:
-                ds = self.create_dataset(name, shape=dataset_shape, overwrite=overwrite,
-                                         dtype=dtype, compression=compression, compression_opts=compression_opts)
-
-                # fill dataset with data:
-                if ds is not None:
-                    if axis == 0:
-                        ds[0, ...] = img
-                        for i, img_fname in tqdm(enumerate(img_filename[1:]), unit='file', desc='processing images'):
-                            img = utils.load_img(img_fname)
-                            if img.shape == img_shape:
-                                ds[i + 1, ...] = img
-                            else:
-                                logger.critical(
-                                    f'Shape of {img_fname} has wrong shape {img.shape}. Expected shape: {img_shape}'
-                                    ' Dataset will be deleted again!'
-                                )
-                                del self[ds.name]
-                    elif axis == -1:
-                        ds[..., 0] = img
-                        for i, img_fname in tqdm(enumerate(img_filename[1:]), unit='file', desc='processing images'):
-                            img = utils.load_img(img_filename[0])
-                            if img.shape == img_shape:
-                                ds[..., i + 1] = img
-                            else:
-                                logger.critical(
-                                    f'Shape if {img_fname} has wrong shape {img.shape}. Expected shape: {img_shape}'
-                                    f' Dataset will be deleted again!')
-                                del self[ds.name]
-                    return ds
+        ds = self.create_dataset(name=name,
+                                 shape=shape,
+                                 compression=compression,
+                                 compression_opts=compression_opts,
+                                 chunks=chunks,
+                                 dtype=dtype,
+                                 **kwargs)
+        if not is_list_tuple_or_numpy:
+            if axis == 0:
+                ds[0, ...] = first_image
+            else:
+                ds[..., 0] = first_image
+            for i, img in enumerate(imgdata):
+                if axis == 0:
+                    ds[i, ...] = img
                 else:
-                    logger.critical(
-                        'Could not create dataset because it already exists and overwrite=False.')
+                    ds[..., i] = img
+            return ds
+
+        if is_np_ndarray:
+            ds[:] = imgdata
+        else:
+            ds[:] = np.stack(imgdata, axis=axis)
+        return ds
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes

@@ -6,6 +6,7 @@ import unittest
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
+
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
@@ -15,10 +16,35 @@ class TestCore(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use('default')
 
+    def test_H5File(self):
+        self.assertEqual(str(h5tbx.H5File), "<class 'h5rdmtoolbox.H5File'>")
+        with h5tbx.H5File() as h5:
+            self.assertEqual(h5.__str__(), "<class 'h5rdmtoolbox.H5File' convention: default>")
+        self.assertEqual(h5tbx.H5File.H5Dataset(), h5tbx.core.H5Dataset)
+        self.assertEqual(h5tbx.H5File.H5Group(), h5tbx.core.H5Group)
+
+    def test_H5Files(self):
+        with h5tbx.H5File() as h5:
+            f1 = h5.hdf_filename
+        with h5tbx.H5File() as h5:
+            f2 = h5.hdf_filename
+        with self.assertRaises(ValueError):
+            with h5tbx.H5Files([f1, ]):
+                pass
+        with h5tbx.H5Files([f1, f2]) as h5:
+            self.assertEqual(str(h5), "<Files (2 files)>")
+            self.assertIsInstance(h5[0], h5tbx.wrapper.core.H5File)
+            self.assertIsInstance(h5[1], h5tbx.wrapper.core.H5File)
+        with h5tbx.H5Files([f1, f2], file_instance=h5tbx.wrapper.core.H5File) as h5:
+            self.assertEqual(str(h5), "<Files (2 files)>")
+            self.assertIsInstance(h5[0], h5tbx.wrapper.core.H5File)
+            self.assertIsInstance(h5[1], h5tbx.wrapper.core.H5File)
+
     def test_subclassstr_attrs(self):
         class MyString(str):
             def some_method(self):
                 return True
+
         with h5tbx.H5File() as h5:
             h5.attrs['mystr'] = MyString('test')
             attr_str = h5.attrs['mystr']
