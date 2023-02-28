@@ -64,10 +64,9 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _user.user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
-    _filename = _user.user_dirs['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
+    _filename = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
     while _filename.exists():
-        _filename = _user.user_dirs['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
+        _filename = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
     return _filename
 
 
@@ -84,9 +83,9 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir = _user.user_dirs['tmp'] / f"{prefix}{next(_user._filecounter)}"
+    _dir = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}"
     while _dir.exists():
-        _dir = _user.user_dirs['tmp'] / f"{prefix}{next(_user._filecounter)}"
+        _dir = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}"
     _dir.mkdir(parents=True)
     return _dir
 

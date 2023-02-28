@@ -5,6 +5,7 @@ import h5py
 import logging
 import numpy as np
 import os
+import pandas as pd
 import pathlib
 # noinspection PyUnresolvedReferences
 import pint
@@ -29,7 +30,6 @@ from .. import _repr
 from .. import config
 from .. import utils
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
-from .._user import user_dirs
 from .._version import __version__
 from ..conventions.layout import H5Layout
 
@@ -37,10 +37,6 @@ logger = logging.getLogger(__package__)
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
-
-H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
-if not H5File_layout_filename.exists():
-    shutil.copy2(pathlib.Path(__file__).parent / '../data/H5File.hdf', H5File_layout_filename)
 
 
 class Lower(str):
@@ -174,7 +170,7 @@ class H5Group(h5py.Group):
 
     def __setitem__(self,
                     name: str,
-                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> None:
+                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> "H5Dataset":
         """
         Lazy creating datasets. More difficult than using h5py as mandatory
         parameters must be provided.
@@ -192,16 +188,15 @@ class H5Group(h5py.Group):
         None
         """
         if isinstance(obj, xr.DataArray):
-            _ = obj.hdf.to_group(H5Group(self), name)
-        elif isinstance(obj, (list, tuple)):
+            return obj.hdf.to_group(H5Group(self), name)
+        if isinstance(obj, (list, tuple)):
             if not isinstance(obj[1], dict):
                 raise TypeError(f'Second item must be type dict but is {type(obj[1])}')
             kwargs = obj[1]
-            self.create_dataset(name, data=obj[0], **kwargs)
-        elif isinstance(obj, dict):
-            self.create_dataset(**obj)
-        else:
-            super().__setitem__(name, obj)
+            return self.create_dataset(name, data=obj[0], **kwargs)
+        if isinstance(obj, dict):
+            return self.create_dataset(name=name, **obj)
+        super().__setitem__(name, obj)
 
     def __getitem__(self, name):
         if isinstance(name, Lower):
@@ -298,20 +293,19 @@ class H5Group(h5py.Group):
             Track creation order under this group. Default is None.
         """
         if name in self:
-            if name in self:
-                if isinstance(self[name], h5py.Group):
-                    if overwrite is True:
-                        del self[name]
-                    elif update_attrs:
-                        g = self[name]
-                        for ak, av in attrs.items():
-                            g.attrs[ak] = av
-                        return g
-                    else:
-                        # let h5py.Group raise the error...
-                        h5py.Group.create_group(self, name, track_order=track_order)
-                else:  # isinstance(self[name], h5py.Dataset):
-                    raise RuntimeError('The name you passed is already ued for a dataset!')
+            if isinstance(self[name], h5py.Group):
+                if overwrite is True:
+                    del self[name]
+                elif update_attrs:
+                    g = self[name]
+                    for ak, av in attrs.items():
+                        g.attrs[ak] = av
+                    return g
+                else:
+                    # let h5py.Group raise the error...
+                    h5py.Group.create_group(self, name, track_order=track_order)
+            else:  # isinstance(self[name], h5py.Dataset):
+                raise RuntimeError('The name you passed is already ued for a dataset!')
 
         if _is_not_valid_natural_name(self, name, config.CONFIG.NATURAL_NAMING):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
@@ -645,91 +639,70 @@ class H5Group(h5py.Group):
 
         """
         from pandas import read_csv as pd_read_csv
+        if combine_opt not in ['concatenate', 'stack']:
+            raise ValueError(f'Invalid input for combine_opt: {combine_opt}')
+
         if attrs is None:
             attrs = {}
         if 'names' in pandas_kwargs.keys():
             if 'header' not in pandas_kwargs.keys():
-                raise RuntimeError('if you pass names also pass header=...')
+                raise RuntimeError('Missing "header" argument for pandas.read_csv')
 
         if isinstance(csv_filename, (list, tuple)):
-            # depending on the meaning of multiple csv_filename axis can be 0 (z-plane)
-            # or 1 (time-plane)
-            axis = pandas_kwargs.pop('axis', 0)
-            csv_fname = csv_filename[0]
-            is_single_file = False
+            n_files = len(csv_filename)
+            dfs = [pd_read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filename]
         elif isinstance(csv_filename, (str, Path)):
-            is_single_file = True
-            csv_fname = csv_filename
+            n_files = 1
+            dfs = [pd_read_csv(csv_filename, **pandas_kwargs), ]
         else:
             raise ValueError(
                 f'Wrong input for "csv_filename: {type(csv_filename)}')
 
-        df = pd_read_csv(csv_fname, **pandas_kwargs)
-
         compression, compression_opts = config.CONFIG.HDF_COMPRESSION, config.CONFIG.HDF_COMPRESSION_OPTS
 
-        if is_single_file:
-            for variable_name in df.columns:
+        if n_files > 1 and combine_opt == 'concatenate':
+            dfs = [pd.concat(dfs, axis=axis), ]
+            n_files = 1
+
+        if n_files == 1:
+            datasets = []
+            for variable_name in dfs[0].columns:
                 ds_name = utils.remove_special_chars(str(variable_name))
-                data = df[str(variable_name)].values.reshape(shape)
+                if shape is not None:
+                    data = dfs[0][str(variable_name)].values.reshape(shape)
+                else:
+                    data = dfs[0][str(variable_name)].values
                 try:
-                    self.create_dataset(name=ds_name,
-                                        data=data,
-                                        attrs=attrs.get(ds_name, None),
-                                        overwrite=overwrite, compression=compression,
-                                        compression_opts=compression_opts)
+                    datasets.append(self.create_dataset(name=ds_name,
+                                                        data=data,
+                                                        attrs=attrs.get(ds_name, None),
+                                                        overwrite=overwrite, compression=compression,
+                                                        compression_opts=compression_opts))
                 except RuntimeError as e:
                     logger.error(
                         f'Could not read {variable_name} from csv file due to: {e}')
-        else:
-            _data = df[df.columns[0]].values.reshape(shape)
-            nfiles = len(csv_filename)
-            for variable_name in df.columns:
-                ds_name = utils.remove_special_chars(str(variable_name))
-                if combine_opt == 'concatenate':
-                    _shape = list(_data.shape)
-                    _shape[axis] = nfiles
-                    self.create_dataset(name=ds_name, shape=_shape,
-                                        attrs=attrs.get(ds_name, None),
-                                        compression=compression,
-                                        compression_opts=compression_opts,
-                                        chunks=chunks)
-                elif combine_opt == 'stack':
-                    if axis == 0:
-                        self.create_dataset(name=ds_name, shape=(nfiles, *_data.shape),
-                                            attrs=attrs.get(ds_name, None),
-                                            compression=compression,
-                                            compression_opts=compression_opts,
-                                            chunks=chunks)
-                    elif axis == 1:
-                        self.create_dataset(name=ds_name, shape=(_data.shape[0], nfiles, *_data.shape[1:]),
-                                            attrs=attrs.get(ds_name, None),
-                                            compression=compression,
-                                            compression_opts=compression_opts,
-                                            chunks=chunks)
-                    else:
-                        raise ValueError('axis must be 0 or -1')
+            return datasets
 
+        data = {}
+        for name, value in dfs[0].items():
+            if shape is None:
+                data[name] = [value.values, ]
+            else:
+                data[name] = [value.values.reshape(shape), ]
+        for df in dfs[1:]:
+            for name, value in df.items():
+                if shape is None:
+                    data[name].append(value.values)
                 else:
-                    raise ValueError(
-                        f'"combine_opt" must be "concatenate" or "stack", not {combine_opt}')
+                    data[name].append(value.values.reshape(shape))
 
-            for i, csv_fname in enumerate(csv_filename):
-                df = pd_read_csv(csv_fname, **pandas_kwargs)
-                for c in df.columns:
-                    ds_name = utils.remove_special_chars(str(c))
-                    data = df[str(c)].values.reshape(shape)
-
-                    if combine_opt == 'concatenate':
-                        if axis == 0:
-                            self[ds_name][i, ...] = data[0, ...]
-                        elif axis == 1:
-                            self[ds_name][:, i, ...] = data[0, ...]
-                    elif combine_opt == 'stack':
-                        if axis == 0:
-                            self[ds_name][i, ...] = data
-                        elif axis == 1:
-                            self[ds_name][:, i, ...] = data
+        for name, value in data.items():
+            self.create_dataset(name=name,
+                                data=np.stack(value, axis=axis),
+                                attrs=attrs.get(name, None),
+                                overwrite=overwrite,
+                                compression=compression,
+                                compression_opts=compression_opts)
 
     def create_dataset_from_image(self,
                                   imgdata: Union[Callable, np.ndarray, List[np.ndarray]],
@@ -1098,6 +1071,8 @@ class DatasetValues:
 
 
 def only1d(obj):
+    """Decorator to check if the dataset is 1D"""
+
     def wrapper(*args, **kwargs):
         if args[0].ndim != 1:
             raise ValueError('Only applicable to 1D datasets!')
@@ -1146,6 +1121,8 @@ class H5Dataset(h5py.Dataset):
             if data.ndim == 1:
                 return np.where(data == other)[0]
             return np.where(data == other)
+        if isinstance(other, str):
+            return self.name == other
         return self.id == other.id
 
     @with_phil
@@ -1339,6 +1316,13 @@ class H5Dataset(h5py.Dataset):
                                 data=arr,
                                 dims=used_dims,
                                 coords=coords, attrs=attrs)
+        # check if arr is string
+        if arr.dtype.kind == 'S':
+            # decode string array
+            _arr = arr.astype(str)
+            if isinstance(_arr, np.ndarray):
+                return tuple(_arr)
+            return _arr
         return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
     def __repr__(self) -> str:

@@ -206,8 +206,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname' 
-                    for="{_id2}">{name}</label>
+                <label class='h5tb-varname' for="{_id2}">{name}</label>
                 <span class="h5tb-dims">{h5dataset.values[()]} ({h5dataset.dtype})</span>"""
         return _html
 
@@ -250,10 +249,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
-                <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname' 
-                    for="{_id2}">{name}</label>
-                <span class="h5tb-dims">{_shape_repr} [{h5dataset.dtype}]{chunks_str}{maxshape_str}</span>"""
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="{_id2}">{name}</label>
+                    <span class="h5tb-dims">{_shape_repr} [{h5dataset.dtype}]{chunks_str}{maxshape_str}</span>"""
         return _html
 
     def __dataset__(self, name, h5dataset) -> str:
@@ -268,19 +266,16 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         # now all attributes of the dataset:
         # open attribute section:
-        _html_ds_attrs = """\n<ul class="h5tb-attr-list">"""
+        _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
         for k, v in h5dataset.attrs.items():
             if k not in self.ignore_attrs:
                 _html_ds_attrs += self.__attrs__(k, v)
         # close attribute section
-        _html_ds_attrs += """\n
-                    </ul>"""
+        _html_ds_attrs += """\n                </ul>"""
 
         # close dataset section
-        _html_post = """\n
-                 </ul>
-                 """
+        _html_post = """\n                </ul>"""
         _html_ds = _html_pre + _html_ds_attrs + _html_post
         return _html_ds
 

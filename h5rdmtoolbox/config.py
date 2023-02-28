@@ -4,12 +4,12 @@ from omegaconf import OmegaConf, DictConfig
 from pint_xarray import unit_registry
 from typing import Union
 
-from ._user import user_dirs
+from ._user import UserDir
 
 ureg = unit_registry
 
-user_config_dir = user_dirs['root']
-user_config_filename = user_dirs['root'] / 'user_config.yaml'
+user_config_dir = UserDir['root']
+user_config_filename = UserDir['root'] / 'user_config.yaml'
 
 DEFAULT_CONFIG = dict(
     RETURN_XARRAY=True,

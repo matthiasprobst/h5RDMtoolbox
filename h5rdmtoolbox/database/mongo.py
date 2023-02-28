@@ -1,15 +1,15 @@
+import h5py
+import numpy as np
 import os
 import pathlib
+import pymongo.collection
 import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pymongo.errors import InvalidDocument
 from typing import Dict, List
 
-import h5py
-import numpy as np
-import pymongo.collection
-from pymongo.errors import InvalidDocument
-
+from .filequery import distinct
 from ..wrapper.accessory import register_special_dataset
 from ..wrapper.core import H5Dataset, H5File, H5Group
 from ..wrapper.h5attr import H5_DIM_ATTRS
@@ -46,7 +46,7 @@ def type2mongo(value: any) -> any:
     """Convert numpy dtypes to int/float/list/..."""
     if isinstance(value, (int, float, str, dict, list, tuple, datetime)):
         return value
-    elif value is None:
+    if value is None:
         return None
     try:
         if np.issubdtype(value, np.floating):
@@ -65,7 +65,8 @@ class MongoGroupAccessor:
     def __init__(self, h5grp: H5Group):
         self._h5grp = h5grp
 
-    def insert(self, collection: pymongo.collection.Collection,
+    def insert(self,
+               collection: pymongo.collection.Collection,
                recursive: bool = False,
                update: bool = True,
                include_dataset: bool = True,
@@ -90,7 +91,7 @@ class MongoGroupAccessor:
                 collection.insert_one(make_dict_mongo_compatible(tree))
             except InvalidDocument as e:
                 raise InvalidDocument(
-                    f'Could not insert dict: \n{make_dict_mongo_compatible(tree)}\nOriginal error: {e}')
+                    f'Could not insert dict: \n{make_dict_mongo_compatible(tree)}\nOriginal error: {e}') from e
             return collection
 
         if ignore_attrs is None:
@@ -120,7 +121,7 @@ class MongoGroupAccessor:
             include_dataset = True
 
         if include_dataset or recursive:
-            for dsname, h5obj in grp.items():
+            for h5obj in grp.values():
                 if isinstance(h5obj, h5py.Dataset):
                     if include_dataset:
                         h5obj.mongo.insert(axis=None, collection=collection,
@@ -144,7 +145,7 @@ class MongoDatasetAccessor:
 
     def get_documents(self, axis: int, ignore_attrs: List[str] = None, dims: List[str] = None,
                       use_relative_filename: bool = False,
-                      use_standard_names_for_dimscales: bool = False) -> List[Dict]:
+                      use_standard_names_for_dim_scales: bool = False) -> List[Dict]:
         """Generates the document from the dataset and return list of dictionaries"""
         if ignore_attrs is None:
             ignore_attrs = []
@@ -157,6 +158,7 @@ class MongoDatasetAccessor:
         else:
             filename = str(pathlib.Path(ds.file.filename).absolute())
 
+        # improve then next lines
         if axis is None:
             doc = {"filename": filename,
                    "name": ds.name,
@@ -213,19 +215,19 @@ class MongoDatasetAccessor:
 
                 for dim in dim_ls:
                     scale = dim[i]
-                    if use_standard_names_for_dimscales:
-                        dimname_to_use = dim.attrs.get('standard_name')
-                        if not dimname_to_use:
-                            dimname_to_use = os.path.basename(dim.name[1:])
+                    if use_standard_names_for_dim_scales:
+                        dim_name_to_use = dim.attrs.get('standard_name')
+                        if not dim_name_to_use:
+                            dim_name_to_use = os.path.basename(dim.name[1:])
                         else:
                             if len(distinct(dim, 'standard_name', None)) > 1:
-                                dimname_to_use = os.path.basename(dim.name[1:])
+                                dim_name_to_use = os.path.basename(dim.name[1:])
                                 warnings.warn(f'Cannot use standard name of dim scale {dim.name} because it '
                                               f'is not distinct in the dataset')
                     else:
-                        dimname_to_use = os.path.basename(dim.name[1:])
+                        dim_name_to_use = os.path.basename(dim.name[1:])
                     # TODO: add string entry that tells us where the scale ds is located
-                    doc[dimname_to_use] = type2mongo(scale)
+                    doc[dim_name_to_use] = type2mongo(scale)
 
                 for ak, av in ds.attrs.items():
                     if ak not in H5_DIM_ATTRS:
@@ -241,20 +243,24 @@ class MongoDatasetAccessor:
                 docs.append(doc)
             return docs
         raise NotImplementedError('This method is under heavy construction. Currently, '
-                                  'only accepts axis==0 in this developmet stage.')
+                                  'only accepts axis==0 in this development stage.')
 
-    def insert(self, axis, collection: pymongo.collection.Collection,
+    def insert(self,
+               axis,
+               collection: pymongo.collection.Collection,
                update: bool = True,
-               ignore_attrs: List[str] = None, dims: List[str] = None,
-               additional_fields: Dict = None, ordered: bool = True,
-               use_standard_names_for_dimscales: bool = False) -> pymongo.collection.Collection:
-        """Using axis is UNDER HEAVY CONSTRUCTION!!! Currently only axis=0 works
+               ignore_attrs: List[str] = None,
+               dims: List[str] = None,
+               additional_fields: Dict = None,
+               ordered: bool = True,
+               use_standard_names_for_dim_scales: bool = False) -> pymongo.collection.Collection:
+        """Using axis is UNDER HEAVY CONSTRUCTION!!! Currently, only axis=0 works
 
         By providing `dims` the dimension scales can be defined. If set to None, all attached
         scales are used
         """
         docs = self.get_documents(axis, ignore_attrs, dims,
-                                  use_standard_names_for_dimscales=use_standard_names_for_dimscales)
+                                  use_standard_names_for_dim_scales=use_standard_names_for_dim_scales)
 
         if additional_fields is not None:
             for doc in docs:

@@ -14,15 +14,17 @@ class HDFXrDataset:
         self._shape = self._datasets[self._data_vars[0]].shape
 
     def __getitem__(self, item) -> xr.DataArray:
-        return xr.merge([da.__getitem__(item) for da in self._datasets.values()])
+        return xr.merge([da.__getitem__(item).rename(k) for k, da in self._datasets.items()])
 
     def __repr__(self):
         return f'<HDF-XrDataset (shape {self.shape} data_vars: {self.data_vars})>'
 
     @property
     def data_vars(self):
+        """List of data variables in the dataset"""
         return self._data_vars
 
     @property
     def shape(self):
+        """Shape of the dataset (taken from the first dataset)"""
         return self._shape

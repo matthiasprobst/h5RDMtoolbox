@@ -102,9 +102,9 @@ def main():
     if args.documentation:
         webbrowser.open('https://matthiasprobst.github.io/h5RDMtoolbox/')
         return
-    if args.user_dirs:
-        from ._user import user_dirs
-        pprint(user_dirs)
+    if args.UserDir:
+        from ._user import UserDir
+        pprint(UserDir)
         return
     if args.dump:
         with H5File(args.dump) as h5:

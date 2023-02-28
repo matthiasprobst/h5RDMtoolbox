@@ -14,7 +14,7 @@ class TestUtils(unittest.TestCase):
         now = datetime.datetime.now()
         tmp_hdf5file = h5tbx.utils.touch_tmp_hdf5_file(touch=True,
                                                     attrs={'dtime': now})
-        self.assertTrue(h5tbx.user_dirs['tmp'] in tmp_hdf5file.parents)
+        self.assertTrue(h5tbx.UserDir['tmp'] in tmp_hdf5file.parents)
 
 
 

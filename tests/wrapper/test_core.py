@@ -16,6 +16,10 @@ class TestCore(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use('default')
 
+    def test_lower(self):
+        self.assertEqual(h5tbx.core.Lower('Hello'), 'hello')
+        self.assertIsInstance(h5tbx.core.lower('Hello'), h5tbx.core.Lower)
+
     def test_H5File(self):
         self.assertEqual(str(h5tbx.H5File), "<class 'h5rdmtoolbox.H5File'>")
         with h5tbx.H5File() as h5:
@@ -58,11 +62,56 @@ class TestCore(unittest.TestCase):
             grp.attrs['mystr'] = attr_str
 
     def test_from_csv(self):
-        df = pd.DataFrame({'x': [1, 5, 10], 'y': [-3, 20, 0]})
-        csv_filename = h5tbx.utils.generate_temporary_filename(suffix='.csv')
-        df.to_csv(csv_filename)
+        df = pd.DataFrame({'x': [1, 5, 10, 0], 'y': [-3, 20, 0, 11.5]})
+        csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
+        df.to_csv(csv_filename1, index=None)
+
         with h5tbx.H5File() as h5:
-            h5.create_datasets_from_csv(csv_filename=csv_filename)
+            h5.create_datasets_from_csv(csv_filename=csv_filename1)
+            self.assertEqual(h5['x'].shape, (4,))
+            self.assertEqual(h5['y'].shape, (4,))
+            np.testing.assert_equal(h5['x'][:], np.array([1, 5, 10, 0]))
+            np.testing.assert_equal(h5['y'][:], np.array([-3, 20, 0, 11.5]))
+
+        csv_filename2 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
+        df.to_csv(csv_filename2, index=None)
+
+        with h5tbx.H5File() as h5:
+            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+                                        combine_opt='concatenate')
+            self.assertEqual(h5['x'].shape, (8,))
+            self.assertEqual(h5['y'].shape, (8,))
+
+        with h5tbx.H5File() as h5:
+            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+                                        axis=0)
+            self.assertEqual(h5['x'].shape, (2, 4))
+            self.assertEqual(h5['y'].shape, (2, 4))
+            np.testing.assert_equal(h5['x'][:], np.array([[1, 5, 10, 0], [1, 5, 10, 0]]))
+            np.testing.assert_equal(h5['y'][:], np.array([[-3, 20, 0, 11.5], [-3, 20, 0, 11.5]]))
+
+        with h5tbx.H5File() as h5:
+            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+                                        combine_opt='stack',
+                                        axis=-1)
+            self.assertEqual(h5['x'].shape, (4, 2))
+            self.assertEqual(h5['y'].shape, (4, 2))
+
+        with h5tbx.H5File() as h5:
+            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+                                        combine_opt='stack',
+                                        axis=0,
+                                        shape=(2, 2))
+            self.assertEqual(h5['x'].shape, (2, 2, 2))
+            self.assertEqual(h5['y'].shape, (2, 2, 2))
+
+        with h5tbx.H5File() as h5:
+            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+                                        combine_opt='stack',
+                                        axis=-1,
+                                        shape=(2, 2))
+            self.assertEqual(h5['x'].shape, (2, 2, 2))
+            self.assertEqual(h5['y'].shape, (2, 2, 2))
 
     def test_modify_static_properties(self):
         with h5tbx.H5File() as h5:
@@ -105,6 +154,8 @@ class TestCore(unittest.TestCase):
                                    dtype=int)
             new_ds = h5['/'].modify_dataset_properties(dataset=ds,
                                                        dtype=float)
+            with self.assertRaises(TypeError):
+                h5['/'].modify_dataset_properties(ds, 4.3)
             self.assertEqual(ds.dtype, int)
             self.assertEqual(new_ds.dtype, float)
 
@@ -148,3 +199,50 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5.data[h5.data.time == 66, :, :].shape, (1, 200, 100))
             np.testing.assert_equal(h5.data[h5.data.time == 66, :, :], h5.data.values[66, :, :].reshape(1, 200, 100))
             np.testing.assert_equal(h5.data.time == 66, np.array(66))
+
+    def test_H5Group(self):
+        with h5tbx.H5File() as h5:
+            grp = h5.create_group('grp')
+            grp.create_dataset('data', data=np.random.rand(10, 20, 30))
+            self.assertEqual(grp.get_datasets('data'), [grp['data'], ])
+            self.assertEqual(grp.get_datasets('dat*'), [grp['data'], ])
+            self.assertEqual(grp.get_datasets('idat*'), [])
+            with self.assertRaises(ValueError):
+                h5tbx.core.H5Group(4.3)
+            with self.assertRaises(TypeError):
+                h5.grp['New'] = (4.3, int)
+            h5.grp['New'] = dict(data=np.random.rand(10, 20, 30))
+
+            newds = h5.grp['New']
+            self.assertEqual(newds.name, '/grp/New')
+
+            from h5rdmtoolbox.wrapper.core import Lower
+            newds = h5.grp[Lower('new')]
+            self.assertEqual(newds.name, '/grp/New')
+
+            self.assertEqual(str(h5.grp), '<HDF5 wrapper group "/grp" (members: 2, convention: "default")>')
+
+            with self.assertRaises(ValueError):
+                grp = h5.create_group('grp')
+            self.assertTrue('a' not in grp.attrs)
+            grp = h5.create_group('grp', attrs={'a': 'b'}, overwrite=True)
+            self.assertTrue('a' in grp.attrs)
+
+            h5.create_string_dataset('str', 'test')
+            self.assertTrue('str' in h5)
+            self.assertTrue(h5['str'].name, '/str')
+            self.assertEqual(h5['str'][()], 'test')
+
+            h5.create_string_dataset('str2', ('a', 'b', 'c'))
+            self.assertTrue(h5['str2'].name, '/str2')
+            self.assertEqual(h5['str2'][()], ('a', 'b', 'c'))
+
+            h5.create_string_dataset('str2', ('a', 'bb', 'c', 'd'), overwrite=True)
+            self.assertTrue(h5['str2'].name, '/str2')
+            self.assertEqual(h5['str2'][()], ('a', 'bb', 'c', 'd'))
+            self.assertTrue(h5['str2'].size, 2)
+
+            h5.create_string_dataset('str2', ('a', 'b', 'c', 'dddd'), overwrite=True, attrs={'a': 'b'})
+            self.assertTrue(h5['str2'].name, '/str2')
+            self.assertEqual(h5['str2'][()], ('a', 'b', 'c', 'dddd'))
+            self.assertTrue(h5['str2'].size, 4)

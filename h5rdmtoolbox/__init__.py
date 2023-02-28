@@ -8,7 +8,7 @@ import warnings
 from . import config
 from . import wrapper
 from ._logger import create_package_logger
-from ._user import _root_tmp_dir, user_dirs
+from ._user import UserDir
 from ._version import __version__
 from .config import user_config_filename
 from .database import filequery
@@ -117,21 +117,22 @@ class H5Files:
 def clean_temp_data(full: bool = False):
     """cleaning up the tmp directory"""
     failed_dirs = []
-    failed_dirs_file = _root_tmp_dir / 'failed.txt'
+    failed_dirs_file = UserDir['tmp'] / 'failed.txt'
     if full:
-        if _root_tmp_dir.exists():
-            shutil.rmtree(_root_tmp_dir)
-            _root_tmp_dir.mkdir(exist_ok=True, parents=True)
+        if UserDir['tmp'].exists():
+            shutil.rmtree(UserDir['tmp'])
+            UserDir['tmp'].mkdir(exist_ok=True, parents=True)
         return
-    _tmp_session_dir = user_dirs["tmp"]
+
+    _tmp_session_dir = UserDir["session_tmp"]
     if _tmp_session_dir.exists():
         try:
             # logger not available anymore
             # core_logger.debug(f'Attempting to delete {_tmp_session_dir}')
-            shutil.rmtree(user_dirs['tmp'])
+            shutil.rmtree(UserDir['session_tmp'])
             # core_logger.debug(f'Successfully deleted {_tmp_session_dir}')
         except PermissionError as e:
-            failed_dirs.append(user_dirs['tmp'])
+            failed_dirs.append(UserDir['session_tmp'])
             print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
                   f'manually delete the directory.')
         finally:
@@ -156,5 +157,5 @@ def clean_temp_data(full: bool = False):
         core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
 
 
-__all__ = ['__version__', '__author__', 'user_dirs', 'use', 'core_logger', 'user_config_filename',
+__all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
            'generate_temporary_filename', 'generate_temporary_directory']

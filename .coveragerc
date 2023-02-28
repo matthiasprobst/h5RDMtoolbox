@@ -25,3 +25,5 @@ exclude_lines =
     def warningtext
     def failtext
     def oktext
+    def sdump
+    def dump

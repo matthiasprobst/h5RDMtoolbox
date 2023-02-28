@@ -14,7 +14,7 @@ from typing import Union, Dict, List
 
 from .utils import equal_base_units
 from .. import _repr
-from .._user import user_dirs
+from .._user import UserDir
 from ..utils import generate_temporary_filename
 
 logger = logging.getLogger(__package__)
@@ -342,16 +342,16 @@ class H5Layout:
             If no unique filename found be idetified.
 
         """
-        src = user_dirs['layouts'] / name
+        src = UserDir['layouts'] / name
         if src.exists():
             return src
         # search for names:
-        candidates = list(user_dirs['layouts'].glob(f'{name}.*'))
+        candidates = list(UserDir['layouts'].glob(f'{name}.*'))
         if len(candidates) == 1:
             return pathlib.Path(candidates[0])
         raise FileNotFoundError(
             f'File {name} could not be found or passed name was not unique. Check the user layout dir '
-            f'{user_dirs["layouts"]}'
+            f'{UserDir["layouts"]}'
         )
 
     @staticmethod
@@ -433,9 +433,9 @@ class H5Layout:
     def register(self, name=None, overwrite=False) -> pathlib.Path:
         """Copy file to user data dir"""
         if name is None:
-            trg = user_dirs['layouts'] / self.filename.name
+            trg = UserDir['layouts'] / self.filename.name
         else:
-            trg = user_dirs['layouts'] / name
+            trg = UserDir['layouts'] / name
         if trg.exists() and not overwrite:
             raise FileExistsError(f'Target file already exists: {trg}')
         print(f'copying here: {trg}')
@@ -444,12 +444,12 @@ class H5Layout:
     @staticmethod
     def get_registered() -> List[pathlib.Path]:
         """Return sorted list of layout HDF files"""
-        return sorted(user_dirs['layouts'].glob('*'))
+        return sorted(UserDir['layouts'].glob('*'))
 
     @staticmethod
     def print_registered() -> None:
         """Return sorted list of standard names files"""
-        print(f'@ {user_dirs["layouts"]}:')
+        print(f'@ {UserDir["layouts"]}:')
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')
 

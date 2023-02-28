@@ -33,7 +33,7 @@ from . import errors
 from .._logger import logger
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from ... import config
-from ..._user import user_dirs
+from ..._user import UserDir
 from ...utils import generate_temporary_filename
 
 try:
@@ -318,9 +318,11 @@ class StandardNameTable:
     def rename(self, name, new_name) -> None:
         """Rename an existing standard name. Make sure that description and unit is still
         valid as this only renames the name of the standard name"""
+        if name not in self:
+            raise KeyError(f'"{name}" does not exist in table')
         existing_sn = self.table.get(name)
         self.set(new_name, **existing_sn)
-        self.table.pop(name)
+        del self._table[name]
 
     def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
         """string representation of the SNT in form of a table"""
@@ -669,7 +671,7 @@ class StandardNameTable:
 
     def register(self, overwrite: bool = False) -> None:
         """Register the standard name table under its versionname."""
-        trg = user_dirs['standard_name_tables'] / f'{self.versionname}.yml'
+        trg = UserDir['standard_name_tables'] / f'{self.versionname}.yml'
         if trg.exists() and not overwrite:
             raise FileExistsError(f'Standard name table {self.versionname} already exists!')
         self.to_yaml(trg)
@@ -678,12 +680,12 @@ class StandardNameTable:
     def load_registered(name: str) -> 'StandardNameTable':
         """Load from user data dir"""
         # search for names:
-        candidates = list(user_dirs['standard_name_tables'].glob(f'{name}.yml'))
+        candidates = list(UserDir['standard_name_tables'].glob(f'{name}.yml'))
         if len(candidates) == 1:
             return StandardNameTable.from_yaml(candidates[0])
         if len(candidates) == 0:
             raise FileNotFoundError(f'No file found under the name {name} at this location: '
-                                    f'{user_dirs["standard_name_tables"]}')
+                                    f'{UserDir["standard_name_tables"]}')
         list_of_reg_names = [snt.versionname for snt in StandardNameTable.get_registered()]
         raise FileNotFoundError(f'File {name} could not be found or passed name was not unique. '
                                 f'Registered tables are: {list_of_reg_names}')
@@ -691,7 +693,7 @@ class StandardNameTable:
     @staticmethod
     def get_registered() -> List["StandardNameTable"]:
         """Return sorted list of standard names files"""
-        return [StandardNameTable.from_yaml(f) for f in sorted(user_dirs['standard_name_tables'].glob('*'))]
+        return [StandardNameTable.from_yaml(f) for f in sorted(UserDir['standard_name_tables'].glob('*'))]
 
     @staticmethod
     def print_registered() -> None:
@@ -809,7 +811,7 @@ class StandardNameTableTranslation:
         overwrite: bool, default=False
             Whether to overwrite an existing translation name
         """
-        self.to_yaml(target_dir=user_dirs['standard_name_table_translations'],
+        self.to_yaml(target_dir=UserDir['standard_name_table_translations'],
                      snt=snt, overwrite=overwrite)
 
     @staticmethod
@@ -821,10 +823,10 @@ class StandardNameTableTranslation:
         """
         # search for names:
         fbasename = f'{name}.yml'
-        if (user_dirs['standard_name_table_translations'] / fbasename).exists():
-            return StandardNameTableTranslation.from_yaml(user_dirs['standard_name_table_translations'] / fbasename)
+        if (UserDir['standard_name_table_translations'] / fbasename).exists():
+            return StandardNameTableTranslation.from_yaml(UserDir['standard_name_table_translations'] / fbasename)
 
-        list_of_reg_names = [fname.stem for fname in user_dirs['standard_name_table_translations'].glob('*.y*ml')]
+        list_of_reg_names = [fname.stem for fname in UserDir['standard_name_table_translations'].glob('*.y*ml')]
         raise FileNotFoundError(f'File {fbasename} could not be found or passed name was not unique. '
                                 f'Registered tables are: {list_of_reg_names}')
 
@@ -832,7 +834,7 @@ class StandardNameTableTranslation:
     def get_registered() -> List["StandardNameTableTranslation"]:
         """Return sorted list of standard names files"""
         return [StandardNameTableTranslation.from_yaml(f) for f in
-                sorted(user_dirs['standard_name_table_translations'].glob('*.y*ml'))]
+                sorted(UserDir['standard_name_table_translations'].glob('*.y*ml'))]
 
     @staticmethod
     def print_registered():
