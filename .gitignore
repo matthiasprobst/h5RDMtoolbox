@@ -45,3 +45,4 @@ docs/_build/
 # pytest
 .coverage
 htmlcov
+coverage.svg
