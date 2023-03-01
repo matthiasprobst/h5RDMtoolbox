@@ -35,11 +35,10 @@ def set_loglevel(logger, level):
     logger.debug(f'changed logger level for {logger.name} from {old_level} to {level}')
 
 
-
 set_loglevel(core_logger, config.init_logger_level)
 
 # global instance:
-h5tbxParams = {'convention': config['convention'],
+h5tbxParams = {'convention': config['default_convention'],
                'H5File': core.H5File,
                'H5Dataset': core.H5Dataset,
                'H5Group': core.H5Group}
@@ -107,7 +106,7 @@ class H5Files:
     """Interface class to wrapper class around HDF5/h5py.File"""
 
     def __new__(cls, *args, **kwargs):
-        use(config['convention'])
+        use(config['default_convention'])
         file_instance = kwargs.get('file_instance', None)
         if file_instance is None:
             kwargs['file_instance'] = h5tbxParams['H5File']
@@ -121,8 +120,11 @@ def clean_temp_data(full: bool = False):
     failed_dirs_file = UserDir['tmp'] / 'failed.txt'
     if full:
         if UserDir['tmp'].exists():
-            shutil.rmtree(UserDir['tmp'])
-            UserDir['tmp'].mkdir(exist_ok=True, parents=True)
+            try:
+                shutil.rmtree(UserDir['tmp'])
+                UserDir['tmp'].mkdir(exist_ok=True, parents=True)
+            except PermissionError as e:
+                print(f'removing tmp folder "{UserDir["tmp"]}" failed due to "{e}".')
         return
 
     _tmp_session_dir = UserDir["session_tmp"]

@@ -78,7 +78,7 @@ class H5tbxConfig:
     require_unit: bool = True  # datasets require units
     ureg_format: Union[str, UregFormats] = 'C~'
     standard_name_table_attribute_name: str = '__standard_name_table__'
-    convention: Union[str, RegisteredConventions] = 'default'
+    default_convention: Union[str, RegisteredConventions] = 'default'
     init_logger_level: Union[int, str] = 'INFO'
     dtime_fmt: str = '%Y%m%d%H%M%S%f'
 
@@ -90,7 +90,12 @@ CONFIG: H5tbxConfig = H5tbxDictConfig(OmegaConf.structured(H5tbxConfig()))
 def read_user_config() -> H5tbxDictConfig:
     """Read user configuration"""
     if user_config_filename.exists():
-        return H5tbxDictConfig(OmegaConf.structured(H5tbxConfig(**OmegaConf.load(user_config_filename))))
+        try:
+            return H5tbxDictConfig(OmegaConf.structured(H5tbxConfig(**OmegaConf.load(user_config_filename))))
+        except TypeError as e:
+            TypeError('Most likely an invalid configuration parameter was found in the user configuration file. '
+                      f'Please check the file and fix it. File location: {user_config_filename}. '
+                      f'Original error: {e}')
     return CONFIG
 
 

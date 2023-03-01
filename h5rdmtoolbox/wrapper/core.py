@@ -593,13 +593,18 @@ class H5Group(h5py.Group):
             recursive=rec,
             find_one=False)
 
+    def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
+        """Create datasets from a single csv file. Docstring: See H5File.create_datasets_from_csv()"""
+        return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
+
     def create_datasets_from_csv(self,
-                                 csv_filename,
+                                 csv_filenames: Union[str, pathlib.Path],
                                  dim_column: Union[int, str] = 0,
                                  shape=None,
                                  overwrite=False,
                                  combine_opt='stack',
-                                 axis=0, chunks=None,
+                                 axis=0,
+                                 chunks=None,
                                  attrs: Dict = None,
                                  **pandas_kwargs):
         """
@@ -649,15 +654,15 @@ class H5Group(h5py.Group):
             if 'header' not in pandas_kwargs.keys():
                 raise RuntimeError('Missing "header" argument for pandas.read_csv')
 
-        if isinstance(csv_filename, (list, tuple)):
-            n_files = len(csv_filename)
-            dfs = [pd_read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filename]
-        elif isinstance(csv_filename, (str, Path)):
+        if isinstance(csv_filenames, (list, tuple)):
+            n_files = len(csv_filenames)
+            dfs = [pd_read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames]
+        elif isinstance(csv_filenames, (str, Path)):
             n_files = 1
-            dfs = [pd_read_csv(csv_filename, **pandas_kwargs), ]
+            dfs = [pd_read_csv(csv_filenames, **pandas_kwargs), ]
         else:
             raise ValueError(
-                f'Wrong input for "csv_filename: {type(csv_filename)}')
+                f'Wrong input for "csv_filenames: {type(csv_filenames)}')
 
         compression, compression_opts = config.hdf_compression, config.hdf_compression_opts
 
@@ -1030,8 +1035,11 @@ class H5Group(h5py.Group):
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
-    def dump(self, collapsed: bool = True, max_attr_length: Union[int, None] = None,
-             chunks: bool = False, maxshape: bool = False):
+    def dump(self,
+             collapsed: bool = True,
+             max_attr_length: Union[int, None] = None,
+             chunks: bool = False,
+             maxshape: bool = False):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used
 
@@ -1264,16 +1272,20 @@ class H5Dataset(h5py.Dataset):
                 d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
 
             coords = {}
-            used_dims = []
+
             for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
                 for iax, _ in enumerate(dim):
                     dim_ds = dim[iax]
                     coord_name = Path(dim[iax].name).stem
                     if dim_ds.ndim == 0:
+                        dim_ds_data = dim_ds[()]
+                    else:
+                        dim_ds_data = dim_ds[arg]
+                    if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
                             coords[coord_name] = xr.DataArray(name=coord_name,
                                                               dims=(
-                                                              ), data=dim_ds[()],
+                                                              ), data=dim_ds_data,
                                                               attrs=pop_hdf_attributes(dim_ds.attrs))
                         else:
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
@@ -1281,21 +1293,17 @@ class H5Dataset(h5py.Dataset):
                                                                   dim_ds[()], ],
                                                               attrs=pop_hdf_attributes(dim_ds.attrs))
                     else:
-                        used_dims.append(dim_name)
-                        _data = dim_ds[arg]
-                        if isinstance(_data, np.ndarray):
+                        if isinstance(dim_ds_data, np.ndarray):
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
-                                                              data=_data,
+                                                              data=dim_ds_data,
                                                               attrs=pop_hdf_attributes(dim_ds.attrs))
                         else:
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
-                                                              data=_data,
+                                                              data=dim_ds_data,
                                                               attrs=pop_hdf_attributes(dim_ds.attrs))
 
-            # used_dims = [dim_name for arg, dim_name in zip(
-            #     myargs, dims_names) if isinstance(arg, slice)]
-
-            used_dims = [dim_name for arg, dim_name in zip(myargs, dims_names)]
+            used_dims = [dim_name for arg, dim_name in zip(
+                myargs, dims_names) if isinstance(arg, (slice, np.ndarray))]
 
             COORDINATES = self.attrs.get('COORDINATES')
             if COORDINATES is not None:

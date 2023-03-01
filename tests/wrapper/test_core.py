@@ -67,7 +67,14 @@ class TestCore(unittest.TestCase):
         df.to_csv(csv_filename1, index=None)
 
         with h5tbx.H5File() as h5:
-            h5.create_datasets_from_csv(csv_filename=csv_filename1)
+            h5.create_datasets_from_csv(csv_filenames=csv_filename1)
+            self.assertEqual(h5['x'].shape, (4,))
+            self.assertEqual(h5['y'].shape, (4,))
+            np.testing.assert_equal(h5['x'][:], np.array([1, 5, 10, 0]))
+            np.testing.assert_equal(h5['y'][:], np.array([-3, 20, 0, 11.5]))
+
+        with h5tbx.H5File() as h5:
+            h5.create_dataset_from_csv(csv_filename=csv_filename1)
             self.assertEqual(h5['x'].shape, (4,))
             self.assertEqual(h5['y'].shape, (4,))
             np.testing.assert_equal(h5['x'][:], np.array([1, 5, 10, 0]))
@@ -77,13 +84,13 @@ class TestCore(unittest.TestCase):
         df.to_csv(csv_filename2, index=None)
 
         with h5tbx.H5File() as h5:
-            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
                                         combine_opt='concatenate')
             self.assertEqual(h5['x'].shape, (8,))
             self.assertEqual(h5['y'].shape, (8,))
 
         with h5tbx.H5File() as h5:
-            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
                                         axis=0)
             self.assertEqual(h5['x'].shape, (2, 4))
             self.assertEqual(h5['y'].shape, (2, 4))
@@ -91,14 +98,14 @@ class TestCore(unittest.TestCase):
             np.testing.assert_equal(h5['y'][:], np.array([[-3, 20, 0, 11.5], [-3, 20, 0, 11.5]]))
 
         with h5tbx.H5File() as h5:
-            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
                                         combine_opt='stack',
                                         axis=-1)
             self.assertEqual(h5['x'].shape, (4, 2))
             self.assertEqual(h5['y'].shape, (4, 2))
 
         with h5tbx.H5File() as h5:
-            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
                                         combine_opt='stack',
                                         axis=0,
                                         shape=(2, 2))
@@ -106,7 +113,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5['y'].shape, (2, 2, 2))
 
         with h5tbx.H5File() as h5:
-            h5.create_datasets_from_csv(csv_filename=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
                                         combine_opt='stack',
                                         axis=-1,
                                         shape=(2, 2))
@@ -121,6 +128,14 @@ class TestCore(unittest.TestCase):
                                    data=np.random.rand(10, 20, 30),
                                    chunks=(1, 20, 30),
                                    attach_scales=(ds_scale,))
+            self.assertEqual(ds[0, :, :].shape, (20, 30))
+            self.assertEqual(ds[:, 0, :].shape, (10, 30))
+            self.assertEqual(ds[:, :, 0].shape, (10, 20))
+            self.assertEqual(ds[1:4, 1:4, 1:4].shape, (3, 3, 3))
+            self.assertEqual(ds[1:4, :, :].shape, (3, 20, 30))
+            self.assertEqual(list(ds[1:4, :, :].coords.keys()), ['time'])
+            self.assertEqual(list(ds[1:4, 1:4, :].coords.keys()), ['time', ])
+            self.assertEqual(list(ds[1:4, 1:4, 1:4].coords.keys()), ['time', ])
             ds0 = ds[:]
 
             new_ds = ds.modify(chunks=(2, 5, 6))
@@ -190,7 +205,20 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('time', data=range(0, 100), make_scale=True)
             h5.create_dataset('x', data=range(0, 100), make_scale=True)
             h5.create_dataset('y', data=range(0, 200), make_scale=True)
-            h5.create_dataset('data', np.random.rand(100, 200, 100), attach_scale=('time', 'y', 'x'))
+            ds = h5.create_dataset('data', np.random.rand(100, 200, 100), attach_scale=('time', 'y', 'x'))
+
+            self.assertEqual(ds[:, :, :].shape, (100, 200, 100))
+            self.assertEqual(ds[0, :, :].shape, (200, 100))
+            self.assertEqual(ds[:, 0, :].shape, (100, 100))
+            self.assertEqual(ds[:, :, 0].shape, (100, 200))
+            self.assertEqual(list(ds[:, :, :].coords.keys()), ['time', 'y', 'x'])
+            self.assertEqual(list(ds[0, :, :].coords.keys()), ['time', 'y', 'x'])
+            self.assertEqual(list(ds[:, 0, :].coords.keys()), ['time', 'y', 'x'])
+            self.assertEqual(list(ds[:, :, 0].coords.keys()), ['time', 'y', 'x'])
+            self.assertEqual(list(ds[:, 0, 0].coords.keys()), ['time', 'y', 'x'])
+
+            np.testing.assert_equal(h5.data.time > 66, np.arange(67, 100))
+
             self.assertEqual(h5.data[h5.data.time > 66, :, :].shape, (33, 200, 100))
             np.testing.assert_equal(h5.data.time > 66, np.arange(67, 100, 1))
             np.testing.assert_equal(h5.data.time >= 66, np.arange(66, 100, 1))
@@ -199,6 +227,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5.data[h5.data.time == 66, :, :].shape, (1, 200, 100))
             np.testing.assert_equal(h5.data[h5.data.time == 66, :, :], h5.data.values[66, :, :].reshape(1, 200, 100))
             np.testing.assert_equal(h5.data.time == 66, np.array(66))
+
 
     def test_H5Group(self):
         with h5tbx.H5File() as h5:

@@ -1,10 +1,11 @@
+"""Unit tests for h5rdmtoolbox.config"""
 import omegaconf
 import unittest
 from omegaconf.errors import ValidationError
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import config
 from h5rdmtoolbox import H5File
+from h5rdmtoolbox import config
 from h5rdmtoolbox.wrapper import core
 
 
@@ -43,9 +44,9 @@ class TestConfig(unittest.TestCase):
     def test_setparameter(self):
         from h5rdmtoolbox.wrapper import cflike
         # config.set_config_parameter('convention', 'default')
-        config['convention'] = 'default'
-        self.assertEqual(config['convention'], 'default')
-        self.assertEqual(config['convention'], 'default')
+        config['default_convention'] = 'default'
+        self.assertEqual(config['default_convention'], 'default')
+        self.assertEqual(config['default_convention'], 'default')
         h5tbx.use('default')
 
         with H5File(mode='w') as h5:
@@ -55,12 +56,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(h5.__class__, core.H5File)
         h5.close()
 
-        config['convention'] = 'cflike'
-        self.assertEqual(config['convention'], 'cflike')
-        self.assertEqual(config['convention'], 'cflike')
+        config['default_convention'] = 'cflike'
+        self.assertEqual(config['default_convention'], 'cflike')
+        self.assertEqual(config['default_convention'], 'cflike')
         h5tbx.use('cflike')
 
-        self.assertEqual(config['convention'], 'cflike')
+        self.assertEqual(config['default_convention'], 'cflike')
         with H5File() as h5:
             self.assertEqual(h5.__class__, cflike.H5File)
 

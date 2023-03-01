@@ -217,8 +217,12 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             _shape_repr = '('
             ndim = h5dataset.ndim
             for i in range(ndim):
+                orig_dim_name = None
                 try:
                     orig_dim_name = h5dataset.dims[i][0].name
+                except RuntimeError:
+                    pass  # no dimension scale could be found
+                if orig_dim_name:
                     if os.path.dirname(orig_dim_name) == ds_dirname:
                         dim_name = os.path.basename(orig_dim_name)
                     else:
@@ -227,8 +231,11 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _shape_repr += f'{dim_name}: {_shape[i]}'
                     else:
                         _shape_repr += f', {dim_name}: {_shape[i]}'
-                except RuntimeError:
-                    pass
+                else:
+                    if i == 0:
+                        _shape_repr += f'{_shape[i]}'
+                    else:
+                        _shape_repr += f', {_shape[i]}'
             _shape_repr += ')'
             if _shape_repr == '()' and ndim > 0:
                 _shape_repr = _shape
