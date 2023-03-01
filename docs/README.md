@@ -18,7 +18,7 @@ Next, run
 
     sphinx-build -b html . _build
 
-to create `index.html` in the `_build/` folder (You may need to install the theme first: `pip install sphinx-book-theme`)
+to create `index.html` in the `_build/` folder (You may need to install the theme first: `pip install sphinx_rtd_theme`)
 
 To update the pdf, run
 
