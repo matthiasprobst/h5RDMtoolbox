@@ -5,7 +5,7 @@ import pathlib
 import shutil
 
 from ._config import CONFIG
-from ._config import user_config_filename, write_default_config, DEFAULT_CONFIG
+from ._config import user_config_filename, write_default_config, write_user_config, DEFAULT_CONFIG
 
 config = CONFIG
 

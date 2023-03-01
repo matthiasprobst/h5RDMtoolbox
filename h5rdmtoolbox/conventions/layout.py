@@ -449,7 +449,7 @@ class H5Layout:
     @staticmethod
     def print_registered() -> None:
         """Return sorted list of standard names files"""
-        print(f'@ {UserDir["layouts"]}:')
+        # print(f'@ {UserDir["layouts"]}:')
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')
 

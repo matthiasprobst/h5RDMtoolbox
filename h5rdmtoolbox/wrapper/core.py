@@ -1251,7 +1251,7 @@ class H5Dataset(h5py.Dataset):
             return super().__getitem__(args, new_dtype=new_dtype)
 
         # check if any entry in args is of type Ellipsis:
-        if Ellipsis in args:
+        if any(arg is Ellipsis for arg in args):
             # substitute Ellipsis with as many slices as needed:
             args = list(args)
             ellipsis_index = args.index(Ellipsis)
