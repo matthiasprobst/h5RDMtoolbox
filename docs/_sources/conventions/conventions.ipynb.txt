@@ -24,7 +24,8 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "2022-10-24_13:31:33,753 INFO     [__init__.py:43] Switched to cflike\n"
+      "2023-03-01_14:28:15,381 DEBUG    [__init__.py:35] changed logger level for h5rdmtoolbox from 20 to DEBUG\n",
+      "2023-03-01_14:28:15,515 INFO     [__init__.py:72] Switched to \"cflike\"\n"
      ]
     }
    ],
@@ -270,7 +271,6 @@
      "output_type": "stream",
      "text": [
       " > fluid-v1\n",
-      " > open_centrifugal_fan_database-v1\n",
       " > piv-v1\n",
       " > standard_name_table-v79\n",
       " > Test-v1\n",
@@ -302,11 +302,17 @@
      "output_type": "stream",
      "text": [
       " > fluid-v1\n",
-      " > open_centrifugal_fan_database-v1\n",
       " > piv-v1\n",
       " > standard_name_table-v79\n",
       " > Test-v1\n",
       " > Test_SNC-v1\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2023-03-01_14:28:25,537 DEBUG    [__init__.py:35] changed logger level for h5rdmtoolbox from 20 to DEBUG\n"
      ]
     }
    ],
@@ -630,14 +636,8 @@
    "outputs": [
     {
      "data": {
-      "text/html": [
-       "m/s"
-      ],
-      "text/latex": [
-       "$\\frac{\\mathrm{m}}{\\mathrm{s}}$"
-      ],
       "text/plain": [
-       "<Unit('meter / second')>"
+       "'m/s'"
       ]
      },
      "execution_count": 18,
@@ -672,7 +672,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"deg\"\n"
+      "Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"degree\"\n"
      ]
     },
     {
@@ -707,15 +707,7 @@
    "execution_count": 21,
    "id": "fbf33dbe-4453-482e-8cd9-2462bf7f81c0",
    "metadata": {},
-   "outputs": [
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "2022-10-24_13:31:53,133 INFO     [__init__.py:43] Switched to cflike\n"
-     ]
-    }
-   ],
+   "outputs": [],
    "source": [
     "with h5tbx.H5File() as h5:\n",
     "    h5.create_dataset('zenith angle 1', shape=(3,), units='K', standard_name='zenith_angle')\n",
@@ -732,8 +724,8 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "2022-10-24_13:31:53,181 ERROR    [standard_name.py:645]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"deg\"\n",
-      "2022-10-24_13:31:53,181 ERROR    [standard_name.py:645]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"deg\"\n"
+      "2023-03-01_14:28:33,859 ERROR    [standard_name.py:666]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"degree\"\n",
+      "2023-03-01_14:28:33,859 ERROR    [standard_name.py:666]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"degree\"\n"
      ]
     }
    ],
@@ -769,16 +761,16 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      " > Checking file \"C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp176\\tmp2.hdf\" with standard name table \"standard_name_table-v79\"\n"
+      " > Checking file \"C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp1227\\tmp2.hdf\" with standard name table \"standard_name_table-v79\"\n"
      ]
     },
     {
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "2022-10-24_13:32:09,138 INFO     [__init__.py:43] Switched to cflike\n",
-      "2022-10-24_13:32:10,175 ERROR    [standard_name.py:645]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"deg\"\n",
-      "2022-10-24_13:32:10,175 ERROR    [standard_name.py:645]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"deg\"\n"
+      "2023-03-01_14:28:41,7 DEBUG    [__init__.py:35] changed logger level for h5rdmtoolbox from 20 to DEBUG\n",
+      "2023-03-01_14:28:49,130 ERROR    [standard_name.py:666]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"degree\"\n",
+      "2023-03-01_14:28:49,130 ERROR    [standard_name.py:666]  > ds: /zenith angle 1: Unit of standard name \"zenith_angle\" not as expected: \"K\" != \"degree\"\n"
      ]
     }
    ],
@@ -811,7 +803,7 @@
    "name": "python",
    "nbconvert_exporter": "python",
    "pygments_lexer": "ipython3",
-   "version": "3.8.13"
+   "version": "3.8.15"
   }
  },
  "nbformat": 4,

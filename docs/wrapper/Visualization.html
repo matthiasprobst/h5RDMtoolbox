@@ -1,16 +1,14 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
     <title>Visualization &#8212; h5RDMtoolbox  documentation</title>
     
-  <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+  <link rel="stylesheet" href="../_static/css/index.f658d18f9b420779cfdf24aa0a7e2d77.css">
 
     
   <link rel="stylesheet"
@@ -20,89 +18,71 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin
     href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
 
+    
+      
+  <link rel="stylesheet"
+    href="../_static/vendor/open-sans_all/1.44.1/index.css">
+  <link rel="stylesheet"
+    href="../_static/vendor/lato_latin-ext/1.44.1/index.css">
+
+    
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
-    <link rel="stylesheet" href="../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-book-theme.40e2e510f6b7d1648584402491bb10fe.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
     
-  <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+  <link rel="preload" as="script" href="../_static/js/index.d3f166471bb80abb5163.js">
 
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script src="../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/clipboard.min.js"></script>
     <script src="../_static/copybutton.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/sphinx-book-theme.d31b09fe5c1d09cb49b26a786de4a05d.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Extensions" href="Extensions.html" />
     <link rel="prev" title="Special I/O" href="SpecialIO.html" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="None">
-    
+    <meta name="docsearch:language" content="en" />
 
-    <!-- Google Analytics -->
-    
+
+
   </head>
-  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
-<!-- Checkboxes to toggle the left sidebar -->
-<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
-<label class="overlay overlay-navbar" for="__navigation">
-    <div class="visually-hidden">Toggle navigation sidebar</div>
-</label>
-<!-- Checkboxes to toggle the in-page toc -->
-<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
-<label class="overlay overlay-pagetoc" for="__page-toc">
-    <div class="visually-hidden">Toggle in-page Table of Contents</div>
-</label>
-<!-- Headers at the top -->
-<div class="announcement header-item noprint"></div>
-<div class="header header-item noprint"></div>
-
-    
-    <div class="container-fluid" id="banner"></div>
-
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
     
 
     <div class="container-xl">
       <div class="row">
           
-<!-- Sidebar -->
-<div class="bd-sidebar noprint" id="site-navigation">
-    <div class="bd-sidebar__content">
-        <div class="bd-sidebar__top"><div class="navbar-brand-box">
-    <a class="navbar-brand text-wrap" href="../index.html">
-      
-      
-      
-      <h1 class="site-logo" id="site-title">h5RDMtoolbox  documentation</h1>
-      
-    </a>
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        <div class="navbar-brand-box">
+<a class="navbar-brand text-wrap" href="../index.html">
+  
+  
+  <h1 class="site-logo" id="site-title">h5RDMtoolbox  documentation</h1>
+  
+</a>
 </div><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
   <i class="icon fas fa-search"></i>
   <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
-</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
-    <div class="bd-toc-item active">
-        <p aria-level="2" class="caption" role="heading">
+</form>
+<nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+    <p class="caption collapsible-parent" role="heading">
  <span class="caption-text">
   Documentation
  </span>
 </p>
-<ul class="current nav bd-sidenav">
- <li class="toctree-l1 has-children">
+<ul class="current nav sidenav_l1">
+ <li class="toctree-l1 collapsible-parent">
   <a class="reference internal" href="../gettingstarted/index.html">
    Getting Started
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
-  <label for="toctree-checkbox-1">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
+  <ul class="collapse-ul">
    <li class="toctree-l2">
     <a class="reference internal" href="../gettingstarted/motivation.html">
      Motivation
@@ -119,17 +99,14 @@
     </a>
    </li>
   </ul>
+  <i class="fas fa-chevron-down">
+  </i>
  </li>
- <li class="toctree-l1 current active has-children">
+ <li class="toctree-l1 current active collapsible-parent">
   <a class="reference internal" href="index.html">
    HDF5-Wrapper
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul class="current">
+  <ul class="current collapse-ul">
    <li class="toctree-l2">
     <a class="reference internal" href="CreateFile.html">
      Create an HDF file
@@ -148,6 +125,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="GroupCreation.html">
      Group creation
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="GroupCreation.html#Group-exploration">
+     Group exploration
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="GroupCreation.html#Meta-convention:-Static-layouts:">
+     Meta convention: Static layouts:
     </a>
    </li>
    <li class="toctree-l2">
@@ -175,38 +162,37 @@
      Extensions
     </a>
    </li>
-   <li class="toctree-l2 has-children">
+   <li class="toctree-l2 collapsible-parent">
     <a class="reference internal" href="wrapper_and_conventions/index.html">
      Wrapper &amp; Conventions
     </a>
-    <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-    <label for="toctree-checkbox-3">
-     <i class="fas fa-chevron-down">
-     </i>
-    </label>
-    <ul>
+    <ul class="collapse-ul">
      <li class="toctree-l3">
       <a class="reference internal" href="wrapper_and_conventions/cflike.html">
        CF-like
       </a>
      </li>
     </ul>
+    <i class="fas fa-chevron-down">
+    </i>
    </li>
   </ul>
+  <i class="fas fa-chevron-down">
+  </i>
  </li>
- <li class="toctree-l1 has-children">
+ <li class="toctree-l1 collapsible-parent">
   <a class="reference internal" href="../database/index.html">
    HDF5-Database
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
-  <label for="toctree-checkbox-4">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
+  <ul class="collapse-ul">
    <li class="toctree-l2">
     <a class="reference internal" href="../database/Serverless.html">
      Serverless HDF Database
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../database/Serverless.html#Filtering-a-single-file-with-pymongo-syntax">
+     Filtering a single file with pymongo-syntax
     </a>
    </li>
    <li class="toctree-l2">
@@ -215,17 +201,14 @@
     </a>
    </li>
   </ul>
+  <i class="fas fa-chevron-down">
+  </i>
  </li>
- <li class="toctree-l1 has-children">
+ <li class="toctree-l1 collapsible-parent">
   <a class="reference internal" href="../conventions/index.html">
    Conventions
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
-  <label for="toctree-checkbox-5">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
+  <ul class="collapse-ul">
    <li class="toctree-l2">
     <a class="reference internal" href="../conventions/conventions.html">
      Standard Name Convention
@@ -237,6 +220,8 @@
     </a>
    </li>
   </ul>
+  <i class="fas fa-chevron-down">
+  </i>
  </li>
  <li class="toctree-l1">
   <a class="reference internal" href="../howto/howto.html">
@@ -254,27 +239,23 @@
   </a>
  </li>
 </ul>
-<p aria-level="2" class="caption" role="heading">
+<p class="caption collapsible-parent" role="heading">
  <span class="caption-text">
   Repository
  </span>
 </p>
-<ul class="nav bd-sidenav">
+<ul class="nav sidenav_l1">
  <li class="toctree-l1">
   <a class="reference external" href="https://github.com/matthiasprobst/h5RDMtoolbox">
    GitHub Repository
+   <i class="fas fa-external-link-alt">
+   </i>
   </a>
  </li>
 </ul>
 
-    </div>
-</nav></div>
-        <div class="bd-sidebar__bottom">
-             <!-- To handle the deprecated key -->
-            
-        </div>
-    </div>
-    <div id="rtd-footer-container"></div>
+</nav> <!-- To handle the deprecated key -->
+
 </div>
 
 
@@ -282,162 +263,91 @@
 
 
           
-<!-- A tiny helper pixel to detect if we've scrolled -->
-<div class="sbt-scroll-pixel-helper"></div>
-<!-- Main content -->
-<div class="col py-0 content-container">
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
     
-    <div class="header-article row sticky-top noprint">
-        
-
-
-
-<div class="col py-1 d-flex header-article-main">
-    <div class="header-article__left">
-        
-        <label for="__navigation"
-  class="headerbtn"
-  data-toggle="tooltip"
-data-placement="right"
-title="Toggle navigation"
->
-  
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-bars"></i>
-  </span>
-
-</label>
-
-        
+    <div class="row topbar fixed-top container-xl">
+    <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show">
     </div>
-    <div class="header-article__right">
-<button onclick="toggleFullScreen()"
-  class="headerbtn"
-  data-toggle="tooltip"
-data-placement="bottom"
-title="Fullscreen mode"
->
-  
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-expand"></i>
-  </span>
-
-</button>
-
-<div class="menu-dropdown menu-dropdown-repository-buttons">
-  <button class="headerbtn menu-dropdown__trigger"
-      aria-label="Source repositories">
-      <i class="fab fa-github"></i>
-  </button>
-  <div class="menu-dropdown__content">
-    <ul>
-      <li>
-        <a href="https://github.com/matthiasprobst/h5RDMtoolbox"
-   class="headerbtn"
-   data-toggle="tooltip"
-data-placement="left"
-title="Source repository"
->
-  
-
-<span class="headerbtn__icon-container">
-  <i class="fab fa-github"></i>
-  </span>
-<span class="headerbtn__text-container">repository</span>
-</a>
-
-      </li>
-      
-      <li>
-        <a href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fwrapper/Visualization.html&body=Your%20issue%20content%20here."
-   class="headerbtn"
-   data-toggle="tooltip"
-data-placement="left"
-title="Open an issue"
->
-  
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-lightbulb"></i>
-  </span>
-<span class="headerbtn__text-container">open issue</span>
-</a>
-
-      </li>
-      
-    </ul>
-  </div>
-</div>
-
-<div class="menu-dropdown menu-dropdown-download-buttons">
-  <button class="headerbtn menu-dropdown__trigger"
-      aria-label="Download this page">
-      <i class="fas fa-download"></i>
-  </button>
-  <div class="menu-dropdown__content">
-    <ul>
-      <li>
-        <a href="../_sources/wrapper/Visualization.ipynb.txt"
-   class="headerbtn"
-   data-toggle="tooltip"
-data-placement="left"
-title="Download source file"
->
-  
-
-<span class="headerbtn__icon-container">
-  <i class="fas fa-file"></i>
-  </span>
-<span class="headerbtn__text-container">.ipynb</span>
-</a>
-
-      </li>
-      
-      <li>
+    <div class="col pl-2 topbar-main">
         
-<button onclick="printPdf(this)"
-  class="headerbtn"
-  data-toggle="tooltip"
-data-placement="left"
-title="Print to PDF"
->
-  
+        <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+            data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+            aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+            title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+            <i class="fas fa-bars"></i>
+            <i class="fas fa-arrow-left"></i>
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        
+        
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
 
-<span class="headerbtn__icon-container">
-  <i class="fas fa-file-pdf"></i>
-  </span>
-<span class="headerbtn__text-container">.pdf</span>
-</button>
-
-      </li>
-      
-    </ul>
-  </div>
-</div>
-
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../_sources/wrapper/Visualization.ipynb.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.ipynb</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
     </div>
 </div>
 
-<!-- Table of contents -->
-<div class="col-md-3 bd-toc show noprint">
-</div>
+        <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/matthiasprobst/h5RDMtoolbox"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        <a class="issues-button"
+            href="https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Fwrapper/Visualization.html&body=Your%20issue%20content%20here."><button
+                type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip" data-placement="left"
+                title="Open an issue"><i class="fas fa-lightbulb"></i>open issue</button></a>
+        
     </div>
-    <div class="article row">
-        <div class="col pl-md-3 pl-lg-5 content-container">
-            <!-- Table of contents that is only displayed when printing the page -->
-            <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Visualization</h1>
-                <!-- Table of contents -->
-                <div id="print-main-content">
-                    <div id="jb-print-toc">
-                        
-                    </div>
-                </div>
-            </div>
-            <main id="main-content" role="main">
-                
+</div>
+
+
+        <!-- Full screen (wrap in <a> to have style consistency -->
+        <a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+                data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+                title="Fullscreen mode"><i
+                    class="fas fa-expand"></i></button></a>
+
+        <!-- Launch buttons -->
+
+    </div>
+
+    <!-- Table of contents -->
+    <div class="d-none d-md-block col-md-2 bd-toc show">
+        
+        <div class="tocsection onthispage pt-5 pb-3">
+            <i class="fas fa-list"></i> Contents
+        </div>
+        <nav id="bd-toc-nav">
+            <ul class="nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Using-ipyvolume">
+   Using ipyvolume
+  </a>
+ </li>
+</ul>
+
+        </nav>
+        
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
               <div>
                 
   
@@ -698,8 +608,9 @@ div.rendered_html tbody tr:hover {
 }
 </style>
 <section id="Visualization">
-<h1>Visualization<a class="headerlink" href="#Visualization" title="Permalink to this headline">#</a></h1>
+<h1>Visualization<a class="headerlink" href="#Visualization" title="Permalink to this heading">¶</a></h1>
 <p>As the return value of a sliced dataset is a <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> instead of a <code class="docutils literal notranslate"><span class="pre">numpy.ndarray</span></code> plotting features of <code class="docutils literal notranslate"><span class="pre">xarray</span></code> is used. For more information about <code class="docutils literal notranslate"><span class="pre">xarray</span></code> see <a class="reference external" href="https://docs.xarray.dev/en/stable/">https://docs.xarray.dev/en/stable/</a></p>
+<p>A a more experimental level, some HDF5 datasets or multiple HDF5 datasets as a tuple can be nicely 3D-rendered by the <code class="docutils literal notranslate"><span class="pre">ipyvolume</span></code> package, see <a class="reference external" href="#Using-ipyvolume">here</a></p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -712,14 +623,303 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">dsx</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;mm&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">),</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">dsy</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;mm&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">),</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">dsz</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;mm&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;z&#39;</span><span class="p">),</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;velocity&#39;</span><span class="p">),</span> <span class="n">attach_scales</span><span class="o">=</span><span class="p">(</span><span class="n">dsy</span><span class="p">,</span> <span class="n">dsx</span><span class="p">))</span>
 
+    <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span><span class="p">,</span> <span class="n">zz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">dsy</span><span class="o">.</span><span class="n">values</span><span class="p">[:],</span> <span class="n">dsz</span><span class="o">.</span><span class="n">values</span><span class="p">[:],</span> <span class="n">dsx</span><span class="o">.</span><span class="n">values</span><span class="p">[:])</span>
+
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">xx</span><span class="p">),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">),</span> <span class="n">attach_scales</span><span class="o">=</span><span class="p">(</span><span class="n">dsz</span><span class="p">,</span> <span class="n">dsy</span><span class="p">,</span> <span class="n">dsx</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;v&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">yy</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;y_velocity&#39;</span><span class="p">),</span> <span class="n">attach_scales</span><span class="o">=</span><span class="p">(</span><span class="n">dsz</span><span class="p">,</span> <span class="n">dsy</span><span class="p">,</span> <span class="n">dsx</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;z_velocity&#39;</span><span class="p">),</span> <span class="n">attach_scales</span><span class="o">=</span><span class="p">(</span><span class="n">dsz</span><span class="p">,</span> <span class="n">dsy</span><span class="p">,</span> <span class="n">dsx</span><span class="p">))</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<head><style>/*
+CSS inspired by xarray: https://github.com/pydata/xarray
+*/
+.h5tb-header > div,
+.h5tb-header > ul {
+    display: inline;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.h5tb-dataarray-cls,
+.h5tb-dataarray-name {
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+.h5tb-dataarray-name {
+    color: #000;
+}
+
+.h5grp-sections {
+    list-style: none;
+    padding: 3px;
+    margin: 0;
+}
+
+.h5grp-sections input {
+    display: none;
+}
+
+.h5grp-sections label {
+    display: inline;
+}
+
+.h5grp-sections > li > input + label > span {
+    display: inline;
+    margin-left: 4px;
+}
+
+.h5grp-sections > li > input:checked + label > span {
+    display: none;
+}
+
+.h5grp-sections input:enabled + label {
+    cursor: pointer;
+}
+
+.h5grp-sections input:not(.h5tb-values-in) ~ ul {
+    display: none;
+}
+
+.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
+    display: block;
+}
+
+.h5grp-sections > li > input + label {
+    width: 140px;
+    color: #555;
+    font-weight: 500;
+    padding: 4px 0 2px 0;
+}
+
+
+.h5grp-sections > li > input + label:before {
+    display: inline-block;
+    content: '+';
+    font-size: 11px;
+    width: 15px;
+    text-align: center;
+}
+
+.h5grp-sections > li > input:disabled + label:before {
+    color: #777;
+}
+
+.h5grp-sections > li > input:checked + label:before {
+    content: '-';
+}
+
+.h5tb-dim-list {
+    display: inline-block !important;
+    list-style: none;
+    padding: 0;
+}
+
+.h5tb-dim-list li {
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-dim-list:before {
+    content: '(';
+}
+
+.h5tb-dim-list:after {
+    content: ')';
+}
+
+.h5tb-dim-list li:not(:last-child):after {
+    content: ',';
+}
+
+.h5tb-has-index {
+    text-decoration: underline;
+}
+
+.h5tb-var-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-var-list > li {
+    background-color: #fcfcfc;
+    overflow: hidden;
+}
+
+.h5tb-var-list > li:nth-child(odd) {
+    background-color: #efefef;
+}
+
+.h5tb-var-list li:hover {
+    background-color: rgba(3, 169, 244, .2);
+}
+
+.h5tb-var-list li > span {
+    display: inline-block;
+}
+
+input.h5tb-varname-in + label {
+    width: 140px;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+.h5tb-dataset {
+    width: 100px;
+}
+
+.h5tb-attributevalue {
+    width: 100px;
+    text-align: left;
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+input.h5tb-varname-in + label:before {
+    content: ' ';
+    display: inline-block;
+    font-size: 11px;
+    width: 15px;
+    padding-left: 2px;
+    padding-right: 2px;
+    text-align: center;
+    color: #aaa;
+    text-decoration: none !important;
+}
+
+input.h5tb-varname-in:enabled + label:hover:before {
+    color: #000;
+}
+
+input.h5tb-varname-in:checked + label:before {
+    color: #ccc;
+}
+
+.h5tb-dims {
+    width: 280px;
+    white-space: nowrap;
+}
+
+
+.h5tb-unit {
+    width: 96px;
+    white-space: nowrap;
+    padding-right: 2px;
+    text-align: right;
+    color: #555;
+    font-style: italic;
+}
+
+.h5tb-attr-list {
+    list-style: none;
+    background-color: #fff;
+    padding-bottom: 6px;
+    color: #555;
+}
+
+.h5tb-attr-list li,
+.h5tb-attr-list li:hover {
+    background-color: #fff;
+}
+
+.h5tb-dim-highlight {
+    background-color: rgba(3, 169, 244, .2);
+    cursor: pointer;
+}</style></head>
+<div class='h5tb-warp'>
+
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds--5487262500" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--5487262500">
+                        /<span>(7)</span></label>
+
+
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a3</li>
+                    </ul>
+
+                <ul id="ds-1-/data-5489508800" class="h5tb-var-list">
+                    <input id="ds-2-/data-5489511400" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/data-5489511400">data</label>
+                    <span class="h5tb-dims">(y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/u-5490053900" class="h5tb-var-list">
+                    <input id="ds-2-/u-5490056200" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/u-5490056200">u</label>
+                    <span class="h5tb-dims">(z: 4, y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : x_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/v-5490551800" class="h5tb-var-list">
+                    <input id="ds-2-/v-5490553900" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/v-5490553900">v</label>
+                    <span class="h5tb-dims">(z: 4, y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : y_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/w-5490995600" class="h5tb-var-list">
+                    <input id="ds-2-/w-5490997700" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/w-5490997700">w</label>
+                    <span class="h5tb-dims">(z: 4, y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : z_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/x-5491239900" class="h5tb-var-list">
+                    <input id="ds-2-/x-5491242000" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/x-5491242000">x</label>
+                    <span class="h5tb-dims">(20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : x</li><li style="list-style-type: none; font-style: italic">units : mm</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/y-5491596000" class="h5tb-var-list">
+                    <input id="ds-2-/y-5491598100" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/y-5491598100">y</label>
+                    <span class="h5tb-dims">(10) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : y</li><li style="list-style-type: none; font-style: italic">units : mm</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/z-5491895400" class="h5tb-var-list">
+                    <input id="ds-2-/z-5491897300" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/z-5491897300">z</label>
+                    <span class="h5tb-dims">(4) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : z</li><li style="list-style-type: none; font-style: italic">units : mm</li>
+                </ul>
+                </ul>
+</li>
+</ul>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="c1"># some plotting</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
     <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
@@ -729,11 +929,6 @@ div.rendered_html tbody tr:hover {
     <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">contourf</span><span class="p">()</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-
-    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
-    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">hist</span><span class="p">()</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -741,17 +936,17 @@ div.rendered_html tbody tr:hover {
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/wrapper_Visualization_2_0.png" src="../_images/wrapper_Visualization_2_0.png" />
+<img alt="../_images/wrapper_Visualization_3_0.png" src="../_images/wrapper_Visualization_3_0.png" />
 </div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/wrapper_Visualization_2_1.png" src="../_images/wrapper_Visualization_2_1.png" />
+<img alt="../_images/wrapper_Visualization_3_1.png" src="../_images/wrapper_Visualization_3_1.png" />
 </div>
 </div>
-<div class="nboutput docutils container">
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
@@ -759,19 +954,389 @@ div.rendered_html tbody tr:hover {
 &lt;Figure size 640x480 with 0 Axes&gt;
 </pre></div></div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
 </div>
-<div class="output_area docutils container">
-<img alt="../_images/wrapper_Visualization_2_3.png" src="../_images/wrapper_Visualization_2_3.png" />
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">hist</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/wrapper_Visualization_2_4.png" src="../_images/wrapper_Visualization_2_4.png" />
+<img alt="../_images/wrapper_Visualization_4_0.png" src="../_images/wrapper_Visualization_4_0.png" />
 </div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># d.plot.line(marker=&#39;o&#39;)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<head><style>/*
+CSS inspired by xarray: https://github.com/pydata/xarray
+*/
+.h5tb-header > div,
+.h5tb-header > ul {
+    display: inline;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.h5tb-dataarray-cls,
+.h5tb-dataarray-name {
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+.h5tb-dataarray-name {
+    color: #000;
+}
+
+.h5grp-sections {
+    list-style: none;
+    padding: 3px;
+    margin: 0;
+}
+
+.h5grp-sections input {
+    display: none;
+}
+
+.h5grp-sections label {
+    display: inline;
+}
+
+.h5grp-sections > li > input + label > span {
+    display: inline;
+    margin-left: 4px;
+}
+
+.h5grp-sections > li > input:checked + label > span {
+    display: none;
+}
+
+.h5grp-sections input:enabled + label {
+    cursor: pointer;
+}
+
+.h5grp-sections input:not(.h5tb-values-in) ~ ul {
+    display: none;
+}
+
+.h5grp-sections input:not(.h5tb-values-in):checked ~ ul {
+    display: block;
+}
+
+.h5grp-sections > li > input + label {
+    width: 140px;
+    color: #555;
+    font-weight: 500;
+    padding: 4px 0 2px 0;
+}
+
+
+.h5grp-sections > li > input + label:before {
+    display: inline-block;
+    content: '+';
+    font-size: 11px;
+    width: 15px;
+    text-align: center;
+}
+
+.h5grp-sections > li > input:disabled + label:before {
+    color: #777;
+}
+
+.h5grp-sections > li > input:checked + label:before {
+    content: '-';
+}
+
+.h5tb-dim-list {
+    display: inline-block !important;
+    list-style: none;
+    padding: 0;
+}
+
+.h5tb-dim-list li {
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-dim-list:before {
+    content: '(';
+}
+
+.h5tb-dim-list:after {
+    content: ')';
+}
+
+.h5tb-dim-list li:not(:last-child):after {
+    content: ',';
+}
+
+.h5tb-has-index {
+    text-decoration: underline;
+}
+
+.h5tb-var-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.h5tb-var-list > li {
+    background-color: #fcfcfc;
+    overflow: hidden;
+}
+
+.h5tb-var-list > li:nth-child(odd) {
+    background-color: #efefef;
+}
+
+.h5tb-var-list li:hover {
+    background-color: rgba(3, 169, 244, .2);
+}
+
+.h5tb-var-list li > span {
+    display: inline-block;
+}
+
+input.h5tb-varname-in + label {
+    width: 140px;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+.h5tb-dataset {
+    width: 100px;
+}
+
+.h5tb-attributevalue {
+    width: 100px;
+    text-align: left;
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+input.h5tb-varname-in + label:before {
+    content: ' ';
+    display: inline-block;
+    font-size: 11px;
+    width: 15px;
+    padding-left: 2px;
+    padding-right: 2px;
+    text-align: center;
+    color: #aaa;
+    text-decoration: none !important;
+}
+
+input.h5tb-varname-in:enabled + label:hover:before {
+    color: #000;
+}
+
+input.h5tb-varname-in:checked + label:before {
+    color: #ccc;
+}
+
+.h5tb-dims {
+    width: 280px;
+    white-space: nowrap;
+}
+
+
+.h5tb-unit {
+    width: 96px;
+    white-space: nowrap;
+    padding-right: 2px;
+    text-align: right;
+    color: #555;
+    font-style: italic;
+}
+
+.h5tb-attr-list {
+    list-style: none;
+    background-color: #fff;
+    padding-bottom: 6px;
+    color: #555;
+}
+
+.h5tb-attr-list li,
+.h5tb-attr-list li:hover {
+    background-color: #fff;
+}
+
+.h5tb-dim-highlight {
+    background-color: rgba(3, 169, 244, .2);
+    cursor: pointer;
+}</style></head>
+<div class='h5tb-warp'>
+
+              <ul style="list-style-type: none;" class="h5grp-sections">
+                    <li>
+                        <input id="group-ds--5906272500" type="checkbox" checked>
+                        <label style="font-weight: bold" for="group-ds--5906272500">
+                        /<span>(7)</span></label>
+
+
+                    <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">__h5rdmtoolbox_version__ : 0.3.0a3</li>
+                    </ul>
+
+                <ul id="ds-1-/data-5908133300" class="h5tb-var-list">
+                    <input id="ds-2-/data-5908135700" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/data-5908135700">data</label>
+                    <span class="h5tb-dims">(y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/u-5908665000" class="h5tb-var-list">
+                    <input id="ds-2-/u-5908667300" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/u-5908667300">u</label>
+                    <span class="h5tb-dims">(z: 4, y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : x_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/v-5909139900" class="h5tb-var-list">
+                    <input id="ds-2-/v-5909142000" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/v-5909142000">v</label>
+                    <span class="h5tb-dims">(z: 4, y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : y_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/w-5909684600" class="h5tb-var-list">
+                    <input id="ds-2-/w-5909687100" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/w-5909687100">w</label>
+                    <span class="h5tb-dims">(z: 4, y: 10, x: 20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : z_velocity</li><li style="list-style-type: none; font-style: italic">units : m/s</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/x-5909941800" class="h5tb-var-list">
+                    <input id="ds-2-/x-5909943900" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/x-5909943900">x</label>
+                    <span class="h5tb-dims">(20) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : x</li><li style="list-style-type: none; font-style: italic">units : mm</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/y-5910363800" class="h5tb-var-list">
+                    <input id="ds-2-/y-5910366000" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/y-5910366000">y</label>
+                    <span class="h5tb-dims">(10) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : y</li><li style="list-style-type: none; font-style: italic">units : mm</li>
+                </ul>
+                </ul>
+
+                <ul id="ds-1-/z-5910873900" class="h5tb-var-list">
+                    <input id="ds-2-/z-5910876400" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="ds-2-/z-5910876400">z</label>
+                    <span class="h5tb-dims">(4) [float64]</span>
+                <ul class="h5tb-attr-list"><li style="list-style-type: none; font-style: italic">long_name : z</li><li style="list-style-type: none; font-style: italic">units : mm</li>
+                </ul>
+                </ul>
+</li>
+</ul>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.wrapper</span> <span class="kn">import</span> <span class="n">accessory</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">u</span><span class="o">=</span><span class="n">h5</span><span class="o">.</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">h5</span><span class="o">.</span><span class="n">v</span><span class="p">)</span>
+    <span class="n">ds</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">quiver</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">u</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="s1">&#39;v&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/wrapper_Visualization_6_0.png" src="../_images/wrapper_Visualization_6_0.png" />
+</div>
+</div>
+<section id="Using-ipyvolume">
+<h2>Using ipyvolume<a class="headerlink" href="#Using-ipyvolume" title="Permalink to this heading">¶</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">h5rdmtoolbox.xr.accessors</span> <span class="kn">import</span> <span class="n">ipyvolume</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">vec</span> <span class="o">=</span>  <span class="n">h5</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">u</span><span class="o">=</span><span class="n">h5</span><span class="o">.</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">h5</span><span class="o">.</span><span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="n">h5</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">ipv_quiver</span> <span class="o">=</span> <span class="n">vec</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">ipyvolume</span><span class="o">.</span><span class="n">quiver</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span><span class="n">z</span><span class="o">=</span><span class="s1">&#39;z&#39;</span><span class="p">,</span>
+                                              <span class="n">u</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span><span class="n">v</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span><span class="n">w</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">)</span>
+    <span class="n">ipv_quiver</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="mi">40</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">)</span>
+    <span class="n">ipv_quiver</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\h5rdmtoolbox\xr\accessors\ipyvolume.py:121: UserWarning: The ipyvolume accessor is highly experimental at this stage!
+  warnings.warn(&#39;The ipyvolume accessor is highly experimental at this stage!&#39;, UserWarning)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8e22fb92b4ca448ab24cdfcec3b7729c", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="n">ipv_surf</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">data</span><span class="p">[:]</span><span class="o">.</span><span class="n">ipyvolume</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+    <span class="n">ipv_surf</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="mi">40</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">)</span>
+    <span class="n">ipv_surf</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\h5rdmtoolbox\xr\accessors\ipyvolume.py:47: UserWarning: The ipyvolume accessor is highly experimental at this stage!
+  warnings.warn(&#39;The ipyvolume accessor is highly experimental at this stage!&#39;, UserWarning)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "17a26dc2de604767b53e15cd1e0ccbab", "version_major": 2, "version_minor": 0}</script></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
@@ -782,52 +1347,41 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 </section>
+</section>
 
 
               </div>
               
-            </main>
-            <footer class="footer-article noprint">
-                
-    <!-- Previous / next buttons -->
-<div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="SpecialIO.html" title="previous page">
-        <i class="fas fa-angle-left"></i>
-        <div class="prev-next-info">
-            <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Special I/O</p>
         </div>
-    </a>
-    <a class='right-next' id="next-link" href="Extensions.html" title="next page">
-    <div class="prev-next-info">
-        <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Extensions</p>
-    </div>
-    <i class="fas fa-angle-right"></i>
-    </a>
-</div>
-            </footer>
-        </div>
-    </div>
-    <div class="footer-content row">
-        <footer class="col footer"><p>
-  
-    By Matthias Probst<br/>
-  
-      &copy; Copyright 2022, Matthias Probst.<br/>
-</p>
-        </footer>
     </div>
     
-</div>
+    
+    <div class='prev-next-bottom'>
+        
+    <a class='left-prev' id="prev-link" href="SpecialIO.html" title="previous page">Special I/O</a>
+    <a class='right-next' id="next-link" href="Extensions.html" title="next page">Extensions</a>
+
+    </div>
+    <footer class="footer mt-5 mt-md-0">
+    <div class="container">
+      <p>
+        
+          By Matthias Probst<br/>
+        
+            &copy; Copyright 2022, Matthias Probst.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
 
 
       </div>
     </div>
-  
-  <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+    
+  <script src="../_static/js/index.d3f166471bb80abb5163.js"></script>
 
 
+    
   </body>
 </html>

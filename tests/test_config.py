@@ -46,7 +46,6 @@ class TestConfig(unittest.TestCase):
         # config.set_config_parameter('convention', 'default')
         config['default_convention'] = 'default'
         self.assertEqual(config['default_convention'], 'default')
-        self.assertEqual(config['default_convention'], 'default')
         h5tbx.use('default')
 
         with H5File(mode='w') as h5:

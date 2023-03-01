@@ -26,10 +26,11 @@ author = 'Matthias Probst'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx_book_theme',  # 'sphinx_rtd_theme',   'sphinx_rtd_theme'
+extensions = ['sphinx.ext.navigationtree',
               'sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'sphinx.ext.viewcode',
+              "sphinx.ext.extlinks",
               "IPython.sphinxext.ipython_directive",
               "IPython.sphinxext.ipython_console_highlighting",
               "sphinx_copybutton",
@@ -53,7 +54,7 @@ autodoc_member_order = 'bysource'
 # a list of builtin themes.
 #
 html_theme = 'sphinx_book_theme'  # 'sphinx_rtd_theme'
-tml_context = {
+html_context = {
     "github_user": "matthiasprobst",
     "github_repo": "h5RDMtoolbox",
     "github_version": "main",

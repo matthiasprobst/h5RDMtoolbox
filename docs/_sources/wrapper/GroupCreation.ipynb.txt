@@ -15,7 +15,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 1,
    "id": "859f96b2-c712-418a-9104-b94bc3a7799d",
    "metadata": {
     "tags": []
@@ -29,7 +29,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 2,
    "id": "e05731c2-b266-4139-9bf7-4fe5d3354035",
    "metadata": {
     "tags": []
@@ -43,7 +43,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 3,
    "id": "f13b927e-361f-46e8-aeea-e9a0c1505371",
    "metadata": {},
    "outputs": [],
@@ -67,10 +67,18 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 4,
    "id": "ac44590c-f3e8-4913-bcf3-73f9cee6ba5e",
    "metadata": {},
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[<HDF5 wrapper group \"/mygrp\" (members: 0, convention: \"default\")>]\n"
+     ]
+    }
+   ],
    "source": [
     "with h5tbx.H5File(h5.hdf_filename) as h5:\n",
     "    print(h5.get_groups())"
@@ -86,10 +94,18 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 5,
    "id": "b9edd387-e3a2-49b9-b51d-cf1da347c803",
    "metadata": {},
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[<HDF5 wrapper group \"/mygrp\" (members: 0, convention: \"default\")>]\n"
+     ]
+    }
+   ],
    "source": [
     "with h5tbx.H5File(h5.hdf_filename) as h5:\n",
     "    print(h5.find({'$name': {'$regex': '.*'}}, rec=False))"
@@ -114,12 +130,20 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 6,
    "id": "48caad4c-a49c-4907-a433-260ba4472fb5",
    "metadata": {
     "tags": []
    },
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0\n"
+     ]
+    }
+   ],
    "source": [
     "import h5py\n",
     "with h5py.File(h5tbx.generate_temporary_filename(suffix='.hdf'), 'w') as h5:\n",
@@ -133,10 +157,19 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 7,
    "id": "3a84fae2-9413-4afc-aa13-ee5ecc37531f",
    "metadata": {},
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[3ma: __h5rdmtoolbox_version__\u001b[0m: __version of this package\n",
+      "\u001b[3ma: title\u001b[0m: __file title\n"
+     ]
+    }
+   ],
    "source": [
     "with h5tbx.H5File(test_filename) as h5:\n",
     "    h5.layout.sdump()"
@@ -167,7 +200,7 @@
    "name": "python",
    "nbconvert_exporter": "python",
    "pygments_lexer": "ipython3",
-   "version": "3.8.13"
+   "version": "3.8.15"
   }
  },
  "nbformat": 4,

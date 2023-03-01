@@ -14,7 +14,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 1,
    "id": "97f1f3a5-5f93-4e1b-b7a4-e3d9b296dd00",
    "metadata": {
     "tags": []
@@ -34,32 +34,30 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 6,
    "id": "44fc86eb-608d-4254-873d-6d4dabd74997",
    "metadata": {},
    "outputs": [],
    "source": [
-    "h5tbx.CONFIG.NATURAL_NAMING = True"
+    "h5tbx.config.natural_naming = True"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": null,
-   "id": "7744ba20-d902-4205-90ee-541832394f2e",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "h5tbx.CONFIG.CONVENTION = 'default'"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 7,
    "id": "c5b94c36-c5c2-4c09-b5a8-a4a45ccd401e",
    "metadata": {
     "tags": []
    },
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<HDF5 dataset \"test\": shape (3,), type \"<f4\", convention \"default\">\n"
+     ]
+    }
+   ],
    "source": [
     "with h5tbx.H5File() as h5:\n",
     "    ds = h5.create_dataset('test', shape=(3,))\n",
@@ -76,20 +74,28 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 8,
    "id": "b2d56e3a-78d8-4149-94dc-1377a0bd0cd6",
    "metadata": {},
    "outputs": [],
    "source": [
-    "h5tbx.CONFIG.NATURAL_NAMING = False"
+    "h5tbx.config.natural_naming = False"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 9,
    "id": "8e030d3d-b0f7-4cb6-b473-d337724953ef",
    "metadata": {},
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "'H5File' object has no attribute 'test'\n"
+     ]
+    }
+   ],
    "source": [
     "with h5tbx.H5File() as h5:\n",
     "    ds = h5.create_dataset('test', shape=(3,))\n",
@@ -124,7 +130,7 @@
    "name": "python",
    "nbconvert_exporter": "python",
    "pygments_lexer": "ipython3",
-   "version": "3.8.13"
+   "version": "3.8.15"
   }
  },
  "nbformat": 4,
