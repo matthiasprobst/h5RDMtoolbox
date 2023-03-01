@@ -16,3 +16,8 @@ class TestTranslation(unittest.TestCase):
         data, meta = xmlsnt2dict(xml_filename=xml_filename)
         self.assertEqual(meta['name'], piv_snt.name, )
         self.assertEqual(meta['versionname'], piv_snt.versionname)
+
+        html_filename = utils.xml_to_html_table_view(xml_filename=xml_filename,
+                                                     html_filename=generate_temporary_filename(suffix='.html'))
+        self.assertTrue(html_filename.exists())
+        self.assertTrue(html_filename.stat().st_size > 0)

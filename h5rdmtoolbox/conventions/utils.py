@@ -1,3 +1,4 @@
+"""utilities of package conventions"""
 import pathlib
 import re
 import xml.etree.ElementTree as ET
@@ -5,7 +6,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, Union
 
-from ..config import ureg
+from .._config import ureg
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
 
@@ -57,17 +58,25 @@ def dict2xml(filename: Union[str, pathlib.Path], name: str, dictionary: Dict, **
     return Path(filename)
 
 
-def xml_to_html_table_view(xml_filename, html_filename=None):
+def xml_to_html_table_view(xml_filename: Union[str, pathlib.Path],
+                           html_filename: Union[str, pathlib.Path]) -> pathlib.Path:
     """creates a table view of standard xml file"""
     xml_filename = Path(xml_filename)
-    if html_filename is None:
-        html_filename = xml_filename.parent / f'{xml_filename.stem}.html'
-    with open(STANDARD_NAME_TABLE_FORMAT_FILE, 'r') as f:
+    if not xml_filename.exists():
+        raise FileNotFoundError(f'File {xml_filename} does not exist')
+    html_filename = Path(html_filename)
+    if html_filename.exists():
+        raise FileExistsError(f'File {html_filename} already exists')
+
+    # read the xml file:
+    with open(xml_filename, 'r') as f:
         lines = f.readlines()
 
     for i, line in enumerate(lines):
         if '{filename}' in line:
-            lines[i] = line.format(filename='fluid-standard-name-table.xml')
+            lines[i] = line.format(filename=str(xml_filename))
 
     with open(html_filename, 'w') as f:
         f.writelines(lines)
+
+    return html_filename

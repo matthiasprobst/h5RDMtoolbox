@@ -1,13 +1,15 @@
+import ast
 import h5py
 import json
-import pint.util
+import pint
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
-from pathlib import Path
 from typing import Dict
 
 from .h5utils import get_rootparent
 from .. import config
+from .. import utils
+from .._config import ureg
 from ..conventions.registration import REGISTRATED_ATTRIBUTE_NAMES
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
@@ -34,7 +36,7 @@ class AttributeString(str):
 
     def to_pint(self) -> "pint.util.Quantity":
         """Returns a pint.Quantity object"""
-        return config.ureg(self)
+        return ureg(self)
 
 
 class WrapperAttributeManager(h5py.AttributeManager):
@@ -57,51 +59,50 @@ class WrapperAttributeManager(h5py.AttributeManager):
         #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         if isinstance(ret, str):
-            if ret:  # not really needed, is it?
-                if ret[0] == '{':
-                    dictionary = json.loads(ret)
-                    for k, v in dictionary.items():
-                        if isinstance(v, str):
-                            if not v:
-                                dictionary[k] = ''
-                            else:
-                                if v[0] == '/':
-                                    if isinstance(self._id, h5py.h5g.GroupID):
-                                        rootgrp = get_rootparent(h5py.Group(self._id))
-                                        dictionary[k] = rootgrp.get(v)
-                                    elif isinstance(self._id, h5py.h5d.DatasetID):
-                                        rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                                        dictionary[k] = rootgrp.get(v)
-                    return dictionary
-                elif ret[0] == '/':
-                    # it may be group or dataset path or actually just a filepath stored by the user
-                    if isinstance(self._id, h5py.h5g.GroupID):
-                        # call like this, otherwise recursive call!
-                        rootgrp = get_rootparent(h5py.Group(self._id))
-                        if rootgrp.get(ret) is None:
-                            # not a dataset or group, maybe just a filename that has been stored
-                            return ret
-                        return rootgrp.get(ret).name
-                    else:
-                        rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                        return rootgrp.get(ret).name
-                elif ret[0] == '(':
-                    if ret[-1] == ')':
-                        return eval(ret)
-                    return ret
-                elif ret[0] == '[':
-                    if ret[-1] == ']':
-                        try:
-                            return eval(ret)
-                        except NameError:
-                            return ret
-                    return ret
-                else:
-                    return AttributeString(ret)
-            else:
+            if ret == '':
                 return ret
-        else:
-            return ret
+            if ret[0] == '{':
+                dictionary = json.loads(ret)
+                for k, v in dictionary.items():
+                    if isinstance(v, str):
+                        if not v:
+                            dictionary[k] = ''
+                        else:
+                            if v[0] == '/':
+                                if isinstance(self._id, h5py.h5g.GroupID):
+                                    rootgrp = get_rootparent(h5py.Group(self._id))
+                                    dictionary[k] = rootgrp.get(v)
+                                elif isinstance(self._id, h5py.h5d.DatasetID):
+                                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+                                    dictionary[k] = rootgrp.get(v)
+                return dictionary
+            if ret[0] == '/':
+                # it may be group or dataset path or actually just a filepath stored by the user
+                if isinstance(self._id, h5py.h5g.GroupID):
+                    # call like this, otherwise recursive call!
+                    rootgrp = get_rootparent(h5py.Group(self._id))
+                    if rootgrp.get(ret) is None:
+                        # not a dataset or group, maybe just a filename that has been stored
+                        return ret
+                    return rootgrp.get(ret).name
+                else:
+                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+                    return rootgrp.get(ret).name
+            if ret[0] == '(':
+                if ret[-1] == ')':
+                    # might be a tuple object
+                    return ast.literal_eval(ret)
+                return ret
+            if ret[0] == '[':
+                if ret[-1] == ']':
+                    # might be a list object
+                    try:
+                        return ast.literal_eval(ret)
+                    except (NameError, AttributeError):
+                        return ret
+                return ret
+            return AttributeString(ret)
+        return ret
 
     @with_phil
     def __setitem__(self, name, value):
@@ -120,27 +121,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if hasattr(self._parent, name):
                 setattr(self._parent, name, value)
                 return
-        if isinstance(value, dict):
-            # some value might be changed to a string first, like h5py objects
-            for k, v in value.items():
-                if isinstance(v, (h5py.Dataset, h5py.Group)):
-                    value[k] = v.name
-            _value = json.dumps(value)
-        elif isinstance(value, Path):
-            _value = str(value)
-        elif isinstance(value, (h5py.Dataset, h5py.Group)):
-            return self.create(name, data=value.name)
-        elif isinstance(value, pint.Quantity):
-            _value = str(value)
-        else:
-            _value = value
-        try:
-            self.create(name, data=_value)
-        except TypeError:
-            try:
-                self.create(name, data=str(_value))
-            except Exception as e2:
-                raise RuntimeError(f'Could not set attribute due to: {e2}')
+        utils.create_special_attribute(self, name, value)
 
     def __repr__(self):
         return super().__repr__()
@@ -157,7 +138,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return outstr[:-1]
 
     def __getattr__(self, item):
-        if config.CONFIG.NATURAL_NAMING:
+        if config.natural_naming:
             if item in self.__dict__:
                 return super().__getattribute__(item)
             if item in self.keys():

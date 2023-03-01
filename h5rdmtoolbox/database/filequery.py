@@ -281,7 +281,7 @@ class H5Objects:
     @property
     def names(self) -> List[str]:
         """Names of objects"""
-        return [obj for obj in self.h5objdict.keys()]
+        return list(self.h5objdict.keys())
 
     @property
     def basenames(self) -> List[str]:
@@ -345,7 +345,7 @@ class Files:
         a list of objects of that item is returned"""
         if isinstance(item, int):
             return self._opened_files[list(self.keys())[item]]
-        elif isinstance(item, (tuple, list)):
+        if isinstance(item, (tuple, list)):
             return [self._opened_files[list(self.keys())[i]] for i in item]
         return H5Objects({f'{key}/item': rgrp[item] for key, rgrp in zip(self.keys(), self.values()) if item in rgrp})
 

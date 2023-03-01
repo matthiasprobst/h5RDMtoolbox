@@ -32,8 +32,6 @@ def register_hdf_attr(cls: Union["H5Dataset", "H5Group"], overwrite=False, name:
     name: str, default=None
         Name to be used for the attribute. If None, cls.__name__ is used
     """
-    # if not isinstance(cls, (H5Dataset, H5Group)):
-    #     raise TypeError(f'Registration is only possible to H5dataset or H5Group but not {type(cls)}')
     return _register_hdf_attribute(cls, name=name, overwrite=overwrite)
 
 

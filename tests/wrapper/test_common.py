@@ -2,13 +2,14 @@
 
 import datetime
 import h5py
+import numpy as np
 import pathlib
 import unittest
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.config import ureg
+from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.wrapper import core, cflike
 from h5rdmtoolbox.wrapper.h5attr import WrapperAttributeManager
@@ -50,10 +51,88 @@ class TestCommon(unittest.TestCase):
                 grp = h5.create_group('testgrp')
                 self.assertIsInstance(grp, gc)
 
+    def test_create_img_dataset(self):
+        # Iterable class:
+        class ImgReader:
+            def __init__(self, imgdir):
+                self._imgdir = imgdir
+                self._index = 0
+                self._size = 5
+
+            def read_img(self):
+                return np.random.random((20, 10))
+
+            def __iter__(self):
+                return self
+
+            def __len__(self):
+                return self._size
+
+            def __next__(self):
+                if self._index < self._size:
+                    self._index += 1
+                    return self.read_img()
+                raise StopIteration
+
+        h5tbx.use('default')
+
+        imgreader = ImgReader('testdir')
+        with h5tbx.H5File() as h5:
+            ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0)
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+            # reset imgreader
+            imgreader._index = 0
+            ds = h5.create_dataset_from_image(imgreader, 'testimg2', axis=-1)
+            self.assertEqual(ds.shape, (20, 10, 5))
+            self.assertEqual(ds.chunks, (20, 10, 1))
+
+        # write more tests for create_dataset_from_image:
+        with h5tbx.H5File() as h5:
+            ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
+                                              'testimg', axis=0)
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+
+        imgreader._index = 0
+        h5tbx.use('cflike')
+        with h5tbx.H5File() as h5:
+            ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0,
+                                              units='', long_name='test')
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+            # reset imgreader
+            imgreader._index = 0
+            ds = h5.create_dataset_from_image(imgreader, 'testimg2', axis=-1,
+                                              units='', long_name='test')
+            self.assertEqual(ds.shape, (20, 10, 5))
+            self.assertEqual(ds.chunks, (20, 10, 1))
+
+        # write more tests for create_dataset_from_image:
+        with h5tbx.H5File() as h5:
+            ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
+                                              'testimg', axis=0, units='', long_name='test')
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+
     def test_attrs(self):
         for CLS, WRPGroup in zip(self.wrapper_classes, self.wrapper_group_classes):
             with CLS() as h5:
                 # root attributes
+                h5.attrs['a_tuple'] = (1, 2, 'awd', {'k': 'v', 'k2': 2})
+                t = h5.attrs['a_tuple']
+                self.assertIsInstance(t, tuple)
+                self.assertEqual(t, (1, 2, 'awd', {'k': 'v', 'k2': 2}))
+
+                h5.attrs['a_list'] = [1, 2, 'awd', {'k': 'v', 'k2': 2}]
+                t = h5.attrs['a_list']
+                self.assertIsInstance(t, list)
+                self.assertEqual(t, [1, 2, 'awd', {'k': 'v', 'k2': 2}])
+                h5.attrs.rename('a_list', 'a_new_list')
+                t = h5.attrs['a_new_list']
+                self.assertIsInstance(t, list)
+                self.assertEqual(t, [1, 2, 'awd', {'k': 'v', 'k2': 2}])
+
                 h5.attrs['an_attr'] = 'a_string'
                 self.assertEqual(h5.attrs['an_attr'], 'a_string')
                 h5.attrs['mean'] = 1.2
@@ -64,6 +143,12 @@ class TestCommon(unittest.TestCase):
                     h5.attrs['mean_with_unit'] = test_val
                     self.assertEqual(h5.attrs['mean_with_unit'], test_val)
                     attrs_with_unit = h5.attrs['mean_with_unit'].to_pint()
+                    self.assertEqual(f"{h5.attrs['mean_with_unit'].to_pint()}", '1.2 m')
+                    h5tbx.config.ureg_format = 'L~'
+                    self.assertEqual(f"{h5.attrs['mean_with_unit'].to_pint()}",
+                                     '\\begin{pmatrix}1.2\\end{pmatrix}\\ \\mathrm{m}')
+                    h5tbx.config.ureg_format = 'C~'
+                    self.assertEqual(f"{h5.attrs['mean_with_unit'].to_pint()}", '1.2 m')
                     self.assertEqual(attrs_with_unit, ureg(test_val))
                     h5.attrs['mean_with_unit'] = attrs_with_unit
                     self.assertEqual(h5.attrs['mean_with_unit'], str(ureg(test_val)))
@@ -72,7 +157,7 @@ class TestCommon(unittest.TestCase):
 
             hdf_filename = h5.hdf_filename
             with h5py.File(hdf_filename, 'r+') as h5:
-                # dataset attibutes
+                # dataset attributes
                 ds = h5.create_dataset('ds', shape=())
 
             with CLS(hdf_filename, 'r+') as h5:

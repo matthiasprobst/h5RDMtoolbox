@@ -1,3 +1,6 @@
+"""
+xarray accessor for ipyvolume
+"""
 import ipyvolume as ipv
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -162,7 +165,8 @@ class Ipyvolume_Dataset_Accessor:
         _u, _v, _w = self._obj[u].values.ravel(), self._obj[v].values.ravel(), self._obj[w].values.ravel()
         vectors = ipv.quiver(xx.ravel(), yy.ravel(), zz.ravel(),
                              _u, _v, _w)
-        abs_val = np.sqrt(np.square(_u) + np.square(_v) + np.square(_w))
+        # the following seems to fail when creating docs but not when running regular notebooks... weird...
+        # abs_val = np.sqrt(np.square(_u) + np.square(_v) + np.square(_w))
         # vectors.color = _color_from_values(arr=abs_val, cmap=cmap,
         #                                    vmin=vmin, vmax=vmax,
         #                                    levels=levels,

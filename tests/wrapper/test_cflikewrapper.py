@@ -8,8 +8,8 @@ import yaml
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.config import CONFIG
-from h5rdmtoolbox.config import ureg
+from h5rdmtoolbox import config
+from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.conventions.cflike import StandardNameTable
 from h5rdmtoolbox.conventions.cflike import standard_name as sn
 from h5rdmtoolbox.conventions.layout import H5Layout
@@ -19,6 +19,7 @@ from h5rdmtoolbox.wrapper import cflike
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.cflike import H5Dataset
 from h5rdmtoolbox.wrapper.cflike import H5Group
+from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
@@ -30,7 +31,6 @@ class TestH5CFLikeFile(unittest.TestCase):
         """setup"""
         h5tbx.use('cflike')
         with h5tbx.H5File() as h5:
-            print(type(h5))
             self.assertIsInstance(h5, cflike.H5File)
         with h5tbx.H5File(mode='w', title='dwa') as h5:
             h5.attrs['one'] = 1
@@ -49,6 +49,36 @@ class TestH5CFLikeFile(unittest.TestCase):
 
         self.lay_filename = generate_temporary_filename(prefix='lay', suffix='.hdf')
         self.other_filename = generate_temporary_filename(prefix='other', suffix='.hdf')
+
+    def test_H5File(self):
+        self.assertEqual(str(h5tbx.H5File), "<class 'h5rdmtoolbox.H5File'>")
+        with h5tbx.H5File() as h5:
+            self.assertEqual(h5.__str__(), "<class 'h5rdmtoolbox.H5File' convention: cflike>")
+        self.assertEqual(h5tbx.H5File.H5Dataset(), cflike.H5Dataset)
+        self.assertEqual(h5tbx.H5File.H5Group(), cflike.H5Group)
+
+    def test_subclassstr_attrs(self):
+        class MyString(str):
+            def some_method(self):
+                return True
+
+        with h5tbx.H5File() as h5:
+            h5.attrs['mystr'] = MyString('test')
+            attr_str = h5.attrs['mystr']
+            self.assertIsInstance(attr_str, AttributeString)
+            h5.attrs['mystr'] = attr_str
+
+            grp = h5.create_group('grp')
+            grp.attrs['mystr'] = MyString('test')
+            attr_str = grp.attrs['mystr']
+            self.assertIsInstance(attr_str, AttributeString)
+            grp.attrs['mystr'] = attr_str
+
+            h5.create_dataset('ds', data=1, standard_name='x_coordinate', units='m')
+            sn = h5['ds'].attrs['standard_name']
+            h5.attrs['sn'] = sn
+            sn = h5['ds'].standard_name
+            h5.attrs['sn'] = sn
 
     def test_str(self):
         strrepr = h5tbx.H5File().__str__()
@@ -274,12 +304,12 @@ class TestH5CFLikeFile(unittest.TestCase):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
-            CONFIG.NATURAL_NAMING = False
+            config.natural_naming = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            CONFIG.NATURAL_NAMING = True
+            config.natural_naming = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -449,7 +479,6 @@ class TestH5CFLikeFile(unittest.TestCase):
     def test_to_unit(self):
         with h5tbx.H5File(mode='w') as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
-            print(dset.units)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
             dset.to_units('K', inplace=True)
@@ -497,12 +526,12 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_attrs(self):
         with h5tbx.H5File(mode='w') as h5:
-            CONFIG.NATURAL_NAMING = False
+            config.natural_naming = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            CONFIG.NATURAL_NAMING = True
+            config.natural_naming = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -557,14 +586,14 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(grp.long_name, 'long name of group')
 
     def test_assign_data_to_existing_dset(self):
-        CONFIG.NATURAL_NAMING = True
+        config.natural_naming = True
         with h5tbx.H5File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name', units='')
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
 
     def test_create_dataset_from_xarray(self):
-        CONFIG.NATURAL_NAMING = True
+        config.natural_naming = True
         with h5tbx.H5File(mode='w') as h5:
             z = xr.DataArray(name='z', data=-1,
                              attrs=dict(units='m', standard_name='z_coordinate'))

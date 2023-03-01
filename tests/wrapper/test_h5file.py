@@ -5,7 +5,6 @@ import unittest
 import yaml
 from pathlib import Path
 
-
 from h5rdmtoolbox import config
 from h5rdmtoolbox import use
 from h5rdmtoolbox.conventions.layout import H5Layout
@@ -15,8 +14,6 @@ from h5rdmtoolbox.wrapper.core import H5Dataset, H5File, H5Group
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
-
-
 
 
 class TestH5File(unittest.TestCase):
@@ -204,14 +201,14 @@ class TestH5File(unittest.TestCase):
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            ds = h5.create_dataset('ds', shape=(), attrs={'mean': 1.2})
+            h5.create_dataset('ds', shape=(), attrs={'mean': 1.2})
 
-            config.NATURAL_NAMING = False
+            config.natural_naming = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.NATURAL_NAMING = True
+            config.natural_naming = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -403,7 +400,7 @@ class TestH5File(unittest.TestCase):
     #         self.assertEqual(h5['x'].attrs['long_name'], 'long_name')
     #         self.assertEqual(h5['x'].attrs['standard_name'], 'standard_name')
     #         from h5rdmtoolbox import config
-    #         self.assertEqual(h5['x'].compression_opts, config.HDF_COMPRESSION_OPTS)
+    #         self.assertEqual(h5['x'].compression_opts, config.hdf_compression_opts)
     #
     #     with H5File() as h5:
     #         h5['x'] = ([1, 2, 3], dict(units='m/s', long_name='long_name',
@@ -417,12 +414,12 @@ class TestH5File(unittest.TestCase):
 
     def test_attrs(self):
         with H5File(mode='w') as h5:
-            config.NATURAL_NAMING = False
+            config.natural_naming = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.NATURAL_NAMING = True
+            config.natural_naming = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -451,7 +448,7 @@ class TestH5File(unittest.TestCase):
             self.assertEqual(grp.rootparent, h5['/'])
 
     def test_assign_data_to_existing_dset(self):
-        config.NATURAL_NAMING = True
+        config.natural_naming = True
         with H5File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3))
             ds[0, 0] = 5

@@ -6,7 +6,7 @@ from abc import abstractmethod
 from numpy import ndarray
 from time import perf_counter_ns
 
-from .config import CONFIG as config
+from . import config
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
@@ -110,7 +110,9 @@ class _HDF5StructureRepr:
 
 class HDF5StructureStrRepr(_HDF5StructureRepr):
 
-    def __call__(self, group, indent=0):
+    def __call__(self, group, indent=0, preamble=None):
+        if preamble:
+            print(preamble)
         for attr_name, attr_value in group.attrs.items():
             if not attr_name.isupper():
                 print(self.base_intent * indent + self.__attrs__(attr_name, attr_value))
@@ -204,20 +206,23 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname' 
-                    for="{_id2}">{name}</label>
+                <label class='h5tb-varname' for="{_id2}">{name}</label>
                 <span class="h5tb-dims">{h5dataset.values[()]} ({h5dataset.dtype})</span>"""
         return _html
 
     def __NDdataset__(self, name, h5dataset):
         ds_dirname = os.path.dirname(h5dataset.name)
         _shape = h5dataset.shape
-        if config.ADVANCED_SHAPE_REPR:
+        if config.advanced_shape_repr:
             _shape_repr = '('
             ndim = h5dataset.ndim
             for i in range(ndim):
+                orig_dim_name = None
                 try:
                     orig_dim_name = h5dataset.dims[i][0].name
+                except RuntimeError:
+                    pass  # no dimension scale could be found
+                if orig_dim_name:
                     if os.path.dirname(orig_dim_name) == ds_dirname:
                         dim_name = os.path.basename(orig_dim_name)
                     else:
@@ -226,8 +231,11 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _shape_repr += f'{dim_name}: {_shape[i]}'
                     else:
                         _shape_repr += f', {dim_name}: {_shape[i]}'
-                except RuntimeError:
-                    pass
+                else:
+                    if i == 0:
+                        _shape_repr += f'{_shape[i]}'
+                    else:
+                        _shape_repr += f', {_shape[i]}'
             _shape_repr += ')'
             if _shape_repr == '()' and ndim > 0:
                 _shape_repr = _shape
@@ -248,10 +256,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
-                <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname' 
-                    for="{_id2}">{name}</label>
-                <span class="h5tb-dims">{_shape_repr} [{h5dataset.dtype}]{chunks_str}{maxshape_str}</span>"""
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' for="{_id2}">{name}</label>
+                    <span class="h5tb-dims">{_shape_repr} [{h5dataset.dtype}]{chunks_str}{maxshape_str}</span>"""
         return _html
 
     def __dataset__(self, name, h5dataset) -> str:
@@ -266,19 +273,16 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         # now all attributes of the dataset:
         # open attribute section:
-        _html_ds_attrs = """\n<ul class="h5tb-attr-list">"""
+        _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
         for k, v in h5dataset.attrs.items():
             if k not in self.ignore_attrs:
                 _html_ds_attrs += self.__attrs__(k, v)
         # close attribute section
-        _html_ds_attrs += """\n
-                    </ul>"""
+        _html_ds_attrs += """\n                </ul>"""
 
         # close dataset section
-        _html_post = """\n
-                 </ul>
-                 """
+        _html_post = """\n                </ul>"""
         _html_ds = _html_pre + _html_ds_attrs + _html_post
         return _html_ds
 

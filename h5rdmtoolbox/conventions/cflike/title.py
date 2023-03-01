@@ -12,10 +12,8 @@ class TitleAttribute:
             raise TitleError('Title must not start with a space')
         if value[-1] == ' ':
             raise TitleError('Title must not end with a space')
-        if value[-1] == ' ':
-            raise TitleError('Title must not end with a space')
         if re.match('^[0-9 ].*', value):
-            raise ValueError('Title must not start with a number')
+            raise TitleError('Title must not start with a number')
         self.attrs.create('title', value)
 
     def get(self):

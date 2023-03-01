@@ -1,3 +1,5 @@
+"""module for external HDF5 objects"""""
+
 import h5py
 
 from .. import H5File

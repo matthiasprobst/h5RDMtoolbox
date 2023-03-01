@@ -51,16 +51,16 @@ def main():
                            help='Register the passed HDF file as a layout.')
 
     # STANDARD NAME
-    sp_standardname = subparsers.add_parser('standard_name', help='standard name menu')
-    sp_standardname.set_defaults(cmd='standard_name')
-    sp_standardname.add_argument('--list-registered', action='store_true',
+    sp_standard_name = subparsers.add_parser('standard_name', help='standard name menu')
+    sp_standard_name.set_defaults(cmd='standard_name')
+    sp_standard_name.add_argument('--list-registered', action='store_true',
                                  help='List all registered standard name tables.')
-    sp_standardname.add_argument('-t', '--table',
+    sp_standard_name.add_argument('-t', '--table',
                                  type=str,
                                  required=False,
                                  default=None,
                                  help='Registered standard name or filename of a standard table.')
-    sp_standardname.add_argument('-f', '--file',
+    sp_standard_name.add_argument('-f', '--file',
                                  type=str,
                                  required=False,
                                  default=None,
@@ -103,15 +103,15 @@ def main():
         webbrowser.open('https://matthiasprobst.github.io/h5RDMtoolbox/')
         return
     if args.user_dirs:
-        from ._user import user_dirs
-        pprint(user_dirs)
+        from ._user import UserDir
+        pprint(UserDir)
         return
     if args.dump:
         with H5File(args.dump) as h5:
             h5.sdump()
-    argvars = vars(args)
+    arg_vars = vars(args)
 
-    if 'cmd' in argvars:
+    if 'cmd' in arg_vars:
         if args.cmd == 'mongodb':
             from pymongo import MongoClient
             db = None
@@ -197,7 +197,7 @@ def main():
                 if layout_filename.exists():
                     h5lay = H5Layout(layout_filename)
                 else:
-                    h5lay = H5Layout.load_registered(args.layout)
+                    h5lay = H5Layout.load_registered(args.layout, h5repr=None)
                 if hdf_filename is None:
                     print('No hdf filename. Provide by -f <my_file.hdf>')
                     return

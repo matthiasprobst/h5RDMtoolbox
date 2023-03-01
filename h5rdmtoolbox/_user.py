@@ -1,22 +1,104 @@
+import appdirs
 import pathlib
+import pkg_resources
 import shutil
 from itertools import count
-
-import appdirs
-import pkg_resources
 
 _filecounter = count()
 _dircounter = count()
 
 _user_root_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
-user_dirs = {'root': _user_root_dir,
-             'layouts': _user_root_dir / 'layouts',
-             'standard_name_tables': _user_root_dir / 'standard_name_tables',
-             'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
-             }
 
-if not user_dirs['root'].exists():
-    user_dirs['root'].mkdir(parents=True)
+
+class DirManger:
+    """Directory Manager class"""
+
+    def __init__(self):
+        self.user_dirs = {'root': _user_root_dir,
+                          'layouts': _user_root_dir / 'layouts',
+                          'standard_name_tables': _user_root_dir / 'standard_name_tables',
+                          'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
+                          }
+
+    def __getitem__(self, item):
+        return self._get_dir(item)
+
+    def names(self):
+        return self.UserDir.keys()
+
+    def __contains__(self, item):
+        return item in self.UserDir.keys()
+
+    def _get_dir(self, name: str) -> pathlib.Path:
+        """Get a path to a file or directory in the user directory.
+
+        Parameters
+        ----------
+        name : str
+            The name of the file or directory.
+
+        Returns
+        -------
+        pathlib.Path
+            The path to the file or directory.
+        """
+        if name == 'root':
+            if not self.user_dirs['root'].exists():
+                self.user_dirs['root'].mkdir(parents=True)
+            return self.user_dirs['root']
+
+        if name == 'layouts':
+            if not self.user_dirs['layouts'].exists():
+                self.user_dirs['layouts'].mkdir()
+
+            H5File_layout_filename = pathlib.Path.joinpath(self.user_dirs['layouts'], 'H5File.hdf')
+            if not H5File_layout_filename.exists():
+                shutil.copy2(_get_pkg_resource_filename('data/H5File.hdf'), H5File_layout_filename)
+
+            return self.user_dirs['layouts']
+        if name == 'standard_name_table_translations':
+            if not self.user_dirs['standard_name_table_translations'].exists():
+                self.user_dirs['standard_name_table_translations'].mkdir()
+                # first copy the default data there:
+                test_to_test = _get_pkg_resource_filename('data/test-to-Test-v1.yml')
+
+                shutil.copy2(test_to_test, self.user_dirs['standard_name_table_translations'])
+            return self.user_dirs['standard_name_table_translations']
+
+        if name == 'standard_name_tables':
+            if not self.user_dirs['standard_name_tables'].exists():
+                # first copy the default data there:
+                fluid_v1 = _get_pkg_resource_filename('data/fluid-v1.yml')
+                piv_v1 = _get_pkg_resource_filename('data/piv-v1.yml')
+                test_v1 = _get_pkg_resource_filename('data/Test-v1.yml')
+
+                self.user_dirs['standard_name_tables'].mkdir()
+                shutil.copy2(fluid_v1, self.user_dirs['standard_name_tables'])
+                shutil.copy2(piv_v1, self.user_dirs['standard_name_tables'])
+                shutil.copy2(test_v1, self.user_dirs['standard_name_tables'])
+                shutil.copy2(test_v1, self.user_dirs['standard_name_tables'])
+            return self.user_dirs['standard_name_tables']
+        if name == 'tmp':
+            # tmp folder name is individual for every call of the package:
+            _root_tmp_dir = self._get_dir('root') / 'tmp'
+            if not _root_tmp_dir.exists():
+                _root_tmp_dir.mkdir()
+                print(_root_tmp_dir)
+            return _root_tmp_dir
+        if name == 'session_tmp':
+            user_tmp_dir = self._get_dir('tmp')
+            itmp = len(list(user_tmp_dir.glob("tmp*")))
+            session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
+            while session_tmp_dir.exists():
+                itmp += 1
+                session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
+
+            session_tmp_dir.mkdir(parents=True, exist_ok=True)
+            return session_tmp_dir
+        raise ValueError(f'Unknown user directory name: "{name}"')
+
+
+UserDir = DirManger()
 
 
 def _get_pkg_resource_filename(fname):
@@ -27,37 +109,7 @@ def _get_pkg_resource_filename(fname):
     return filename
 
 
-if not user_dirs['standard_name_tables'].exists():
-    # first copy the default data there:
-    fluid_v1 = _get_pkg_resource_filename('data/fluid-v1.yml')
-    piv_v1 = _get_pkg_resource_filename('data/piv-v1.yml')
-    test_v1 = _get_pkg_resource_filename('data/Test-v1.yml')
-
-    user_dirs['standard_name_tables'].mkdir()
-    shutil.copy2(fluid_v1, user_dirs['standard_name_tables'])
-    shutil.copy2(piv_v1, user_dirs['standard_name_tables'])
-    shutil.copy2(test_v1, user_dirs['standard_name_tables'])
-    shutil.copy2(test_v1, user_dirs['standard_name_tables'])
-
-if not user_dirs['layouts'].exists():
-    user_dirs['layouts'].mkdir()
-if not user_dirs['standard_name_table_translations'].exists():
-    user_dirs['standard_name_table_translations'].mkdir()
-    # first copy the default data there:
-    test_to_test = _get_pkg_resource_filename('data/test-to-Test-v1.yml')
-
-    shutil.copy2(test_to_test, user_dirs['standard_name_table_translations'])
-
 config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
 config_filename = config_dir / 'h5rdmtoolbox.yaml'
 
-# tmp folder name is individual for every call of the package:
-_root_tmp_dir = _user_root_dir / 'tmp'
-itmp = len(list(_root_tmp_dir.glob("tmp*")))
-user_dirs['tmp'] = _root_tmp_dir / f'tmp{itmp}'
-while user_dirs['tmp'].exists():
-    itmp += 1
-    user_dirs['tmp'] = _root_tmp_dir / f'tmp{itmp}'
-
-user_dirs['tmp'].mkdir(parents=True, exist_ok=True)
 testdir = pathlib.Path(__file__).parent / '../tests/data'

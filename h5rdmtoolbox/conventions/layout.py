@@ -1,3 +1,4 @@
+"""layout module to manage/check layout of HDF files"""
 import h5py
 import logging
 import numpy as np
@@ -13,7 +14,7 @@ from typing import Union, Dict, List
 
 from .utils import equal_base_units
 from .. import _repr
-from .._user import user_dirs
+from .._user import UserDir
 from ..utils import generate_temporary_filename
 
 logger = logging.getLogger(__package__)
@@ -73,7 +74,7 @@ def check_attributes(obj: Union[h5py.Dataset, h5py.Group],
             continue
         keys = ak.split('.alt:')
         if len(keys) > 1:
-            if not any([k in otherobj.attrs for k in keys]):
+            if not any(k in otherobj.attrs for k in keys):
                 logger.error(f'Neither of the attribute {", ".join(keys)} exist in {otherobj.name}')
                 issues.append(
                     {'path': obj.name, 'obj_type': 'attribute', 'name': ' or '.join(keys), 'issue': 'missing'})
@@ -155,7 +156,7 @@ class LayoutGroup(h5py.Group):
                     ds_name = obj_name
                     # first check if the dataset exist:
                     if ds_name in other:
-                        issues.append(self[obj_name].check(other[ds_name]))
+                        issues.append(obj.check(other[ds_name]))
                     else:
                         # now check alternative:
                         # does the alternative group exist?
@@ -164,7 +165,7 @@ class LayoutGroup(h5py.Group):
                                 if isinstance(other_grp, h5py.Group):
                                     if re.match(alt_grp_name[3:], other_grp_name):
                                         if ds_name in other_grp:
-                                            issues.append(self[obj_name].check(other_grp[ds_name]))
+                                            issues.append(obj.check(other_grp[ds_name]))
                                         else:
                                             issues.append({'path': os.path.join(other.name, alt_grp_name, ds_name),
                                                            'obj_type': 'dataset',
@@ -175,7 +176,7 @@ class LayoutGroup(h5py.Group):
                         else:
                             if alt_grp_name in other.keys():
                                 if ds_name in other[alt_grp_name]:
-                                    issues.append(self[obj_name].check(other[alt_grp_name][ds_name]))
+                                    issues.append(obj.check(other[alt_grp_name][ds_name]))
                                 else:
                                     issues.append(
                                         {'path': os.path.join(other, alt_grp_name, ds_name), 'obj_type': 'dataset',
@@ -189,7 +190,7 @@ class LayoutGroup(h5py.Group):
 
                 else:
                     if obj_name in other:
-                        issues.append(self[obj_name].check(other[obj_name]))
+                        issues.append(obj.check(other[obj_name]))
                     else:
                         if '__optional__' not in obj.attrs:
                             issues.append({'path': obj.name, 'obj_type': 'dataset', 'issue': 'missing'})
@@ -217,7 +218,7 @@ class LayoutGroup(h5py.Group):
 
                                 if n_found == 0 and not obj.attrs.get('__check_isoptional__', False):
                                     logger.error(f'Group name "{obj_name}" missing in {other.name}.')
-                                    issues.append({'path': self[obj_name].name,
+                                    issues.append({'path': obj.name,
                                                    'obj_type': 'group',
                                                    'issue': 'missing'})
                             else:
@@ -240,7 +241,7 @@ class LayoutGroup(h5py.Group):
                                         issues.append(LayoutGroup(obj.id).check(other_grp))
                             if n_found == 0 and not obj.attrs.get('__check_isoptional__', False):
                                 logger.error(f'Group name "{obj_name}" missing in {other.name}.')
-                                issues.append({'path': self[obj_name].name,
+                                issues.append({'path': obj.name,
                                                'obj_type': 'group',
                                                'issue': 'missing'})
                         else:
@@ -250,7 +251,7 @@ class LayoutGroup(h5py.Group):
                                 is_optional = obj.attrs.get('__check_isoptional__', False)
                                 if not is_optional:
                                     logger.error(f'Group name "{obj_name}" missing in {other.name}.')
-                                    issues.append({'path': self[obj_name].name,
+                                    issues.append({'path': obj.name,
                                                    'obj_type': 'group',
                                                    'issue': 'missing'})
 
@@ -268,8 +269,7 @@ class H5FileLayout(h5py.File, LayoutGroup):
     def _repr_html_(self):
         preamble = f'<p>H5FileLayout File "{self.filename.stem}"</p>\n'
         with h5py.File(self.filename, mode='r') as h5:
-            return _repr.h5file_html_repr(h5, max_attr_length=None, preamble=preamble,
-                                          build_debug_html_page=False)
+            return _repr.HDF5StructureStrRepr(h5)(preamble=preamble)
 
     # @abc.abstractmethod
     def write(self) -> pathlib.Path:
@@ -342,16 +342,16 @@ class H5Layout:
             If no unique filename found be idetified.
 
         """
-        src = user_dirs['layouts'] / name
+        src = UserDir['layouts'] / name
         if src.exists():
             return src
         # search for names:
-        candidates = list(user_dirs['layouts'].glob(f'{name}.*'))
+        candidates = list(UserDir['layouts'].glob(f'{name}.*'))
         if len(candidates) == 1:
             return pathlib.Path(candidates[0])
         raise FileNotFoundError(
             f'File {name} could not be found or passed name was not unique. Check the user layout dir '
-            f'{user_dirs["layouts"]}'
+            f'{UserDir["layouts"]}'
         )
 
     @staticmethod
@@ -433,9 +433,9 @@ class H5Layout:
     def register(self, name=None, overwrite=False) -> pathlib.Path:
         """Copy file to user data dir"""
         if name is None:
-            trg = user_dirs['layouts'] / self.filename.name
+            trg = UserDir['layouts'] / self.filename.name
         else:
-            trg = user_dirs['layouts'] / name
+            trg = UserDir['layouts'] / name
         if trg.exists() and not overwrite:
             raise FileExistsError(f'Target file already exists: {trg}')
         print(f'copying here: {trg}')
@@ -444,12 +444,12 @@ class H5Layout:
     @staticmethod
     def get_registered() -> List[pathlib.Path]:
         """Return sorted list of layout HDF files"""
-        return sorted(user_dirs['layouts'].glob('*'))
+        return sorted(UserDir['layouts'].glob('*'))
 
     @staticmethod
     def print_registered() -> None:
         """Return sorted list of standard names files"""
-        print(f'@ {user_dirs["layouts"]}:')
+        # print(f'@ {UserDir["layouts"]}:')
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')
 

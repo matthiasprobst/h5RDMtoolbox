@@ -1,9 +1,9 @@
+"""package-wide logger module"""
+import appdirs
 import logging
 import pathlib
 from logging.handlers import RotatingFileHandler
 from typing import Tuple
-
-import appdirs
 
 DEFAULT_LOGGING_LEVEL = logging.INFO
 

@@ -4,7 +4,6 @@ Contains wrapper classes
 """
 
 from . import _logger
-from . import cflike
 from . import core
 
 

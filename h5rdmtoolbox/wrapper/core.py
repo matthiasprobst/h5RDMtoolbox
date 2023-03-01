@@ -5,6 +5,7 @@ import h5py
 import logging
 import numpy as np
 import os
+import pandas as pd
 import pathlib
 # noinspection PyUnresolvedReferences
 import pint
@@ -12,12 +13,13 @@ import shutil
 import warnings
 import xarray as xr
 import yaml
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from h5py._hl.base import phil
+from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
 from tqdm import tqdm
-from typing import List, Dict, Union, Tuple
+from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -25,22 +27,17 @@ from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
-from .. import utils
-from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
-from .._user import user_dirs
-from .._version import __version__
 from .. import config
+from .. import utils
+from .._config import ureg
+from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
+from .._version import __version__
 from ..conventions.layout import H5Layout
 
 logger = logging.getLogger(__package__)
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
-
-
-H5File_layout_filename = Path.joinpath(user_dirs['layouts'], 'H5File.hdf')
-if not H5File_layout_filename.exists():
-    shutil.copy2(pathlib.Path(__file__).parent / '../data/H5File.hdf', H5File_layout_filename)
 
 
 class Lower(str):
@@ -128,7 +125,7 @@ class H5Group(h5py.Group):
                 _orig_dataset_properties.update({k: v})
 
         if not worth_changing:
-            warnings.warn(f'No changes were applied because new properties a no different to present ones', UserWarning)
+            warnings.warn('No changes were applied because new properties a no different to present ones', UserWarning)
             return dataset
 
         with H5File() as temp_h5dest:
@@ -170,11 +167,11 @@ class H5Group(h5py.Group):
         if isinstance(_id, h5py.h5g.GroupID):
             super().__init__(_id)
         else:
-            ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
+            raise ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
 
     def __setitem__(self,
                     name: str,
-                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> None:
+                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> "H5Dataset":
         """
         Lazy creating datasets. More difficult than using h5py as mandatory
         parameters must be provided.
@@ -192,16 +189,15 @@ class H5Group(h5py.Group):
         None
         """
         if isinstance(obj, xr.DataArray):
-            _ = obj.hdf.to_group(H5Group(self), name)
-        elif isinstance(obj, (list, tuple)):
+            return obj.hdf.to_group(H5Group(self), name)
+        if isinstance(obj, (list, tuple)):
             if not isinstance(obj[1], dict):
                 raise TypeError(f'Second item must be type dict but is {type(obj[1])}')
             kwargs = obj[1]
-            self.create_dataset(name, data=obj[0], **kwargs)
-        elif isinstance(obj, dict):
-            self.create_dataset(**obj)
-        else:
-            super().__setitem__(name, obj)
+            return self.create_dataset(name, data=obj[0], **kwargs)
+        if isinstance(obj, dict):
+            return self.create_dataset(name=name, **obj)
+        super().__setitem__(name, obj)
 
     def __getitem__(self, name):
         if isinstance(name, Lower):
@@ -212,7 +208,7 @@ class H5Group(h5py.Group):
         ret = super().__getitem__(name)
         if isinstance(ret, h5py.Dataset):
             return self._h5ds(ret.id)
-        elif isinstance(ret, h5py.Group):
+        if isinstance(ret, h5py.Group):
             return self._h5grp(ret.id)
         return ret
 
@@ -220,9 +216,8 @@ class H5Group(h5py.Group):
         try:
             return super().__getattribute__(item)
         except AttributeError as e:
-            if config.CONFIG.NATURAL_NAMING:
-                pass
-            else:
+            if not config.natural_naming:
+                # raise an error if natural naming is NOT enabled
                 raise AttributeError(e)
 
         if item in self.__dict__:
@@ -231,16 +226,14 @@ class H5Group(h5py.Group):
             if item in self:
                 if isinstance(self[item], h5py.Group):
                     return self._h5grp(self[item].id)
-                else:
-                    return self._h5ds(self[item].id)
+                return self._h5ds(self[item].id)
             else:
                 # try replacing underscores with spaces:
                 _item = item.replace('_', ' ')
                 if _item in self:
                     if isinstance(self[_item], h5py.Group):
                         return self.__class__(self[_item].id)
-                    else:
-                        return self._h5ds(self[_item].id)
+                    return self._h5ds(self[_item].id)
                 else:
                     return super().__getattribute__(item)
         except AttributeError:
@@ -259,7 +252,7 @@ class H5Group(h5py.Group):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
             ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
-        tree = {ak: av for ak, av in self.attrs.items()}
+        tree = dict(self.attrs.items())
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
                 ds_dict = {'shape': v.shape, 'ndim': v.ndim}
@@ -301,22 +294,21 @@ class H5Group(h5py.Group):
             Track creation order under this group. Default is None.
         """
         if name in self:
-            if name in self:
-                if isinstance(self[name], h5py.Group):
-                    if overwrite is True:
-                        del self[name]
-                    elif update_attrs:
-                        g = self[name]
-                        for ak, av in attrs.items():
-                            g.attrs[ak] = av
-                        return g
-                    else:
-                        # let h5py.Group raise the error...
-                        h5py.Group.create_group(self, name, track_order=track_order)
-                else:  # isinstance(self[name], h5py.Dataset):
-                    raise RuntimeError('The name you passed is already ued for a dataset!')
+            if isinstance(self[name], h5py.Group):
+                if overwrite is True:
+                    del self[name]
+                elif update_attrs:
+                    g = self[name]
+                    for ak, av in attrs.items():
+                        g.attrs[ak] = av
+                    return g
+                else:
+                    # let h5py.Group raise the error...
+                    h5py.Group.create_group(self, name, track_order=track_order)
+            else:  # isinstance(self[name], h5py.Dataset):
+                raise RuntimeError('The name you passed is already ued for a dataset!')
 
-        if _is_not_valid_natural_name(self, name, config.CONFIG.NATURAL_NAMING):
+        if _is_not_valid_natural_name(self, name, config.natural_naming):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
                              f'attribute of the class and cannot be used '
                              f'while natural naming is enabled')
@@ -437,8 +429,8 @@ class H5Group(h5py.Group):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        compression = kwargs.pop('compression', config.CONFIG.HDF_COMPRESSION)
-        compression_opts = kwargs.pop('compression_opts', config.CONFIG.HDF_COMPRESSION_OPTS)
+        compression = kwargs.pop('compression', config.hdf_compression)
+        compression_opts = kwargs.pop('compression_opts', config.hdf_compression_opts)
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
@@ -462,7 +454,7 @@ class H5Group(h5py.Group):
             attach_scales = kwargs.pop('attach_scale', None)
 
         if name:
-            if _is_not_valid_natural_name(self, name, config.CONFIG.NATURAL_NAMING):
+            if _is_not_valid_natural_name(self, name, config.natural_naming):
                 raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
                                  f'attribute of the class and cannot be used '
                                  f'while natural naming is enabled')
@@ -601,13 +593,18 @@ class H5Group(h5py.Group):
             recursive=rec,
             find_one=False)
 
+    def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
+        """Create datasets from a single csv file. Docstring: See H5File.create_datasets_from_csv()"""
+        return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
+
     def create_datasets_from_csv(self,
-                                 csv_filename,
+                                 csv_filenames: Union[str, pathlib.Path],
                                  dim_column: Union[int, str] = 0,
                                  shape=None,
                                  overwrite=False,
                                  combine_opt='stack',
-                                 axis=0, chunks=None,
+                                 axis=0,
+                                 chunks=None,
                                  attrs: Dict = None,
                                  **pandas_kwargs):
         """
@@ -648,111 +645,90 @@ class H5Group(h5py.Group):
 
         """
         from pandas import read_csv as pd_read_csv
+        if combine_opt not in ['concatenate', 'stack']:
+            raise ValueError(f'Invalid input for combine_opt: {combine_opt}')
+
         if attrs is None:
             attrs = {}
         if 'names' in pandas_kwargs.keys():
             if 'header' not in pandas_kwargs.keys():
-                raise RuntimeError('if you pass names also pass header=...')
+                raise RuntimeError('Missing "header" argument for pandas.read_csv')
 
-        if isinstance(csv_filename, (list, tuple)):
-            # depending on the meaning of multiple csv_filename axis can be 0 (z-plane)
-            # or 1 (time-plane)
-            axis = pandas_kwargs.pop('axis', 0)
-            csv_fname = csv_filename[0]
-            is_single_file = False
-        elif isinstance(csv_filename, (str, Path)):
-            is_single_file = True
-            csv_fname = csv_filename
+        if isinstance(csv_filenames, (list, tuple)):
+            n_files = len(csv_filenames)
+            dfs = [pd_read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames]
+        elif isinstance(csv_filenames, (str, Path)):
+            n_files = 1
+            dfs = [pd_read_csv(csv_filenames, **pandas_kwargs), ]
         else:
             raise ValueError(
-                f'Wrong input for "csv_filename: {type(csv_filename)}')
+                f'Wrong input for "csv_filenames: {type(csv_filenames)}')
 
-        df = pd_read_csv(csv_fname, **pandas_kwargs)
+        compression, compression_opts = config.hdf_compression, config.hdf_compression_opts
 
-        compression, compression_opts = config.CONFIG.HDF_COMPRESSION, config.CONFIG.HDF_COMPRESSION_OPTS
+        if n_files > 1 and combine_opt == 'concatenate':
+            dfs = [pd.concat(dfs, axis=axis), ]
+            n_files = 1
 
-        if is_single_file:
-            for variable_name in df.columns:
+        if n_files == 1:
+            datasets = []
+            for variable_name in dfs[0].columns:
                 ds_name = utils.remove_special_chars(str(variable_name))
-                data = df[str(variable_name)].values.reshape(shape)
+                if shape is not None:
+                    data = dfs[0][str(variable_name)].values.reshape(shape)
+                else:
+                    data = dfs[0][str(variable_name)].values
                 try:
-                    self.create_dataset(name=ds_name,
-                                        data=data,
-                                        attrs=attrs.get(ds_name, None),
-                                        overwrite=overwrite, compression=compression,
-                                        compression_opts=compression_opts)
+                    datasets.append(self.create_dataset(name=ds_name,
+                                                        data=data,
+                                                        attrs=attrs.get(ds_name, None),
+                                                        overwrite=overwrite, compression=compression,
+                                                        compression_opts=compression_opts))
                 except RuntimeError as e:
                     logger.error(
                         f'Could not read {variable_name} from csv file due to: {e}')
-        else:
-            _data = df[df.columns[0]].values.reshape(shape)
-            nfiles = len(csv_filename)
-            for variable_name in df.columns:
-                ds_name = utils.remove_special_chars(str(variable_name))
-                if combine_opt == 'concatenate':
-                    _shape = list(_data.shape)
-                    _shape[axis] = nfiles
-                    self.create_dataset(name=ds_name, shape=_shape,
-                                        attrs=attrs.get(ds_name, None),
-                                        compression=compression,
-                                        compression_opts=compression_opts,
-                                        chunks=chunks)
-                elif combine_opt == 'stack':
-                    if axis == 0:
-                        self.create_dataset(name=ds_name, shape=(nfiles, *_data.shape),
-                                            attrs=attrs.get(ds_name, None),
-                                            compression=compression,
-                                            compression_opts=compression_opts,
-                                            chunks=chunks)
-                    elif axis == 1:
-                        self.create_dataset(name=ds_name, shape=(_data.shape[0], nfiles, *_data.shape[1:]),
-                                            attrs=attrs.get(ds_name, None),
-                                            compression=compression,
-                                            compression_opts=compression_opts,
-                                            chunks=chunks)
-                    else:
-                        raise ValueError('axis must be 0 or -1')
+            return datasets
 
+        data = {}
+        for name, value in dfs[0].items():
+            if shape is None:
+                data[name] = [value.values, ]
+            else:
+                data[name] = [value.values.reshape(shape), ]
+        for df in dfs[1:]:
+            for name, value in df.items():
+                if shape is None:
+                    data[name].append(value.values)
                 else:
-                    raise ValueError(
-                        f'"combine_opt" must be "concatenate" or "stack", not {combine_opt}')
+                    data[name].append(value.values.reshape(shape))
 
-            for i, csv_fname in enumerate(csv_filename):
-                df = pd_read_csv(csv_fname, **pandas_kwargs)
-                for c in df.columns:
-                    ds_name = utils.remove_special_chars(str(c))
-                    data = df[str(c)].values.reshape(shape)
+        for name, value in data.items():
+            self.create_dataset(name=name,
+                                data=np.stack(value, axis=axis),
+                                attrs=attrs.get(name, None),
+                                overwrite=overwrite,
+                                compression=compression,
+                                compression_opts=compression_opts)
 
-                    if combine_opt == 'concatenate':
-                        if axis == 0:
-                            self[ds_name][i, ...] = data[0, ...]
-                        elif axis == 1:
-                            self[ds_name][:, i, ...] = data[0, ...]
-                    elif combine_opt == 'stack':
-                        if axis == 0:
-                            self[ds_name][i, ...] = data
-                        elif axis == 1:
-                            self[ds_name][:, i, ...] = data
-
-    def create_dataset_from_image(self, img_filename, name=None,
-                                  overwrite=False, dtype=None, ufunc=None,
-                                  axis=0, **kwargs):
+    def create_dataset_from_image(self,
+                                  imgdata: Union[Callable, np.ndarray, List[np.ndarray]],
+                                  name,
+                                  chunks=None,
+                                  dtype=None,
+                                  axis=0,
+                                  **kwargs):
         """
         Creates a dataset for a single or multiple files. If a list of filenames is passed
         All images are stacked (thus shape of all images must be equal!)
 
         Parameters
         ----------
-        img_filename : {Path, list}
+        imgdata : np.ndarray or list of np.ndarray
             Image filename or list of image file names. See also axis in case of multiple files
         name : str
             Name of create dataset
-        units : string
-            Unit of image. Typically, pixels which is also default.
-        long_name : str
-            long_name of dataset
-        overwrite : bool
-            Whether to overwrite an existing dataset with this name
+        chunks : Tuple or None
+            Data chunking
         dtype : str
             Data type used for hdf dataset creation
         axis: int, optional
@@ -768,146 +744,70 @@ class H5Group(h5py.Group):
         """
 
         # take compression from kwargs or config:
-        _compression, _compression_opts = config.CONFIG.HDF_COMPRESSION, config.CONFIG.HDF_COMPRESSION_OPTS
+        _compression, _compression_opts = config.hdf_compression, config.hdf_compression_opts
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
-        units = kwargs.pop('units', 'pixel')
-        ds = None
 
-        if isinstance(img_filename, (str, Path)):
-            if name is None:
-                name = utils.remove_special_chars(
-                    os.path.basename(img_filename).rsplit('.', 1)[0])
-            img = utils.load_img(img_filename)
-            if ufunc is not None:
-                if isinstance(ufunc, (list, tuple)):
-                    _ufunc = ufunc[0]
-                    _ufunc_param = ufunc[1:]
-                    raise NotImplementedError(
-                        'user function with parameter not implemented yet')
-                elif hasattr(ufunc, '__call__'):
-                    try:
-                        img_processed = ufunc(img)
-                    except RuntimeError as e:
-                        raise logger.error(f'Failed running user function {ufunc} '
-                                           f'with this error: {e}')
-                    if img_processed is not None:
-                        ds = self.create_dataset(name=name, data=img_processed,
-                                                 overwrite=overwrite,
-                                                 dtype=dtype, compression=compression,
-                                                 compression_opts=compression_opts,
-                                                 units=units,
-                                                 **kwargs)
-                        return ds
+        if axis not in (0, -1):
+            raise ValueError(f'Value for parameter axis can only be 0 or 1 but not {axis}')
 
+        is_list_tuple_or_numpy = isinstance(imgdata, (list, tuple, np.ndarray))
+        if not is_list_tuple_or_numpy:
+            if not isinstance(imgdata, Iterable):
+                raise ValueError('imgdata must be iterable')
+            # check if imgdata has method __len__():
+            if not hasattr(imgdata, '__len__'):
+                raise ValueError('imgdata must have method __len__()')
+            # get first element of imgdata:
+            first_image = next(imgdata)
+            single_img_shape = first_image.shape
+            if axis == 0:
+                shape = (len(imgdata), *single_img_shape)
+                chunks = (1, *single_img_shape)
             else:
-                ds = self.create_dataset(name=name, data=img,
-                                         overwrite=overwrite, dtype=dtype,
-                                         compression=compression, compression_opts=compression_opts)
-                return ds
-        elif isinstance(img_filename, (list, tuple)):
-            if not name:  # take the first image name
-                name = os.path.commonprefix(img_filename)
-            nimg = len(img_filename)
-
-            if ufunc is not None:  # user function given. final size of dataset unknown
-                if isinstance(ufunc, (list, tuple)):
-                    _ufunc = ufunc[0]
-                    _ufunc_param = ufunc[1:]
-                    # raise NotImplementedError('user function with parameter not implemented yet')
-                else:
-                    _ufunc = ufunc
-                    _ufunc_param = list()
-
-                if hasattr(_ufunc, '__call__'):
-                    for i, img_fname in tqdm(enumerate(img_filename)):
-                        img = utils.load_img(img_fname)
-                        img_shape = img.shape
-                        try:
-                            if hasattr(ufunc, '__call__'):
-                                img_processed = _ufunc(img)
-                            else:
-                                img_processed = _ufunc(img, *_ufunc_param)
-                        except RuntimeError as e:
-                            raise logger.error(f'Failed running user function {_ufunc} '
-                                               f'with this error: {e}')
-                        if img_processed is not None:
-                            if name in self:  # dataset already exists
-                                ds = self[name]
-                                ds_shape = list(ds.shape)
-                                if axis == 0:
-                                    ds_shape[0] += 1
-                                else:
-                                    ds_shape[-1] += 1
-                                ds.resize(tuple(ds_shape))
-                                if axis == 0:
-                                    ds[-1, ...] = img_processed
-                                else:
-                                    ds[..., -1] = img_processed
-                            else:  # dataset must be created first
-                                if axis == 0:
-                                    dataset_shape = (1, *img_shape)
-                                    _maxshape = (None, *img_shape)
-                                    _chunks = (1, *img_shape)
-                                elif axis == -1:
-                                    dataset_shape = (*img_shape, 1)
-                                    _maxshape = (*img_shape, None)
-                                    _chunks = (*img_shape, 1)
-                                else:
-                                    raise ValueError('Other axis than 0 or -1 not accepted!')
-                                ds = self.create_dataset(name, shape=dataset_shape, overwrite=overwrite,
-                                                         maxshape=_maxshape, dtype=dtype, compression=compression,
-                                                         compression_opts=compression_opts, chunks=_chunks)
-                                if axis == 0:
-                                    ds[0, ...] = img
-                                else:
-                                    ds[..., 0] = img
-                else:
-                    raise ValueError(f'Wrong ufunc type: {type(ufunc)}')
-                return ds
-            else:  # no user function passed. shape of dataset is known and can be pre-allocated
-                img = utils.load_img(img_filename[0])
-                img_shape = img.shape
+                shape = (*single_img_shape, len(imgdata))
+                chunks = (*single_img_shape, 1)
+        else:
+            is_np_ndarray = isinstance(imgdata, np.ndarray)
+            if is_np_ndarray:
+                shape = imgdata.shape
+            else:
+                single_img_shape = imgdata[0].shape
+                if not all([img.shape == single_img_shape for img in imgdata]):
+                    raise ValueError('All images must have the same shape to fit into the same dataset!')
                 if axis == 0:
-                    dataset_shape = (nimg, *img_shape)
-                elif axis == -1:
-                    dataset_shape = (*img_shape, nimg)
+                    shape = (len(imgdata), *single_img_shape)
+                    if chunks is None:
+                        chunks = (1, *single_img_shape)
                 else:
-                    raise ValueError('Other axis than 0 or -1 not accepted!')
+                    shape = (*single_img_shape, len(imgdata))
+                    if chunks is None:
+                        chunks = (*single_img_shape, 1)
 
-                # pre-allocate dataset with shape:
-                ds = self.create_dataset(name, shape=dataset_shape, overwrite=overwrite,
-                                         dtype=dtype, compression=compression, compression_opts=compression_opts)
-
-                # fill dataset with data:
-                if ds is not None:
-                    if axis == 0:
-                        ds[0, ...] = img
-                        for i, img_fname in tqdm(enumerate(img_filename[1:]), unit='file', desc='processing images'):
-                            img = utils.load_img(img_fname)
-                            if img.shape == img_shape:
-                                ds[i + 1, ...] = img
-                            else:
-                                logger.critical(
-                                    f'Shape of {img_fname} has wrong shape {img.shape}. Expected shape: {img_shape}'
-                                    ' Dataset will be deleted again!'
-                                )
-                                del self[ds.name]
-                    elif axis == -1:
-                        ds[..., 0] = img
-                        for i, img_fname in tqdm(enumerate(img_filename[1:]), unit='file', desc='processing images'):
-                            img = utils.load_img(img_filename[0])
-                            if img.shape == img_shape:
-                                ds[..., i + 1] = img
-                            else:
-                                logger.critical(
-                                    f'Shape if {img_fname} has wrong shape {img.shape}. Expected shape: {img_shape}'
-                                    f' Dataset will be deleted again!')
-                                del self[ds.name]
-                    return ds
+        ds = self.create_dataset(name=name,
+                                 shape=shape,
+                                 compression=compression,
+                                 compression_opts=compression_opts,
+                                 chunks=chunks,
+                                 dtype=dtype,
+                                 **kwargs)
+        if not is_list_tuple_or_numpy:
+            if axis == 0:
+                ds[0, ...] = first_image
+            else:
+                ds[..., 0] = first_image
+            for i, img in enumerate(imgdata):
+                if axis == 0:
+                    ds[i, ...] = img
                 else:
-                    logger.critical(
-                        'Could not create dataset because it already exists and overwrite=False.')
+                    ds[..., i] = img
+            return ds
+
+        if is_np_ndarray:
+            ds[:] = imgdata
+        else:
+            ds[:] = np.stack(imgdata, axis=axis)
+        return ds
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
@@ -961,18 +861,16 @@ class H5Group(h5py.Group):
                 del self[name]
                 self[name] = h5py.ExternalLink(filename, path)
                 return self[name]
-            else:
-                logger.debug('External link %s was not created. A Dataset with this name'
+            logger.debug('External link %s was not created. A Dataset with this name'
+                         ' already exists and overwrite is set to False! '
+                         'You can pass overwrite=True in order to overwrite the '
+                         'existing dataset', name)
+            raise ValueError(f'External link {name} was not created. A Dataset with this name'
                              ' already exists and overwrite is set to False! '
                              'You can pass overwrite=True in order to overwrite the '
-                             'existing dataset', name)
-                raise ValueError(f'External link {name} was not created. A Dataset with this name'
-                                 ' already exists and overwrite is set to False! '
-                                 'You can pass overwrite=True in order to overwrite the '
-                                 'existing dataset')
-        else:
-            self[name] = h5py.ExternalLink(filename, path)
-            return self[name]
+                             'existing dataset')
+        self[name] = h5py.ExternalLink(filename, path)
+        return self[name]
 
     def from_yaml(self, yamlfile: Path):
         """creates groups, datasets and attributes defined in a yaml file.
@@ -1049,7 +947,7 @@ class H5Group(h5py.Group):
         """
         names = []
 
-        def _get_grp(name, node):
+        def _get_grp(_, node):
             if isinstance(node, h5py.Group):
                 if attribute_name in node.attrs:
                     if attribute_value is None:
@@ -1058,7 +956,7 @@ class H5Group(h5py.Group):
                         if node.attrs[attribute_name] == attribute_value:
                             names.append(node)
 
-        def _get_ds(name, node):
+        def _get_ds(_, node):
             if isinstance(node, h5py.Dataset):
                 if attribute_name in node.attrs:
                     if attribute_value is None:
@@ -1067,7 +965,7 @@ class H5Group(h5py.Group):
                         if node.attrs[attribute_name] == attribute_value:
                             names.append(node)
 
-        def _get_ds_grp(name, node):
+        def _get_ds_grp(_, node):
             if attribute_name in node.attrs:
                 if attribute_value is None:
                     names.append(node)
@@ -1075,14 +973,7 @@ class H5Group(h5py.Group):
                     if node.attrs[attribute_name] == attribute_value:
                         names.append(node)
 
-        if recursive:
-            if h5type is None:
-                self.visititems(_get_ds_grp)
-            elif h5type.lower() in ('dataset', 'ds'):
-                self.visititems(_get_ds)
-            elif h5type.lower() in ('group', 'grp', 'gr'):
-                self.visititems(_get_grp)
-        else:
+        if not recursive:
             if h5type is None:
                 for ds in self.values():
                     if attribute_name in ds.attrs:
@@ -1100,6 +991,13 @@ class H5Group(h5py.Group):
                         if attribute_name in ds.attrs:
                             if ds.attrs[attribute_name] == attribute_value:
                                 names.append(ds)
+        else:
+            if h5type is None:
+                self.visititems(_get_ds_grp)
+            elif h5type.lower() in ('dataset', 'ds'):
+                self.visititems(_get_ds)
+            elif h5type.lower() in ('group', 'grp', 'gr'):
+                self.visititems(_get_grp)
         return names
 
     def get_datasets_by_attribute(self, attribute_name, attribute_value=None,
@@ -1137,8 +1035,11 @@ class H5Group(h5py.Group):
         all below"""
         return self._get_obj_names(h5py.Dataset, recursive)
 
-    def dump(self, collapsed: bool = True, max_attr_length: Union[int, None] = None,
-             chunks: bool = False, maxshape: bool = False):
+    def dump(self,
+             collapsed: bool = True,
+             max_attr_length: Union[int, None] = None,
+             chunks: bool = False,
+             maxshape: bool = False):
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used
 
@@ -1164,10 +1065,6 @@ class H5Group(h5py.Group):
         """string representation of group"""
         return self.hdfrepr.__str__(self)
 
-    def build_xr_dataset(self, *dataset):
-        from ..xr.dataset import HDFXrDataset
-        return HDFXrDataset(*dataset)
-
 
 class DatasetValues:
     """helper class to work around xarray"""
@@ -1182,9 +1079,64 @@ class DatasetValues:
         return self.h5dataset.__setitem__(args, val)
 
 
+def only1d(obj):
+    """Decorator to check if the dataset is 1D"""
+
+    def wrapper(*args, **kwargs):
+        if args[0].ndim != 1:
+            raise ValueError('Only applicable to 1D datasets!')
+
+    return obj
+
+
 class H5Dataset(h5py.Dataset):
     """Inherited Dataset group of the h5py package"""
     convention = 'default'
+
+    @only1d
+    def __lt__(self, other: Union[int, float]):
+        if isinstance(other, (int, float)):
+            data = self.values[:]
+            if data.ndim == 1:
+                return np.where(data < other)[0]
+            return np.where(data < other)
+        return self.name < other.name
+
+    @only1d
+    def __le__(self, value: Union[int, float]):
+        data = self.values[:]
+        if data.ndim == 1:
+            return np.where(data <= value)[0]
+        return np.where(data <= value)
+
+    @only1d
+    def __gt__(self, value: Union[int, float]):
+        data = self.values[:]
+        if data.ndim == 1:
+            return np.where(data > value)[0]
+        return np.where(data > value)
+
+    @only1d
+    def __ge__(self, value: Union[int, float]):
+        data = self.values[:]
+        if data.ndim == 1:
+            return np.where(data >= value)[0]
+        return np.where(data >= value)
+
+    @only1d
+    def __eq__(self, other):
+        if isinstance(other, (int, float)):
+            data = self.values[:]
+            if data.ndim == 1:
+                return np.where(data == other)[0]
+            return np.where(data == other)
+        if isinstance(other, str):
+            return self.name == other
+        return self.id == other.id
+
+    @with_phil
+    def __hash__(self):
+        return hash(self.id)
 
     @property
     def attrs(self):
@@ -1277,7 +1229,7 @@ class H5Dataset(h5py.Dataset):
                 if len(d) > 0:
                     for i in range(len(d)):
                         if item == os.path.basename(d[i].name):
-                            return d[i]
+                            return self.__class__(d[i])
         return super().__getattribute__(item)
 
     def __setitem__(self, key, value):
@@ -1288,81 +1240,102 @@ class H5Dataset(h5py.Dataset):
             super().__setitem__(key, value)
 
     def __getitem__(self, args, new_dtype=None, nparray=False) -> Union[xr.DataArray, np.ndarray]:
-        """Return sliced HDF dataset. If global setting `RETURN_XARRAY`
+        """Return sliced HDF dataset. If global setting `return_xarray`
         is set to True, a `xr.DataArray` is returned, otherwise the default
         behaviour of the h5p-package is used and a np.ndarray is returned.
-        Note, that even if `RETURN_XARRAY` is True, there is another way to
+        Note, that even if `return_xarray` is True, there is another way to
         receive  numpy array. This is by calling .values[:] on the dataset."""
         args = args if isinstance(args, tuple) else (args,)
-        if not config.CONFIG.RETURN_XARRAY or nparray:
+
+        if not config.return_xarray or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
-        if Ellipsis in args:
-            warnings.warn(
-                'Ellipsis not supported at this stage. returning numpy array')
-            return super().__getitem__(args, new_dtype=new_dtype)
-        else:
-            arr = super().__getitem__(args, new_dtype=new_dtype)
-            attrs = pop_hdf_attributes(self.attrs)
 
-            if 'DIMENSION_LIST' in self.attrs:
-                # there are coordinates to attach...
+        # check if any entry in args is of type Ellipsis:
+        if any(arg is Ellipsis for arg in args):
+            # substitute Ellipsis with as many slices as needed:
+            args = list(args)
+            ellipsis_index = args.index(Ellipsis)
+            args.pop(ellipsis_index)
+            args[ellipsis_index:ellipsis_index] = [slice(None)
+                                                   for _ in range(self.ndim - len(args))]
+            args = tuple(args)
 
-                myargs = [slice(None) for _ in range(self.ndim)]
-                for ia, a in enumerate(args):
-                    myargs[ia] = a
+        arr = super().__getitem__(args, new_dtype=new_dtype)
+        attrs = pop_hdf_attributes(self.attrs)
 
-                # remember the first dimension name for all axis:
-                dims_names = [Path(d[0].name).stem if len(
-                    d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
+        if 'DIMENSION_LIST' in self.attrs:
+            # there are coordinates to attach...
 
-                coords = {}
-                used_dims = []
-                for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
-                    for iax, _ in enumerate(dim):
-                        dim_ds = dim[iax]
-                        coord_name = Path(dim[iax].name).stem
-                        if dim_ds.ndim == 0:
-                            if isinstance(arg, int):
-                                coords[coord_name] = xr.DataArray(name=coord_name,
-                                                                  dims=(
-                                                                  ), data=dim_ds[()],
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
-                            else:
-                                coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
-                                                                  data=[
-                                                                      dim_ds[()], ],
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
+            myargs = [slice(None) for _ in range(self.ndim)]
+            for ia, a in enumerate(args):
+                myargs[ia] = a
+
+            # remember the first dimension name for all axis:
+            dims_names = [Path(d[0].name).stem if len(
+                d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
+
+            coords = {}
+
+            for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
+                for iax, _ in enumerate(dim):
+                    dim_ds = dim[iax]
+                    coord_name = Path(dim[iax].name).stem
+                    if dim_ds.ndim == 0:
+                        dim_ds_data = dim_ds[()]
+                    else:
+                        dim_ds_data = dim_ds[arg]
+                    if dim_ds_data.ndim == 0:
+                        if isinstance(arg, int):
+                            coords[coord_name] = xr.DataArray(name=coord_name,
+                                                              dims=(
+                                                              ), data=dim_ds_data,
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
                         else:
-                            used_dims.append(dim_name)
-                            _data = dim_ds[arg]
-                            if isinstance(_data, np.ndarray):
-                                coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
-                                                                  data=_data,
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
-                            else:
-                                coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
-                                                                  data=_data,
-                                                                  attrs=pop_hdf_attributes(dim_ds.attrs))
-
-                used_dims = [dim_name for arg, dim_name in zip(
-                    myargs, dims_names) if isinstance(arg, slice)]
-
-                COORDINATES = self.attrs.get('COORDINATES')
-                if COORDINATES is not None:
-                    if isinstance(COORDINATES, str):
-                        COORDINATES = [COORDINATES, ]
-                    for c in COORDINATES:
-                        if c[0] == '/':
-                            _data = self.rootparent[c]
+                            coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
+                                                              data=[
+                                                                  dim_ds[()], ],
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+                    else:
+                        if isinstance(dim_ds_data, np.ndarray):
+                            coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
+                                                              data=dim_ds_data,
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
                         else:
-                            _data = self.parent[c]
-                        _name = Path(c).stem
-                        coords.update({_name: xr.DataArray(name=_name, dims=(),
-                                                           data=_data,
-                                                           attrs=pop_hdf_attributes(self.parent[c].attrs))})
-                return xr.DataArray(name=Path(self.name).stem, data=arr, dims=used_dims,
-                                    coords=coords, attrs=attrs)
-            return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
+                            coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
+                                                              data=dim_ds_data,
+                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+
+            used_dims = [dim_name for arg, dim_name in zip(
+                myargs, dims_names) if isinstance(arg, (slice, np.ndarray))]
+
+            COORDINATES = self.attrs.get('COORDINATES')
+            if COORDINATES is not None:
+                if isinstance(COORDINATES, str):
+                    COORDINATES = [COORDINATES, ]
+                else:
+                    COORDINATES = list(COORDINATES)
+
+                for c in COORDINATES:
+                    if c[0] == '/':
+                        _data = self.rootparent[c]
+                    else:
+                        _data = self.parent[c]
+                    _name = Path(c).stem
+                    coords.update({_name: xr.DataArray(name=_name, dims=(),
+                                                       data=_data,
+                                                       attrs=pop_hdf_attributes(self.parent[c].attrs))})
+            return xr.DataArray(name=Path(self.name).stem,
+                                data=arr,
+                                dims=used_dims,
+                                coords=coords, attrs=attrs)
+        # check if arr is string
+        if arr.dtype.kind == 'S':
+            # decode string array
+            _arr = arr.astype(str)
+            if isinstance(_arr, np.ndarray):
+                return tuple(_arr)
+            return _arr
+        return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
     def __repr__(self) -> str:
         r = super().__repr__()
@@ -1370,10 +1343,6 @@ class H5Dataset(h5py.Dataset):
             return r[:-1] + f' (convention "{self.convention}")>'
         else:
             return r[:-1] + f', convention "{self.convention}">'
-
-    def __lt__(self, other):
-        """Call __lt__() on group names"""
-        return self.name < other.name
 
     def dump(self) -> None:
         """Call sdump()"""
@@ -1406,7 +1375,7 @@ class H5Dataset(h5py.Dataset):
         if isinstance(_id, h5py.h5d.DatasetID):
             super().__init__(_id)
         else:
-            ValueError('Could not initialize Dataset. A h5py.h5f.FileID object must be passed')
+            raise ValueError('Could not initialize Dataset. A h5py.h5f.FileID object must be passed')
 
         super().__init__(_id)
 
@@ -1492,7 +1461,7 @@ class H5File(h5py.File, H5Group):
 
         """
         _bytes = os.path.getsize(self.filename)
-        return _bytes * config.ureg.byte
+        return _bytes * ureg.byte
 
     @property
     def layout(self) -> H5Layout:

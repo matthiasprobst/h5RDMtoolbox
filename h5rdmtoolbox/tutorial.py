@@ -1,12 +1,11 @@
 """
 Tutorial module providing easy access to particular data.
 """
+import numpy as np
 import os
 import pathlib
-from typing import List
-
-import numpy as np
 import xarray as xr
+from typing import List
 
 from .utils import generate_temporary_directory
 from .wrapper.cflike import H5File as CFH5File
@@ -205,10 +204,14 @@ class Database:
                     ds.attrs['std'] = np.std(_vfr_vec)
                 else:
                     zplanes, timesteps = 2, 5
+                    h5.create_dataset('x', data=range(86), attrs={'units': 'm', 'long_name': 'x-coordinate'},
+                                      make_scale=True)
                     h5.create_dataset('u', attrs={'units': 'm/s', 'long_name': 'u-component'},
-                                      shape=(zplanes, timesteps, 64, 86, 2))
+                                      shape=(zplanes, timesteps, 64, 86, 2),
+                                      attach_scales=(None, None, None, 'x', None))
                     h5.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'v-component'},
-                                      shape=(zplanes, timesteps, 64, 86, 2))
+                                      shape=(zplanes, timesteps, 64, 86, 2),
+                                      attach_scales=(None, None, None, 'x', None))
                     g = h5.create_group('timeAverages', long_name='time averaged data')
                     g.create_dataset('u', attrs={'units': 'm/s', 'long_name': 'mean u-component'},
                                      shape=(zplanes, 64, 86, 2))
