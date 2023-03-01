@@ -3,7 +3,6 @@ import atexit
 import logging
 import pathlib
 import shutil
-import warnings
 
 from . import config
 from . import wrapper
@@ -35,10 +34,10 @@ def set_loglevel(logger, level):
 
 CONFIG = config.CONFIG
 
-set_loglevel(core_logger, CONFIG.INIT_LOGGER_LEVEL)
+set_loglevel(core_logger, CONFIG.init_logger_level)
 
 # global instance:
-h5tbxParams = {'convention': config.CONFIG['CONVENTION'],
+h5tbxParams = {'convention': config.CONFIG['convention'],
                'H5File': core.H5File,
                'H5Dataset': core.H5Dataset,
                'H5Group': core.H5Group}
@@ -106,7 +105,7 @@ class H5Files:
     """Interface class to wrapper class around HDF5/h5py.File"""
 
     def __new__(cls, *args, **kwargs):
-        use(config.CONFIG['CONVENTION'])
+        use(config.CONFIG['convention'])
         file_instance = kwargs.get('file_instance', None)
         if file_instance is None:
             kwargs['file_instance'] = h5tbxParams['H5File']

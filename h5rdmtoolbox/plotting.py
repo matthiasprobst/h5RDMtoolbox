@@ -10,7 +10,7 @@ from .config import CONFIG as config
 
 
 def build_label_unit_str(name: str, units: str,
-                         units_format: str = config.XARRAY_UNIT_REPR_IN_PLOTS) -> str:
+                         units_format: str = config.xarray_unit_repr_in_plots) -> str:
     """generates the label string from a name and a units based on the units format"""
     units = units.replace("**", "^")
     if units_format == 'in':
@@ -27,7 +27,7 @@ class XarrayLabelManipulation(plt.Axes):
     """Label manipulation axis class"""
 
     @staticmethod
-    def _adjust_units_label(label, units_format=config.XARRAY_UNIT_REPR_IN_PLOTS):
+    def _adjust_units_label(label, units_format=config.xarray_unit_repr_in_plots):
         # other formats: '(', '[', '/', 'in'
         if label:
             if not label[-1] == ']':

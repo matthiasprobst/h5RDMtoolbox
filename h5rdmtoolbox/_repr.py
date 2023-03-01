@@ -213,7 +213,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __NDdataset__(self, name, h5dataset):
         ds_dirname = os.path.dirname(h5dataset.name)
         _shape = h5dataset.shape
-        if config.ADVANCED_SHAPE_REPR:
+        if config.advanced_shape_repr:
             _shape_repr = '('
             ndim = h5dataset.ndim
             for i in range(ndim):

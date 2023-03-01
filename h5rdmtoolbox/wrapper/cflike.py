@@ -208,7 +208,7 @@ class H5Group(core.H5Group):
                               'associated with the attribute "units" and '
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
-            if CONFIG.REQUIRE_UNITS:
+            if CONFIG.require_unit:
                 raise errors.UnitsError(f'Units of dataset "{name}" cannot be None.'
                                         ' A dimensionless dataset has units "''"')
             attrs['units'] = ''

@@ -134,7 +134,7 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
     elif isinstance(value, pathlib.Path):
         _value = str(value)
     elif isinstance(value, datetime.datetime):
-        _value = value.strftime(config.CONFIG.DTIME_FMT)
+        _value = value.strftime(config.CONFIG.dtime_fmt)
     else:
         _value = value
 
