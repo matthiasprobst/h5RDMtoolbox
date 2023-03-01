@@ -8,8 +8,8 @@ import yaml
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.config import CONFIG
-from h5rdmtoolbox.config import ureg
+from h5rdmtoolbox import config
+from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.conventions.cflike import StandardNameTable
 from h5rdmtoolbox.conventions.cflike import standard_name as sn
 from h5rdmtoolbox.conventions.layout import H5Layout
@@ -304,12 +304,12 @@ class TestH5CFLikeFile(unittest.TestCase):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
-            CONFIG.natural_naming = False
+            config.natural_naming = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            CONFIG.natural_naming = True
+            config.natural_naming = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -526,12 +526,12 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_attrs(self):
         with h5tbx.H5File(mode='w') as h5:
-            CONFIG.natural_naming = False
+            config.natural_naming = False
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            CONFIG.natural_naming = True
+            config.natural_naming = True
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -586,14 +586,14 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(grp.long_name, 'long name of group')
 
     def test_assign_data_to_existing_dset(self):
-        CONFIG.natural_naming = True
+        config.natural_naming = True
         with h5tbx.H5File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name', units='')
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
 
     def test_create_dataset_from_xarray(self):
-        CONFIG.natural_naming = True
+        config.natural_naming = True
         with h5tbx.H5File(mode='w') as h5:
             z = xr.DataArray(name='z', data=-1,
                              attrs=dict(units='m', standard_name='z_coordinate'))

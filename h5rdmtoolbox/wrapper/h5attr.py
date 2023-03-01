@@ -9,6 +9,7 @@ from typing import Dict
 from .h5utils import get_rootparent
 from .. import config
 from .. import utils
+from .._config import ureg
 from ..conventions.registration import REGISTRATED_ATTRIBUTE_NAMES
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
@@ -35,7 +36,7 @@ class AttributeString(str):
 
     def to_pint(self) -> "pint.util.Quantity":
         """Returns a pint.Quantity object"""
-        return config.ureg(self)
+        return ureg(self)
 
 
 class WrapperAttributeManager(h5py.AttributeManager):
@@ -137,7 +138,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return outstr[:-1]
 
     def __getattr__(self, item):
-        if config.CONFIG.natural_naming:
+        if config.natural_naming:
             if item in self.__dict__:
                 return super().__getattribute__(item)
             if item in self.keys():

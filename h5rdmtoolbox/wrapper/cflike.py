@@ -11,7 +11,8 @@ from h5rdmtoolbox.conventions.registration import register_hdf_attribute
 from . import core
 from .. import _repr
 from .. import errors
-from ..config import CONFIG, ureg
+from .._config import ureg
+from .. import config
 from ..conventions import cflike
 
 logger = logging.getLogger(__package__)
@@ -208,7 +209,7 @@ class H5Group(core.H5Group):
                               'associated with the attribute "units" and '
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
-            if CONFIG.require_unit:
+            if config.require_unit:
                 raise errors.UnitsError(f'Units of dataset "{name}" cannot be None.'
                                         ' A dimensionless dataset has units "''"')
             attrs['units'] = ''

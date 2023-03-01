@@ -6,7 +6,7 @@ from abc import abstractmethod
 from numpy import ndarray
 from time import perf_counter_ns
 
-from .config import CONFIG as config
+from . import config
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:

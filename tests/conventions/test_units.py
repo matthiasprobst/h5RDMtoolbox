@@ -3,7 +3,7 @@ import unittest
 from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox
-from h5rdmtoolbox.config import ureg
+from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.conventions.cflike import units
 
 

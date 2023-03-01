@@ -6,7 +6,7 @@ Matplotlib labels are manipulated to set the units representation correctly. See
 import matplotlib.projections as proj
 import matplotlib.pyplot as plt
 
-from .config import CONFIG as config
+from . import config
 
 
 def build_label_unit_str(name: str, units: str,

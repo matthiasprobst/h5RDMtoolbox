@@ -9,7 +9,7 @@ from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.config import ureg
+from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.wrapper import core, cflike
 from h5rdmtoolbox.wrapper.h5attr import WrapperAttributeManager
@@ -143,6 +143,12 @@ class TestCommon(unittest.TestCase):
                     h5.attrs['mean_with_unit'] = test_val
                     self.assertEqual(h5.attrs['mean_with_unit'], test_val)
                     attrs_with_unit = h5.attrs['mean_with_unit'].to_pint()
+                    self.assertEqual(f"{h5.attrs['mean_with_unit'].to_pint()}", '1.2 m')
+                    h5tbx.config.ureg_format = 'L~'
+                    self.assertEqual(f"{h5.attrs['mean_with_unit'].to_pint()}",
+                                     '\\begin{pmatrix}1.2\\end{pmatrix}\\ \\mathrm{m}')
+                    h5tbx.config.ureg_format = 'C~'
+                    self.assertEqual(f"{h5.attrs['mean_with_unit'].to_pint()}", '1.2 m')
                     self.assertEqual(attrs_with_unit, ureg(test_val))
                     h5.attrs['mean_with_unit'] = attrs_with_unit
                     self.assertEqual(h5.attrs['mean_with_unit'], str(ureg(test_val)))

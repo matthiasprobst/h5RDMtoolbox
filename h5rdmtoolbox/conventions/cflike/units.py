@@ -1,8 +1,8 @@
 import pint
 from typing import Union
 
-from ... import config
 from .errors import UnitsError
+from ..._config import ureg
 
 
 class UnitsAttribute:
@@ -13,7 +13,7 @@ class UnitsAttribute:
         default unit registry format of pint is used."""
         if new_units:
             if isinstance(new_units, str):
-                _new_units = f'{config.ureg.Unit(new_units)}'
+                _new_units = f'{ureg.Unit(new_units)}'
             elif isinstance(new_units, pint.Unit):
                 _new_units = f'{new_units}'
             else:

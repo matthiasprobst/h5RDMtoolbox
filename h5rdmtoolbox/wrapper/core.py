@@ -29,6 +29,7 @@ from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
 from .. import config
 from .. import utils
+from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import H5Layout
@@ -215,7 +216,7 @@ class H5Group(h5py.Group):
         try:
             return super().__getattribute__(item)
         except AttributeError as e:
-            if not config.CONFIG.natural_naming:
+            if not config.natural_naming:
                 # raise an error if natural naming is NOT enabled
                 raise AttributeError(e)
 
@@ -307,7 +308,7 @@ class H5Group(h5py.Group):
             else:  # isinstance(self[name], h5py.Dataset):
                 raise RuntimeError('The name you passed is already ued for a dataset!')
 
-        if _is_not_valid_natural_name(self, name, config.CONFIG.natural_naming):
+        if _is_not_valid_natural_name(self, name, config.natural_naming):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
                              f'attribute of the class and cannot be used '
                              f'while natural naming is enabled')
@@ -428,8 +429,8 @@ class H5Group(h5py.Group):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        compression = kwargs.pop('compression', config.CONFIG.hdf_compression)
-        compression_opts = kwargs.pop('compression_opts', config.CONFIG.hdf_compression_opts)
+        compression = kwargs.pop('compression', config.hdf_compression)
+        compression_opts = kwargs.pop('compression_opts', config.hdf_compression_opts)
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
@@ -453,7 +454,7 @@ class H5Group(h5py.Group):
             attach_scales = kwargs.pop('attach_scale', None)
 
         if name:
-            if _is_not_valid_natural_name(self, name, config.CONFIG.natural_naming):
+            if _is_not_valid_natural_name(self, name, config.natural_naming):
                 raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
                                  f'attribute of the class and cannot be used '
                                  f'while natural naming is enabled')
@@ -658,7 +659,7 @@ class H5Group(h5py.Group):
             raise ValueError(
                 f'Wrong input for "csv_filename: {type(csv_filename)}')
 
-        compression, compression_opts = config.CONFIG.hdf_compression, config.CONFIG.hdf_compression_opts
+        compression, compression_opts = config.hdf_compression, config.hdf_compression_opts
 
         if n_files > 1 and combine_opt == 'concatenate':
             dfs = [pd.concat(dfs, axis=axis), ]
@@ -738,7 +739,7 @@ class H5Group(h5py.Group):
         """
 
         # take compression from kwargs or config:
-        _compression, _compression_opts = config.CONFIG.hdf_compression, config.CONFIG.hdf_compression_opts
+        _compression, _compression_opts = config.hdf_compression, config.hdf_compression_opts
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
 
@@ -1238,7 +1239,7 @@ class H5Dataset(h5py.Dataset):
         receive  numpy array. This is by calling .values[:] on the dataset."""
         args = args if isinstance(args, tuple) else (args,)
 
-        if not config.CONFIG.return_xarray or nparray:
+        if not config.return_xarray or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
 
         for arg in args:
@@ -1449,7 +1450,7 @@ class H5File(h5py.File, H5Group):
 
         """
         _bytes = os.path.getsize(self.filename)
-        return _bytes * config.ureg.byte
+        return _bytes * ureg.byte
 
     @property
     def layout(self) -> H5Layout:
