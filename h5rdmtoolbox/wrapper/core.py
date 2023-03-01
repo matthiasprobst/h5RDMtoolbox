@@ -1250,12 +1250,15 @@ class H5Dataset(h5py.Dataset):
         if not config.return_xarray or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
 
-        for arg in args:
-            if not isinstance(arg, np.ndarray):
-                if arg == Ellipsis:
-                    warnings.warn(
-                        'Ellipsis not supported at this stage. returning numpy array')
-                    return super().__getitem__(args, new_dtype=new_dtype)
+        # check if any entry in args is of type Ellipsis:
+        if Ellipsis in args:
+            # substitute Ellipsis with as many slices as needed:
+            args = list(args)
+            ellipsis_index = args.index(Ellipsis)
+            args.pop(ellipsis_index)
+            args[ellipsis_index:ellipsis_index] = [slice(None)
+                                                   for _ in range(self.ndim - len(args))]
+            args = tuple(args)
 
         arr = super().__getitem__(args, new_dtype=new_dtype)
         attrs = pop_hdf_attributes(self.attrs)

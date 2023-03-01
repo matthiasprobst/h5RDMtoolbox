@@ -120,7 +120,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5['x'].shape, (2, 2, 2))
             self.assertEqual(h5['y'].shape, (2, 2, 2))
 
-    def test_modify_static_properties(self):
+    def test_slicing(self):
         with h5tbx.H5File() as h5:
             ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
                                          make_scale=True)
@@ -136,6 +136,20 @@ class TestCore(unittest.TestCase):
             self.assertEqual(list(ds[1:4, :, :].coords.keys()), ['time'])
             self.assertEqual(list(ds[1:4, 1:4, :].coords.keys()), ['time', ])
             self.assertEqual(list(ds[1:4, 1:4, 1:4].coords.keys()), ['time', ])
+
+            self.assertTrue(ds[..., 0].equals(ds[:, :, 0]))
+            self.assertTrue(ds[0, ...].equals(ds[0, :, :]))
+            self.assertTrue(ds[..., :].equals(ds[:, :, :]))
+            self.assertTrue(ds[...].equals(ds[:, :, :]))
+
+    def test_modify_static_properties(self):
+        with h5tbx.H5File() as h5:
+            ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
+                                         make_scale=True)
+            ds = h5.create_dataset('grp/data', shape=(10, 20, 30),
+                                   data=np.random.rand(10, 20, 30),
+                                   chunks=(1, 20, 30),
+                                   attach_scales=(ds_scale,))
             ds0 = ds[:]
 
             new_ds = ds.modify(chunks=(2, 5, 6))
@@ -227,7 +241,6 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5.data[h5.data.time == 66, :, :].shape, (1, 200, 100))
             np.testing.assert_equal(h5.data[h5.data.time == 66, :, :], h5.data.values[66, :, :].reshape(1, 200, 100))
             np.testing.assert_equal(h5.data.time == 66, np.array(66))
-
 
     def test_H5Group(self):
         with h5tbx.H5File() as h5:
