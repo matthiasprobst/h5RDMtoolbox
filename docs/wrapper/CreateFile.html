@@ -699,7 +699,7 @@ div.rendered_html tbody tr:hover {
 </style>
 <section id="Create-an-HDF-file">
 <h1>Create an HDF file<a class="headerlink" href="#Create-an-HDF-file" title="Permalink to this headline">#</a></h1>
-<p>To work with HDF5 files, the “wrapper”-class <code class="docutils literal notranslate"><span class="pre">H5File</span></code> is used (aquivilant to <code class="docutils literal notranslate"><span class="pre">h5py.File</span></code>).</p>
+<p>To work with HDF5 files, the “wrapper”-class <code class="docutils literal notranslate"><span class="pre">File</span></code> is used (aquivilant to <code class="docutils literal notranslate"><span class="pre">h5py.File</span></code>).</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -714,7 +714,7 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
 <span class="n">h5</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
@@ -735,7 +735,7 @@ tmp0.hdf
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="p">)</span>
 <span class="n">h5</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
@@ -760,7 +760,7 @@ tmp0.hdf
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="s1">&#39;test.hdf&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s1">&#39;test.hdf&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">hdf_filename</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 </pre></div>
 </div>

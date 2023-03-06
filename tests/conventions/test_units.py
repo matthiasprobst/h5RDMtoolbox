@@ -13,7 +13,7 @@ class TestUnits(unittest.TestCase):
     def test_title(self):
         """Test title attribute"""
         h5rdmtoolbox.use('cflike')
-        with h5rdmtoolbox.H5File() as h5:
+        with h5rdmtoolbox.File() as h5:
             ds = h5.create_dataset('test', data=[1, 2, 3], units='m', long_name='test')
             with self.assertRaises(UndefinedUnitError):
                 ds.units = 'test'

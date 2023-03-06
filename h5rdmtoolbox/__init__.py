@@ -3,6 +3,7 @@ import atexit
 import logging
 import pathlib
 import shutil
+import warnings
 
 from ._config import CONFIG
 from ._config import user_config_filename, write_default_config, write_user_config, DEFAULT_CONFIG
@@ -39,9 +40,9 @@ set_loglevel(core_logger, config.init_logger_level)
 
 # global instance:
 h5tbxParams = {'convention': config['default_convention'],
-               'H5File': core.H5File,
-               'H5Dataset': core.H5Dataset,
-               'H5Group': core.H5Group}
+               'File': core.File,
+               'Dataset': core.Dataset,
+               'Group': core.Group}
 
 
 def use(convention_name: str) -> None:
@@ -56,9 +57,9 @@ def use(convention_name: str) -> None:
         if h5tbxParams['convention'] != convention_name:
             core_logger.info('Switched to "default"')
         h5tbxParams['convention'] = convention_name
-        h5tbxParams['H5File'] = core.H5File
-        h5tbxParams['H5Dataset'] = core.H5Dataset
-        h5tbxParams['H5Group'] = core.H5Group
+        h5tbxParams['File'] = core.File
+        h5tbxParams['Dataset'] = core.Dataset
+        h5tbxParams['Group'] = core.Group
         return
 
     if convention_name == 'cflike':
@@ -71,46 +72,62 @@ def use(convention_name: str) -> None:
         if h5tbxParams['convention'] != convention_name:
             core_logger.info(f'Switched to "{convention_name}"')
         h5tbxParams['convention'] = convention_name
-        h5tbxParams['H5File'] = cflike.H5File
-        h5tbxParams['H5Dataset'] = cflike.H5Dataset
-        h5tbxParams['H5Group'] = cflike.H5Group
+        h5tbxParams['File'] = cflike.File
+        h5tbxParams['Dataset'] = cflike.Dataset
+        h5tbxParams['Group'] = cflike.Group
         return
 
     raise ValueError(f'Unknown convention name: "{convention_name}"')
 
 
-class H5File:
+class File:
     """Interface class to wrapper class around HDF5/h5py.File"""
 
     def __new__(cls, *args, **kwargs):
-        return h5tbxParams['H5File'](*args, **kwargs)
+        return h5tbxParams['File'](*args, **kwargs)
 
     def __str__(self) -> str:
-        return h5tbxParams['H5File'].__str__(self)
+        return h5tbxParams['File'].__str__(self)
 
     def __repr__(self) -> str:
-        return h5tbxParams['H5File'].__repr__(self)
+        return h5tbxParams['File'].__repr__(self)
 
     @staticmethod
-    def H5Dataset():
+    def Dataset():
         """Return hdf dataset class  of set convention wrapper"""
-        return h5tbxParams['H5Dataset']
+        return h5tbxParams['Dataset']
 
     @staticmethod
-    def H5Group():
+    def Group():
         """Return hdf group class  of set convention wrapper"""
-        return h5tbxParams['H5Group']
+        return h5tbxParams['Group']
 
 
-class H5Files:
+class Files:
     """Interface class to wrapper class around HDF5/h5py.File"""
 
     def __new__(cls, *args, **kwargs):
         use(config['default_convention'])
         file_instance = kwargs.get('file_instance', None)
         if file_instance is None:
-            kwargs['file_instance'] = h5tbxParams['H5File']
+            kwargs['file_instance'] = h5tbxParams['File']
         return filequery.Files(*args, **kwargs)
+
+
+class H5File(File):
+    """Deprecated class. Use "File" instead."""
+
+    def __new__(cls, *args, **kwargs):
+        warnings.warn('File is deprecated. Use "File" instead.', DeprecationWarning)
+        return super().__new__(cls, *args, **kwargs)
+
+
+class H5Files(Files):
+    """Deprecated class. Use "Files" instead."""
+
+    def __new__(cls, *args, **kwargs):
+        warnings.warn('H5Files is deprecated. Use "Files" instead.', DeprecationWarning)
+        super().__new__(cls, *args, **kwargs)
 
 
 @atexit.register

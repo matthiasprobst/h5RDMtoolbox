@@ -62,7 +62,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    print(h5.hdf_filename.name)  # equal to h5.filename but a pathlib.Path and exists also after the file is closed"
    ]
   },
@@ -90,7 +90,7 @@
     "time = np.linspace(0, np.pi/4, 21)\n",
     "signal = np.sin(2*np.pi*3*time)\n",
     "\n",
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    signal_filename = h5.hdf_filename\n",
     "    \n",
     "    ds_time = h5.create_dataset(name='time',\n",
@@ -529,7 +529,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File(signal_filename) as h5:\n",
+    "with h5tbx.File(signal_filename) as h5:\n",
     "    signal_data = h5['signal'][:]\n",
     "signal_data"
    ]
@@ -566,7 +566,7 @@
    "source": [
     "import matplotlib.pyplot as plt\n",
     "\n",
-    "with h5tbx.H5File(signal_filename, 'r') as h5:\n",
+    "with h5tbx.File(signal_filename, 'r') as h5:\n",
     "    plt.figure(figsize=(4,2))\n",
     "    h5['signal'][:].plot(marker='o')"
    ]
@@ -589,7 +589,7 @@
    },
    "outputs": [],
    "source": [
-    "with h5tbx.H5File(signal_filename, 'r+') as h5:\n",
+    "with h5tbx.File(signal_filename, 'r+') as h5:\n",
     "    h5.create_group('mygroup',\n",
     "                    overwrite=True,\n",
     "                    attrs={'long_name': 'my special group'})"
@@ -632,13 +632,13 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "'H5File' object has no attribute 'signal'\n"
+      "'File' object has no attribute 'signal'\n"
      ]
     }
    ],
    "source": [
     "config.natural_naming = False\n",
-    "with h5tbx.H5File(signal_filename, 'r') as h5:\n",
+    "with h5tbx.File(signal_filename, 'r') as h5:\n",
     "    try:\n",
     "        ds = h5.signal[:]\n",
     "    except AttributeError as e:\n",
@@ -663,7 +663,7 @@
    "outputs": [],
    "source": [
     "config.natural_naming = True\n",
-    "with h5tbx.H5File(signal_filename, 'r') as h5:\n",
+    "with h5tbx.File(signal_filename, 'r') as h5:\n",
     "    ds = h5.signal[:]\n",
     "    grp = h5.mygroup"
    ]
@@ -939,7 +939,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File(signal_filename) as h5:\n",
+    "with h5tbx.File(signal_filename) as h5:\n",
     "    h5.dump()"
    ]
   },
@@ -964,7 +964,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File(signal_filename) as h5:\n",
+    "with h5tbx.File(signal_filename) as h5:\n",
     "    h5.sdump()"
    ]
   }

@@ -303,7 +303,7 @@
     "list_of_hdf_filenames = tutorial.Database.generate_test_files()\n",
     "\n",
     "# dump the content of the first file in the list:\n",
-    "with h5tbx.H5File(list_of_hdf_filenames[0]) as h5:\n",
+    "with h5tbx.File(list_of_hdf_filenames[0]) as h5:\n",
     "    h5.dump()\n"
    ]
   },
@@ -610,7 +610,7 @@
    "source": [
     "h5tbx.use('cflike')\n",
     "\n",
-    "with h5tbx.H5File(list_of_hdf_filenames[0]) as h5:\n",
+    "with h5tbx.File(list_of_hdf_filenames[0]) as h5:\n",
     "    h5.dump()"
    ]
   },
@@ -621,7 +621,7 @@
    "source": [
     "## Multi-file inspection\n",
     "\n",
-    "To inspect multiple files simultaneous, use `H5Files` instead of `H5File`:"
+    "To inspect multiple files simultaneous, use `H5Files` instead of `File`:"
    ]
   },
   {

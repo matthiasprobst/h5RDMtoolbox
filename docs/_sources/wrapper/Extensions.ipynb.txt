@@ -14,7 +14,7 @@
     "The concept of composition adds a component to a composite class. The relationship is such, that the composite class does not know the component class but wise versa. This allows to add additional functionality without changing the original code. Adding components to an existing wrapper class will be called \"registering\" here.\n",
     "\n",
     "### Registration of properties\n",
-    "To facilitate and speed up certain tasks and workflows, it might be usefull to have additional properties. Let's assume we want to store a username as an attribute in the HDF5 file. Let's further assume that a user name has a firstname and a surname and both must start with a capitalized letter. To catch possible errerneous input by the user, we would need an additional method, e.g. \"set_username\" or a property \"username\" of `H5File`.<br>**Two** possible ways to achieve this: **inheritance or composition**. The quick and recommended way to add a new class property is to use composition by \"registering\" the property. Like this we don't have to rewrite (inherite at least) the API but only simply write the porperty class.<br>\n",
+    "To facilitate and speed up certain tasks and workflows, it might be usefull to have additional properties. Let's assume we want to store a username as an attribute in the HDF5 file. Let's further assume that a user name has a firstname and a surname and both must start with a capitalized letter. To catch possible errerneous input by the user, we would need an additional method, e.g. \"set_username\" or a property \"username\" of `File`.<br>**Two** possible ways to achieve this: **inheritance or composition**. The quick and recommended way to add a new class property is to use composition by \"registering\" the property. Like this we don't have to rewrite (inherite at least) the API but only simply write the porperty class.<br>\n",
     "Let's first write a property class \"username\". It needs **three methods**: `get`, `set` and `delete`:"
    ]
   },
@@ -39,7 +39,7 @@
     "from typing import Tuple\n",
     "\n",
     "# register a property with setter and getter method:\n",
-    "@h5tbx.conventions.register_hdf_attr(h5tbx.wrapper.core.H5Dataset, overwrite=True, name='username')\n",
+    "@h5tbx.conventions.register_hdf_attr(h5tbx.wrapper.core.Dataset, overwrite=True, name='username')\n",
     "class username:\n",
     "    \"\"\"User Name Property. Requires name and ORCID\"\"\"\n",
     "\n",
@@ -63,7 +63,7 @@
    "metadata": {},
    "source": [
     "Some words about above lines:\n",
-    "- `@h5tbx.wrapper.register_special_property(h5tbx.H5File)`: registering the below class (only) to the class `H5File`\n",
+    "- `@h5tbx.wrapper.register_special_property(h5tbx.File)`: registering the below class (only) to the class `File`\n",
     "- don't use existing property names. An error will be raised anyhow. You may however pass `overwrite=True` in the registration method. Be careful though!\n",
     "- provide `set` and optionally also `get` and `delete`. The method `get` makes sense though, while `delete` is not really needed most of the times.\n",
     "\n",
@@ -319,7 +319,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    ds = h5.create_dataset('test', shape=(2,))    \n",
     "    ds.username = 'First User', '0000-0001-8729-0482'\n",
     "    print(ds.username)\n",
@@ -337,7 +337,7 @@
    "metadata": {},
    "source": [
     "### Registration of datasets\n",
-    "We can also \"register\" dataset accessors. In the following example we add \"device\" as a \"property with methods\". So \"device\" seems to be a property which has a method \"add\". Such an implementation faclitates the interaction with HDF data, too. Note, that this \"property-like\" accessor is available for all `H5Dataset` objects from know on in this session:"
+    "We can also \"register\" dataset accessors. In the following example we add \"device\" as a \"property with methods\". So \"device\" seems to be a property which has a method \"add\". Such an implementation faclitates the interaction with HDF data, too. Note, that this \"property-like\" accessor is available for all `Dataset` objects from know on in this session:"
    ]
   },
   {
@@ -348,7 +348,7 @@
    "outputs": [],
    "source": [
     "from h5rdmtoolbox.wrapper.accessory import register_special_dataset\n",
-    "@register_special_dataset('device', h5tbx.H5File.H5Dataset(), overwrite=True)\n",
+    "@register_special_dataset('device', h5tbx.File.Dataset(), overwrite=True)\n",
     "class DeviceProperty:\n",
     "    \"\"\"Device Accessor class\"\"\"\n",
     "\n",
@@ -375,13 +375,13 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "<class 'h5rdmtoolbox.wrapper.core.H5Dataset'>\n",
+      "<class 'h5rdmtoolbox.wrapper.core.Dataset'>\n",
       "my device\n"
      ]
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    ds = h5.create_dataset('test', shape=(2,))\n",
     "    print(type(ds))\n",
     "    ds.device.add('my device')\n",
@@ -399,7 +399,7 @@
     "\n",
     "### New Wrapper Class\n",
     "\n",
-    "The main wrapper class around a HDF5 file in this package is `H5File` which uses the wrapper class `H5Group` for `h5py.Group` and `H5Dataset` for wrapping `h5py.Dataset`"
+    "The main wrapper class around a HDF5 file in this package is `File` which uses the wrapper class `Group` for `h5py.Group` and `Dataset` for wrapping `h5py.Dataset`"
    ]
   },
   {
@@ -420,7 +420,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "class MyDataset(h5tbx.wrapper.core.H5Dataset):\n",
+    "class MyDataset(h5tbx.wrapper.core.Dataset):\n",
     "    def __repr__(self):\n",
     "        return f'{self.name}\\n{self.attrs}'\n",
     "    \n",
@@ -445,7 +445,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "class MyGroup(h5tbx.wrapper.core.H5Group):\n",
+    "class MyGroup(h5tbx.wrapper.core.Group):\n",
     "    \"\"\"My group. It prints a logger-like info to the screen and \n",
     "    requires a user when creating datasets\"\"\"\n",
     "    \n",
@@ -471,7 +471,7 @@
    "id": "09e135e0-ce76-4c77-90eb-8ec7fe811f40",
    "metadata": {},
    "source": [
-    "The main file wrapper inherites from `H5File` (\"root\" parent was `h5py.File`) and the new group class. Next, we have set the group and dataset class again, since some methods in the file wrapper class will need that information when returning instances of those classes (e.g. dataset or group creation). Finally we define a new method which sets the user name to the root attributes:"
+    "The main file wrapper inherites from `File` (\"root\" parent was `h5py.File`) and the new group class. Next, we have set the group and dataset class again, since some methods in the file wrapper class will need that information when returning instances of those classes (e.g. dataset or group creation). Finally we define a new method which sets the user name to the root attributes:"
    ]
   },
   {
@@ -481,7 +481,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "class MyWrapper(h5tbx.wrapper.core.H5File, MyGroup):\n",
+    "class MyWrapper(h5tbx.wrapper.core.File, MyGroup):\n",
     "    \n",
     "    def set_user(self, user_name):\n",
     "        self.attrs.modify('user', user_name)"

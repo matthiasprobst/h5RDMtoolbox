@@ -6,7 +6,7 @@ from pprint import pprint
 
 import h5py
 
-from . import H5File
+from . import File
 from ._version import __version__
 
 
@@ -107,7 +107,7 @@ def main():
         pprint(UserDir)
         return
     if args.dump:
-        with H5File(args.dump) as h5:
+        with File(args.dump) as h5:
             h5.sdump()
     arg_vars = vars(args)
 
@@ -162,7 +162,7 @@ def main():
                           'opened/is not corrupt')
                     return
                 print(f' > Adding hdf file: {args.add} to collection {collection.name} of database {db.name}')
-                with H5File(args.add) as h5:
+                with File(args.add) as h5:
                     # noinspection PyUnresolvedReferences
                     from h5rdmtoolbox.database import mongo
                     h5.mongo.insert(collection=collection, recursive=True, update=True)
@@ -180,7 +180,7 @@ def main():
                 else:
                     snt = StandardNameTable.load_registered(args.table)
                 print(f' > Checking file "{args.file}" with standard name table "{snt.versionname}"')
-                with H5File(args.file) as h5:
+                with File(args.file) as h5:
                     snt.check_grp(h5, recursive=True, raise_error=False)
                 return
         if args.cmd == 'layout':

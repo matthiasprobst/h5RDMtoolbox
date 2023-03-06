@@ -790,7 +790,7 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="p">)</span>
 <span class="n">h5</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
@@ -801,7 +801,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;class &#39;h5rdmtoolbox.H5File&#39; convention: cflike&gt;
+&lt;class &#39;h5rdmtoolbox.File&#39; convention: cflike&gt;
 </pre></div></div>
 </div>
 <section id="Working-with-HDF5-files-following-the-cf-like-convention">
@@ -809,7 +809,7 @@ div.rendered_html tbody tr:hover {
 <p>Some attributes are obligatory to provide with a dataset: - <code class="docutils literal notranslate"><span class="pre">units</span></code> - <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> - <code class="docutils literal notranslate"><span class="pre">long_name</span></code> (not needed if <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> exists and vise versa)</p>
 <p><strong>units</strong> We expect that each data set written to the HDF5 file has a physical unit or no unit at all. It is registered in the attribute <code class="docutils literal notranslate"><span class="pre">units</span></code>.</p>
 <p><strong>standard_name and long_name</strong> For the sake of improved readability and interpretability we suggest to use <code class="docutils literal notranslate"><span class="pre">long_name</span></code> or <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> as additional attributes. While <code class="docutils literal notranslate"><span class="pre">long_name</span></code> is human-readable and interpretable attribute, <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> is intended to be read by a machine (other software). This allows to automate exploration and processing work.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> generally should not be chosen freely but must follow a certain convention. Such a naming convention may be defined by a project or a community, e.g. the climate and forecast community [cfconventions.org], from which the concept of standard names is adoped. A convention is described in an <strong>XML</strong> file and associated with the wrapper file <code class="docutils literal notranslate"><span class="pre">H5File</span></code>. Again this is adoped from [cfconventions.org]. The XML file contains the standard name, a description for each one and the
+<p>The <code class="docutils literal notranslate"><span class="pre">standard_name</span></code> generally should not be chosen freely but must follow a certain convention. Such a naming convention may be defined by a project or a community, e.g. the climate and forecast community [cfconventions.org], from which the concept of standard names is adoped. A convention is described in an <strong>XML</strong> file and associated with the wrapper file <code class="docutils literal notranslate"><span class="pre">File</span></code>. Again this is adoped from [cfconventions.org]. The XML file contains the standard name, a description for each one and the
 respective unit. Thus, if a convention is associated with a wrapper class, the standard name and unit cannot be freely be chsen but is verified.</p>
 </section>
 <section id="File-creation">
@@ -819,7 +819,7 @@ respective unit. Thus, if a convention is associated with a wrapper class, the s
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;MyFile&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;MyFile&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -1047,7 +1047,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;MyFile&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;MyFile&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">standard_name_table</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -1067,7 +1067,7 @@ EmptyStandardNameTable
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;MyFile&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;MyFile&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_velocity&#39;</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;v&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;y_velocity&#39;</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="s2">&quot;linear_interpolation&quot;</span><span class="p">,</span>
@@ -1340,7 +1340,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;mygrp&#39;</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">&#39;othergrp&#39;</span><span class="p">,</span> <span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;my other group&#39;</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">sdump</span><span class="p">()</span>

@@ -2,7 +2,7 @@
 import h5py
 from typing import Union
 
-from .core import H5Group, H5File
+from .core import Group, File
 from ..xr.dataset import HDFXrDataset
 
 
@@ -79,7 +79,7 @@ def _register_special_dataset(name, cls, special_dataset, overwrite):
     return special_dataset
 
 
-def register_special_dataset(name, cls: Union["H5Dataset", "H5Group"], overwrite=False):
+def register_special_dataset(name, cls: Union["Dataset", "Group"], overwrite=False):
     """registers a special dataset to a wrapper class"""
 
     def decorator(accessor):
@@ -96,8 +96,8 @@ class Accessor:
         self._grp = h5grp
 
 
-@register_special_dataset("Vector", H5Group)
-@register_special_dataset("Vector", H5File)
+@register_special_dataset("Vector", Group)
+@register_special_dataset("Vector", File)
 class VectorDataset(Accessor):
     """A special dataset for vector data.
      The vector components are stored in the group as datasets."""

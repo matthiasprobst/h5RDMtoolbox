@@ -98,7 +98,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     # might be a list object
                     try:
                         return ast.literal_eval(ret)
-                    except (NameError, AttributeError):
+                    except (ValueError, NameError, AttributeError):
                         return ret
                 return ret
             return AttributeString(ret)

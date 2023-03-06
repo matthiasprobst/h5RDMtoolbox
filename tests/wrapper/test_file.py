@@ -10,18 +10,18 @@ from h5rdmtoolbox import use
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import set_loglevel
-from h5rdmtoolbox.wrapper.core import H5Dataset, H5File, H5Group
+from h5rdmtoolbox.wrapper.core import Dataset, File, Group
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
 
-class TestH5File(unittest.TestCase):
+class TestFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
         use('default')
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
             g.attrs['one'] = 1
@@ -194,13 +194,13 @@ class TestH5File(unittest.TestCase):
         # self.assertEqual(lay.n_issues, 0)
 
     def test_create_dataset(self):
-        """H5File has more parameters to pass as H5Base"""
-        with H5File() as h5:
+        """File has more parameters to pass as H5Base"""
+        with File() as h5:
             ds = h5.create_dataset('u', shape=())
             self.assertEqual(ds.name, '/u')
 
     def test_attrs(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             h5.create_dataset('ds', shape=(), attrs={'mean': 1.2})
 
             config.natural_naming = False
@@ -228,7 +228,7 @@ class TestH5File(unittest.TestCase):
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
 
     def test_attrs_find(self):
-        with H5File(self.test_filename, mode='r') as h5:
+        with File(self.test_filename, mode='r') as h5:
             self.assertEqual(
                 h5['/grp_1'],
                 h5.find_one(
@@ -275,14 +275,14 @@ class TestH5File(unittest.TestCase):
             )
 
     def test_find_group_data(self):
-        with H5File(self.test_filename, mode='r') as h5:
+        with File(self.test_filename, mode='r') as h5:
             self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}, '$group'))
             self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
             self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}))
             self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}))
 
     def test_find_dataset_data(self):
-        with H5File(self.test_filename, mode='r') as h5:
+        with File(self.test_filename, mode='r') as h5:
             self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
             self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
             self.assertEqual([h5['ds'], ], h5.find({'$basename': 'ds'}))
@@ -293,14 +293,14 @@ class TestH5File(unittest.TestCase):
                              sorted(h5.find({'$ndim': 1})))
 
     def test_open(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             pass
         h5.reopen('r+')
         self.assertEqual(h5.mode, 'r+')
         h5.close()
 
     def test_groups(self):
-        with H5File() as h5:
+        with File() as h5:
             groups = h5.get_groups()
             self.assertEqual(groups, [])
             h5.create_group('grp_1', attrs=dict(a=1))
@@ -321,7 +321,7 @@ class TestH5File(unittest.TestCase):
             self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=False))
 
     def test_tree_structur(self):
-        with H5File() as h5:
+        with File() as h5:
             h5.attrs['one'] = 1
             h5.attrs['two'] = 2
             h5.create_dataset('rootds', shape=(2, 40, 3))
@@ -332,15 +332,15 @@ class TestH5File(unittest.TestCase):
             tree = h5.get_tree_structure()
 
     def test_rootparent(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             grp = h5.create_group('grp1/grp2/grp3')
-            self.assertIsInstance(grp, H5Group)
+            self.assertIsInstance(grp, Group)
             dset = grp.create_dataset('test', data=1, units='', long_name='some long name')
-            self.assertIsInstance(dset, H5Dataset)
+            self.assertIsInstance(dset, Dataset)
             self.assertEqual(dset.rootparent, h5['/'])
 
     def test_rename(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             h5.create_dataset('testds',
                               data=np.random.rand(10, 10))
             h5.testds.rename('newname')
@@ -351,7 +351,7 @@ class TestH5File(unittest.TestCase):
                 ds.rename('newname')
 
     def test_dimension_scales(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=True)
             with self.assertRaises(ValueError):  # because name already exists
                 _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=True)
@@ -360,7 +360,7 @@ class TestH5File(unittest.TestCase):
                 _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=[1, 2])
 
     def test_scale_manipulation(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             h5.create_dataset('x',
                               data=np.random.rand(10),
                               attrs=dict(long_name='x-coordinate',
@@ -384,17 +384,17 @@ class TestH5File(unittest.TestCase):
         ds.baz.attrs['units'] = 'm'
         ds.baz.attrs['long_name'] = 'baz'
 
-        with H5File() as h5:
+        with File() as h5:
             h5.create_dataset_from_xarray_dataset(ds)
 
     # def test_setitem(self):
-    #     with H5File() as h5:
+    #     with File() as h5:
     #         h5['x'] = [1, 2, 3], 'm/s', {'attrs': {'long_name': 'hallo'}}
     #         self.assertEqual(h5['x'].shape, (3,))
     #         self.assertEqual(h5['x'].attrs['long_name'], 'hallo')
     #         self.assertEqual(h5['x'].attrs['units'], 'm/s')
     #
-    #     with H5File() as h5:
+    #     with File() as h5:
     #         h5['x'] = (np.random.random((20, 3, 5)), 'm/s', 'long_name', 'standard_name')
     #         self.assertEqual(h5['x'].shape, (20, 3, 5))
     #         self.assertEqual(h5['x'].attrs['long_name'], 'long_name')
@@ -402,7 +402,7 @@ class TestH5File(unittest.TestCase):
     #         from h5rdmtoolbox import config
     #         self.assertEqual(h5['x'].compression_opts, config.hdf_compression_opts)
     #
-    #     with H5File() as h5:
+    #     with File() as h5:
     #         h5['x'] = ([1, 2, 3], dict(units='m/s', long_name='long_name',
     #                                    attrs={'hello': 'world'}, compression='gzip',
     #                                    compression_opts=2))
@@ -413,7 +413,7 @@ class TestH5File(unittest.TestCase):
     #         self.assertEqual(h5['x'].compression_opts, 2)
 
     def test_attrs(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             config.natural_naming = False
 
             with self.assertRaises(AttributeError):
@@ -443,13 +443,13 @@ class TestH5File(unittest.TestCase):
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
     def test_rootparent(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             grp = h5.create_group('grp1/grp2/grp3')
             self.assertEqual(grp.rootparent, h5['/'])
 
     def test_assign_data_to_existing_dset(self):
         config.natural_naming = True
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3))
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
@@ -467,14 +467,14 @@ class TestH5File(unittest.TestCase):
             yaml.safe_dump(dictionary, f)
 
         hdf_filename = generate_temporary_filename(suffix='.hdf')
-        with H5File(hdf_filename, 'w') as h5:
+        with File(hdf_filename, 'w') as h5:
             h5.from_yaml(yaml_file)
             self.assertIn('test/grp', h5)
             self.assertIn('boundary/outlet boundary/y', h5)
             self.assertTrue(h5['boundary/outlet boundary/y'].attrs['units'], 'm')
 
     def test_get_group_names(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             g = h5.create_group('one', 'one')
             g.create_group('two', 'two')
             g = g.create_group('three', 'three')
@@ -482,7 +482,7 @@ class TestH5File(unittest.TestCase):
             self.assertEqual(h5['one'].get_group_names(), ['three', 'three/four', 'two'])
 
     def test_get_dataset_names(self):
-        with H5File(mode='w') as h5:
+        with File(mode='w') as h5:
             h5.create_dataset('one', data=1, attrs=dict(long_name='long name', units=''))
             h5.create_dataset('two', data=1, attrs=dict(long_name='long name', units=''))
             h5.create_dataset('grp/three', data=1, attrs=dict(long_name='long name', units=''))
@@ -496,7 +496,7 @@ class TestH5File(unittest.TestCase):
         tmpfile = touch_tmp_hdf5_file()
         with h5py.File(tmpfile, mode='w') as h5:
             h5.create_dataset(name='test', data=1)
-        with H5File(tmpfile, mode='r') as h5:
+        with File(tmpfile, mode='r') as h5:
             n = h5.check()
             # missing at root level:
             # title
@@ -508,7 +508,7 @@ class TestH5File(unittest.TestCase):
         with h5py.File(tmpfile, mode='w') as h5:
             h5.attrs['title'] = 'testfile'
             h5.create_dataset(name='test', data=1)
-        with H5File(tmpfile, mode='r') as h5:
+        with File(tmpfile, mode='r') as h5:
             n = h5.check()
             self.assertEqual(n, 0)
         return
@@ -517,7 +517,7 @@ class TestH5File(unittest.TestCase):
         with h5py.File(tmpfile, mode='w') as h5:
             h5.create_group(name='test')
 
-        with H5File(tmpfile, mode='r') as h5:
+        with File(tmpfile, mode='r') as h5:
             n = h5.check()
             self.assertEqual(n, 2)
 
@@ -541,7 +541,7 @@ class TestH5File(unittest.TestCase):
             signal.dims[1].attach_scale(h5['y'])
             signal.dims[1].attach_scale(h5['iy'])
 
-        with H5File(fname) as h5:
+        with File(fname) as h5:
             x = h5['x'][:]
             ix = h5['ix'][:]
             s = h5['signal'][:, :]

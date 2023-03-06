@@ -4,18 +4,18 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.database import Files
-from h5rdmtoolbox.wrapper.cflike import H5File
+from h5rdmtoolbox.wrapper.cflike import File
 
 
 class TestFileQuery(unittest.TestCase):
 
     def test_H5Files(self):
         fnames = []
-        with H5File() as h51:
+        with File() as h51:
             h51.create_dataset('ds', shape=(1, 2, 3), units='', long_name='long name 1')
             fnames.append(h51.filename)
 
-            with H5File() as h52:
+            with File() as h52:
                 h52.create_dataset('ds', shape=(1, 2, 3), units='', long_name='long name 2')
                 fnames.append(h52.filename)
 
@@ -37,7 +37,7 @@ class TestFileQuery(unittest.TestCase):
 
     def test_recursive_find(self):
         h5tbx.use('default')
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             gd = h5.create_group('trn_datacubes')
             gd.create_dataset('u', data=np.random.random((3, 5, 10, 20)))
             g = h5.create_group('monitors')
@@ -49,10 +49,10 @@ class TestFileQuery(unittest.TestCase):
 
     def test_getitem(self):
         fnames = []
-        with H5File() as h51:
+        with File() as h51:
             h51.create_dataset('ds', data=(1, 2, 3), units='', long_name='long name 1')
             fnames.append(h51.filename)
 
-        with H5File() as h52:
+        with File() as h52:
             h52.create_dataset('ds', data=(4, 5, 6), units='', long_name='long name 2')
             fnames.append(h52.filename)

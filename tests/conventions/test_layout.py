@@ -2,7 +2,7 @@ import pathlib
 import unittest
 from psutil._compat import FileExistsError
 
-from h5rdmtoolbox import H5File
+from h5rdmtoolbox import File
 from h5rdmtoolbox.conventions.layout import H5Layout
 
 
@@ -20,7 +20,7 @@ class TestConventions(unittest.TestCase):
                 f.unlink()
 
     def test_registering(self):
-        with H5File() as h5:
+        with File() as h5:
             h5.attrs['hello'] = 'world'
         self.filenames.append(h5.hdf_filename)
 

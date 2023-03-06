@@ -4,7 +4,7 @@ import unittest
 from omegaconf.errors import ValidationError
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import H5File
+from h5rdmtoolbox import File
 from h5rdmtoolbox import config
 from h5rdmtoolbox.wrapper import core
 
@@ -48,11 +48,11 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config['default_convention'], 'default')
         h5tbx.use('default')
 
-        with H5File(mode='w') as h5:
-            self.assertEqual(h5.__class__, core.H5File)
+        with File(mode='w') as h5:
+            self.assertEqual(h5.__class__, core.File)
 
-        h5 = H5File()
-        self.assertEqual(h5.__class__, core.H5File)
+        h5 = File()
+        self.assertEqual(h5.__class__, core.File)
         h5.close()
 
         config['default_convention'] = 'cflike'
@@ -61,9 +61,9 @@ class TestConfig(unittest.TestCase):
         h5tbx.use('cflike')
 
         self.assertEqual(config['default_convention'], 'cflike')
-        with H5File() as h5:
-            self.assertEqual(h5.__class__, cflike.H5File)
+        with File() as h5:
+            self.assertEqual(h5.__class__, cflike.File)
 
-        h5 = H5File()
-        self.assertEqual(h5.__class__, cflike.H5File)
+        h5 = File()
+        self.assertEqual(h5.__class__, cflike.File)
         h5.close()

@@ -280,7 +280,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('x', shape=(4,),\n",
     "                      attrs=dict(description='x coordinate'))\n",
     "    h5.dump()"
@@ -558,7 +558,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('grp/subgrp/x', shape=(4,))\n",
     "    h5.dump()"
    ]
@@ -598,7 +598,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.attrs['length'] = '1 m'\n",
     "    p = h5.attrs.length.to_pint()\n",
     "p"
@@ -866,7 +866,7 @@
    ],
    "source": [
     "fname_dimcales = h5tbx.generate_temporary_filename()\n",
-    "with h5tbx.H5File(fname_dimcales, 'w') as h5:\n",
+    "with h5tbx.File(fname_dimcales, 'w') as h5:\n",
     "    h5.create_dataset('time', data=[0,1,2,3,4,5],\n",
     "                      make_scale=True,\n",
     "                      attrs={'units': 's'})\n",
@@ -1148,7 +1148,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File(fname_dimcales, 'r+') as h5:\n",
+    "with h5tbx.File(fname_dimcales, 'r+') as h5:\n",
     "    h5.create_dataset('x', data=5.32)\n",
     "    h5.create_dataset('y', data=-3.1)\n",
     "    h5['pressure'].attrs['COORDINATES'] = ('x', 'y')\n",
@@ -1426,7 +1426,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_string_dataset('astr', 'hello_world')\n",
     "    h5.create_string_dataset('string_list', ['hello', 'world'])\n",
     "    h5.dump()\n",
@@ -1456,7 +1456,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('ds', shape=(10, ), attrs=dict(long_name='a long name', anothera='another attr'))  # unitless dataset. long_name is passed via parameter attrs"
    ]
   },
@@ -1725,7 +1725,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('x', data=[1,2,3], attrs=dict(units='m', standard_name='x_coordinate'), make_scale=True)\n",
     "    h5.create_dataset('t', data=[20.1, 18.5, 24.7], attrs=dict(units='degC', standard_name='temperature'), attach_scale=h5['x'])\n",
     "    print(h5.t.x)  # note, that you can access the dimension scale using attribute-style-syntax\n",
@@ -2011,7 +2011,7 @@
     "                                 attrs={'long_name': 'a long name',\n",
     "                                        'units': 'm/s'})\n",
     "\n",
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('temperature', data=arr)\n",
     "    h5.dump()"
    ]
@@ -2434,7 +2434,7 @@
    "outputs": [],
    "source": [
     "try:\n",
-    "    with h5tbx.H5File() as h5:\n",
+    "    with h5tbx.File() as h5:\n",
     "        h5.create_dataset_from_xarray_dataset(ds)\n",
     "except h5tbx.errors.UnitsError as e:\n",
     "    print(e)"
@@ -2857,7 +2857,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset_from_xarray_dataset(ds)"
    ]
   },
@@ -3109,7 +3109,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5['x'] = ([1,2,3], dict(attrs={'hello': 'world'}, compression='gzip'))\n",
     "    h5.dump()"
    ]

@@ -295,7 +295,7 @@ class H5Objects:
 
 
 class Files:
-    """H5File-like interface for multiple HDF Files"""
+    """File-like interface for multiple HDF Files"""
 
     def __init__(self, filenames: List[Union[str, pathlib.Path]], file_instance=h5py.File, **kwargs):
         """

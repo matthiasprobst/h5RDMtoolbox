@@ -15,7 +15,7 @@ class TestDataset(unittest.TestCase):
         h5rdmtoolbox.use('default')
 
     def test_HDFXrDataset(self):
-        with h5rdmtoolbox.H5File() as h5:
+        with h5rdmtoolbox.File() as h5:
             u = h5.create_dataset('u', data=np.arange(10, 20))
             v = h5.create_dataset('v', data=np.arange(10, 100))
             v2 = h5.create_dataset('v2', data=np.arange(10, 20))

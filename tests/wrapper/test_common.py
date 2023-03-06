@@ -18,12 +18,12 @@ from h5rdmtoolbox.wrapper.h5attr import WrapperAttributeManager
 class TestCommon(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.wrapper_classes = (core.H5File, cflike.H5File)
-        self.wrapper_group_classes = (core.H5Group, cflike.H5Group)
+        self.wrapper_classes = (core.File, cflike.File)
+        self.wrapper_group_classes = (core.Group, cflike.Group)
 
     def test_layout(self):
         for wc in self.wrapper_classes:
-            with wc(mode='w', layout='H5File') as h5touch:
+            with wc(mode='w', layout='File_core') as h5touch:
                 self.assertIsInstance(h5touch.layout, H5Layout)
             list_of_registered_layouts = H5Layout.get_registered()
             for lay in list_of_registered_layouts:
@@ -77,7 +77,7 @@ class TestCommon(unittest.TestCase):
         h5tbx.use('default')
 
         imgreader = ImgReader('testdir')
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0)
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
@@ -88,7 +88,7 @@ class TestCommon(unittest.TestCase):
             self.assertEqual(ds.chunks, (20, 10, 1))
 
         # write more tests for create_dataset_from_image:
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
                                               'testimg', axis=0)
             self.assertEqual(ds.shape, (5, 20, 10))
@@ -96,7 +96,7 @@ class TestCommon(unittest.TestCase):
 
         imgreader._index = 0
         h5tbx.use('cflike')
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0,
                                               units='', long_name='test')
             self.assertEqual(ds.shape, (5, 20, 10))
@@ -109,7 +109,7 @@ class TestCommon(unittest.TestCase):
             self.assertEqual(ds.chunks, (20, 10, 1))
 
         # write more tests for create_dataset_from_image:
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
                                               'testimg', axis=0, units='', long_name='test')
             self.assertEqual(ds.shape, (5, 20, 10))
@@ -195,7 +195,7 @@ class TestCommon(unittest.TestCase):
 
     def test_Layout(self):
 
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             h5.attrs['mandatory_attribute'] = 1
 
         for wc, gc in zip(self.wrapper_classes, self.wrapper_group_classes):

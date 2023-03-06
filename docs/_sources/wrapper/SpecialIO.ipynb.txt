@@ -306,7 +306,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset_from_csv(csv_filename=csv_filename1)\n",
     "    h5.dump()"
    ]
@@ -575,7 +575,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_datasets_from_csv(csv_filenames=[csv_filename1, csv_filename2], combine_opt='concatenate')\n",
     "    h5.dump()"
    ]
@@ -836,7 +836,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_datasets_from_csv(csv_filenames=[csv_filename2, csv_filename2], combine_opt='stack')\n",
     "    h5.dump()"
    ]
@@ -1090,7 +1090,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset_from_image([np.random.random((20, 10))] * 5,\n",
     "                                 'testimg', axis=0)\n",
     "    h5.dump()"
@@ -1376,7 +1376,7 @@
    ],
    "source": [
     "imgreader = ImgReader('testdir')\n",
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset_from_image(imgreader, 'testimg', axis=0)\n",
     "    h5.dump()"
    ]

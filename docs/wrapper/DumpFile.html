@@ -760,7 +760,7 @@ div.rendered_html tbody tr:hover {
 <span class="n">list_of_hdf_filenames</span> <span class="o">=</span> <span class="n">tutorial</span><span class="o">.</span><span class="n">Database</span><span class="o">.</span><span class="n">generate_test_files</span><span class="p">()</span>
 
 <span class="c1"># dump the content of the first file in the list:</span>
-<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">list_of_hdf_filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">list_of_hdf_filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 <br/></pre></div>
 </div>
@@ -1044,7 +1044,7 @@ input.h5tb-varname-in:checked + label:before {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">h5tbx</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;cflike&#39;</span><span class="p">)</span>
 
-<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">list_of_hdf_filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">list_of_hdf_filenames</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -1330,7 +1330,7 @@ input.h5tb-varname-in:checked + label:before {
 </section>
 <section id="Multi-file-inspection">
 <h2>Multi-file inspection<a class="headerlink" href="#Multi-file-inspection" title="Permalink to this headline">#</a></h2>
-<p>To inspect multiple files simultaneous, use <code class="docutils literal notranslate"><span class="pre">H5Files</span></code> instead of <code class="docutils literal notranslate"><span class="pre">H5File</span></code>:</p>
+<p>To inspect multiple files simultaneous, use <code class="docutils literal notranslate"><span class="pre">H5Files</span></code> instead of <code class="docutils literal notranslate"><span class="pre">File</span></code>:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>

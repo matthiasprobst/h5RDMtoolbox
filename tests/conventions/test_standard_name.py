@@ -17,8 +17,8 @@ from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTable,
                                                            url_exists)
 from h5rdmtoolbox.conventions.cflike.standard_name import merge
 from h5rdmtoolbox.conventions.registration import register_hdf_attr
-from h5rdmtoolbox.wrapper.cflike import H5Dataset, H5Group
-from h5rdmtoolbox.wrapper.cflike import H5File
+from h5rdmtoolbox.wrapper.cflike import Dataset, Group
+from h5rdmtoolbox.wrapper.cflike import File
 
 
 class TestStandardName(unittest.TestCase):
@@ -26,9 +26,9 @@ class TestStandardName(unittest.TestCase):
     def setUp(self) -> None:
         """setup"""
 
-        @register_hdf_attr(H5Group, name='software', overwrite=True)
+        @register_hdf_attr(Group, name='software', overwrite=True)
         class SoftwareAttribute:
-            """property attach to a H5Group"""
+            """property attach to a Group"""
 
             def set(self, sftw: Union[software.Software, Dict]):
                 """Get `software` as group attbute"""
@@ -72,8 +72,8 @@ class TestStandardName(unittest.TestCase):
                 """Delete attribute"""
                 self.attrs.__delitem__('standard_name')
 
-        @register_hdf_attr(H5Group, name='user', overwrite=True)
-        @register_hdf_attr(H5Dataset, name='user', overwrite=True)
+        @register_hdf_attr(Group, name='user', overwrite=True)
+        @register_hdf_attr(Dataset, name='user', overwrite=True)
         class UserAttribute:
             """User can be one or multiple persons in charge or related to the
             file, group or dataset"""
@@ -269,7 +269,7 @@ class TestStandardNameTable(unittest.TestCase):
         self.assertNotEqual(table, table2)
 
     def test_translate_group(self):
-        with H5File() as h5:
+        with File() as h5:
             ds1 = h5.create_dataset('ds1', shape=(2,), units='', long_name='a long name')
             ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='', long_name='a long name')
             translation = {'ds1': 'dataset_one', 'ds2': 'dataset_two'}

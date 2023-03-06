@@ -796,7 +796,7 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
                       <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;x coordinate&#39;</span><span class="p">))</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
@@ -1034,7 +1034,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;grp/subgrp/x&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,))</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
@@ -1298,7 +1298,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1 m&#39;</span>
     <span class="n">p</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">to_pint</span><span class="p">()</span>
 <span class="n">p</span>
@@ -1321,7 +1321,7 @@ input.h5tb-varname-in:checked + label:before {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fname_dimcales</span> <span class="o">=</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">generate_temporary_filename</span><span class="p">()</span>
-<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">fname_dimcales</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">fname_dimcales</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span>
                       <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                       <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;s&#39;</span><span class="p">})</span>
@@ -1571,7 +1571,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">(</span><span class="n">fname_dimcales</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">fname_dimcales</span><span class="p">,</span> <span class="s1">&#39;r+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="mf">5.32</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=-</span><span class="mf">3.1</span><span class="p">)</span>
     <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;pressure&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;COORDINATES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">)</span>
@@ -1836,7 +1836,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_string_dataset</span><span class="p">(</span><span class="s1">&#39;astr&#39;</span><span class="p">,</span> <span class="s1">&#39;hello_world&#39;</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_string_dataset</span><span class="p">(</span><span class="s1">&#39;string_list&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="s1">&#39;world&#39;</span><span class="p">])</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
@@ -2104,7 +2104,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;ds&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="p">),</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">long_name</span><span class="o">=</span><span class="s1">&#39;a long name&#39;</span><span class="p">,</span> <span class="n">anothera</span><span class="o">=</span><span class="s1">&#39;another attr&#39;</span><span class="p">))</span>  <span class="c1"># unitless dataset. long_name is passed via parameter attrs</span>
 </pre></div>
 </div>
@@ -2116,7 +2116,7 @@ input.h5tb-varname-in:checked + label:before {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;x_coordinate&#39;</span><span class="p">),</span> <span class="n">make_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="mf">20.1</span><span class="p">,</span> <span class="mf">18.5</span><span class="p">,</span> <span class="mf">24.7</span><span class="p">],</span> <span class="n">attrs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s1">&#39;degC&#39;</span><span class="p">,</span> <span class="n">standard_name</span><span class="o">=</span><span class="s1">&#39;temperature&#39;</span><span class="p">),</span> <span class="n">attach_scale</span><span class="o">=</span><span class="n">h5</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># note, that you can access the dimension scale using attribute-style-syntax</span>
@@ -2386,7 +2386,7 @@ input.h5tb-varname-in:checked + label:before {
                                  <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;long_name&#39;</span><span class="p">:</span> <span class="s1">&#39;a long name&#39;</span><span class="p">,</span>
                                         <span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;m/s&#39;</span><span class="p">})</span>
 
-<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;temperature&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">arr</span><span class="p">)</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>
@@ -3030,7 +3030,7 @@ Data variables:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
-    <span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
         <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset_from_xarray_dataset</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
 <span class="k">except</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">UnitsError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
@@ -3435,7 +3435,7 @@ Data variables:
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset_from_xarray_dataset</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -3445,7 +3445,7 @@ Data variables:
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">h5</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="nb">dict</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">},</span> <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;gzip&#39;</span><span class="p">))</span>
     <span class="n">h5</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
 </pre></div>

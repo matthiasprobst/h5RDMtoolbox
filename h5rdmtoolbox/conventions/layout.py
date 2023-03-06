@@ -339,7 +339,7 @@ class H5Layout:
         Raises
         ------
         FileNotFoundError
-            If no unique filename found be idetified.
+            If no unique filename found be identified.
 
         """
         src = UserDir['layouts'] / name
@@ -350,7 +350,7 @@ class H5Layout:
         if len(candidates) == 1:
             return pathlib.Path(candidates[0])
         raise FileNotFoundError(
-            f'File {name} could not be found or passed name was not unique. Check the user layout dir '
+            f'File "{name}" could not be found or passed name was not unique. Check the user layout dir '
             f'{UserDir["layouts"]}'
         )
 
@@ -453,7 +453,7 @@ class H5Layout:
         for f in H5Layout.get_registered():
             print(f' > {f.stem}')
 
-# # @register_standard_attribute(H5File, name='layout')
+# # @register_standard_attribute(File, name='layout')
 # class LayoutAttribute:
 #     """Layout attribute"""
 #

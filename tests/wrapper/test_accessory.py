@@ -13,7 +13,7 @@ class TestAccessory(unittest.TestCase):
 
     def test_Vector(self):
         """Test the Vector special dataset"""
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             h5.create_dataset('u', data=[1, 2, 3])
             h5.create_dataset('v', data=[2, 2, 2])
 

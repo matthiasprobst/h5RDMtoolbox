@@ -1,4 +1,4 @@
-"""Core wrapper module containing basic wrapper implementation of H5File, H5Dataset and H5Group
+"""Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
 import h5py
@@ -54,7 +54,7 @@ def lower(string: str) -> Lower:
     return Lower(string)
 
 
-class H5Group(h5py.Group):
+class Group(h5py.Group):
     """Inherited Group of the package h5py
     """
     convention = 'default'
@@ -128,7 +128,7 @@ class H5Group(h5py.Group):
             warnings.warn('No changes were applied because new properties a no different to present ones', UserWarning)
             return dataset
 
-        with H5File() as temp_h5dest:
+        with File() as temp_h5dest:
             progress_bar = tqdm(total=4, desc='Progress')
             progress_bar.desc = 'Copy dataset to temporary file'
 
@@ -171,7 +171,7 @@ class H5Group(h5py.Group):
 
     def __setitem__(self,
                     name: str,
-                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> "H5Dataset":
+                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> "Dataset":
         """
         Lazy creating datasets. More difficult than using h5py as mandatory
         parameters must be provided.
@@ -189,7 +189,7 @@ class H5Group(h5py.Group):
         None
         """
         if isinstance(obj, xr.DataArray):
-            return obj.hdf.to_group(H5Group(self), name)
+            return obj.hdf.to_group(Group(self), name)
         if isinstance(obj, (list, tuple)):
             if not isinstance(obj[1], dict):
                 raise TypeError(f'Second item must be type dict but is {type(obj[1])}')
@@ -441,7 +441,7 @@ class H5Group(h5py.Group):
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
 
-            dset = data.hdf.to_group(H5Group(self), name=name, overwrite=overwrite,
+            dset = data.hdf.to_group(Group(self), name=name, overwrite=overwrite,
                                      compression=compression,
                                      compression_opts=compression_opts, attrs=attrs)
             return dset
@@ -478,7 +478,7 @@ class H5Group(h5py.Group):
                     'Cannot make scale and attach scale at the same time!')
 
         logger.debug(
-            f'Creating H5DatasetModel "{name}" in "{self.name}" with maxshape {_maxshape} " '
+            f'Creating DatasetModel "{name}" in "{self.name}" with maxshape {_maxshape} " '
             f'and using compression "{compression}" with opt "{compression_opts}"')
 
         if _data is not None:
@@ -594,7 +594,7 @@ class H5Group(h5py.Group):
             find_one=False)
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
-        """Create datasets from a single csv file. Docstring: See H5File.create_datasets_from_csv()"""
+        """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
         return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
 
     def create_datasets_from_csv(self,
@@ -1089,7 +1089,7 @@ def only1d(obj):
     return obj
 
 
-class H5Dataset(h5py.Dataset):
+class Dataset(h5py.Dataset):
     """Inherited Dataset group of the h5py package"""
     convention = 'default'
 
@@ -1146,23 +1146,23 @@ class H5Dataset(h5py.Dataset):
             return WrapperAttributeManager(self)
 
     @property
-    def parent(self) -> "H5Group":
+    def parent(self) -> "Group":
         """Return the parent group of this dataset
 
         Returns
         -------
-        H5Group
+        Group
             Parent group of this dataset"""
 
         return self._h5grp(super().parent)
 
     @property
-    def rootparent(self) -> "H5Group":
+    def rootparent(self) -> "Group":
         """Return the root group of the file.
 
         Returns
         -------
-        H5Group
+        Group
             Root group object.
         """
 
@@ -1211,7 +1211,7 @@ class H5Dataset(h5py.Dataset):
         """
         return DatasetValues(self)
 
-    def modify(self, **properties) -> "H5Dataset":
+    def modify(self, **properties) -> "Dataset":
         """modify property of dataset such as `chunks` or `dtpye`. This is
         not possible with the original implementation in `h5py`. Note, that
         this may be a time-consuming task for large datasets! Better to set
@@ -1418,7 +1418,7 @@ class H5Dataset(h5py.Dataset):
         logger.debug('new primary scale: %s', self.dims[axis][0])
 
 
-class H5File(h5py.File, H5Group):
+class File(h5py.File, Group):
     """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
     It enables additional features and adds new methods streamlining the work with
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
@@ -1486,7 +1486,7 @@ class H5File(h5py.File, H5Group):
                  name: Path = None,
                  mode='r',
                  *,
-                 layout: Union[Path, str, H5Layout] = 'H5File',
+                 layout: Union[Path, str, H5Layout] = 'File_core',
                  driver=None,
                  libver=None,
                  userblock_size=None,
@@ -1502,7 +1502,7 @@ class H5File(h5py.File, H5Group):
         _tmp_init = False
         if name is None:
             _tmp_init = True
-            logger.debug("An empty H5File class is initialized")
+            logger.debug("An empty File class is initialized")
             name = utils.touch_tmp_hdf5_file()
         elif isinstance(name, ObjectID):
             pass
@@ -1552,7 +1552,7 @@ class H5File(h5py.File, H5Group):
         return r.replace('HDF5', f'HDF5 (convention: {self.convention})')
 
     def __str__(self) -> str:
-        return f"<class 'h5rdmtoolbox.H5File' convention: {self.convention}>"
+        return f"<class 'h5rdmtoolbox.File' convention: {self.convention}>"
 
     def check(self, grp: Union[str, h5py.Group] = '/') -> int:
         """Run layout check. This method may be overwritten to add conditional
@@ -1609,7 +1609,7 @@ class H5File(h5py.File, H5Group):
         self.hdf_filename = new_filepath
         return new_filepath
 
-    def saveas(self, filename: Path, overwrite: bool = False) -> "H5File":
+    def saveas(self, filename: Path, overwrite: bool = False) -> "File":
         """
         Save this file under a new name (effectively a copy). This file is closed and re-opened
         from the new destination using the previous file mode.
@@ -1623,8 +1623,8 @@ class H5File(h5py.File, H5Group):
 
         Returns
         -------
-        H5File
-            Instance of moved H5File
+        File
+            Instance of moved File
 
         """
         _filename = Path(filename)
@@ -1641,14 +1641,14 @@ class H5File(h5py.File, H5Group):
 
         shutil.copy2(src, _filename)
         self.hdf_filename = _filename
-        return H5File(_filename, mode=mode)
+        return File(_filename, mode=mode)
 
     def reopen(self, mode: str = 'r+') -> None:
         """Open the closed file"""
         self.__init__(self.hdf_filename, mode=mode)
 
     @staticmethod
-    def open(filename: Union[str, pathlib.Path], mode: str = "r+") -> 'H5File':
+    def open(filename: Union[str, pathlib.Path], mode: str = "r+") -> 'File':
         """Open the closed file and use the correct wrapper class
 
         Parameters
@@ -1660,13 +1660,13 @@ class H5File(h5py.File, H5Group):
 
         Returns
         -------
-        Subclass of H5File
+        Subclass of File
         """
-        return H5File(filename, mode)
+        return File(filename, mode)
 
 
-H5Dataset._h5grp = H5Group
-H5Dataset._h5ds = H5Dataset
+Dataset._h5grp = Group
+Dataset._h5ds = Dataset
 
-H5Group._h5grp = H5Group
-H5Group._h5ds = H5Dataset
+Group._h5grp = Group
+Group._h5ds = Dataset

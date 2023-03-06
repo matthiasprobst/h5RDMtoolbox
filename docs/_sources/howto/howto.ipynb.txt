@@ -97,7 +97,7 @@
     "import h5rdmtoolbox as h5tbx\n",
     "\n",
     "h5tbx.config.return_xarray = False\n",
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('test', shape=(3, 4), attrs=dict(long_name='a long name'))\n",
     "    print(type(h5['test'][:]))\n",
     "    h5tbx.config.return_xarray = True\n",
@@ -136,7 +136,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('TEST', data=1)\n",
     "    print(h5[h5tbx.lower('test')])"
    ]
@@ -413,7 +413,7 @@
    ],
    "source": [
     "import numpy as np\n",
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.create_dataset('time', data=range(0, 100), make_scale=True)\n",
     "    h5.create_dataset('x', data=range(0, 100), make_scale=True)\n",
     "    h5.create_dataset('y', data=range(0, 200), make_scale=True)\n",
@@ -439,7 +439,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File(h5.hdf_filename) as h5:\n",
+    "with h5tbx.File(h5.hdf_filename) as h5:\n",
     "    h5.data[h5.data.time > 5.4, :, :].plot()"
    ]
   },

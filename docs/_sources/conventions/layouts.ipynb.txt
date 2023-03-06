@@ -9,7 +9,7 @@
     "\n",
     "A Layout in the context of this package describes the required tree-structure and multiple meta information of an HDF5 file. What and how exactly can be defined via a layout is outlined in [a later section.](#Write-an-individual-layout)\n",
     "\n",
-    "A layout essentially is a HDF itself and is used in combination with a another HDF5 file, e.g. one that contains measurement data. Specialized \"wrapper-HDF files\" in this package such as `H5File` or `H5PIV` come already with a pre-defined layout, which is already associated with it\n",
+    "A layout essentially is a HDF itself and is used in combination with a another HDF5 file, e.g. one that contains measurement data. Specialized \"wrapper-HDF files\" in this package such as `File` or `H5PIV` come already with a pre-defined layout, which is already associated with it\n",
     "\n",
     "The idea behind defining layouts is, that the data generation process is supervised. This means, that a *check* can be performed by the user filling the HDF5 file with data using the provided layout file. This in turn will lead to no suprises or inconsitencies when exchanging the file with other as everybody involved agreed on the respected layout. Optimally, this will save a lot of tie and costs.\n",
     "\n",
@@ -30,7 +30,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      " > H5File\n"
+      " > File\n"
      ]
     }
    ],
@@ -76,7 +76,7 @@
    "id": "8c771d39-1ebc-4689-bbe4-17a5d139d87a",
    "metadata": {},
    "source": [
-    "If a `H5File` (or a subclass of it) is already associated with a layout, we can call the `layout`-property (We saw above that a layout for H5File indeed is registered aleady):"
+    "If a `File` (or a subclass of it) is already associated with a layout, we can call the `layout`-property (We saw above that a layout for File indeed is registered aleady):"
    ]
   },
   {
@@ -94,7 +94,7 @@
     }
    ],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    lay = h5.layout\n",
     "print(lay)"
    ]
@@ -131,7 +131,7 @@
    "id": "966ecf93-4ce4-4ed0-94a1-029b9344ddd8",
    "metadata": {},
    "source": [
-    "As said in the introduction, a `layout` is a HDF file itself, it has similar features like wrapper files, e.g. we can get a nice html representation of the content. Like this we can see what is required to have in any file written with `H5File`.\n",
+    "As said in the introduction, a `layout` is a HDF file itself, it has similar features like wrapper files, e.g. we can get a nice html representation of the content. Like this we can see what is required to have in any file written with `File`.\n",
     "\n",
     "Doing so, we directly see, that the layout **requires to have two attributes**, namely `__h5rdmtoobox_version__` and a `title`:"
    ]
@@ -390,7 +390,7 @@
    "metadata": {},
    "source": [
     "## Check layout\n",
-    "Let's create an empty HDF5 file with `h5py`, thus no data will be available. If we then open it with a `H5File` wrapper, everything defined in the layout file is missing, hence, we expect 4 issues to raise:"
+    "Let's create an empty HDF5 file with `h5py`, thus no data will be available. If we then open it with a `File` wrapper, everything defined in the layout file is missing, hence, we expect 4 issues to raise:"
    ]
   },
   {
@@ -430,7 +430,7 @@
     "    pass\n",
     "\n",
     "#open with h5tbx and perform a check:\n",
-    "with h5tbx.H5File(filename, layout='H5File') as h5:\n",
+    "with h5tbx.File(filename, layout='File') as h5:\n",
     "    print('run check')\n",
     "    h5.check()\n",
     "    \n",
@@ -459,7 +459,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Checking C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp1200\\tmp2 with layout H5File\n"
+      "Checking C:\\Users\\da4323\\AppData\\Local\\h5rdmtoolbox\\h5rdmtoolbox\\tmp\\tmp1200\\tmp2 with layout File\n"
      ]
     },
     {
@@ -472,7 +472,7 @@
     }
    ],
    "source": [
-    "! h5tbx layout -l H5File -c \"{filename}\""
+    "! h5tbx layout -l File -c \"{filename}\""
    ]
   },
   {
@@ -494,7 +494,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "with h5tbx.H5File() as h5:\n",
+    "with h5tbx.File() as h5:\n",
     "    h5.attrs['title'] = 'A test file'\n",
     "    hdf_filename = h5.hdf_filename"
    ]

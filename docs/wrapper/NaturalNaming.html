@@ -699,7 +699,7 @@ div.rendered_html tbody tr:hover {
 </style>
 <section id="Natural-Naming">
 <h1>Natural Naming<a class="headerlink" href="#Natural-Naming" title="Permalink to this headline">#</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> supports attribute style access (natural naming) on datasets, groups and attributes instead of the known dictionary style. This means that HDF objects must not be named as existing attributes of used instances, e.g. <code class="docutils literal notranslate"><span class="pre">H5File</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">h5RDMtoolbox</span></code> supports attribute style access (natural naming) on datasets, groups and attributes instead of the known dictionary style. This means that HDF objects must not be named as existing attributes of used instances, e.g. <code class="docutils literal notranslate"><span class="pre">File</span></code>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -721,7 +721,7 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,))</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">test</span><span class="p">)</span>
 </pre></div>
@@ -748,7 +748,7 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">H5File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">h5tbx</span><span class="o">.</span><span class="n">File</span><span class="p">()</span> <span class="k">as</span> <span class="n">h5</span><span class="p">:</span>
     <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,))</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">h5</span><span class="o">.</span><span class="n">test</span><span class="p">)</span>
@@ -762,7 +762,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&#39;H5File&#39; object has no attribute &#39;test&#39;
+&#39;File&#39; object has no attribute &#39;test&#39;
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">

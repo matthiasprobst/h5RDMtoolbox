@@ -2,7 +2,7 @@
 
 import h5py
 
-from .. import H5File
+from .. import File
 
 
 class ExternalLink(h5py.ExternalLink):
@@ -13,7 +13,7 @@ class ExternalLink(h5py.ExternalLink):
         self._file = None
 
     def __enter__(self):
-        self._file = H5File(self.filename)
+        self._file = File(self.filename)
         return self._file[self.path]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
