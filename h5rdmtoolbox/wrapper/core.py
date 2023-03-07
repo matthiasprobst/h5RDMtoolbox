@@ -1066,6 +1066,15 @@ class Group(h5py.Group):
         return self.hdfrepr.__str__(self)
 
 
+# H5Group is depreciated
+class H5Group(Group):
+    """Inherited from Group. Is depreciated. Use Group instead"""
+
+    def __init__(self, _id):
+        warnings.warn('H5Group is depreciated. Use Group instead', DeprecationWarning)
+        super(H5Group, self).__init__(self, _id)
+
+
 class DatasetValues:
     """helper class to work around xarray"""
 
@@ -1418,6 +1427,15 @@ class Dataset(h5py.Dataset):
         logger.debug('new primary scale: %s', self.dims[axis][0])
 
 
+# H5Dataset is depreciated
+class H5Dataset(Dataset):
+    """Inherited from Dataset. It is depreciated and will be removed in future versions."""
+
+    def __init__(self, _id):
+        warnings.warn('H5Dataset is depreciated. Use Dataset instead', DeprecationWarning)
+        super(H5Dataset, self).__init__(self, _id)
+
+
 class File(h5py.File, Group):
     """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
     It enables additional features and adds new methods streamlining the work with
@@ -1663,6 +1681,15 @@ class File(h5py.File, Group):
         Subclass of File
         """
         return File(filename, mode)
+
+
+# H5File is depreciated
+class H5File(File):
+    """Inherited from File. It is depreciated and will be removed in future versions."""
+
+    def __init__(self, _id):
+        warnings.warn('H5File is depreciated. Use File instead', DeprecationWarning)
+        super(H5File, self).__init__(self, _id)
 
 
 Dataset._h5grp = Group

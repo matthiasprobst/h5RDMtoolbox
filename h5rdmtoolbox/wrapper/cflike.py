@@ -269,6 +269,15 @@ class Group(core.Group):
         return self.find({'standard_name': standard_name}, objfilter=h5py.Dataset, rec=rec)
 
 
+# H5Group is depreciated
+class H5Group(Group):
+    """Inherited from Group. Is depreciated. Use Group instead"""
+
+    def __init__(self, _id):
+        warnings.warn('H5Group is depreciated. Use Group instead', DeprecationWarning)
+        super(H5Group, self).__init__(self, _id)
+
+
 class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
     """String representation class for sdump()"""
 
@@ -378,9 +387,27 @@ class File(core.File, Group):
         self.layout = layout
 
 
+# H5File is depreciated
+class H5File(File):
+    """Inherited from File. It is depreciated and will be removed in future versions."""
+
+    def __init__(self, _id):
+        warnings.warn('H5File is depreciated. Use File instead', DeprecationWarning)
+        super(H5File, self).__init__(self, _id)
+
+
 class Dataset(core.Dataset):
     """Dataset class following the CF-like conventions"""
     convention = 'cflike'
+
+
+# H5Dataset is depreciated
+class H5Dataset(Dataset):
+    """Inherited from Dataset. It is depreciated and will be removed in future versions."""
+
+    def __init__(self, _id):
+        warnings.warn('H5Dataset is depreciated. Use Dataset instead', DeprecationWarning)
+        super(H5Dataset, self).__init__(self, _id)
 
 
 Dataset._h5grp = Group
