@@ -6,4 +6,4 @@ sphinx:
 python:
   version: ["3.8", "3.9", "3.10"]
   install:
-    - requirements: requirements-dev.txt
+    - requirements: requirements-docs.txt
