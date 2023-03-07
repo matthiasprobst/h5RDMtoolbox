@@ -14,7 +14,7 @@ of data using the HDF5 file format while pursuing the [FAIR](https://www.nature.
 All functionalities are wrapped around the `h5py` package (https://www.h5py.org/). Most additional features 
 facilitate the work with HDF5 files. By including other packages such as `xarray` and conventions for attributes, 
 visualization of data becomes fast and easy. Also, a database-solution for HDF5 files is provided. Please find the 
-comprehensive documentation with examples [here](https://matthiasprobst.github.io/h5RDMtoolbox/).  
+comprehensive documentation with examples [here](h5rdmtoolbox.readthedocs.io/en/latest/).  
 
 
 ## Installation
@@ -32,7 +32,7 @@ or for editable mode:
     pip install -e h5RDMtoolbox
 
 There are optional dependencies, e.g. for PIV-specific features. Specify them in square brackets after the package 
-name. Check the setup config (`setup.cfg`) or the [documentation](https://matthiasprobst.github.io/h5RDMtoolbox/) for 
+name. Check the setup config (`setup.cfg`) or the [documentation](h5rdmtoolbox.readthedocs.io/en/latest/) for 
 all optional dependencies. To install all dependencies, simply run
 
     pip install h5RDMtoolbox[complete]
