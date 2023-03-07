@@ -52,6 +52,7 @@ autodoc_member_order = 'bysource'
 # a list of builtin themes.
 #
 html_theme = 'pydata_sphinx_theme'  # 'sphinx_rtd_theme'
+
 tml_context = {
     "github_user": "matthiasprobst",
     "github_repo": "h5RDMtoolbox",
