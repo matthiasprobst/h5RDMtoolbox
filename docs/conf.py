@@ -53,11 +53,12 @@ autodoc_member_order = 'bysource'
 #
 html_theme = 'sphinx_book_theme'  # 'sphinx_rtd_theme'
 
-tml_context = {
+html_context = {
     "github_user": "matthiasprobst",
     "github_repo": "h5RDMtoolbox",
     "github_version": "main",
     "doc_path": "doc",
+    "default_mode": "light",
 }
 
 # Theme options are theme-specific and customize the look and feel of a theme
