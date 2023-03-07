@@ -31,12 +31,12 @@ jobs:
         run: |
           cd docs
           make clean
-          sphinx-build -b html . _build
+          make github
           cd ..
 
       - name: Init new repo in dist folder and commit generated files
         run: |
-          cd docs/_build/html
+          cd docs/
           git init
           touch .nojekyll
           git add -A
