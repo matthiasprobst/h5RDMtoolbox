@@ -31,7 +31,7 @@ jobs:
         run: |
           cd docs
           make clean
-          make github
+          make.bat github
           cd ..
 
       - name: Init new repo in dist folder and commit generated files
