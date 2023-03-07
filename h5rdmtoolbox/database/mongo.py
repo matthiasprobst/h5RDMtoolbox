@@ -11,7 +11,7 @@ from typing import Dict, List
 
 from .filequery import distinct
 from ..wrapper.accessory import register_special_dataset
-from ..wrapper.core import H5Dataset, H5File, H5Group
+from ..wrapper.core import Dataset, File, Group
 from ..wrapper.h5attr import H5_DIM_ATTRS
 
 
@@ -58,11 +58,11 @@ def type2mongo(value: any) -> any:
     return value
 
 
-@register_special_dataset('mongo', H5Group)
+@register_special_dataset('mongo', Group)
 class MongoGroupAccessor:
     """Accessor for HDF5 datasets to Mongo DB"""
 
-    def __init__(self, h5grp: H5Group):
+    def __init__(self, h5grp: Group):
         self._h5grp = h5grp
 
     def insert(self,
@@ -136,11 +136,11 @@ class MongoGroupAccessor:
         return collection
 
 
-@register_special_dataset('mongo', H5Dataset)
+@register_special_dataset('mongo', Dataset)
 class MongoDatasetAccessor:
     """Accessor for HDF5 datasets to Mongo DB"""
 
-    def __init__(self, h5ds: H5Dataset):
+    def __init__(self, h5ds: Dataset):
         self._h5ds = h5ds
 
     def get_documents(self, axis: int, ignore_attrs: List[str] = None, dims: List[str] = None,
@@ -315,7 +315,7 @@ class H5Result:
     def open(self):
         """open the file"""
         try:
-            self.file = H5File(self.rdict['filename'])
+            self.file = File(self.rdict['filename'])
         except RuntimeError as e:
             if self.file is not None:
                 print('closing file')

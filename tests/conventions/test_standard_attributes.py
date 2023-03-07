@@ -7,7 +7,7 @@ from typing import Union, Dict, List
 
 from h5rdmtoolbox.conventions.cflike import software, user, errors
 from h5rdmtoolbox.conventions.registration import register_hdf_attr
-from h5rdmtoolbox.wrapper.cflike import H5File, H5Dataset, H5Group
+from h5rdmtoolbox.wrapper.cflike import File, Dataset, Group
 
 
 class TestOptAccessors(unittest.TestCase):
@@ -15,9 +15,9 @@ class TestOptAccessors(unittest.TestCase):
     def setUp(self) -> None:
         """setup"""
 
-        @register_hdf_attr(H5Group, name='software', overwrite=True)
+        @register_hdf_attr(Group, name='software', overwrite=True)
         class SoftwareAttribute:
-            """property attach to a H5Group"""
+            """property attach to a Group"""
 
             def set(self, sftw: Union[software.Software, Dict]):
                 """Get `software` as group attbute"""
@@ -61,8 +61,8 @@ class TestOptAccessors(unittest.TestCase):
                 """Delete attribute"""
                 self.attrs.__delitem__('standard_name')
 
-        @register_hdf_attr(H5Group, name='user', overwrite=True)
-        @register_hdf_attr(H5Dataset, name='user', overwrite=True)
+        @register_hdf_attr(Group, name='user', overwrite=True)
+        @register_hdf_attr(Dataset, name='user', overwrite=True)
         class UserAttribute:
             """User can be one or multiple persons in charge or related to the
             file, group or dataset"""
@@ -107,12 +107,12 @@ class TestOptAccessors(unittest.TestCase):
         s = software.Software(meta['Name'], version=meta['Version'], url=meta['Home-page'],
                               description=meta['Summary'])
 
-        with H5File() as h5:
+        with File() as h5:
             h5.software = s
 
     def test_long_name(self):
         # is available per default
-        with H5File() as h5:
+        with File() as h5:
             with self.assertRaises(errors.LongNameError):
                 h5.attrs['long_name'] = ' 1234'
             with self.assertRaises(errors.LongNameError):
@@ -126,7 +126,7 @@ class TestOptAccessors(unittest.TestCase):
     def test_units(self):
         # is available per default
         import pint
-        with H5File() as h5:
+        with File() as h5:
             h5.attrs['units'] = ' '
             h5.attrs['units'] = 'hallo'
 
@@ -139,13 +139,13 @@ class TestOptAccessors(unittest.TestCase):
                 h5.create_dataset('ds2', shape=(2,), long_name='a long name', units='nounit')
 
     def test_user(self):
-        with H5File() as h5:
+        with File() as h5:
             self.assertEqual(h5.user, None)
             h5.attrs['user'] = '1123-0814-1234-2343'
             self.assertEqual(h5.user, '1123-0814-1234-2343')
 
         # noinspection PyUnresolvedReferences
-        with H5File() as h5:
+        with File() as h5:
             with self.assertRaises(errors.OrcidError):
                 h5.user = '11308429'
             with self.assertRaises(errors.OrcidError):

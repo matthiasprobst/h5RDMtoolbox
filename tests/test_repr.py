@@ -1,7 +1,7 @@
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import H5File
+from h5rdmtoolbox import File
 from h5rdmtoolbox import _repr
 # noinspection PyUnresolvedReferences
 from h5rdmtoolbox.database import mongo
@@ -14,7 +14,7 @@ class TestRepr(unittest.TestCase):
 
     def test_repr(self):
         # test h5rdmtoolbox._repr.DataSetRepr
-        with H5File(h5tbx.generate_temporary_filename(), 'w') as h5:
+        with File(h5tbx.generate_temporary_filename(), 'w') as h5:
             h5.create_dataset('ds', data=3, dtype='int64')
             h5.create_dataset('dsfloat', data=3., dtype='float64')
             h5.create_dataset('str', data='str')

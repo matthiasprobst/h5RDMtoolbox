@@ -51,9 +51,9 @@ class DirManger:
             if not self.user_dirs['layouts'].exists():
                 self.user_dirs['layouts'].mkdir()
 
-            H5File_layout_filename = pathlib.Path.joinpath(self.user_dirs['layouts'], 'H5File.hdf')
-            if not H5File_layout_filename.exists():
-                shutil.copy2(_get_pkg_resource_filename('data/H5File.hdf'), H5File_layout_filename)
+            layout_filenames = pathlib.Path(_get_pkg_resource_filename('data')).glob('*.hdf')
+            for layout_filename in layout_filenames:
+                shutil.copy2(layout_filename, self.user_dirs['layouts'] / layout_filename.name)
 
             return self.user_dirs['layouts']
         if name == 'standard_name_table_translations':

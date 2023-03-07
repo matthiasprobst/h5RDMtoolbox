@@ -11,7 +11,7 @@ class TestTitle(unittest.TestCase):
     def test_title(self):
         """Test title attribute"""
         h5rdmtoolbox.use('cflike')
-        with h5rdmtoolbox.H5File() as h5:
+        with h5rdmtoolbox.File() as h5:
             with self.assertRaises(title.TitleError):
                 h5.title = ' test'
             with self.assertRaises(title.TitleError):

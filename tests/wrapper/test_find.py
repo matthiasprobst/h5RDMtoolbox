@@ -14,7 +14,7 @@ class TestFind(unittest.TestCase):
     def setUp(self) -> None:
         """setup"""
         use('cflike')
-        with h5tbx.H5File() as h5:
+        with h5tbx.File() as h5:
             h5.attrs['project'] = 'tutorial'
             h5.create_dataset('velocity', data=[1, 2, -1], units='m/s', standard_name='x_velocity')
             g = h5.create_group('sub')
@@ -23,7 +23,7 @@ class TestFind(unittest.TestCase):
             self.filename = h5.hdf_filename
 
     def test_find_rec_False(self):
-        with h5tbx.H5File(self.filename) as h5:
+        with h5tbx.File(self.filename) as h5:
             print('\nfind basename=velocity in sub/:')
             self.assertEqual(h5['sub'].find({'$basename': 'velocity'}, '$dataset', rec=False)[0],
                              h5['sub/velocity'])

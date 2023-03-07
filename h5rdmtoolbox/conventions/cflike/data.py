@@ -26,8 +26,8 @@ class DataSource(Enum):
         return 'data_source'
 
 #
-# @register_standard_attribute(H5Group, name='data_source_type')
-# @register_standard_attribute(H5Dataset, name='data_source_type')
+# @register_standard_attribute(Group, name='data_source_type')
+# @register_standard_attribute(Dataset, name='data_source_type')
 # class DataSourceTypeAttribute:
 #     """Long name attribute"""
 #

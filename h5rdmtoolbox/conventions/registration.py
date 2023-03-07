@@ -19,13 +19,13 @@ def _register_hdf_attribute(cls, name: str = None, overwrite: bool = False):
     return decorator
 
 
-def register_hdf_attr(cls: Union["H5Dataset", "H5Group"], overwrite=False, name: str = None):
+def register_hdf_attr(cls: Union["Dataset", "Group"], overwrite=False, name: str = None):
     """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
     also docstring is optional but strongly recommended!
 
     Parameters
     ----------
-    cls: H5Dataset or H5Group
+    cls: Dataset or Group
         HDF5 object to attach standard attribute to.
     overwrite: bool, default=False
         Whether to overwrite an existing attributes

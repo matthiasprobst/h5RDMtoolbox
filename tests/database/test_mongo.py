@@ -6,7 +6,7 @@ import warnings
 from pymongo import MongoClient
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import H5File
+from h5rdmtoolbox import File
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
 # noinspection PyUnresolvedReferences
@@ -42,7 +42,7 @@ class TestH5Mongo(unittest.TestCase):
             company = ('bikeCompany', 'shoeCompany', 'bikeCompany', 'shoeCompany')
             filenames = []
             for i, (username, company) in enumerate(zip(usernames, company)):
-                with H5File(h5tbx.generate_temporary_filename(), 'w') as h5:
+                with File(h5tbx.generate_temporary_filename(), 'w') as h5:
                     filenames.append(h5.hdf_filename)
                     h5.attrs['username'] = username
                     h5.attrs['company'] = company
@@ -56,14 +56,14 @@ class TestH5Mongo(unittest.TestCase):
                     ds.dims[0].attach_scale(h5['ds_at_root'])
                     ds.attrs['id'] = i
 
-            with H5File(filenames[0]) as h5:
+            with File(filenames[0]) as h5:
                 tree = h5.get_tree_structure(True)
             self.collection.insert_one(make_dict_mongo_compatible(tree))
 
     def test_insert_dataset(self):
         if self.mongodb_running:
             self.collection.drop()
-            with H5File() as h5:
+            with File() as h5:
                 hdf_filename = h5.hdf_filename
                 h5.create_dataset('z', data=2, dtype=int,
                                   units='', long_name='z_coordinate')
@@ -95,7 +95,7 @@ class TestH5Mongo(unittest.TestCase):
                 self.assertTrue((now - r['file_creation_time']).total_seconds() < 1)
 
             self.collection.drop()
-            with H5File(hdf_filename) as h5:
+            with File(hdf_filename) as h5:
                 h5.images.mongo.insert(axis=0, collection=self.collection, dims=(h5['/index'],))
             res = self.collection.find()
             for r in res:
@@ -104,7 +104,7 @@ class TestH5Mongo(unittest.TestCase):
                 self.assertNotIn('index3', r.keys())
 
             self.collection.drop()
-            with H5File(hdf_filename) as h5:
+            with File(hdf_filename) as h5:
                 h5.images.mongo.insert(axis=0, collection=self.collection, dims=(h5['/index'], h5['/index2']))
             res = self.collection.find()
             for r in res:
@@ -113,7 +113,7 @@ class TestH5Mongo(unittest.TestCase):
                 self.assertNotIn('index3', r.keys())
 
             self.collection.drop()
-            with H5File(hdf_filename) as h5:
+            with File(hdf_filename) as h5:
                 h5.images.mongo.insert(axis=0, collection=self.collection, dims=(h5['/index3'],))
             res = self.collection.find()
             for r in res:
@@ -124,7 +124,7 @@ class TestH5Mongo(unittest.TestCase):
     def test_insert_dataset_update(self):
         if self.mongodb_running:
             self.collection.drop()
-            with H5File() as h5:
+            with File() as h5:
                 hdf_filename = h5.hdf_filename
                 h5.create_dataset('z', data=2, dtype=int,
                                   units='', long_name='z_coordinate')
@@ -141,7 +141,7 @@ class TestH5Mongo(unittest.TestCase):
     def test_insert_group(self):
         if self.mongodb_running:
             self.collection.drop()
-            with H5File() as h5:
+            with File() as h5:
                 h5.attrs['rootatr'] = 1
                 h5.attrs['str'] = 'test'
 
@@ -166,7 +166,7 @@ class TestH5Mongo(unittest.TestCase):
 
             repo_filenames = tutorial.Database.generate_test_files()
             for fname in repo_filenames:
-                with H5File(fname) as h5:
+                with File(fname) as h5:
                     h5.mongo.insert(collection=self.collection, recursive=True, flatten_tree=True)
             now = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
             for r in self.collection.find({}):

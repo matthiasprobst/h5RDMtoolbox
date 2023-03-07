@@ -29,7 +29,6 @@ author = 'Matthias Probst'
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'sphinx.ext.viewcode',
-              "sphinx.ext.extlinks",
               "IPython.sphinxext.ipython_directive",
               "IPython.sphinxext.ipython_console_highlighting",
               "sphinx_copybutton",
@@ -53,7 +52,7 @@ autodoc_member_order = 'bysource'
 # a list of builtin themes.
 #
 html_theme = 'sphinx_book_theme'  # 'sphinx_rtd_theme'
-html_context = {
+tml_context = {
     "github_user": "matthiasprobst",
     "github_repo": "h5RDMtoolbox",
     "github_version": "main",
