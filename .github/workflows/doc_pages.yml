@@ -1,0 +1,52 @@
+name: docs_pages_workflow
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+
+  build_doc_job:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+      steps:
+        - name: Checkout repo
+          uses: actions/checkout@v2
+
+        - name: Set up Python 3.8
+          uses: actions/setup-python@v2
+          with:
+            python-version: 3.8
+
+        - name: Install dependencies
+          run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements-doc.txt
+
+        - name: make the docs
+          run: |
+            cd docs
+            make clean
+            sphinx-build -b html . _build
+            cd ..
+
+        - name: Init new repo in dist folder and commit generated files
+          run: |
+            cd docs/_build/html
+            git init
+            touch .nojekyll
+            git add -A
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git commit -m "deploy to GitHub Pages"
+
+        - name: Force push to docs branch
+          uses: ad-m/github-push-action@v0.5.0
+          with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            branch: gh-pages
+            directory: docs/_build/html

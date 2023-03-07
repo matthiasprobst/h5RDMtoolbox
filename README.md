@@ -3,6 +3,7 @@
 
 
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
+![Tests](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/branch/dev/graph/badge.svg)
 
 *Note, that the repository is beta! A stable version is expected mid of 2023*
 

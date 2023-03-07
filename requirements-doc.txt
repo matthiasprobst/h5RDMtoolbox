@@ -1,0 +1,9 @@
+-e .
+-r requirements.txt
+jupyterlab
+sphinx >= 4.5.0
+sphinx_book_theme
+sphinx-copybutton
+scikit-image
+scikit-learn
+nbsphinx
