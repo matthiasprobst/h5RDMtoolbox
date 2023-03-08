@@ -3,10 +3,10 @@ import xarray as xr
 
 import h5rdmtoolbox as h5tbx
 # noinspection PyUnresolvedReferences
-from h5rdmtoolbox.wrapper import accessory
+from h5rdmtoolbox.extensions import Vector, magnitude
 
 
-class TestAccessory(unittest.TestCase):
+class TestExtension(unittest.TestCase):
 
     def setUp(self) -> None:
         h5tbx.use('default')
@@ -32,3 +32,14 @@ class TestAccessory(unittest.TestCase):
                 h5.Vector('u', 6.5)
             with self.assertRaises(TypeError):
                 h5.Vector(u='u', v=6.5)
+            vec.magnitude.compute_from('uu', 'vv', inplace=True)
+            self.assertTrue('magnitude_of_uu_vv' in vec.data_vars)
+            vec.magnitude.compute_from('uu', 'vv', name='speed', inplace=True)
+            self.assertTrue('speed' in vec.data_vars)
+            with self.assertRaises(KeyError):
+                vec.magnitude.compute_from('uu', 'vv', name='speed', inplace=True)
+            vec.magnitude.compute_from('uu', 'vv', name='speed2', inplace=True, overwrite=True, attrs={'test': 1})
+            self.assertEqual(vec.speed2.attrs['test'], 1)
+            vec2 = vec.magnitude.compute_from('uu', 'vv', name='speed2', inplace=False, overwrite=True, attrs={'test': 1})
+            self.assertEqual(vec2.attrs['test'], 1)
+            self.assertIsInstance(vec2, xr.DataArray)

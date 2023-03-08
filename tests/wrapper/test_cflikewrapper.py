@@ -269,6 +269,11 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(ds.attrs['units'], 'm/s')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
+    def test_create_string_dataset(self):
+        with h5tbx.File() as h5:
+            ds = h5.create_string_dataset('test', data='test')
+            self.assertEqual(ds[()], 'test')
+
     def test_create_group(self):
         """testing the creation of groups"""
         with h5tbx.File() as h5:
@@ -453,11 +458,6 @@ class TestH5CFLikeFile(unittest.TestCase):
             tree = h5.get_tree_structure()
             # from pprint import pprint
             # pprint(tree)
-
-    def tearDown(self) -> None:
-        for fname in Path(__file__).parent.glob('*'):
-            if fname.suffix not in ('py', '.py', ''):
-                fname.unlink()
 
     def test_rootparent(self):
         with h5tbx.File(mode='w') as h5:
@@ -753,3 +753,15 @@ class TestH5CFLikeFile(unittest.TestCase):
             x = h5['x'][:]
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
+
+    def test_repr(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, units='m', long_name='a test dataset')
+            self.assertEqual(h5tbx.wrapper.cflike.CFLikeHDF5StructureStrRepr().__0Ddataset__('test', h5['test']),
+                             '\x1b[1mtest\x1b[0m 1 [m], dtype: int32')
+
+
+    def tearDown(self) -> None:
+        for fname in Path(__file__).parent.glob('*'):
+            if fname.suffix not in ('py', '.py', ''):
+                fname.unlink()

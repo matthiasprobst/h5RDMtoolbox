@@ -1,13 +1,14 @@
 """
 xarray accessor for ipyvolume
 """
-import ipyvolume as ipv
 import matplotlib.cm
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 import xarray as xr
 from matplotlib.colors import BoundaryNorm, Normalize
+
+import ipyvolume as ipv
 
 
 def _color_from_values(arr, cmap="jet", levels=None, vmin=None, vmax=None,

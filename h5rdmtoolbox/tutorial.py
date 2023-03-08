@@ -1,7 +1,6 @@
 """
 Tutorial module providing easy access to particular data.
 """
-import numpy as np
 import os
 import pathlib
 import xarray as xr
@@ -9,6 +8,7 @@ from typing import List
 
 from .utils import generate_temporary_directory
 from .wrapper.cflike import File as CFFile
+from .wrapper.core import File as CoreFile
 
 
 def get_xr_dataset(name):
@@ -224,3 +224,73 @@ class Database:
         tocdir = generate_temporary_directory('test_repo')
         Database.build_test_repo(tocdir, n_files=n_files)
         return sorted(tocdir.rglob('*.hdf'))
+
+
+import numpy as np
+
+np.random.seed(100)
+
+
+class FlowDataset(CoreFile):
+    """FlowDataset tutorial data interface class"""
+
+    def __init__(self, x=11, y=11, z=None, u=None, v=None, w=None):
+        """Create an HDF5 file containing velocity data."""
+        super().__init__()
+        if isinstance(x, int):
+            xmin = np.random.randint(-100, 100 + 1)
+            xmax = np.random.randint(-100, 100 + 1)
+            x = np.linspace(xmin, xmax, x)
+        elif isinstance(x, (list, tuple)):
+            a, b, n = x
+            x = np.sort((b - a) * np.random.random_sample(n) + a)
+        self.create_dataset('x', x,
+                            attrs=dict(units='m', standard_name='x_coordinate'),
+                            make_scale=True)
+        if isinstance(y, int):
+            ymin = np.random.randint(-100, 100 + 1)
+            ymax = np.random.randint(-100, 100 + 1)
+            y = np.linspace(ymin, ymax, y)
+        elif isinstance(y, (list, tuple)):
+            a, b, n = y
+            y = np.sort((b - a) * np.random.random_sample(n) + a)
+        self.create_dataset('y', y,
+                            attrs=dict(units='m', standard_name='y_coordinate'),
+                            make_scale=True)
+        if z is not None:
+            if isinstance(z, int):
+                zmin = np.random.randint(-100, 100 + 1)
+                zmax = np.random.randint(-100, 100 + 1)
+                z = np.linspace(zmin, zmax, z)
+            elif isinstance(z, (list, tuple)):
+                a, b, n = z
+                z = np.sort((b - a) * np.random.random_sample(n) + a)
+            self.create_dataset('z', z,
+                                attrs=dict(units='m', standard_name='z_coordinate'),
+                                make_scale=True)
+
+        if z is None:
+            ny, nx = self.y.size, self.x.size
+            shape = (ny, nx)
+            scales = ('y', 'x')
+        else:
+            nz, ny, nx = self.z.size, self.y.size, self.x.size
+            shape = (nz, ny, nx)
+            scales = ('z', 'y', 'x')
+
+        if u is None:
+            u = np.random.rand(*shape)
+        if v is None:
+            v = np.random.rand(*shape)
+        if z is not None and w is None:
+            w = np.random.rand(*shape)
+        self.create_dataset('u', data=u,
+                            attrs=dict(units='m/s', standard_name='x_velocity'),
+                            attach_scales=scales)
+        self.create_dataset('v', data=v,
+                            attrs=dict(units='m/s', standard_name='y_velocity'),
+                            attach_scales=scales)
+        if z is not None:
+            self.create_dataset('w', data=w,
+                                attrs=dict(units='m/s', standard_name='z_velocity'),
+                                attach_scales=scales)

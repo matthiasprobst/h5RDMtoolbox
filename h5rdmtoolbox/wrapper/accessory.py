@@ -2,8 +2,7 @@
 import h5py
 from typing import Union
 
-from .core import Group, File
-from ..xr.dataset import HDFXrDataset
+from .core import Group
 
 
 class SpecialDatasetRegistrationWarning(Warning):
@@ -46,27 +45,6 @@ class _CachedAccessor:
         return accessor_obj
 
 
-# def _register_special_dataset(name, cls, overwrite):
-#     def decorator(accessor):
-#         """decorator"""
-#         if hasattr(cls, name):
-#             if overwrite:
-#                 pass
-#                 # warnings.warn(
-#                 #     f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
-#                 #     "overriding a preexisting attribute with the same name.",
-#                 #     SpecialDatasetRegistrationWarning,
-#                 #     stacklevel=2,
-#                 # )
-#             else:
-#                 raise RuntimeError(f'Cannot register the accessor {accessor!r} under name {name!r} '
-#                                    f'because it already exists and overwrite is set to {overwrite}')
-#         setattr(cls, name, _CachedAccessor(name, accessor))
-#         return accessor
-#
-#     return decorator
-
-
 PROPERTY_ACCESSOR_NAMES = []
 
 
@@ -94,34 +72,3 @@ class Accessor:
 
     def __init__(self, h5grp: h5py.Group):
         self._grp = h5grp
-
-
-@register_special_dataset("Vector", Group)
-@register_special_dataset("Vector", File)
-class VectorDataset(Accessor):
-    """A special dataset for vector data.
-     The vector components are stored in the group as datasets."""
-
-    def __init__(self, h5grp: h5py.Group):
-        self._grp = h5grp
-
-    def __call__(self, *args, **kwargs) -> HDFXrDataset:
-        """Returns a xarray dataset with the vector components as data variables."""
-        if len(args) and len(kwargs):
-            raise ValueError('Either args or kwargs must be provided but not both')
-        hdf_datasets = {}
-        for arg in args:
-            if isinstance(arg, str):
-                ds = self._grp[arg]
-            elif isinstance(arg, h5py.Dataset):
-                ds = arg
-            else:
-                raise TypeError(f'Invalid type: {type(arg)}')
-            hdf_datasets[ds.name.strip('/')] = ds
-
-        for name, ds in kwargs.items():
-            if not isinstance(ds, h5py.Dataset):
-                raise TypeError(f'Invalid type: {type(ds)}')
-            hdf_datasets[name.strip('/')] = ds
-
-        return HDFXrDataset(**hdf_datasets)

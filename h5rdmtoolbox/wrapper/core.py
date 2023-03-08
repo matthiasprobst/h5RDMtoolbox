@@ -349,7 +349,7 @@ class Group(h5py.Group):
         for ak, av in attrs.items():
             ds.attrs[ak] = av
         # TODO: H5StingDataset
-        return ds
+        return self._h5ds(ds.id)
 
     def create_dataset(self,
                        name,
@@ -557,7 +557,7 @@ class Group(h5py.Group):
                  key,
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None
                  ) -> List:
-        """Find a distinct key"""
+        """Find a distinct key (only one result is returned although multiple objects match the filter)"""
         from ..database.filequery import distinct
         objfilter = utils.process_obj_filter_input(objfilter)
         return distinct(self, key, objfilter)

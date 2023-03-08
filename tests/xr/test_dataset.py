@@ -5,7 +5,7 @@ import unittest
 import xarray as xr
 
 import h5rdmtoolbox
-from h5rdmtoolbox.xr.dataset import HDFXrDataset
+from h5rdmtoolbox.extensions.xr.dataset import HDFXrDataset
 
 
 class TestDataset(unittest.TestCase):

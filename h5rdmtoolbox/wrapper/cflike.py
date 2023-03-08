@@ -257,17 +257,6 @@ class Group(core.Group):
             attrs.update({'standard_name': long_name})
         return super().create_string_dataset(name, data, overwrite, attrs)
 
-    def get_dataset_by_standard_name(self, standard_name: str, n: int = None, rec: bool = True) -> h5py.Dataset or None:
-        """Return the dataset with a specific standard_name within the current group.
-        Raises error if multiple datasets are found!
-        To recursive scan through all datasets, use
-        get_by_attribute('standard_name', <your_value>, 'ds').
-        Returns None if no matching dataset has been found.
-        """
-        if n == 1:
-            return self.find_one({'standard_name': standard_name}, objfilter=h5py.Dataset, rec=rec)
-        return self.find({'standard_name': standard_name}, objfilter=h5py.Dataset, rec=rec)
-
 
 # H5Group is depreciated
 class H5Group(Group):

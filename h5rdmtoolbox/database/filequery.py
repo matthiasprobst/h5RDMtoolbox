@@ -1,3 +1,4 @@
+"""filequery module"""
 import h5py
 import numpy as np
 import os
@@ -40,26 +41,11 @@ def _regex(value, pattern) -> bool:
     return True
 
 
-def _eq_name(node, name):
-    return node.name == name
-
-
-def _eq_basename(node, name):
-    return node.basename == name
-
-
-def _eq_ndim(node, ndim):
-    return node.ndim == ndim
-
-
-def _eq_shape(node, shape):
-    return node.shape == shape
-
-
 _operator = {'$regex': _regex, '$eq': _eq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
 
 
 class RecFind:
+    """Visititems class to find all objects with a certain attribute value"""
     def __init__(self, func: Callable, attribute, value):
         self._func = func
         self._attribute = attribute
@@ -76,6 +62,7 @@ class RecFind:
 
 
 class RecAttrFind:
+    """Visititems class to find all objects with a certain attribute value"""
     def __init__(self, func: Callable, attribute, value):
         self._func = func
         self._attribute = attribute
@@ -260,6 +247,7 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
 
 
 class DatasetValues:
+
     def __init__(self, arr: Dict):
         self.arr = arr
 
