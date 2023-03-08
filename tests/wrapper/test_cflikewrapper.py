@@ -756,9 +756,12 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_repr(self):
         with h5tbx.File() as h5:
-            h5.create_dataset('test', data=1, units='m', long_name='a test dataset')
+            h5.create_dataset('test', data=1, units='m', long_name='a test dataset', dtype='int64')
             self.assertEqual(h5tbx.wrapper.cflike.CFLikeHDF5StructureStrRepr().__0Ddataset__('test', h5['test']),
-                             '\x1b[1mtest\x1b[0m 1 [m], dtype: int32')
+                             '\x1b[1mtest\x1b[0m 1 [m], dtype: int64')
+            h5.create_dataset('test2', data=1, units='m', long_name='a test dataset', dtype='int32')
+            self.assertEqual(h5tbx.wrapper.cflike.CFLikeHDF5StructureStrRepr().__0Ddataset__('test2', h5['test2']),
+                             '\x1b[1mtest2\x1b[0m 1 [m], dtype: int32')
 
 
     def tearDown(self) -> None:
