@@ -3,7 +3,7 @@ import xarray as xr
 
 import h5rdmtoolbox as h5tbx
 # noinspection PyUnresolvedReferences
-from h5rdmtoolbox.extensions import Vector, magnitude
+from h5rdmtoolbox.extensions import vector, magnitude
 
 
 class TestExtension(unittest.TestCase):
