@@ -47,31 +47,47 @@ _operator = {'$regex': _regex, '$eq': _eq, '$gt': _gt, '$gte': _gte, '$lt': _lt,
 class RecFind:
     """Visititems class to find all objects with a certain attribute value"""
 
-    def __init__(self, func: Callable, attribute, value):
+    def __init__(self, func: Callable, attribute, value, objfilter, ignore_attribute_error):
         self._func = func
         self._attribute = attribute
         self._value = value
         self.found_objects = []
+        self.objfilter = objfilter
+        self.ignore_attribute_error = ignore_attribute_error
 
     def __call__(self, name, h5obj):
+        if self.objfilter:
+            if not isinstance(h5obj, self.objfilter):
+                return
         try:
             objattr = h5obj.__getattribute__(self._attribute)
             if self._func(objattr, self._value):
                 self.found_objects.append(h5obj)
-        except AttributeError:
-            pass
+        except AttributeError as e:
+            if not self.ignore_attribute_error:
+                raise AttributeError(f'Unknown key "{self._attribute}". Must be "$basename" or a valid h5py object '
+                                     f'attribute. '
+                                     'You may also consider setting the object filter to "$Dataset" or "$Group" '
+                                     'because e.g. filtering for "$shape" only works for datasets. '
+                                     'If you dont want this error to be raised and ignored instead, '
+                                     'pass "ignore_attribute_error=True" '
+                                     f'Original h5py error: {e}')
 
 
 class RecAttrFind:
     """Visititems class to find all objects with a certain attribute value"""
 
-    def __init__(self, func: Callable, attribute, value):
+    def __init__(self, func: Callable, attribute, value, objfilter):
         self._func = func
         self._attribute = attribute
         self._value = value
+        self.objfilter = objfilter
         self.found_objects = []
 
     def __call__(self, name, obj):
+        if self.objfilter:
+            if not isinstance(obj, self.objfilter):
+                return
         if self._attribute in obj.attrs:
             if self._func(obj.attrs[self._attribute], self._value):
                 self.found_objects.append(obj)
@@ -141,45 +157,56 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
     # find objects with equal value
     if is_hdf_attrs_search:
         for ok, ov in qv.items():
-            if qk in h5obj.attrs:
-                if _operator[ok](h5obj.attrs[qk], ov):
-                    found_objs.append(h5obj)
-            for hv in h5obj.values():
-                if qk in hv.attrs:
-                    if _operator[ok](hv.attrs[qk], ov):
-                        found_objs.append(hv)
             if recursive:
-                rf = RecAttrFind(_operator[ok], qk, ov)
+                _skip = False
+                if objfilter:
+                    if not isinstance(h5obj, objfilter):
+                        _skip = True
+                if not _skip:
+                    if qk in h5obj.attrs:
+                        if _operator[ok](h5obj.attrs[qk], ov):
+                            found_objs.append(h5obj)
+                rf = RecAttrFind(_operator[ok], qk, ov, objfilter=objfilter)
                 h5obj.visititems(rf)
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
+            else:
+                if qk in h5obj.attrs:
+                    if _operator[ok](h5obj.attrs[qk], ov):
+                        found_objs.append(h5obj)
+                for hv in h5obj.values():
+                    if qk in hv.attrs:
+                        if _operator[ok](hv.attrs[qk], ov):
+                            found_objs.append(hv)
     else:
         for ok, ov in qv.items():
-            for hk, hv in h5obj.items():
-                if objfilter:
-                    if not isinstance(hv, objfilter):
-                        continue
-                try:
-                    if qk == '$basename':
-                        objattr = pathlib.Path(hv.__getattribute__('name')).name
-                    else:
-                        objattr = hv.__getattribute__(qk[1:])
-                    if _operator[ok](objattr, ov):
-                        found_objs.append(hv)
-                except AttributeError as e:
-                    if not ignore_attribute_error:
-                        raise AttributeError(f'Unknown key "{qk}". Must be "$basename" or a valid h5py object attribute. '
-                                       'You may also consider setting the object filter to "$Dataset" or "$Group" '
-                                       'because e.g. filtering for "$shape" only works for datasets. '
-                                       'If you dont want this error to be raised and ignored instead, '
-                                       'pass "ignore_attribute_error=True" '
-                                       f'Original h5py error: {e}')
-
             if recursive:
-                rf = RecFind(_operator[ok], qk[1:], ov)
+                rf = RecFind(_operator[ok], qk[1:], ov, objfilter=objfilter,
+                             ignore_attribute_error=ignore_attribute_error)
                 h5obj.visititems(rf)
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
+            else:
+                for hk, hv in h5obj.items():
+                    if objfilter:
+                        if not isinstance(hv, objfilter):
+                            continue
+                    try:
+                        if qk == '$basename':
+                            objattr = pathlib.Path(hv.__getattribute__('name')).name
+                        else:
+                            objattr = hv.__getattribute__(qk[1:])
+                        if _operator[ok](objattr, ov):
+                            found_objs.append(hv)
+                    except AttributeError as e:
+                        if not ignore_attribute_error:
+                            raise AttributeError(
+                                f'Unknown key "{qk}". Must be "$basename" or a valid h5py object attribute. '
+                                'You may also consider setting the object filter to "$Dataset" or "$Group" '
+                                'because e.g. filtering for "$shape" only works for datasets. '
+                                'If you dont want this error to be raised and ignored instead, '
+                                'pass "ignore_attribute_error=True" '
+                                f'Original h5py error: {e}')
     return found_objs
 
 
@@ -196,23 +223,29 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
 
     # actual filter:
     results = []
+    # go through all filter queries. They are treated as AND queries
     for k, v in flt.items():
         _results = _h5find(h5obj, k, v, recursive, objfilter, ignore_attribute_error)
-        if find_one:
-            if len(_results):
-                if objfilter:
-                    for r in _results:
-                        if isinstance(r, objfilter):
-                            return r
-                return _results[0]
+        # if find_one:
+        #     if len(_results):
+        #         if objfilter:
+        #             for r in _results:
+        #                 if isinstance(r, objfilter):
+        #                     return r
+        #         return _results[0]
         results.append(_results)
-    if find_one:
-        return  # Nothing found
-
+    # only get common results from all results:
     common_results = list(set.intersection(*map(set, results)))
-    if objfilter:
-        return [r for r in common_results if isinstance(r, objfilter)]
+
+    if find_one:
+        if len(common_results):
+            return common_results[0]
+        return  # Nothing found
     return common_results
+
+    # if objfilter:
+    #     return [r for r in common_results if isinstance(r, objfilter)]
+    # return common_results
 
 
 def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
@@ -380,13 +413,15 @@ class Files:
                  ignore_attribute_error: bool = False) -> Union[h5py.Group, h5py.Dataset, None]:
         """See find() in h5file.py"""
         for v in self.values():
-            found = find(v, flt, objfilter=objfilter, recursive=rec, find_one=True, ignore_attribute_error=ignore_attribute_error)
+            found = find(v, flt, objfilter=objfilter, recursive=rec, find_one=True,
+                         ignore_attribute_error=ignore_attribute_error)
             if found:
                 return found
 
     def find(self, flt: Union[Dict, str], objfilter=None, rec: bool = True, ignore_attribute_error: bool = False):
         """See find() in h5file.py"""
-        found = [find(v, flt, objfilter=objfilter, recursive=rec, find_one=False, ignore_attribute_error=ignore_attribute_error) for
+        found = [find(v, flt, objfilter=objfilter, recursive=rec, find_one=False,
+                      ignore_attribute_error=ignore_attribute_error) for
                  v in self.values()]
         return list(chain.from_iterable(found))
 

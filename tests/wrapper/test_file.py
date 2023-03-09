@@ -276,10 +276,10 @@ class TestFile(unittest.TestCase):
 
     def test_find_group_data(self):
         with File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}, '$group'))
+            self.assertEqual(h5.find({'$basename': 'grp_1'}, '$group')[0], h5.find_one({'$basename': 'grp_1'}, '$group'))
             self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
             self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, "$dataset"))
-            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}, "$dataset"))
+            self.assertEqual(h5.find({'$ndim': 1}, "$dataset")[0], h5.find_one({'$ndim': 1}, "$dataset"))
 
     def test_find_dataset_data(self):
         with File(self.test_filename, mode='r') as h5:

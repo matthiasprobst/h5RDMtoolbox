@@ -3,7 +3,7 @@ import pathlib
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.database import Files
+from h5rdmtoolbox import Files
 from h5rdmtoolbox.wrapper.cflike import File
 
 
@@ -39,6 +39,22 @@ class TestFileQuery(unittest.TestCase):
 
                 with Files(pathlib.Path(fnames[0]).parent) as h5s:
                     self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
+
+    def test_and_find(self):
+        h5tbx.use('cflike')
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', shape=(1, 2, 3), units='', long_name='long name 1')
+            h5.create_dataset('ds2', shape=(1, 2, 3), units='', long_name='long name 1')
+            h5.create_dataset('ds3', shape=(1, 2, 3), units='', long_name='long name 2')
+            h5.create_group('grps', long_name='long name 1')
+            res = h5.find({'$basename': 'ds', 'long_name': 'long name 1'})
+            self.assertEqual(res[0], h5['ds'])
+            res = sorted(h5.find({'$shape': (1,2,3), 'long_name': 'long name 1'}, '$dataset'))
+            self.assertEqual(len(res), 2)
+            self.assertEqual(res[0], h5['ds'])
+            self.assertEqual(res[1], h5['ds2'])
+            res = h5.find_one({'$shape': (1,2,3), 'long_name': 'long name 1'}, '$dataset')
+            self.assertEqual(res, h5['ds'])
 
     def test_recursive_find(self):
         h5tbx.use('default')

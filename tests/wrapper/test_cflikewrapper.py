@@ -342,17 +342,9 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_attrs_find(self):
         with h5tbx.File(self.test_filename, mode='r') as h5:
-            self.assertEqual(
-                h5['/grp_1'],
-                h5.find_one(
-                    {
-                        '$basename': {
-                            '$regex': 'grp_[0-9]'
-                        }
-                    },
-                    '$group'
-                )
-            )
+            res = h5.find_one({'$basename': {'$regex': 'grp_[0-9]'}}, '$group')
+            self.assertIsInstance(res, h5py.Group)
+            self.assertEqual(res.basename[0:4], 'grp_')
             #
             self.assertListEqual(
                 [h5['/grp_1'], h5['/grp_2'], h5['/grp_3']],
@@ -376,7 +368,7 @@ class TestH5CFLikeFile(unittest.TestCase):
                 h5['/ds'], h5.find_one({'one': 1}, '$dataset')
             )
             self.assertEqual(
-                [h5['/'], h5['/ds'], h5['grp_1']],
+                sorted([h5['/'], h5['/ds'], h5['grp_1']]),
                 sorted(h5.find({'one': 1}))
             )
             self.assertListEqual(
@@ -392,7 +384,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}, '$group'))
             self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
             self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, "$dataset"))
-            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}, "$dataset"))
+            self.assertEqual(h5.find({'$ndim': 1}, "$dataset")[0], h5.find_one({'$ndim': 1}, "$dataset"))
 
     def test_find_dataset_data(self):
         with h5tbx.File(self.test_filename, mode='r') as h5:
@@ -405,7 +397,8 @@ class TestH5CFLikeFile(unittest.TestCase):
                 self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}, '$group'))
             self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}, ignore_attribute_error=True))
             self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, objfilter='$dataset'))
-            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}, '$dataset'))
+            self.assertIsInstance(h5.find_one({'$ndim': 1}, '$dataset'), h5py.Dataset)
+            self.assertEqual(h5.find_one({'$ndim': 1}, '$dataset').basename[0:2], 'ds')
             self.assertEqual([h5['ds'], h5['ds1'], h5['ds2'], h5['dsY']],
                              sorted(h5.find({'$ndim': 1}, '$dataset')))
 
@@ -766,7 +759,6 @@ class TestH5CFLikeFile(unittest.TestCase):
             h5.create_dataset('test2', data=1, units='m', long_name='a test dataset', dtype='int32')
             self.assertEqual(h5tbx.wrapper.cflike.CFLikeHDF5StructureStrRepr().__0Ddataset__('test2', h5['test2']),
                              '\x1b[1mtest2\x1b[0m 1 [m], dtype: int32')
-
 
     def tearDown(self) -> None:
         for fname in Path(__file__).parent.glob('*'):
