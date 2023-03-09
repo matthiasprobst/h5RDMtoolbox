@@ -46,6 +46,7 @@ _operator = {'$regex': _regex, '$eq': _eq, '$gt': _gt, '$gte': _gte, '$lt': _lt,
 
 class RecFind:
     """Visititems class to find all objects with a certain attribute value"""
+
     def __init__(self, func: Callable, attribute, value):
         self._func = func
         self._attribute = attribute
@@ -63,6 +64,7 @@ class RecFind:
 
 class RecAttrFind:
     """Visititems class to find all objects with a certain attribute value"""
+
     def __init__(self, func: Callable, attribute, value):
         self._func = func
         self._attribute = attribute
@@ -117,7 +119,7 @@ class RecAttrCollect:
                     self.found_objects.append(obj.attrs[self._attribute_name])
 
 
-def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
+def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter, ignore_attribute_error: bool = False):
     """
 
     Parameters
@@ -154,6 +156,9 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
     else:
         for ok, ov in qv.items():
             for hk, hv in h5obj.items():
+                if objfilter:
+                    if not isinstance(hv, objfilter):
+                        continue
                 try:
                     if qk == '$basename':
                         objattr = pathlib.Path(hv.__getattribute__('name')).name
@@ -161,8 +166,14 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive):
                         objattr = hv.__getattribute__(qk[1:])
                     if _operator[ok](objattr, ov):
                         found_objs.append(hv)
-                except AttributeError:
-                    pass
+                except AttributeError as e:
+                    if not ignore_attribute_error:
+                        raise AttributeError(f'Unknown key "{qk}". Must be "$basename" or a valid h5py object attribute. '
+                                       'You may also consider setting the object filter to "$Dataset" or "$Group" '
+                                       'because e.g. filtering for "$shape" only works for datasets. '
+                                       'If you dont want this error to be raised and ignored instead, '
+                                       'pass "ignore_attribute_error=True" '
+                                       f'Original h5py error: {e}')
 
             if recursive:
                 rf = RecFind(_operator[ok], qk[1:], ov)
@@ -176,7 +187,8 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
          flt: Dict,
          objfilter: Union[h5py.Group, h5py.Dataset, None],
          recursive: bool,
-         find_one: bool):
+         find_one: bool,
+         ignore_attribute_error):
     """find objects in `h5obj` based on the filter request (-dictionary) `flt`"""
     # start with some input checks:
     if not isinstance(flt, Dict):
@@ -185,7 +197,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
     # actual filter:
     results = []
     for k, v in flt.items():
-        _results = _h5find(h5obj, k, v, recursive)
+        _results = _h5find(h5obj, k, v, recursive, objfilter, ignore_attribute_error)
         if find_one:
             if len(_results):
                 if objfilter:
@@ -364,16 +376,18 @@ class Files:
 
     def find_one(self, flt: Union[Dict, str],
                  objfilter=None,
-                 rec: bool = True) -> Union[h5py.Group, h5py.Dataset, None]:
+                 rec: bool = True,
+                 ignore_attribute_error: bool = False) -> Union[h5py.Group, h5py.Dataset, None]:
         """See find() in h5file.py"""
         for v in self.values():
-            found = find(v, flt, objfilter=objfilter, recursive=rec, find_one=True)
+            found = find(v, flt, objfilter=objfilter, recursive=rec, find_one=True, ignore_attribute_error=ignore_attribute_error)
             if found:
                 return found
 
-    def find(self, flt: Union[Dict, str], objfilter=None, rec: bool = True):
+    def find(self, flt: Union[Dict, str], objfilter=None, rec: bool = True, ignore_attribute_error: bool = False):
         """See find() in h5file.py"""
-        found = [find(v, flt, objfilter=objfilter, recursive=rec, find_one=False) for v in self.values()]
+        found = [find(v, flt, objfilter=objfilter, recursive=rec, find_one=False, ignore_attribute_error=ignore_attribute_error) for
+                 v in self.values()]
         return list(chain.from_iterable(found))
 
     def keys(self):

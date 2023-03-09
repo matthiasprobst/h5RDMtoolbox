@@ -391,19 +391,23 @@ class TestH5CFLikeFile(unittest.TestCase):
         with h5tbx.File(self.test_filename, mode='r') as h5:
             self.assertEqual(h5['grp_1'], h5.find_one({'$basename': 'grp_1'}, '$group'))
             self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
-            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}))
-            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}))
+            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, "$dataset"))
+            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}, "$dataset"))
 
     def test_find_dataset_data(self):
         with h5tbx.File(self.test_filename, mode='r') as h5:
             self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
             self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
             self.assertEqual([h5['ds'], ], h5.find({'$basename': 'ds'}))
-            self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}))
-            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}))
-            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}))
+            with self.assertRaises(AttributeError):
+                self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}))
+            with self.assertRaises(AttributeError):
+                self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}, '$group'))
+            self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}, ignore_attribute_error=True))
+            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, objfilter='$dataset'))
+            self.assertEqual(h5['ds'], h5.find_one({'$ndim': 1}, '$dataset'))
             self.assertEqual([h5['ds'], h5['ds1'], h5['ds2'], h5['dsY']],
-                             sorted(h5.find({'$ndim': 1})))
+                             sorted(h5.find({'$ndim': 1}, '$dataset')))
 
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):

@@ -52,6 +52,8 @@ class TestFileQuery(unittest.TestCase):
             self.assertEqual(gd.find({'long_name': 'Pressure'}, rec=True), [])
             self.assertEqual(gd.find({'long_name': 'Pressure'}, rec=False), [])
             self.assertEqual(gd.find({'$shape': (3, 5, 10, 20)}, rec=True), [gd.u])
+            with self.assertRaises(AttributeError):
+                gd.find({'$fail': (3, 5, 10, 20)}, objfilter='$Dataset', rec=True)
 
     def test_distinct(self):
         h5tbx.use('default')

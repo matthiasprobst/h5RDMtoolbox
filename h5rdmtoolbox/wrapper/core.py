@@ -541,7 +541,8 @@ class Group(h5py.Group):
 
     def find_one(self, flt: Union[Dict, str],
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-                 rec: bool = True):
+                 rec: bool = True,
+                 ignore_attribute_error: bool = False):
         """See find()"""
         from ..database import filequery
         objfilter = utils.process_obj_filter_input(objfilter)
@@ -550,7 +551,8 @@ class Group(h5py.Group):
             flt,
             objfilter=objfilter,
             recursive=rec,
-            find_one=True
+            find_one=True,
+            ignore_attribute_error=ignore_attribute_error
         )
 
     def distinct(self,
@@ -564,7 +566,8 @@ class Group(h5py.Group):
 
     def find(self, flt: Union[Dict, str],
              objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             rec: bool = True):
+             rec: bool = True,
+             ignore_attribute_error: bool = False) -> List:
         """
         Examples for filter parameters:
         filter = {'long_name': 'any objects long name'} --> searches in attributes only
@@ -579,6 +582,9 @@ class Group(h5py.Group):
             Filter. Default is None. Otherwise, only dataset or group types are returned.
         rec: bool, optional
             Recursive search. Default is True
+        ignore_attribute_error: bool, optional=False
+            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
+            Otherwise, the KeyError is raised.
 
         Returns
         -------
@@ -591,7 +597,8 @@ class Group(h5py.Group):
             flt=flt,
             objfilter=objfilter,
             recursive=rec,
-            find_one=False)
+            find_one=False,
+            ignore_attribute_error=ignore_attribute_error)
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
