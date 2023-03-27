@@ -33,6 +33,7 @@ from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import H5Layout
+from ..conventions.registration import register_hdf_attribute
 
 logger = logging.getLogger(__package__)
 
@@ -1704,3 +1705,8 @@ Dataset._h5ds = Dataset
 
 Group._h5grp = Group
 Group._h5ds = Dataset
+
+# user:
+from ..conventions.default.user import User
+
+register_hdf_attribute(User, File, name='user', overwrite=True)

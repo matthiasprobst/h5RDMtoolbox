@@ -9,7 +9,7 @@ from typing import Union
 from ._logger import logger
 
 # dictionary of all registered user-defined attribute names
-REGISTRATED_ATTRIBUTE_NAMES = {n: {} for n in ['default', 'cflike']}
+REGISTRATED_ATTRIBUTE_NAMES = {}
 
 
 class AbstractUserAttribute:
@@ -59,9 +59,7 @@ def register_hdf_attribute(attribute_class, cls, name, overwrite):
         attrname = attribute_class.__name__
     else:
         attrname = name
-        if cls not in REGISTRATED_ATTRIBUTE_NAMES[cls.convention]:
-            REGISTRATED_ATTRIBUTE_NAMES[cls.convention][cls] = {}
-        REGISTRATED_ATTRIBUTE_NAMES[cls.convention][cls][attrname] = attribute_class
+    REGISTRATED_ATTRIBUTE_NAMES[attrname] = attribute_class
     if hasattr(cls, attrname):
         if overwrite:
             logger.debug(f'Overwriting existing property "{attrname}" of {cls}.')

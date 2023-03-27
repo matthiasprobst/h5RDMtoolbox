@@ -7,13 +7,13 @@ import warnings
 import xarray as xr
 from typing import Union, List
 
-from h5rdmtoolbox.conventions.registration import register_hdf_attribute
 from . import core
 from .. import _repr
 from .. import config
 from .. import errors
 from .._config import ureg
-from ..conventions import cflike
+from ..conventions import cflike, default
+from ..conventions.registration import register_hdf_attribute
 
 logger = logging.getLogger(__package__)
 
@@ -493,3 +493,6 @@ register_hdf_attribute(cflike.title.TitleAttribute, File, name='title', overwrit
 
 # references:
 register_hdf_attribute(cflike.references.ReferencesAttribute, File, name='references', overwrite=True)
+
+# # user
+# register_hdf_attribute(default.user.User, File, name='user', overwrite=True)

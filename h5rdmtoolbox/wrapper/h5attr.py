@@ -47,11 +47,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
     the name (string) is identified as a dataset or group, then this object is returned.
     """
 
-    def __init__(self, parent):  # , identifier_convention: conventions.StandardNameTable):
+    def __init__(self, parent):
         """ Private constructor."""
         super().__init__(parent)
         self._parent = parent
-        # self.identifier_convention = identifier_convention  # standard_name_convention
 
     @with_phil
     def __getitem__(self, name):
@@ -59,10 +58,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         obj_type = self._parent.__class__
-        if obj_type in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
-            if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][obj_type]:
-                return REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][self._parent.__class__][name].parse(ret,
-                                                                                                                self._parent)
+        if name in REGISTRATED_ATTRIBUTE_NAMES:
+            if hasattr(obj_type, name):
+                return REGISTRATED_ATTRIBUTE_NAMES[name].parse(ret, self._parent)
 
         if isinstance(ret, str):
             if ret == '':
@@ -124,10 +122,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
         obj_type = self._parent.__class__
-        if obj_type in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
-            if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][obj_type]:
-                setattr(self._parent, name, value)
-                return
+        if name in REGISTRATED_ATTRIBUTE_NAMES:
+            if hasattr(obj_type, name):
+                return setattr(self._parent, name, value)
         utils.create_special_attribute(self, name, value)
 
     def __repr__(self):

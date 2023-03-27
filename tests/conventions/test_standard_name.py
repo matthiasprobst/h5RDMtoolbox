@@ -6,19 +6,19 @@ import requests
 import unittest
 import warnings
 from omegaconf import DictConfig
-from typing import Union, Dict, List
+from typing import Union, Dict
 
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._user import testdir
-from h5rdmtoolbox.conventions.cflike import software, user, errors
+from h5rdmtoolbox.conventions.cflike import software
 from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTable,
                                                            StandardNameTableTranslation,
                                                            StandardName,
                                                            url_exists)
 from h5rdmtoolbox.conventions.cflike.standard_name import merge
 from h5rdmtoolbox.conventions.registration import register_hdf_attr, AbstractUserAttribute
-from h5rdmtoolbox.wrapper.cflike import Dataset, Group
 from h5rdmtoolbox.wrapper.cflike import File
+from h5rdmtoolbox.wrapper.cflike import Group
 
 
 class TestStandardName(unittest.TestCase):
@@ -72,46 +72,6 @@ class TestStandardName(unittest.TestCase):
                 """Delete attribute"""
                 self.attrs.__delitem__('standard_name')
 
-        @register_hdf_attr(Group, name='user', overwrite=True)
-        @register_hdf_attr(Dataset, name='user', overwrite=True)
-        class UserAttribute(AbstractUserAttribute):
-            """User can be one or multiple persons in charge or related to the
-            file, group or dataset"""
-
-            def set(self, orcid: Union[str, List[str]]):
-                """Add user
-                Parameters
-                ----------
-                orcid: str or List[str]
-                    ORCID of one or many responsible persons.
-
-                Raises
-                ------
-                TypeError
-                    If input is not a string or a list of strings
-                OrcidError
-                    If a string is not meeting the ORCID pattern of four times four numbers sparated with a dash.
-                """
-                if not isinstance(orcid, (list, tuple)):
-                    orcid = [orcid, ]
-                    for o in orcid:
-                        if not isinstance(o, str):
-                            TypeError(f'Expecting a string or list of strings representing an ORCID but got {type(o)}')
-                        if user.is_invalid_orcid_pattern(o):
-                            raise errors.OrcidError(f'Not an ORCID ID: {o}')
-                if len(orcid) == 1:
-                    self.attrs.create('user', orcid[0])
-                else:
-                    self.attrs.create('user', orcid)
-
-            def get(self) -> Union[str, List[str]]:
-                """Get user attribute"""
-                return self.attrs.get('user', None)
-
-            def delete(self):
-                """Get user attribute"""
-                self.attrs.__delitem__('user')
-
     def test_standard_name(self):
         sn1 = StandardName(name='acc',
                            description=None,
@@ -139,9 +99,9 @@ class TestStandardName(unittest.TestCase):
         with self.assertRaises(AttributeError):
             self.assertTrue(sn1.check())
         _ = StandardName(name='a',
-                           description=None,
-                           canonical_units='m^2/s',
-                           snt=None)
+                         description=None,
+                         canonical_units='m^2/s',
+                         snt=None)
 
         sn5 = StandardName(name='a',
                            description=None,

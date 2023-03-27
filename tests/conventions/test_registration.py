@@ -34,7 +34,7 @@ class TestAccessor(unittest.TestCase):
         class shortyname(AbstractUserAttribute):
             """Shorty name attribute"""
 
-            def get(self, value):
+            def get(self):
                 """Set the short_name"""
                 return shortyname.parse(self.attrs.get('short_name', None))
 

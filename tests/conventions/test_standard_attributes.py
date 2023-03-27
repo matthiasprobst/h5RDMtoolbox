@@ -3,11 +3,14 @@
 import json
 import unittest
 from importlib.metadata import metadata
-from typing import Union, Dict, List
+from typing import Union, Dict
 
-from h5rdmtoolbox.conventions.cflike import software, user, errors
+from h5rdmtoolbox.conventions.cflike import software
+from h5rdmtoolbox.conventions.cflike.errors import LongNameError
+from h5rdmtoolbox.conventions.default.errors import OrcidError
 from h5rdmtoolbox.conventions.registration import register_hdf_attr, AbstractUserAttribute
 from h5rdmtoolbox.wrapper.cflike import File, Group
+from h5rdmtoolbox.wrapper.core import File as CoreFile
 
 
 class TestOptAccessors(unittest.TestCase):
@@ -64,45 +67,6 @@ class TestOptAccessors(unittest.TestCase):
                 """Delete attribute"""
                 self.attrs.__delitem__('standard_name')
 
-        @register_hdf_attr(File, name='user', overwrite=True)
-        class UserAttribute(AbstractUserAttribute):
-            """User can be one or multiple persons in charge or related to the
-            file, group or dataset"""
-
-            def set(self, orcid: Union[str, List[str]]):
-                """Add user
-                Parameters
-                ----------
-                orcid: str or List[str]
-                    ORCID of one or many responsible persons.
-
-                Raises
-                ------
-                TypeError
-                    If input is not a string or a list of strings
-                OrcidError
-                    If a string is not meeting the ORCID pattern of four times four numbers sparated with a dash.
-                """
-                if not isinstance(orcid, (list, tuple)):
-                    orcid = [orcid, ]
-                    for o in orcid:
-                        if not isinstance(o, str):
-                            TypeError(f'Expecting a string or list of strings representing an ORCID but got {type(o)}')
-                        if user.is_invalid_orcid_pattern(o):
-                            raise errors.OrcidError(f'Not an ORCID ID: {o}')
-                if len(orcid) == 1:
-                    self.attrs.create('user', orcid[0])
-                else:
-                    self.attrs.create('user', orcid)
-
-            def get(self) -> Union[str, List[str]]:
-                """Get user attribute"""
-                return self.attrs.get('user', None)
-
-            def delete(self):
-                """Get user attribute"""
-                self.attrs.__delitem__('user')
-
     def test_software(self):
         meta = metadata('numpy')
 
@@ -115,14 +79,14 @@ class TestOptAccessors(unittest.TestCase):
     def test_long_name(self):
         # is available per default
         with File() as h5:
-            with self.assertRaises(errors.LongNameError):
+            with self.assertRaises(LongNameError):
                 h5.attrs['long_name'] = ' 1234'
-            with self.assertRaises(errors.LongNameError):
+            with self.assertRaises(LongNameError):
                 h5.attrs['long_name'] = '1234'
             h5.attrs['long_name'] = 'a1234'
-            with self.assertRaises(errors.LongNameError):
+            with self.assertRaises(LongNameError):
                 h5.create_dataset('ds1', shape=(2,), long_name=' a long name', units='m**2')
-            with self.assertRaises(errors.LongNameError):
+            with self.assertRaises(LongNameError):
                 h5.create_dataset('ds3', shape=(2,), long_name='123a long name ', units='m**2')
 
     def test_units(self):
@@ -148,13 +112,13 @@ class TestOptAccessors(unittest.TestCase):
 
         # noinspection PyUnresolvedReferences
         with File() as h5:
-            with self.assertRaises(errors.OrcidError):
+            with self.assertRaises(OrcidError):
                 h5.user = '11308429'
-            with self.assertRaises(errors.OrcidError):
+            with self.assertRaises(OrcidError):
                 h5.attrs['user'] = '11308429'
-            with self.assertRaises(errors.OrcidError):
+            with self.assertRaises(OrcidError):
                 h5.user = '123-132-123-123'
-            with self.assertRaises(errors.OrcidError):
+            with self.assertRaises(OrcidError):
                 h5.user = '1234-1324-1234-1234s'
             h5.user = '1234-1324-1234-1234'
             self.assertTrue(h5.user, '1234-1324-1234-1234')
@@ -167,3 +131,28 @@ class TestOptAccessors(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 g.attrs.user = '123'
             config.natural_naming = True
+
+    def test_set_atrribute_to_higher_class(self):
+        @register_hdf_attr(File, name=None)
+        class shortyname2(AbstractUserAttribute):
+            """Shorty name attribute"""
+
+            def get(self):
+                """Set the short_name"""
+                return shortyname2.parse(self.attrs.get('shortyname2', None))
+
+            def delete(self):
+                """Delete title attribute"""
+                self.attrs.__delitem__('title')
+
+            def set(self, value):
+                """Set the shortyname"""
+                self.attrs.create('shortyname2', value.__str__())
+
+        with CoreFile() as h5:
+            # shortyname2 only available for classes inherited from File
+            h5.shortyname2 = 'my short name2'
+            self.assertNotIn('shortyname2', h5.attrs.keys())
+        with File() as h5:
+            h5.shortyname2 = 'my short name2'
+            self.assertNotIn('shortyname', h5.attrs.keys())

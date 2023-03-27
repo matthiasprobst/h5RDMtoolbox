@@ -35,8 +35,4 @@ class EmailError(ValueError):
 
 
 class LongNameError(ValueError):
-    """An error associated with the user property"""
-
-
-class OrcidError(ValueError):
-    """An error associated with the user property"""
+    """An error associated with the long_name property"""
