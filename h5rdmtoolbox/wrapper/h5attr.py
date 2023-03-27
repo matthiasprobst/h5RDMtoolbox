@@ -58,8 +58,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
         # if name in self.__dict__:
         #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
-        if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
-            return REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][name].parse(ret, self._parent)
+        obj_type = self._parent.__class__
+        if obj_type in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
+            if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][obj_type]:
+                return REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][self._parent.__class__][name].parse(ret,
+                                                                                                                self._parent)
 
         if isinstance(ret, str):
             if ret == '':
@@ -120,9 +123,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
-        if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
-            setattr(self._parent, name, value)
-            return
+        obj_type = self._parent.__class__
+        if obj_type in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
+            if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][obj_type]:
+                setattr(self._parent, name, value)
+                return
         utils.create_special_attribute(self, name, value)
 
     def __repr__(self):
@@ -153,8 +158,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
             super().__setattr__(key, value)
             return
         if not isinstance(value, ObjectID):
-            self.__setitem__(key, value)
-            return
+            if config.natural_naming:
+                self.__setitem__(key, value)
+                return
+            else:
+                raise RuntimeError('Natural naming is disabled. Use the setitem method to set attributes.')
         super().__setattr__(key, value)
 
     def rename(self, key, new_name):

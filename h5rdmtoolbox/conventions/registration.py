@@ -59,7 +59,9 @@ def register_hdf_attribute(attribute_class, cls, name, overwrite):
         attrname = attribute_class.__name__
     else:
         attrname = name
-        REGISTRATED_ATTRIBUTE_NAMES[cls.convention][attrname] = attribute_class
+        if cls not in REGISTRATED_ATTRIBUTE_NAMES[cls.convention]:
+            REGISTRATED_ATTRIBUTE_NAMES[cls.convention][cls] = {}
+        REGISTRATED_ATTRIBUTE_NAMES[cls.convention][cls][attrname] = attribute_class
     if hasattr(cls, attrname):
         if overwrite:
             logger.debug(f'Overwriting existing property "{attrname}" of {cls}.')

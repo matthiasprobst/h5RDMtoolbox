@@ -556,8 +556,9 @@ class TestH5CFLikeFile(unittest.TestCase):
             # h5.attrs.gr2 = h5['/']
             # self.assertEqual(h5.attrs['gr2'].name, '/')
 
-            dset = h5.create_dataset('ds', data=1, long_name='a long name', attrs={'a1': 1, 'a2': 'str',
-                                                                                   'a3': {'a': 2}},
+            dset = h5.create_dataset('ds', data=1, long_name='a long name',
+                                     attrs={'a1': 1, 'a2': 'str',
+                                            'a3': {'a': 2}},
                                      units='')
             self.assertEqual(dset.attrs.get('a1'), 1)
             self.assertEqual(dset.attrs.get('a2'), 'str')

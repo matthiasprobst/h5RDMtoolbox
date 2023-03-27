@@ -114,6 +114,9 @@ class StandardName(str):
         """Not equal"""
         return not self.__eq__(other)
 
+    def __hash__(self):
+        return hash(self.name)
+
     @property
     def units(self) -> str:
         """alias for canonical_units"""
@@ -964,7 +967,8 @@ class StandardNameDatasetAttribute(AbstractUserAttribute):
         Returns `None` if it does not exist."""
         if name is None:
             return None
-        return StandardName(name, canonical_units=obj.attrs.get('units', None), snt=obj.attrs.get('standard_name_table', None))
+        return StandardName(name, canonical_units=obj.attrs.get('units', None),
+                            snt=obj.attrs.get('standard_name_table', None))
 
     def get(self):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.

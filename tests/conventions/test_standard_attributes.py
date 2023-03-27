@@ -7,7 +7,7 @@ from typing import Union, Dict, List
 
 from h5rdmtoolbox.conventions.cflike import software, user, errors
 from h5rdmtoolbox.conventions.registration import register_hdf_attr, AbstractUserAttribute
-from h5rdmtoolbox.wrapper.cflike import File, Dataset, Group
+from h5rdmtoolbox.wrapper.cflike import File, Group
 
 
 class TestOptAccessors(unittest.TestCase):
@@ -20,10 +20,10 @@ class TestOptAccessors(unittest.TestCase):
             """property attach to a Group"""
 
             def set(self, sftw: Union[software.Software, Dict]):
-                """Get `software` as group attbute"""
+                """Get `software` as group attribute"""
                 if isinstance(sftw, (tuple, list)):
-                    raise TypeError('Software infomration must be provided as dictionary '
-                                    f'or object of class Softare, not {type(sftw)}')
+                    raise TypeError('Software information must be provided as dictionary '
+                                    f'or object of class Software, not {type(sftw)}')
                 if isinstance(sftw, dict):
                     # init the Software to check for errors
                     self.attrs.create('software', json.dumps(software.Software(**sftw).to_dict()))
@@ -53,7 +53,7 @@ class TestOptAccessors(unittest.TestCase):
                 return software.Software.from_dict(datadict)
 
             def get(self) -> software.Software:
-                """Get `software` from group attbute. The value is expected
+                """Get `software` from group attribute. The value is expected
                 to be a dictionary-string that can be decoded by json.
                 However, if it is a real string it is expected that it contains
                 name, version url and description separated by a comma.
@@ -64,8 +64,7 @@ class TestOptAccessors(unittest.TestCase):
                 """Delete attribute"""
                 self.attrs.__delitem__('standard_name')
 
-        @register_hdf_attr(Group, name='user', overwrite=True)
-        @register_hdf_attr(Dataset, name='user', overwrite=True)
+        @register_hdf_attr(File, name='user', overwrite=True)
         class UserAttribute(AbstractUserAttribute):
             """User can be one or multiple persons in charge or related to the
             file, group or dataset"""
@@ -161,3 +160,10 @@ class TestOptAccessors(unittest.TestCase):
             self.assertTrue(h5.user, '1234-1324-1234-1234')
             h5.user = ['1234-1324-1234-1234', ]
             self.assertTrue(h5.user, ['1234-1324-1234-1234', ])
+
+            g = h5.create_group('g1')
+            from h5rdmtoolbox import config
+            config.natural_naming = False
+            with self.assertRaises(RuntimeError):
+                g.attrs.user = '123'
+            config.natural_naming = True

@@ -484,6 +484,7 @@ register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute, Group, n
 register_hdf_attribute(cflike.units.UnitsAttribute, Dataset, name='units', overwrite=True)
 
 # long name:
+register_hdf_attribute(cflike.long_name.LongNameAttribute, File, name='long_name', overwrite=True)
 register_hdf_attribute(cflike.long_name.LongNameAttribute, Group, name='long_name', overwrite=True)
 register_hdf_attribute(cflike.long_name.LongNameAttribute, Dataset, name='long_name', overwrite=True)
 
