@@ -434,8 +434,6 @@ class StandardNameTable(MinimalStandardNameTable):
         super().__init__(name, table, valid_characters, pattern)
         self._version_number = version_number
         self._institution = institution
-        if not is_valid_email_address(contact):
-            raise ValueError(f'Contact email address is not valid: {contact}')
         self.contact = contact
         self._filename = None
         self.url = url

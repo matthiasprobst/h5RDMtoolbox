@@ -34,9 +34,9 @@ extensions = ['sphinx.ext.autodoc',
               "IPython.sphinxext.ipython_directive",
               "IPython.sphinxext.ipython_console_highlighting",
               "sphinx_copybutton",
-              "nbsphinx"]
+              "nbsphinx",
+              "sphinx_design", ]
 # Napoleon configurations
-
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_use_param = False
