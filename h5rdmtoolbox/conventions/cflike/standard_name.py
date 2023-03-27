@@ -85,22 +85,51 @@ def _units_power_fix(_str: str):
     return _str
 
 
-class StandardName(str):
-    """Standard name class"""
+class StandardName:
+    """Standard name class
 
-    def __new__(cls, name, canonical_units=None, description=None, snt=None):
-        obj = str.__new__(cls, name)
-        obj.name = name
-        obj.description = description
-        obj.canonical_units = f'{ureg.Unit(_units_power_fix(canonical_units))}'
+    Parameters
+    ----------
+    name : str
+        standard name
+    canonical_units : str
+        The canonical units. The package pint is used. If the units are not valid, an error is raised.
+    description : str, optional=None
+        description, by default None
+    snt : str | StandardNameTable, optional=None
+        Standard Name Table. If None, a minimal SNT is used, by default None
+
+        .. note::
+
+            If a standard name table is provided, the standard name is checked against the table.
+
+
+    Examples
+    --------
+    >>> from h5rdmtoolbox.conventions.cflike.standard_name import StandardName
+    >>> StandardName('x_wind', 'm/s', 'x wind component')
+    <StandardName: x_wind [m/s] | SNT: None | desc: x wind component>
+    """
+
+    def __init__(self,
+                 name,
+                 canonical_units: str,
+                 description: str = None,
+                 snt: Union[str, "StandardNameTable"] = None
+                 ):
+        self.name = name
+        self.description = description
+        self.canonical_units = f'{ureg.Unit(_units_power_fix(canonical_units))}'
         if snt is None:
-            # select a "minimal snt", which has no valid online resource but allows to perform checks
+            # select a "minimal snt", which has no valid online resource but allows performing checks
             snt = MinimalStandardNameTable(None, {})
         else:
             # perform a check as standard name table is provided:
             snt.check_name(name)
-        obj.snt = snt
-        return obj
+        self.snt = snt
+
+    def __repr__(self):
+        return f'<StandardName: {self.name} [{self.canonical_units}] | SNT: {self.snt.name} | desc: {self.description}>'
 
     def __eq__(self, other):
         if isinstance(other, StandardName):
@@ -122,15 +151,35 @@ class StandardName(str):
         """alias for canonical_units"""
         return self.canonical_units
 
-    def from_snt(self, name, snt: "StandardNameTable"):
-        """Initialize StandardName from StandardNameTable"""
+    @staticmethod
+    def from_snt(name, snt: "StandardNameTable") -> "StandardName":
+        """Initialize the StandardName object from StandardNameTable object
+
+        Parameters
+        ----------
+        name : str
+            The name of the standard name
+        snt : StandardNameTable
+            The StandardNameTable object from which the standard name is initialized.
+            The name must be contained in the Standard Name Table.
+
+        Returns
+        -------
+        StandardName
+
+        Raises
+        ------
+        KeyError
+            If the name is not contained in the Standard Name Table.
+
+        """
         if name not in snt:
             raise KeyError(f'Name {name} not found in standard name table {snt.name}. Cannot initialize StandardName.')
-        self.name = name
-        self.description = snt[name]['description']
-        self.canonical_units = snt[name]['canonical_units']
-        self.snt = snt
-        return self
+        name = name
+        description = snt[name]['description']
+        canonical_units = snt[name]['canonical_units']
+        snt = snt
+        return StandardName(name, canonical_units, description, snt)
 
     def check_syntax(self):
         """Run the name check of the standard name."""
@@ -325,7 +374,50 @@ class MinimalStandardNameTable:
 
 
 class StandardNameTable(MinimalStandardNameTable):
-    """Base class of Standard Name Tables"""
+    """Minimal version of a StandardNameTable.
+
+    Parameters
+    ----------
+    name: str
+        Name of the standard name table
+    table: DictConfig or Dict
+        Dictionary containing the standard names
+    version_number: int
+        Version number of the standard name table
+    institution: str
+        Institution that maintains the standard name table
+    contact: str
+        Contact person of the institution
+
+        .. note::
+
+            The email address is validated on common email address patterns.
+
+    last_modified: str
+        Date of last modification of the standard name table
+    valid_characters: str
+        String containing all valid characters for standard names, e.g. \"[\^a-zA-Z0-9\_]"
+    pattern: str
+        Regular expression pattern that standard names must match, e.g. \"^[0-9 ].*"
+    url: str
+        URL to the standard name table
+    alias: Dict
+        Dictionary containing aliases for standard names
+
+    Examples
+    --------
+    >>> from h5rdmtoolbox.conventions.cflike import StandardNameTable
+    >>> sc = StandardNameTable(
+    >>>             name='Test_SNC',
+    >>>             table={},
+    >>>             version_number=1,
+    >>>             contact='contact@python.com',
+    >>>             institution='my_institution'
+    >>>             )
+    >>> sc
+    Test_SNC (version number: 1)
+
+    """
     STORE_AS: StandardNameTableStoreOption = StandardNameTableStoreOption.none
 
     def __init__(self,
@@ -339,10 +431,11 @@ class StandardNameTable(MinimalStandardNameTable):
                  pattern: str = '',
                  url: str = None,
                  alias: Dict = None):
-        """Initialize StandardNameTable"""
         super().__init__(name, table, valid_characters, pattern)
         self._version_number = version_number
         self._institution = institution
+        if not is_valid_email_address(contact):
+            raise ValueError(f'Contact email address is not valid: {contact}')
         self.contact = contact
         self._filename = None
         self.url = url
@@ -508,7 +601,25 @@ class StandardNameTable(MinimalStandardNameTable):
 
     @staticmethod
     def from_xml(xml_filename, name: str = None) -> "StandardNameTable":
-        """read from xml file"""
+        """Create a StandardNameTable from an xml file
+
+        Parameters
+        ----------
+        xml_filename : str
+            Filename of the xml file
+        name : str, optional
+            Name of the StandardNameTable, by default None. If None, the name of the xml file is used.
+
+        Returns
+        -------
+        snt: StandardNameTable
+            The StandardNameTable object
+
+        Raises
+        ------
+        FileNotFoundError
+            If the xml file does not exist
+        """
         with open(xml_filename, 'r', encoding='utf-8') as file:
             my_xml = file.read()
         xmldict = xmltodict.parse(my_xml)
@@ -549,7 +660,18 @@ class StandardNameTable(MinimalStandardNameTable):
 
     @staticmethod
     def from_yaml(yaml_filename) -> "StandardNameTable":
-        """read from yaml file"""
+        """Create a StandardNameTable from a yaml file
+
+        Parameters
+        ----------
+        yaml_filename : str
+            Filename of the yaml file
+
+        Returns
+        -------
+        snt: StandardNameTable
+            The StandardNameTable object
+        """
         try:
             oc = OmegaConf.load(yaml_filename)
         except yaml.composer.ComposerError:
@@ -565,10 +687,38 @@ class StandardNameTable(MinimalStandardNameTable):
     @staticmethod
     def from_web(url: str, known_hash: str = None,
                  name: str = None,
-                 valid_characters: str = '[^a-zA-Z0-9_]',
-                 pattern: str = '^[0-9 ].*'):
-        """Init from an online resource. Provide a hash is recommended. For more info
-        see documentation of pooch.retrieve()"""
+                 valid_characters: str = None,
+                 pattern: str = None):
+        """Create a StandardNameTable from an online resource.
+        Provide a hash is recommended.
+
+        Parameters
+        ----------
+        url : str
+            URL of the file to download
+        known_hash : str, optional
+            Hash of the file, by default None
+        name : str, optional
+            Name of the StandardNameTable, by default None. If None, the name of the xml file is used.
+        valid_characters : str, optional
+            Regular expression for valid characters. If None, the default value from the config file is used.
+        pattern : str, optional
+            Regular expression for valid standard names. If None, the default value from the config file is used.
+
+        Returns
+        -------
+        snt: StandardNameTable
+            The StandardNameTable object
+
+        Notes
+        -----
+        This method requires the package pooch to be installed.
+
+        .. seealso::
+
+            For more info see documentation of `pooch.retrieve()`
+
+        """
         try:
             import pooch
         except ImportError:
@@ -584,7 +734,11 @@ class StandardNameTable(MinimalStandardNameTable):
             snt = StandardNameTable.from_yaml(file_path)
         else:
             raise ValueError(f'Unexpected file suffix: {file_path.suffix}. Expected .xml, .yml or .yaml')
+        if valid_characters is None:
+            valid_characters = config['valid_characters']
         snt._valid_characters = valid_characters
+        if pattern is None:
+            pattern = config['pattern']
         snt._pattern = pattern
         snt.url = url
         return snt
@@ -619,8 +773,11 @@ class StandardNameTable(MinimalStandardNameTable):
         >>>                               project_id='35443',
         >>>                               ref_name='main')
 
+
         Notes
         -----
+        This method requires the package python-gitlab to be installed.
+
         Equivalent curl statement:
         curl <url>/api/v4/projects/<project-id>/repository/files/<file-path>/raw?ref\=<ref_name> -o <output-filename>
         """
@@ -639,7 +796,7 @@ class StandardNameTable(MinimalStandardNameTable):
             return StandardNameTable.from_yaml(tmpfilename)
         if file_path.endswith('.xml'):
             return StandardNameTable.from_xml(tmpfilename)
-        raise NotImplementedError(f'Cannot handle file name extention {file_path.rsplit(".", 1)[1]}. '
+        raise NotImplementedError(f'Cannot handle file name extension {file_path.rsplit(".", 1)[1]}. '
                                   'Expected yml/yaml or xml')
 
     @staticmethod

@@ -41,6 +41,7 @@ Thumbs.db
 
 # docs
 docs/_build/
+docs/generated
 
 # pytest
 .coverage

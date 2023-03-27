@@ -70,6 +70,7 @@ You may install optional dependencies:
     HDF5-Database <database/index>
     Conventions <conventions/index>
     HowTo <howto/howto.ipynb>
+    API Reference <api>
     Glossary <glossary/index>
 
 .. toctree::

@@ -12,7 +12,7 @@ from .. import _repr
 from .. import config
 from .. import errors
 from .._config import ureg
-from ..conventions import cflike, default
+from ..conventions import cflike
 from ..conventions.registration import register_hdf_attribute
 
 logger = logging.getLogger(__package__)
@@ -321,6 +321,7 @@ class File(core.File, Group):
     It enables additional features and adds new methods streamlining the work with
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
+
     convention = 'cflike'
     hdfrepr = _repr.H5Repr(str_repr=CFLikeHDF5StructureStrRepr(),
                            html_repr=CFLikeHDF5StructureHTMLRepr())
@@ -493,6 +494,3 @@ register_hdf_attribute(cflike.title.TitleAttribute, File, name='title', overwrit
 
 # references:
 register_hdf_attribute(cflike.references.ReferencesAttribute, File, name='references', overwrite=True)
-
-# # user
-# register_hdf_attribute(default.user.User, File, name='user', overwrite=True)
