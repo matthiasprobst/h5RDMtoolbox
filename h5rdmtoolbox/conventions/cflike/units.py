@@ -2,10 +2,11 @@ import pint
 from typing import Union
 
 from .errors import UnitsError
+from ..registration import AbstractUserAttribute
 from ..._config import ureg
 
 
-class UnitsAttribute:
+class UnitsAttribute(AbstractUserAttribute):
     """Units attribute"""
 
     def set(self, new_units: Union[str, pint.Unit]):

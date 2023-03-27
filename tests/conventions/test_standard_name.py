@@ -16,7 +16,7 @@ from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTable,
                                                            StandardName,
                                                            url_exists)
 from h5rdmtoolbox.conventions.cflike.standard_name import merge
-from h5rdmtoolbox.conventions.registration import register_hdf_attr
+from h5rdmtoolbox.conventions.registration import register_hdf_attr, AbstractUserAttribute
 from h5rdmtoolbox.wrapper.cflike import Dataset, Group
 from h5rdmtoolbox.wrapper.cflike import File
 
@@ -27,7 +27,7 @@ class TestStandardName(unittest.TestCase):
         """setup"""
 
         @register_hdf_attr(Group, name='software', overwrite=True)
-        class SoftwareAttribute:
+        class SoftwareAttribute(AbstractUserAttribute):
             """property attach to a Group"""
 
             def set(self, sftw: Union[software.Software, Dict]):
@@ -74,7 +74,7 @@ class TestStandardName(unittest.TestCase):
 
         @register_hdf_attr(Group, name='user', overwrite=True)
         @register_hdf_attr(Dataset, name='user', overwrite=True)
-        class UserAttribute:
+        class UserAttribute(AbstractUserAttribute):
             """User can be one or multiple persons in charge or related to the
             file, group or dataset"""
 
@@ -113,20 +113,23 @@ class TestStandardName(unittest.TestCase):
                 self.attrs.__delitem__('user')
 
     def test_standard_name(self):
-        sn1 = StandardName(name='acc', description=None,
+        sn1 = StandardName(name='acc',
+                           description=None,
                            canonical_units='m**2/s',
                            snt=None)
         self.assertEqual(sn1.canonical_units, 'm**2/s')
+
         sn2 = StandardName(name='acc',
                            description=None,
                            canonical_units='m^2/s',
                            snt=None)
         self.assertEqual(sn2.canonical_units, 'm**2/s')
+
         sn3 = StandardName(name='acc',
                            description=None,
                            canonical_units='m/s',
                            snt=None)
-        self.assertEqual(sn2.canonical_units, 'm**2/s')
+        self.assertEqual(sn3.canonical_units, 'm/s')
 
         self.assertTrue(sn1 == sn2)
         self.assertFalse(sn1 == sn3)
@@ -135,7 +138,7 @@ class TestStandardName(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             self.assertTrue(sn1.check())
-        sn4 = StandardName(name='a',
+        _ = StandardName(name='a',
                            description=None,
                            canonical_units='m^2/s',
                            snt=None)

@@ -1,9 +1,10 @@
 import re
 
 from .errors import TitleError
+from ..registration import AbstractUserAttribute
 
 
-class TitleAttribute:
+class TitleAttribute(AbstractUserAttribute):
     """Title attribute"""
 
     def set(self, value):
@@ -18,8 +19,8 @@ class TitleAttribute:
 
     def get(self):
         """Get title attribute"""
-        return self.attrs.get('title', None)
+        return TitleAttribute.parse(self.attrs.get('title', None))
 
     def delete(self):
-        """Get title attribute"""
+        """Delete title attribute"""
         self.attrs.__delitem__('title')

@@ -6,7 +6,7 @@ from importlib.metadata import metadata
 from typing import Union, Dict, List
 
 from h5rdmtoolbox.conventions.cflike import software, user, errors
-from h5rdmtoolbox.conventions.registration import register_hdf_attr
+from h5rdmtoolbox.conventions.registration import register_hdf_attr, AbstractUserAttribute
 from h5rdmtoolbox.wrapper.cflike import File, Dataset, Group
 
 
@@ -16,7 +16,7 @@ class TestOptAccessors(unittest.TestCase):
         """setup"""
 
         @register_hdf_attr(Group, name='software', overwrite=True)
-        class SoftwareAttribute:
+        class SoftwareAttribute(AbstractUserAttribute):
             """property attach to a Group"""
 
             def set(self, sftw: Union[software.Software, Dict]):
@@ -30,13 +30,8 @@ class TestOptAccessors(unittest.TestCase):
                 else:
                     self.attrs.create('software', json.dumps(sftw.to_dict()))
 
-            def get(self) -> software.Software:
-                """Get `software` from group attbute. The value is expected
-                to be a dictionary-string that can be decoded by json.
-                However, if it is a real string it is expected that it contains
-                name, version url and description separated by a comma.
-                """
-                raw = self.attrs.get('software', None)
+            @staticmethod
+            def parse(raw, obj=None):
                 if raw is None:
                     return software.Software(None, None, None, None)
                 if isinstance(raw, dict):
@@ -57,13 +52,21 @@ class TestOptAccessors(unittest.TestCase):
 
                 return software.Software.from_dict(datadict)
 
+            def get(self) -> software.Software:
+                """Get `software` from group attbute. The value is expected
+                to be a dictionary-string that can be decoded by json.
+                However, if it is a real string it is expected that it contains
+                name, version url and description separated by a comma.
+                """
+                return SoftwareAttribute.parse(self.attrs.get('software', None))
+
             def delete(self):
                 """Delete attribute"""
                 self.attrs.__delitem__('standard_name')
 
         @register_hdf_attr(Group, name='user', overwrite=True)
         @register_hdf_attr(Dataset, name='user', overwrite=True)
-        class UserAttribute:
+        class UserAttribute(AbstractUserAttribute):
             """User can be one or multiple persons in charge or related to the
             file, group or dataset"""
 

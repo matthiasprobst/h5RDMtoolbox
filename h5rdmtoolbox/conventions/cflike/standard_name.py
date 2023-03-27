@@ -21,7 +21,6 @@ import warnings
 import xml.etree.ElementTree as ET
 import yaml
 from IPython.display import display, HTML
-from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from omegaconf import DictConfig, OmegaConf
@@ -31,8 +30,9 @@ from typing import Dict, Union, List, Tuple
 
 from . import errors
 from .._logger import logger
+from ..registration import AbstractUserAttribute
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
-from ... import config
+from ... import config as package_config
 from ..._config import ureg
 from ..._user import UserDir
 from ...utils import generate_temporary_filename
@@ -85,36 +85,86 @@ def _units_power_fix(_str: str):
     return _str
 
 
-@dataclass
-class StandardName:
-    """basic standardized name class"""
-    name: str
-    description: Union[str, None]
-    canonical_units: Union[str, None]
-    snt: "StandardNameTable"
+class StandardName(str):
+    """Standard name class"""
 
-    def __post_init__(self):
-        if self.canonical_units:
-            self.canonical_units = f'{ureg.Unit(_units_power_fix(self.canonical_units))}'
-        self.name = str(self.name)
-
-    def __format__(self, spec):
-        return self.name.__format__(spec)
-
-    def __str__(self):
-        return self.name
+    def __new__(cls, name, canonical_units=None, description=None, snt=None):
+        obj = str.__new__(cls, name)
+        obj.name = name
+        obj.description = description
+        obj.canonical_units = f'{ureg.Unit(_units_power_fix(canonical_units))}'
+        if snt is None:
+            # select a "minimal snt", which has no valid online resource but allows to perform checks
+            snt = MinimalStandardNameTable(None, {})
+        else:
+            # perform a check as standard name table is provided:
+            snt.check_name(name)
+        obj.snt = snt
+        return obj
 
     def __eq__(self, other):
-        if isinstance(other, str):
-            return self.name == other
-        return all([self.name == other.name,
-                    self.description == other.description,
-                    self.canonical_units == other.canonical_units,
-                    self.snt == other.snt])
+        if isinstance(other, StandardName):
+            return all([self.name == other.name,
+                        self.description == other.description,
+                        self.canonical_units == other.canonical_units,
+                        self.snt == other.snt])
+        return self.name == other
 
-    def check(self):
+    def __ne__(self, other):
+        """Not equal"""
+        return not self.__eq__(other)
+
+    @property
+    def units(self) -> str:
+        """alias for canonical_units"""
+        return self.canonical_units
+
+    def from_snt(self, name, snt: "StandardNameTable"):
+        """Initialize StandardName from StandardNameTable"""
+        if name not in snt:
+            raise KeyError(f'Name {name} not found in standard name table {snt.name}. Cannot initialize StandardName.')
+        self.name = name
+        self.description = snt[name]['description']
+        self.canonical_units = snt[name]['canonical_units']
+        self.snt = snt
+        return self
+
+    def check_syntax(self):
         """Run the name check of the standard name."""
-        self.snt.check_name(self.name)
+        return self.snt.check_syntax(self)
+
+
+# @dataclass
+# class StandardName:
+#     """basic standardized name class"""
+#     name: str
+#     description: Union[str, None]
+#     canonical_units: Union[str, None]
+#     snt: "StandardNameTable"
+#
+#     def __post_init__(self):
+#         if self.canonical_units:
+#             self.canonical_units = f'{ureg.Unit(_units_power_fix(self.canonical_units))}'
+#         self.name = str(self.name)
+#
+#     def __format__(self, spec):
+#         return self.name.__format__(spec)
+#
+#     def __str__(self):
+#         return self.name
+#
+#     def __eq__(self, other):
+#         if isinstance(other, str):
+#             return self.name == other
+#         return all([self.name == other.name,
+#                     self.description == other.description,
+#                     self.canonical_units == other.canonical_units,
+#                     self.snt == other.snt])
+#
+#     def check(self):
+#         """Run the name check of the standard name."""
+#         self.snt.check_name(self.name)
+#
 
 
 class StandardNameTableStoreOption(Enum):
@@ -131,7 +181,147 @@ def url_exists(url: str) -> bool:
     return response.status_code == 200
 
 
-class StandardNameTable:
+config = {'valid_characters': '[^a-zA-Z0-9_]', 'pattern': '^[0-9 ].*'}
+
+
+class MinimalStandardNameTable:
+    """Minimal version of a standard name table, which only contains name, and the table but no contanct or
+    versioning information"""
+
+    def __init__(self, name, table,
+                 valid_characters: Union[str, None] = None,
+                 pattern: Union[str, None] = None):
+        self._name = name
+        self._table = table
+        if valid_characters is None:
+            valid_characters = config['valid_characters']
+        self._valid_characters = valid_characters
+        if pattern is None:
+            pattern = config['pattern']
+        self._pattern = pattern
+
+        if self._table:
+            self.check_table()
+
+    def __eq__(self, other):
+        """Check if two standard name tables are equal"""
+        return all([self.name == other.name,
+                    self.table == other.table, ])
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @property
+    def name(self) -> str:
+        """Return name of standard name table"""
+        return self._name
+
+    @property
+    def table(self) -> Union[Dict, DictConfig]:
+        """Return table as dictionary"""
+        if self._table is None:
+            return {}
+        if isinstance(self._table, DictConfig):
+            return OmegaConf.to_container(self._table)
+        return self._table  # assuming it is a dict
+
+    @property
+    def names(self):
+        """Return keys of table"""
+        return [*list(self.table.keys()), *list(self.alias.keys())]
+
+    @property
+    def valid_characters(self) -> str:
+        """Return valid characters of the snt"""
+        return self._valid_characters
+
+    @property
+    def pattern(self) -> str:
+        """Return valid pattern of the snt"""
+        return self._pattern
+
+    def check_table(self):
+        """Check if table is valid"""
+        for v in self._table.values():
+            if isinstance(v, (dict, DictConfig)):
+                if 'description' not in v:
+                    raise KeyError(f'Keyword "description" missing: {v}')
+                if 'canonical_units' not in v:
+                    raise KeyError(f'Keyword "canonical_units" missing: {v}')
+            else:
+                raise TypeError(f'Content of Table is unexpected: {self._table}')
+
+    def set(self, name: str, description: str, canonical_units: str):
+        """Set the value of a standard name"""
+        if name in self.table:
+            raise errors.StandardNameError(f'name "{name}" already exists in table. Use modify() '
+                                           'to change the content')
+        verify_unit_object(canonical_units)
+        self._table[name] = dict(description=description, canonical_units=canonical_units)
+
+    def modify(self, name: str, description: str, canonical_units: str):
+        """Modify a standard name or creates one if non-existing"""
+        if name not in self.table:
+            if not description or not canonical_units:
+                raise ValueError(f'Name {name} does not exist yet. You must provide string values '
+                                 'for both description and canonical_units')
+            self.table[name] = dict(description=description, canonical_units=canonical_units)
+        else:
+            if description:
+                self.table[name]['description'] = description
+            if canonical_units:
+                self.table[name]['canonical_units'] = canonical_units
+
+    def rename(self, name, new_name) -> None:
+        """Rename an existing standard name. Make sure that description and unit is still
+        valid as this only renames the name of the standard name"""
+        if name not in self:
+            raise KeyError(f'"{name}" does not exist in table')
+        existing_sn = self.table.get(name)
+        self.set(new_name, **existing_sn)
+        del self._table[name]
+
+    def check_syntax(self, name: str) -> bool:
+        """Checks if the syntax of the name is correct according to the syntax rules of the StandardNameTable."""
+        if not len(name) > 0:
+            raise errors.StandardNameError('Name too short!')
+
+        if name[0] == ' ':
+            raise errors.StandardNameError('Name must not start with a space!')
+
+        if name[-1] == ' ':
+            raise errors.StandardNameError('Name must not end with a space!')
+
+        if re.sub(self.valid_characters, '', name) != name:
+            raise errors.StandardNameError('Invalid special characters in name '
+                                           f'"{name}": Only "{self.valid_characters}" '
+                                           'is allowed.')
+
+        if self.pattern != '' and self.pattern is not None:
+            if re.match(self.pattern, name):
+                raise errors.StandardNameError('Name must not start with a number!')
+        return True
+
+    def check_name(self, name, strict: bool = None) -> bool:
+        """Verifies general requirements like lower-case writing and no
+        invalid character exist in the name.
+        If strict is True, it is further checked whether the name exists
+        in the standard name table. This is a global setting which can be changed
+        in `conventions.standard_attributes.standard_name.STRICT`"""
+        self.check_syntax(name)
+        if strict:
+            if name not in self.table:
+                if name not in self.alias:
+                    err_msg = f'Standard name "{name}" not in name table {self.versionname}.'
+                    if self.table:
+                        similar_names = self.find_similar_names(name)
+                        if similar_names:
+                            err_msg += f'\nSimilar names are {similar_names}'
+                        raise errors.StandardNameError(err_msg)
+        return True
+
+
+class StandardNameTable(MinimalStandardNameTable):
     """Base class of Standard Name Tables"""
     STORE_AS: StandardNameTableStoreOption = StandardNameTableStoreOption.none
 
@@ -146,11 +336,9 @@ class StandardNameTable:
                  pattern: str = '',
                  url: str = None,
                  alias: Dict = None):
-
-        self._name = name
+        """Initialize StandardNameTable"""
+        super().__init__(name, table, valid_characters, pattern)
         self._version_number = version_number
-        self._valid_characters = valid_characters
-        self._pattern = pattern
         self._institution = institution
         self.contact = contact
         self._filename = None
@@ -161,32 +349,7 @@ class StandardNameTable:
             self._last_modified = now.strftime(CF_DATETIME_STR)
         else:
             self._last_modified = last_modified
-        self._table = table
         self._alias = alias
-
-        if self._table:
-            for v in self._table.values():
-                if isinstance(v, (dict, DictConfig)):
-                    if 'description' not in v:
-                        raise KeyError(f'Keyword "description" missing: {v}')
-                    if 'canonical_units' not in v:
-                        raise KeyError(f'Keyword "canonical_units" missing: {v}')
-                else:
-                    raise TypeError(f'Content of Table is unexpected: {self._table}')
-
-    @property
-    def names(self):
-        """Return keys of table"""
-        return [*list(self.table.keys()), *list(self.alias.keys())]
-
-    @property
-    def table(self) -> Union[Dict, DictConfig]:
-        """Return table as dictionary"""
-        if self._table is None:
-            return {}
-        if isinstance(self._table, DictConfig):
-            return OmegaConf.to_container(self._table)
-        return self._table  # assuming it is a dict
 
     @property
     def alias(self) -> Union[Dict, DictConfig]:
@@ -215,21 +378,6 @@ class StandardNameTable:
         if not is_valid_email_address(contact):
             raise errors.EmailError(f'Invalid email address: {contact}')
         self._contact = contact
-
-    @property
-    def name(self) -> str:
-        """Return name of standard name table"""
-        return self._name
-
-    @property
-    def valid_characters(self) -> str:
-        """Return valid characters of the snt"""
-        return self._valid_characters
-
-    @property
-    def pattern(self) -> str:
-        """Return valid pattern of the snt"""
-        return self._pattern
 
     @property
     def last_modified(self) -> str:
@@ -268,12 +416,13 @@ class StandardNameTable:
     def __getitem__(self, item) -> StandardName:
         if item in self.table:
             return StandardName(name=item,
-                                description=self.table[item]['description'],
                                 canonical_units=self.table[item]['canonical_units'],
+                                description=self.table[item]['description'],
                                 snt=self)
         if item in self.alias:
-            return StandardName(item, self.table[self.alias[item]]['description'],
+            return StandardName(item,
                                 self.table[self.alias[item]]['canonical_units'],
+                                self.table[self.alias[item]]['description'],
                                 snt=self)
         # return a standard name that is not in the table
         return StandardName(item, None, None, snt=self)
@@ -288,42 +437,9 @@ class StandardNameTable:
                     self.table == other.table,
                     self.versionname == other.versionname])
 
-    def __neg__(self, other):
-        return not self.__eq__(other)
-
     def compare_versionname(self, other):
         """Compare versionname"""
         return self.versionname == other.versionname
-
-    def set(self, name: str, description: str, canonical_units: str):
-        """Set the value of a standard name"""
-        if name in self.table:
-            raise errors.StandardNameError(f'name "{name}" already exists in table. Use modify() '
-                                           'to change the content')
-        verify_unit_object(canonical_units)
-        self._table[name] = dict(description=description, canonical_units=canonical_units)
-
-    def modify(self, name: str, description: str, canonical_units: str):
-        """Modify a standard name or creates one if non-existing"""
-        if name not in self.table:
-            if not description or not canonical_units:
-                raise ValueError(f'Name {name} does not exist yet. You must provide string values '
-                                 'for both description and canonical_units')
-            self.table[name] = dict(description=description, canonical_units=canonical_units)
-        else:
-            if description:
-                self.table[name]['description'] = description
-            if canonical_units:
-                self.table[name]['canonical_units'] = canonical_units
-
-    def rename(self, name, new_name) -> None:
-        """Rename an existing standard name. Make sure that description and unit is still
-        valid as this only renames the name of the standard name"""
-        if name not in self:
-            raise KeyError(f'"{name}" does not exist in table')
-        existing_sn = self.table.get(name)
-        self.set(new_name, **existing_sn)
-        del self._table[name]
 
     def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
         """string representation of the SNT in form of a table"""
@@ -586,44 +702,6 @@ class StandardNameTable:
             yaml.dump({'table': self.table}, f)
         return yaml_filename
 
-    def check_name(self, name, strict: bool = None) -> bool:
-        """Verifies general requirements like lower-case writing and no
-        invalid character exist in the name.
-        If strict is True, it is further checked whether the name exists
-        in the standard name table. This is a global setting which can be changed
-        in `conventions.standard_attributes.standard_name.STRICT`"""
-        if strict is None:
-            strict = STRICT
-
-        if not len(name) > 0:
-            raise errors.StandardNameError('Name too short!')
-
-        if name[0] == ' ':
-            raise errors.StandardNameError('Name must not start with a space!')
-
-        if name[-1] == ' ':
-            raise errors.StandardNameError('Name must not end with a space!')
-
-        if re.sub(self.valid_characters, '', name) != name:
-            raise errors.StandardNameError('Invalid special characters in name '
-                                           f'"{name}": Only "{self.valid_characters}" '
-                                           'is allowed.')
-
-        if self.pattern != '' and self.pattern is not None:
-            if re.match(self.pattern, name):
-                raise errors.StandardNameError('Name must not start with a number!')
-
-        if strict:
-            if name not in self.table:
-                if name not in self.alias:
-                    err_msg = f'Standard name "{name}" not in name table {self.versionname}.'
-                    if self.table:
-                        similar_names = self.find_similar_names(name)
-                        if similar_names:
-                            err_msg += f'\nSimilar names are {similar_names}'
-                        raise errors.StandardNameError(err_msg)
-        return True
-
     def find_similar_names(self, key):
         """Return similar names to key"""
         return [k for k in [*self.table.keys(), *self.alias.keys()] if get_similar_names_ratio(key, k) > 0.75]
@@ -866,7 +944,7 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               valid_characters='')
 
 
-class StandardNameDatasetAttribute:
+class StandardNameDatasetAttribute(AbstractUserAttribute):
     """Standard Name attribute"""
 
     def set(self, new_standard_name):
@@ -880,25 +958,30 @@ class StandardNameDatasetAttribute:
                                                              self.attrs['units'])
                 self.attrs.create('standard_name', str(new_standard_name))
 
+    @staticmethod
+    def parse(name, obj):
+        """Return the standardized name of the dataset. The attribute name is `standard_name`.
+        Returns `None` if it does not exist."""
+        if name is None:
+            return None
+        return StandardName(name, canonical_units=obj.attrs.get('units', None), snt=obj.attrs.get('standard_name_table', None))
+
     def get(self):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
-        val = self.attrs.get('standard_name', None)
-        if val is None:
-            return None
-        return self.standard_name_table[val]
+        return StandardNameDatasetAttribute.parse(self.attrs.get('standard_name', None), self)
 
     def delete(self):
         """Delete attribute"""
         self.attrs.__delitem__('standard_name')
 
 
-class StandardNameGroupAttribute:
+class StandardNameGroupAttribute(AbstractUserAttribute):
     def set(self, new_standard_name):
         raise RuntimeError('A standard name attribute is used for datasets only')
 
 
-class StandardNameTableAttribute:
+class StandardNameTableAttribute(AbstractUserAttribute):
     """Standard Name Table attribute"""
 
     def set(self, snt: Union[str, StandardNameTable]):
@@ -918,31 +1001,32 @@ class StandardNameTableAttribute:
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.url)
+                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name,
+                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name,
                                                  snt.to_dict())
             else:
-                self.rootparent.attrs.modify(config.standard_name_table_attribute_name,
+                self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name,
                                              json.dumps(snt.to_dict()))
         if snt.STORE_AS == StandardNameTableStoreOption.versionname:
-            self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.versionname)
+            self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.versionname)
         elif snt.STORE_AS == StandardNameTableStoreOption.dict:
-            self.rootparent.attrs.modify(config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
+            self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
         elif snt.STORE_AS == StandardNameTableStoreOption.url:
             if snt.url is not None:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.url)
+                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(config.standard_name_table_attribute_name, snt.to_dict())
+                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.to_dict())
             else:  # else fall back to writing dict. better than versionname because cannot get lost
-                self.rootparent.attrs.modify(config.standard_name_table_attribute_name,
+                self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name,
                                              json.dumps(snt.to_dict()))
         _SNT_CACHE[self.id.id] = snt
 
-    def get(self) -> StandardNameTable:
+    @staticmethod
+    def parse(snt, self=None):
         """Get (if exists) Standard Name Table from file
 
         Raises
@@ -950,11 +1034,12 @@ class StandardNameTableAttribute:
         KeyError
             If cannot load SNT from registration.
         """
-        try:
-            return _SNT_CACHE[self.file.id.id]
-        except KeyError:
-            pass  # not cached
-        snt = self.rootparent.attrs.get(config.standard_name_table_attribute_name, None)
+        if self:
+            try:
+                return _SNT_CACHE[self.file.id.id]
+            except KeyError:
+                pass  # not cached
+
         if snt is not None:
             # snt is a string
             if isinstance(snt, dict):
@@ -963,10 +1048,13 @@ class StandardNameTableAttribute:
                 return StandardNameTable(**json.loads(snt))
             elif snt[0:4] in ('http', 'wwww.'):
                 return StandardNameTable.from_web(snt)
-            else:
-                return StandardNameTable.from_versionname(snt)
+            return StandardNameTable.from_versionname(snt)
         return Empty_Standard_Name_Table
+
+    def get(self) -> StandardNameTable:
+        snt = self.rootparent.attrs.get(package_config.standard_name_table_attribute_name, None)
+        return StandardNameTableAttribute.parse(snt, self)
 
     def delete(self):
         """Delete standard name table from root attributes"""
-        self.attrs.__delitem__(config.standard_name_table_attribute_name)
+        self.attrs.__delitem__(package_config.standard_name_table_attribute_name)

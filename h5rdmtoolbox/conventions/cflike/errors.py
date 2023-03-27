@@ -6,6 +6,10 @@ class TitleError(ValueError):
     """An error associated with the title property"""
 
 
+class ReferencesError(ValueError):
+    """An error associated with the references property"""
+
+
 class UnitsError(Exception):
     """Units Error"""
 

@@ -326,10 +326,14 @@ class File(core.File, Group):
                            html_repr=CFLikeHDF5StructureHTMLRepr())
 
     def __init__(self,
-                 name: pathlib.Path = None,
+                 name: Union[str, pathlib.Path, None] = None,
                  mode='r',
                  *,
                  title=None,
+                 institution=None,
+                 source=None,
+                 references=None,
+                 comment=None,
                  standard_name_table=None,
                  layout: Union[pathlib.Path, str, 'H5Layout'] = 'File_core',
                  driver=None,
@@ -359,6 +363,66 @@ class File(core.File, Group):
                          fs_persist=fs_persist,
                          fs_threshold=fs_threshold,
                          **kwds)
+        """Initialize a File object following the cf-like convention.
+        
+        Parameters
+        ----------
+        name : str, pathlib.Path, None
+            The name of the file to open. If None, a temporary file is created.
+        mode : str
+            The mode in which to open the file. Must be one of 'r', 'r+', 'w', or 'a'.
+        title : str, optional
+            The title of the file. Only used if mode is not 'r'.
+        institution : str, optional
+            The institution that created the file. Only used if mode is not 'r'.
+        source : str, optional
+            The source of the data, indicating how the data was produced (model version, ...). 
+            Only used if mode is not 'r'.
+        references : str, optional
+            Publications or web documentations that describe the file. Only used if mode is not 'r'.
+        comment : str, optional
+            Additional comments. Only used if mode is not 'r'.
+        standard_name_table : str, StandardNameTable, optional
+            The standard name table to use. If a string is given, the table is loaded from the
+            registered tables. If None, the default table is used.
+        layout : str, pathlib.Path, H5Layout, optional
+            The layout to use. If a string is given, the layout is loaded from the registered layouts.
+            If None, the default layout is used.
+        driver : str, optional
+            The low-level file driver to use. See h5py.File for more information.
+        libver : str, optional
+            The version of the HDF5 library to use. See h5py.File for more information.
+        userblock_size : int, optional
+            The size of the user block in bytes. See h5py.File for more information.
+        swmr : bool, optional
+            Whether to open the file in SWMR read mode. See h5py.File for more information.
+        rdcc_nslots : int, optional
+            The number of chunk slots in the raw data chunk cache. See h5py.File for more information.
+        rdcc_nbytes : int, optional
+            The total size of the raw data chunk cache in bytes. See h5py.File for more information.
+        rdcc_w0 : float, optional
+            The preemption policy for chunks. See h5py.File for more information.
+        track_order : bool, optional
+            Whether to track the order in which chunks are accessed. See h5py.File for more information.
+        fs_strategy : str, optional
+            The file space strategy to use. See h5py.File for more information.
+        fs_persist : bool, optional
+            Whether to persistently allocate file space. See h5py.File for more information.
+        fs_threshold : int, optional
+            The minimum size of a file space allocation. See h5py.File for more information.
+        **kwds
+            Additional keyword arguments are passed to h5py.File.
+        """
+
+        def _write_non_readonly_attr(name, value):
+            if self.mode != 'r':
+                self.attrs[name] = value
+            else:
+                raise RuntimeError(f'No write intent. Cannot write {name}.')
+
+        for attr in ['institution', 'source', 'references', 'comment']:
+            if locals()[attr] is not None:
+                _write_non_readonly_attr(attr, locals()[attr])
 
         if self.mode != 'r':
             # set title and layout
@@ -425,3 +489,6 @@ register_hdf_attribute(cflike.long_name.LongNameAttribute, Dataset, name='long_n
 
 # title:
 register_hdf_attribute(cflike.title.TitleAttribute, File, name='title', overwrite=True)
+
+# references:
+register_hdf_attribute(cflike.references.ReferencesAttribute, File, name='references', overwrite=True)

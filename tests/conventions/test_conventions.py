@@ -1,12 +1,11 @@
 import logging
 import unittest
-
 from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.conventions.cflike.errors import EmailError, StandardNameTableError, StandardNameError
 from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTableTranslation, verify_unit_object,
                                                            StandardNameTable, Empty_Standard_Name_Table)
-from h5rdmtoolbox.conventions.cflike.errors import EmailError, StandardNameTableError, StandardNameError
 from h5rdmtoolbox.wrapper.cflike import File
 
 
@@ -87,7 +86,7 @@ class TestConventions(unittest.TestCase):
 
         self.assertEqual(pivsnt.name, str(pivsnt))
         with self.assertRaises(StandardNameError):
-            self.assertTrue(pivsnt.check_name('hallo'))
+            self.assertTrue(pivsnt.check_name('hallo', strict=True))
         with self.assertRaises(StandardNameError):
             pivsnt.check_name(' 213 ')
 

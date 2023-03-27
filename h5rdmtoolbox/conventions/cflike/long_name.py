@@ -2,6 +2,7 @@ import re
 from typing import Union
 
 from .errors import LongNameError
+from ..registration import AbstractUserAttribute
 
 
 class LongName(str):
@@ -29,7 +30,7 @@ class LongOrStandardNameWarning(Warning):
         return repr(self.message)
 
 
-class LongNameAttribute:
+class LongNameAttribute(AbstractUserAttribute):
     """Long name attribute"""
 
     def set(self, value):
@@ -37,9 +38,16 @@ class LongNameAttribute:
         ln = LongName(value)  # runs check automatically during initialization
         self.attrs.create('long_name', ln.__str__())
 
+    @staticmethod
+    def parse(value, obj=None):
+        """Parse the long_name"""
+        if value:
+            return LongName(value)
+        return None
+
     def get(self) -> Union[str, None]:
         """Get the long_name"""
-        return self.attrs.get('long_name', None)
+        return LongNameAttribute.parse(self.attrs.get('long_name', None))
 
     def delete(self):
         """Delete the long_name"""

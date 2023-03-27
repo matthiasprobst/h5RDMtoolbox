@@ -2,6 +2,7 @@ import h5py
 import logging
 import numpy as np
 import pint.errors
+import requests.exceptions
 import unittest
 import xarray as xr
 import yaml
@@ -56,6 +57,22 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(h5.__str__(), "<class 'h5rdmtoolbox.File' convention: cflike>")
         self.assertEqual(h5tbx.File.Dataset(), cflike.Dataset)
         self.assertEqual(h5tbx.File.Group(), cflike.Group)
+
+        with h5tbx.File(title='mytitle') as h5:
+            self.assertIsInstance(h5.attrs['title'], str)
+            self.assertEqual(h5.attrs['title'], 'mytitle')
+
+        with self.assertRaises(requests.exceptions.MissingSchema):
+            with h5tbx.File(references='h5rdmtoolbox.readthedocs.io/') as h5:
+                pass
+        with h5tbx.File(references=' https://h5rdmtoolbox.readthedocs.io/') as h5:
+            self.assertEqual(h5.attrs['references'], ' https://h5rdmtoolbox.readthedocs.io/')
+
+        with h5tbx.File(references=('https://h5rdmtoolbox.readthedocs.io/',
+                                    'https://github.com/matthiasprobst/h5RDMtoolbox')) as h5:
+            self.assertTupleEqual(h5.attrs['references'],
+                                  ('https://h5rdmtoolbox.readthedocs.io/',
+                                   'https://github.com/matthiasprobst/h5RDMtoolbox'))
 
     def test_subclassstr_attrs(self):
         class MyString(str):

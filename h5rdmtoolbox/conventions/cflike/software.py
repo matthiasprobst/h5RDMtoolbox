@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from typing import Union, Dict
-
 from packaging import version
+from typing import Union, Dict
 
 
 @dataclass
@@ -25,4 +24,3 @@ class Software:
         """Dict representation of the object"""
         return dict(name=self.name, version=str(self.version),
                     url=self.url, description=self.description)
-

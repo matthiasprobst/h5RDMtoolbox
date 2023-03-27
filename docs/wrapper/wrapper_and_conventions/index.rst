@@ -3,7 +3,7 @@
 |h5wrappericon| Wrapper + Conventions
 =====================================
 
-.. |h5wrappericon| image:: ../../icons/icon_h5wrapper.svg
+.. |h5wrappericon| image:: ../../_static/icon_h5wrapper.svg
   :width: 30
   :alt:
 

@@ -45,6 +45,11 @@ h5tbxParams = {'convention': config['default_convention'],
                'Group': core.Group}
 
 
+def get_current_convention_name():
+    """Get the name of the currently selected convention"""
+    return h5tbxParams['convention']
+
+
 def use(convention_name: str) -> None:
     """Select the convention for the HDF5 wrapper class(es)
 

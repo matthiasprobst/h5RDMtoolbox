@@ -58,6 +58,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         # if name in self.__dict__:
         #     return super(WrapperAttributeManager, self).__getitem__(name)
         ret = super(WrapperAttributeManager, self).__getitem__(name)
+        if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
+            return REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention][name].parse(ret, self._parent)
+
         if isinstance(ret, str):
             if ret == '':
                 return ret
@@ -117,10 +120,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
-        if name in REGISTRATED_ATTRIBUTE_NAMES:
-            if hasattr(self._parent, name):
-                setattr(self._parent, name, value)
-                return
+        if name in REGISTRATED_ATTRIBUTE_NAMES[self._parent.convention]:
+            setattr(self._parent, name, value)
+            return
         utils.create_special_attribute(self, name, value)
 
     def __repr__(self):

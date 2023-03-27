@@ -8,12 +8,30 @@ from typing import Union
 
 from ._logger import logger
 
-REGISTRATED_ATTRIBUTE_NAMES = []
+# dictionary of all registered user-defined attribute names
+REGISTRATED_ATTRIBUTE_NAMES = {n: {} for n in ['default', 'cflike']}
+
+
+class AbstractUserAttribute:
+    """Base class for CF-like attributes"""
+
+    @staticmethod
+    def parse(value, obj=None):
+        """Parse attribute"""
+        return value
 
 
 def _register_hdf_attribute(cls, name: str = None, overwrite: bool = False):
     def decorator(accessor):
         """decorator"""
+        if not hasattr(accessor, 'get'):
+            raise AttributeError(f'accessor {accessor} must have a "get" method')
+        if not hasattr(accessor, 'set'):
+            raise AttributeError(f'accessor {accessor} must have a "set" method')
+        if not hasattr(accessor, 'delete'):
+            raise AttributeError(f'accessor {accessor} must have a "delete" method')
+        if not hasattr(accessor, 'parse'):
+            raise AttributeError(f'accessor {accessor} must have a "parse" method')
         return register_hdf_attribute(accessor, cls, name, overwrite)
 
     return decorator
@@ -41,7 +59,7 @@ def register_hdf_attribute(attribute_class, cls, name, overwrite):
         attrname = attribute_class.__name__
     else:
         attrname = name
-    REGISTRATED_ATTRIBUTE_NAMES.append(attrname)
+        REGISTRATED_ATTRIBUTE_NAMES[cls.convention][attrname] = attribute_class
     if hasattr(cls, attrname):
         if overwrite:
             logger.debug(f'Overwriting existing property "{attrname}" of {cls}.')

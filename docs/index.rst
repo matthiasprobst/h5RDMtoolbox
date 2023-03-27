@@ -1,27 +1,27 @@
-.. image:: icons/icon4_header.svg
-  :width: 500
-  :alt: Alternative text
+HDF Research Data Management Toolbox
+====================================
 
-
-
-Overview
-========
-
-The HDF5 Research Data Management Toolbox (h5RDMtoolbox) supports the data creation, processing and sharing
-of data using the HDF5 file format pursuing the `FAIR principles <https://www.nature.com/articles/sdata201618>`_.
+The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package that provides a set of tools to work
+with HDF5 files. It is intended to help researches in projects achieving
+`FAIR principles <https://www.nature.com/articles/sdata201618>`_ data management based on HDF5 files. It
+supports with data creation, processing and sharing.
 
 
 .. note::
 
-   This project is under current development! The first stable release is expected for January 2023.
+   This project is still beta. Usage is at your own risk. Please report any issues on the `here <https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Findex.html&body=Your%20issue%20content%20here.>`_. Thank you!
 
 
-The packages comes with three sub-packages:
-  - :doc:`convention <conventions/index>`: Naming standards mostly for attributes in the HDF5 files
-  - :doc:`wrapper <wrapper/index>`: Interacting/working with HDF5 files including many useful features and user-defined methods including static and dynamic layout definition
-  - :doc:`database <database/index>`: Practical and easy searching in multiple HDF5 files
+Overview
+========
+The packages comes with three sub-packages, each of it covering a different aspect of efficient and sustained work with
+HDF5 files:
 
-.. image:: icons/package_overview.svg
+  - :doc:`convention <conventions/index>`: Naming standards for specific attributes in the HDF5 files
+  - :doc:`wrapper <wrapper/index>`: Efficient high-level objects for efficient work with HDF5 files
+  - :doc:`database <database/index>`: Querying HDF5 files
+
+.. image:: _static/package_overview.svg
   :width: 350
   :alt: Alternative text
   :align: center
@@ -60,8 +60,6 @@ You may install optional dependencies:
    python3.8 -m pip install "h5RDMtoolbox[complete]"
 
 
-
-
 .. toctree::
    :maxdepth: 3
    :hidden:
@@ -73,7 +71,6 @@ You may install optional dependencies:
     Conventions <conventions/index>
     HowTo <howto/howto.ipynb>
     Glossary <glossary/index>
-    References <references>
 
 .. toctree::
    :maxdepth: 1

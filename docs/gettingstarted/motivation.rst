@@ -26,4 +26,8 @@ HDF5 is selected as the file format around everything is built because...
 - has a comprehensive file-system-like structure
 - has a large community.
 
-More information can be found `here <https://www.hdfgroup.org/solutions/hdf5/>`_.
+Using HDF5 in combination with xarray allows keeping track of the meta information also during data processing, as
+both, the file and the data object, allow attaching attributes to the data. This reduces processing errors, enhances
+interpretability and finally makes it easier to share.
+
+More information on HDF5 can be found `here <https://www.hdfgroup.org/solutions/hdf5/>`_.

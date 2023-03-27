@@ -144,7 +144,7 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         try:
             h5obj.create(name, data=str(_value))
         except TypeError as e2:
-            raise RuntimeError(f'Error setting attribute to HDF object {self._parent}:'
+            raise RuntimeError(f'Error setting attribute to HDF object {h5obj._parent}:'
                                f'\n  name: {name}\n  value: {value} \n  type: {type(value)}\n'
                                f'Original error: {e2}') from e2
 
