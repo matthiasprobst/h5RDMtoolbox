@@ -33,7 +33,7 @@ from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import H5Layout
-from ..conventions.registration import register_hdf_attribute
+from ..conventions.registration import register_hdf_attribute, REGISTERED_PROPERTIES
 
 logger = logging.getLogger(__package__)
 
@@ -214,6 +214,9 @@ class Group(h5py.Group):
         return ret
 
     def __getattr__(self, item):
+        if item in REGISTERED_PROPERTIES[self.__class__]:
+            return REGISTERED_PROPERTIES[self.__class__][item].getter(self)
+
         try:
             return super().__getattribute__(item)
         except AttributeError as e:
@@ -239,6 +242,12 @@ class Group(h5py.Group):
                     return super().__getattribute__(item)
         except AttributeError:
             raise AttributeError(item)
+
+    def __setattr__(self, key, value):
+        if self.__class__ in REGISTERED_PROPERTIES:
+            if key in REGISTERED_PROPERTIES[self.__class__]:
+                return REGISTERED_PROPERTIES[self.__class__][key].setter(self, value)
+        super().__setattr__(key, value)
 
     def __str__(self) -> str:
         return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{self.convention}")>'
@@ -1008,16 +1017,6 @@ class Group(h5py.Group):
                 self.visititems(_get_grp)
         return names
 
-    def get_datasets_by_attribute(self, attribute_name, attribute_value=None,
-                                  recursive=True) -> List[h5py.Dataset]:
-        """Return datasets that have key-value-attribute pari. Calls `get_by_attribute`"""
-        return self.get_by_attribute(attribute_name, attribute_value, 'dataset', recursive)
-
-    def get_groups_by_attribute(self, attribute_name, attribute_value=None,
-                                recursive=True) -> List[h5py.Group]:
-        """Return groups that have key-value-attribute pari. Calls `get_by_attribute`"""
-        return self.get_by_attribute(attribute_name, attribute_value, 'group', recursive)
-
     def _get_obj_names(self, obj_type, recursive):
         """Return all names of specified object type
         in this group and if recursive==True also
@@ -1241,6 +1240,8 @@ class Dataset(h5py.Dataset):
         return self.parent.modify_dataset_properties(self, name=new_name)
 
     def __getattr__(self, item):
+        if item in REGISTERED_PROPERTIES[self.__class__]:
+            return REGISTERED_PROPERTIES[self.__class__][item].getter(self)
         if item not in self.__dict__:
             for d in self.dims:
                 if len(d) > 0:
@@ -1248,6 +1249,12 @@ class Dataset(h5py.Dataset):
                         if item == os.path.basename(d[i].name):
                             return self.__class__(d[i])
         return super().__getattribute__(item)
+
+    def __setattr__(self, key, value):
+        if self.__class__ in REGISTERED_PROPERTIES:
+            if key in REGISTERED_PROPERTIES[self.__class__]:
+                return REGISTERED_PROPERTIES[self.__class__][key].setter(self, value)
+        return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
         if isinstance(value, xr.DataArray):
@@ -1262,6 +1269,7 @@ class Dataset(h5py.Dataset):
         behaviour of the h5p-package is used and a np.ndarray is returned.
         Note, that even if `return_xarray` is True, there is another way to
         receive  numpy array. This is by calling .values[:] on the dataset."""
+
         args = args if isinstance(args, tuple) else (args,)
 
         if not config.return_xarray or nparray:
@@ -1573,6 +1581,11 @@ class File(h5py.File, Group):
 
         self.layout = layout
 
+    def __setattr__(self, key, value):
+        if key in REGISTERED_PROPERTIES[self.__class__]:
+            return REGISTERED_PROPERTIES[self.__class__][key].setter(self, value)
+        return super().__setattr__(key, value)
+
     def __repr__(self) -> str:
         r = super().__repr__()
         return r.replace('HDF5', f'HDF5 (convention: {self.convention})')
@@ -1709,4 +1722,4 @@ Group._h5ds = Dataset
 # user:
 from ..conventions.default.user import User
 
-register_hdf_attribute(User, File, name='user', overwrite=True)
+register_hdf_attribute(User(), File, name='user', overwrite=True)

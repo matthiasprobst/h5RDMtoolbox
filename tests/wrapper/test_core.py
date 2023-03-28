@@ -4,6 +4,7 @@ import pandas as pd
 import unittest
 
 import h5rdmtoolbox as h5tbx
+import h5rdmtoolbox.conventions.default.errors
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -15,6 +16,13 @@ class TestCore(unittest.TestCase):
 
     def setUp(self) -> None:
         h5tbx.use('default')
+
+    def test_user(self):
+        with h5tbx.File() as h5:
+            with self.assertRaises(h5tbx.conventions.default.errors.OrcidError):
+                h5.user = '000-123'
+            h5.attrs['user'] = '0000-1233-1234-1234'
+            self.assertEqual(h5.attrs['user'], '0000-1233-1234-1234')
 
     def test_lower(self):
         self.assertEqual(h5tbx.core.Lower('Hello'), 'hello')

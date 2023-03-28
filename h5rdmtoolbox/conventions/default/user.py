@@ -2,7 +2,7 @@ import re
 from typing import Union, List
 
 from . import errors
-from ..registration import AbstractUserAttribute
+from ..registration import UserAttr
 
 ORCID_PATTERN: str = '^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$'
 
@@ -12,14 +12,26 @@ def is_invalid_orcid_pattern(orcid_str: str) -> bool:
     return re.match(ORCID_PATTERN, orcid_str) is None
 
 
-class User(AbstractUserAttribute):
+class User(UserAttr):
     """User can be one or multiple persons in charge or related to the
     file, group or dataset"""
 
-    def set(self, orcid: Union[str, List[str]]):
+    name = 'user'
+
+
+    def getter(self, obj):
+        """Get user"""
+        user = self.safe_getter(obj)
+        return user
+
+    def setter(self, obj, orcid: Union[str, List[str]]):
         """Add user
+
         Parameters
         ----------
+        obj: h5py.Dataset or h5py.Group
+            HDF5 object to which the attribute is set. Can be a file, group or dataset, but depends on
+            for which object the attribute is registered.
         orcid: str or List[str]
             ORCID of one or many responsible persons.
 
@@ -28,7 +40,7 @@ class User(AbstractUserAttribute):
         TypeError
             If input is not a string or a list of strings
         OrcidError
-            If a string is not meeting the ORCID pattern of four times four numbers sparated with a dash.
+            If a string is not meeting the ORCID pattern of four times four numbers separated with a dash.
         """
         if not isinstance(orcid, (list, tuple)):
             orcid = [orcid, ]
@@ -38,18 +50,6 @@ class User(AbstractUserAttribute):
                 if is_invalid_orcid_pattern(o):
                     raise errors.OrcidError(f'Not an ORCID ID: {o}')
         if len(orcid) == 1:
-            self.attrs.create('user', orcid[0])
+            obj.attrs.create('user', orcid[0])
         else:
-            self.attrs.create('user', orcid)
-
-    @staticmethod
-    def parse(value, obj=None):
-        return value
-
-    def get(self) -> Union[str, List[str]]:
-        """Get user attribute"""
-        return self.attrs.get('user', None)
-
-    def delete(self):
-        """Get user attribute"""
-        self.attrs.__delitem__('user')
+            obj.attrs.create('user', orcid)

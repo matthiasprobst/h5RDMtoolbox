@@ -2,7 +2,7 @@ import requests
 from typing import Union, List
 
 from .errors import ReferencesError
-from ..registration import AbstractUserAttribute
+from ..registration import UserAttr
 
 
 def validate_url(url: str) -> bool:
@@ -24,13 +24,15 @@ def validate_url(url: str) -> bool:
     return False
 
 
-class ReferencesAttribute(AbstractUserAttribute):
+class ReferencesAttribute(UserAttr):
     """References attribute
 
     A reference can be an online resource. Currently, only URLs are supported.
     """
 
-    def set(self, value: Union[str, List[str]]):
+    name = 'references'
+
+    def setter(self, obj, value: Union[str, List[str]]):
         """Set the reference or multiple references"""
         if isinstance(value, str):
             references = value.split(',')
@@ -41,24 +43,17 @@ class ReferencesAttribute(AbstractUserAttribute):
                 raise ReferencesError(f'Invalid URL: {ref}')
 
         if len(references) == 1:
-            self.attrs.create('references', references[0])
+            obj.attrs.create(self.name, references[0])
         else:
-            self.attrs.create('references', ','.join(references))
+            obj.attrs.create(self.name, ','.join(references))
 
-    @staticmethod
-    def parse(value, obj=None) -> Union[str, tuple, None]:
-        """Parse references attribute"""
+    def getter(self, obj):
+        """Get references attribute"""
+        value = self.safe_getter(obj)
+
         if value:
             list_of_references = value.split(',')
             if len(list_of_references) == 1:
                 return list_of_references[0]
             return tuple(list_of_references)
         return value
-
-    def get(self):
-        """Get references attribute"""
-        return ReferencesAttribute.parse(self.attrs.get('references', None))
-
-    def delete(self):
-        """Delete title attribute"""
-        self.attrs.__delitem__('title')

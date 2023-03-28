@@ -5,10 +5,11 @@ import unittest
 from importlib.metadata import metadata
 from typing import Union, Dict
 
+from h5rdmtoolbox import use
 from h5rdmtoolbox.conventions.cflike import software
 from h5rdmtoolbox.conventions.cflike.errors import LongNameError
 from h5rdmtoolbox.conventions.default.errors import OrcidError
-from h5rdmtoolbox.conventions.registration import register_hdf_attr, AbstractUserAttribute
+from h5rdmtoolbox.conventions.registration import register_hdf_attr, UserAttr
 from h5rdmtoolbox.wrapper.cflike import File, Group
 from h5rdmtoolbox.wrapper.core import File as CoreFile
 
@@ -19,7 +20,7 @@ class TestOptAccessors(unittest.TestCase):
         """setup"""
 
         @register_hdf_attr(Group, name='software', overwrite=True)
-        class SoftwareAttribute(AbstractUserAttribute):
+        class SoftwareAttribute(UserAttr):
             """property attach to a Group"""
 
             def set(self, sftw: Union[software.Software, Dict]):
@@ -105,13 +106,15 @@ class TestOptAccessors(unittest.TestCase):
                 h5.create_dataset('ds2', shape=(2,), long_name='a long name', units='nounit')
 
     def test_user(self):
-        with File() as h5:
+        use('default')
+        with CoreFile() as h5:
             self.assertEqual(h5.user, None)
             h5.attrs['user'] = '1123-0814-1234-2343'
             self.assertEqual(h5.user, '1123-0814-1234-2343')
 
-        # noinspection PyUnresolvedReferences
-        with File() as h5:
+        # noinspectio
+        # n PyUnresolvedReferences
+        with CoreFile() as h5:
             with self.assertRaises(OrcidError):
                 h5.user = '11308429'
             with self.assertRaises(OrcidError):
@@ -131,28 +134,18 @@ class TestOptAccessors(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 g.attrs.user = '123'
             config.natural_naming = True
+        use('cflike')
 
     def test_set_atrribute_to_higher_class(self):
         @register_hdf_attr(File, name=None)
-        class shortyname2(AbstractUserAttribute):
+        class shortyname2(UserAttr):
             """Shorty name attribute"""
-
-            def get(self):
-                """Set the short_name"""
-                return shortyname2.parse(self.attrs.get('shortyname2', None))
-
-            def delete(self):
-                """Delete title attribute"""
-                self.attrs.__delitem__('title')
-
-            def set(self, value):
-                """Set the shortyname"""
-                self.attrs.create('shortyname2', value.__str__())
+            pass
 
         with CoreFile() as h5:
             # shortyname2 only available for classes inherited from File
             h5.shortyname2 = 'my short name2'
-            self.assertNotIn('shortyname2', h5.attrs.keys())
+            self.assertIn('shortyname2', h5.attrs.keys())
         with File() as h5:
             h5.shortyname2 = 'my short name2'
             self.assertNotIn('shortyname', h5.attrs.keys())

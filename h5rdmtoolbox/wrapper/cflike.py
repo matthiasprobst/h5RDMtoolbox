@@ -229,7 +229,6 @@ class Group(core.Group):
                           '"standard_name" and you passed the parameter "standard_name". The latter will overwrite '
                           'the data array units!')
         if standard_name is not None:
-            self.standard_name_table.check_units(standard_name, attrs['units'])
             attrs['standard_name'] = standard_name
 
         if attrs.get('standard_name') is None and attrs.get('long_name') is None:
@@ -471,26 +470,28 @@ Group._h5grp = Group
 Group._h5ds = Dataset
 
 # standard name
-register_hdf_attribute(cflike.standard_name.StandardNameDatasetAttribute,
+register_hdf_attribute(cflike.standard_name.StandardNameDatasetAttribute(),
                        Dataset,
                        name='standard_name',
                        overwrite=True)
-register_hdf_attribute(cflike.standard_name.StandardNameGroupAttribute, Group, name='standard_name', overwrite=True)
-register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute, Dataset, name='standard_name_table',
+register_hdf_attribute(cflike.standard_name.StandardNameGroupAttribute(), Group, name='standard_name', overwrite=True)
+
+register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute(), Dataset, name='standard_name_table',
                        overwrite=True)
-register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute, Group, name='standard_name_table',
+register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute(), Group, name='standard_name_table',
+                       overwrite=True)
+register_hdf_attribute(cflike.standard_name.StandardNameTableAttribute(), File, name='standard_name_table',
                        overwrite=True)
 
 # units:
-register_hdf_attribute(cflike.units.UnitsAttribute, Dataset, name='units', overwrite=True)
+register_hdf_attribute(cflike.units.UnitsAttribute(), Dataset, name='units', overwrite=True)
 
 # long name:
-register_hdf_attribute(cflike.long_name.LongNameAttribute, File, name='long_name', overwrite=True)
-register_hdf_attribute(cflike.long_name.LongNameAttribute, Group, name='long_name', overwrite=True)
-register_hdf_attribute(cflike.long_name.LongNameAttribute, Dataset, name='long_name', overwrite=True)
+for cls in (Dataset, Group, File):
+    register_hdf_attribute(cflike.long_name.LongNameAttribute(), cls, name='long_name', overwrite=True)
 
 # title:
-register_hdf_attribute(cflike.title.TitleAttribute, File, name='title', overwrite=True)
+register_hdf_attribute(cflike.title.TitleAttribute(), File, name='title', overwrite=True)
 
 # references:
-register_hdf_attribute(cflike.references.ReferencesAttribute, File, name='references', overwrite=True)
+register_hdf_attribute(cflike.references.ReferencesAttribute(), File, name='references', overwrite=True)

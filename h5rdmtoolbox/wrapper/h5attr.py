@@ -10,7 +10,7 @@ from .h5utils import get_rootparent
 from .. import config
 from .. import utils
 from .._config import ureg
-from ..conventions.registration import REGISTRATED_ATTRIBUTE_NAMES
+from ..conventions.registration import REGISTERED_PROPERTIES
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
@@ -54,13 +54,13 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
     @with_phil
     def __getitem__(self, name):
-        # if name in self.__dict__:
-        #     return super(WrapperAttributeManager, self).__getitem__(name)
+
         ret = super(WrapperAttributeManager, self).__getitem__(name)
-        obj_type = self._parent.__class__
-        if name in REGISTRATED_ATTRIBUTE_NAMES:
-            if hasattr(obj_type, name):
-                return REGISTRATED_ATTRIBUTE_NAMES[name].parse(ret, self._parent)
+        parent = self._parent
+
+        if config.expose_user_prop_to_attrs and parent.__class__ in REGISTERED_PROPERTIES:
+            if name in REGISTERED_PROPERTIES[parent.__class__]:
+                return REGISTERED_PROPERTIES[parent.__class__][name].getter(self._parent)
 
         if isinstance(ret, str):
             if ret == '':
@@ -121,10 +121,15 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
-        obj_type = self._parent.__class__
-        if name in REGISTRATED_ATTRIBUTE_NAMES:
-            if hasattr(obj_type, name):
-                return setattr(self._parent, name, value)
+        parent = self._parent
+        # obj_type = parent.__class__
+        if parent.__class__ in REGISTERED_PROPERTIES:
+            if parent.__class__ in REGISTERED_PROPERTIES:
+                if name in REGISTERED_PROPERTIES[parent.__class__]:
+                    try:
+                        return REGISTERED_PROPERTIES[parent.__class__][name].setter(parent, value)
+                    except TypeError:
+                        raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}"')
         utils.create_special_attribute(self, name, value)
 
     def __repr__(self):

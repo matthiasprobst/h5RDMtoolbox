@@ -390,31 +390,6 @@ class TestFile(unittest.TestCase):
         with File() as h5:
             h5.create_dataset_from_xarray_dataset(ds)
 
-    # def test_setitem(self):
-    #     with File() as h5:
-    #         h5['x'] = [1, 2, 3], 'm/s', {'attrs': {'long_name': 'hallo'}}
-    #         self.assertEqual(h5['x'].shape, (3,))
-    #         self.assertEqual(h5['x'].attrs['long_name'], 'hallo')
-    #         self.assertEqual(h5['x'].attrs['units'], 'm/s')
-    #
-    #     with File() as h5:
-    #         h5['x'] = (np.random.random((20, 3, 5)), 'm/s', 'long_name', 'standard_name')
-    #         self.assertEqual(h5['x'].shape, (20, 3, 5))
-    #         self.assertEqual(h5['x'].attrs['long_name'], 'long_name')
-    #         self.assertEqual(h5['x'].attrs['standard_name'], 'standard_name')
-    #         from h5rdmtoolbox import config
-    #         self.assertEqual(h5['x'].compression_opts, config.hdf_compression_opts)
-    #
-    #     with File() as h5:
-    #         h5['x'] = ([1, 2, 3], dict(units='m/s', long_name='long_name',
-    #                                    attrs={'hello': 'world'}, compression='gzip',
-    #                                    compression_opts=2))
-    #         self.assertEqual(h5['x'].shape, (3,))
-    #         self.assertEqual(h5['x'].attrs['long_name'], 'long_name')
-    #         self.assertEqual(h5['x'].attrs['hello'], 'world')
-    #         self.assertEqual(h5['x'].compression, 'gzip')
-    #         self.assertEqual(h5['x'].compression_opts, 2)
-
     def test_attrs(self):
         with File(mode='w') as h5:
             config.natural_naming = False
@@ -425,9 +400,7 @@ class TestFile(unittest.TestCase):
             config.natural_naming = True
 
             h5.attrs.title = 'title of file'
-            print(type(h5))
-            print(type(h5.attrs))
-            print(h5.attrs.keys())
+
             self.assertEqual(h5.attrs['title'], 'title of file')
             #
             # h5.attrs['gr'] = h5['/']
@@ -468,6 +441,8 @@ class TestFile(unittest.TestCase):
                                                    'array': [1, 2, 3]}}},
             'groups': {'test/grp': {'attrs': {'long_name': 'a test group'}}}
         }
+        use('cflike')
+        use(None)
         yaml_file = generate_temporary_filename(suffix='.yaml')
         with open(yaml_file, 'w') as f:
             yaml.safe_dump(dictionary, f)

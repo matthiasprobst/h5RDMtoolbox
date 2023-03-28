@@ -678,23 +678,27 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_get_by_attribute(self):
         with h5tbx.File(mode='w') as h5:
-            lname = h5.get_datasets_by_attribute('long_name')
+            lname = h5.find({'long_name': {'$regex': '(.*)'}}, '$Dataset')
             self.assertEqual(lname, [])
 
             h5.create_dataset('test', data=2, units='m',
                               long_name='a long name')
-            lname = h5.get_datasets_by_attribute('long_name')
+
+            lname = h5.find({'long_name': {'$regex': '(.*)'}}, '$Dataset')
             self.assertEqual(lname, [h5['test'], ])
+
             h5.create_dataset('grp/test', data=2, units='m',
                               long_name='a long name 2')
-            lname = h5.get_datasets_by_attribute('long_name')
+            lname = h5.find({'long_name': {'$regex': '(.*)'}}, '$Dataset')
             self.assertEqual(lname, [h5['grp/test'], h5['test']])
-            lname = h5.get_datasets_by_attribute('long_name',
-                                                 'a long name')
+
+            lname = h5.find({'long_name': 'long_name',
+                             'long_name': 'a long name'},
+                            '$Dataset')
             self.assertEqual(lname, [h5['test'], ])
 
             h5['grp'].long_name = 'grp1'
-            r = h5.get_groups_by_attribute('long_name')
+            r = h5.find({'long_name': {'$regex': '(.*)'}}, '$Group')
             self.assertEqual(r, [h5['grp'], ])
 
     def test_get_group_names(self):

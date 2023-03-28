@@ -43,13 +43,6 @@ class UnitPlotRepr(enum.Enum):
     SQUARE_BRACKETS = '['
 
 
-class HDF5CompressionFilters(enum.Enum):
-    """HDF5 compression filters"""
-    GZIP = 'gzip'
-    LZF = 'lzf'
-    SZIP = 'szip'
-
-
 class UregFormats(enum.Enum):
     """Unit representation formats
     see https://pint.readthedocs.io/en/0.10.1/tutorial.html for available formats"""
@@ -61,14 +54,54 @@ class UregFormats(enum.Enum):
     NONE = '~'
 
 
-class RegisteredConventions(enum.Enum):
-    DEFAULT = 'default'
-    CFLIKE = 'cflike'
+class HDF5CompressionFilters(enum.Enum):
+    """HDF5 compression filters"""
+    GZIP = 'gzip'
+    LZF = 'lzf'
+    SZIP = 'szip'
+    NONE = None
 
 
 @dataclass
 class H5tbxConfig:
-    """Configuration for h5rdmtoolbox"""
+    """Configuration for h5rdmtoolbox
+
+    Attributes
+    ----------
+    return_xarray: bool
+        If True, return xarray objects instead of h5py objects.
+        Default is True.
+    advanced_shape_repr: bool
+        If True, use advanced shape representation in `__repr__` of h5py objects.
+        Default is True.
+    natural_naming: bool
+        If True, use natural naming for attributes. Default is True.
+    hdf_compression: Union[str, HDF5CompressionFilters]
+        HDF5 compression filter. Default is 'gzip'. Other options are e.g. 'lzf', 'szip'.
+        .. seealso:: see https://docs.h5py.org/en/stable/high/dataset.html#filter-pipeline
+    hdf_compression_opts: int
+        HDF5 compression options. Default is 5.
+    xarray_unit_repr_in_plots: Union[str, UnitPlotRepr]
+        Unit representation in plots. Default is '/'. Other options are e.g. '(', '['.
+    require_unit: bool
+        If True, datasets require units. Default is False.
+    ureg_format: Union[str, UregFormats]
+        Unit representation format. Default is 'C~'. Other options are 'P~', 'L~', 'H~', 'A~', '~'.
+        .. seealso:: see https://pint.readthedocs.io/en/0.10.1/tutorial.html
+    default_convention: str
+        Default convention for standard names. Default is `default`.
+    init_logger_level: Union[int, str]
+        Logger level for initialization. Default is `INFO`.
+    dtime_fmt: str
+        Datetime format for HDF5 attributes. Default is `%Y%m%d%H%M%S`.
+    expose_user_prop_to_attrs: bool
+        If True, expose user properties to HDF5 attributes. Say, `user` is a property of `File`,
+        then the following two lines are equivalent:
+        >>> with File() as h5:
+        >>>     file.user
+        >>>     file.attrs['user']
+        Default is True.
+    """
     return_xarray: bool = True
     advanced_shape_repr: bool = True
     natural_naming: bool = True
@@ -77,10 +110,10 @@ class H5tbxConfig:
     xarray_unit_repr_in_plots: Union[str, UnitPlotRepr] = '/'
     require_unit: bool = True  # datasets require units
     ureg_format: Union[str, UregFormats] = 'C~'
-    standard_name_table_attribute_name: str = '__standard_name_table__'
-    default_convention: Union[str, RegisteredConventions] = 'default'
+    default_convention: str = 'default'
     init_logger_level: Union[int, str] = 'INFO'
     dtime_fmt: str = '%Y%m%d%H%M%S%f'
+    expose_user_prop_to_attrs: bool = True
 
 
 DEFAULT_CONFIG: H5tbxConfig = H5tbxDictConfig(OmegaConf.structured(H5tbxConfig()))

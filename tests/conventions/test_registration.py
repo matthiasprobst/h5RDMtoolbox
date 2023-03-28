@@ -1,8 +1,8 @@
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions.registration import register_hdf_attr, AbstractUserAttribute
-from h5rdmtoolbox.wrapper.core import Group
+from h5rdmtoolbox.conventions.registration import register_hdf_attr, UserAttr, register_hdf_attribute
+from h5rdmtoolbox.wrapper.core import Group, File
 
 
 class TestAccessor(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestAccessor(unittest.TestCase):
             class ShortNameAttribute:
                 """Short name attribute"""
 
-                def set(self, value):
+                def setter(self, value):
                     """Set the short_name"""
                     self.attrs.create('short_name', value.__str__())
 
@@ -31,50 +31,27 @@ class TestAccessor(unittest.TestCase):
                     return shortyname.parse(self.attrs.get('short_name', None))
 
         @register_hdf_attr(Group, name=None)
-        class shortyname(AbstractUserAttribute):
+        class shortyname(UserAttr):
             """Shorty name attribute"""
+            name = 'shortyname'
 
-            def get(self):
-                """Set the short_name"""
-                return shortyname.parse(self.attrs.get('short_name', None))
-
-            def delete(self):
-                """Delete title attribute"""
-                self.attrs.__delitem__('title')
-
-            def set(self, value):
-                """Set the shortyname"""
-                self.attrs.create('shortyname', value.__str__())
+            def getter(self, obj):
+                """Get the short_name and add a !"""
+                return self.value(obj) + '!'
 
         with h5tbx.File() as h5:
             h5.short_name = 'short'
             h5.shortyname = 'shorty'
             self.assertNotIn('short_name', h5.attrs.keys())
+            self.assertNotIn('shortyname', h5.attrs.keys())
+            # self.assertEqual(h5.attrs['shortyname'], 'shorty')
+
+            # register shortyname to file:
+            register_hdf_attribute(shortyname, cls=File)
+            h5.shortyname = 'shorty'
             self.assertIn('shortyname', h5.attrs.keys())
-            self.assertEqual(h5.attrs['shortyname'], 'shorty')
 
         with self.assertRaises(AttributeError):
             @register_hdf_attr(Group)
             class attrs:
                 pass
-
-        @register_hdf_attr(Group, overwrite=True)
-        class shortyname(AbstractUserAttribute):
-
-            def get(self, value):
-                """Set the short_name"""
-                return shortyname.parse(self.attrs.get('short_name', None))
-
-            def delete(self):
-                """Delete title attribute"""
-                self.attrs.__delitem__('title')
-
-            def set(self, value):
-                """Set the shortyname"""
-                self.attrs.create('veryshortyname', value.__str__())
-
-        h5tbx.use('cflike')
-        with h5tbx.File() as h5:
-            h5.shortyname = 'shortynew'
-            self.assertIn('veryshortyname', h5.attrs.keys())
-            self.assertEqual(h5.attrs['veryshortyname'], 'shortynew')

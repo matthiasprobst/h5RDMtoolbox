@@ -2,13 +2,15 @@ import re
 from typing import Union
 
 from .errors import LongNameError
-from ..registration import AbstractUserAttribute
+from ..registration import UserAttr
 
 
 class LongName(str):
     """Long Name class. Implements convention (rules) for usage"""
     MIN_LENGTH = 1
     PATTERN = '^[0-9 ].*'
+
+    name = 'long_name'
 
     def __new__(cls, value):
         # 1. Must be longer than MIN_LENGTH
@@ -30,25 +32,19 @@ class LongOrStandardNameWarning(Warning):
         return repr(self.message)
 
 
-class LongNameAttribute(AbstractUserAttribute):
+class LongNameAttribute(UserAttr):
     """Long name attribute"""
 
-    def set(self, value):
+    name = 'long_name'
+
+    def setter(self, obj, value: str) -> None:
         """Set the long_name"""
         ln = LongName(value)  # runs check automatically during initialization
-        self.attrs.create('long_name', ln.__str__())
+        obj.attrs.create('long_name', ln.__str__())
 
-    @staticmethod
-    def parse(value, obj=None):
-        """Parse the long_name"""
+    def getter(self, obj) -> Union[str, None]:
+        """Get the long_name"""
+        value = self.safe_getter(obj)
         if value:
             return LongName(value)
         return None
-
-    def get(self) -> Union[str, None]:
-        """Get the long_name"""
-        return LongNameAttribute.parse(self.attrs.get('long_name', None))
-
-    def delete(self):
-        """Delete the long_name"""
-        self.attrs.__delitem__('long_name')

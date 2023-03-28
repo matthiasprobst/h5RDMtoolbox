@@ -30,7 +30,7 @@ from typing import Dict, Union, List, Tuple
 
 from . import errors
 from .._logger import logger
-from ..registration import AbstractUserAttribute
+from ..registration import UserAttr
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from ... import config as package_config
 from ..._config import ureg
@@ -798,6 +798,23 @@ class StandardNameTable(MinimalStandardNameTable):
                                   'Expected yml/yaml or xml')
 
     @staticmethod
+    def from_dict(d: dict) -> "StandardNameTable":
+        """Create a StandardNameTable from a dictionary
+
+        Parameters
+        ----------
+        d : dict
+            Dictionary containing the StandardNameTable information
+
+        Returns
+        -------
+        snt: StandardNameTable
+            The StandardNameTable object
+        """
+        snt = StandardNameTable(**d)
+        return snt
+
+    @staticmethod
     def from_versionname(version_name: str):
         """reads the table from an xml file stored in this package"""
         vn_split = version_name.rsplit('-v', 1)
@@ -1102,48 +1119,52 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               valid_characters='')
 
 
-class StandardNameDatasetAttribute(AbstractUserAttribute):
+class StandardNameDatasetAttribute(UserAttr):
     """Standard Name attribute"""
 
-    def set(self, new_standard_name):
+    name = 'standard_name'
+
+    def setter(self, obj, new_standard_name):
         """Writes attribute standard_name if passed string is not None.
         The rules for the standard_name is checked before writing to file."""
         if new_standard_name:
-            if self.standard_name_table.check_name(new_standard_name):
-                if STRICT:
-                    if 'units' in self.attrs:
-                        self.standard_name_table.check_units(new_standard_name,
-                                                             self.attrs['units'])
-                self.attrs.create('standard_name', str(new_standard_name))
+            snt = obj.standard_name_table
+            if snt:
+                if snt.check_name(new_standard_name):
+                    if STRICT:
+                        if 'units' in obj.attrs:
+                            if not snt.check_units(new_standard_name, obj.attrs['units']):
+                                raise ValueError(f'Units {obj.attrs["units"]} failed he unit check of standard name '
+                                                 f'table {snt.versionname} for standard name {new_standard_name}')
+                    return obj.attrs.create(self.name, str(new_standard_name))
+            raise ValueError(f'No standard name table found for {obj.name}')
 
-    @staticmethod
-    def parse(name, obj):
+    def getter(self, obj):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
-        if name is None:
+        sn = self.safe_getter(obj)
+        if sn is None:
             return None
-        return StandardName(name, canonical_units=obj.attrs.get('units', None),
-                            snt=obj.attrs.get('standard_name_table', None))
-
-    def get(self):
-        """Return the standardized name of the dataset. The attribute name is `standard_name`.
-        Returns `None` if it does not exist."""
-        return StandardNameDatasetAttribute.parse(self.attrs.get('standard_name', None), self)
-
-    def delete(self):
-        """Delete attribute"""
-        self.attrs.__delitem__('standard_name')
+        return StandardName(name=sn,
+                            canonical_units=obj.attrs.get('units', None),
+                            snt=obj.attrs.get('standard_name_table', None)
+                            )
 
 
-class StandardNameGroupAttribute(AbstractUserAttribute):
-    def set(self, new_standard_name):
+class StandardNameGroupAttribute(UserAttr):
+    """Standard Name attribute. Not used for groups. Setting this attribute raises an error."""
+
+    def setter(self, obj, new_standard_name):
+        """Raises an error. Standard Name attribute is used for datasets only."""
         raise RuntimeError('A standard name attribute is used for datasets only')
 
 
-class StandardNameTableAttribute(AbstractUserAttribute):
+class StandardNameTableAttribute(UserAttr):
     """Standard Name Table attribute"""
 
-    def set(self, snt: Union[str, StandardNameTable]):
+    name = 'standard_name_table'
+
+    def setter(self, obj, snt: Union[str, StandardNameTable]):
         """Set (write to root group) Standard Name Table
 
         Raises
@@ -1154,35 +1175,38 @@ class StandardNameTableAttribute(AbstractUserAttribute):
         """
         if isinstance(snt, str):
             StandardNameTable.print_registered()
-            snt = StandardNameTable.load_registered(snt)
-        if self.mode == 'r':
+            if snt[0] == '{':
+                json.dumps(snt)
+                snt = StandardNameTable.from_dict(json.loads(snt))
+            else:
+                snt = StandardNameTable.load_registered(snt)
+        if obj.mode == 'r':
             raise errors.StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.url)
+                    self.safe_setter(obj.rootparent,snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name,
-                                                 snt.to_dict())
+                    self.safe_setter(obj.rootparent, json.dumps(snt.to_dict()))
             else:
-                self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name,
-                                             json.dumps(snt.to_dict()))
+                self.safe_setter(obj.rootparent, json.dumps(snt.to_dict()))
         if snt.STORE_AS == StandardNameTableStoreOption.versionname:
-            self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.versionname)
+            obj.rootparent.attrs.modify(self.name, snt.versionname)
+            self.safe_setter(obj.rootparent, snt.versionname)
         elif snt.STORE_AS == StandardNameTableStoreOption.dict:
-            self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, json.dumps(snt.to_dict()))
+            self.safe_setter(obj.rootparent, json.dumps(snt.to_dict()))
         elif snt.STORE_AS == StandardNameTableStoreOption.url:
             if snt.url is not None:
                 if url_exists(snt.url):
-                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.url)
+                    obj.rootparent.attrs.modify(self.name, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name, snt.to_dict())
+                    obj.rootparent.attrs.modify(self.name, snt.to_dict())
             else:  # else fall back to writing dict. better than versionname because cannot get lost
-                self.rootparent.attrs.modify(package_config.standard_name_table_attribute_name,
+                obj.rootparent.attrs.modify(self.name,
                                              json.dumps(snt.to_dict()))
-        _SNT_CACHE[self.id.id] = snt
+        _SNT_CACHE[obj.id.id] = snt
 
     @staticmethod
     def parse(snt, self=None):
@@ -1210,10 +1234,22 @@ class StandardNameTableAttribute(AbstractUserAttribute):
             return StandardNameTable.from_versionname(snt)
         return Empty_Standard_Name_Table
 
-    def get(self) -> StandardNameTable:
-        snt = self.rootparent.attrs.get(package_config.standard_name_table_attribute_name, None)
-        return StandardNameTableAttribute.parse(snt, self)
+    def getter(self, obj) -> StandardNameTable:
+        """Get (if exists) Standard Name Table from file"""
+        snt = self.safe_getter(obj)
 
-    def delete(self):
-        """Delete standard name table from root attributes"""
-        self.attrs.__delitem__(package_config.standard_name_table_attribute_name)
+        try:
+            return _SNT_CACHE[obj.file.id.id]
+        except KeyError:
+            pass  # not cached
+
+        if snt is not None:
+            # snt is a string
+            if isinstance(snt, dict):
+                return StandardNameTable(**snt)
+            if snt[0] == '{':
+                return StandardNameTable(**json.loads(snt))
+            elif snt[0:4] in ('http', 'wwww.'):
+                return StandardNameTable.from_web(snt)
+            return StandardNameTable.from_versionname(snt)
+        return Empty_Standard_Name_Table

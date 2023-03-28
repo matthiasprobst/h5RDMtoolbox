@@ -1,13 +1,15 @@
 import re
 
 from .errors import TitleError
-from ..registration import AbstractUserAttribute
+from ..registration import UserAttr
 
 
-class TitleAttribute(AbstractUserAttribute):
+class TitleAttribute(UserAttr):
     """Title attribute"""
 
-    def set(self, value):
+    name = 'title'
+
+    def setter(self, obj, value):
         """Set title"""
         if value[0] == ' ':
             raise TitleError('Title must not start with a space')
@@ -15,12 +17,4 @@ class TitleAttribute(AbstractUserAttribute):
             raise TitleError('Title must not end with a space')
         if re.match('^[0-9 ].*', value):
             raise TitleError('Title must not start with a number')
-        self.attrs.create('title', value)
-
-    def get(self):
-        """Get title attribute"""
-        return TitleAttribute.parse(self.attrs.get('title', None))
-
-    def delete(self):
-        """Delete title attribute"""
-        self.attrs.__delitem__('title')
+        obj.attrs.create(self.name, value)

@@ -74,14 +74,11 @@ class TestConventions(unittest.TestCase):
         empty = Empty_Standard_Name_Table
         with File() as h5:
             h5.standard_name_table = Empty_Standard_Name_Table
+
+        with File(h5.hdf_filename, standard_name_table=empty, mode='r+') as h5:
+            self.assertTrue(h5.standard_name_table, empty)
+
         with File(standard_name_table=pivsnt) as h5:
-            pass
-
-        with self.assertRaises(StandardNameTableError):
-            with File(h5.hdf_filename, standard_name_table=empty):
-                pass
-
-        with File(h5.hdf_filename) as h5:
             self.assertEqual(h5.standard_name_table, pivsnt)
 
         self.assertEqual(pivsnt.name, str(pivsnt))
