@@ -5,6 +5,7 @@ the python filename and accessor class name must not be identical!
 """
 
 import h5py
+from abc import ABC
 from typing import Union, Any, Callable
 
 from ._logger import logger
@@ -26,9 +27,38 @@ def parse(name: str, attribute: Callable) -> str:
     return name
 
 
-class StandardAttribute:
-    """Base class for user-defined attributes that are registered after instantiation
-    of the HDF5 File object
+class StandardAttribute(ABC):
+    """Abstract base class for user-defined standard attributes that are registered after instantiation
+    of the HDF5 File object.
+
+    Examples
+    --------
+    Say you want to regulate the usage of the attribute `long_name` in your project, that must be lowercase.
+    You can do so by creating a class that inherits from `StandardAttribute` and implements the setter method
+    like so:
+    >>> class LongNameAttribute(StandardAttribute):
+    ...     name = 'long_name'
+    ...
+    ...     def setter(self, obj, value: str) -> None:
+    ...         if not value.is_lower():
+    ...             raise ValueError('Long name must be lower case')
+    ...         obj.attrs.create('long_name', value)
+    ...
+    >>> register_attribute(LongNameAttribute)
+    Then you can use the attribute like so:
+    >>> with h5py.File('test.h5', 'w') as f:
+    ...     f.attrs.long_name = 'test'
+    ...     print(f.attrs.long_name)
+    test
+
+    .. warning::
+
+        If you expose a standard attribute to be the attribute manager you risk calling the
+        getter methods in an infinite loop. So don't do
+        >>> obj.attrs[self.name]
+        but
+        >>> obj.safe_getter(self.name)
+        The latter calls the superclass method and hence avoids infinite recursion.
     """
 
     def safe_setter(self, obj, value):
@@ -89,6 +119,7 @@ class StandardAttribute:
             Value of the attribute
         """
         return self.safe_getter(obj)
+
 
 def validate_standard_attribute_class(obj, methods=('getter', 'setter', 'safe_getter', 'safe_setter')):
     """validate that the user-defined attribute has the required methods"""
