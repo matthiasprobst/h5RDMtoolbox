@@ -30,19 +30,21 @@ class TestStandardName(unittest.TestCase):
         class SoftwareAttribute(UserAttr):
             """property attach to a Group"""
 
-            def set(self, sftw: Union[software.Software, Dict]):
-                """Get `software` as group attbute"""
+            name = 'software'
+
+            def setter(self, obj, sftw: Union[software.Software, Dict]):
+                """Get `software` as group attribute"""
                 if isinstance(sftw, (tuple, list)):
-                    raise TypeError('Software infomration must be provided as dictionary '
-                                    f'or object of class Softare, not {type(sftw)}')
+                    raise TypeError('Software information must be provided as dictionary '
+                                    f'or object of class Software, not {type(sftw)}')
                 if isinstance(sftw, dict):
                     # init the Software to check for errors
-                    self.attrs.create('software', json.dumps(software.Software(**sftw).to_dict()))
+                    obj.attrs.create(self.name, json.dumps(software.Software(**sftw).to_dict()))
                 else:
-                    self.attrs.create('software', json.dumps(sftw.to_dict()))
+                    obj.attrs.create(self.name, json.dumps(sftw.to_dict()))
 
-            def get(self) -> software.Software:
-                """Get `software` from group attbute. The value is expected
+            def getter(self, obj) -> software.Software:
+                """Get `software` from group attribute. The value is expected
                 to be a dictionary-string that can be decoded by json.
                 However, if it is a real string it is expected that it contains
                 name, version url and description separated by a comma.
@@ -67,10 +69,6 @@ class TestStandardName(unittest.TestCase):
                             datadict[keys[i]] = raw_split[i].strip()
 
                 return software.Software.from_dict(datadict)
-
-            def delete(self):
-                """Delete attribute"""
-                self.attrs.__delitem__('standard_name')
 
     def test_standard_name(self):
         sn1 = StandardName(name='acc',

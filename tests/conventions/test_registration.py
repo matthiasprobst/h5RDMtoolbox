@@ -30,7 +30,7 @@ class TestAccessor(unittest.TestCase):
                     """Set the short_name"""
                     return shortyname.parse(self.attrs.get('short_name', None))
 
-        @register_hdf_attr(Group, name=None)
+        @register_hdf_attr(Group, name=None, overwrite=True)
         class shortyname(UserAttr):
             """Shorty name attribute"""
             name = 'shortyname'

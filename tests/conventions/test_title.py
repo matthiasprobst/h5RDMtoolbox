@@ -6,7 +6,7 @@ from h5rdmtoolbox.conventions.cflike import title
 
 
 class TestTitle(unittest.TestCase):
-    """Test h5rdmtolbox.conventions.cflike.title"""
+    """Test h5rdmtoolbox.conventions.cflike.title"""
 
     def test_title(self):
         """Test title attribute"""

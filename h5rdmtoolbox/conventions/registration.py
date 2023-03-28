@@ -5,12 +5,25 @@ the python filename and accessor class name must not be identical!
 """
 
 import h5py
-from typing import Union, Any
+from typing import Union, Any, Callable
 
 from ._logger import logger
 
 # dictionary of all registered user-defined attribute names
 REGISTERED_PROPERTIES = {}
+
+
+def parse(name: str, attribute: Callable) -> str:
+    """Parse name of the attribute. If the attribute has no name or is None,
+    the class name is returned."""
+    if name is None:
+        if hasattr(attribute, 'name'):
+            name = attribute.name
+            if name is None:
+                name = attribute.__class__.__name__
+        else:
+            name = attribute.__class__.__name__
+    return name
 
 
 class UserAttr:
@@ -77,18 +90,7 @@ class UserAttr:
         """
         return self.safe_getter(obj)
 
-    def deleter(self, obj: Union[h5py.Dataset, h5py.Group]):
-        """Delete attribute from HDF5 object
-
-        Parameters
-        ----------
-        obj: h5py.AttributeManager
-            HDF5 AttributeManager object from which the attribute is deleted
-        """
-        obj.attrs.__delitem__(self.name)
-
-
-def validate_user_hdf_attribute(obj, methods=('getter', 'setter', 'deleter', 'safe_getter', 'safe_setter')):
+def validate_user_hdf_attribute(obj, methods=('getter', 'setter', 'safe_getter', 'safe_setter')):
     """validate that the user-defined attribute has the required methods"""
     for method in methods:
         if not hasattr(obj, method):
@@ -100,13 +102,18 @@ def _register_hdf_attribute(cls, name: str = None, overwrite: bool = False):
     def decorator(accessor):
         """decorator"""
         validate_user_hdf_attribute(accessor)
+
         a = accessor()
+
         if cls not in REGISTERED_PROPERTIES:
             REGISTERED_PROPERTIES[cls] = {}
-        if name in REGISTERED_PROPERTIES[cls] and not overwrite:
-            raise ValueError(f'Attribute {name} is already registered for {cls}')
-        REGISTERED_PROPERTIES[cls][name] = a
-        return register_hdf_attribute(a, cls, name, overwrite)
+
+        _name = parse(name, a)
+        if _name in REGISTERED_PROPERTIES[cls] and not overwrite:
+            raise ValueError(f'Attribute {_name} is already registered for {cls}')
+
+        REGISTERED_PROPERTIES[cls][_name] = a
+        return register_hdf_attribute(a, cls, _name, overwrite)
 
     return decorator
 
@@ -160,13 +167,7 @@ def register_hdf_attribute(attribute, cls, name=None, overwrite=False):
                         )
 
     # figure out the name of the attribute:
-    if name is None:
-        if hasattr(attribute, 'name'):
-            name = attribute.name
-            if name is None:
-                name = attribute.__class__.__name__
-        else:
-            name = attribute.__class__.__name__
+    name = parse(name, attribute)
 
     if cls not in REGISTERED_PROPERTIES:
         REGISTERED_PROPERTIES[cls] = {}

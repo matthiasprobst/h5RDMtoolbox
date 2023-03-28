@@ -690,7 +690,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             h5.create_dataset('grp/test', data=2, units='m',
                               long_name='a long name 2')
             lname = h5.find({'long_name': {'$regex': '(.*)'}}, '$Dataset')
-            self.assertEqual(lname, [h5['grp/test'], h5['test']])
+            self.assertEqual(sorted(lname), sorted([h5['grp/test'], h5['test']]))
 
             lname = h5.find({'long_name': 'long_name',
                              'long_name': 'a long name'},

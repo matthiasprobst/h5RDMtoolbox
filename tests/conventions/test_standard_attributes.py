@@ -112,8 +112,6 @@ class TestOptAccessors(unittest.TestCase):
             h5.attrs['user'] = '1123-0814-1234-2343'
             self.assertEqual(h5.user, '1123-0814-1234-2343')
 
-        # noinspectio
-        # n PyUnresolvedReferences
         with CoreFile() as h5:
             with self.assertRaises(OrcidError):
                 h5.user = '11308429'
@@ -136,8 +134,8 @@ class TestOptAccessors(unittest.TestCase):
             config.natural_naming = True
         use('cflike')
 
-    def test_set_atrribute_to_higher_class(self):
-        @register_hdf_attr(File, name=None)
+    def test_set_attribute_to_higher_class(self):
+        @register_hdf_attr(CoreFile, name=None, overwrite=True)
         class shortyname2(UserAttr):
             """Shorty name attribute"""
             pass

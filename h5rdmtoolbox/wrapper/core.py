@@ -61,6 +61,13 @@ class Group(h5py.Group):
     convention = 'default'
     hdfrepr = H5Repr()
 
+    def __delattr__(self, item):
+        if self.__class__ in REGISTERED_PROPERTIES:
+            if item in REGISTERED_PROPERTIES[self.__class__]:
+                del self.attrs[item]
+                return
+        super().__delattr__(item)
+
     @property
     def attrs(self):
         """Calls the wrapper attribute manager"""
@@ -214,8 +221,9 @@ class Group(h5py.Group):
         return ret
 
     def __getattr__(self, item):
-        if item in REGISTERED_PROPERTIES[self.__class__]:
-            return REGISTERED_PROPERTIES[self.__class__][item].getter(self)
+        if self.__class__ in REGISTERED_PROPERTIES:
+            if item in REGISTERED_PROPERTIES[self.__class__]:
+                return REGISTERED_PROPERTIES[self.__class__][item].getter(self)
 
         try:
             return super().__getattribute__(item)
@@ -1109,6 +1117,13 @@ class Dataset(h5py.Dataset):
     """Inherited Dataset group of the h5py package"""
     convention = 'default'
 
+    def __delattr__(self, item):
+        if self.__class__ in REGISTERED_PROPERTIES:
+            if item in REGISTERED_PROPERTIES[self.__class__]:
+                del self.attrs[item]
+                return
+        super().__delattr__(item)
+
     @only1d
     def __lt__(self, other: Union[int, float]):
         if isinstance(other, (int, float)):
@@ -1240,8 +1255,9 @@ class Dataset(h5py.Dataset):
         return self.parent.modify_dataset_properties(self, name=new_name)
 
     def __getattr__(self, item):
-        if item in REGISTERED_PROPERTIES[self.__class__]:
-            return REGISTERED_PROPERTIES[self.__class__][item].getter(self)
+        if self.__class__ in REGISTERED_PROPERTIES:
+            if item in REGISTERED_PROPERTIES[self.__class__]:
+                return REGISTERED_PROPERTIES[self.__class__][item].getter(self)
         if item not in self.__dict__:
             for d in self.dims:
                 if len(d) > 0:

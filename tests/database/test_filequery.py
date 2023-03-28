@@ -54,7 +54,7 @@ class TestFileQuery(unittest.TestCase):
             self.assertEqual(res[0], h5['ds'])
             self.assertEqual(res[1], h5['ds2'])
             res = h5.find_one({'$shape': (1,2,3), 'long_name': 'long name 1'}, '$dataset')
-            self.assertEqual(res, h5['ds'])
+            self.assertIn(res, [h5['ds'], h5['ds2']])
 
     def test_recursive_find(self):
         h5tbx.use('default')

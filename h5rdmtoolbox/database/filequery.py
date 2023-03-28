@@ -33,6 +33,8 @@ def _lte(a, b):
 
 
 def _regex(value, pattern) -> bool:
+    if value is None:
+        return False
     match = re.search(pattern, value)
     if match is None:
         return False

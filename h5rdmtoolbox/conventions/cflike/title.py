@@ -18,3 +18,4 @@ class TitleAttribute(UserAttr):
         if re.match('^[0-9 ].*', value):
             raise TitleError('Title must not start with a number')
         obj.attrs.create(self.name, value)
+
