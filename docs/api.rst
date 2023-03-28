@@ -30,8 +30,8 @@ CF-like wrapper class
 Conventions
 ===========
 
-Standard names
---------------
+Standard names and tables
+-------------------------
 
 .. autosummary::
    :toctree: generated/

@@ -1,10 +1,10 @@
 import re
 
 from .errors import TitleError
-from ..registration import UserAttr
+from ..registration import StandardAttribute
 
 
-class TitleAttribute(UserAttr):
+class TitleAttribute(StandardAttribute):
     """Title attribute"""
 
     name = 'title'

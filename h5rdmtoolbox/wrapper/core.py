@@ -33,7 +33,7 @@ from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import H5Layout
-from ..conventions.registration import register_hdf_attribute, REGISTERED_PROPERTIES
+from ..conventions.registration import register_standard_attribute, REGISTERED_PROPERTIES
 
 logger = logging.getLogger(__package__)
 
@@ -1469,10 +1469,46 @@ class H5Dataset(Dataset):
 
 
 class File(h5py.File, Group):
-    """Main wrapper around h5py.File. It is inherited from h5py.File and h5py.Group.
-    It enables additional features and adds new methods streamlining the work with
-    HDF5 files and incorporates usage of so-called naming-conventions and layouts.
-    All features from h5py packages are preserved."""
+    """Main wrapper around h5py.File.
+
+    Adds additional features and methods to h5py.File in order to streamline the work with
+    HDF5 files and to incorporate usage of metadata (attribute naming) conventions and layouts.
+
+
+    .. note:: All features from h5py packages are preserved.
+
+
+    Parameters
+    ----------
+    filename : str
+        The name of the file to open. If the file mode is 'w' or 'r+' and the file does not exist,
+        a temporary file is created in the user's temporary directory.
+    mode : {'r', 'r+', 'w', 'w-', 'x', 'a'}, optional
+        The mode in which to open the file. The default is 'r'.
+    layout : Path | str | H5Layout, optional
+        The layout of the file.
+    **kwargs
+        Additional keyword arguments are passed to h5py.File.
+
+
+    Notes
+    -----
+    The following methods are added to the h5py.File object:
+
+    * check(): Run layout check.
+    * moveto(): Move the file to a new location.
+    * saveas(): Save the file to a new location.
+
+    The following attributes are added to the h5py.File object:
+
+    * version: (str) The version of the package used to create the file.
+    * modification_time: (datetime) The modification time of the file.
+    * creation_time: (datetime) The creation time of the file.
+    * layout: (H5Layout) The layout of the file.
+    * filesize: (int) The size of the file in bytes.
+
+    .. seealso:: :class:`h5rdmtoolbox.core.Group`
+    """
 
     convention = 'default'
 
@@ -1484,38 +1520,39 @@ class File(h5py.File, Group):
 
     @property
     def version(self) -> str:
-        """Return version stored in file"""
+        """Return version stored in file, which is the package version used at the time of creation.
+        Not necessarily the current version of the package."""
         return self.attrs.get('__h5rdmtoolbox_version__')
 
     @property
     def modification_time(self) -> datetime:
-        """Return creation time from file"""
+        """Return the modification from the file. Not stored as an attribute!"""
         return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
                                       tz=timezone.utc).astimezone()
 
     @property
     def creation_time(self) -> datetime:
-        """Return creation time from file"""
+        """Return the creation time from the file. Not stored as an attribute!"""
         return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
                                       tz=timezone.utc).astimezone()
 
     @property
     def filesize(self):
         """
-        Returns file size in bytes (or other units if asked)
+        Returns file size in units of bytes.
 
         Returns
         -------
-        _bytes
-            file size in byte
+        bytes : pint.Quantity
+            File size in bytes
 
         """
-        _bytes = os.path.getsize(self.filename)
-        return _bytes * ureg.byte
+        bytes = os.path.getsize(self.filename)
+        return bytes * ureg.byte
 
     @property
     def layout(self) -> H5Layout:
-        """return H5Layout object"""
+        """Return the HDF-Layout object for this file."""
         return self._layout
 
     @layout.setter
@@ -1537,18 +1574,7 @@ class File(h5py.File, Group):
                  mode='r',
                  *,
                  layout: Union[Path, str, H5Layout] = 'File_core',
-                 driver=None,
-                 libver=None,
-                 userblock_size=None,
-                 swmr=False,
-                 rdcc_nslots=None,
-                 rdcc_nbytes=None,
-                 rdcc_w0=None,
-                 track_order=None,
-                 fs_strategy=None,
-                 fs_persist=False,
-                 fs_threshold=1,
-                 **kwds):
+                 **kwargs):
         _tmp_init = False
         if name is None:
             _tmp_init = True
@@ -1564,12 +1590,7 @@ class File(h5py.File, Group):
                 if not Path(name).exists():
                     _tmp_init = True
                     # "touch" the file, so it exists
-                    with h5py.File(name, mode='w', driver=driver,
-                                   libver=libver, userblock_size=userblock_size, swmr=swmr,
-                                   rdcc_nslots=rdcc_nslots, rdcc_nbytes=rdcc_nbytes, rdcc_w0=rdcc_w0,
-                                   track_order=track_order, fs_strategy=fs_strategy, fs_persist=fs_persist,
-                                   fs_threshold=fs_threshold,
-                                   **kwds) as _h5:
+                    with h5py.File(name, mode='w', **kwargs) as _h5:
                         pass  # just touching the file
 
         if _tmp_init:
@@ -1578,18 +1599,7 @@ class File(h5py.File, Group):
             self.hdf_filename = Path(name)
         super().__init__(name=name,
                          mode=mode,
-                         driver=driver,
-                         libver=libver,
-                         userblock_size=userblock_size,
-                         swmr=swmr,
-                         rdcc_nslots=rdcc_nslots,
-                         rdcc_nbytes=rdcc_nbytes,
-                         rdcc_w0=rdcc_w0,
-                         track_order=track_order,
-                         fs_strategy=fs_strategy,
-                         fs_persist=fs_persist,
-                         fs_threshold=fs_threshold,
-                         **kwds)
+                         **kwargs)
 
         if self.mode != 'r':
             # update file toolbox version, wrapper version
@@ -1738,4 +1748,4 @@ Group._h5ds = Dataset
 # user:
 from ..conventions.default.user import User
 
-register_hdf_attribute(User(), File, name='user', overwrite=True)
+register_standard_attribute(User(), File, name='user', overwrite=True)

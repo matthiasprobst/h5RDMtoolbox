@@ -26,7 +26,7 @@ def parse(name: str, attribute: Callable) -> str:
     return name
 
 
-class UserAttr:
+class StandardAttribute:
     """Base class for user-defined attributes that are registered after instantiation
     of the HDF5 File object
     """
@@ -90,7 +90,7 @@ class UserAttr:
         """
         return self.safe_getter(obj)
 
-def validate_user_hdf_attribute(obj, methods=('getter', 'setter', 'safe_getter', 'safe_setter')):
+def validate_standard_attribute_class(obj, methods=('getter', 'setter', 'safe_getter', 'safe_setter')):
     """validate that the user-defined attribute has the required methods"""
     for method in methods:
         if not hasattr(obj, method):
@@ -98,10 +98,10 @@ def validate_user_hdf_attribute(obj, methods=('getter', 'setter', 'safe_getter',
     return True
 
 
-def _register_hdf_attribute(cls, name: str = None, overwrite: bool = False):
+def _register_standard_attribute(cls, name: str = None, overwrite: bool = False):
     def decorator(accessor):
         """decorator"""
-        validate_user_hdf_attribute(accessor)
+        validate_standard_attribute_class(accessor)
 
         a = accessor()
 
@@ -113,7 +113,7 @@ def _register_hdf_attribute(cls, name: str = None, overwrite: bool = False):
             raise ValueError(f'Attribute {_name} is already registered for {cls}')
 
         REGISTERED_PROPERTIES[cls][_name] = a
-        return register_hdf_attribute(a, cls, _name, overwrite)
+        return register_standard_attribute(a, cls, _name, overwrite)
 
     return decorator
 
@@ -131,16 +131,16 @@ def register_hdf_attr(cls: Union["Dataset", "Group"], overwrite=False, name: str
     name: str, default=None
         Name to be used for the attribute. If None, cls.__name__ is used
     """
-    return _register_hdf_attribute(cls, name=name, overwrite=overwrite)
+    return _register_standard_attribute(cls, name=name, overwrite=overwrite)
 
 
-def register_hdf_attribute(attribute, cls, name=None, overwrite=False):
+def register_standard_attribute(attribute, cls, name=None, overwrite=False):
     """register an attribute defined in `attribute_class` to `cls`
 
     Parameters
     ----------
-    attribute: UserAttr
-        User-defined attribute. Must be a subclass of `UserAttr`
+    attribute: StandardAttribute
+        User-defined attribute. Must be a subclass of `StandardAttribute`
     cls: Dataset or Group
         HDF5 object to attach standard attribute to.
     name: str, default=None
@@ -152,18 +152,18 @@ def register_hdf_attribute(attribute, cls, name=None, overwrite=False):
 
     Examples
     --------
-    >>> class MyAttr(UserAttr):
+    >>> class MyAttr(StandardAttribute):
     ...     name = 'my_attr'
     ...     def getter(self, obj):
     ...         # add 1 to the value
     ...         return self.value(obj) + 1
     >>> # register my attribute to a Group:
-    >>> register_hdf_attribute(MyAttr(), cls=Group)
+    >>> register_standard_attribute(MyAttr(), cls=Group)
     """
 
-    if not isinstance(attribute, UserAttr):
+    if not isinstance(attribute, StandardAttribute):
         raise TypeError(f'Cannot register property {attribute} to {cls} because it is not a '
-                        'UserAttr instance.'
+                        'StandardAttribute instance.'
                         )
 
     # figure out the name of the attribute:

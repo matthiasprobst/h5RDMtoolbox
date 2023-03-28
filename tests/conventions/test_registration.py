@@ -1,7 +1,7 @@
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions.registration import register_hdf_attr, UserAttr, register_hdf_attribute
+from h5rdmtoolbox.conventions.registration import register_hdf_attr, StandardAttribute, register_standard_attribute
 from h5rdmtoolbox.wrapper.core import Group, File
 
 
@@ -31,7 +31,7 @@ class TestAccessor(unittest.TestCase):
                     return shortyname.parse(self.attrs.get('short_name', None))
 
         @register_hdf_attr(Group, name=None, overwrite=True)
-        class shortyname(UserAttr):
+        class shortyname(StandardAttribute):
             """Shorty name attribute"""
             name = 'shortyname'
 
@@ -47,7 +47,7 @@ class TestAccessor(unittest.TestCase):
             # self.assertEqual(h5.attrs['shortyname'], 'shorty')
 
             # register shortyname to file:
-            register_hdf_attribute(shortyname, cls=File)
+            register_standard_attribute(shortyname, cls=File)
             h5.shortyname = 'shorty'
             self.assertIn('shortyname', h5.attrs.keys())
 

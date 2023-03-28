@@ -30,7 +30,7 @@ from typing import Dict, Union, List, Tuple
 
 from . import errors
 from .._logger import logger
-from ..registration import UserAttr
+from ..registration import StandardAttribute
 from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
 from ... import config as package_config
 from ..._config import ureg
@@ -1119,7 +1119,7 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               valid_characters='')
 
 
-class StandardNameDatasetAttribute(UserAttr):
+class StandardNameDatasetAttribute(StandardAttribute):
     """Standard Name attribute"""
 
     name = 'standard_name'
@@ -1151,7 +1151,7 @@ class StandardNameDatasetAttribute(UserAttr):
                             )
 
 
-class StandardNameGroupAttribute(UserAttr):
+class StandardNameGroupAttribute(StandardAttribute):
     """Standard Name attribute. Not used for groups. Setting this attribute raises an error."""
 
     def setter(self, obj, new_standard_name):
@@ -1159,7 +1159,7 @@ class StandardNameGroupAttribute(UserAttr):
         raise RuntimeError('A standard name attribute is used for datasets only')
 
 
-class StandardNameTableAttribute(UserAttr):
+class StandardNameTableAttribute(StandardAttribute):
     """Standard Name Table attribute"""
 
     name = 'standard_name_table'

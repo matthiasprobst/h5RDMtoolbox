@@ -9,7 +9,7 @@ from h5rdmtoolbox import use
 from h5rdmtoolbox.conventions.cflike import software
 from h5rdmtoolbox.conventions.cflike.errors import LongNameError
 from h5rdmtoolbox.conventions.default.errors import OrcidError
-from h5rdmtoolbox.conventions.registration import register_hdf_attr, UserAttr
+from h5rdmtoolbox.conventions.registration import register_hdf_attr, StandardAttribute
 from h5rdmtoolbox.wrapper.cflike import File, Group
 from h5rdmtoolbox.wrapper.core import File as CoreFile
 
@@ -20,7 +20,7 @@ class TestOptAccessors(unittest.TestCase):
         """setup"""
 
         @register_hdf_attr(Group, name='software', overwrite=True)
-        class SoftwareAttribute(UserAttr):
+        class SoftwareAttribute(StandardAttribute):
             """property attach to a Group"""
 
             def set(self, sftw: Union[software.Software, Dict]):
@@ -136,7 +136,7 @@ class TestOptAccessors(unittest.TestCase):
 
     def test_set_attribute_to_higher_class(self):
         @register_hdf_attr(CoreFile, name=None, overwrite=True)
-        class shortyname2(UserAttr):
+        class shortyname2(StandardAttribute):
             """Shorty name attribute"""
             pass
 

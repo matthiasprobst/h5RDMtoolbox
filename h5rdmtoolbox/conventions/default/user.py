@@ -2,7 +2,7 @@ import re
 from typing import Union, List
 
 from . import errors
-from ..registration import UserAttr
+from ..registration import StandardAttribute
 
 ORCID_PATTERN: str = '^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$'
 
@@ -12,7 +12,7 @@ def is_invalid_orcid_pattern(orcid_str: str) -> bool:
     return re.match(ORCID_PATTERN, orcid_str) is None
 
 
-class User(UserAttr):
+class User(StandardAttribute):
     """User can be one or multiple persons in charge or related to the
     file, group or dataset"""
 

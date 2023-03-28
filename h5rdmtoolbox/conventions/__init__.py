@@ -10,7 +10,7 @@ in the fluid.py file but in later versions the conventions will only be provided
 
 from ._logger import logger
 from .layout import H5Layout
-from .registration import register_hdf_attr, register_hdf_attribute
+from .registration import register_hdf_attr, register_standard_attribute
 from .utils import dict2xml, is_valid_email_address
 
 

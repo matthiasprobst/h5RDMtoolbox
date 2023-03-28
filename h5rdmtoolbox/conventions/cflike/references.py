@@ -2,7 +2,7 @@ import requests
 from typing import Union, List
 
 from .errors import ReferencesError
-from ..registration import UserAttr
+from ..registration import StandardAttribute
 
 
 def validate_url(url: str) -> bool:
@@ -24,7 +24,7 @@ def validate_url(url: str) -> bool:
     return False
 
 
-class ReferencesAttribute(UserAttr):
+class ReferencesAttribute(StandardAttribute):
     """References attribute
 
     A reference can be an online resource. Currently, only URLs are supported.

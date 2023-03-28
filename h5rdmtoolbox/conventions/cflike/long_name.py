@@ -2,7 +2,7 @@ import re
 from typing import Union
 
 from .errors import LongNameError
-from ..registration import UserAttr
+from ..registration import StandardAttribute
 
 
 class LongName(str):
@@ -32,7 +32,7 @@ class LongOrStandardNameWarning(Warning):
         return repr(self.message)
 
 
-class LongNameAttribute(UserAttr):
+class LongNameAttribute(StandardAttribute):
     """Long name attribute"""
 
     name = 'long_name'

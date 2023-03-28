@@ -2,11 +2,11 @@ import pint
 from typing import Union
 
 from .errors import UnitsError
-from ..registration import UserAttr
+from ..registration import StandardAttribute
 from ..._config import ureg
 
 
-class UnitsAttribute(UserAttr):
+class UnitsAttribute(StandardAttribute):
     """Units attribute"""
 
     name = 'units'
