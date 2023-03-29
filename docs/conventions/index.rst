@@ -29,6 +29,12 @@ HDF5 file itself and is to be defined within a project.
 In sum, both concepts guide and control the user (and all collaborators) during data creation but also during exploring
 and comparison to ensure all data is available and with the agreed naming standard.
 
+*Standard attributes* build the core of the conventions used in the `h5rdmtoolbox`. The allow controlling user input 
+and return values of attributes that are associated with a standardization. Go here to find out how to define 
+your own standard(ized) attribute.
+
+
+
 Available Conventions
 ---------------------
 The `h5RDMtoolbox` comes with two conventions, namely the
@@ -39,16 +45,15 @@ default-convention
 and the
 
 CF-like-convention
-    Convention based on the CF Metadata Convention, enforcing the usage of `standard_name` and `units`.
-
-Both conventions are outlined in the following sections.
+    Convention based on the CF Metadata Convention \cite{gregory2003cf}, enforcing the usage of `standard_name` and `units`.
 
 
 .. toctree::
-    :titlesonly:
-    :glob:
+    :maxdepth: 2
+    :hidden:
 
-    default
-    cflike
-    layouts
+    standard_attributes.ipynb
+    default.ipynb
+    cflike.ipynb
+    layouts.ipynb
 

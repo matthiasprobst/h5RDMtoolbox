@@ -1,12 +1,12 @@
-"""
-Contains all property accessors
-
-the python filename and accessor class name must not be identical!
-"""
+"""This module contains the registration of user-defined so-called standard attributes.
+Standard attributes are HDF5 attributes that follow specific rules defined by the user
+through StandardAttribute classes. These classes are registered in the REGISTERED_PROPERTIES
+for the HDF5 classe (File, Group, Dataset) they are registered for. The registration is done
+by the decorator `register_standard_attribute` or the function `register_standard_attr`."""
 
 import h5py
 from abc import ABC
-from typing import Union, Any, Callable
+from typing import Union, Any, Callable, Iterable
 
 from ._logger import logger
 
@@ -36,28 +36,43 @@ class StandardAttribute(ABC):
     Say you want to regulate the usage of the attribute `long_name` in your project, that must be lowercase.
     You can do so by creating a class that inherits from `StandardAttribute` and implements the setter method
     like so:
-    >>> class LongNameAttribute(StandardAttribute):
-    ...     name = 'long_name'
-    ...
-    ...     def setter(self, obj, value: str) -> None:
-    ...         if not value.is_lower():
-    ...             raise ValueError('Long name must be lower case')
-    ...         obj.attrs.create('long_name', value)
-    ...
-    >>> register_attribute(LongNameAttribute)
+
+    .. code-block:: python
+
+        >>> class LongNameAttribute(StandardAttribute):
+        ...     name = 'long_name'
+        ...
+        ...     def setter(self, obj, value: str) -> None:
+        ...         if not value.is_lower():
+        ...             raise ValueError('Long name must be lower case')
+        ...         obj.attrs.create('long_name', value)
+        ...
+        >>> register_attribute(LongNameAttribute)
+
     Then you can use the attribute like so:
-    >>> with h5py.File('test.h5', 'w') as f:
-    ...     f.attrs.long_name = 'test'
-    ...     print(f.attrs.long_name)
-    test
+
+    .. code-block:: python
+
+        >>> with h5py.File('test.h5', 'w') as f:
+        ...     f.attrs.long_name = 'test'
+        ...     print(f.attrs.long_name)
+        test
 
     .. warning::
 
         If you expose a standard attribute to be the attribute manager you risk calling the
         getter methods in an infinite loop. So don't do
-        >>> obj.attrs[self.name]
+
+        .. code-block:: python
+
+            >>> obj.attrs[self.name]
+
         but
-        >>> obj.safe_getter(self.name)
+
+        .. code-block:: python
+
+            >>> obj.safe_getter(self.name)
+
         The latter calls the superclass method and hence avoids infinite recursion.
     """
 
@@ -149,7 +164,7 @@ def _register_standard_attribute(cls, name: str = None, overwrite: bool = False)
     return decorator
 
 
-def register_hdf_attr(cls: Union["Dataset", "Group"], overwrite=False, name: str = None):
+def register_standard_attr(cls: Union["Dataset", "Group"], overwrite=False, name: str = None):
     """registers a property to a group or dataset. getting method must be specified, setting and deleting are optional,
     also docstring is optional but strongly recommended!
 
@@ -165,21 +180,27 @@ def register_hdf_attr(cls: Union["Dataset", "Group"], overwrite=False, name: str
     return _register_standard_attribute(cls, name=name, overwrite=overwrite)
 
 
-def register_standard_attribute(attribute, cls, name=None, overwrite=False):
+def register_standard_attribute(attribute: StandardAttribute,
+                                cls: Union[Callable, Iterable[Callable]],
+                                name=None, overwrite=False) -> None:
     """register an attribute defined in `attribute_class` to `cls`
 
     Parameters
     ----------
     attribute: StandardAttribute
         User-defined attribute. Must be a subclass of `StandardAttribute`
-    cls: Dataset or Group
-        HDF5 object to attach standard attribute to.
+    cls: Union[Callable, Iterable[Callable]]
+        HDF5 object or Iterable of HDF5 objects to attach standard attribute to. Valid objects
+        are `h5py.Dataset`, `h5py.Group` and `h5py.File`
     name: str, default=None
         Name to be used for the attribute. If None, `attribute.name` is used. If no `attribute.name` is available
         or is None, `attribute.__class__.__name__` is used
     overwrite: bool, default=False
         Whether to overwrite an existing attributes
 
+    Returns
+    -------
+    None
 
     Examples
     --------
@@ -200,12 +221,19 @@ def register_standard_attribute(attribute, cls, name=None, overwrite=False):
     # figure out the name of the attribute:
     name = parse(name, attribute)
 
-    if cls not in REGISTERED_PROPERTIES:
-        REGISTERED_PROPERTIES[cls] = {}
+    if not isinstance(cls, Iterable):
+        # make it a list
+        cls = [cls]
 
-    if name in REGISTERED_PROPERTIES[cls] and not overwrite:
-        raise AttributeError(
-            f'Cannot register property {name} to {cls} because it has already a property with this name.')
-    REGISTERED_PROPERTIES[cls][name] = attribute
-    logger.debug(f'Register special hdf attribute {name} to {cls}')
-    return attribute
+    def _register(_cls):
+        if _cls not in REGISTERED_PROPERTIES:
+            REGISTERED_PROPERTIES[_cls] = {}
+
+        if name in REGISTERED_PROPERTIES[_cls] and not overwrite:
+            raise AttributeError(
+                f'Cannot register property {name} to {_cls} because it has already a property with this name.')
+        REGISTERED_PROPERTIES[_cls][name] = attribute
+        logger.debug(f'Register special hdf attribute {name} to {_cls}')
+
+    for c in cls:
+        _register(c)

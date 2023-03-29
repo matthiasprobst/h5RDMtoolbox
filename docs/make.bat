@@ -12,6 +12,12 @@ set BUILDDIR=_build
 
 if "%1" == "" goto help
 
+REM sphinx-build -b html . _build:
+if "%1" == "html" (
+    %SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% %SPHINXOPTS%
+    goto end
+)
+
 if "%1" == "github" (
     %SPHINXBUILD% -M html %SOURCEDIR% %BUILDDIR% %SPHINXOPTS%
     robocopy %BUILDDIR%/html ../docs /E /XF *.ipynb> nul

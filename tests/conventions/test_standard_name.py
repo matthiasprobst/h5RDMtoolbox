@@ -16,7 +16,7 @@ from h5rdmtoolbox.conventions.cflike.standard_name import (StandardNameTable,
                                                            StandardName,
                                                            url_exists)
 from h5rdmtoolbox.conventions.cflike.standard_name import merge
-from h5rdmtoolbox.conventions.registration import register_hdf_attr, StandardAttribute
+from h5rdmtoolbox.conventions.registration import register_standard_attr, StandardAttribute
 from h5rdmtoolbox.wrapper.cflike import File
 from h5rdmtoolbox.wrapper.cflike import Group
 
@@ -26,7 +26,7 @@ class TestStandardName(unittest.TestCase):
     def setUp(self) -> None:
         """setup"""
 
-        @register_hdf_attr(Group, name='software', overwrite=True)
+        @register_standard_attr(Group, name='software', overwrite=True)
         class SoftwareAttribute(StandardAttribute):
             """property attach to a Group"""
 

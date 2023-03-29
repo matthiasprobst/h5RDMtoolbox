@@ -10,7 +10,7 @@ in the fluid.py file but in later versions the conventions will only be provided
 
 from ._logger import logger
 from .layout import H5Layout
-from .registration import register_hdf_attr, register_standard_attribute
+from .registration import register_standard_attr, register_standard_attribute, StandardAttribute
 from .utils import dict2xml, is_valid_email_address
 
 
@@ -22,4 +22,5 @@ def set_loglevel(level):
 
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['H5Layout', 'datetime_str', 'set_loglevel']
+__all__ = ['H5Layout', 'datetime_str', 'set_loglevel',
+           'register_standard_attr', 'register_standard_attribute', 'StandardAttribute']

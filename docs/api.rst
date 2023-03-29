@@ -30,6 +30,15 @@ CF-like wrapper class
 Conventions
 ===========
 
+Standard attributes
+-------------------
+
+.. autosummary::
+    :toctree: generated/
+
+    h5rdmtoolbox.conventions.registration.StandardAttribute
+    h5rdmtoolbox.conventions.registration.register_standard_attribute
+
 Standard names and tables
 -------------------------
 

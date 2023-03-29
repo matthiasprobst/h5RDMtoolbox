@@ -173,3 +173,30 @@ class WrapperAttributeManager(h5py.AttributeManager):
         self[new_name] = tmp_val
         assert tmp_val == self[new_name]
         del self[key]
+
+    def sdump(self, show_private=True) -> None:
+        """Print all attributes. Hides all attributes that start with __ and end with __ if show_private is False.
+
+        Parameters
+        ----------
+        show_private : bool, optional
+            If True, all attributes are shown, by default True. If False, all attributes that start with
+            "__" and end with "__" are hidden.
+        """
+        first_line = f'Attributes of "{self._parent.name}":'
+        print(first_line)
+        print('-' * len(first_line))
+
+        adict = dict(self.items())
+        if not show_private:
+            key_lens = [len(k) for k in adict.keys() if not k.startswith('__') and not k.endswith('__')]
+        else:
+            key_lens = [len(k) for k in adict.keys()]
+        if len(key_lens) == 0:
+            return None
+        keylen = max(key_lens)
+        for k, v in adict.items():
+            if not show_private:
+                if k.startswith('__') and k.endswith('__'):
+                    continue
+            print(f'{k:{keylen}}:  {v}')

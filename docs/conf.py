@@ -34,8 +34,14 @@ extensions = ['sphinx.ext.autodoc',
               "IPython.sphinxext.ipython_directive",
               "IPython.sphinxext.ipython_console_highlighting",
               "sphinx_copybutton",
-              "nbsphinx",
-              "sphinx_design", ]
+              # "nbsphinx",
+              "sphinx_design",
+              "myst_nb",
+              "sphinxcontrib.bibtex"]
+
+# path to the bibtex file:
+bibtex_bibfiles = ['references.bib']
+
 # Napoleon configurations
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
