@@ -6,4 +6,6 @@ sphinx_book_theme
 sphinx-copybutton
 scikit-image
 scikit-learn
-nbsphinx
+sphinx-design
+myst-nb
+sphinxcontrib-bibtex
