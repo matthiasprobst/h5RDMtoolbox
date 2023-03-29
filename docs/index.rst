@@ -72,6 +72,7 @@ You may install optional dependencies:
     HowTo <howto/howto.ipynb>
     API Reference <api>
     Glossary <glossary/index>
+    References <references>
 
 .. toctree::
    :maxdepth: 1

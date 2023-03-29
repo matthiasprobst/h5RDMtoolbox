@@ -45,7 +45,7 @@ default-convention
 and the
 
 CF-like-convention
-    Convention based on the CF Metadata Convention \cite{gregory2003cf}, enforcing the usage of `standard_name` and `units`.
+    Convention based on the CF Metadata Convention :cite:t:`gregory2003cf`, enforcing the usage of `standard_name` and `units`.
 
 
 .. toctree::
@@ -56,4 +56,3 @@ CF-like-convention
     default.ipynb
     cflike.ipynb
     layouts.ipynb
-

@@ -1,4 +1,3 @@
-
 Glossary
 ========
 
@@ -6,7 +5,7 @@ Glossary
 .. glossary::
 
     metadata
-        "Information about data" ([MICHENER2006]_) o higher level descriptions of data sets. In HDF5
+        "Information about data" :cite:t:`michener2006meta` o higher level descriptions of data sets. In HDF5
         files, attributes are used to describe data. Standardized attribute names like **long_name** or
         **standard_name** are special meta data descriptors that follow a specific standard and allow
         automated exploration and analysis.
@@ -32,8 +31,5 @@ Glossary
         A layout defines the structure of an HDF5 file. It may define exact content, e.g. attribute name and value or
         define expected dataset dimensions or shape. Also some limited conditional layout definition is possible, e.g.
         that dataset may be in another group if the expected does not exist. Layout definitions are attached to a wrapper
-        HDF file and epecially assists during data collection as it defines the final content of a file which was prior
+        HDF file and especially assists during data collection as it defines the final content of a file which was prior
         defined by a community or project.
-
-.. [MICHENER2006] Michener, William K., (2006). Meta-information concepts for ecological data management. Ecological informatics. 1(1), p.3-7.
-  DOI: https://doi.org/10.1016/j.ecoinf.2005.08.004
