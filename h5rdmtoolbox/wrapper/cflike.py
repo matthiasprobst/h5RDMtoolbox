@@ -10,10 +10,8 @@ from typing import Union, List
 from . import core
 from .. import _repr
 from .. import config
-from .. import errors
 from .._config import ureg
-from ..conventions import cflike
-from ..conventions.registration import register_standard_attribute
+from ..conventions import standard_name, units, long_name, title, comment, references
 
 logger = logging.getLogger(__package__)
 
@@ -49,7 +47,8 @@ class Group(core.Group):
                      overwrite=None,
                      attrs=None,
                      *,
-                     track_order=None) -> 'Group':
+                     track_order=None,
+                     **kwargs) -> 'Group':
         """
         Overwrites parent methods. Additional parameters are "long_name" and "attrs".
         Besides, it does and behaves the same. Differently to dataset creating
@@ -73,7 +72,9 @@ class Group(core.Group):
         track_order : bool or None
             Track creation order under this group. Default is None.
         """
-        subgrp = super().create_group(name, overwrite, attrs, track_order=track_order)
+        kwargs, std_attrs = core._pop_standard_attributes(self, kwargs)
+        subgrp = super().create_group(name, overwrite, attrs, track_order=track_order, **kwargs)
+        core._write_standard_attributes(subgrp, std_attrs)
 
         if attrs is not None:
             long_name = attrs.pop('long_name', long_name)
@@ -210,8 +211,8 @@ class Group(core.Group):
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
             if config.require_unit:
-                raise errors.UnitsError(f'Units of dataset "{name}" cannot be None.'
-                                        ' A dimensionless dataset has units "''"')
+                raise units.UnitsError(f'Units of dataset "{name}" cannot be None.'
+                                       ' A dimensionless dataset has units "''"')
             attrs['units'] = ''
         else:
             attrs['units'] = units
@@ -434,7 +435,7 @@ class File(core.File, Group):
 
         if standard_name_table is not None:
             if isinstance(standard_name_table, str):
-                standard_name_table = cflike.standard_name.StandardNameTable.load_registered(standard_name_table)
+                standard_name_table = standard_name.StandardNameTable.load_registered(standard_name_table)
             if self.standard_name_table != standard_name_table:
                 self.standard_name_table = standard_name_table
         self.layout = layout
@@ -469,29 +470,11 @@ Dataset._h5ds = Dataset
 Group._h5grp = Group
 Group._h5ds = Dataset
 
-# standard name
-register_standard_attribute(cflike.standard_name.StandardNameDatasetAttribute(),
-                       Dataset,
-                       name='standard_name',
-                       overwrite=True)
-register_standard_attribute(cflike.standard_name.StandardNameGroupAttribute(), Group, name='standard_name', overwrite=True)
-
-register_standard_attribute(cflike.standard_name.StandardNameTableAttribute(), Dataset, name='standard_name_table',
-                       overwrite=True)
-register_standard_attribute(cflike.standard_name.StandardNameTableAttribute(), Group, name='standard_name_table',
-                       overwrite=True)
-register_standard_attribute(cflike.standard_name.StandardNameTableAttribute(), File, name='standard_name_table',
-                       overwrite=True)
-
-# units:
-register_standard_attribute(cflike.units.UnitsAttribute(), Dataset, name='units', overwrite=True)
-
-# long name:
-for cls in (Dataset, Group, File):
-    register_standard_attribute(cflike.long_name.LongNameAttribute(), cls, name='long_name', overwrite=True)
-
-# title:
-register_standard_attribute(cflike.title.TitleAttribute(), File, name='title', overwrite=True)
-
-# references:
-register_standard_attribute(cflike.references.ReferencesAttribute(), File, name='references', overwrite=True)
+# Register standard attributes:
+units.UnitsAttribute().register(Dataset)
+long_name.LongNameAttribute().register((Dataset, Group))
+standard_name.StandardNameAttribute().register(Dataset)
+standard_name.StandardNameTableAttribute().register((Dataset, Group, File))
+title.TitleAttribute().register(File)
+references.ReferencesAttribute().register((File, Dataset, Group))
+comment.CommentAttribute().register((File, Dataset, Group))

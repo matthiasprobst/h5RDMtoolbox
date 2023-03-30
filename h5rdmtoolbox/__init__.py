@@ -88,6 +88,13 @@ def use(convention_name: str) -> None:
 class File:
     """Interface class to wrapper class around HDF5/h5py.File"""
 
+    @staticmethod
+    def __get_cls__(name: str):
+        """Return hdf class of set convention wrapper"""
+        if not name in ('File', 'Dataset', 'Group'):
+            raise ValueError(f'Unknown class name: "{name}"')
+        return h5tbxParams[name]
+
     def __new__(cls, *args, **kwargs):
         return h5tbxParams['File'](*args, **kwargs)
 

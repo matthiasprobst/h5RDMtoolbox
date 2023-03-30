@@ -1,10 +1,13 @@
 import re
 from typing import Union, List
 
-from . import errors
-from ..registration import StandardAttribute
+from .standard_attribute import StandardAttribute
 
 ORCID_PATTERN: str = '^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$'
+
+
+class OrcidError(ValueError):
+    """An error associated with the user property"""
 
 
 def is_invalid_orcid_pattern(orcid_str: str) -> bool:
@@ -12,12 +15,11 @@ def is_invalid_orcid_pattern(orcid_str: str) -> bool:
     return re.match(ORCID_PATTERN, orcid_str) is None
 
 
-class User(StandardAttribute):
-    """User can be one or multiple persons in charge or related to the
+class RespUserAttribute(StandardAttribute):
+    """RespUser can be one or multiple persons in charge or related to the
     file, group or dataset"""
 
-    name = 'user'
-
+    name = 'responsible_person'
 
     def getter(self, obj):
         """Get user"""
@@ -48,8 +50,8 @@ class User(StandardAttribute):
                 if not isinstance(o, str):
                     TypeError(f'Expecting a string or list of strings representing an ORCID but got {type(o)}')
                 if is_invalid_orcid_pattern(o):
-                    raise errors.OrcidError(f'Not an ORCID ID: {o}')
+                    raise OrcidError(f'Not an ORCID ID: {o}')
         if len(orcid) == 1:
-            obj.attrs.create('user', orcid[0])
+            obj.attrs.create(self.name, orcid[0])
         else:
-            obj.attrs.create('user', orcid)
+            obj.attrs.create(self.name, orcid)

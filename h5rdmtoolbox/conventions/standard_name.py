@@ -28,28 +28,44 @@ from pathlib import Path
 from pint.errors import UndefinedUnitError
 from typing import Dict, Union, List, Tuple
 
-from . import errors
-from .._logger import logger
-from ..registration import StandardAttribute
-from ..utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
-from ... import config as package_config
-from ..._config import ureg
-from ..._user import UserDir
-from ...utils import generate_temporary_filename
+from ._logger import logger
+from .standard_attribute import StandardAttribute
+from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
+from .._config import ureg
+from .._user import UserDir
+from ..utils import generate_temporary_filename
 
 try:
     from tabulate import tabulate
     import requests
     import xmltodict
 except ImportError:
-    from ...errors import CFLikeImportError
-
-    raise CFLikeImportError()
+    raise ImportError('Please install tabulate, requests and xmltodict to use this standard names')
 
 STRICT = True
 
 CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
 _SNT_CACHE = {}
+
+
+class StandardNameError(Exception):
+    """Exception class for error associated with standard name usage"""
+
+
+class StandardNameTableError(Exception):
+    """Exception class for error associated with standard name usage"""
+
+
+class StandardNameTableError(Exception):
+    """Exception class for StandardName Tables"""
+
+
+class StandardNameTableVersionError(Exception):
+    """Incompatible Errors"""
+
+
+class EmailError(ValueError):
+    """Wrong Email Error"""
 
 
 def verify_unit_object(_units):
@@ -106,7 +122,7 @@ class StandardName:
 
     Examples
     --------
-    >>> from h5rdmtoolbox.conventions.cflike.standard_name import StandardName
+    >>> from h5rdmtoolbox.conventions.standard_name import StandardName
     >>> StandardName('x_wind', 'm/s', 'x wind component')
     <StandardName: x_wind [m/s] | SNT: None | desc: x wind component>
     """
@@ -175,10 +191,8 @@ class StandardName:
         """
         if name not in snt:
             raise KeyError(f'Name {name} not found in standard name table {snt.name}. Cannot initialize StandardName.')
-        name = name
         description = snt[name]['description']
         canonical_units = snt[name]['canonical_units']
-        snt = snt
         return StandardName(name, canonical_units, description, snt)
 
     def check_syntax(self):
@@ -229,7 +243,7 @@ class StandardNameTableStoreOption(Enum):
 
 def url_exists(url: str) -> bool:
     """Return True if URL exist"""
-    response = requests.head(url)
+    response = requests.head(url, timeout=2)
     return response.status_code == 200
 
 
@@ -306,8 +320,8 @@ class MinimalStandardNameTable:
     def set(self, name: str, description: str, canonical_units: str):
         """Set the value of a standard name"""
         if name in self.table:
-            raise errors.StandardNameError(f'name "{name}" already exists in table. Use modify() '
-                                           'to change the content')
+            raise StandardNameError(f'name "{name}" already exists in table. Use modify() '
+                                    'to change the content')
         verify_unit_object(canonical_units)
         self._table[name] = dict(description=description, canonical_units=canonical_units)
 
@@ -336,22 +350,22 @@ class MinimalStandardNameTable:
     def check_syntax(self, name: str) -> bool:
         """Checks if the syntax of the name is correct according to the syntax rules of the StandardNameTable."""
         if not len(name) > 0:
-            raise errors.StandardNameError('Name too short!')
+            raise StandardNameError('Name too short!')
 
         if name[0] == ' ':
-            raise errors.StandardNameError('Name must not start with a space!')
+            raise StandardNameError('Name must not start with a space!')
 
         if name[-1] == ' ':
-            raise errors.StandardNameError('Name must not end with a space!')
+            raise StandardNameError('Name must not end with a space!')
 
         if re.sub(self.valid_characters, '', name) != name:
-            raise errors.StandardNameError('Invalid special characters in name '
-                                           f'"{name}": Only "{self.valid_characters}" '
-                                           'is allowed.')
+            raise StandardNameError('Invalid special characters in name '
+                                    f'"{name}": Only "{self.valid_characters}" '
+                                    'is allowed.')
 
         if self.pattern != '' and self.pattern is not None:
             if re.match(self.pattern, name):
-                raise errors.StandardNameError('Name must not start with a number!')
+                raise StandardNameError('Name must not start with a number!')
         return True
 
     def check_name(self, name, strict: bool = None) -> bool:
@@ -369,7 +383,7 @@ class MinimalStandardNameTable:
                         similar_names = self.find_similar_names(name)
                         if similar_names:
                             err_msg += f'\nSimilar names are {similar_names}'
-                        raise errors.StandardNameError(err_msg)
+                        raise StandardNameError(err_msg)
         return True
 
 
@@ -406,7 +420,7 @@ class StandardNameTable(MinimalStandardNameTable):
 
     Examples
     --------
-    >>> from h5rdmtoolbox.conventions.cflike import StandardNameTable
+    >>> from h5rdmtoolbox.conventions.standard_name import StandardNameTable
     >>> sc = StandardNameTable(
     >>>             name='Test_SNC',
     >>>             table={},
@@ -470,7 +484,7 @@ class StandardNameTable(MinimalStandardNameTable):
         if not isinstance(contact, str):
             raise ValueError(f'Invalid type for contact Expcting str but got {type(contact)}')
         if not is_valid_email_address(contact):
-            raise errors.EmailError(f'Invalid email address: {contact}')
+            raise EmailError(f'Invalid email address: {contact}')
         self._contact = contact
 
     @property
@@ -891,8 +905,8 @@ class StandardNameTable(MinimalStandardNameTable):
                 logger.error('The standard name table has a units with value "None" for name %s. Adjusting to "". '
                              'Consider change the entry', name)
             if not equal_base_units(_units_power_fix(canonical_units), units):
-                raise errors.StandardNameError(f'Unit of standard name "{name}" not as expected: '
-                                               f'"{units}" != "{canonical_units}"')
+                raise StandardNameError(f'Unit of standard name "{name}" not as expected: '
+                                        f'"{units}" != "{canonical_units}"')
         return True
 
     def check_file(self, filename, recursive: bool = True, raise_error: bool = True):
@@ -912,9 +926,9 @@ class StandardNameTable(MinimalStandardNameTable):
                         units = ''
                     try:
                         self.check_units(node.attrs['standard_name'], units=units)
-                    except errors.StandardNameError as e:
+                    except StandardNameError as e:
                         if raise_error:
-                            raise errors.StandardNameError(e)
+                            raise StandardNameError(e)
                         else:
                             logger.error(' > ds: %s: %s', node.name, e)
 
@@ -1119,7 +1133,7 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               valid_characters='')
 
 
-class StandardNameDatasetAttribute(StandardAttribute):
+class StandardNameAttribute(StandardAttribute):
     """Standard Name attribute"""
 
     name = 'standard_name'
@@ -1151,14 +1165,6 @@ class StandardNameDatasetAttribute(StandardAttribute):
                             )
 
 
-class StandardNameGroupAttribute(StandardAttribute):
-    """Standard Name attribute. Not used for groups. Setting this attribute raises an error."""
-
-    def setter(self, obj, new_standard_name):
-        """Raises an error. Standard Name attribute is used for datasets only."""
-        raise RuntimeError('A standard name attribute is used for datasets only')
-
-
 class StandardNameTableAttribute(StandardAttribute):
     """Standard Name Table attribute"""
 
@@ -1169,7 +1175,7 @@ class StandardNameTableAttribute(StandardAttribute):
 
         Raises
         ------
-        errors.StandardNameTableError
+        StandardNameTableError
             If no write intent on file.
 
         """
@@ -1181,11 +1187,11 @@ class StandardNameTableAttribute(StandardAttribute):
             else:
                 snt = StandardNameTable.load_registered(snt)
         if obj.mode == 'r':
-            raise errors.StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
+            raise StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if url_exists(snt.url):
-                    self.safe_setter(obj.rootparent,snt.url)
+                    self.safe_setter(obj.rootparent, snt.url)
                 else:
                     warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
                     self.safe_setter(obj.rootparent, json.dumps(snt.to_dict()))
@@ -1205,7 +1211,7 @@ class StandardNameTableAttribute(StandardAttribute):
                     obj.rootparent.attrs.modify(self.name, snt.to_dict())
             else:  # else fall back to writing dict. better than versionname because cannot get lost
                 obj.rootparent.attrs.modify(self.name,
-                                             json.dumps(snt.to_dict()))
+                                            json.dumps(snt.to_dict()))
         _SNT_CACHE[obj.id.id] = snt
 
     @staticmethod

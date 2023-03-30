@@ -1,0 +1,2 @@
+"""Caches"""
+REGISTERED_PROPERTIES = {}

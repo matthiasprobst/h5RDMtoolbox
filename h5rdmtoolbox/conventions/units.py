@@ -1,9 +1,12 @@
 import pint
 from typing import Union
 
-from .errors import UnitsError
-from ..registration import StandardAttribute
-from ..._config import ureg
+from .standard_attribute import StandardAttribute
+from .._config import ureg
+
+
+class UnitsError(Exception):
+    """Units Error"""
 
 
 class UnitsAttribute(StandardAttribute):

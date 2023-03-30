@@ -4,7 +4,7 @@ import pandas as pd
 import unittest
 
 import h5rdmtoolbox as h5tbx
-import h5rdmtoolbox.conventions.default.errors
+from h5rdmtoolbox.conventions import respuser
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -19,10 +19,10 @@ class TestCore(unittest.TestCase):
 
     def test_user(self):
         with h5tbx.File() as h5:
-            with self.assertRaises(h5tbx.conventions.default.errors.OrcidError):
-                h5.user = '000-123'
-            h5.attrs['user'] = '0000-1233-1234-1234'
-            self.assertEqual(h5.attrs['user'], '0000-1233-1234-1234')
+            with self.assertRaises(respuser.OrcidError):
+                h5.responsible_person = '000-123'
+            h5.attrs['responsible_person'] = '0000-1233-1234-1234'
+            self.assertEqual(h5.attrs['responsible_person'], '0000-1233-1234-1234')
 
     def test_lower(self):
         self.assertEqual(h5tbx.core.Lower('Hello'), 'hello')
@@ -130,8 +130,17 @@ class TestCore(unittest.TestCase):
 
     def test_slicing(self):
         with h5tbx.File() as h5:
+            with self.assertRaises(respuser.OrcidError):
+                h5.create_dataset('time', data=np.linspace(0, 1, 10),
+                                             make_scale=True, responsible_person='matze')
+            self.assertEqual(h5['time'].responsible_person, None)
             ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
-                                         make_scale=True)
+                                         make_scale=True, responsible_person='0000-0000-0000-0000',
+                                         overwrite=True)
+            self.assertEqual(ds_scale.responsible_person, '0000-0000-0000-0000')
+            self.assertEqual(ds_scale.attrs['responsible_person'], '0000-0000-0000-0000')
+            ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
+                                         make_scale=True, overwrite=True)
             ds = h5.create_dataset('grp/data', shape=(10, 20, 30),
                                    data=np.random.rand(10, 20, 30),
                                    chunks=(1, 20, 30),

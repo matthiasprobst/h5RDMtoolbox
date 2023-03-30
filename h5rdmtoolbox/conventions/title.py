@@ -1,7 +1,10 @@
 import re
 
-from .errors import TitleError
-from ..registration import StandardAttribute
+from .standard_attribute import StandardAttribute
+
+
+class TitleError(ValueError):
+    """An error associated with the title property"""
 
 
 class TitleAttribute(StandardAttribute):
@@ -18,4 +21,3 @@ class TitleAttribute(StandardAttribute):
         if re.match('^[0-9 ].*', value):
             raise TitleError('Title must not start with a number')
         obj.attrs.create(self.name, value)
-

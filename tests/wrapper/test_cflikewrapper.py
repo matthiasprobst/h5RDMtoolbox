@@ -11,10 +11,8 @@ from pathlib import Path
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import config
 from h5rdmtoolbox._config import ureg
-from h5rdmtoolbox.conventions.cflike import StandardNameTable
-from h5rdmtoolbox.conventions.cflike import standard_name as sn
+from h5rdmtoolbox.conventions import standard_name
 from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.errors import StandardNameError
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import cflike
 from h5rdmtoolbox.wrapper import set_loglevel
@@ -66,13 +64,15 @@ class TestH5CFLikeFile(unittest.TestCase):
             with h5tbx.File(references='h5rdmtoolbox.readthedocs.io/') as h5:
                 pass
         with h5tbx.File(references=' https://h5rdmtoolbox.readthedocs.io/') as h5:
-            self.assertEqual(h5.attrs['references'], ' https://h5rdmtoolbox.readthedocs.io/')
+            self.assertEqual(h5.attrs['references'], 'https://h5rdmtoolbox.readthedocs.io/')
 
         with h5tbx.File(references=('https://h5rdmtoolbox.readthedocs.io/',
                                     'https://github.com/matthiasprobst/h5RDMtoolbox')) as h5:
-            self.assertTupleEqual(h5.attrs['references'],
-                                  ('https://h5rdmtoolbox.readthedocs.io/',
-                                   'https://github.com/matthiasprobst/h5RDMtoolbox'))
+            self.assertTupleEqual(
+                h5.attrs['references'],
+                ('https://h5rdmtoolbox.readthedocs.io/',
+                 'https://github.com/matthiasprobst/h5RDMtoolbox/')
+            )
 
     def test_subclassstr_attrs(self):
         class MyString(str):
@@ -85,7 +85,9 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertIsInstance(attr_str, AttributeString)
             h5.attrs['mystr'] = attr_str
 
-            grp = h5.create_group('grp')
+            grp = h5.create_group('grp', comment='this is a group created during testing')
+            self.assertEqual(grp.attrs['comment'], 'this is a group created during testing')
+            self.assertEqual(grp.comment, 'this is a group created during testing')
             grp.attrs['mystr'] = MyString('test')
             attr_str = grp.attrs['mystr']
             self.assertIsInstance(attr_str, AttributeString)
@@ -251,7 +253,7 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_empty_convention(self):
         with h5tbx.File() as h5:
-            self.assertIsInstance(h5.standard_name_table, StandardNameTable)
+            self.assertIsInstance(h5.standard_name_table, standard_name.StandardNameTable)
             self.assertEqual(h5.standard_name_table.version_number, 0)
             self.assertEqual(h5.standard_name_table.name, 'EmptyStandardNameTable')
 
@@ -306,23 +308,23 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_attrs(self):
         with h5tbx.File(mode='w') as h5:
-            convention = StandardNameTable(name='empty',
-                                           table={'x_velocity': {'description': '',
-                                                                 'units': 'm/s'}},
-                                           version_number=0,
-                                           valid_characters='[^a-zA-Z0-9_]',
-                                           institution='', contact='a.b@test.com')
+            convention = standard_name.StandardNameTable(name='empty',
+                                                         table={'x_velocity': {'description': '',
+                                                                               'units': 'm/s'}},
+                                                         version_number=0,
+                                                         valid_characters='[^a-zA-Z0-9_]',
+                                                         institution='', contact='a.b@test.com')
             h5.standard_name_table = convention
-            self.assertIsInstance(h5.standard_name_table, StandardNameTable)
+            self.assertIsInstance(h5.standard_name_table, standard_name.StandardNameTable)
             ds = h5.create_dataset('ds', shape=(), long_name='x_velocity', units='m/s')
-            with self.assertRaises(StandardNameError):
+            with self.assertRaises(standard_name.StandardNameError):
                 ds.attrs['standard_name'] = ' x_velocity'
-            sn.STRICT = False
+            standard_name.STRICT = False
             ds.attrs['standard_name'] = 'x_velocityyy'
-            with self.assertRaises(StandardNameError):
+            with self.assertRaises(standard_name.StandardNameError):
                 ds.attrs['standard_name'] = '!x_velocityyy'
-            sn.STRICT = True
-            with self.assertRaises(StandardNameError):
+            standard_name.STRICT = True
+            with self.assertRaises(standard_name.StandardNameError):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
@@ -424,7 +426,7 @@ class TestH5CFLikeFile(unittest.TestCase):
             with h5tbx.File(mode='w', standard_name_table='wrong file name'):
                 pass
         with h5tbx.File(mode='w', standard_name_table=None) as h5:
-            self.assertIsInstance(h5.standard_name_table, StandardNameTable)
+            self.assertIsInstance(h5.standard_name_table, standard_name.StandardNameTable)
 
     def test_open(self):
         with h5tbx.File(mode='w') as h5:
@@ -594,9 +596,10 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(grp.rootparent, h5['/'])
 
     def test_create_group(self):
+        h5tbx.use('cflike')
         with h5tbx.File(mode='w') as h5:
             grp = h5.create_group('group')
-            self.assertEqual(h5.long_name, None)
+            self.assertEqual(grp.long_name, None)
             grp.long_name = 'long name of group'
             self.assertEqual(grp.long_name, 'long name of group')
 

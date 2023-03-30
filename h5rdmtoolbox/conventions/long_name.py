@@ -1,8 +1,11 @@
 import re
 from typing import Union
 
-from .errors import LongNameError
-from ..registration import StandardAttribute
+from .standard_attribute import StandardAttribute
+
+
+class LongNameError(ValueError):
+    """An error associated with the long_name property"""
 
 
 class LongName(str):
@@ -19,17 +22,6 @@ class LongName(str):
         if re.match(cls.PATTERN, value):
             raise LongNameError(f'Name must not start with a number or a space: "{value}"')
         return str.__new__(cls, value)
-
-
-class LongOrStandardNameWarning(Warning):
-    """Warning raised if neither a long_name nor a standard_names was passed during dataset creation"""
-
-    def __init__(self, dataset_name):
-        self.message = f'No long_name or standard_name given for dataset "{dataset_name}".\n' \
-                       f' It is highly recommended to give either of it otherwise file check will fail.'
-
-    def __str__(self):
-        return repr(self.message)
 
 
 class LongNameAttribute(StandardAttribute):
