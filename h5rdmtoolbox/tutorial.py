@@ -7,8 +7,8 @@ import xarray as xr
 from typing import List
 
 from .utils import generate_temporary_directory
-from .wrapper.cflike import File as CFFile
 from .wrapper.core import File as CoreFile
+from .wrapper.tbx import File as TbxFile
 
 
 def get_xr_dataset(name):
@@ -139,7 +139,7 @@ class Conventions:
     @staticmethod
     def fetch_cf_standard_name_table():
         """download cf-standard-name-table"""
-        from h5rdmtoolbox.conventions.cflike.standard_name import StandardNameTable
+        from h5rdmtoolbox.conventions.standard_name import StandardNameTable
         url = "https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml"
         return StandardNameTable.from_web(url)
 
@@ -178,7 +178,7 @@ class Database:
             os.makedirs(folders[ifolder], exist_ok=True)
 
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
-            with CFFile(filename, 'w') as h5:
+            with TbxFile(filename, 'w') as h5:
                 h5.attrs['operator'] = operators[np.random.randint(4)]
                 if fid % 2:
                     __ftype__ = db_file_type[0]

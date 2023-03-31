@@ -58,28 +58,28 @@ def use(convention_name: str) -> None:
     convention_name: str
         Name of the convention
     """
-    if convention_name == 'default' or convention_name is None:
+    if convention_name == 'h5py' or convention_name is None:
         if h5tbxParams['convention'] != convention_name:
-            core_logger.info('Switched to "default"')
+            core_logger.info('Switched to convention "h5py"')
         h5tbxParams['convention'] = convention_name
         h5tbxParams['File'] = core.File
         h5tbxParams['Dataset'] = core.Dataset
         h5tbxParams['Group'] = core.Group
         return
 
-    if convention_name == 'cflike':
-        # only now import the cflike sub-package if its dependencies are installed
+    if convention_name == 'tbx':
+        # only now import the tbx convention sub-package if its dependencies are installed
         try:
-            from .wrapper import cflike
+            from .wrapper import tbx
         except ImportError:
-            raise ImportError('It seems like the dependencies for the cflike package are missing. Consider '
-                              'installing them. Get all dependencies by calling "pip install h5rdmtoolbox[cflike]"')
+            raise ImportError('It seems like the dependencies for the tbx package are missing. Consider '
+                              'installing them. Get all dependencies by calling "pip install h5rdmtoolbox[tbx]"')
         if h5tbxParams['convention'] != convention_name:
-            core_logger.info(f'Switched to "{convention_name}"')
+            core_logger.info(f'Switched to convention "{convention_name}"')
         h5tbxParams['convention'] = convention_name
-        h5tbxParams['File'] = cflike.File
-        h5tbxParams['Dataset'] = cflike.Dataset
-        h5tbxParams['Group'] = cflike.Group
+        h5tbxParams['File'] = tbx.File
+        h5tbxParams['Dataset'] = tbx.Dataset
+        h5tbxParams['Group'] = tbx.Group
         return
 
     raise ValueError(f'Unknown convention name: "{convention_name}"')
@@ -87,6 +87,13 @@ def use(convention_name: str) -> None:
 
 class File:
     """Interface class to wrapper class around HDF5/h5py.File"""
+
+    @staticmethod
+    def __get_cls__(cls_name: str):
+        """Return hdf class of set convention wrapper"""
+        if not cls_name ('File', 'Dataset', 'Group'):
+            raise ValueError(f'Unknown class name: "{cls_name}"')
+        return h5tbxParams[cls_name]
 
     def __new__(cls, *args, **kwargs):
         return h5tbxParams['File'](*args, **kwargs)
@@ -109,7 +116,7 @@ class File:
 
 
 class Files:
-    """Interface class to wrapper class around HDF5/h5py.File"""
+    """Class to access multiple files at once"""
 
     def __new__(cls, *args, **kwargs):
         use(config['default_convention'])

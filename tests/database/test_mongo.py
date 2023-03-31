@@ -17,7 +17,7 @@ from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
 class TestH5Mongo(unittest.TestCase):
 
     def setUp(self) -> None:
-        use('cflike')
+        use('tbx')
         self.mongodb_running = True
         try:
             client = MongoClient(serverSelectionTimeoutMS=1.)

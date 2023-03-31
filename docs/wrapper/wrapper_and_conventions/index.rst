@@ -26,5 +26,5 @@ of deveopment no claim for completeness is given, the convention is called `CF-l
     :maxdepth: 2
     :hidden:
 
-    cflike.ipynb
+    tbx.ipynb
 

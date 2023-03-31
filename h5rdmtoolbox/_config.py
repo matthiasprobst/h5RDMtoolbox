@@ -88,8 +88,9 @@ class H5tbxConfig:
     ureg_format: Union[str, UregFormats]
         Unit representation format. Default is 'C~'. Other options are 'P~', 'L~', 'H~', 'A~', '~'.
         .. seealso:: see https://pint.readthedocs.io/en/0.10.1/tutorial.html
-    default_convention: str
-        Default convention for standard names. Default is `default`.
+    default_convention: Union[str, None]
+        Default convention for standard names. Default is `tbx`. None disables any conventions and leaves
+        the user with the h5py-implementation plus the extra features of the h5rdmtoolbox
     init_logger_level: Union[int, str]
         Logger level for initialization. Default is `INFO`.
     dtime_fmt: str
@@ -98,8 +99,8 @@ class H5tbxConfig:
         If True, expose user properties to HDF5 attributes. Say, `user` is a property of `File`,
         then the following two lines are equivalent:
         >>> with File() as h5:
-        >>>     file.user
-        >>>     file.attrs['user']
+        >>>     file.responsible_person
+        >>>     file.attrs['responsible_person']
         Default is True.
     """
     return_xarray: bool = True
@@ -110,7 +111,7 @@ class H5tbxConfig:
     xarray_unit_repr_in_plots: Union[str, UnitPlotRepr] = '/'
     require_unit: bool = True  # datasets require units
     ureg_format: Union[str, UregFormats] = 'C~'
-    default_convention: str = 'default'
+    default_convention: Union[str, None] = 'tbx'
     init_logger_level: Union[int, str] = 'INFO'
     dtime_fmt: str = '%Y%m%d%H%M%S%f'
     expose_user_prop_to_attrs: bool = True

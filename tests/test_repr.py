@@ -10,7 +10,7 @@ from h5rdmtoolbox.database import mongo
 class TestRepr(unittest.TestCase):
 
     def setUp(self) -> None:
-        h5tbx.use('default')
+        h5tbx.use(None)
 
     def test_repr(self):
         # test h5rdmtoolbox._repr.DataSetRepr

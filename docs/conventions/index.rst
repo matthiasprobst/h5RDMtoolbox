@@ -37,16 +37,12 @@ your own standard(ized) attribute.
 
 Available Conventions
 ---------------------
-The `h5RDMtoolbox` comes with two conventions, namely the
+The `h5RDMtoolbox` comes with one conventions, namely the
 
-default-convention
-    Basic convention not prescribing any mandatory attributes
+Toolbox-convention
+    Convention largely based on the CF Metadata Convention \cite{gregory2003cf}, enforcing the usage of `standard_name` and `units` during dataset creation. Also manages the usag of other standardized attributes like `responsible_user`, `title`, `long_name` and more.
 
-and the
-
-CF-like-convention
-    Convention based on the CF Metadata Convention :cite:t:`gregory2003cf`, enforcing the usage of `standard_name` and `units`.
-
+.. note::Selecting no convention will feel like using the `h5py` with some extra features from this toolbox.
 
 .. toctree::
     :maxdepth: 2
@@ -54,5 +50,5 @@ CF-like-convention
 
     standard_attributes.ipynb
     default.ipynb
-    cflike.ipynb
+    tbx.ipynb
     layouts.ipynb

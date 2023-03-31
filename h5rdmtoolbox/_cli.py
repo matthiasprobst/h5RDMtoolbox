@@ -168,7 +168,7 @@ def main():
                     h5.mongo.insert(collection=collection, recursive=True, update=True)
             return
         if args.cmd == 'standard_name':
-            from .conventions.cflike.standard_name import StandardNameTable
+            from .conventions.standard_name import StandardNameTable
             import pathlib
             if args.list_registered:
                 StandardNameTable.print_registered()

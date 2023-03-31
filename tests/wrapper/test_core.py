@@ -4,7 +4,7 @@ import pandas as pd
 import unittest
 
 import h5rdmtoolbox as h5tbx
-import h5rdmtoolbox.conventions.default.errors
+from h5rdmtoolbox.conventions import respuser
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -15,14 +15,7 @@ set_loglevel('ERROR')
 class TestCore(unittest.TestCase):
 
     def setUp(self) -> None:
-        h5tbx.use('default')
-
-    def test_user(self):
-        with h5tbx.File() as h5:
-            with self.assertRaises(h5tbx.conventions.default.errors.OrcidError):
-                h5.user = '000-123'
-            h5.attrs['user'] = '0000-1233-1234-1234'
-            self.assertEqual(h5.attrs['user'], '0000-1233-1234-1234')
+        h5tbx.use(None)
 
     def test_lower(self):
         self.assertEqual(h5tbx.core.Lower('Hello'), 'hello')
@@ -31,7 +24,7 @@ class TestCore(unittest.TestCase):
     def test_File(self):
         self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.File'>")
         with h5tbx.File() as h5:
-            self.assertEqual(h5.__str__(), "<class 'h5rdmtoolbox.File' convention: default>")
+            self.assertEqual(h5.__str__(), '<class "File" convention: "None">')
         self.assertEqual(h5tbx.File.Dataset(), h5tbx.core.Dataset)
         self.assertEqual(h5tbx.File.Group(), h5tbx.core.Group)
 
@@ -131,7 +124,7 @@ class TestCore(unittest.TestCase):
     def test_slicing(self):
         with h5tbx.File() as h5:
             ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
-                                         make_scale=True)
+                                         make_scale=True, overwrite=True)
             ds = h5.create_dataset('grp/data', shape=(10, 20, 30),
                                    data=np.random.rand(10, 20, 30),
                                    chunks=(1, 20, 30),
@@ -270,7 +263,7 @@ class TestCore(unittest.TestCase):
             newds = h5.grp[Lower('new')]
             self.assertEqual(newds.name, '/grp/New')
 
-            self.assertEqual(str(h5.grp), '<HDF5 wrapper group "/grp" (members: 2, convention: "default")>')
+            self.assertEqual(str(h5.grp), '<HDF5 wrapper group "/grp" (members: 2, convention: "None")>')
 
             with self.assertRaises(ValueError):
                 grp = h5.create_group('grp')

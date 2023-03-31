@@ -1,4 +1,5 @@
-"""Implementation of wrapper classes using the CF-like conventions
+"""Toolbox wrapper classes for HDF5 files. Various standard attributes are
+automatically registered to the root group, groups and datasets.
 """
 import h5py
 import logging
@@ -10,10 +11,8 @@ from typing import Union, List
 from . import core
 from .. import _repr
 from .. import config
-from .. import errors
 from .._config import ureg
-from ..conventions import cflike
-from ..conventions.registration import register_standard_attribute
+from ..conventions import standard_name, units, long_name, title, comment, references, respuser
 
 logger = logging.getLogger(__package__)
 
@@ -41,7 +40,7 @@ class Group(core.Group):
     adapted methods like create_dataset, create_external_link.
     """
 
-    convention = 'cflike'
+    convention = 'tbx'
 
     def create_group(self,
                      name,
@@ -49,7 +48,8 @@ class Group(core.Group):
                      overwrite=None,
                      attrs=None,
                      *,
-                     track_order=None) -> 'Group':
+                     track_order=None,
+                     **kwargs) -> 'Group':
         """
         Overwrites parent methods. Additional parameters are "long_name" and "attrs".
         Besides, it does and behaves the same. Differently to dataset creating
@@ -73,7 +73,9 @@ class Group(core.Group):
         track_order : bool or None
             Track creation order under this group. Default is None.
         """
-        subgrp = super().create_group(name, overwrite, attrs, track_order=track_order)
+        kwargs, std_attrs = core._pop_standard_attributes(self, kwargs)
+        subgrp = super().create_group(name, overwrite, attrs, track_order=track_order, **kwargs)
+        core._write_standard_attributes(subgrp, std_attrs)
 
         if attrs is not None:
             long_name = attrs.pop('long_name', long_name)
@@ -210,8 +212,8 @@ class Group(core.Group):
                               'you passed the parameter "units". The latter will overwrite the data array units!')
         if units is None:
             if config.require_unit:
-                raise errors.UnitsError(f'Units of dataset "{name}" cannot be None.'
-                                        ' A dimensionless dataset has units "''"')
+                raise units.UnitsError(f'Units of dataset "{name}" cannot be None.'
+                                       ' A dimensionless dataset has units "''"')
             attrs['units'] = ''
         else:
             attrs['units'] = units
@@ -266,7 +268,7 @@ class H5Group(Group):
         super(H5Group, self).__init__(self, _id)
 
 
-class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
+class TbxWrapperHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
     """String representation class for sdump()"""
 
     def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
@@ -300,17 +302,17 @@ class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
         return 'N.A.'
 
 
-class CFLikeHDF5StructureHTMLRepr(_repr.HDF5StructureHTMLRepr):
+class TbxWrapperHDF5StructureHTMLRepr(_repr.HDF5StructureHTMLRepr):
 
     def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
         _html = super().__0Ddataset__(name, h5dataset)
-        _unit = CFLikeHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
+        _unit = TbxWrapperHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
         _html += f' [{_unit}]'
         return _html
 
     def __NDdataset__(self, name, h5dataset):
         _html = super().__NDdataset__(name, h5dataset)
-        _unit = CFLikeHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
+        _unit = TbxWrapperHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
         _html += f' [{_unit}]'
         return _html
 
@@ -321,9 +323,9 @@ class File(core.File, Group):
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
 
-    convention = 'cflike'
-    hdfrepr = _repr.H5Repr(str_repr=CFLikeHDF5StructureStrRepr(),
-                           html_repr=CFLikeHDF5StructureHTMLRepr())
+    convention = 'tbx'
+    hdfrepr = _repr.H5Repr(str_repr=TbxWrapperHDF5StructureStrRepr(),
+                           html_repr=TbxWrapperHDF5StructureHTMLRepr())
 
     def __init__(self,
                  name: Union[str, pathlib.Path, None] = None,
@@ -335,7 +337,7 @@ class File(core.File, Group):
                  references=None,
                  comment=None,
                  standard_name_table=None,
-                 layout: Union[pathlib.Path, str, 'H5Layout'] = 'File_core',
+                 layout: Union[pathlib.Path, str, 'H5Layout', None] = 'TbxLayout',
                  driver=None,
                  libver=None,
                  userblock_size=None,
@@ -434,8 +436,10 @@ class File(core.File, Group):
 
         if standard_name_table is not None:
             if isinstance(standard_name_table, str):
-                standard_name_table = cflike.standard_name.StandardNameTable.load_registered(standard_name_table)
-            if self.standard_name_table != standard_name_table:
+                snt = standard_name.StandardNameTable.load_registered(standard_name_table)
+                self.standard_name_table = snt
+            elif self.standard_name_table != standard_name_table:
+                # update the current snt:
                 self.standard_name_table = standard_name_table
         self.layout = layout
 
@@ -451,7 +455,7 @@ class H5File(File):
 
 class Dataset(core.Dataset):
     """Dataset class following the CF-like conventions"""
-    convention = 'cflike'
+    convention = 'tbx'
 
 
 # H5Dataset is depreciated
@@ -469,29 +473,12 @@ Dataset._h5ds = Dataset
 Group._h5grp = Group
 Group._h5ds = Dataset
 
-# standard name
-register_standard_attribute(cflike.standard_name.StandardNameDatasetAttribute(),
-                       Dataset,
-                       name='standard_name',
-                       overwrite=True)
-register_standard_attribute(cflike.standard_name.StandardNameGroupAttribute(), Group, name='standard_name', overwrite=True)
-
-register_standard_attribute(cflike.standard_name.StandardNameTableAttribute(), Dataset, name='standard_name_table',
-                       overwrite=True)
-register_standard_attribute(cflike.standard_name.StandardNameTableAttribute(), Group, name='standard_name_table',
-                       overwrite=True)
-register_standard_attribute(cflike.standard_name.StandardNameTableAttribute(), File, name='standard_name_table',
-                       overwrite=True)
-
-# units:
-register_standard_attribute(cflike.units.UnitsAttribute(), Dataset, name='units', overwrite=True)
-
-# long name:
-for cls in (Dataset, Group, File):
-    register_standard_attribute(cflike.long_name.LongNameAttribute(), cls, name='long_name', overwrite=True)
-
-# title:
-register_standard_attribute(cflike.title.TitleAttribute(), File, name='title', overwrite=True)
-
-# references:
-register_standard_attribute(cflike.references.ReferencesAttribute(), File, name='references', overwrite=True)
+# Register standard attributes:
+units.UnitsAttribute.register(Dataset)
+long_name.LongNameAttribute.register((Dataset, Group))
+standard_name.StandardNameAttribute.register(Dataset)
+standard_name.StandardNameTableAttribute.register((Dataset, Group, File))
+title.TitleAttribute.register(File)
+references.ReferencesAttribute.register((File, Dataset, Group))
+comment.CommentAttribute.register((File, Dataset, Group))
+respuser.RespUserAttribute.register((File, Dataset, Group))

@@ -12,7 +12,7 @@ class TestDataset(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        h5rdmtoolbox.use('default')
+        h5rdmtoolbox.use(None)
 
     def test_HDFXrDataset(self):
         with h5rdmtoolbox.File() as h5:

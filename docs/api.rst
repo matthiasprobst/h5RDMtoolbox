@@ -19,13 +19,13 @@ Base wrapper class
    h5rdmtoolbox.wrapper.core.File
    h5rdmtoolbox.wrapper.core.File.check
 
-CF-like wrapper class
-=====================
+Toolbox wrapper class using the toolbox conventions
+===================================================
 
 .. autosummary::
    :toctree: generated/
 
-   h5rdmtoolbox.wrapper.cflike.File
+   h5rdmtoolbox.wrapper.tbx.File
 
 Conventions
 ===========
@@ -36,8 +36,11 @@ Standard attributes
 .. autosummary::
     :toctree: generated/
 
-    h5rdmtoolbox.conventions.registration.StandardAttribute
-    h5rdmtoolbox.conventions.registration.register_standard_attribute
+    h5rdmtoolbox.conventions.standard_attribute.StandardAttribute
+    h5rdmtoolbox.conventions.standard_attribute.register
+    h5rdmtoolbox.conventions.standard_attribute.get_name
+    h5rdmtoolbox.conventions.standard_attribute.get
+    h5rdmtoolbox.conventions.standard_attribute.set
 
 Standard names and tables
 -------------------------
@@ -45,12 +48,12 @@ Standard names and tables
 .. autosummary::
    :toctree: generated/
 
-   h5rdmtoolbox.conventions.cflike.StandardName
-   h5rdmtoolbox.conventions.cflike.StandardNameTable
-   h5rdmtoolbox.conventions.cflike.StandardNameTable.check_syntax
-   h5rdmtoolbox.conventions.cflike.StandardNameTable.check_units
-   h5rdmtoolbox.conventions.cflike.StandardNameTable.from_web
-   h5rdmtoolbox.conventions.cflike.StandardNameTable.from_gitlab
-   h5rdmtoolbox.conventions.cflike.StandardNameTable.from_yaml
-   h5rdmtoolbox.conventions.cflike.StandardNameTable.from_xml
-   h5rdmtoolbox.conventions.cflike.StandardNameTable.get_registered
+   h5rdmtoolbox.conventions.standard_name.StandardName
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable.check_syntax
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable.check_units
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_web
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_gitlab
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_yaml
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_xml
+   h5rdmtoolbox.conventions.standard_name.StandardNameTable.get_registered

@@ -10,7 +10,7 @@ from .h5utils import get_rootparent
 from .. import config
 from .. import utils
 from .._config import ureg
-from ..conventions.registration import REGISTERED_PROPERTIES
+from .. import cache
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
@@ -58,9 +58,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
 
-        if config.expose_user_prop_to_attrs and parent.__class__ in REGISTERED_PROPERTIES:
-            if name in REGISTERED_PROPERTIES[parent.__class__]:
-                return REGISTERED_PROPERTIES[parent.__class__][name].getter(self._parent)
+        if config.expose_user_prop_to_attrs and parent.__class__ in cache.REGISTERED_PROPERTIES:
+            if name in cache.REGISTERED_PROPERTIES[parent.__class__]:
+                return cache.REGISTERED_PROPERTIES[parent.__class__][name](self._parent).get()
 
         if isinstance(ret, str):
             if ret == '':
@@ -123,11 +123,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
         parent = self._parent
         # obj_type = parent.__class__
-        if parent.__class__ in REGISTERED_PROPERTIES:
-            if parent.__class__ in REGISTERED_PROPERTIES:
-                if name in REGISTERED_PROPERTIES[parent.__class__]:
+        if parent.__class__ in cache.REGISTERED_PROPERTIES:
+            if parent.__class__ in cache.REGISTERED_PROPERTIES:
+                if name in cache.REGISTERED_PROPERTIES[parent.__class__]:
                     try:
-                        return REGISTERED_PROPERTIES[parent.__class__][name].setter(parent, value)
+                        return cache.REGISTERED_PROPERTIES[parent.__class__][name](parent).set(value)
                     except TypeError:
                         raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}"')
         utils.create_special_attribute(self, name, value)
