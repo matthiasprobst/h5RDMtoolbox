@@ -1590,7 +1590,7 @@ class File(h5py.File, Group):
         elif isinstance(layout, Path):
             self._layout = H5Layout(layout, self.hdfrepr)
         elif layout is None:
-            self._layout = H5Layout('EmptyLayout', self.hdfrepr)
+            self._layout = H5Layout.load_registered(name='EmptyLayout', h5repr=self.hdfrepr)
         elif isinstance(layout, H5Layout):
             self._layout = layout
         else:
