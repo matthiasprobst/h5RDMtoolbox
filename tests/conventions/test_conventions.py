@@ -4,7 +4,7 @@ from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions import standard_name
-from h5rdmtoolbox.wrapper.cflike import File
+from h5rdmtoolbox.wrapper.tbx import File
 
 
 class TestConventions(unittest.TestCase):

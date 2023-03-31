@@ -849,6 +849,10 @@ class StandardNameTable(MinimalStandardNameTable):
                     alias=self.alias
                     )
 
+    def dumps(self):
+        """String representation of the standard name table"""
+        return json.dumps(self.to_dict())
+
     def to_xml(self, xml_filename: Path, datetime_str=None, parents=True) -> Path:
         """Save the SNT in a XML file"""
         if not xml_filename.parent.exists() and parents:
@@ -1138,30 +1142,30 @@ class StandardNameAttribute(StandardAttribute):
 
     name = 'standard_name'
 
-    def setter(self, obj, new_standard_name):
+    def set(self, new_standard_name):
         """Writes attribute standard_name if passed string is not None.
         The rules for the standard_name is checked before writing to file."""
         if new_standard_name:
-            snt = obj.standard_name_table
+            snt = self.parent.standard_name_table
             if snt:
                 if snt.check_name(new_standard_name):
                     if STRICT:
-                        if 'units' in obj.attrs:
-                            if not snt.check_units(new_standard_name, obj.attrs['units']):
-                                raise ValueError(f'Units {obj.attrs["units"]} failed he unit check of standard name '
+                        if 'units' in self.parent.attrs:
+                            if not snt.check_units(new_standard_name, self.parent.attrs['units']):
+                                raise ValueError(f'Units {self.parent.units} failed he unit check of standard name '
                                                  f'table {snt.versionname} for standard name {new_standard_name}')
-                    return obj.attrs.create(self.name, str(new_standard_name))
-            raise ValueError(f'No standard name table found for {obj.name}')
+                    return self.parent.attrs.create(self.name, str(new_standard_name))
+            raise ValueError(f'No standard name table found for {self.parent.name}')
 
-    def getter(self, obj):
+    def get(self):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
-        sn = self.safe_getter(obj)
+        sn = super().get()
         if sn is None:
             return None
         return StandardName(name=sn,
-                            canonical_units=obj.attrs.get('units', None),
-                            snt=obj.attrs.get('standard_name_table', None)
+                            canonical_units=self.parent.attrs.get('units', None),
+                            snt=self.parent.attrs.get('standard_name_table', None)
                             )
 
 
@@ -1170,7 +1174,7 @@ class StandardNameTableAttribute(StandardAttribute):
 
     name = 'standard_name_table'
 
-    def setter(self, obj, snt: Union[str, StandardNameTable]):
+    def set(self, snt: Union[str, StandardNameTable]):
         """Set (write to root group) Standard Name Table
 
         Raises
@@ -1186,36 +1190,24 @@ class StandardNameTableAttribute(StandardAttribute):
                 snt = StandardNameTable.from_dict(json.loads(snt))
             else:
                 snt = StandardNameTable.load_registered(snt)
-        if obj.mode == 'r':
+        if self.parent.mode == 'r':
             raise StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if url_exists(snt.url):
-                    self.safe_setter(obj.rootparent, snt.url)
+                    super().set(value=snt.url, target=self.parent.rootparent)
                 else:
-                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    self.safe_setter(obj.rootparent, json.dumps(snt.to_dict()))
+                    warnings.warn(f'URL {snt.url} does not exist. Cannot set standard name table.')
             else:
-                self.safe_setter(obj.rootparent, json.dumps(snt.to_dict()))
-        if snt.STORE_AS == StandardNameTableStoreOption.versionname:
-            obj.rootparent.attrs.modify(self.name, snt.versionname)
-            self.safe_setter(obj.rootparent, snt.versionname)
-        elif snt.STORE_AS == StandardNameTableStoreOption.dict:
-            self.safe_setter(obj.rootparent, json.dumps(snt.to_dict()))
-        elif snt.STORE_AS == StandardNameTableStoreOption.url:
-            if snt.url is not None:
-                if url_exists(snt.url):
-                    obj.rootparent.attrs.modify(self.name, snt.url)
-                else:
-                    warnings.warn(f'URL {snt.url} not reached. Storing SNT as dictionary instead')
-                    obj.rootparent.attrs.modify(self.name, snt.to_dict())
-            else:  # else fall back to writing dict. better than versionname because cannot get lost
-                obj.rootparent.attrs.modify(self.name,
-                                            json.dumps(snt.to_dict()))
-        _SNT_CACHE[obj.id.id] = snt
+                warnings.warn(f'No URL provided. Will save as dictionary.')
+                return super().set(value=snt.dumps(), target=self.parent.rootparent)
+        if snt.STORE_AS == StandardNameTableStoreOption.url:
+            return super().set(value=snt.url, target=self.parent.rootparent)
+        if snt.STORE_AS == StandardNameTableStoreOption.inline:
+            return super().set(value=snt.dumps(), target=self.parent.rootparent)
+        raise ValueError(f'Unknown store option {snt.STORE_AS}')
 
-    @staticmethod
-    def parse(snt, self=None):
+    def get(self) -> StandardNameTable:
         """Get (if exists) Standard Name Table from file
 
         Raises
@@ -1223,29 +1215,12 @@ class StandardNameTableAttribute(StandardAttribute):
         KeyError
             If cannot load SNT from registration.
         """
-        if self:
-            try:
-                return _SNT_CACHE[self.file.id.id]
-            except KeyError:
-                pass  # not cached
-
+        snt = super().get(src=self.parent.rootparent)
         if snt is not None:
-            # snt is a string
-            if isinstance(snt, dict):
-                return StandardNameTable(**snt)
-            if snt[0] == '{':
-                return StandardNameTable(**json.loads(snt))
-            elif snt[0:4] in ('http', 'wwww.'):
-                return StandardNameTable.from_web(snt)
-            return StandardNameTable.from_versionname(snt)
-        return Empty_Standard_Name_Table
-
-    def getter(self, obj) -> StandardNameTable:
-        """Get (if exists) Standard Name Table from file"""
-        snt = self.safe_getter(obj)
+            snt = json.loads(snt)
 
         try:
-            return _SNT_CACHE[obj.file.id.id]
+            return _SNT_CACHE[self.parent.file.id.id]
         except KeyError:
             pass  # not cached
 

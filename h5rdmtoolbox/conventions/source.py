@@ -49,9 +49,9 @@ class Software:
             self.version = version.parse(self.version)
 
     @staticmethod
-    def from_dict(dictdata):
+    def from_dict(software_dict: Dict):
         """Read from a dict"""
-        return Software(**dictdata)
+        return Software(**software_dict)
 
     def dumps(self) -> Dict:
         """Dict representation of the object"""
@@ -63,19 +63,18 @@ class SourceAttribute(StandardAttribute):
     """Source attribute. Currently, only supports Software"""
     name = 'source'
 
-    def setter(self, obj, source: Union[str, Software]):
-        """Sets the attribute source to attribute 'source'"""
-        if isinstance(source, Software):
-            obj.attrs.create('source', source.dumps())
-        else:
-            obj.attrs.create('source', source)
-
-    def getter(self, obj):
+    def get(self):
         """Return the source of the dataset. The attribute name is `source`.
         Returns `None` if it does not exist."""
-        source = self.safe_getter(obj)
+        source = super().get(src=self.parent, name=self.name)
         if source is None:
             return None
         if isinstance(source, str):
             return source
         return Software.from_dict(source)
+
+    def set(self, source: Union[str, Software]):
+        """Sets the attribute source to attribute 'source'"""
+        if isinstance(source, Software):
+            super().set(source.dumps())
+        super().set(source)

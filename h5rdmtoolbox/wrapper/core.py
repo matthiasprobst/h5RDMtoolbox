@@ -79,7 +79,7 @@ def lower(string: str) -> Lower:
 class Group(h5py.Group):
     """Inherited Group of the package h5py
     """
-    convention = 'default'
+    convention = None
     hdfrepr = H5Repr()
 
     def __delattr__(self, item):
@@ -244,7 +244,7 @@ class Group(h5py.Group):
     def __getattr__(self, item):
         if self.__class__ in cache.REGISTERED_PROPERTIES:
             if item in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][item].getter(self)
+                return cache.REGISTERED_PROPERTIES[self.__class__][item](self).get()
 
         try:
             return super().__getattribute__(item)
@@ -275,7 +275,7 @@ class Group(h5py.Group):
     def __setattr__(self, key, value):
         if self.__class__ in cache.REGISTERED_PROPERTIES:
             if key in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][key].setter(self, value)
+                return cache.REGISTERED_PROPERTIES[self.__class__][key](self).set(value)
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
@@ -1144,7 +1144,7 @@ def only1d(obj):
 
 class Dataset(h5py.Dataset):
     """Inherited Dataset group of the h5py package"""
-    convention = 'default'
+    convention = None
 
     def __delattr__(self, item):
         if self.__class__ in cache.REGISTERED_PROPERTIES:
@@ -1286,7 +1286,7 @@ class Dataset(h5py.Dataset):
     def __getattr__(self, item):
         if self.__class__ in cache.REGISTERED_PROPERTIES:
             if item in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][item].getter(self)
+                return cache.REGISTERED_PROPERTIES[self.__class__][item](self).get()
         if item not in self.__dict__:
             for d in self.dims:
                 if len(d) > 0:
@@ -1298,7 +1298,7 @@ class Dataset(h5py.Dataset):
     def __setattr__(self, key, value):
         if self.__class__ in cache.REGISTERED_PROPERTIES:
             if key in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][key].setter(self, value)
+                return cache.REGISTERED_PROPERTIES[self.__class__][key](self).set(value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -1539,7 +1539,7 @@ class File(h5py.File, Group):
     .. seealso:: :class:`h5rdmtoolbox.core.Group`
     """
 
-    convention = 'default'
+    convention = None
 
     @property
     def attrs(self) -> WrapperAttributeManager:
@@ -1572,12 +1572,11 @@ class File(h5py.File, Group):
 
         Returns
         -------
-        bytes : pint.Quantity
-            File size in bytes
+        pint.Quantity
+            The file size in units of bytes.
 
         """
-        bytes = os.path.getsize(self.filename)
-        return bytes * ureg.byte
+        return os.path.getsize(self.filename) * ureg.byte
 
     @property
     def layout(self) -> H5Layout:
@@ -1591,7 +1590,7 @@ class File(h5py.File, Group):
         elif isinstance(layout, Path):
             self._layout = H5Layout(layout, self.hdfrepr)
         elif layout is None:
-            self._layout = H5Layout.load_registered(name=self.__class__.__name__, h5repr=self.hdfrepr)
+            self._layout = H5Layout('EmptyLayout', self.hdfrepr)
         elif isinstance(layout, H5Layout):
             self._layout = layout
         else:
@@ -1602,7 +1601,7 @@ class File(h5py.File, Group):
                  name: Path = None,
                  mode='r',
                  *,
-                 layout: Union[Path, str, H5Layout] = 'File_core',
+                 layout: Union[Path, str, H5Layout, None] = None,
                  **kwargs):
         _tmp_init = False
         kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
@@ -1642,16 +1641,18 @@ class File(h5py.File, Group):
         self.layout = layout
 
     def __setattr__(self, key, value):
-        if key in cache.REGISTERED_PROPERTIES[self.__class__]:
-            return cache.REGISTERED_PROPERTIES[self.__class__][key].setter(self, value)
+        if self.__class__ in cache.REGISTERED_PROPERTIES:
+            if key in cache.REGISTERED_PROPERTIES[self.__class__]:
+                # assign the current object to the requested standard attribute
+                return cache.REGISTERED_PROPERTIES[self.__class__][key](self).set(value)
         return super().__setattr__(key, value)
 
     def __repr__(self) -> str:
         r = super().__repr__()
-        return r.replace('HDF5', f'HDF5 (convention: {self.convention})')
+        return r.replace('HDF5', f'HDF5 (convention: "{self.convention}")')
 
     def __str__(self) -> str:
-        return f"<class 'h5rdmtoolbox.File' convention: {self.convention}>"
+        return f'<class "{self.__class__.__name__}" convention: "{self.convention}">'
 
     def check(self, grp: Union[str, h5py.Group] = '/') -> int:
         """Run layout check. This method may be overwritten to add conditional
@@ -1778,8 +1779,3 @@ Dataset._h5ds = Dataset
 
 Group._h5grp = Group
 Group._h5ds = Dataset
-
-# user:
-from ..conventions import respuser
-
-respuser.RespUserAttribute().register((File, Dataset, Group), overwrite=True)

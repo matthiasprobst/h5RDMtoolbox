@@ -12,7 +12,7 @@ class TitleAttribute(StandardAttribute):
 
     name = 'title'
 
-    def setter(self, obj, value):
+    def set(self, value):
         """Set title"""
         if value[0] == ' ':
             raise TitleError('Title must not start with a space')
@@ -20,4 +20,4 @@ class TitleAttribute(StandardAttribute):
             raise TitleError('Title must not end with a space')
         if re.match('^[0-9 ].*', value):
             raise TitleError('Title must not start with a number')
-        obj.attrs.create(self.name, value)
+        super().set(value)

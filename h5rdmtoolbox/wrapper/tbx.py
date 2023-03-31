@@ -1,4 +1,5 @@
-"""Implementation of wrapper classes using the CF-like conventions
+"""Toolbox wrapper classes for HDF5 files. Various standard attributes are
+automatically registered to the root group, groups and datasets.
 """
 import h5py
 import logging
@@ -11,7 +12,7 @@ from . import core
 from .. import _repr
 from .. import config
 from .._config import ureg
-from ..conventions import standard_name, units, long_name, title, comment, references
+from ..conventions import standard_name, units, long_name, title, comment, references, respuser
 
 logger = logging.getLogger(__package__)
 
@@ -39,7 +40,7 @@ class Group(core.Group):
     adapted methods like create_dataset, create_external_link.
     """
 
-    convention = 'cflike'
+    convention = 'tbx'
 
     def create_group(self,
                      name,
@@ -267,7 +268,7 @@ class H5Group(Group):
         super(H5Group, self).__init__(self, _id)
 
 
-class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
+class TbxWrapperHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
     """String representation class for sdump()"""
 
     def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
@@ -301,17 +302,17 @@ class CFLikeHDF5StructureStrRepr(_repr.HDF5StructureStrRepr):
         return 'N.A.'
 
 
-class CFLikeHDF5StructureHTMLRepr(_repr.HDF5StructureHTMLRepr):
+class TbxWrapperHDF5StructureHTMLRepr(_repr.HDF5StructureHTMLRepr):
 
     def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
         _html = super().__0Ddataset__(name, h5dataset)
-        _unit = CFLikeHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
+        _unit = TbxWrapperHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
         _html += f' [{_unit}]'
         return _html
 
     def __NDdataset__(self, name, h5dataset):
         _html = super().__NDdataset__(name, h5dataset)
-        _unit = CFLikeHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
+        _unit = TbxWrapperHDF5StructureStrRepr.get_string_repr_of_unit(h5dataset)
         _html += f' [{_unit}]'
         return _html
 
@@ -322,9 +323,9 @@ class File(core.File, Group):
     HDF5 files and incorporates usage of so-called naming-conventions and layouts.
     All features from h5py packages are preserved."""
 
-    convention = 'cflike'
-    hdfrepr = _repr.H5Repr(str_repr=CFLikeHDF5StructureStrRepr(),
-                           html_repr=CFLikeHDF5StructureHTMLRepr())
+    convention = 'tbx'
+    hdfrepr = _repr.H5Repr(str_repr=TbxWrapperHDF5StructureStrRepr(),
+                           html_repr=TbxWrapperHDF5StructureHTMLRepr())
 
     def __init__(self,
                  name: Union[str, pathlib.Path, None] = None,
@@ -336,7 +337,7 @@ class File(core.File, Group):
                  references=None,
                  comment=None,
                  standard_name_table=None,
-                 layout: Union[pathlib.Path, str, 'H5Layout'] = 'File_core',
+                 layout: Union[pathlib.Path, str, 'H5Layout', None] = 'TbxLayout',
                  driver=None,
                  libver=None,
                  userblock_size=None,
@@ -435,8 +436,10 @@ class File(core.File, Group):
 
         if standard_name_table is not None:
             if isinstance(standard_name_table, str):
-                standard_name_table = standard_name.StandardNameTable.load_registered(standard_name_table)
-            if self.standard_name_table != standard_name_table:
+                snt = standard_name.StandardNameTable.load_registered(standard_name_table)
+                self.standard_name_table = snt
+            elif self.standard_name_table != standard_name_table:
+                # update the current snt:
                 self.standard_name_table = standard_name_table
         self.layout = layout
 
@@ -452,7 +455,7 @@ class H5File(File):
 
 class Dataset(core.Dataset):
     """Dataset class following the CF-like conventions"""
-    convention = 'cflike'
+    convention = 'tbx'
 
 
 # H5Dataset is depreciated
@@ -471,10 +474,11 @@ Group._h5grp = Group
 Group._h5ds = Dataset
 
 # Register standard attributes:
-units.UnitsAttribute().register(Dataset)
-long_name.LongNameAttribute().register((Dataset, Group))
-standard_name.StandardNameAttribute().register(Dataset)
-standard_name.StandardNameTableAttribute().register((Dataset, Group, File))
-title.TitleAttribute().register(File)
-references.ReferencesAttribute().register((File, Dataset, Group))
-comment.CommentAttribute().register((File, Dataset, Group))
+units.UnitsAttribute.register(Dataset)
+long_name.LongNameAttribute.register((Dataset, Group))
+standard_name.StandardNameAttribute.register(Dataset)
+standard_name.StandardNameTableAttribute.register((Dataset, Group, File))
+title.TitleAttribute.register(File)
+references.ReferencesAttribute.register((File, Dataset, Group))
+comment.CommentAttribute.register((File, Dataset, Group))
+respuser.RespUserAttribute.register((File, Dataset, Group))

@@ -1,6 +1,6 @@
 import h5py
 from abc import ABC
-from typing import Union, Any, Callable, Iterable
+from typing import Union, Callable, Iterable
 
 from ._logger import logger
 # dictionary that holds all registered standard attributes:
@@ -10,6 +10,11 @@ from .. import cache
 class StandardAttribute(ABC):
     """Abstract base class for user-defined standard attributes that are registered after instantiation
     of the HDF5 File object.
+
+    Parameters
+    ----------
+    parent: h5py.Group or h5py.Dataset
+        HDF5 object to which the attribute is to be set
 
     Examples
     --------
@@ -22,12 +27,13 @@ class StandardAttribute(ABC):
         >>> class LongNameAttribute(StandardAttribute):
         ...     name = 'long_name'
         ...
-        ...     def setter(self, obj, value: str) -> None:
+        ...     def set(self, value: str) -> None:
         ...         if not value.is_lower():
         ...             raise ValueError('Long name must be lower case')
-        ...         obj.attrs.create('long_name', value)
+        ...         super().set('long_name', value)
         ...
-        >>> register_attribute(LongNameAttribute)
+        >>> from h5rdmtoolbox.wrapper.core import Dataset
+        >>> LongNameAttribute.register(Dataset)
 
     Then you can use the std_attr like so:
 
@@ -40,41 +46,42 @@ class StandardAttribute(ABC):
 
     .. warning::
 
-        If you expose a standard std_attr to be the std_attr manager you risk calling the
-        getter methods in an infinite loop. So don't do
-
-        .. code-block:: python
-
-            >>> obj.attrs[self.name]
-
-        but
-
-        .. code-block:: python
-
-            >>> obj.safe_getter(self.name)
-
-        The latter calls the superclass method and hence avoids infinite recursion.
+        Don't call `self.parent.attrs[<name>] = <value>` in the set method. If you expose a standard attribute
+        to the attribute manager you risk calling the getter methods in an infinite loop. So always use
+        `super().set(<value>)`.
     """
 
-    def safe_setter(self, obj, value):
+    def __init__(self, parent=None):
+        self.parent = parent
+
+    def set(self, value, target=None, name=None):
         """Set std_attr to HDF5 object. Superclass method is used to avoid
-        infinite recursion."""
-        super(type(obj.attrs), obj.attrs).__setitem__(self.get_name(), value)
+        infinite recursion.
 
-    @staticmethod
-    def safe_attr_getter(obj, name, default=None):
+        Parameters
+        ----------
+        value: str
+            Value to be set as attribute of src
+        target: h5py.Group or h5py.Dataset
+            HDF5 object to which the attribute is to be set
+        name: str
+            Name of the attribute to be set
+        """
+        if target is None:
+            target = self.parent
+        if name is None:
+            name = self.get_name()
+        super(type(target.attrs), target.attrs).__setitem__(name, value)
+
+    def get(self, src=None, name=None, default=None):
         """Get std_attr from HDF5 object. Superclass method is used to avoid
         infinite recursion."""
+        if src is None:
+            src = self.parent
+        if name is None:
+            name = self.get_name()
         try:
-            return super(type(obj.attrs), obj.attrs).__getitem__(name)
-        except KeyError:
-            return default
-
-    def safe_getter(self, obj, default=None):
-        """Get std_attr from HDF5 object. Superclass method is used to avoid
-        infinite recursion."""
-        try:
-            return super(type(obj.attrs), obj.attrs).__getitem__(self.get_name())
+            return super(type(src.attrs), src.attrs).__getitem__(name)
         except KeyError:
             return default
 
@@ -88,38 +95,42 @@ class StandardAttribute(ABC):
             return name
         return self.__class__.__name__
 
-    def setter(self, obj: Union[h5py.Dataset, h5py.Group], value: Any):
-        """Set std_attr to HDF5 object
+    # def setter(self, obj: Union[h5py.Dataset, h5py.Group], value: Any):
+    #     """Set std_attr to HDF5 object
+    #
+    #     Parameters
+    #     ----------
+    #     obj: h5py.AttributeManager
+    #         HDF5 AttributeManager object to which the std_attr is set
+    #     value: Any
+    #         Value of the std_attr
+    #     """
+    #     obj.attrs.create(self.get_name(), value)
 
-        Parameters
-        ----------
-        obj: h5py.AttributeManager
-            HDF5 AttributeManager object to which the std_attr is set
-        value: Any
-            Value of the std_attr
-        """
-        obj.attrs.create(self.get_name(), value)
+    # def getter(self, obj: Union[h5py.Dataset, h5py.Group]):
+    #     """Get std_attr from HDF5 object
+    #
+    #     Parameters
+    #     ----------
+    #     obj: h5py.AttributeManager
+    #         HDF5 AttributeManager object from which the std_attr is retrieved
+    #
+    #     Returns
+    #     -------
+    #     Any
+    #         Value of the std_attr
+    #     """
+    #     return self.safe_getter(obj)
 
-    def getter(self, obj: Union[h5py.Dataset, h5py.Group]):
-        """Get std_attr from HDF5 object
-
-        Parameters
-        ----------
-        obj: h5py.AttributeManager
-            HDF5 AttributeManager object from which the std_attr is retrieved
-
-        Returns
-        -------
-        Any
-            Value of the std_attr
-        """
-        return self.safe_getter(obj)
-
-    def register(self, cls: Union[Callable, Iterable[Callable]], name: str = None, overwrite: bool = False):
+    @classmethod
+    def register(cls, target_cls: Union[Callable, Iterable[Callable]], name: str = None, overwrite: bool = False):
         """Register the standard std_attr to a HDF5 class (File, Group, Dataset)"""
         if name is None:
-            name = self.name
-        register(self, cls, name, overwrite)
+            if hasattr(cls, 'name'):
+                name = cls.name
+            else:
+                name = cls.__name__
+        register(cls, target_cls, name, overwrite)
 
 
 def _parse_name(name: str, attribute: Callable) -> str:
@@ -135,8 +146,8 @@ def _parse_name(name: str, attribute: Callable) -> str:
     return name
 
 
-def register(std_attr: StandardAttribute,
-             cls: Union[Callable, Iterable[Callable]],
+def register(attr_cls,
+             target_cls: Union[Callable, Iterable[Callable]],
              name=None,
              overwrite=False) -> None:
     """register a std_attr defined in `attribute_class` to `cls`
@@ -169,17 +180,19 @@ def register(std_attr: StandardAttribute,
     >>> register_standard_attribute(MyAttr(), cls=Group)
     """
 
-    if not isinstance(std_attr, StandardAttribute):
-        raise TypeError(f'Cannot register property {std_attr} to {cls} because it is not a '
-                        'StandardAttribute instance.'
-                        )
+    if not hasattr(attr_cls, 'set') and not hasattr(attr_cls, 'get'):
+        raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it does not '
+                        'have a getter and setter method.')
+    if StandardAttribute not in attr_cls.__bases__:
+        raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it is not a '
+                        'subclass of `StandardAttribute`.')
 
     # figure out the name of the std_attr:
-    name = _parse_name(name, std_attr)
+    name = _parse_name(name, attr_cls)
 
-    if not isinstance(cls, Iterable):
+    if not isinstance(target_cls, Iterable):
         # make it a list
-        cls = [cls]
+        target_cls = [target_cls]
 
     def _register(_cls):
         if _cls not in cache.REGISTERED_PROPERTIES:
@@ -188,10 +201,10 @@ def register(std_attr: StandardAttribute,
         if name in cache.REGISTERED_PROPERTIES[_cls] and not overwrite:
             raise AttributeError(
                 f'Cannot register property {name} to {_cls} because it has already a property with this name.')
-        cache.REGISTERED_PROPERTIES[_cls][name] = std_attr
+        cache.REGISTERED_PROPERTIES[_cls][name] = attr_cls
         logger.debug(f'Register special hdf std_attr {name} to {_cls}')
 
-    for c in cls:
+    for c in target_cls:
         if hasattr(c, '__get_cls__'):
             c = type(c())
         if not issubclass(c, (h5py.File, h5py.Group, h5py.Dataset)) and not hasattr(c, '__get_cls__'):

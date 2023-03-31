@@ -13,7 +13,7 @@ class TestFind(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        use('cflike')
+        use('tbx')
         with h5tbx.File() as h5:
             h5.attrs['project'] = 'tutorial'
             h5.create_dataset('velocity', data=[1, 2, -1], units='m/s', standard_name='x_velocity')

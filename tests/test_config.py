@@ -41,12 +41,12 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(config, omegaconf.DictConfig)
         self.assertEqual(config['init_logger_level'], 'INFO')
 
-    def test_setparameter(self):
-        from h5rdmtoolbox.wrapper import cflike
-        # config.set_config_parameter('convention', 'default')
-        config['default_convention'] = 'default'
-        self.assertEqual(config['default_convention'], 'default')
-        h5tbx.use('default')
+    def test_set_parameter(self):
+        from h5rdmtoolbox.wrapper import tbx
+        # config.set_config_parameter('convention', None)
+        config['default_convention'] = None
+        self.assertEqual(config['default_convention'], None)
+        h5tbx.use(None)
 
         with File(mode='w') as h5:
             self.assertEqual(h5.__class__, core.File)
@@ -55,15 +55,15 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(h5.__class__, core.File)
         h5.close()
 
-        config['default_convention'] = 'cflike'
-        self.assertEqual(config['default_convention'], 'cflike')
-        self.assertEqual(config['default_convention'], 'cflike')
-        h5tbx.use('cflike')
+        config['default_convention'] = 'tbx'
+        self.assertEqual(config['default_convention'], 'tbx')
+        self.assertEqual(config['default_convention'], 'tbx')
+        h5tbx.use('tbx')
 
-        self.assertEqual(config['default_convention'], 'cflike')
+        self.assertEqual(config['default_convention'], 'tbx')
         with File() as h5:
-            self.assertEqual(h5.__class__, cflike.File)
+            self.assertEqual(h5.__class__, tbx.File)
 
         h5 = File()
-        self.assertEqual(h5.__class__, cflike.File)
+        self.assertEqual(h5.__class__, tbx.File)
         h5.close()

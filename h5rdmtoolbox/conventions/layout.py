@@ -106,7 +106,7 @@ class IssueList(list):
             for __obj in __object:
                 self.append(__obj)
         else:
-            super(IssueList, self).append(__object)
+            super().append(__object)
 
 
 class LayoutDataset(h5py.Dataset):

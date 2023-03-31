@@ -11,26 +11,27 @@ from pathlib import Path
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import config
 from h5rdmtoolbox._config import ureg
+from h5rdmtoolbox.conventions import respuser
 from h5rdmtoolbox.conventions import standard_name
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
-from h5rdmtoolbox.wrapper import cflike
 from h5rdmtoolbox.wrapper import set_loglevel
-from h5rdmtoolbox.wrapper.cflike import Dataset
-from h5rdmtoolbox.wrapper.cflike import Group
+from h5rdmtoolbox.wrapper import tbx
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
+from h5rdmtoolbox.wrapper.tbx import Dataset
+from h5rdmtoolbox.wrapper.tbx import Group
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
 
 
-class TestH5CFLikeFile(unittest.TestCase):
+class TestH5TbxWrapperFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        h5tbx.use('cflike')
+        h5tbx.use('tbx')
         with h5tbx.File() as h5:
-            self.assertIsInstance(h5, cflike.File)
+            self.assertIsInstance(h5, tbx.File)
         with h5tbx.File(mode='w', title='dwa') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
@@ -52,9 +53,9 @@ class TestH5CFLikeFile(unittest.TestCase):
     def test_H5File(self):
         self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.File'>")
         with h5tbx.File() as h5:
-            self.assertEqual(h5.__str__(), "<class 'h5rdmtoolbox.File' convention: cflike>")
-        self.assertEqual(h5tbx.File.Dataset(), cflike.Dataset)
-        self.assertEqual(h5tbx.File.Group(), cflike.Group)
+            self.assertEqual(h5.__str__(), '<class "File" convention: "tbx">')
+        self.assertEqual(h5tbx.File.Dataset(), tbx.Dataset)
+        self.assertEqual(h5tbx.File.Group(), tbx.Group)
 
         with h5tbx.File(title='mytitle') as h5:
             self.assertIsInstance(h5.attrs['title'], str)
@@ -93,6 +94,18 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertIsInstance(attr_str, AttributeString)
             grp.attrs['mystr'] = attr_str
 
+            with self.assertRaises(respuser.OrcidError):
+                h5.create_dataset('time', data=np.linspace(0, 1, 10),
+                                  units='s', long_name='time',
+                                  make_scale=True, responsible_person='matze')
+            self.assertEqual(h5['time'].responsible_person, None)
+            ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
+                                         units='s', long_name='time',
+                                         make_scale=True, responsible_person='0000-0000-0000-0000',
+                                         overwrite=True)
+            self.assertEqual(ds_scale.responsible_person, '0000-0000-0000-0000')
+            self.assertEqual(ds_scale.attrs['responsible_person'], '0000-0000-0000-0000')
+
             h5.create_dataset('ds', data=1, standard_name='x_coordinate', units='m')
             sn = h5['ds'].attrs['standard_name']
             h5.attrs['sn'] = sn
@@ -101,7 +114,7 @@ class TestH5CFLikeFile(unittest.TestCase):
 
     def test_str(self):
         strrepr = h5tbx.File().__str__()
-        self.assertEqual(strrepr, "<class 'h5rdmtoolbox.File' convention: cflike>")
+        self.assertEqual(strrepr, '<class "File" convention: "tbx">')
 
     def test_layout(self):
         lay = H5Layout(self.lay_filename)
@@ -596,7 +609,6 @@ class TestH5CFLikeFile(unittest.TestCase):
             self.assertEqual(grp.rootparent, h5['/'])
 
     def test_create_group(self):
-        h5tbx.use('cflike')
         with h5tbx.File(mode='w') as h5:
             grp = h5.create_group('group')
             self.assertEqual(grp.long_name, None)
@@ -779,13 +791,21 @@ class TestH5CFLikeFile(unittest.TestCase):
     def test_repr(self):
         with h5tbx.File() as h5:
             h5.create_dataset('test', data=1, units='m', long_name='a test dataset', dtype='int64')
-            self.assertEqual(h5tbx.wrapper.cflike.CFLikeHDF5StructureStrRepr().__0Ddataset__('test', h5['test']),
+            self.assertEqual(h5tbx.wrapper.tbx.TbxWrapperHDF5StructureStrRepr().__0Ddataset__('test', h5['test']),
                              '\x1b[1mtest\x1b[0m 1 [m], dtype: int64')
             h5.create_dataset('test2', data=1, units='m', long_name='a test dataset', dtype='int32')
-            self.assertEqual(h5tbx.wrapper.cflike.CFLikeHDF5StructureStrRepr().__0Ddataset__('test2', h5['test2']),
+            self.assertEqual(h5tbx.wrapper.tbx.TbxWrapperHDF5StructureStrRepr().__0Ddataset__('test2', h5['test2']),
                              '\x1b[1mtest2\x1b[0m 1 [m], dtype: int32')
 
+    def test_user(self):
+        with h5tbx.File() as h5:
+            with self.assertRaises(respuser.OrcidError):
+                h5.responsible_person = '000-123'
+            h5.attrs['responsible_person'] = '0000-1233-1234-1234'
+            self.assertEqual(h5.attrs['responsible_person'], '0000-1233-1234-1234')
+
     def tearDown(self) -> None:
+        """cleanup all files created during tests"""
         for fname in Path(__file__).parent.glob('*'):
             if fname.suffix not in ('py', '.py', ''):
                 fname.unlink()

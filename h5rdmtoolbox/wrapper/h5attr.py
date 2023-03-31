@@ -60,7 +60,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
         if config.expose_user_prop_to_attrs and parent.__class__ in cache.REGISTERED_PROPERTIES:
             if name in cache.REGISTERED_PROPERTIES[parent.__class__]:
-                return cache.REGISTERED_PROPERTIES[parent.__class__][name].getter(self._parent)
+                return cache.REGISTERED_PROPERTIES[parent.__class__][name](self._parent).get()
 
         if isinstance(ret, str):
             if ret == '':
@@ -127,7 +127,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if parent.__class__ in cache.REGISTERED_PROPERTIES:
                 if name in cache.REGISTERED_PROPERTIES[parent.__class__]:
                     try:
-                        return cache.REGISTERED_PROPERTIES[parent.__class__][name].setter(parent, value)
+                        return cache.REGISTERED_PROPERTIES[parent.__class__][name](parent).set(value)
                     except TypeError:
                         raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}"')
         utils.create_special_attribute(self, name, value)

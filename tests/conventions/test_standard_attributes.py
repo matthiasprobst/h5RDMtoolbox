@@ -18,7 +18,7 @@ from h5rdmtoolbox.conventions import units, title, standard_name
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
-        h5tbx.use('default')
+        h5tbx.use(None)
 
     def test_registration(self):
 
@@ -30,7 +30,7 @@ class TestStandardAttributes(unittest.TestCase):
                 """Get the short_name and add a !"""
                 return self.value(obj) + '!'
 
-        shortyname().register(cls=h5tbx.wrapper.core.Group, overwrite=True)
+        shortyname.register(h5tbx.wrapper.core.Group, overwrite=True)
 
         with h5tbx.File() as h5:
             h5.short_name = 'short'
@@ -40,7 +40,7 @@ class TestStandardAttributes(unittest.TestCase):
             # self.assertEqual(h5.attrs['shortyname'], 'shorty')
 
             # register shortyname to file:
-            shortyname().register(cls=h5tbx.File, overwrite=True)
+            shortyname.register(h5tbx.File, overwrite=True)
             h5.shortyname = 'shorty'
             self.assertIn('shortyname', h5.attrs.keys())
 
@@ -61,7 +61,7 @@ class TestStandardAttributes(unittest.TestCase):
         url = 'https://h5rdmtoolbox.readthedocs.io/en/latest/'
         from h5rdmtoolbox.conventions import references
 
-        references.ReferencesAttribute().register(cls=h5tbx.File, name='references', overwrite=True)
+        references.ReferencesAttribute.register(h5tbx.File, name='references', overwrite=True)
 
         with h5tbx.File() as h5:
             h5.references = bibtex_entry
@@ -184,7 +184,7 @@ class TestStandardAttributes(unittest.TestCase):
     #             h5.create_dataset('ds2', shape=(2,), long_name='a long name', units='nounit')
     #
     # def test_user(self):
-    #     use('default')
+    #     use(None)
     #     with CoreFile() as h5:
     #         self.assertEqual(h5.user, None)
     #         h5.attrs['responsible_person'] = '1123-0814-1234-2343'
@@ -210,7 +210,7 @@ class TestStandardAttributes(unittest.TestCase):
     #         with self.assertRaises(RuntimeError):
     #             g.attrs.user = '123'
     #         config.natural_naming = True
-    #     use('cflike')
+    #     use('tbx')
     #
     # def test_set_attribute_to_higher_class(self):
     #     @register_standard_attr(CoreFile, name=None, overwrite=True)
@@ -228,7 +228,7 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_units(self):
         """Test title attribute"""
-        h5rdmtoolbox.use('cflike')
+        h5rdmtoolbox.use('tbx')
         with h5rdmtoolbox.File() as h5:
             ds = h5.create_dataset('test', data=[1, 2, 3], units='m', long_name='test')
             with self.assertRaises(UndefinedUnitError):
@@ -256,7 +256,7 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_title(self):
         """Test title attribute"""
-        h5rdmtoolbox.use('cflike')
+        h5rdmtoolbox.use('tbx')
         with h5rdmtoolbox.File() as h5:
             with self.assertRaises(title.TitleError):
                 h5.title = ' test'
@@ -426,7 +426,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertNotEqual(table, table2)
 
     def test_translate_group(self):
-        h5tbx.use('cflike')
+        h5tbx.use('tbx')
         with h5tbx.File() as h5:
             ds1 = h5.create_dataset('ds1', shape=(2,), units='', long_name='a long name')
             ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='', long_name='a long name')

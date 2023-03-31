@@ -4,13 +4,13 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Files
-from h5rdmtoolbox.wrapper.cflike import File
+from h5rdmtoolbox.wrapper.tbx import File
 
 
 class TestFileQuery(unittest.TestCase):
 
     def test_H5Files(self):
-        h5tbx.use('cflike')
+        h5tbx.use('tbx')
         fnames = []
         with File() as h51:
             h51.create_dataset('ds', shape=(1, 2, 3), units='', long_name='long name 1')
@@ -41,7 +41,7 @@ class TestFileQuery(unittest.TestCase):
                     self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
 
     def test_and_find(self):
-        h5tbx.use('cflike')
+        h5tbx.use('tbx')
         with h5tbx.File() as h5:
             h5.create_dataset('ds', shape=(1, 2, 3), units='', long_name='long name 1')
             h5.create_dataset('ds2', shape=(1, 2, 3), units='', long_name='long name 1')
@@ -57,7 +57,7 @@ class TestFileQuery(unittest.TestCase):
             self.assertIn(res, [h5['ds'], h5['ds2']])
 
     def test_recursive_find(self):
-        h5tbx.use('default')
+        h5tbx.use(None)
         with h5tbx.File() as h5:
             gd = h5.create_group('trn_datacubes')
             gd.create_dataset('u', data=np.random.random((3, 5, 10, 20)))
@@ -72,7 +72,7 @@ class TestFileQuery(unittest.TestCase):
                 gd.find({'$fail': (3, 5, 10, 20)}, objfilter='$Dataset', rec=True)
 
     def test_distinct(self):
-        h5tbx.use('default')
+        h5tbx.use(None)
         with h5tbx.File() as h5:
             gd = h5.create_group('trn_datacubes')
             gd.create_dataset('u', data=np.random.random((3, 5, 10, 20)))

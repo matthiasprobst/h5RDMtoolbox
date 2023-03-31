@@ -9,7 +9,7 @@ from h5rdmtoolbox.extensions import vector, magnitude
 class TestExtension(unittest.TestCase):
 
     def setUp(self) -> None:
-        h5tbx.use('default')
+        h5tbx.use(None)
 
     def test_Vector(self):
         """Test the Vector special dataset"""

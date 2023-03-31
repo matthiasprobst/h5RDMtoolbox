@@ -29,14 +29,14 @@ class LongNameAttribute(StandardAttribute):
 
     name = 'long_name'
 
-    def setter(self, obj, value: str) -> None:
+    def set(self, long_name: str) -> None:
         """Set the long_name"""
-        ln = LongName(value)  # runs check automatically during initialization
-        obj.attrs.create('long_name', ln.__str__())
+        ln = LongName(long_name)  # runs check automatically during initialization
+        super().set(value=ln.__str__())
 
-    def getter(self, obj) -> Union[str, None]:
+    def get(self) -> Union[str, None]:
         """Get the long_name"""
-        value = self.safe_getter(obj)
-        if value:
-            return LongName(value)
+        long_name = super().get()
+        if long_name:
+            return LongName(long_name)
         return None

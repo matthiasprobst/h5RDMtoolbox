@@ -32,14 +32,14 @@ class CommentAttribute(StandardAttribute):
 
     name = 'comment'
 
-    def setter(self, obj, value: str) -> None:
+    def set(self, comment: str) -> None:
         """Set the comment"""
-        ln = Comment(value)  # runs check automatically during initialization
-        obj.attrs.create('comment', ln.__str__())
+        ln = Comment(comment)  # runs check automatically during initialization
+        super().set(value=ln.__str__())
 
-    def getter(self, obj) -> Union[str, None]:
+    def get(self) -> Union[str, None]:
         """Get the comment"""
-        value = self.safe_getter(obj)
-        if value:
-            return Comment(value)
+        comment = super().get()
+        if comment:
+            return Comment(comment)
         return None

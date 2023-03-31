@@ -56,19 +56,16 @@ class ReferencesAttribute(StandardAttribute):
 
     name = 'references'
 
-    def setter(self, obj,
-               reference: Union[
-                   str, List[str],
-                   Dict, List[Dict]]
-               ):
+    def set(self, reference: Union[
+        str, List[str],
+        Dict, List[Dict]]
+            ):
         """Set the reference or multiple references.
         A reference can be a web-source (URL) or a bibtext entry.
         For URLs the package requests is used to validate the URL.
 
         Parameters
         ----------
-        obj: h5py.Group
-            The group to which the attribute is attached
         reference: Union[str, List[str], Dict, List[Dict]]
             The reference or list of references to be set.
             A reference can be a web-source (URL) or a bibtext entry.
@@ -90,15 +87,15 @@ class ReferencesAttribute(StandardAttribute):
             else:
                 str_references.append(json.dumps(r))
 
-        obj.attrs.create(self.name, ','.join(str_references))
+        super().set(','.join(str_references))
 
-    def getter(self, obj) -> Union[str, List[str], Dict, List[Dict]]:
+    def get(self) -> Union[str, List[str], Dict, List[Dict]]:
         """Read the references from the HDF attribute and return it as an url (str) or
          dictionary (for bibtex) or a list of these."
 
          .. note:: In case of multiple references, URLs are placed at the beginning of the list followed by the dictionaries.
          """
-        attrs_str = self.safe_getter(obj)
+        attrs_str = super().get()
 
         if not attrs_str:
             return attrs_str

@@ -1,5 +1,5 @@
 import re
-from typing import Union, List
+from typing import List
 
 from .standard_attribute import StandardAttribute
 
@@ -21,22 +21,17 @@ class RespUserAttribute(StandardAttribute):
 
     name = 'responsible_person'
 
-    def getter(self, obj):
+    def get(self):
         """Get user"""
-        user = self.safe_getter(obj)
+        user = super().get(src=self.parent, name=self.name)
         return user
 
-    def setter(self, obj, orcid: Union[str, List[str]]):
+    def set(self, orcid):
         """Add user
-
         Parameters
         ----------
-        obj: h5py.Dataset or h5py.Group
-            HDF5 object to which the attribute is set. Can be a file, group or dataset, but depends on
-            for which object the attribute is registered.
         orcid: str or List[str]
             ORCID of one or many responsible persons.
-
         Raises
         ------
         TypeError
@@ -52,6 +47,5 @@ class RespUserAttribute(StandardAttribute):
                 if is_invalid_orcid_pattern(o):
                     raise OrcidError(f'Not an ORCID ID: {o}')
         if len(orcid) == 1:
-            obj.attrs.create(self.name, orcid[0])
-        else:
-            obj.attrs.create(self.name, orcid)
+            super().set(orcid[0])
+        super().set(orcid)

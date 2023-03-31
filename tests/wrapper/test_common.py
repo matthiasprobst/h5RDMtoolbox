@@ -11,19 +11,19 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.wrapper import core, cflike
+from h5rdmtoolbox.wrapper import core, tbx
 from h5rdmtoolbox.wrapper.h5attr import WrapperAttributeManager
 
 
 class TestCommon(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.wrapper_classes = (core.File, cflike.File)
-        self.wrapper_group_classes = (core.Group, cflike.Group)
+        self.wrapper_classes = (core.File, tbx.File)
+        self.wrapper_group_classes = (core.Group, tbx.Group)
 
     def test_layout(self):
         for wc in self.wrapper_classes:
-            with wc(mode='w', layout='File_core') as h5touch:
+            with wc(mode='w', layout='TbxLayout') as h5touch:
                 self.assertIsInstance(h5touch.layout, H5Layout)
             list_of_registered_layouts = H5Layout.get_registered()
             for lay in list_of_registered_layouts:
@@ -74,7 +74,7 @@ class TestCommon(unittest.TestCase):
                     return self.read_img()
                 raise StopIteration
 
-        h5tbx.use('default')
+        h5tbx.use(None)
 
         imgreader = ImgReader('testdir')
         with h5tbx.File() as h5:
@@ -95,7 +95,7 @@ class TestCommon(unittest.TestCase):
             self.assertEqual(ds.chunks, (1, 20, 10))
 
         imgreader._index = 0
-        h5tbx.use('cflike')
+        h5tbx.use('tbx')
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0,
                                               units='', long_name='test')
@@ -199,7 +199,7 @@ class TestCommon(unittest.TestCase):
             h5.attrs['mandatory_attribute'] = 1
 
         for wc, gc in zip(self.wrapper_classes, self.wrapper_group_classes):
-            with wc() as h5:
+            with wc(layout='TbxLayout') as h5:
                 n_issuess = h5.check()
                 self.assertIsInstance(n_issuess, int)
                 self.assertTrue(n_issuess > 0)
