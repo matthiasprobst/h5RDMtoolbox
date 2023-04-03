@@ -6,9 +6,19 @@ import pathlib
 import xarray as xr
 from typing import List
 
+from .conventions.standard_name import StandardNameTable
 from .utils import generate_temporary_directory
-from .wrapper.core import File as CoreFile
-from .wrapper.tbx import File as TbxFile
+from .wrapper.core import File
+
+__this_dir__ = pathlib.Path(__file__).parent
+
+
+def get_standard_name_table() -> StandardNameTable:
+    """Return an example standard name table"""
+    if False:
+        url = 'https://raw.githubusercontent.com/matthiasprobst/h5RDMtoolbox/main/h5rdmtoolbox/data/Test-v1.yml'
+        return StandardNameTable.from_web(url)
+    return StandardNameTable.from_yaml(__this_dir__ / 'data/Test-v1.yml')
 
 
 def get_xr_dataset(name):
@@ -178,7 +188,7 @@ class Database:
             os.makedirs(folders[ifolder], exist_ok=True)
 
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
-            with TbxFile(filename, 'w') as h5:
+            with File(filename, 'w') as h5:
                 h5.attrs['operator'] = operators[np.random.randint(4)]
                 if fid % 2:
                     __ftype__ = db_file_type[0]
@@ -231,7 +241,7 @@ import numpy as np
 np.random.seed(100)
 
 
-class FlowDataset(CoreFile):
+class FlowDataset(File):
     """FlowDataset tutorial data interface class"""
 
     def __init__(self, x=11, y=11, z=None, u=None, v=None, w=None):

@@ -1,6 +1,8 @@
+import warnings
+
 import h5py
 from abc import ABC
-from typing import Union, Callable, Iterable
+from typing import Union, Callable, Iterable, Any, Dict
 
 from ._logger import logger
 # dictionary that holds all registered standard attributes:
@@ -54,6 +56,11 @@ class StandardAttribute(ABC):
     def __init__(self, parent=None):
         self.parent = parent
 
+    @staticmethod
+    def validate(name, value, obj=None):
+        """validate the value of the attribute"""
+        return True
+
     def set(self, value, target=None, name=None):
         """Set std_attr to HDF5 object. Superclass method is used to avoid
         infinite recursion.
@@ -95,42 +102,49 @@ class StandardAttribute(ABC):
             return name
         return self.__class__.__name__
 
-    # def setter(self, obj: Union[h5py.Dataset, h5py.Group], value: Any):
-    #     """Set std_attr to HDF5 object
-    #
-    #     Parameters
-    #     ----------
-    #     obj: h5py.AttributeManager
-    #         HDF5 AttributeManager object to which the std_attr is set
-    #     value: Any
-    #         Value of the std_attr
-    #     """
-    #     obj.attrs.create(self.get_name(), value)
-
-    # def getter(self, obj: Union[h5py.Dataset, h5py.Group]):
-    #     """Get std_attr from HDF5 object
-    #
-    #     Parameters
-    #     ----------
-    #     obj: h5py.AttributeManager
-    #         HDF5 AttributeManager object from which the std_attr is retrieved
-    #
-    #     Returns
-    #     -------
-    #     Any
-    #         Value of the std_attr
-    #     """
-    #     return self.safe_getter(obj)
-
     @classmethod
-    def register(cls, target_cls: Union[Callable, Iterable[Callable]], name: str = None, overwrite: bool = False):
+    def register(cls,
+                 convention_name: str,
+                 target_cls: Union[Callable, Iterable[Callable]],
+                 add_to_method: bool = True,
+                 optional: bool = False,
+                 method_default_value: Any = None,
+                 position: Dict = {'index': -1},
+                 name: str = None, overwrite: bool = False):
         """Register the standard std_attr to a HDF5 class (File, Group, Dataset)"""
         if name is None:
             if hasattr(cls, 'name'):
                 name = cls.name
             else:
                 name = cls.__name__
-        register(cls, target_cls, name, overwrite)
+        register(convention_name, cls, target_cls, name, overwrite)
+        if add_to_method:
+            from ..wrapper.core import Dataset, Group, File
+            import forge
+
+            convention_cache = cache.cache[convention_name]
+
+            if Dataset in target_cls.__mro__:
+                # if target_cls is a subclass of Dataset then standard argument
+                # may be required during create_dataset:
+                if name not in convention_cache.methods['create_dataset']:
+                    Group.create_dataset = forge.insert(forge.arg(f'{name}', default=method_default_value),
+                                                        **position)(Group.create_dataset)
+                    convention_cache.methods['create_dataset'][name] = {'cls': cls, 'optional': optional}
+            elif File in target_cls.__mro__:
+                if name not in convention_cache.methods['init_file']:
+                    File.__init__ = forge.insert(forge.arg(f'{name}', default=method_default_value),
+                                                     **position)(File.__init__)
+                    convention_cache.methods['init_file'][name] = {'cls': cls, 'optional': optional}
+            elif Group in target_cls.__mro__:
+                if name not in convention_cache.methods['init_group']:
+                    Group.create_group = forge.insert(forge.arg(f'{name}', default=method_default_value),
+                                                      **position)(Group.create_dataset)
+                    convention_cache.methods['create_group'][name] = {'cls': cls, 'optional': optional}
+
+
+        # if target_methods is not None:
+        #     register_method(name, target_methods, overwrite)
 
 
 def _parse_name(name: str, attribute: Callable) -> str:
@@ -146,7 +160,20 @@ def _parse_name(name: str, attribute: Callable) -> str:
     return name
 
 
-def register(attr_cls,
+def register_method(name,
+                    target_meth: Union[Callable, Iterable[Callable]],
+                    overwrite=False) -> None:
+    import forge
+    """Register the standard attribute for a class method"""
+    if not isinstance(target_meth, Iterable):
+        target_meth = [target_meth]
+    for meth in target_meth:
+        meth = forge.insert(forge.arg(f'{name}', default=None), index=6)(meth)
+        convention_cache.methods[meth] = name
+
+
+def register(convention_name:str,
+             attr_cls,
              target_cls: Union[Callable, Iterable[Callable]],
              name=None,
              overwrite=False) -> None:
@@ -154,9 +181,9 @@ def register(attr_cls,
 
     Parameters
     ----------
-    std_attr: StandardAttribute
+    attr_cls: StandardAttribute
         User-defined std_attr. Must be a subclass of `StandardAttribute`
-    cls: Union[Callable, Iterable[Callable]]
+    target_cls: Union[Callable, Iterable[Callable]]
         HDF5 object or Iterable of HDF5 objects to attach standard std_attr to. Valid objects
         are `h5py.Dataset`, `h5py.Group` and `h5py.File`
     name: str, default=None
@@ -173,9 +200,9 @@ def register(attr_cls,
     --------
     >>> class MyAttr(StandardAttribute):
     ...     name = 'my_attr'
-    ...     def getter(self, obj):
+    ...     def get(self):
     ...         # add 1 to the value
-    ...         return self.value(obj) + 1
+    ...         return super().get() + 1
     >>> # register my std_attr to a Group:
     >>> register_standard_attribute(MyAttr(), cls=Group)
     """
@@ -195,13 +222,16 @@ def register(attr_cls,
         target_cls = [target_cls]
 
     def _register(_cls):
-        if _cls not in cache.REGISTERED_PROPERTIES:
-            cache.REGISTERED_PROPERTIES[_cls] = {}
+        convention_cache = cache.cache[convention_name]
+        if _cls not in convention_cache.properties:
+            convention_cache.properties[_cls] = {}
 
-        if name in cache.REGISTERED_PROPERTIES[_cls] and not overwrite:
-            raise AttributeError(
-                f'Cannot register property {name} to {_cls} because it has already a property with this name.')
-        cache.REGISTERED_PROPERTIES[_cls][name] = attr_cls
+        if name in convention_cache.properties[_cls] and not overwrite:
+            warnings.warn(f'Cannot register property {name} to {_cls} because it has already a property with this name.',
+                          UserWarning)
+            # raise AttributeError(
+            #     f'Cannot register property {name} to {_cls} because it has already a property with this name.')
+        convention_cache.properties[_cls][name] = attr_cls
         logger.debug(f'Register special hdf std_attr {name} to {_cls}')
 
     for c in target_cls:

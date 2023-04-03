@@ -27,8 +27,8 @@ from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr
-from .. import cache
 from .. import config
+from .. import conventions
 from .. import utils
 from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
@@ -41,15 +41,12 @@ MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compress
                                       'dtype', 'maxshape')
 
 
-def _pop_standard_attributes(obj, kwargs) -> Tuple[Dict, Dict]:
+def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
     """Pop all standard attributes from kwargs and return them in a dict."""
-    # pop all key value pairs from kwargs that are in cache.REGISTERED_PROPERTIES
     std_attrs = {}
-    _this_cls = type(obj)
-    if _this_cls in cache.REGISTERED_PROPERTIES:
-        for k in cache.REGISTERED_PROPERTIES[_this_cls].keys():
-            if k in kwargs:
-                std_attrs[k] = kwargs.pop(k)
+    for k in cache_entry.keys():
+        if k in kwargs:
+            std_attrs[k] = kwargs.pop(k)
     return kwargs, std_attrs
 
 
@@ -76,6 +73,39 @@ def lower(string: str) -> Lower:
     return Lower(string)
 
 
+# def decorator_factory(argument):
+#     def decorator(function):
+#         def wrapper(*args, **kwargs):
+#             funny_stuff()
+#             something_with_argument(argument)
+#             result = function(*args, **kwargs)
+#             more_funny_stuff()
+#             return result
+#         return wrapper
+#     return decorator
+
+def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict]:
+    """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
+    if attrs is None:
+        attrs = {}
+    # go through list of registered standard attributes, and check whether they are in kwargs:
+    kwargs, skwargs = _pop_standard_attributes(kwargs, cache_entry=conventions.current_convention._methods[meth_name])
+
+    for skey in skwargs:
+        if skey in attrs:
+            raise ValueError(f'You passed the standard attribute "{skey}" as a standard argument and it is '
+                             f'also in the "attrs" argument. This is not allowed!')
+    # run through skwargs. if key is required but not available this should raise an error!
+    for k, v in conventions.current_convention._methods[meth_name].items():
+        if not v['optional']:
+            if k not in skwargs or skwargs[k] is None:
+                raise ValueError(f'The standard attribute "{k}" is required but not provided.')
+    if attrs is None:
+        attrs = {}
+    attrs.update(skwargs)
+    return attrs, kwargs
+
+
 class Group(h5py.Group):
     """Inherited Group of the package h5py
     """
@@ -83,8 +113,8 @@ class Group(h5py.Group):
     hdfrepr = H5Repr()
 
     def __delattr__(self, item):
-        if self.__class__ in cache.REGISTERED_PROPERTIES:
-            if item in cache.REGISTERED_PROPERTIES[self.__class__]:
+        if self.__class__ in conventions.current_convention._properties:
+            if item in conventions.current_convention._properties[self.__class__]:
                 del self.attrs[item]
                 return
         super().__delattr__(item)
@@ -242,9 +272,9 @@ class Group(h5py.Group):
         return ret
 
     def __getattr__(self, item):
-        if self.__class__ in cache.REGISTERED_PROPERTIES:
-            if item in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][item](self).get()
+        if self.__class__ in conventions.current_convention._properties:
+            if item in conventions.current_convention._properties[self.__class__]:
+                return conventions.current_convention._properties[self.__class__][item](self).get()
 
         try:
             return super().__getattribute__(item)
@@ -273,9 +303,9 @@ class Group(h5py.Group):
             raise AttributeError(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in cache.REGISTERED_PROPERTIES:
-            if key in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][key](self).set(value)
+        if self.__class__ in conventions.current_convention._properties:
+            if key in conventions.current_convention._properties[self.__class__]:
+                return conventions.current_convention._properties[self.__class__][key](self).set(value)
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
@@ -333,7 +363,7 @@ class Group(h5py.Group):
         track_order : bool or None
             Track creation order under this group. Default is None.
         """
-        kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
+        attrs, kwargs = process_attributes('create_dataset', attrs, kwargs)
         if name in self:
             if isinstance(self[name], h5py.Group):
                 if overwrite is True:
@@ -401,10 +431,11 @@ class Group(h5py.Group):
                        data=None,
                        overwrite=None,
                        chunks=True,
-                       attrs=None,
-                       attach_scales=None,
                        make_scale=False,
-                       **kwargs):
+                       attach_scales=None,
+                       attrs=None,
+                       **kwargs  # standard attributes and other keyword arguments
+                       ):
         """
         Creating a dataset. Allows attaching/making scale, overwriting and setting attributes simultaneously.
 
@@ -428,9 +459,8 @@ class Group(h5py.Group):
             ... overwrite is False: dataset creation has no effect. Existing dataset is returned.
         chunks : bool or according to h5py.File.create_dataset documentation
             Needs to be True if later resizing is planned
-        attrs : dict, optional
-            Allows to set attributes directly after dataset creation. Default is
-            None, which is an empty dict
+        make_scale: bool, default=False
+            Makes this dataset scale. The parameter attach_scale must be uses, thus be None.
         attach_scales : tuple, optional
             Tuple defining the datasets to attach scales to. Content of tuples are
             internal hdf paths. If an axis should not be attached to any axis leave it
@@ -440,29 +470,36 @@ class Group(h5py.Group):
             Also note, that if data is a xr.DataArray and attach_scales is not None,
             coordinates of xr.DataArray are ignored and only attach_scales is
             considered.
-        make_scale: bool, default=False
-            Makes this dataset scale. The parameter attach_scale must be uses, thus be None.
-        **kwargs
-            see documentation of h5py.File.create_dataset
+        attrs : dict, optional
+            Allows to set attributes directly after dataset creation. Default is
+            None, which is an empty dict
+        **kwargs : dict, optional
+            Dictionary of standard arguments and other keyword arguments that are passed
+            to the parent function.
+            For **kwargs, see h5py.File.create_dataset.
+
+            Standard arguments are defined by a convention and hence expected keywords
+            depend on the registered standard attributes.
+            For the current convention, the arguments are:
+                * None given
 
         Returns
         -------
         ds : h5py.Dataset
             created dataset
         """
+        attrs, kwargs = process_attributes('create_dataset', attrs, kwargs)
         if isinstance(data, str):
             return self.create_string_dataset(name=name,
                                               data=data,
                                               overwrite=overwrite,
-                                              attrs=attrs, **kwargs)
+                                              attrs=attrs,
+                                              **kwargs)
 
-        kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
+        # kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
 
-        if attrs is None:
-            attrs = {}
-        else:
-            if isinstance(data, xr.DataArray):
-                data.attrs.update(attrs)
+        if isinstance(data, xr.DataArray):
+            data.attrs.update(attrs)
 
         if name:
             if name in self:
@@ -481,16 +518,19 @@ class Group(h5py.Group):
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
 
-        if attrs is None:
-            attrs = {}
+        if name:
+            if _is_not_valid_natural_name(self, name, config.natural_naming):
+                raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
+                                 f'attribute of the class and cannot be used '
+                                 f'while natural naming is enabled')
 
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
-
-            dset = data.hdf.to_group(Group(self), name=name, overwrite=overwrite,
+            return data.hdf.to_group(self._h5grp(self), name=name,
+                                     overwrite=overwrite,
                                      compression=compression,
-                                     compression_opts=compression_opts, attrs=attrs)
-            return dset
+                                     compression_opts=compression_opts,
+                                     attrs=attrs)
 
         if not isinstance(make_scale, (bool, str)):
             raise TypeError(f'Make scale must be a boolean or a string not {type(make_scale)}')
@@ -498,12 +538,6 @@ class Group(h5py.Group):
         if attach_scales is None:
             # maybe there's a typo:
             attach_scales = kwargs.pop('attach_scale', None)
-
-        if name:
-            if _is_not_valid_natural_name(self, name, config.natural_naming):
-                raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
-                                 f'attribute of the class and cannot be used '
-                                 f'while natural naming is enabled')
 
         if isinstance(shape, np.ndarray):  # need if no keyword is used
             data = shape
@@ -524,17 +558,20 @@ class Group(h5py.Group):
                     'Cannot make scale and attach scale at the same time!')
 
         logger.debug(
-            f'Creating DatasetModel "{name}" in "{self.name}" with maxshape {_maxshape} " '
+            f'Creating dataset "{name}" in "{self.name}" with maxshape {_maxshape} " '
             f'and using compression "{compression}" with opt "{compression_opts}"')
 
+        # if possible, create dataset with shape first:
         if _data is not None:
             if _data.ndim == 0:
+                # create 0D dataset
                 _ds = super().create_dataset(name,
                                              shape=shape,
                                              dtype=dtype,
                                              data=_data,
                                              **kwargs)
             else:
+                # create ND dataset with shape, data is assigned later
                 _ds = super().create_dataset(name,
                                              shape=shape,
                                              dtype=dtype,
@@ -544,6 +581,7 @@ class Group(h5py.Group):
                                              compression_opts=compression_opts,
                                              **kwargs)
         else:
+            # no data given, initialize with shape only
             _ds = super().create_dataset(name, shape=shape, dtype=dtype, data=_data,
                                          compression=compression,
                                          compression_opts=compression_opts,
@@ -552,9 +590,18 @@ class Group(h5py.Group):
 
         ds = self._h5ds(_ds.id)
 
+        # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
-            for k, v in attrs.items():
-                ds.attrs[k] = v
+            try:
+                for k, v in attrs.items():
+                    ds.attrs[k] = v
+            except Exception as e:
+                logger.error(f'Could not set attributes {attrs} for dataset {name}')
+                del self[name]
+                raise e
+        if isinstance(data, np.ndarray):
+            if data is not None and data.ndim > 0:
+                ds[()] = data
 
         # make scale
         if make_scale:
@@ -583,8 +630,8 @@ class Group(h5py.Group):
                                 raise ValueError(f'Cannot assign {ss} to {ds.name} because it seems not '
                                                  f'to exist!')
 
-        _write_standard_attributes(ds, std_attrs)
-        return self._h5ds(ds.id)
+        # _write_standard_attributes(ds, std_attrs)
+        return ds
 
     def find_one(self, flt: Union[Dict, str],
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
@@ -862,6 +909,32 @@ class Group(h5py.Group):
         else:
             ds[:] = np.stack(imgdata, axis=axis)
         return ds
+
+    def create_dataset_from_xarray_dataarray(self, dataarr: xr.DataArray, name: str = None,
+                                             overwrite: bool = False) -> None:
+        """create hdf dataset from xarray DataArray. All attributes are written to the
+        hdf dataset. If coordinates are present, they are written as dimension scales.
+        If only dimensions are present, the dim names are written as attributes using
+        `DIMS` as key."""
+        ds_coords = {}
+        for coord in dataarr.coords.keys():
+            ds = self.create_dataset(coord,
+                                     data=dataarr.coords[coord].values,
+                                     attrs=dataarr.coords[coord].attrs,
+                                     overwrite=overwrite)
+            ds.make_scale()
+            ds_coords[coord] = ds
+        if name is None:
+            name = dataarr.name
+        if len(ds_coords) == 0:
+            dim_attr = {'DIMS': dataarr.dims}
+        else:
+            dim_attr = {}
+        ds = self.create_dataset(name,
+                                 shape=dataarr.shape,
+                                 attrs=dataarr.attrs.update(dim_attr),
+                                 overwrite=overwrite)
+        ds[()] = dataarr.values
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
@@ -1147,8 +1220,8 @@ class Dataset(h5py.Dataset):
     convention = None
 
     def __delattr__(self, item):
-        if self.__class__ in cache.REGISTERED_PROPERTIES:
-            if item in cache.REGISTERED_PROPERTIES[self.__class__]:
+        if self.__class__ in conventions.current_convention._properties:
+            if item in conventions.current_convention._properties[self.__class__]:
                 del self.attrs[item]
                 return
         super().__delattr__(item)
@@ -1284,9 +1357,9 @@ class Dataset(h5py.Dataset):
         return self.parent.modify_dataset_properties(self, name=new_name)
 
     def __getattr__(self, item):
-        if self.__class__ in cache.REGISTERED_PROPERTIES:
-            if item in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][item](self).get()
+        if self.__class__ in conventions.current_convention._properties:
+            if item in conventions.current_convention._properties[self.__class__]:
+                return conventions.current_convention._properties[self.__class__][item](self).get()
         if item not in self.__dict__:
             for d in self.dims:
                 if len(d) > 0:
@@ -1296,9 +1369,9 @@ class Dataset(h5py.Dataset):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in cache.REGISTERED_PROPERTIES:
-            if key in cache.REGISTERED_PROPERTIES[self.__class__]:
-                return cache.REGISTERED_PROPERTIES[self.__class__][key](self).set(value)
+        if self.__class__ in conventions.current_convention._properties:
+            if key in conventions.current_convention._properties[self.__class__]:
+                return conventions.current_convention._properties[self.__class__][key](self).set(value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -1502,6 +1575,10 @@ class File(h5py.File, Group):
 
     Adds additional features and methods to h5py.File in order to streamline the work with
     HDF5 files and to incorporate usage of metadata (attribute naming) conventions and layouts.
+    An additional argument is added to the h5py.File with "layout" to specify the layout of the file.
+    The layout specifies the structure of the file and the expected content of each group and dataset.
+    A check can be performed to verify that the file is in accordance with the layout.
+    .. seealso:: :meth:`check`
 
 
     .. note:: All features from h5py packages are preserved.
@@ -1602,15 +1679,14 @@ class File(h5py.File, Group):
                  mode='r',
                  *,
                  layout: Union[Path, str, H5Layout, None] = None,
+                 attrs: Dict = None,
                  **kwargs):
-        _tmp_init = False
-        kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
-        if mode == 'r' and len(std_attrs) > 0:
-            raise ValueError(f'Cannot set standard attributes {list(std_attrs.keys())} in read mode')
+
         if name is None:
             _tmp_init = True
             logger.debug("An empty File class is initialized")
             name = utils.touch_tmp_hdf5_file()
+            mode = 'r+'
         elif isinstance(name, ObjectID):
             pass
         elif not isinstance(name, (str, Path)):
@@ -1623,28 +1699,38 @@ class File(h5py.File, Group):
                     # "touch" the file, so it exists
                     with h5py.File(name, mode='w', **kwargs) as _h5:
                         pass  # just touching the file
+                    logger.debug(f"An empty File class is initialized for {name}")
+        attrs, kwargs = process_attributes('init_file', attrs, kwargs)
+        _tmp_init = False
 
         if _tmp_init:
             mode = 'r+'
+            warnings.warn('Switched to mode "r+"')
+
+        if mode == 'r' and len(attrs) > 0:
+            if len(attrs) > 1:
+                raise ValueError(f'Cannot set attribute {list(attrs.keys())[0]} in read mode')
+            raise ValueError(f'Cannot set attributes {list(attrs.keys())} in read mode')
+
         if not isinstance(name, ObjectID):
             self.hdf_filename = Path(name)
         super().__init__(name=name,
                          mode=mode,
                          **kwargs)
 
-        _write_standard_attributes(self, std_attrs)
-
         if self.mode != 'r':
             # update file toolbox version, wrapper version
             self.attrs['__h5rdmtoolbox_version__'] = __version__
+            for k, v in attrs.items():
+                self.attrs[k] = v
 
         self.layout = layout
 
     def __setattr__(self, key, value):
-        if self.__class__ in cache.REGISTERED_PROPERTIES:
-            if key in cache.REGISTERED_PROPERTIES[self.__class__]:
+        if self.__class__ in conventions.current_convention._properties:
+            if key in conventions.current_convention._properties[self.__class__]:
                 # assign the current object to the requested standard attribute
-                return cache.REGISTERED_PROPERTIES[self.__class__][key](self).set(value)
+                return conventions.current_convention._properties[self.__class__][key](self).set(value)
         return super().__setattr__(key, value)
 
     def __repr__(self) -> str:

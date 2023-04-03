@@ -8,9 +8,9 @@ from typing import Dict
 
 from .h5utils import get_rootparent
 from .. import config
+from .. import conventions
 from .. import utils
 from .._config import ureg
-from .. import cache
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
@@ -58,9 +58,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
 
-        if config.expose_user_prop_to_attrs and parent.__class__ in cache.REGISTERED_PROPERTIES:
-            if name in cache.REGISTERED_PROPERTIES[parent.__class__]:
-                return cache.REGISTERED_PROPERTIES[parent.__class__][name](self._parent).get()
+        if config.expose_user_prop_to_attrs and parent.__class__ in conventions.current_convention._properties:
+            if name in conventions.current_convention._properties[parent.__class__]:
+                return conventions.current_convention._properties[parent.__class__][name](self._parent).get()
 
         if isinstance(ret, str):
             if ret == '':
@@ -123,11 +123,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
         parent = self._parent
         # obj_type = parent.__class__
-        if parent.__class__ in cache.REGISTERED_PROPERTIES:
-            if parent.__class__ in cache.REGISTERED_PROPERTIES:
-                if name in cache.REGISTERED_PROPERTIES[parent.__class__]:
+        if parent.__class__ in conventions.current_convention._properties:
+            if parent.__class__ in conventions.current_convention._properties:
+                if name in conventions.current_convention._properties[parent.__class__]:
                     try:
-                        return cache.REGISTERED_PROPERTIES[parent.__class__][name](parent).set(value)
+                        return conventions.current_convention._properties[parent.__class__][name](parent).set(value)
                     except TypeError:
                         raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}"')
         utils.create_special_attribute(self, name, value)

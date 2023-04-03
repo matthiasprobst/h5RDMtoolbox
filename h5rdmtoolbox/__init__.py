@@ -16,6 +16,7 @@ from ._user import UserDir
 from ._version import __version__
 from .database import filequery
 from .utils import generate_temporary_filename, generate_temporary_directory
+from . import cache
 from .wrapper import core
 from .wrapper.core import lower
 
@@ -44,75 +45,94 @@ h5tbxParams = {'convention': config['default_convention'],
                'Dataset': core.Dataset,
                'Group': core.Group}
 
+from . import conventions
 
-def get_current_convention_name():
-    """Get the name of the currently selected convention"""
-    return h5tbxParams['convention']
+cv_h5py = conventions.Convention('h5py')
+cv_h5py.register()
+
+cv = conventions.Convention('tbx')
+cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
+       target_cls=core.File,
+       add_to_method=True,
+       position={'before': 'layout'},
+       optional=True)
+cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
+       target_cls=core.Dataset,
+       add_to_method=False)
+cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
+       target_cls=core.Group,
+       add_to_method=False)
+cv.add(attr_cls=conventions.standard_name.StandardNameAttribute,
+       target_cls=core.Dataset,
+       position={'after': 'data'},
+       add_to_method=True)
+cv.add(attr_cls=conventions.units.UnitsAttribute,
+       target_cls=core.Dataset,
+       add_to_method=True,
+       position={'after': 'data'},
+       optional=False)
+cv.register()
+
+use = conventions.use
+# def use(convention_name: str) -> None:
+#     """Select the convention for the HDF5 wrapper class(es)
+#
+#     Parameters
+#     ----------
+#     convention_name: str
+#         Name of the convention
+#     """
+#     cv.use(convention_name)
+# current = cache.ConventionCache.get_current()
+# if convention_name is None:
+#     convention_name = 'h5py'
+#
+# if current.name == 'h5py':
+#     cache.current_convention = 'h5py'
+#     cache.loaded_conventions.add('h5py')
+#     return
+#
+# if convention_name == 'tbx':
+#     cache.current_convention = 'tbx'
+#     if cache.current_convention not in cache.loaded_conventions:
+#         from . import conventions
+#         cache.loaded_conventions.add('tbx')
+#     return
+#
+# raise ValueError(f'Unknown convention name: "{convention_name}"')
 
 
-def use(convention_name: str) -> None:
-    """Select the convention for the HDF5 wrapper class(es)
-
-    Parameters
-    ----------
-    convention_name: str
-        Name of the convention
-    """
-    if convention_name == 'h5py' or convention_name is None:
-        if h5tbxParams['convention'] != convention_name:
-            core_logger.info('Switched to convention "h5py"')
-        h5tbxParams['convention'] = convention_name
-        h5tbxParams['File'] = core.File
-        h5tbxParams['Dataset'] = core.Dataset
-        h5tbxParams['Group'] = core.Group
-        return
-
-    if convention_name == 'tbx':
-        # only now import the tbx convention sub-package if its dependencies are installed
-        try:
-            from .wrapper import tbx
-        except ImportError:
-            raise ImportError('It seems like the dependencies for the tbx package are missing. Consider '
-                              'installing them. Get all dependencies by calling "pip install h5rdmtoolbox[tbx]"')
-        if h5tbxParams['convention'] != convention_name:
-            core_logger.info(f'Switched to convention "{convention_name}"')
-        h5tbxParams['convention'] = convention_name
-        h5tbxParams['File'] = tbx.File
-        h5tbxParams['Dataset'] = tbx.Dataset
-        h5tbxParams['Group'] = tbx.Group
-        return
-
-    raise ValueError(f'Unknown convention name: "{convention_name}"')
+File = core.File
 
 
-class File:
-    """Interface class to wrapper class around HDF5/h5py.File"""
-
-    @staticmethod
-    def __get_cls__(cls_name: str):
-        """Return hdf class of set convention wrapper"""
-        if not cls_name ('File', 'Dataset', 'Group'):
-            raise ValueError(f'Unknown class name: "{cls_name}"')
-        return h5tbxParams[cls_name]
-
-    def __new__(cls, *args, **kwargs):
-        return h5tbxParams['File'](*args, **kwargs)
-
-    def __str__(self) -> str:
-        return h5tbxParams['File'].__str__(self)
-
-    def __repr__(self) -> str:
-        return h5tbxParams['File'].__repr__(self)
-
-    @staticmethod
-    def Dataset():
-        """Return hdf dataset class  of set convention wrapper"""
-        return h5tbxParams['Dataset']
-
-    @staticmethod
-    def Group():
-        """Return hdf group class  of set convention wrapper"""
-        return h5tbxParams['Group']
+# class File:
+#     """Interface class to wrapper class around HDF5/h5py.File"""
+#
+#     @staticmethod
+#     def __get_cls__(cls_name: str):
+#         """Return hdf class of set convention wrapper"""
+#         if not cls_name ('File', 'Dataset', 'Group'):
+#             raise ValueError(f'Unknown class name: "{cls_name}"')
+#         return h5tbxParams[cls_name]
+#
+#     def __new__(cls, *args, **kwargs):
+#         return h5tbxParams['File'](*args, **kwargs)
+#
+#     def __str__(self) -> str:
+#         return h5tbxParams['File'].__str__(self)
+#
+#     def __repr__(self) -> str:
+#         return h5tbxParams['File'].__repr__(self)
+#
+#     @staticmethod
+#     def Dataset():
+#         """Return hdf dataset class  of set convention wrapper"""
+#         return h5tbxParams['Dataset']
+#
+#     @staticmethod
+#     def Group():
+#         """Return hdf group class  of set convention wrapper"""
+#         return h5tbxParams['Group']
 
 
 class Files:

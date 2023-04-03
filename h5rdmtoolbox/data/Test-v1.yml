@@ -9,6 +9,15 @@ table:
   time:
     canonical_units: s
     description: physical time
+  x_coordinate:
+    canonical_units: m
+    description: x indicates the component in x-axis direction
+  y_coordinate:
+    canonical_units: m
+    description: y indicates the component in y-axis direction
+  z_coordinate:
+    canonical_units: m
+    description: z indicates the component in z-axis direction
   x_velocity:
     canonical_units: m/s
     description: velocity is a vector quantity. x indicates the component in y-axis

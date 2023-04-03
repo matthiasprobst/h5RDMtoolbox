@@ -21,7 +21,7 @@ class HDFArrayAccessor:
         overwrite: bool, optional=False
             Whether to overwrite an existing dataset with that name
         """
-        h5group = h5py.Group(h5group.id)
+        # h5group = h5py.Group(h5group.id)
         if not self._obj.name and name is None:
             raise AttributeError('Data Array has no name and no name is passed as function parameter.')
         if self._obj.name and name is None:
@@ -56,14 +56,15 @@ class HDFArrayAccessor:
         for coord in self._obj.coords:
             if coord not in h5group:
                 _data = self._obj.coords[coord].values
+                coord_attrs = self._obj.coords[coord].attrs
                 if _data.ndim == 0:
                     _ = kwargs.pop('compression_opts', None)
                     _ = kwargs.pop('compression', None)
                     cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
-                                                 **kwargs)
+                                                 attrs=coord_attrs, **kwargs)
                 else:
                     cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
-                                                 **kwargs)
+                                                 attrs=coord_attrs, **kwargs)
                 for k, v in self._obj.coords[coord].attrs.items():
                     cds.attrs[k] = v
                 cds.make_scale()
@@ -76,17 +77,17 @@ class HDFArrayAccessor:
             else:
                 attach_scales.append(coord)
 
-        dset = h5group.create_dataset(name, data=self._obj.data)
-        for k, v in ds_attrs.items():
-            try:
-                if isinstance(v, str):
-                    dset.attrs[k] = str(v)
-                else:
-                    dset.attrs[k] = v
-            except Exception as e:
-                raise Exception(f'Error setting attribute to HDF dataset {dset}:'
-                                f'\n  name: {k}\n  value: {v} \n  type: {type(v)}\n'
-                                f'Original error: {e}')
+        dset = h5group.create_dataset(name, data=self._obj.data, attrs=ds_attrs, **kwargs)
+        # for k, v in ds_attrs.items():
+        #     try:
+        #         if isinstance(v, str):
+        #             dset.attrs[k] = str(v)
+        #         else:
+        #             dset.attrs[k] = v
+        #     except Exception as e:
+        #         raise Exception(f'Error setting attribute to HDF dataset {dset}:'
+        #                         f'\n  name: {k}\n  value: {v} \n  type: {type(v)}\n'
+        #                         f'Original error: {e}')
 
         # TODO check that there are "intermediate" coords like ix(x), iy(y)
         for i, s in enumerate(self._obj.dims):

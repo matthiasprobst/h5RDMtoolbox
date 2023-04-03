@@ -34,6 +34,7 @@ from .utils import equal_base_units, is_valid_email_address, dict2xml, get_simil
 from .._config import ureg
 from .._user import UserDir
 from ..utils import generate_temporary_filename
+from .. import cache
 
 try:
     from tabulate import tabulate
@@ -45,7 +46,6 @@ except ImportError:
 STRICT = True
 
 CF_DATETIME_STR = '%Y-%m-%dT%H:%M:%SZ%z'
-_SNT_CACHE = {}
 
 
 class StandardNameError(Exception):
@@ -707,7 +707,13 @@ class StandardNameTable(MinimalStandardNameTable):
         Parameters
         ----------
         url : str
-            URL of the file to download
+            URL of the file to download.
+
+            .. info::
+
+                You may read a table stored as a yaml file from a github repository by using the following url:
+                https://raw.githubusercontent.com/<username>/<repository>/<branch>/<filepath>
+
         known_hash : str, optional
             Hash of the file, by default None
         name : str, optional
@@ -1147,15 +1153,20 @@ class StandardNameAttribute(StandardAttribute):
         The rules for the standard_name is checked before writing to file."""
         if new_standard_name:
             snt = self.parent.standard_name_table
-            if snt:
+            if isinstance(snt, StandardNameTable):
                 if snt.check_name(new_standard_name):
                     if STRICT:
                         if 'units' in self.parent.attrs:
-                            if not snt.check_units(new_standard_name, self.parent.attrs['units']):
+                            if not snt.check_units(new_standard_name, self.parent.units):
                                 raise ValueError(f'Units {self.parent.units} failed he unit check of standard name '
                                                  f'table {snt.versionname} for standard name {new_standard_name}')
                     return self.parent.attrs.create(self.name, str(new_standard_name))
             raise ValueError(f'No standard name table found for {self.parent.name}')
+
+    @staticmethod
+    def validate(name, value, obj=None):
+        snt = obj.snt
+        return snt.check_name(value)
 
     def get(self):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.
@@ -1174,6 +1185,12 @@ class StandardNameTableAttribute(StandardAttribute):
 
     name = 'standard_name_table'
 
+    @staticmethod
+    def _store_in_cache(root, snt: Dict):
+        """Store standard name table in cache"""
+        assert isinstance(snt, StandardNameTable)
+        cache.STANDARD_NAME_TABLES[root.file.id.id] = snt
+
     def set(self, snt: Union[str, StandardNameTable]):
         """Set (write to root group) Standard Name Table
 
@@ -1186,16 +1203,20 @@ class StandardNameTableAttribute(StandardAttribute):
         if isinstance(snt, str):
             StandardNameTable.print_registered()
             if snt[0] == '{':
-                json.dumps(snt)
-                snt = StandardNameTable.from_dict(json.loads(snt))
+                sntdict = json.loads(snt)
+                snt = StandardNameTable.from_dict(sntdict)
             else:
                 snt = StandardNameTable.load_registered(snt)
+
         if self.parent.mode == 'r':
             raise StandardNameTableError('Cannot write Standard Name Table (no write intent on file)')
+
+        StandardNameTableAttribute._store_in_cache(self.parent, snt)
+
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if url_exists(snt.url):
-                    super().set(value=snt.url, target=self.parent.rootparent)
+                    return super().set(value=snt.url, target=self.parent.rootparent)
                 else:
                     warnings.warn(f'URL {snt.url} does not exist. Cannot set standard name table.')
             else:
@@ -1208,21 +1229,23 @@ class StandardNameTableAttribute(StandardAttribute):
         raise ValueError(f'Unknown store option {snt.STORE_AS}')
 
     def get(self) -> StandardNameTable:
-        """Get (if exists) Standard Name Table from file
+        """Get (if exists) Standard Name Table from file.
 
         Raises
         ------
         KeyError
             If cannot load SNT from registration.
         """
-        snt = super().get(src=self.parent.rootparent)
-        if snt is not None:
-            snt = json.loads(snt)
-
         try:
-            return _SNT_CACHE[self.parent.file.id.id]
+            return cache.STANDARD_NAME_TABLES[self.parent.file.id.id]
         except KeyError:
             pass  # not cached
+
+        snt = super().get(src=self.parent.rootparent)
+        if snt is not None:
+            if snt.startswith('{'):
+                return json.loads(snt)
+            return StandardNameTable.from_web(snt)
 
         if snt is not None:
             # snt is a string
