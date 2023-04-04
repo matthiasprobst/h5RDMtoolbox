@@ -11,10 +11,11 @@ import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import conventions
 from h5rdmtoolbox import generate_temporary_filename
+from h5rdmtoolbox import tutorial
 from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions import units, title, standard_name
-
+from packaging import version
 
 class TestStandardAttributes(unittest.TestCase):
 
@@ -25,25 +26,64 @@ class TestStandardAttributes(unittest.TestCase):
 
         class shortyname(h5tbx.conventions.StandardAttribute):
             """Shorty name attribute"""
-            name = 'shortyname'
 
-            def getter(self, obj):
-                """Get the short_name and add a !"""
-                return self.value(obj) + '!'
+            def set(self, value):
+                """Only take the first 3 characters"""
+                super().set(value[0:3])
 
-        shortyname.register(h5tbx.wrapper.core.Group, overwrite=True)
+            def get(self, src=None, name=None, default=None):
+                """Get the short_name and add a '!'"""
+                return super().get() + '!'
 
+        class ShortyAttribute(h5tbx.conventions.StandardAttribute):
+            """Shorty name attribute"""
+
+            name = 'another_shorty_name'
+
+            def set(self, value):
+                """Only take the first 3 characters"""
+                super().set(value[0:4])
+
+            def get(self, src=None, name=None, default=None):
+                """Get the short_name and add a '!'"""
+                return super().get() + '!!'
+
+        cv = conventions.Convention('short_name_convention')
+        cv.add(shortyname,
+               target_cls=h5tbx.wrapper.core.Group,
+               add_to_method=True,
+               position={'after': 'name'},
+               optional=True)
+        cv.add(ShortyAttribute,
+               target_cls=h5tbx.wrapper.core.Group,
+               add_to_method=True,
+               position={'after': 'name'},
+               optional=True)
+        cv.register()
+        self.assertIn(cv.name, h5tbx.conventions.registered_conventions)
+        h5tbx.use(cv.name)
+        self.assertEqual(cv, h5tbx.conventions.current_convention)
         with h5tbx.File() as h5:
             h5.short_name = 'short'
-            h5.shortyname = 'shorty'
+            h5.shortyname = 'not_effect'
             self.assertNotIn('short_name', h5.attrs.keys())
             self.assertNotIn('shortyname', h5.attrs.keys())
-            # self.assertEqual(h5.attrs['shortyname'], 'shorty')
 
-            # register shortyname to file:
-            shortyname.register(h5tbx.File, overwrite=True)
-            h5.shortyname = 'shorty'
-            self.assertIn('shortyname', h5.attrs.keys())
+            h5['/'].short_name = 'short'
+            h5['/'].shortyname = 'shorty'
+            h5['/'].another_shorty_name = 'shorty'
+            self.assertEqual(h5.attrs['shortyname'], 'sho')
+            self.assertEqual(h5['/'].attrs['shortyname'], 'sho!')
+            self.assertEqual(h5['/'].attrs['another_shorty_name'], 'shor!!')
+
+            self.assertEqual(h5['/'].shortyname, 'sho!')
+            self.assertEqual(h5['/'].another_shorty_name, 'shor!!')
+
+            self.assertEqual(h5.shortyname, 'not_effect')
+            h5tbx.use(None)
+            with self.assertRaises(AttributeError):
+                self.assertNotEqual(h5['/'].shortyname, 'sho!')
+            self.assertEqual(h5.attrs['shortyname'], 'sho')
 
     def test_references(self):
         # bibtex dict example taken from https://bibtexparser.readthedocs.io/en/master/tutorial.html#step-2-parse-it
@@ -234,6 +274,22 @@ class TestStandardAttributes(unittest.TestCase):
     #         h5.shortyname2 = 'my short name2'
     #         self.assertNotIn('shortyname', h5.attrs.keys())
 
+    def test_comment(self):
+        h5rdmtoolbox.use('tbx')
+        with h5rdmtoolbox.File() as h5:
+            self.assertEqual(h5.comment, None)
+            with self.assertRaises(conventions.comment.CommentError):
+                h5.comment = ' This is a comment, which starts with a space.'
+            with self.assertRaises(conventions.comment.CommentError):
+                h5.comment = '9 This is a comment, which starts with a number.'
+            with self.assertRaises(conventions.comment.CommentError):
+                h5.comment = 'Too short'
+            with self.assertRaises(conventions.comment.CommentError):
+                h5.comment = 'Too long' * 100
+
+            h5.comment = 'This comment is ok.'
+            self.assertEqual(h5.comment, 'This comment is ok.')
+
     def test_units(self):
         """Test title attribute"""
         h5rdmtoolbox.use('tbx')
@@ -277,12 +333,47 @@ class TestStandardAttributes(unittest.TestCase):
             del h5.title
             self.assertEqual(h5.title, None)
 
+    def test_source(self):
+        h5tbx.use('tbx')
+        sftw = conventions.source.Software(name='h5rdmtoolbox',
+                                           version='1.0',
+                                           url='https://h5rdmtoolbox.readthedocs.io/en/latest/',
+                                           description='This is my software')
+        self.assertEqual(sftw.name, 'h5rdmtoolbox')
+        self.assertEqual(sftw.version, version.Version('1.0'))
+        self.assertEqual(sftw.url, 'https://h5rdmtoolbox.readthedocs.io/en/latest/')
+        self.assertEqual(sftw.description, 'This is my software')
+
+        sftw = conventions.source.Software.from_dict({'name': 'h5rdmtoolbox',
+                                                      'version': '1.0',
+                                                      'url': 'https://h5rdmtoolbox.readthedocs.io/en/latest/',
+                                                      'description': 'This is my software'})
+        self.assertEqual(sftw.name, 'h5rdmtoolbox')
+        self.assertEqual(sftw.version, version.Version('1.0'))
+        self.assertEqual(sftw.url, 'https://h5rdmtoolbox.readthedocs.io/en/latest/')
+        self.assertEqual(sftw.description, 'This is my software')
+
+        with h5rdmtoolbox.File() as h5:
+            ds1 = h5.create_dataset('test1', data=[1, 2, 3], units='m', long_name='test')
+            ds2 = h5.create_dataset('test2', data=[1, 2, 3], units='m', long_name='test',
+                                    source=sftw)
+            self.assertEqual(ds1.source, None)
+            self.assertEqual(ds2.source, sftw)
+
     def test_standard_name(self):
         sn1 = standard_name.StandardName(name='acc',
                                          description=None,
                                          canonical_units='m**2/s',
                                          snt=None)
         self.assertEqual(sn1.canonical_units, 'm**2/s')
+
+        with self.assertRaises(KeyError):
+            standard_name.StandardName.from_snt('xx_coordinate', snt=tutorial.get_standard_name_table())
+        sn = standard_name.StandardName.from_snt('x_coordinate', snt=tutorial.get_standard_name_table())
+        sn.check_syntax()
+        self.assertEqual(sn.canonical_units, 'm')
+        self.assertEqual(sn.name, 'x_coordinate')
+        self.assertEqual(sn.description, 'x indicates the component in x-axis direction')
 
         sn2 = standard_name.StandardName(name='acc',
                                          description=None,
@@ -435,13 +526,14 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_translate_group(self):
         h5tbx.use('tbx')
-        with h5tbx.File() as h5:
-            ds1 = h5.create_dataset('ds1', shape=(2,), units='', long_name='a long name')
-            ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='', long_name='a long name')
-            translation = {'ds1': 'dataset_one', 'ds2': 'dataset_two'}
+        with h5tbx.File(standard_name_table=tutorial.get_standard_name_table()) as h5:
+            ds1 = h5.create_dataset('ds1', shape=(2,), units='m', long_name='a long name')
+            ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='m', long_name='a long name')
+            translation = {'ds1': 'x_coordinate', 'ds2': 'y_coordinate'}
             sntt = standard_name.StandardNameTableTranslation('test', translation)
             sntt.translate_group(h5)
-            h5.sdump()
+            self.assertEqual(ds1.standard_name, 'x_coordinate')
+            self.assertEqual(ds2.standard_name, 'y_coordinate')
 
     def test_merge(self):
         registered_snts = standard_name.StandardNameTable.get_registered()

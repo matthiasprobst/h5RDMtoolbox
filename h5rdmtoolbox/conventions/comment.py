@@ -10,7 +10,7 @@ class CommentError(ValueError):
 
 class Comment(str):
     """Comment class. Implements convention (rules) for usage"""
-    MIN_LENGTH = 1
+    MIN_LENGTH = 10  # reasonable smallest length
     MAX_LENGTH = 300  # arbitrary, seems reasonable...
     PATTERN = '^[0-9 ].*'
 

@@ -3,41 +3,52 @@
 Various source objects are defined and can be set to the HDF5 file:
 * Software
 """
+import abc
+import json
 from dataclasses import dataclass
-from enum import Enum
 from packaging import version
 from typing import Union, Dict
 
 from .standard_attribute import StandardAttribute
 
 
-class DataSourceType(Enum):
-    """root attribute: data_source_type"""
-    experimental = 1
-    numerical = 2
-    analytical = 3
-    unknown = 4
-    none = 5
+@dataclass
+class Source:
+    """Source class containing most relevant information about a source"""
 
     @staticmethod
-    def get_attr_name():
-        """Attribute name to be used in HDF5 files"""
-        return 'data_source_type'
-
-
-class DataSource(Enum):
-    """root attribute: data_source"""
-    particle_image_velocimetry = 1
-    computational_fluid_dynamics = 2
+    def from_dict(source_dict: Dict):
+        """Read from a dict"""
+        if 'source_type' in source_dict:
+            if source_dict['source_type'] == 'software':
+                return Software.from_dict(source_dict)
+        raise RuntimeError(f'Could not identify source type from: {source_dict}')
 
     @staticmethod
-    def get_attr_name():
-        """Attribute name to be used in HDF5 files"""
-        return 'data_source'
+    def loads(sdict: str):
+        """Read from a json string"""
+        return Source.from_dict(json.loads(sdict))
 
 
 @dataclass
-class Software:
+class SourceBase(abc.ABC):
+    """Base class for all source types."""
+
+    @abc.abstractmethod
+    def from_dict(self) -> str:
+        pass
+
+    @abc.abstractmethod
+    def loads(self) -> str:
+        pass
+
+    @abc.abstractmethod
+    def dumps(self) -> str:
+        pass
+
+
+@dataclass
+class Software(SourceBase):
     """Software class containing most relevant information about a software"""
     name: str
     version: Union[str, version.Version]
@@ -51,12 +62,20 @@ class Software:
     @staticmethod
     def from_dict(software_dict: Dict):
         """Read from a dict"""
+        if 'source_type' in software_dict:
+            if software_dict['source_type'] != 'software':
+                raise ValueError('Seems not to be a software dict. source_type is not "software"')
+            software_dict.pop('source_type')
         return Software(**software_dict)
 
+    def loads(self, sdict: str):
+        """Read from a json string"""
+        return Software.from_dict(json.loads(sdict))
+
     def dumps(self) -> Dict:
-        """Dict representation of the object"""
-        return dict(name=self.name, version=str(self.version),
-                    url=self.url, description=self.description)
+        """Calls json.dumps() on the dict representation of the object"""
+        return json.dumps(dict(source_type='software', name=self.name, version=str(self.version),
+                               url=self.url, description=self.description))
 
 
 class SourceAttribute(StandardAttribute):
@@ -70,11 +89,11 @@ class SourceAttribute(StandardAttribute):
         if source is None:
             return None
         if isinstance(source, str):
-            return source
-        return Software.from_dict(source)
+            return Source.loads(source)
+        raise RuntimeError(f'Could not parse source string: {source}')
 
     def set(self, source: Union[str, Software]):
         """Sets the attribute source to attribute 'source'"""
         if isinstance(source, Software):
-            super().set(source.dumps())
+            return super().set(source.dumps())
         super().set(source)

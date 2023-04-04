@@ -1,11 +1,13 @@
 import unittest
 
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.wrapper import core, h5ext
 
 
 class TestH5Ext(unittest.TestCase):
 
     def test_h5ext(self):
+        h5tbx.use('h5py')
         with core.File() as h51:
             h51.create_dataset('ds', data=1)
         with core.File() as h52:

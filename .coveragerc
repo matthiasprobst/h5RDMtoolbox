@@ -7,6 +7,8 @@ relative_files = true
 
 [report]
 exclude_lines =
+    @abstractmethod
+    @abc.abstractmethod
     pragma: no cover
     def __repr__
     @atexit.register

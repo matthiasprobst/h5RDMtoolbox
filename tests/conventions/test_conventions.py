@@ -1,19 +1,20 @@
-# import logging
-# import unittest
-# from pint.errors import UndefinedUnitError
-#
-# import h5rdmtoolbox as h5tbx
-# from h5rdmtoolbox.conventions import standard_name
-# from h5rdmtoolbox.wrapper.core import File
-#
-#
-# class TestConventions(unittest.TestCase):
-#
-#     def test_logger(self):
-#         h5tbx.conventions.set_loglevel(logging.DEBUG)
-#         self.assertEqual(h5tbx.conventions.logger.level, logging.DEBUG)
-#         h5tbx.conventions.set_loglevel(logging.CRITICAL)
-#         self.assertEqual(h5tbx.conventions.logger.level, logging.CRITICAL)
+import unittest
+
+import h5rdmtoolbox as h5tbx
+
+
+class TestConventions(unittest.TestCase):
+
+    def test_use(self):
+        h5tbx.use('h5py')
+        self.assertEqual(h5tbx.conventions.current_convention.name, 'h5py')
+        h5tbx.use(None)
+        self.assertEqual(h5tbx.conventions.current_convention.name, 'h5py')
+        h5tbx.use('tbx')
+        self.assertEqual(h5tbx.conventions.current_convention.name, 'tbx')
+        with self.assertRaises(ValueError):
+            h5tbx.use('tbx2')
+
 #
 #     def test_pivview(self):
 #         with File(mode='w', standard_name_table='Test-v1') as h5:

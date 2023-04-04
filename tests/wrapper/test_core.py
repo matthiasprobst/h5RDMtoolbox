@@ -24,8 +24,8 @@ class TestCore(unittest.TestCase):
         h5tbx.use(None)
 
     def test_lower(self):
-        self.assertEqual(h5tbx.core.Lower('Hello'), 'hello')
-        self.assertIsInstance(h5tbx.core.lower('Hello'), h5tbx.core.Lower)
+        self.assertEqual(h5tbx.Lower('Hello'), 'hello')
+        self.assertIsInstance(h5tbx.lower('Hello'), h5tbx.Lower)
 
     def test_File(self):
         self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.core.File'>")
@@ -255,7 +255,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(grp.get_datasets('dat*'), [grp['data'], ])
             self.assertEqual(grp.get_datasets('idat*'), [])
             with self.assertRaises(ValueError):
-                h5tbx.core.Group(4.3)
+                h5tbx.Group(4.3)
             with self.assertRaises(TypeError):
                 h5.grp['New'] = (4.3, int)
             h5.grp['New'] = dict(data=np.random.rand(10, 20, 30))

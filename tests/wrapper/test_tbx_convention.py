@@ -17,7 +17,6 @@ from h5rdmtoolbox.conventions import standard_name
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import set_loglevel
-from h5rdmtoolbox.wrapper import tbx
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
@@ -28,9 +27,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def TestFile(self):
         return h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt)
+                                       institution=self.default_institution,
+                                       references=self.default_references,
+                                       standard_name_table=self.default_snt)
 
     def setUp(self) -> None:
         """setup"""
@@ -40,14 +39,14 @@ class TestH5TbxWrapperFile(unittest.TestCase):
         self.default_snt = tutorial.get_standard_name_table()
         self.default_references = 'https://h5rdmtoolbox.readthedocs.io/'
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             self.assertIsInstance(h5, h5tbx.wrapper.core.File)
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
             g.attrs['one'] = 1
@@ -71,30 +70,30 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             self.assertEqual(h5.__str__(), '<class "File" convention: "tbx">')
 
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             self.assertIsInstance(h5.attrs['title'], str)
             self.assertEqual(h5.attrs['title'], self.default_title)
 
         with self.assertRaises(requests.exceptions.MissingSchema):
             with h5tbx.wrapper.core.File(title=self.default_title,
-                            institution=self.default_institution,
-                            standard_name_table=self.default_snt,
-                            references='h5rdmtoolbox.readthedocs.io/',
-                            ):
+                                         institution=self.default_institution,
+                                         standard_name_table=self.default_snt,
+                                         references='h5rdmtoolbox.readthedocs.io/',
+                                         ):
                 pass
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        standard_name_table=self.default_snt,
-                        references=' https://h5rdmtoolbox.readthedocs.io/') as h5:
+                                     institution=self.default_institution,
+                                     standard_name_table=self.default_snt,
+                                     references=' https://h5rdmtoolbox.readthedocs.io/') as h5:
             self.assertEqual(h5.attrs['references'], 'https://h5rdmtoolbox.readthedocs.io/')
 
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        standard_name_table=self.default_snt,
-                        references=('https://h5rdmtoolbox.readthedocs.io/',
-                                    'https://github.com/matthiasprobst/h5RDMtoolbox')) as h5:
+                                     institution=self.default_institution,
+                                     standard_name_table=self.default_snt,
+                                     references=('https://h5rdmtoolbox.readthedocs.io/',
+                                                 'https://github.com/matthiasprobst/h5RDMtoolbox')) as h5:
             self.assertTupleEqual(
                 h5.attrs['references'],
                 ('https://h5rdmtoolbox.readthedocs.io/',
@@ -293,30 +292,30 @@ class TestH5TbxWrapperFile(unittest.TestCase):
     def test_create_dataset(self):
         """File has more parameters to pass as H5Base"""
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             with self.assertRaises(ValueError):
                 _ = h5.create_dataset('u', shape=(), units='m/s')
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             ds = h5.create_dataset('u', shape=(), long_name='velocity', units='')
             self.assertEqual(ds.name, '/u')
             self.assertEqual(ds.attrs['units'], '')
             self.assertEqual(ds.attrs['long_name'], 'velocity')
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             ds = h5.create_dataset('velocity', shape=(), standard_name='x_velocity', units='m/s')
             self.assertEqual(ds.attrs['units'], 'm/s')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             ds = h5.create_dataset('velocity', shape=(),
                                    standard_name='x_velocity',
                                    units='m/s')
@@ -324,53 +323,53 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
         da = xr.DataArray(data=[1, 2, 3], attrs={'units': 'm/s'})
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             with self.assertRaises(ValueError):
                 _ = h5.create_dataset('velocity', data=da)
 
         da = xr.DataArray(data=[1, 2, 3], attrs={'units': 'm/s', 'standard_name': 'x_velocity'})
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             ds = h5.create_dataset('velocity', data=da)
             self.assertEqual(ds.attrs['units'], 'm/s')
             self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
 
     def test_create_string_dataset(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             ds = h5.create_string_dataset('test', data='test')
             self.assertEqual(ds[()], 'test')
 
     def test_create_group(self):
         """testing the creation of groups"""
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             grp = h5.create_group('testgrp2', long_name='a long name')
             self.assertEqual(grp.attrs['long_name'], 'a long name')
             self.assertEqual(grp.long_name, 'a long name')
 
     def test_Layout(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             h5.create_dataset('test', shape=(3,), long_name='daadw', units='')
             h5.create_dataset('testgrp/ds2', shape=(30,), long_name='daadw', units='')
             n_issuess = h5.check()
 
     def test_attrs(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             convention = standard_name.StandardNameTable(name='empty',
                                                          table={'x_velocity': {'description': '',
                                                                                'units': 'm/s'}},
@@ -487,24 +486,24 @@ class TestH5TbxWrapperFile(unittest.TestCase):
     def test_H5File_and_standard_name(self):
         with self.assertRaises(FileNotFoundError):
             with h5tbx.wrapper.core.File(title=self.default_title,
-                            mode='w',
-                            institution=self.default_institution,
-                            references=self.default_references,
-                            standard_name_table='wrong file name'):
+                                         mode='w',
+                                         institution=self.default_institution,
+                                         references=self.default_references,
+                                         standard_name_table='wrong file name'):
                 pass
         with self.assertRaises(AttributeError):
             with h5tbx.wrapper.core.File(title=self.default_title,
-                            mode='w',
-                            institution=self.default_institution,
-                            references=self.default_references,
-                            standard_name_table=None) as h5:
+                                         mode='w',
+                                         institution=self.default_institution,
+                                         references=self.default_references,
+                                         standard_name_table=None) as h5:
                 h5.create_dataset('ds', data=[1, 2, 3], units='m', standard_name='x_coordinate')
 
     def test_open(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             pass
         h5.reopen('r+')
         self.assertEqual(h5.mode, 'r+')
@@ -512,9 +511,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_create_group(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             grp = h5.create_group('test_grp')
             self.assertIsInstance(grp, h5tbx.wrapper.core.Group)
             grp = grp.create_group('test_grp')
@@ -522,9 +521,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_groups(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             groups = h5.get_groups()
             self.assertEqual(groups, [])
             h5.create_group('grp_1', attrs=dict(a=1))
@@ -545,9 +544,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_tree_structure(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             h5.attrs['one'] = 1
             h5.attrs['two'] = 2
             h5.create_dataset('rootds', shape=(2, 40, 3),
@@ -564,9 +563,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_rootparent(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             grp = h5.create_group('grp1/grp2/grp3')
             self.assertIsInstance(grp, Group)
             dset = grp.create_dataset('test', data=1, units='', long_name='some long name')
@@ -584,9 +583,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_to_unit(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
             self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
@@ -611,9 +610,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_scale_manipulation(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             h5.create_dataset('x', long_name='x-coordinate', units='m', data=np.random.rand(10))
             h5.create_dataset('time', long_name='time', units='s', data=np.random.rand(10))
             h5.create_dataset('temp', long_name='temperature', units='K', data=np.random.rand(10),
@@ -634,16 +633,16 @@ class TestH5TbxWrapperFile(unittest.TestCase):
         ds.baz.attrs['long_name'] = 'baz'
 
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             h5.create_dataset_from_xarray_dataset(ds)
 
     def test_attrs(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             config.natural_naming = False
 
             with self.assertRaises(AttributeError):
@@ -679,10 +678,10 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_units(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        mode='w',
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     mode='w',
+                                     standard_name_table=self.default_snt) as h5:
             with self.assertRaises(standard_name.StandardNameError):
                 h5.create_dataset(name='x', standard_name='x_coordinate', shape=(10, 20), units='')
             self.assertNotIn('x', h5)  # the dataset should not have been created
@@ -709,17 +708,17 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_rootparent(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             grp = h5.create_group('grp1/grp2/grp3')
             self.assertEqual(grp.rootparent, h5['/'])
 
     def test_create_group(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             grp = h5.create_group('group')
             self.assertEqual(grp.long_name, None)
             grp.long_name = 'long name of group'
@@ -728,9 +727,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
     def test_assign_data_to_existing_dset(self):
         config.natural_naming = True
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             ds = h5.create_dataset('ds', shape=(2, 3), long_name='a long name', units='')
             ds[0, 0] = 5
             self.assertEqual(ds[0, 0], 5)
@@ -738,9 +737,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
     def test_create_dataset_from_xarray(self):
         config.natural_naming = True
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             z = xr.DataArray(name='z', data=-1,
                              attrs=dict(units='m',
                                         standard_name='z_coordinate'))
@@ -797,7 +796,8 @@ class TestH5TbxWrapperFile(unittest.TestCase):
     def test_from_yaml_to_hdf(self):
         dictionary = {
             'datasets': {'boundary/outlet boundary/y': {'data': 2, 'units': 'm', 'standard_name': 'y_coordinate',
-                                                        'attrs': {'comment': 'test', 'another_attr': 100.2,
+                                                        'attrs': {'comment': 'This is an OK comment',
+                                                                  'another_attr': 100.2,
                                                                   'array': [1, 2, 3]}}},
             'groups': {'test/grp': {'long_name': 'a test group'}}
         }
@@ -807,10 +807,10 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
         hdf_filename = generate_temporary_filename(suffix='.hdf')
         with h5tbx.wrapper.core.File(hdf_filename, 'w',
-                        title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     title=self.default_title,
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             h5.from_yaml(yaml_file)
             self.assertIn('test/grp', h5)
             self.assertIn('boundary/outlet boundary/y', h5)
@@ -818,9 +818,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_get_by_attribute(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             lname = h5.find({'long_name': {'$regex': '(.*)'}}, '$Dataset')
             self.assertEqual(lname, [])
 
@@ -846,9 +846,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_get_group_names(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             g = h5.create_group('one', 'one')
             g.create_group('two', 'two')
             g = g.create_group('three', 'three')
@@ -857,9 +857,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_get_dataset_names(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             h5.create_dataset('one', data=1, long_name='long name', units='')
             h5.create_dataset('two', data=1, long_name='long name', units='')
             h5.create_dataset('grp/three', data=1, long_name='long name', units='')
@@ -936,9 +936,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_user(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
-                        institution=self.default_institution,
-                        references=self.default_references,
-                        standard_name_table=self.default_snt) as h5:
+                                     institution=self.default_institution,
+                                     references=self.default_references,
+                                     standard_name_table=self.default_snt) as h5:
             with self.assertRaises(respuser.OrcidError):
                 h5.responsible_person = '000-123'
             h5.attrs['responsible_person'] = '0000-1233-1234-1234'

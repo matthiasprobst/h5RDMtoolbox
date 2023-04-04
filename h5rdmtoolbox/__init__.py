@@ -3,7 +3,6 @@ import atexit
 import logging
 import pathlib
 import shutil
-import warnings
 
 from ._config import CONFIG
 from ._config import user_config_filename, write_default_config, write_user_config, DEFAULT_CONFIG
@@ -17,8 +16,7 @@ from ._version import __version__
 from .database import filequery
 from .utils import generate_temporary_filename, generate_temporary_directory
 from . import cache
-from .wrapper import core
-from .wrapper.core import lower
+from .wrapper.core import lower, Lower, File, Group, Dataset
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
@@ -41,9 +39,9 @@ set_loglevel(core_logger, config.init_logger_level)
 
 # global instance:
 h5tbxParams = {'convention': config['default_convention'],
-               'File': core.File,
-               'Dataset': core.Dataset,
-               'Group': core.Group}
+               'File': File,
+               'Dataset': Dataset,
+               'Group': Group}
 
 from . import conventions
 
@@ -52,83 +50,92 @@ cv_h5py.register()
 
 cv = conventions.Convention('tbx')
 cv.add(attr_cls=conventions.title.TitleAttribute,
-       target_cls=core.File,
+       target_cls=File,
        add_to_method=True,
        position={'before': 'layout'},
        optional=True)
 cv.add(attr_cls=conventions.StandardAttribute.AnyString('institution'),
-       target_cls=core.File,
+       target_cls=File,
        add_to_method=True,
        position={'before': 'layout'},
        optional=True)
 cv.add(attr_cls=conventions.references.ReferencesAttribute,
-       target_cls=core.File,
+       target_cls=File,
        add_to_method=True,
        position={'before': 'layout'},
        optional=True)
 cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
-       target_cls=core.File,
+       target_cls=File,
        add_to_method=True,
        position={'before': 'layout'},
        optional=True)
 cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
-       target_cls=core.Dataset,
+       target_cls=Dataset,
        add_to_method=False)
 cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
-       target_cls=core.Group,
+       target_cls=Group,
        add_to_method=False)
 cv.add(attr_cls=conventions.standard_name.StandardNameAttribute,
-       target_cls=core.Dataset,
+       target_cls=Dataset,
        position={'after': 'name'},
        add_to_method=True,
        optional=False,
        alt='long_name')
 cv.add(attr_cls=conventions.units.UnitsAttribute,
-       target_cls=core.Dataset,
+       target_cls=Dataset,
        add_to_method=True,
        position={'after': 'name'},
        optional=False)
 cv.add(attr_cls=conventions.long_name.LongNameAttribute,
-       target_cls=core.Dataset,
+       target_cls=Dataset,
        add_to_method=True,
        position={'after': 'name'},
        optional=False,
        alt='standard_name')
 cv.add(attr_cls=conventions.long_name.LongNameAttribute,
-       target_cls=core.Group,
+       target_cls=Group,
        add_to_method=True,
        position={'after': 'name'},
-       optional=True,)
+       optional=True)
 cv.add(attr_cls=conventions.comment.CommentAttribute,
-       target_cls=core.Group,
+       target_cls=Group,
        add_to_method=True,
        position={'after': 'long_name'},
-       optional=True,)
+       optional=True)
 cv.add(attr_cls=conventions.comment.CommentAttribute,
-       target_cls=core.Dataset,
+       target_cls=Dataset,
        add_to_method=True,
        position={'after': 'long_name'},
-       optional=True,)
+       optional=True)
+cv.add(attr_cls=conventions.comment.CommentAttribute,
+       target_cls=File,
+       add_to_method=True,
+       position={'after': 'standard_name_table'},
+       optional=True)
 cv.add(attr_cls=conventions.respuser.RespUserAttribute,
-       target_cls=core.Dataset,
+       target_cls=Dataset,
        add_to_method=True,
        position={'after': 'comment'},
-       optional=True,)
+       optional=True)
 cv.add(attr_cls=conventions.respuser.RespUserAttribute,
-       target_cls=core.Group,
+       target_cls=Group,
        add_to_method=True,
        position={'before': 'attrs'},
-       optional=True,)
+       optional=True)
 cv.add(attr_cls=conventions.respuser.RespUserAttribute,
-       target_cls=core.File,
+       target_cls=File,
        add_to_method=True,
        position={'after': 'mode'},
-       optional=True,)
+       optional=True)
+cv.add(attr_cls=conventions.source.SourceAttribute,
+       target_cls=Dataset,
+       add_to_method=True,
+       position={'after': 'comment'},
+       optional=True)
 cv.register()
 
 use = conventions.use
-
-File = core.File
+use(config['default_convention'])
 
 
 class Files:
@@ -140,22 +147,6 @@ class Files:
         if file_instance is None:
             kwargs['file_instance'] = h5tbxParams['File']
         return filequery.Files(*args, **kwargs)
-
-
-class H5File(File):
-    """Deprecated class. Use "File" instead."""
-
-    def __new__(cls, *args, **kwargs):
-        warnings.warn('File is deprecated. Use "File" instead.', DeprecationWarning)
-        return super().__new__(cls, *args, **kwargs)
-
-
-class H5Files(Files):
-    """Deprecated class. Use "Files" instead."""
-
-    def __new__(cls, *args, **kwargs):
-        warnings.warn('H5Files is deprecated. Use "Files" instead.', DeprecationWarning)
-        super().__new__(cls, *args, **kwargs)
 
 
 @atexit.register
@@ -206,4 +197,4 @@ def clean_temp_data(full: bool = False):
 
 
 __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
-           'generate_temporary_filename', 'generate_temporary_directory']
+           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset']

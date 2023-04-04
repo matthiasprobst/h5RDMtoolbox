@@ -43,19 +43,6 @@ def set_loglevel(level):
         handler.setLevel(level)
 
 
-def _parse_name(name: str, attribute: Callable) -> str:
-    """Parse name of the attribute. If the attribute has no name or is None,
-    the class name is returned."""
-    if name is None:
-        if hasattr(attribute, 'name'):
-            name = attribute.name
-            if name is None:
-                name = attribute.__class__.__name__
-        else:
-            name = attribute.__class__.__name__
-    return name
-
-
 registered_conventions = {}
 
 
@@ -136,9 +123,6 @@ class Convention:
         if StandardAttribute not in attr_cls.__bases__:
             raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it is not a '
                             'subclass of `StandardAttribute`.')
-
-        # figure out the name of the std_attr:
-        name = _parse_name(name, attr_cls)
 
         if not isinstance(target_cls, Iterable):
             # make it a list

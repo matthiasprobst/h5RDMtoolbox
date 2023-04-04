@@ -31,10 +31,10 @@ from typing import Dict, Union, List, Tuple
 from ._logger import logger
 from .standard_attribute import StandardAttribute
 from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
+from .. import cache
 from .._config import ureg
 from .._user import UserDir
 from ..utils import generate_temporary_filename
-from .. import cache
 
 try:
     from tabulate import tabulate
@@ -191,46 +191,13 @@ class StandardName:
         """
         if name not in snt:
             raise KeyError(f'Name {name} not found in standard name table {snt.name}. Cannot initialize StandardName.')
-        description = snt[name]['description']
-        canonical_units = snt[name]['canonical_units']
+        description = snt[name].description
+        canonical_units = snt[name].canonical_units
         return StandardName(name, canonical_units, description, snt)
 
     def check_syntax(self):
         """Run the name check of the standard name."""
-        return self.snt.check_syntax(self)
-
-
-# @dataclass
-# class StandardName:
-#     """basic standardized name class"""
-#     name: str
-#     description: Union[str, None]
-#     canonical_units: Union[str, None]
-#     snt: "StandardNameTable"
-#
-#     def __post_init__(self):
-#         if self.canonical_units:
-#             self.canonical_units = f'{ureg.Unit(_units_power_fix(self.canonical_units))}'
-#         self.name = str(self.name)
-#
-#     def __format__(self, spec):
-#         return self.name.__format__(spec)
-#
-#     def __str__(self):
-#         return self.name
-#
-#     def __eq__(self, other):
-#         if isinstance(other, str):
-#             return self.name == other
-#         return all([self.name == other.name,
-#                     self.description == other.description,
-#                     self.canonical_units == other.canonical_units,
-#                     self.snt == other.snt])
-#
-#     def check(self):
-#         """Run the name check of the standard name."""
-#         self.snt.check_name(self.name)
-#
+        return self.snt.check_syntax(self.name)
 
 
 class StandardNameTableStoreOption(Enum):
@@ -1243,9 +1210,8 @@ class StandardNameTableAttribute(StandardAttribute):
 
         snt = super().get(src=self.parent.rootparent)
 
-
         if snt is None:
-            #return Empty_Standard_Name_Table
+            # return Empty_Standard_Name_Table
             raise AttributeError(f'No standard name table found for file {self.parent.hdf_filename}')
 
         if snt.startswith('{'):
