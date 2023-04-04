@@ -16,7 +16,6 @@ class TestCommon(unittest.TestCase):
             h5.sdump()
 
         print('\n---------------\n')
-        h5tbx.use('tbx')
         with h5tbx.File() as h5:
             h5.create_dataset('myvar', data=[1, 2, 4], attrs={'units': 'm/s', 'long_name': 'test var'})
             h5.sdump()

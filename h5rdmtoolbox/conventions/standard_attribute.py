@@ -1,6 +1,5 @@
-import warnings
-
 import h5py
+import warnings
 from abc import ABC
 from typing import Union, Callable, Iterable, Any, Dict
 
@@ -102,6 +101,13 @@ class StandardAttribute(ABC):
             return name
         return self.__class__.__name__
 
+    @staticmethod
+    def AnyString(attr_name: str):
+        class any_string(StandardAttribute):
+            name = attr_name
+
+        return any_string
+
     @classmethod
     def register(cls,
                  convention_name: str,
@@ -134,14 +140,13 @@ class StandardAttribute(ABC):
             elif File in target_cls.__mro__:
                 if name not in convention_cache.methods['init_file']:
                     File.__init__ = forge.insert(forge.arg(f'{name}', default=method_default_value),
-                                                     **position)(File.__init__)
+                                                 **position)(File.__init__)
                     convention_cache.methods['init_file'][name] = {'cls': cls, 'optional': optional}
             elif Group in target_cls.__mro__:
                 if name not in convention_cache.methods['init_group']:
                     Group.create_group = forge.insert(forge.arg(f'{name}', default=method_default_value),
                                                       **position)(Group.create_dataset)
                     convention_cache.methods['create_group'][name] = {'cls': cls, 'optional': optional}
-
 
         # if target_methods is not None:
         #     register_method(name, target_methods, overwrite)
@@ -172,7 +177,7 @@ def register_method(name,
         convention_cache.methods[meth] = name
 
 
-def register(convention_name:str,
+def register(convention_name: str,
              attr_cls,
              target_cls: Union[Callable, Iterable[Callable]],
              name=None,
@@ -227,8 +232,9 @@ def register(convention_name:str,
             convention_cache.properties[_cls] = {}
 
         if name in convention_cache.properties[_cls] and not overwrite:
-            warnings.warn(f'Cannot register property {name} to {_cls} because it has already a property with this name.',
-                          UserWarning)
+            warnings.warn(
+                f'Cannot register property {name} to {_cls} because it has already a property with this name.',
+                UserWarning)
             # raise AttributeError(
             #     f'Cannot register property {name} to {_cls} because it has already a property with this name.')
         convention_cache.properties[_cls][name] = attr_cls

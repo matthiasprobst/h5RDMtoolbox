@@ -50,15 +50,6 @@ def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
     return kwargs, std_attrs
 
 
-def _write_standard_attributes(obj: Union[h5py.Dataset, h5py.Group], std_attrs: Dict):
-    for k, v in std_attrs.items():
-        try:
-            setattr(obj, k, v)
-        except RuntimeError:
-            logger.error(f'Could not set attribute {k} to {v} on {obj.name}. Dataset was created '
-                         f'anyway. Please set the attribute manually.')
-
-
 class Lower(str):
     """Lower"""
 
@@ -84,32 +75,51 @@ def lower(string: str) -> Lower:
 #         return wrapper
 #     return decorator
 
-def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict]:
+def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
-    if attrs is None:
-        attrs = {}
     # go through list of registered standard attributes, and check whether they are in kwargs:
     kwargs, skwargs = _pop_standard_attributes(kwargs, cache_entry=conventions.current_convention._methods[meth_name])
 
-    for skey in skwargs:
+    # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
+    for skey, vas in skwargs.items():
         if skey in attrs:
-            raise ValueError(f'You passed the standard attribute "{skey}" as a standard argument and it is '
-                             f'also in the "attrs" argument. This is not allowed!')
+            if vas is None:
+                # pass over the attribute value to the skwargs dict:
+                skwargs[skey] = attrs[skey]
+            else:
+                raise ValueError(f'You passed the standard attribute "{skey}" as a standard argument and it is '
+                                 f'also in the "attrs" argument. This is not allowed!')
+
+    attrs.update(skwargs)
+
     # run through skwargs. if key is required but not available this should raise an error!
     for k, v in conventions.current_convention._methods[meth_name].items():
-        if not v['optional']:
-            if k not in skwargs or skwargs[k] is None:
-                raise ValueError(f'The standard attribute "{k}" is required but not provided.')
-    if attrs is None:
-        attrs = {}
-    attrs.update(skwargs)
-    return attrs, kwargs
+        if v['optional']:
+            if skwargs[k] is None:
+                attrs.pop(k)
+        else:
+            if k not in skwargs or skwargs[k] is None:  # missing or None
+                if v['alt'] is not None and v['alt'] not in attrs:
+                    raise ValueError(f'The standard attribute "{k}" is required but not provided. The alternative '
+                                     f'attribute "{v["alt"]}" is also not provided.')
+                attrs.pop(k)
+
+    return attrs, skwargs, kwargs
 
 
-class Group(h5py.Group):
+class ConventionAccesor:
+    @property
+    def convention(self):
+        return conventions.current_convention
+
+    @property
+    def standard_attributes(self) -> Dict:
+        return self.convention._properties[self.__class__]
+
+
+class Group(h5py.Group, ConventionAccesor):
     """Inherited Group of the package h5py
     """
-    convention = None
     hdfrepr = H5Repr()
 
     def __delattr__(self, item):
@@ -309,7 +319,7 @@ class Group(h5py.Group):
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
-        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{self.convention}")>'
+        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{conventions.current_convention.name}")>'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -363,7 +373,10 @@ class Group(h5py.Group):
         track_order : bool or None
             Track creation order under this group. Default is None.
         """
-        attrs, kwargs = process_attributes('create_dataset', attrs, kwargs)
+        if attrs is None:
+            attrs = {}
+
+        attrs, skwargs, kwargs = process_attributes('create_group', attrs, kwargs)
         if name in self:
             if isinstance(self[name], h5py.Group):
                 if overwrite is True:
@@ -372,7 +385,6 @@ class Group(h5py.Group):
                     g = self[name]
                     for ak, av in attrs.items():
                         g.attrs[ak] = av
-                    _write_standard_attributes(g, std_attrs)
                     return g
                 else:
                     # let h5py.Group raise the error...
@@ -386,7 +398,6 @@ class Group(h5py.Group):
                              f'while natural naming is enabled')
 
         subgrp = super().create_group(name, track_order=track_order, **kwargs)
-        _write_standard_attributes(subgrp, std_attrs)
 
         # new_subgroup = h5py.Group.create_group(self, name, track_order=track_order)
         logger.debug(f'Created group "{name}" at "{self.name}"-level.')
@@ -488,7 +499,13 @@ class Group(h5py.Group):
         ds : h5py.Dataset
             created dataset
         """
-        attrs, kwargs = process_attributes('create_dataset', attrs, kwargs)
+        if attrs is None:
+            attrs = {}
+
+        if isinstance(data, xr.DataArray):
+            attrs.update(data.attrs)
+
+        attrs, skwargs, kwargs = process_attributes('create_dataset', attrs, kwargs)
         if isinstance(data, str):
             return self.create_string_dataset(name=name,
                                               data=data,
@@ -499,7 +516,7 @@ class Group(h5py.Group):
         # kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
 
         if isinstance(data, xr.DataArray):
-            data.attrs.update(attrs)
+             data.attrs.update(attrs)
 
         if name:
             if name in self:
@@ -629,8 +646,6 @@ class Group(h5py.Group):
                             else:
                                 raise ValueError(f'Cannot assign {ss} to {ds.name} because it seems not '
                                                  f'to exist!')
-
-        # _write_standard_attributes(ds, std_attrs)
         return ds
 
     def find_one(self, flt: Union[Dict, str],
@@ -1215,9 +1230,8 @@ def only1d(obj):
     return obj
 
 
-class Dataset(h5py.Dataset):
+class Dataset(h5py.Dataset, ConventionAccesor):
     """Inherited Dataset group of the h5py package"""
-    convention = None
 
     def __delattr__(self, item):
         if self.__class__ in conventions.current_convention._properties:
@@ -1483,9 +1497,9 @@ class Dataset(h5py.Dataset):
     def __repr__(self) -> str:
         r = super().__repr__()
         if not self:
-            return r[:-1] + f' (convention "{self.convention}")>'
+            return r[:-1] + f' (convention "{conventions.current_convention.name}")>'
         else:
-            return r[:-1] + f', convention "{self.convention}">'
+            return r[:-1] + f', convention "{conventions.current_convention.name}">'
 
     def dump(self) -> None:
         """Call sdump()"""
@@ -1570,7 +1584,7 @@ class H5Dataset(Dataset):
         super(H5Dataset, self).__init__(self, _id)
 
 
-class File(h5py.File, Group):
+class File(h5py.File, Group, ConventionAccesor):
     """Main wrapper around h5py.File.
 
     Adds additional features and methods to h5py.File in order to streamline the work with
@@ -1615,8 +1629,6 @@ class File(h5py.File, Group):
 
     .. seealso:: :class:`h5rdmtoolbox.core.Group`
     """
-
-    convention = None
 
     @property
     def attrs(self) -> WrapperAttributeManager:
@@ -1700,17 +1712,20 @@ class File(h5py.File, Group):
                     with h5py.File(name, mode='w', **kwargs) as _h5:
                         pass  # just touching the file
                     logger.debug(f"An empty File class is initialized for {name}")
-        attrs, kwargs = process_attributes('init_file', attrs, kwargs)
+
+        if attrs is None:
+            attrs = {}
+        attrs, skwargs, kwargs = process_attributes('init_file', attrs, kwargs)
         _tmp_init = False
 
         if _tmp_init:
             mode = 'r+'
             warnings.warn('Switched to mode "r+"')
 
-        if mode == 'r' and len(attrs) > 0:
-            if len(attrs) > 1:
-                raise ValueError(f'Cannot set attribute {list(attrs.keys())[0]} in read mode')
-            raise ValueError(f'Cannot set attributes {list(attrs.keys())} in read mode')
+        if mode == 'r' and len(skwargs) > 0:
+            for k, v in skwargs.items():
+                if v is not None:
+                    raise ValueError(f'Cannot set attribute {k} in read mode')
 
         if not isinstance(name, ObjectID):
             self.hdf_filename = Path(name)
@@ -1735,10 +1750,10 @@ class File(h5py.File, Group):
 
     def __repr__(self) -> str:
         r = super().__repr__()
-        return r.replace('HDF5', f'HDF5 (convention: "{self.convention}")')
+        return r.replace('HDF5', f'HDF5 (convention: "{conventions.current_convention.name}")')
 
     def __str__(self) -> str:
-        return f'<class "{self.__class__.__name__}" convention: "{self.convention}">'
+        return f'<class "{self.__class__.__name__}" convention: "{conventions.current_convention.name}">'
 
     def check(self, grp: Union[str, h5py.Group] = '/') -> int:
         """Run layout check. This method may be overwritten to add conditional

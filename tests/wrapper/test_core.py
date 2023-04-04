@@ -22,11 +22,9 @@ class TestCore(unittest.TestCase):
         self.assertIsInstance(h5tbx.core.lower('Hello'), h5tbx.core.Lower)
 
     def test_File(self):
-        self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.File'>")
+        self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.core.File'>")
         with h5tbx.File() as h5:
             self.assertEqual(h5.__str__(), '<class "File" convention: "None">')
-        self.assertEqual(h5tbx.File.Dataset(), h5tbx.core.Dataset)
-        self.assertEqual(h5tbx.File.Group(), h5tbx.core.Group)
 
     def test_Files(self):
         with h5tbx.File() as h5:
@@ -38,12 +36,12 @@ class TestCore(unittest.TestCase):
                 pass
         with h5tbx.Files([f1, f2]) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
-            self.assertIsInstance(h5[0], h5tbx.wrapper.core.File)
-            self.assertIsInstance(h5[1], h5tbx.wrapper.core.File)
-        with h5tbx.Files([f1, f2], file_instance=h5tbx.wrapper.core.File) as h5:
+            self.assertIsInstance(h5[0], h5tbx.File)
+            self.assertIsInstance(h5[1], h5tbx.File)
+        with h5tbx.Files([f1, f2], file_instance=h5tbx.File) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
-            self.assertIsInstance(h5[0], h5tbx.wrapper.core.File)
-            self.assertIsInstance(h5[1], h5tbx.wrapper.core.File)
+            self.assertIsInstance(h5[0], h5tbx.File)
+            self.assertIsInstance(h5[1], h5tbx.File)
 
     def test_subclassstr_attrs(self):
         class MyString(str):

@@ -51,6 +51,21 @@ cv_h5py = conventions.Convention('h5py')
 cv_h5py.register()
 
 cv = conventions.Convention('tbx')
+cv.add(attr_cls=conventions.title.TitleAttribute,
+       target_cls=core.File,
+       add_to_method=True,
+       position={'before': 'layout'},
+       optional=True)
+cv.add(attr_cls=conventions.StandardAttribute.AnyString('institution'),
+       target_cls=core.File,
+       add_to_method=True,
+       position={'before': 'layout'},
+       optional=True)
+cv.add(attr_cls=conventions.references.ReferencesAttribute,
+       target_cls=core.File,
+       add_to_method=True,
+       position={'before': 'layout'},
+       optional=True)
 cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
        target_cls=core.File,
        add_to_method=True,
@@ -64,82 +79,63 @@ cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
        add_to_method=False)
 cv.add(attr_cls=conventions.standard_name.StandardNameAttribute,
        target_cls=core.Dataset,
-       position={'after': 'data'},
-       add_to_method=True)
+       position={'after': 'name'},
+       add_to_method=True,
+       optional=False,
+       alt='long_name')
 cv.add(attr_cls=conventions.units.UnitsAttribute,
        target_cls=core.Dataset,
        add_to_method=True,
-       position={'after': 'data'},
+       position={'after': 'name'},
        optional=False)
+cv.add(attr_cls=conventions.long_name.LongNameAttribute,
+       target_cls=core.Dataset,
+       add_to_method=True,
+       position={'after': 'name'},
+       optional=False,
+       alt='standard_name')
+cv.add(attr_cls=conventions.long_name.LongNameAttribute,
+       target_cls=core.Group,
+       add_to_method=True,
+       position={'after': 'name'},
+       optional=True,)
+cv.add(attr_cls=conventions.comment.CommentAttribute,
+       target_cls=core.Group,
+       add_to_method=True,
+       position={'after': 'long_name'},
+       optional=True,)
+cv.add(attr_cls=conventions.comment.CommentAttribute,
+       target_cls=core.Dataset,
+       add_to_method=True,
+       position={'after': 'long_name'},
+       optional=True,)
+cv.add(attr_cls=conventions.respuser.RespUserAttribute,
+       target_cls=core.Dataset,
+       add_to_method=True,
+       position={'after': 'comment'},
+       optional=True,)
+cv.add(attr_cls=conventions.respuser.RespUserAttribute,
+       target_cls=core.Group,
+       add_to_method=True,
+       position={'before': 'attrs'},
+       optional=True,)
+cv.add(attr_cls=conventions.respuser.RespUserAttribute,
+       target_cls=core.File,
+       add_to_method=True,
+       position={'after': 'mode'},
+       optional=True,)
 cv.register()
 
 use = conventions.use
-# def use(convention_name: str) -> None:
-#     """Select the convention for the HDF5 wrapper class(es)
-#
-#     Parameters
-#     ----------
-#     convention_name: str
-#         Name of the convention
-#     """
-#     cv.use(convention_name)
-# current = cache.ConventionCache.get_current()
-# if convention_name is None:
-#     convention_name = 'h5py'
-#
-# if current.name == 'h5py':
-#     cache.current_convention = 'h5py'
-#     cache.loaded_conventions.add('h5py')
-#     return
-#
-# if convention_name == 'tbx':
-#     cache.current_convention = 'tbx'
-#     if cache.current_convention not in cache.loaded_conventions:
-#         from . import conventions
-#         cache.loaded_conventions.add('tbx')
-#     return
-#
-# raise ValueError(f'Unknown convention name: "{convention_name}"')
-
 
 File = core.File
-
-
-# class File:
-#     """Interface class to wrapper class around HDF5/h5py.File"""
-#
-#     @staticmethod
-#     def __get_cls__(cls_name: str):
-#         """Return hdf class of set convention wrapper"""
-#         if not cls_name ('File', 'Dataset', 'Group'):
-#             raise ValueError(f'Unknown class name: "{cls_name}"')
-#         return h5tbxParams[cls_name]
-#
-#     def __new__(cls, *args, **kwargs):
-#         return h5tbxParams['File'](*args, **kwargs)
-#
-#     def __str__(self) -> str:
-#         return h5tbxParams['File'].__str__(self)
-#
-#     def __repr__(self) -> str:
-#         return h5tbxParams['File'].__repr__(self)
-#
-#     @staticmethod
-#     def Dataset():
-#         """Return hdf dataset class  of set convention wrapper"""
-#         return h5tbxParams['Dataset']
-#
-#     @staticmethod
-#     def Group():
-#         """Return hdf group class  of set convention wrapper"""
-#         return h5tbxParams['Group']
 
 
 class Files:
     """Class to access multiple files at once"""
 
     def __new__(cls, *args, **kwargs):
-        use(config['default_convention'])
+        # use(config['default_convention'])
         file_instance = kwargs.get('file_instance', None)
         if file_instance is None:
             kwargs['file_instance'] = h5tbxParams['File']

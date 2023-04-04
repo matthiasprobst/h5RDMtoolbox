@@ -20,7 +20,7 @@ class TestFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        use('tbx')
+        use(None)
         with File(mode='w') as h5:
             h5.attrs['one'] = 1
             g = h5.create_group('grp_1')
@@ -441,8 +441,6 @@ class TestFile(unittest.TestCase):
                                                    'array': [1, 2, 3]}}},
             'groups': {'test/grp': {'attrs': {'long_name': 'a test group'}}}
         }
-        use('tbx')
-        use(None)
         yaml_file = generate_temporary_filename(suffix='.yaml')
         with open(yaml_file, 'w') as f:
             yaml.safe_dump(dictionary, f)

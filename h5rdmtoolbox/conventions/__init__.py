@@ -8,6 +8,7 @@ are provided by this sub-packages (fluid and piv). As the projec is under develo
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
 
+import forge
 import h5py
 from typing import Callable, List, Union, Iterable
 
@@ -68,16 +69,59 @@ class Convention:
                          'create_group': {},
                          'create_dataset': {}}
 
+    def __repr__(self):
+        out = f'Convention({self.name})'
+        out += 'Properties:\n-----------\n'
+        for k, v in self._properties.items():
+            out += f'{k}:\n'
+            for k2, v2 in v.items():
+                out += f'  {k2}: {v2}\n'
+        out += 'Methods:\n--------\n'
+        for k, v in self._methods.items():
+            out += f'{k}:\n'
+            for k2, v2 in v.items():
+                out += f'  {k2}: {v2}\n'
+        return out
+
     def add(self,
             attr_cls: StandardAttribute,
             target_cls: Callable,
             add_to_method: bool = False,
             position: dict = None,
             optional: bool = False,
+            alt: str = None,
             default_value: str = None,
             name: str = None,
             overwrite: bool = False
             ):
+        """Add a standard attribute to a class and modify signature of the methods if required.
+
+        Parameters
+        ----------
+        attr_cls : StandardAttribute
+            The standard attribute class to be added
+        target_cls : Callable
+            The class to which the standard attribute is added
+        add_to_method : bool, optional
+            If True, the standard attribute is added to the signature the respected method, thus it can be
+            passed to the method. Depending on the following parameters, the standard attribute is optional
+            or required and has a specific default value.
+        position : dict, optional
+            The position of the standard attribute in the signature of the method.
+            E.g. {'index': 1} or {'position': {'after': 'name'}}
+        optional : bool, optional
+            If True, the standard attribute is optional in the signature of the method.
+        alt : str, optional
+            The name of an alternative standard attribute that is used if the standard attribute is not provided.
+            If neither the standard attribute nor the alternative attribute is provided, an error is raised.
+            Only valid if `optional` is False.
+        default_value : str, optional
+            The default value of the standard attribute in the signature of the method.
+        name : str, optional
+            The name of the standard attribute. If None, the name of the class is used.
+        overwrite : bool, optional
+            If True, the standard attribute is overwritten if it already exists.
+        """
         from .standard_attribute import register
         if name is None:
             if hasattr(attr_cls, 'name'):
@@ -114,36 +158,37 @@ class Convention:
 
             if name in self._properties[cls] and not overwrite:
                 raise AttributeError(
-                    f'Cannot register property {name} to {_cls} because it has already a property with this name.')
+                    f'Cannot register property {name} to {cls} because it has already a property with this name.')
             self._properties[cls][name] = attr_cls
             logger.debug(f'Register special hdf std_attr {name} to {cls}')
 
             if add_to_method:
                 from ..wrapper.core import Dataset, Group, File
-                import forge
                 if Dataset in cls.__mro__:
                     if name not in self._methods['create_dataset']:
                         self._methods['create_dataset'][name] = {'cls': cls,
                                                                  'optional': optional,
                                                                  'default': default_value,
-                                                                 'position': position}
+                                                                 'position': position,
+                                                                 'alt': alt}
                     continue
                 if File in cls.__mro__:
                     if name not in self._methods['init_file']:
                         self._methods['init_file'][name] = {'cls': cls,
                                                             'optional': optional,
                                                             'default': default_value,
-                                                            'position': position}
+                                                            'position': position,
+                                                            'alt': alt}
                     continue
                 if Group in cls.__mro__:
                     if name not in self._methods['create_group']:
                         self._methods['create_group'][name] = {'cls': cls,
                                                                'optional': optional,
                                                                'default': default_value,
-                                                               'position': position}
+                                                               'position': position,
+                                                               'alt': alt}
 
     def _add_signature(self):
-        import forge
         for name, values in self._methods['create_dataset'].items():
             from ..wrapper.core import Group
             Group.create_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
@@ -158,7 +203,6 @@ class Convention:
                                          **values['position'])(File.__init__)
 
     def _delete_signature(self):
-        import forge
         for name, values in self._methods['create_dataset'].items():
             from ..wrapper.core import Group
             Group.create_dataset = forge.delete(f'{name}')(Group.create_dataset)

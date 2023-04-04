@@ -2,7 +2,7 @@ import logging
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import use
+from h5rdmtoolbox import use, tutorial
 from h5rdmtoolbox.wrapper import set_loglevel
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
@@ -14,7 +14,7 @@ class TestFind(unittest.TestCase):
     def setUp(self) -> None:
         """setup"""
         use('tbx')
-        with h5tbx.File() as h5:
+        with h5tbx.File(standard_name_table=tutorial.get_standard_name_table()) as h5:
             h5.attrs['project'] = 'tutorial'
             h5.create_dataset('velocity', data=[1, 2, -1], units='m/s', standard_name='x_velocity')
             g = h5.create_group('sub')

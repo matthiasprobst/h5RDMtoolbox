@@ -1242,18 +1242,21 @@ class StandardNameTableAttribute(StandardAttribute):
             pass  # not cached
 
         snt = super().get(src=self.parent.rootparent)
-        if snt is not None:
-            if snt.startswith('{'):
-                return json.loads(snt)
-            return StandardNameTable.from_web(snt)
 
-        if snt is not None:
-            # snt is a string
-            if isinstance(snt, dict):
-                return StandardNameTable(**snt)
-            if snt[0] == '{':
-                return StandardNameTable(**json.loads(snt))
-            elif snt[0:4] in ('http', 'wwww.'):
-                return StandardNameTable.from_web(snt)
-            return StandardNameTable.from_versionname(snt)
-        return Empty_Standard_Name_Table
+
+        if snt is None:
+            #return Empty_Standard_Name_Table
+            raise AttributeError(f'No standard name table found for file {self.parent.hdf_filename}')
+
+        if snt.startswith('{'):
+            return json.loads(snt)
+        return StandardNameTable.from_web(snt)
+
+        # snt is a string
+        if isinstance(snt, dict):
+            return StandardNameTable(**snt)
+        if snt[0] == '{':
+            return StandardNameTable(**json.loads(snt))
+        elif snt[0:4] in ('http', 'wwww.'):
+            return StandardNameTable.from_web(snt)
+        return StandardNameTable.from_versionname(snt)
