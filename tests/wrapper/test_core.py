@@ -24,7 +24,7 @@ class TestCore(unittest.TestCase):
     def test_File(self):
         self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.core.File'>")
         with h5tbx.File() as h5:
-            self.assertEqual(h5.__str__(), '<class "File" convention: "None">')
+            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
 
     def test_Files(self):
         with h5tbx.File() as h5:
@@ -261,7 +261,7 @@ class TestCore(unittest.TestCase):
             newds = h5.grp[Lower('new')]
             self.assertEqual(newds.name, '/grp/New')
 
-            self.assertEqual(str(h5.grp), '<HDF5 wrapper group "/grp" (members: 2, convention: "None")>')
+            self.assertEqual(str(h5.grp), '<HDF5 wrapper group "/grp" (members: 2, convention: "h5py")>')
 
             with self.assertRaises(ValueError):
                 grp = h5.create_group('grp')

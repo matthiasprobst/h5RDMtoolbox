@@ -222,7 +222,8 @@ class Database:
                     h5.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'v-component'},
                                       shape=(zplanes, timesteps, 64, 86, 2),
                                       attach_scales=(None, None, None, 'x', None))
-                    g = h5.create_group('timeAverages', long_name='time averaged data')
+                    g = h5.create_group('timeAverages',
+                                        attrs=dict(long_name='time averaged data'))
                     g.create_dataset('u', attrs={'units': 'm/s', 'long_name': 'mean u-component'},
                                      shape=(zplanes, 64, 86, 2))
                     g.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'mean v-component'},

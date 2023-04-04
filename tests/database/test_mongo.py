@@ -17,7 +17,7 @@ from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
 class TestH5Mongo(unittest.TestCase):
 
     def setUp(self) -> None:
-        use('tbx')
+        use(None)
         self.mongodb_running = True
         try:
             client = MongoClient(serverSelectionTimeoutMS=1.)
@@ -47,12 +47,14 @@ class TestH5Mongo(unittest.TestCase):
                     h5.attrs['username'] = username
                     h5.attrs['company'] = company
                     h5.attrs['meta'] = {'day': 'monday', 'iday': 0}
-                    h5.create_dataset('ds_at_root', data=np.random.random((2, 10, 8)), units='',
-                                      long_name='ds_at_root')
+                    h5.create_dataset('ds_at_root', data=np.random.random((2, 10, 8)),
+                                      attrs=dict(units='',
+                                                 long_name='ds_at_root'))
                     h5['ds_at_root'].make_scale()
                     g = h5.create_group('idgroup')
-                    ds = g.create_dataset('ds_at_subgroup', data=np.random.random((2, 10, 13)), units='',
-                                          long_name='ds_at_subgroup')
+                    ds = g.create_dataset('ds_at_subgroup', data=np.random.random((2, 10, 13)),
+                                          attrs=dict(units='',
+                                                     long_name='ds_at_subgroup'))
                     ds.dims[0].attach_scale(h5['ds_at_root'])
                     ds.attrs['id'] = i
 
@@ -66,16 +68,15 @@ class TestH5Mongo(unittest.TestCase):
             with File() as h5:
                 hdf_filename = h5.hdf_filename
                 h5.create_dataset('z', data=2, dtype=int,
-                                  units='', long_name='z_coordinate')
+                                  attrs=dict(units='', long_name='z_coordinate'))
                 h5.create_dataset('index', data=np.arange(0, 4, 1), dtype=int,
-                                  units='', long_name='index', make_scale=True)
+                                  attrs=dict(units='', long_name='index'), make_scale=True)
                 h5.create_dataset('index2', data=np.arange(0, 4, 1), dtype=int,
-                                  units='', long_name='index', make_scale=True)
+                                  attrs=dict(units='', long_name='index'), make_scale=True)
                 h5.create_dataset('index3', data=np.arange(0, 4, 1), dtype=int,
-                                  units='', long_name='index', make_scale=False)
+                                  attrs=dict(units='', long_name='index'), make_scale=False)
                 h5.create_dataset('images', data=np.random.random((4, 11, 21)),
-                                  units='counts',
-                                  long_name='a long name',
+                                  attrs=dict(units='counts', long_name='a long name'),
                                   attach_scales=([h5['index'], h5['index2']], None, None))
                 h5['images'].attrs['COORDINATES'] = ['/z', ]
 
@@ -127,7 +128,7 @@ class TestH5Mongo(unittest.TestCase):
             with File() as h5:
                 hdf_filename = h5.hdf_filename
                 h5.create_dataset('z', data=2, dtype=int,
-                                  units='', long_name='z_coordinate')
+                                  attrs=dict(units='', long_name='z_coordinate'))
                 for i in range(3):
                     h5.z.mongo.insert(axis=None, collection=self.collection, update=True)
                 self.assertEqual(self.collection.count_documents({}), 1)
@@ -146,7 +147,7 @@ class TestH5Mongo(unittest.TestCase):
                 h5.attrs['str'] = 'test'
 
                 h5.create_dataset('dataset', data=[1, 2, 3],
-                                  units='m/s', long_name='a velocity')
+                                  attrs=dict(units='m/s', long_name='a velocity'))
 
                 g = h5.create_group('a_group')
                 g.attrs['a'] = 1

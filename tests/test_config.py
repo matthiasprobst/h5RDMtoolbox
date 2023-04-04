@@ -62,8 +62,8 @@ class TestConfig(unittest.TestCase):
 
         self.assertEqual(config['default_convention'], 'tbx')
         with File() as h5:
-            self.assertEqual(h5.__class__, tbx.File)
+            self.assertEqual(h5.__class__, h5tbx.File)
 
         h5 = File()
-        self.assertEqual(h5.__class__, tbx.File)
+        self.assertEqual(h5.__class__, h5tbx.File)
         h5.close()

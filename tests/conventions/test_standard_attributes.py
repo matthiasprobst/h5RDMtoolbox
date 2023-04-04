@@ -9,6 +9,7 @@ from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import conventions
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox._user import testdir
@@ -59,9 +60,15 @@ class TestStandardAttributes(unittest.TestCase):
                         'keyword': 'keyword1, keyword2',
                         'ENTRYTYPE': 'article'}
         url = 'https://h5rdmtoolbox.readthedocs.io/en/latest/'
-        from h5rdmtoolbox.conventions import references
 
-        references.ReferencesAttribute.register(h5tbx.File, name='references', overwrite=True)
+        cv = conventions.Convention('test_references')
+        cv.add(attr_cls=conventions.references.ReferencesAttribute,
+               target_cls=h5tbx.wrapper.core.File,
+               add_to_method=True,
+               position={'before': 'layout'},
+               optional=True)
+        cv.register()
+        h5tbx.use(cv.name)
 
         with h5tbx.File() as h5:
             h5.references = bibtex_entry
@@ -93,6 +100,7 @@ class TestStandardAttributes(unittest.TestCase):
 
             h5.references = (url, url, url, url, bibtex_entry, bibtex_entry, bibtex_entry)
             self.assertTupleEqual(h5.references, (url, url, url, url, bibtex_entry, bibtex_entry, bibtex_entry))
+        h5tbx.use(None)
 
     # def setUp(self) -> None:
     #     """setup"""
