@@ -1,10 +1,16 @@
+import datetime
+import h5py
 import logging
 import numpy as np
 import pandas as pd
+import pathlib
 import unittest
+from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions import respuser
+from h5rdmtoolbox import __version__
+from h5rdmtoolbox._config import ureg
+from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -287,3 +293,151 @@ class TestCore(unittest.TestCase):
             self.assertTrue(h5['str2'].name, '/str2')
             self.assertEqual(h5['str2'][()], ('a', 'b', 'c', 'dddd'))
             self.assertTrue(h5['str2'].size, 4)
+
+    # ---------------------------------------------------------------------------
+    # special dataset creation methods:
+    # ---------------------------------------------------------------------------
+    def test_create_img_dataset(self):
+        # Iterable class:
+        class ImgReader:
+            def __init__(self, imgdir):
+                self._imgdir = imgdir
+                self._index = 0
+                self._size = 5
+
+            def read_img(self):
+                return np.random.random((20, 10))
+
+            def __iter__(self):
+                return self
+
+            def __len__(self):
+                return self._size
+
+            def __next__(self):
+                if self._index < self._size:
+                    self._index += 1
+                    return self.read_img()
+                raise StopIteration
+
+        imgreader = ImgReader('testdir')
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0)
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+            # reset imgreader
+            imgreader._index = 0
+            ds = h5.create_dataset_from_image(imgreader, 'testimg2', axis=-1)
+            self.assertEqual(ds.shape, (20, 10, 5))
+            self.assertEqual(ds.chunks, (20, 10, 1))
+
+        # write more tests for create_dataset_from_image:
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
+                                              'testimg', axis=0)
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+
+        imgreader._index = 0
+        h5tbx.use('tbx')
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0,
+                                              units='', long_name='test')
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+            # reset imgreader
+            imgreader._index = 0
+            ds = h5.create_dataset_from_image(imgreader, 'testimg2', axis=-1,
+                                              units='', long_name='test')
+            self.assertEqual(ds.shape, (20, 10, 5))
+            self.assertEqual(ds.chunks, (20, 10, 1))
+
+        # write more tests for create_dataset_from_image:
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
+                                              'testimg', axis=0, units='', long_name='test')
+            self.assertEqual(ds.shape, (5, 20, 10))
+            self.assertEqual(ds.chunks, (1, 20, 10))
+
+    def test_properties(self):
+        with h5tbx.File() as h5:
+            self.assertIsInstance(h5.creation_time, datetime)
+            now = datetime.now().astimezone()
+            file_now = h5.creation_time
+            self.assertTrue(abs((file_now - now).total_seconds()) < 1)
+            self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
+            self.assertEqual(h5.version, __version__)
+            self.assertEqual(h5.filesize.units, ureg.byte)
+            self.assertIsInstance(h5.hdf_filename, pathlib.Path)
+
+    def test_layout(self):
+        with h5tbx.File(layout='TbxLayout') as h5:
+            self.assertIsInstance(h5.layout, H5Layout)
+        list_of_registered_layouts = H5Layout.get_registered()
+        for lay in list_of_registered_layouts:
+            with h5tbx.File(layout=lay) as h5:
+                self.assertIsInstance(h5.layout, H5Layout)
+        for lay in list_of_registered_layouts:
+            with h5tbx.File(layout=H5Layout(lay)) as h5:
+                self.assertIsInstance(h5.layout, H5Layout)
+        with self.assertRaises(TypeError):
+            with h5tbx.File(layout=123.3):
+                pass
+
+    def test_special_attribute_types(self):
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=np.random.random((10, 10)))
+            grp = h5.create_group('grp')
+            for obj in (h5, ds, grp):
+                self.assertTrue(isinstance(obj.attrs, h5tbx.wrapper.h5attr.WrapperAttributeManager))
+
+                obj.attrs['a_tuple'] = (1, 2, 'awd', {'k': 'v', 'k2': 2})
+                t = obj.attrs['a_tuple']
+                self.assertIsInstance(t, tuple)
+                self.assertEqual(t, (1, 2, 'awd', {'k': 'v', 'k2': 2}))
+
+                obj.attrs['a_list'] = [1, 2, 'awd', {'k': 'v', 'k2': 2}]
+                t = obj.attrs['a_list']
+                self.assertIsInstance(t, list)
+                self.assertEqual(t, [1, 2, 'awd', {'k': 'v', 'k2': 2}])
+                obj.attrs.rename('a_list', 'a_new_list')
+                t = obj.attrs['a_new_list']
+                self.assertIsInstance(t, list)
+                self.assertEqual(t, [1, 2, 'awd', {'k': 'v', 'k2': 2}])
+
+                obj.attrs['an_attr'] = 'a_string'
+                self.assertEqual(obj.attrs['an_attr'], 'a_string')
+                obj.attrs['mean'] = 1.2
+                self.assertEqual(obj.attrs['mean'], 1.2)
+
+                # testing links:
+                obj.attrs['link_to_group'] = h5['/']
+                self.assertEqual(obj.attrs['link_to_group'], '/')
+                self.assertIsInstance(obj.attrs['link_to_group'], str)
+                obj.attrs['link_to_ds'] = ds
+                self.assertEqual(obj.attrs['link_to_ds'], ds.name)
+                self.assertIsInstance(obj.attrs['link_to_ds'], str)
+                obj.attrs['attribute_of_links_to_ds'] = {'ds': ds, 'grp': grp, 'astr': 'test', 'afloat': 3.1}
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds'], dict)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['ds'], h5py.Dataset)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['grp'], h5py.Group)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['astr'], str)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['afloat'], float)
+
+                # testing units
+                test_vals = ('1.2m', '1.2 m', '1.2 [m]', '1.2 (m)')
+                for test_val in test_vals:
+                    obj.attrs['mean_with_unit'] = test_val
+                    self.assertEqual(obj.attrs['mean_with_unit'], test_val)
+                    attrs_with_unit = obj.attrs['mean_with_unit'].to_pint()
+                    self.assertEqual(f"{obj.attrs['mean_with_unit'].to_pint()}", '1.2 m')
+                    h5tbx.config.ureg_format = 'L~'
+                    self.assertEqual(f"{obj.attrs['mean_with_unit'].to_pint()}",
+                                     '\\begin{pmatrix}1.2\\end{pmatrix}\\ \\mathrm{m}')
+                    h5tbx.config.ureg_format = 'C~'
+                    self.assertEqual(f"{obj.attrs['mean_with_unit'].to_pint()}", '1.2 m')
+                    self.assertEqual(attrs_with_unit, ureg(test_val))
+                    obj.attrs['mean_with_unit'] = attrs_with_unit
+                    self.assertEqual(obj.attrs['mean_with_unit'], str(ureg(test_val)))
+
+                self.assertEqual(obj.attrs.get('non_existing_attribute'), None)
