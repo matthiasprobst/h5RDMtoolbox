@@ -489,18 +489,19 @@ class StandardNameTable(MinimalStandardNameTable):
         return self.name
 
     def __getitem__(self, item) -> StandardName:
+        if item not in self.table and item not in self.alias:
+            raise KeyError(f'Standard name "{item}" not in name table {self.versionname}.')
+
         if item in self.table:
             return StandardName(name=item,
                                 canonical_units=self.table[item]['canonical_units'],
                                 description=self.table[item]['description'],
                                 snt=self)
-        if item in self.alias:
-            return StandardName(item,
-                                self.table[self.alias[item]]['canonical_units'],
-                                self.table[self.alias[item]]['description'],
-                                snt=self)
-        # return a standard name that is not in the table
-        return StandardName(item, None, None, snt=self)
+        # if item in self.alias:
+        return StandardName(item,
+                            self.table[self.alias[item]]['canonical_units'],
+                            self.table[self.alias[item]]['description'],
+                            snt=self)
 
     def __contains__(self, item):
         return item in self.table
@@ -579,7 +580,8 @@ class StandardNameTable(MinimalStandardNameTable):
             self.table.update(data)
 
     @staticmethod
-    def from_xml(xml_filename, name: str = None) -> "StandardNameTable":
+    def from_xml(xml_filename: Union[str, pathlib.Path],
+                 name: str = None) -> "StandardNameTable":
         """Create a StandardNameTable from an xml file
 
         Parameters
@@ -599,7 +601,7 @@ class StandardNameTable(MinimalStandardNameTable):
         FileNotFoundError
             If the xml file does not exist
         """
-        with open(xml_filename, 'r', encoding='utf-8') as file:
+        with open(str(xml_filename), 'r', encoding='utf-8') as file:
             my_xml = file.read()
         xmldict = xmltodict.parse(my_xml)
         _name = list(xmldict.keys())[0]
@@ -638,7 +640,7 @@ class StandardNameTable(MinimalStandardNameTable):
         return snt
 
     @staticmethod
-    def from_yaml(yaml_filename) -> "StandardNameTable":
+    def from_yaml(yaml_filename: Union[str, pathlib.Path]) -> "StandardNameTable":
         """Create a StandardNameTable from a yaml file
 
         Parameters
@@ -729,8 +731,11 @@ class StandardNameTable(MinimalStandardNameTable):
         return snt
 
     @staticmethod
-    def from_gitlab(url: str, project_id: int, ref_name: str,
-                    file_path: str, private_token: str = None) -> "StandardNameTable":
+    def from_gitlab(url: str,
+                    project_id: int,
+                    ref_name: str,
+                    file_path: Union[str, pathlib.Path],
+                    private_token: str = None) -> "StandardNameTable":
         """
         Download a file from a gitlab repository and provide StandardNameTable based on this.
 
@@ -742,7 +747,7 @@ class StandardNameTable(MinimalStandardNameTable):
             ID of gitlab project
         ref_name: str
             Name of branch or tag
-        file_path: str
+        file_path: Union[str, pathlib.Path
             Path to file in gitlab project
         private_token: str
             Token if porject is not public
@@ -1135,7 +1140,7 @@ class StandardNameAttribute(StandardAttribute):
         snt = obj.snt
         return snt.check_name(value)
 
-    def get(self):
+    def get(self, src=None, name=None, default=None):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
         sn = super().get()
@@ -1191,11 +1196,9 @@ class StandardNameTableAttribute(StandardAttribute):
                 return super().set(value=snt.dumps(), target=self.parent.rootparent)
         if snt.STORE_AS == StandardNameTableStoreOption.url:
             return super().set(value=snt.url, target=self.parent.rootparent)
-        if snt.STORE_AS == StandardNameTableStoreOption.inline:
-            return super().set(value=snt.dumps(), target=self.parent.rootparent)
         raise ValueError(f'Unknown store option {snt.STORE_AS}')
 
-    def get(self) -> StandardNameTable:
+    def get(self, src=None, name=None, default=None) -> StandardNameTable:
         """Get (if exists) Standard Name Table from file.
 
         Raises
@@ -1216,13 +1219,4 @@ class StandardNameTableAttribute(StandardAttribute):
 
         if snt.startswith('{'):
             return json.loads(snt)
-        return StandardNameTable.from_web(snt)
-
-        # snt is a string
-        if isinstance(snt, dict):
-            return StandardNameTable(**snt)
-        if snt[0] == '{':
-            return StandardNameTable(**json.loads(snt))
-        elif snt[0:4] in ('http', 'wwww.'):
-            return StandardNameTable.from_web(snt)
-        return StandardNameTable.from_versionname(snt)
+        return web

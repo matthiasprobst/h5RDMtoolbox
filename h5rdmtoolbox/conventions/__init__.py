@@ -109,7 +109,6 @@ class Convention:
         overwrite : bool, optional
             If True, the standard attribute is overwritten if it already exists.
         """
-        from .standard_attribute import register
         if name is None:
             if hasattr(attr_cls, 'name'):
                 name = attr_cls.name

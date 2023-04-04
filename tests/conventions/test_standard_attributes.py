@@ -361,14 +361,35 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(ds2.source, sftw)
 
     def test_standard_name(self):
+        sn_fail = standard_name.StandardName(name='', canonical_units='m')
+        with self.assertRaises(standard_name.StandardNameError):
+            sn_fail.check_syntax()
+        sn_fail = standard_name.StandardName(name=' x', canonical_units='m')
+        with self.assertRaises(standard_name.StandardNameError):
+            sn_fail.check_syntax()
+        sn_fail = standard_name.StandardName(name='x ', canonical_units='m')
+        with self.assertRaises(standard_name.StandardNameError):
+            sn_fail.check_syntax()
+        sn_fail = standard_name.StandardName(name='x_coordinate_$', canonical_units='m')
+        with self.assertRaises(standard_name.StandardNameError):
+            sn_fail.check_syntax()
+        sn_fail = standard_name.StandardName(name='1x_coordinate', canonical_units='m')
+        with self.assertRaises(standard_name.StandardNameError):
+            sn_fail.check_syntax()
+
         sn1 = standard_name.StandardName(name='acc',
                                          description=None,
                                          canonical_units='m**2/s',
                                          snt=None)
         self.assertEqual(sn1.canonical_units, 'm**2/s')
+        self.assertEqual(sn1.units, 'm**2/s')
+
+        with self.assertRaises(KeyError):
+            tutorial.get_standard_name_table()['z_coord']
 
         with self.assertRaises(KeyError):
             standard_name.StandardName.from_snt('xx_coordinate', snt=tutorial.get_standard_name_table())
+
         sn = standard_name.StandardName.from_snt('x_coordinate', snt=tutorial.get_standard_name_table())
         sn.check_syntax()
         self.assertEqual(sn.canonical_units, 'm')
