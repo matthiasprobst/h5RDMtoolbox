@@ -1215,8 +1215,9 @@ class StandardNameTableAttribute(StandardAttribute):
 
         if snt is None:
             # return Empty_Standard_Name_Table
-            raise AttributeError(f'No standard name table found for file {self.parent.hdf_filename}')
+            print(self.parent, type(self.parent))
+            raise AttributeError(f'No standard name table found for file {self.parent.file.filename}')
 
         if snt.startswith('{'):
             return json.loads(snt)
-        return web
+        return StandardNameTable.from_web(snt)

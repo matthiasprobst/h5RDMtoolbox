@@ -37,12 +37,6 @@ def set_loglevel(logger, level):
 
 set_loglevel(core_logger, config.init_logger_level)
 
-# global instance:
-h5tbxParams = {'convention': config['default_convention'],
-               'File': File,
-               'Dataset': Dataset,
-               'Group': Group}
-
 from . import conventions
 
 cv_h5py = conventions.Convention('h5py')
@@ -142,10 +136,7 @@ class Files:
     """Class to access multiple files at once"""
 
     def __new__(cls, *args, **kwargs):
-        # use(config['default_convention'])
-        file_instance = kwargs.get('file_instance', None)
-        if file_instance is None:
-            kwargs['file_instance'] = h5tbxParams['File']
+        kwargs['file_instance'] = File
         return filequery.Files(*args, **kwargs)
 
 

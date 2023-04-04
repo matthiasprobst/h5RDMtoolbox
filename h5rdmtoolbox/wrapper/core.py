@@ -1727,11 +1727,12 @@ class File(h5py.File, Group, ConventionAccesor):
                 if v is not None:
                     raise ValueError(f'Cannot set attribute {k} in read mode')
 
-        if not isinstance(name, ObjectID):
-            self.hdf_filename = Path(name)
+        # if not isinstance(name, ObjectID):
+        #     self.hdf_filename = Path(name)
         super().__init__(name=name,
                          mode=mode,
                          **kwargs)
+        self.hdf_filename = Path(self.filename)
 
         if self.mode != 'r':
             # update file toolbox version, wrapper version

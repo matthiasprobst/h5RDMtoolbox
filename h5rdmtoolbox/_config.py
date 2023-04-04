@@ -111,7 +111,7 @@ class H5tbxConfig:
     xarray_unit_repr_in_plots: Union[str, UnitPlotRepr] = '/'
     require_unit: bool = True  # datasets require units
     ureg_format: Union[str, UregFormats] = 'C~'
-    default_convention: Union[str, None] = 'tbx'
+    default_convention: Union[str, None] = 'h5py'
     init_logger_level: Union[int, str] = 'INFO'
     dtime_fmt: str = '%Y%m%d%H%M%S%f'
     expose_user_prop_to_attrs: bool = True

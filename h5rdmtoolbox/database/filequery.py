@@ -332,7 +332,7 @@ class H5Objects:
 class Files:
     """File-like interface for multiple HDF Files"""
 
-    def __init__(self, filenames: List[Union[str, pathlib.Path]], file_instance=h5py.File, **kwargs):
+    def __init__(self, filenames: List[Union[str, pathlib.Path]], file_instance, **kwargs):
         """
         Parameters
         ----------
@@ -340,7 +340,7 @@ class Files:
             A list of hdf5 filenames or path to a directory containing hdf files.
             If a directory is passed, the glob-str can be specified via **kwargs.
             Default is glob='*.hdf'.
-        file_instance: h5py.File, optional=h5py.File
+        file_instance: h5py.File
             The HDF5 file instance
         """
 
