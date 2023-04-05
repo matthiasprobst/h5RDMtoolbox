@@ -54,15 +54,24 @@ class TestStandardAttributes(unittest.TestCase):
                add_to_method=True,
                position={'after': 'name'},
                optional=True)
+
+        # this shall be a required attribute:
         cv.add(ShortyAttribute,
                target_cls=h5tbx.wrapper.core.Group,
                add_to_method=True,
                position={'after': 'name'},
-               optional=True)
+               optional=False)
+        cv.add(ShortyAttribute,
+               target_cls=h5tbx.wrapper.core.Dataset,
+               add_to_method=True,
+               position={'after': 'name'},
+               optional=False)
+
         cv.register()
         self.assertIn(cv.name, h5tbx.conventions.registered_conventions)
         h5tbx.use(cv.name)
         self.assertEqual(cv, h5tbx.conventions.current_convention)
+
         with h5tbx.File() as h5:
             h5.short_name = 'short'
             h5.shortyname = 'not_effect'
@@ -75,6 +84,11 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(h5.attrs['shortyname'], 'sho')
             self.assertEqual(h5['/'].attrs['shortyname'], 'sho!')
             self.assertEqual(h5['/'].attrs['another_shorty_name'], 'shor!!')
+
+            with self.assertRaises(ValueError):
+                h5.create_dataset('test', data=1)
+            h5.create_dataset('test', data=1, another_shorty_name='shorty')
+            self.assertEqual(h5['test'].another_shorty_name, 'shor!!')
 
             self.assertEqual(h5['/'].shortyname, 'sho!')
             self.assertEqual(h5['/'].another_shorty_name, 'shor!!')

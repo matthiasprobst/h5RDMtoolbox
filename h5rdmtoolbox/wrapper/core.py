@@ -99,7 +99,10 @@ def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict,
                 attrs.pop(k)
         else:
             if k not in skwargs or skwargs[k] is None:  # missing or None
-                if v['alt'] is not None and v['alt'] not in attrs:
+                if v['alt'] is None:
+                    raise ValueError(f'The standard attribute "{k}" is required but not provided.')
+                # there is an alternative attribute which should be available instead:
+                if v['alt'] not in attrs:
                     raise ValueError(f'The standard attribute "{k}" is required but not provided. The alternative '
                                      f'attribute "{v["alt"]}" is also not provided.')
                 attrs.pop(k)
