@@ -9,11 +9,9 @@ import yaml
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import config
-from h5rdmtoolbox import tutorial
+from h5rdmtoolbox import config, tutorial
 from h5rdmtoolbox._config import ureg
-from h5rdmtoolbox.conventions import respuser
-from h5rdmtoolbox.conventions import standard_name
+from h5rdmtoolbox.conventions import respuser, standard_name
 from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
 from h5rdmtoolbox.wrapper import set_loglevel
@@ -295,7 +293,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      institution=self.default_institution,
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(h5tbx.conventions.StandardAttributeError):
                 _ = h5.create_dataset('u', shape=(), units='m/s')
         with h5tbx.wrapper.core.File(title=self.default_title,
                                      institution=self.default_institution,
@@ -326,7 +324,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      institution=self.default_institution,
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(h5tbx.conventions.StandardAttributeError):
                 _ = h5.create_dataset('velocity', data=da)
 
         da = xr.DataArray(data=[1, 2, 3], attrs={'units': 'm/s', 'standard_name': 'x_velocity'})

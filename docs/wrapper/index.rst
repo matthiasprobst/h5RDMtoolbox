@@ -1,26 +1,25 @@
-|h5wrappericon| HDF5-Wrapper
-============================
+.. _wrapper:
+
+|h5wrappericon| Wrapper around `h5py`
+=====================================
 
 .. |h5wrappericon| image:: ../_static/icon_h5wrapper.svg
   :width: 30
   :alt:
 
-Motivated by sustainable research data management, the sub-package `wrapper` aims to facilitate data generation,
-processing and analysing using HDF5 files. This is done by providing a class that is inherited from the core interface
-class of the widely used
-package `h5py`. On top of the core wrapper implementation class, specialized classes implement conventions that enforce
-the usage of
-certain attributes and regulate their values.
-
+Motivated by the need for sustainable research data management, the wrapper sub-package aims to simplify data
+generation, processing, and analysis using HDF5 files.
+It achieves this by providing a class that inherits from the core interface classes of the popular package `h5py`.
+Besides new methods and properties, the "wrapper classes" embedding user-defined (conventions)[conventions]. Please
+refer :ref:`here<conventions>` for a detailed description of the conventions.
+The following sections will guide you through the complete workflow of creating, writing, and reading HDF5 files and
+thereby highlight the advantages of the wrapper classes.
 
 .. note::
 
    The wrapper-classes extend but don't limit the functionality of the `h5py` package. So users that are
    familiar to the `h5py` package will find all features but will be enforced to provide e.g. certain attributes
    to fulfill the requirements of a certain meta convention.
-
-This notebook will guide through the high-level methods and additional features of the core wrapper/interface class.
-Specialized classes associated with a convention get a dedicated section (:ref:`wrapper_and_conventions`)
 
 
 .. toctree::
@@ -36,4 +35,3 @@ Specialized classes associated with a convention get a dedicated section (:ref:`
     SpecialIO.ipynb
     Visualization.ipynb
     Extensions.ipynb
-    Wrapper & Conventions <wrapper_and_conventions/index>

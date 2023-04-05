@@ -20,6 +20,7 @@ class TestFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
+        use('tbx')
         use(None)
         with File(mode='w') as h5:
             h5.attrs['one'] = 1

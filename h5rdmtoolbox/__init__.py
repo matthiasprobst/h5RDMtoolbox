@@ -37,98 +37,12 @@ def set_loglevel(logger, level):
 
 set_loglevel(core_logger, config.init_logger_level)
 
-from . import conventions
+from .conventions import Convention, use, current_convention, registered_conventions
 
-cv_h5py = conventions.Convention('h5py')
+cv_h5py = Convention('h5py')
 cv_h5py.register()
+from . import tbx_convention
 
-cv = conventions.Convention('tbx')
-cv.add(attr_cls=conventions.title.TitleAttribute,
-       target_cls=File,
-       add_to_method=True,
-       position={'before': 'layout'},
-       optional=True)
-cv.add(attr_cls=conventions.StandardAttribute.AnyString('institution'),
-       target_cls=File,
-       add_to_method=True,
-       position={'before': 'layout'},
-       optional=True)
-cv.add(attr_cls=conventions.references.ReferencesAttribute,
-       target_cls=File,
-       add_to_method=True,
-       position={'before': 'layout'},
-       optional=True)
-cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
-       target_cls=File,
-       add_to_method=True,
-       position={'before': 'layout'},
-       optional=True)
-cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
-       target_cls=Dataset,
-       add_to_method=False)
-cv.add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
-       target_cls=Group,
-       add_to_method=False)
-cv.add(attr_cls=conventions.standard_name.StandardNameAttribute,
-       target_cls=Dataset,
-       position={'after': 'name'},
-       add_to_method=True,
-       optional=False,
-       alt='long_name')
-cv.add(attr_cls=conventions.units.UnitsAttribute,
-       target_cls=Dataset,
-       add_to_method=True,
-       position={'after': 'name'},
-       optional=False)
-cv.add(attr_cls=conventions.long_name.LongNameAttribute,
-       target_cls=Dataset,
-       add_to_method=True,
-       position={'after': 'name'},
-       optional=False,
-       alt='standard_name')
-cv.add(attr_cls=conventions.long_name.LongNameAttribute,
-       target_cls=Group,
-       add_to_method=True,
-       position={'after': 'name'},
-       optional=True)
-cv.add(attr_cls=conventions.comment.CommentAttribute,
-       target_cls=Group,
-       add_to_method=True,
-       position={'after': 'long_name'},
-       optional=True)
-cv.add(attr_cls=conventions.comment.CommentAttribute,
-       target_cls=Dataset,
-       add_to_method=True,
-       position={'after': 'long_name'},
-       optional=True)
-cv.add(attr_cls=conventions.comment.CommentAttribute,
-       target_cls=File,
-       add_to_method=True,
-       position={'after': 'standard_name_table'},
-       optional=True)
-cv.add(attr_cls=conventions.respuser.RespUserAttribute,
-       target_cls=Dataset,
-       add_to_method=True,
-       position={'after': 'comment'},
-       optional=True)
-cv.add(attr_cls=conventions.respuser.RespUserAttribute,
-       target_cls=Group,
-       add_to_method=True,
-       position={'before': 'attrs'},
-       optional=True)
-cv.add(attr_cls=conventions.respuser.RespUserAttribute,
-       target_cls=File,
-       add_to_method=True,
-       position={'after': 'mode'},
-       optional=True)
-cv.add(attr_cls=conventions.source.SourceAttribute,
-       target_cls=Dataset,
-       add_to_method=True,
-       position={'after': 'comment'},
-       optional=True)
-cv.register()
-
-use = conventions.use
 use(config['default_convention'])
 
 
@@ -188,4 +102,5 @@ def clean_temp_data(full: bool = False):
 
 
 __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
-           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset']
+           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset',
+           'current_convention']

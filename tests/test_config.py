@@ -36,13 +36,12 @@ class TestConfig(unittest.TestCase):
     def test_write_config(self):
         h5tbx.write_default_config()
         self.assertIsInstance(h5tbx.DEFAULT_CONFIG, omegaconf.DictConfig)
-        self.assertEqual(h5tbx.DEFAULT_CONFIG['init_logger_level'], 'INFO')
+        self.assertEqual(h5tbx.DEFAULT_CONFIG['init_logger_level'], 'ERROR')
         self.assertTrue(h5tbx.user_config_filename.exists())
         self.assertIsInstance(config, omegaconf.DictConfig)
-        self.assertEqual(config['init_logger_level'], 'INFO')
+        self.assertEqual(config['init_logger_level'], 'ERROR')
 
     def test_set_parameter(self):
-        from h5rdmtoolbox.wrapper import tbx
         # config.set_config_parameter('convention', None)
         config['default_convention'] = None
         self.assertEqual(config['default_convention'], None)

@@ -350,7 +350,7 @@ class H5Layout:
         if len(candidates) == 1:
             return pathlib.Path(candidates[0])
         raise FileNotFoundError(
-            f'File "{name}" could not be found or passed name was not unique. Check the user layout dir '
+            f'File "{name}" could not be found or passed because "{name}" was not unique. Check the user layout dir '
             f'{UserDir["layouts"]}'
         )
 

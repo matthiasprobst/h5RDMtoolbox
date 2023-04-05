@@ -100,11 +100,13 @@ def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict,
         else:
             if k not in skwargs or skwargs[k] is None:  # missing or None
                 if v['alt'] is None:
-                    raise ValueError(f'The standard attribute "{k}" is required but not provided.')
+                    raise conventions.StandardAttributeError(
+                        f'The standard attribute "{k}" is required but not provided.')
                 # there is an alternative attribute which should be available instead:
                 if v['alt'] not in attrs:
-                    raise ValueError(f'The standard attribute "{k}" is required but not provided. The alternative '
-                                     f'attribute "{v["alt"]}" is also not provided.')
+                    raise conventions.StandardAttributeError(
+                        f'The standard attribute "{k}" is required but not provided. The alternative '
+                        f'attribute "{v["alt"]}" is also not provided.')
                 attrs.pop(k)
 
     return attrs, skwargs, kwargs
@@ -415,10 +417,19 @@ class Group(h5py.Group, ConventionAccesor):
                               name: str,
                               data: Union[str, List[str]],
                               overwrite=False,
-                              attrs=None):
+                              attrs=None,
+                              **kwargs):
         """Create a string dataset. In this version only one string is allowed.
         In future version a list of strings may be allowed, too.
         No long or standard name needed"""
+
+        if attrs is None:
+            attrs = {}
+
+        if isinstance(data, xr.DataArray):
+            attrs.update(data.attrs)
+        attrs, skwargs, kwargs = process_attributes('create_string_dataset', attrs, kwargs)
+
         if isinstance(data, str):
             n_letter = len(data)
         elif isinstance(data, (tuple, list)):
@@ -502,24 +513,24 @@ class Group(h5py.Group, ConventionAccesor):
         ds : h5py.Dataset
             created dataset
         """
-        if attrs is None:
-            attrs = {}
 
-        if isinstance(data, xr.DataArray):
-            attrs.update(data.attrs)
-
-        attrs, skwargs, kwargs = process_attributes('create_dataset', attrs, kwargs)
         if isinstance(data, str):
             return self.create_string_dataset(name=name,
                                               data=data,
                                               overwrite=overwrite,
                                               attrs=attrs,
                                               **kwargs)
+        if attrs is None:
+            attrs = {}
+
+        if isinstance(data, xr.DataArray):
+            attrs.update(data.attrs)
+        attrs, skwargs, kwargs = process_attributes('create_dataset', attrs, kwargs)
 
         # kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
 
         if isinstance(data, xr.DataArray):
-             data.attrs.update(attrs)
+            data.attrs.update(attrs)
 
         if name:
             if name in self:
@@ -1512,7 +1523,12 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         """Print the dataset content in a more comprehensive way"""
         out = f'{self.__class__.__name__} "{self.name}"'
         out += f'\n{"-" * len(out)}'
-        out += f'\n{"shape:":14} {self.shape}'
+        out += f'\n{"*shape:":14} {self.shape}'
+        out += f'\n{"*dtype:":14} {self.dtype}'
+        out += f'\n{"*compression:":14} {self.compression} ({self.compression_opts})'
+
+        for k, v in self.attrs.items():
+            out += f'\n{k+":":14} {v}'
 
         has_dim = False
         dim_str = '\n\nDimensions'
@@ -1576,15 +1592,6 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         for i in ils:
             self.dims[axis].attach_scale(backup_scales[i][1])
         logger.debug('new primary scale: %s', self.dims[axis][0])
-
-
-# H5Dataset is depreciated
-class H5Dataset(Dataset):
-    """Inherited from Dataset. It is depreciated and will be removed in future versions."""
-
-    def __init__(self, _id):
-        warnings.warn('H5Dataset is depreciated. Use Dataset instead', DeprecationWarning)
-        super(H5Dataset, self).__init__(self, _id)
 
 
 class File(h5py.File, Group, ConventionAccesor):

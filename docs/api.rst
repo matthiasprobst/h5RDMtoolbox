@@ -19,14 +19,6 @@ Base wrapper class
    h5rdmtoolbox.wrapper.core.File
    h5rdmtoolbox.wrapper.core.File.check
 
-Toolbox wrapper class using the toolbox conventions
-===================================================
-
-.. autosummary::
-   :toctree: generated/
-
-   h5rdmtoolbox.wrapper.tbx.File
-
 Conventions
 ===========
 
@@ -37,10 +29,8 @@ Standard attributes
     :toctree: generated/
 
     h5rdmtoolbox.conventions.standard_attribute.StandardAttribute
-    h5rdmtoolbox.conventions.standard_attribute.register
-    h5rdmtoolbox.conventions.standard_attribute.get_name
-    h5rdmtoolbox.conventions.standard_attribute.get
-    h5rdmtoolbox.conventions.standard_attribute.set
+    h5rdmtoolbox.conventions.standard_attribute.StandardAttribute.get
+    h5rdmtoolbox.conventions.standard_attribute.StandardAttribute.set
 
 Standard names and tables
 -------------------------

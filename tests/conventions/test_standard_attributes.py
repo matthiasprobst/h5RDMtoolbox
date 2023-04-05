@@ -5,6 +5,7 @@ import requests
 import unittest
 import warnings
 from omegaconf import DictConfig
+from packaging import version
 from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox
@@ -15,7 +16,7 @@ from h5rdmtoolbox import tutorial
 from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions import units, title, standard_name
-from packaging import version
+
 
 class TestStandardAttributes(unittest.TestCase):
 
@@ -85,7 +86,7 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(h5['/'].attrs['shortyname'], 'sho!')
             self.assertEqual(h5['/'].attrs['another_shorty_name'], 'shor!!')
 
-            with self.assertRaises(ValueError):
+            with self.assertRaises(h5tbx.conventions.StandardAttributeError):
                 h5.create_dataset('test', data=1)
             h5.create_dataset('test', data=1, another_shorty_name='shorty')
             self.assertEqual(h5['test'].another_shorty_name, 'shor!!')

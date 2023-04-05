@@ -112,7 +112,7 @@ class H5tbxConfig:
     require_unit: bool = True  # datasets require units
     ureg_format: Union[str, UregFormats] = 'C~'
     default_convention: Union[str, None] = 'h5py'
-    init_logger_level: Union[int, str] = 'INFO'
+    init_logger_level: Union[int, str] = 'ERROR'
     dtime_fmt: str = '%Y%m%d%H%M%S%f'
     expose_user_prop_to_attrs: bool = True
 

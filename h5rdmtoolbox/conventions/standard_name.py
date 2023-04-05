@@ -678,7 +678,7 @@ class StandardNameTable(MinimalStandardNameTable):
         url : str
             URL of the file to download.
 
-            .. info::
+            .. note::
 
                 You may read a table stored as a yaml file from a github repository by using the following url:
                 https://raw.githubusercontent.com/<username>/<repository>/<branch>/<filepath>

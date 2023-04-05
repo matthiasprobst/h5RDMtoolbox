@@ -13,18 +13,29 @@ supports with data creation, processing and sharing.
 
 
 Overview
-========
-The packages comes with three sub-packages, each of it covering a different aspect of efficient and sustained work with
+--------
+The packages comes with three sub-packages, each covering a different aspect of efficient and sustainable work with
 HDF5 files:
 
-  - :doc:`convention <conventions/index>`: Naming standards for specific attributes in the HDF5 files
-  - :doc:`wrapper <wrapper/index>`: Efficient high-level objects for efficient work with HDF5 files
-  - :doc:`database <database/index>`: Querying HDF5 files
+  - :doc:`convention <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
+  - :doc:`wrapper <wrapper/index>`: Efficient high-level objects for efficient work with HDF5 files (extending `h5py`)
+  - :doc:`database <database/index>`: Querying HDF5 files (A database for HDF5 files)
 
 .. image:: _static/package_overview.svg
   :width: 350
   :alt: Alternative text
   :align: center
+
+Please navigate through the chapters on the left to learn more about the package. They are organized in the following:
+
+      - :doc:`Getting Started <gettingstarted/index>`: A quick introduction to the package
+      - :doc:`Wrapper <wrapper/index>`: A high-level wrapper for HDF5 files
+      - :doc:`Database <database/index>`: A database for HDF5 files
+      - :doc:`Conventions <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
+      - :doc:`HowTo <howto/index>`: A collection of FAQs how to do things
+      - :doc:`API Reference <api>`: The API reference
+      - :doc:`Glossary <glossary/index>`: A glossary of terms used in the package
+      - :doc:`References <references>`: A list of references used in the package
 
 Installation
 ------------
@@ -66,10 +77,10 @@ You may install optional dependencies:
    :caption: Documentation
 
     Getting Started <gettingstarted/index>
-    HDF5-Wrapper <wrapper/index>
-    HDF5-Database <database/index>
+    Wrapper <wrapper/index>
+    Database <database/index>
     Conventions <conventions/index>
-    HowTo <howto/howto.ipynb>
+    HowTo <howto/index>
     API Reference <api>
     Glossary <glossary/index>
     References <references>

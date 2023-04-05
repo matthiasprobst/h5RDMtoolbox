@@ -19,6 +19,7 @@ from .layout import H5Layout
 from .standard_attribute import StandardAttribute
 from .standard_name import StandardName, StandardNameTable
 from .utils import dict2xml, is_valid_email_address
+from .._repr import make_italic, make_bold
 
 __all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'respuser']
 
@@ -46,6 +47,11 @@ def set_loglevel(level):
 registered_conventions = {}
 
 
+class StandardAttributeError(Exception):
+    """Exception for standard attribute errors"""
+    pass
+
+
 class Convention:
     """A convention is a set of standard attributes that are used to describe the data in a file."""
 
@@ -54,26 +60,68 @@ class Convention:
         self._properties = {}
         self._methods = {'init_file': {},
                          'create_group': {},
-                         'create_dataset': {}}
+                         'create_dataset': {},
+                         'create_string_dataset': {}}
 
     def __repr__(self):
-        out = f'Convention({self.name})'
-        out += 'Properties:\n-----------\n'
+        header = f'Convention({self.name})'
+        out = f'{make_bold(header)}\n'
+
+        header = make_bold('\n> Properties')
+        out += f'{header}:'
+
+        if len(self._properties) == 0:
+            out += f' ({make_italic("Nothing registered")})'
+
         for k, v in self._properties.items():
-            out += f'{k}:\n'
+            out += f'\n{k.__name__}:'
             for k2, v2 in v.items():
-                out += f'  {k2}: {v2}\n'
-        out += 'Methods:\n--------\n'
+                out += f'\n    * {k2}: {v2.__name__}'
+
+        header = make_bold('\n> Methods')
+        out += f'{header}:'
+
         for k, v in self._methods.items():
-            out += f'{k}:\n'
+            out += f'\n  {k}:'
+            if len(v) == 0:
+                out += f' ({make_italic("Nothing registered")})'
             for k2, v2 in v.items():
-                out += f'  {k2}: {v2}\n'
+                if v2['optional']:
+                    out += f'\n    * {k2} (opt={v2["default"]})'
+                else:
+                    out += f'\n    * {k2}'
+        out += '\n'
         return out
+
+    def make_optional(self, method, attr_name, default_value=None):
+        """Make a standard attribute optional in the signature of a method.
+
+        Parameters
+        ----------
+        attr_name : str
+            The name of the standard attribute
+        """
+        if method not in self._methods:
+            raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered.'
+                             f'Allowed methods are: {self._methods.keys()}')
+        if attr_name not in self._methods[method]:
+            raise ValueError(f'Cannot make {attr_name} optional because it is not registered.')
+        self._methods[method][attr_name]['optional'] = True
+        self._methods[method][attr_name]['default'] = default_value
+
+    def make_required(self, method, attr_name):
+        """Make a standard attribute required in the signature of a method."""
+        if method not in self._methods:
+            raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered. '
+                             f'Allowed methods are: {self._methods.keys()}')
+        if attr_name not in self._methods[method]:
+            raise ValueError(f'Cannot make {attr_name} required because it is not registered.')
+        self._methods[method][attr_name]['optional'] = False
 
     def add(self,
             attr_cls: StandardAttribute,
             target_cls: Callable,
-            add_to_method: bool = False,
+            add_to_method: Union[bool, str] = False,
             position: dict = None,
             optional: bool = False,
             alt: str = None,
@@ -148,12 +196,16 @@ class Convention:
             if add_to_method:
                 from ..wrapper.core import Dataset, Group, File
                 if Dataset in cls.__mro__:
-                    if name not in self._methods['create_dataset']:
-                        self._methods['create_dataset'][name] = {'cls': cls,
-                                                                 'optional': optional,
-                                                                 'default': default_value,
-                                                                 'position': position,
-                                                                 'alt': alt}
+                    if isinstance(add_to_method, str):
+                        method = add_to_method
+                    else:
+                        method = 'create_dataset'
+                    if name not in self._methods[method]:
+                        self._methods[method][name] = {'cls': cls,
+                                                       'optional': optional,
+                                                       'default': default_value,
+                                                       'position': position,
+                                                       'alt': alt}
                     continue
                 if File in cls.__mro__:
                     if name not in self._methods['init_file']:
@@ -172,6 +224,10 @@ class Convention:
                                                                'alt': alt}
 
     def _add_signature(self):
+        for name, values in self._methods['create_string_dataset'].items():
+            from ..wrapper.core import Group
+            Group.create_string_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
+                                                       **values['position'])(Group.create_string_dataset)
         for name, values in self._methods['create_dataset'].items():
             from ..wrapper.core import Group
             Group.create_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
@@ -186,6 +242,9 @@ class Convention:
                                          **values['position'])(File.__init__)
 
     def _delete_signature(self):
+        for name, values in self._methods['create_string_dataset'].items():
+            from ..wrapper.core import Group
+            Group.create_string_dataset = forge.delete(f'{name}')(Group.create_string_dataset)
         for name, values in self._methods['create_dataset'].items():
             from ..wrapper.core import Group
             Group.create_dataset = forge.delete(f'{name}')(Group.create_dataset)

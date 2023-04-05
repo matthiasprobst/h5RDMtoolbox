@@ -1,3 +1,5 @@
+.. _conventions:
+
 Conventions
 ===========
 
@@ -48,7 +50,6 @@ Toolbox-convention
     :maxdepth: 2
     :hidden:
 
-    standard_attributes.ipynb
-    default.ipynb
+    conventions_and_standard_attributes.ipynb
     tbx.ipynb
     layouts.ipynb
