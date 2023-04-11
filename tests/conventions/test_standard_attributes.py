@@ -1,5 +1,4 @@
 """Testing the standard attributes"""
-
 import pathlib
 import requests
 import unittest
@@ -350,6 +349,50 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_source(self):
         h5tbx.use('tbx')
+
+        htwr = conventions.source.Hardware(device='PressureSensorX',
+                                           manufacturer='PressureCompany',
+                                           serial_number='1234567890',
+                                           description='Pressure senor for testing',
+                                           temperature_range=[0, 50],
+                                           temperature_range_unit=['C', 'C'])
+        self.assertEqual(htwr.device, 'PressureSensorX')
+        self.assertEqual(htwr.manufacturer, 'PressureCompany')
+        self.assertEqual(htwr.serial_number, '1234567890')
+        self.assertEqual(htwr.description, 'Pressure senor for testing')
+        self.assertEqual(htwr.temperature_range, [0, 50])
+        self.assertEqual(htwr.temperature_range_unit, ['C', 'C'])
+        self.assertEqual(sorted(htwr.required_items()),
+                         sorted([('device', 'PressureSensorX'),
+                                 ('manufacturer', 'PressureCompany'),
+                                 ('serial_number', '1234567890')]))
+        self.assertEqual(htwr._pattern, '^[0-9].*')
+        self.assertEqual(sorted(htwr.optional_items()),
+                         sorted([('description', 'Pressure senor for testing'),
+                                 ('temperature_range', [0, 50]),
+                                 ('temperature_range_unit', ['C', 'C'])]))
+
+        with h5rdmtoolbox.File() as h5:
+            h5.create_dataset('test', data=[1, 2, 3],
+                              source=htwr, units='m', long_name='test')
+            self.assertIsInstance(h5['test'].source, conventions.source.Hardware)
+
+        with self.assertRaises(ValueError):
+            conventions.source.Hardware(device='1PressureSensorX',
+                                        manufacturer='PressureCompany',
+                                        serial_number='1234567890',
+                                        description='Pressure senor for testing',
+                                        temperature_range=[0, 50],
+                                        temperature_range_unit=['C', 'C'])
+
+        with self.assertRaises(ValueError):
+            conventions.source.Hardware(device=None,
+                                        manufacturer='PressureCompany',
+                                        serial_number='1234567890',
+                                        description='Pressure senor for testing',
+                                        temperature_range=[0, 50],
+                                        temperature_range_unit=['C', 'C'])
+
         sftw = conventions.source.Software(name='h5rdmtoolbox',
                                            version='1.0',
                                            url='https://h5rdmtoolbox.readthedocs.io/en/latest/',
@@ -358,15 +401,29 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(sftw.version, version.Version('1.0'))
         self.assertEqual(sftw.url, 'https://h5rdmtoolbox.readthedocs.io/en/latest/')
         self.assertEqual(sftw.description, 'This is my software')
+        self.assertEqual(sorted(sftw.required_items()),
+                         sorted([('name', 'h5rdmtoolbox'),
+                                 ('version', version.Version('1.0')),
+                                 ('description', 'This is my software'),
+                                 ('url', 'https://h5rdmtoolbox.readthedocs.io/en/latest/')]))
+        self.assertEqual(sorted(sftw.optional_items()),
+                         sorted([('author', None),
+                                 ('license', None),
+                                 ('language', None),
+                                 ('platform', None)]))
+        self.assertEqual(sftw._pattern, '^[0-9].*')
 
-        sftw = conventions.source.Software.from_dict({'name': 'h5rdmtoolbox',
-                                                      'version': '1.0',
-                                                      'url': 'https://h5rdmtoolbox.readthedocs.io/en/latest/',
-                                                      'description': 'This is my software'})
-        self.assertEqual(sftw.name, 'h5rdmtoolbox')
-        self.assertEqual(sftw.version, version.Version('1.0'))
-        self.assertEqual(sftw.url, 'https://h5rdmtoolbox.readthedocs.io/en/latest/')
-        self.assertEqual(sftw.description, 'This is my software')
+        with self.assertRaises(ValueError):
+            conventions.source.Software(name='1h5rdmtoolbox',
+                                        version='1.0',
+                                        url='https://h5rdmtoolbox.readthedocs.io/en/latest/',
+                                        description='This is my software')
+
+        with self.assertRaises(ValueError):
+            conventions.source.Software(name='1h5rdmtoolbox',
+                                        version='1.0',
+                                        url='ww.h5rmtoolbox.de',
+                                        description='This is my software')
 
         with h5rdmtoolbox.File() as h5:
             ds1 = h5.create_dataset('test1', data=[1, 2, 3], units='m', long_name='test')
@@ -374,6 +431,20 @@ class TestStandardAttributes(unittest.TestCase):
                                     source=sftw)
             self.assertEqual(ds1.source, None)
             self.assertEqual(ds2.source, sftw)
+
+            h5tbx.use(None)
+            h5.create_dataset('test3', data=[1, 2, 3], attrs={'source': None})
+            h5.create_dataset('test4', data=[1, 2, 3], attrs={'source': {'name': 'h5rdmtoolbox'}})
+            h5.create_dataset('test5', data=[1, 2, 3], attrs={'source': 1.5})
+            h5tbx.use('tbx')
+            with self.assertRaises(RuntimeError):
+                print(h5.test3.source)
+            with self.assertRaises(ValueError):
+                print(h5.test4.source)
+            with self.assertRaises(RuntimeError):
+                print(h5.test5.source)
+            h5.test5.source = sftw
+            self.assertIsInstance(h5.test5.source, conventions.source.Software)
 
     def test_standard_name(self):
         sn_fail = standard_name.StandardName(name='', canonical_units='m')
@@ -443,6 +514,16 @@ class TestStandardAttributes(unittest.TestCase):
 
         self.assertTrue(sn1 != sn3)
 
+    def test_responsible_person(self):
+        orcid = '0000-0001-8729-0482'
+        self.assertTrue(conventions.respuser.is_valid_orcid_pattern(orcid))
+        self.assertFalse(conventions.respuser.is_valid_orcid_pattern('123-123-123-123'))
+        self.assertFalse(conventions.respuser.is_valid_orcid_pattern(orcid[0:-1]))
+        self.assertTrue(conventions.respuser.exist(orcid))
+        not_existing_orcid = '0000-0001-5747-0739'
+        self.assertFalse(conventions.respuser.exist(not_existing_orcid))
+
+
     def test_translation_table(self):
         translation = standard_name.StandardNameTableTranslation('pytest', {'u': 'x_velocity'})
         self.assertIsInstance(translation, standard_name.StandardNameTableTranslation)
@@ -506,8 +587,8 @@ class TestStandardAttributes(unittest.TestCase):
             name='standard_name_table')
         self.assertEqual(cf.name, 'standard_name_table')
         self.assertEqual(cf.versionname, 'standard_name_table-v79')
-        self.assertTrue(standard_name.url_exists(cf.url))
-        self.assertFalse(standard_name.url_exists(cf.url + '123'))
+        self.assertTrue(standard_name.check_url(cf.url))
+        self.assertFalse(standard_name.check_url(cf.url + '123'))
 
         try:
             requests.get('https://git.scc.kit.edu', timeout=5)

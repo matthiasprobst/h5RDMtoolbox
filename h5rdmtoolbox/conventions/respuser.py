@@ -1,4 +1,5 @@
 import re
+import requests
 from typing import List
 
 from .standard_attribute import StandardAttribute
@@ -10,9 +11,21 @@ class OrcidError(ValueError):
     """An error associated with the user property"""
 
 
-def is_invalid_orcid_pattern(orcid_str: str) -> bool:
+def is_valid_orcid_pattern(orcid_str: str) -> bool:
     """Check if the pattern matches. Returns True if no match."""
-    return re.match(ORCID_PATTERN, orcid_str) is None
+    return not re.match(ORCID_PATTERN, orcid_str) is None
+
+
+def exist(orcid: str) -> bool:
+    """Check if the ORCID exists"""
+    if not is_valid_orcid_pattern(orcid):
+        raise OrcidError(f'Not an ORCID ID: {orcid}')
+    url = f'https://orcid.org/{orcid}'
+    headers = {'Accept': 'application/vnd.orcid+json'}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return True
+    return False
 
 
 class RespUserAttribute(StandardAttribute):
@@ -44,7 +57,7 @@ class RespUserAttribute(StandardAttribute):
             for o in orcid:
                 if not isinstance(o, str):
                     TypeError(f'Expecting a string or list of strings representing an ORCID but got {type(o)}')
-                if is_invalid_orcid_pattern(o):
+                if not is_valid_orcid_pattern(o):
                     raise OrcidError(f'Not an ORCID ID: {o}')
         if len(orcid) == 1:
             super().set(orcid[0])

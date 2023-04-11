@@ -1,10 +1,11 @@
-import h5py
 import os
+from abc import abstractmethod
+from time import perf_counter_ns
+
+import h5py
 import pkg_resources
 from IPython.display import HTML, display
-from abc import abstractmethod
 from numpy import ndarray
-from time import perf_counter_ns
 
 from . import config
 
@@ -56,15 +57,22 @@ def warningtext(string):
     """make string orange"""
     return f"{BColors.WARNING}{string}{BColors.ENDC}"
 
-
 def failtext(string):
     """make string red"""
     return f"{BColors.FAIL}{string}{BColors.ENDC}"
+
+def failprint(string):
+    """print string in red"""
+    print(failtext(string))
 
 
 def oktext(string):
     """make string green"""
     return f"{BColors.OKGREEN}{string}{BColors.ENDC}"
+
+def okprint(string):
+    """print string in red"""
+    print(oktext(string))
 
 
 class _HDF5StructureRepr:

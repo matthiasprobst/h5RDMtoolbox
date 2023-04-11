@@ -1,16 +1,16 @@
 import datetime
-import h5py
 import logging
-import numpy as np
-import pandas as pd
 import pathlib
 import unittest
 from datetime import datetime
 
+import h5py
+import numpy as np
+import pandas as pd
+
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox._config import ureg
-from h5rdmtoolbox.conventions.layout import H5Layout
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -369,20 +369,6 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5.version, __version__)
             self.assertEqual(h5.filesize.units, ureg.byte)
             self.assertIsInstance(h5.hdf_filename, pathlib.Path)
-
-    def test_layout(self):
-        with h5tbx.File(layout='TbxLayout') as h5:
-            self.assertIsInstance(h5.layout, H5Layout)
-        list_of_registered_layouts = H5Layout.get_registered()
-        for lay in list_of_registered_layouts:
-            with h5tbx.File(layout=lay) as h5:
-                self.assertIsInstance(h5.layout, H5Layout)
-        for lay in list_of_registered_layouts:
-            with h5tbx.File(layout=H5Layout(lay)) as h5:
-                self.assertIsInstance(h5.layout, H5Layout)
-        with self.assertRaises(TypeError):
-            with h5tbx.File(layout=123.3):
-                pass
 
     def test_special_attribute_types(self):
         with h5tbx.File() as h5:

@@ -1,6 +1,8 @@
 """utilities of package conventions"""
 import pathlib
 import re
+import requests
+import warnings
 import xml.etree.ElementTree as ET
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -32,6 +34,26 @@ def is_valid_email_address(email: str) -> bool:
     if re.fullmatch(EMAIL_REGREX, email):
         return True
     return False
+
+
+def check_url(url, raise_error: bool = False, print_warning: bool = False, timeout: int = 2):
+    """Check if URL is valid. Returns True if valid, False otherwise."""
+    if print_warning and raise_error:
+        raise ValueError("'print_warning' and 'raise_error' cannot both be True")
+    try:
+        response = requests.head(url, timeout=timeout)
+        response.raise_for_status()
+        return True
+    except requests.exceptions.ConnectionError:
+        msg = f"Error: Could not connect to URL {url}. Please check your internet connection."
+    except requests.exceptions.HTTPError:
+        msg = "Error: URL returned non-success status code."
+    if raise_error:
+        raise requests.exceptions.ConnectionError(msg)
+    if print_warning:
+        warnings.warn(msg, UserWarning)
+    return False
+
 
 
 def dict2xml(filename: Union[str, pathlib.Path], name: str, dictionary: Dict, **metadata) -> Path:

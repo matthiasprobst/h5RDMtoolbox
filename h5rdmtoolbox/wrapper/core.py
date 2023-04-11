@@ -1,25 +1,26 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
-import h5py
 import logging
-import numpy as np
 import os
-import pandas as pd
 import pathlib
-# noinspection PyUnresolvedReferences
-import pint
 import shutil
 import warnings
-import xarray as xr
-import yaml
 from collections.abc import Iterable
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import List, Dict, Union, Tuple, Callable
+
+import h5py
+import numpy as np
+import pandas as pd
+# noinspection PyUnresolvedReferences
+import pint
+import xarray as xr
+import yaml
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
-from pathlib import Path
 from tqdm import tqdm
-from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -33,7 +34,7 @@ from .. import utils
 from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
-from ..conventions.layout import H5Layout
+from ..conventions.layout import File as LayoutFile
 
 logger = logging.getLogger(__package__)
 
@@ -152,16 +153,14 @@ class Group(h5py.Group, ConventionAccesor):
         """Basename of dataset (path without leading forward slash)"""
         return os.path.basename(self.name)
 
-    def get_datasets(self, pattern=None) -> List[h5py.Dataset]:
+    def get_datasets(self, pattern: str = '.*', rec: bool = False) -> List[h5py.Dataset]:
         """Return list of datasets in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the datasets."""
-        dsets = [v for k, v in self.items() if isinstance(v, h5py.Dataset)]
-        if pattern is None:
-            return dsets
-        import re
-        return [ds for ds in dsets if re.search(pattern, os.path.basename(ds.name))]
+        if pattern == '.*' and not rec:
+            return [v for v in self.values() if isinstance(v, h5py.Dataset)]
+        return self.find({'$basename': {'$regex': pattern}}, '$Dataset', rec=rec)
 
     def get_groups(self, pattern: str = '.*', rec: bool = False) -> List[h5py.Group]:
         """Return list of groups in the current group.
@@ -170,7 +169,7 @@ class Group(h5py.Group, ConventionAccesor):
         on the basenames of the groups."""
         if pattern == '.*' and not rec:
             return [v for v in self.values() if isinstance(v, h5py.Group)]
-        return self.find({'$basename': {'$regex': pattern}}, rec=rec)
+        return self.find({'$basename': {'$regex': pattern}}, '$Group', rec=rec)
 
     def modify_dataset_properties(self, dataset, **dataset_properties):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
@@ -393,7 +392,7 @@ class Group(h5py.Group, ConventionAccesor):
                     return g
                 else:
                     # let h5py.Group raise the error...
-                    h5py.Group.create_group(self, name, track_order=track_order, **kwargs)
+                    h5py.Group.create_group(self, name, track_order=track_order)
             else:  # isinstance(self[name], h5py.Dataset):
                 raise RuntimeError('The name you passed is already ued for a dataset!')
 
@@ -402,7 +401,7 @@ class Group(h5py.Group, ConventionAccesor):
                              f'attribute of the class and cannot be used '
                              f'while natural naming is enabled')
 
-        subgrp = super().create_group(name, track_order=track_order, **kwargs)
+        subgrp = super().create_group(name, track_order=track_order)
 
         # new_subgroup = h5py.Group.create_group(self, name, track_order=track_order)
         logger.debug(f'Created group "{name}" at "{self.name}"-level.')
@@ -1528,7 +1527,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         out += f'\n{"*compression:":14} {self.compression} ({self.compression_opts})'
 
         for k, v in self.attrs.items():
-            out += f'\n{k+":":14} {v}'
+            out += f'\n{k + ":":14} {v}'
 
         has_dim = False
         dim_str = '\n\nDimensions'
@@ -1615,7 +1614,7 @@ class File(h5py.File, Group, ConventionAccesor):
         a temporary file is created in the user's temporary directory.
     mode : {'r', 'r+', 'w', 'w-', 'x', 'a'}, optional
         The mode in which to open the file. The default is 'r'.
-    layout : Path | str | H5Layout, optional
+    layout : Path | str | LayoutFile, optional
         The layout of the file.
     **kwargs
         Additional keyword arguments are passed to h5py.File.
@@ -1634,7 +1633,7 @@ class File(h5py.File, Group, ConventionAccesor):
     * version: (str) The version of the package used to create the file.
     * modification_time: (datetime) The modification time of the file.
     * creation_time: (datetime) The creation time of the file.
-    * layout: (H5Layout) The layout of the file.
+    * layout: (LayoutFile) The layout of the file.
     * filesize: (int) The size of the file in bytes.
 
     .. seealso:: :class:`h5rdmtoolbox.core.Group`
@@ -1678,29 +1677,29 @@ class File(h5py.File, Group, ConventionAccesor):
         return os.path.getsize(self.filename) * ureg.byte
 
     @property
-    def layout(self) -> H5Layout:
+    def layout(self) -> LayoutFile:
         """Return the HDF-Layout object for this file."""
         return self._layout
 
     @layout.setter
-    def layout(self, layout: Union[Path, str, H5Layout]):
+    def layout(self, layout: Union[Path, str, LayoutFile]):
         if isinstance(layout, str):
-            self._layout = H5Layout.load_registered(name=layout, h5repr=self.hdfrepr)
+            self._layout = LayoutFile.load_registered(name=layout, h5repr=self.hdfrepr)
         elif isinstance(layout, Path):
-            self._layout = H5Layout(layout, self.hdfrepr)
+            self._layout = LayoutFile(layout, self.hdfrepr)
         elif layout is None:
-            self._layout = H5Layout.load_registered(name='EmptyLayout', h5repr=self.hdfrepr)
-        elif isinstance(layout, H5Layout):
+            self._layout = LayoutFile.load_registered(name='EmptyLayout', h5repr=self.hdfrepr)
+        elif isinstance(layout, LayoutFile):
             self._layout = layout
         else:
-            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or H5Layout but got '
+            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or LayoutFile but got '
                             f'{type(layout)}')
 
     def __init__(self,
                  name: Path = None,
                  mode='r',
                  *,
-                 layout: Union[Path, str, H5Layout, None] = None,
+                 layout: Union[Path, str, LayoutFile, None] = None,
                  attrs: Dict = None,
                  **kwargs):
 
@@ -1875,15 +1874,6 @@ class File(h5py.File, Group, ConventionAccesor):
         Subclass of File
         """
         return File(filename, mode)
-
-
-# H5File is depreciated
-class H5File(File):
-    """Inherited from File. It is depreciated and will be removed in future versions."""
-
-    def __init__(self, _id):
-        warnings.warn('H5File is depreciated. Use File instead', DeprecationWarning)
-        super(H5File, self).__init__(self, _id)
 
 
 Dataset._h5grp = Group

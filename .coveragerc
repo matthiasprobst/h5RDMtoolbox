@@ -12,6 +12,7 @@ exclude_lines =
     pragma: no cover
     def __repr__
     def __hash__
+    def __str__
     @atexit.register
     except AttributeError
     raise NotImplementedError

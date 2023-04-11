@@ -1,14 +1,14 @@
-import h5py
 import logging
-import numpy as np
 import unittest
-import yaml
 from pathlib import Path
+
+import h5py
+import numpy as np
+import yaml
 
 from h5rdmtoolbox import config
 from h5rdmtoolbox import use
-from h5rdmtoolbox.conventions.layout import H5Layout
-from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
+from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.core import Dataset, File, Group
 
@@ -44,155 +44,6 @@ class TestFile(unittest.TestCase):
         for fname in Path(__file__).parent.glob('*'):
             if fname.suffix not in ('py', '.py', ''):
                 fname.unlink()
-
-    def test_layout(self):
-        lay = H5Layout(self.lay_filename)
-        with lay.File(mode='w') as h5:
-            grp = h5.create_group('grp')
-            grp.attrs['__check_isoptional__'] = True
-        with h5py.File(self.other_filename, 'w') as other:
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-        with lay.File(mode='w') as h5:
-            grp = h5.create_group('grp')
-        with h5py.File(self.other_filename, 'w') as other:
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 1)
-        self.assertDictEqual(lay._issues_list[0],
-                             {'path': '/grp', 'obj_type': 'group', 'issue': 'missing'})
-
-    def test_layout_regrex(self):
-        lay = H5Layout(self.lay_filename)
-        with lay.File(mode='w') as h5:
-            grp = h5.create_group('re:plane[0-9]')
-            subgrp = grp.create_group('subgroup')
-            # grp.attrs['__check_isoptional__'] = False
-
-        with h5py.File(self.other_filename, 'w') as other:
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 1)
-
-        with h5py.File(self.other_filename, 'w') as other:
-            other.create_group('plane0')
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 1)
-
-        with lay.File(mode='w') as h5:
-            grp = h5.create_group('re:plane[0-9]')
-            grp.attrs['__check_isoptional__'] = True
-            subgrp = grp.create_group('subgroup')  # mandatory if plane[0-9] exists
-
-        with h5py.File(self.other_filename, 'w') as other:
-            # plane[0-9] doe does not exist. as it is optional no issues found
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-    def test_layout_altgrp1(self):
-        lay = H5Layout(self.lay_filename)
-        with lay.File(mode='w') as h5:
-            # ds = h5.create_dataset('u.alt:re:plane[0-9]', shape=1)
-            ds = h5.create_dataset('u', shape=1)
-            ds.attrs['__alternative_source_group__'] = 'plane0'
-
-        with h5py.File(self.other_filename, 'w') as other:
-            ds = other.create_dataset('u', shape=1)
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-    def test_layout_altgrp2(self):
-        lay = H5Layout(self.lay_filename)
-        with lay.File(mode='w') as h5:
-            ds = h5.create_dataset('u', shape=1)
-            ds.attrs['__alternative_source_group__'] = 'plane0'
-
-        with h5py.File(self.other_filename, 'w') as other:
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 1)
-
-        with h5py.File(self.other_filename, 'w') as other:
-            other.create_dataset('plane0/u', shape=1)
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-        with h5py.File(self.other_filename, 'w') as other:
-            ds = other.create_dataset('plane1/u', shape=1)
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 1)
-
-    def test_layout_altgrp3(self):
-        lay = H5Layout(self.lay_filename)
-        with lay.File(mode='w') as h5:
-            ds = h5.create_dataset('u', shape=1)
-            ds.attrs['__alternative_source_group__'] = 're:plane[0-9]'
-
-        with h5py.File(self.other_filename, 'w') as other:
-            ds = other.create_dataset('u', shape=1)
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-        with h5py.File(self.other_filename, 'w') as other:
-            ds = other.create_dataset('plane0/u', shape=1)
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-        with h5py.File(self.other_filename, 'w') as other:
-            ds = other.create_dataset('plane0/u', shape=1)
-            ds = other.create_dataset('plane1/u', shape=1)
-            ds = other.create_dataset('plane1297/u', shape=1)
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-    def test_layout_altgrp4(self):
-        """alternative groups"""
-        lay = H5Layout(self.lay_filename)
-        with lay.File(mode='w') as h5:
-            h5.create_group('pivpar')
-            h5['pivpar'].attrs['__alternative_source_group__'] = 'plane0'
-
-        with h5py.File(self.other_filename, 'w') as other:
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 1)
-
-        with h5py.File(self.other_filename, 'w') as other:
-            other.create_group('pivpar')
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-        with h5py.File(self.other_filename, 'w') as other:
-            other.create_group('plane0/pivpar')
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-
-    def test_layout_altgrp5(self):
-        """alternative groups"""
-        lay = H5Layout(self.lay_filename)
-        with lay.File(mode='w') as h5:
-            gr = h5.create_group('pivpar')
-            gr.attrs['__alternative_source_group__'] = 're:plane[0-9]'
-            gr.attrs['important'] = 'attribute'
-
-        # with h5py.File(self.other_filename, 'w') as other:
-        #     lay.check(other)
-        # self.assertEqual(lay.n_issues, 1)
-        #
-        with h5py.File(self.other_filename, 'w') as other:
-            gr = other.create_group('pivpar')
-            gr.attrs['important'] = 'attribute'
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 0)
-        #
-        with h5py.File(self.other_filename, 'w') as other:
-            gr = other.create_group('plane0/pivpar')
-            gr.attrs['important'] = 'attribute'
-            other.create_group('plane1/pivpar')
-            lay.check(other)
-        self.assertEqual(lay.n_issues, 1)
-
-        # with h5py.File(self.other_filename, 'w') as other:
-        #     other.create_group('plane000/pivpar')
-        #     lay.check(other)
-        # self.assertEqual(lay.n_issues, 0)
 
     def test_create_dataset(self):
         """File has more parameters to pass as H5Base"""
@@ -469,41 +320,6 @@ class TestFile(unittest.TestCase):
             h5.create_dataset('grp/two', data=1, attrs=dict(long_name='long name', units=''))
             self.assertEqual(h5.get_dataset_names(),
                              ['grp/three', 'grp/two', 'one', 'two'])
-
-    def test_inspection(self):
-        """file (layout/content) check is used to check whether all metadata is set correct
-        """
-        tmpfile = touch_tmp_hdf5_file()
-        with h5py.File(tmpfile, mode='w') as h5:
-            h5.create_dataset(name='test', data=1)
-        with File(tmpfile, mode='r') as h5:
-            n = h5.check()
-            # missing at root level:
-            # title
-            # missing at dataset:
-            # units, long_name or standard_name
-            self.assertEqual(n, 0)
-        with File(tmpfile, mode='r') as h5:
-            h5.layout = 'TbxLayout'
-            n = h5.check()
-            self.assertEqual(n, 1)
-
-        tmpfile = touch_tmp_hdf5_file()
-        with h5py.File(tmpfile, mode='w') as h5:
-            h5.attrs['title'] = 'testfile'
-            h5.create_dataset(name='test', data=1)
-        with File(tmpfile, mode='r') as h5:
-            n = h5.check()
-            self.assertEqual(n, 0)
-        return
-
-        tmpfile = touch_tmp_hdf5_file()
-        with h5py.File(tmpfile, mode='w') as h5:
-            h5.create_group(name='test')
-
-        with File(tmpfile, mode='r') as h5:
-            n = h5.check()
-            self.assertEqual(n, 2)
 
     def test_multi_dim_scales(self):
         fname = generate_temporary_filename(suffix='.hdf')

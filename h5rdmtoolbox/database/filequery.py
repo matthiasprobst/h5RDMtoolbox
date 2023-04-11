@@ -6,29 +6,34 @@ import pandas as pd
 import pathlib
 import re
 from itertools import chain
-from typing import List, Union, Dict, Callable
+from typing import List, Union, Dict, Callable, Tuple
 
 
 # implementation similar to pymongo:
 # https://www.mongodb.com/docs/manual/reference/operator/query/
 
 def _eq(a, b):
+    """Check if a == b"""
     return a == b
 
 
 def _gt(a, b):
+    """Check if a > b"""
     return a > b
 
 
 def _gte(a, b):
+    """Check if a >= b"""
     return a >= b
 
 
 def _lt(a, b):
+    """Check if a < b"""
     return a < b
 
 
 def _lte(a, b):
+    """Check if a <= b"""
     return a <= b
 
 
@@ -73,7 +78,7 @@ class RecFind:
                                      'because e.g. filtering for "$shape" only works for datasets. '
                                      'If you dont want this error to be raised and ignored instead, '
                                      'pass "ignore_attribute_error=True" '
-                                     f'Original h5py error: {e}')
+                                     f'Original h5py error: {e}') from e
 
 
 class RecAttrFind:
@@ -298,6 +303,10 @@ class DatasetValues:
     def __init__(self, arr: Dict):
         self.arr = arr
 
+    def to_dataframe(self, axis=0, join='outer') -> pd.DataFrame:
+        """alias for to_DataFrame()"""
+        return self.to_DataFrame(axis=axis, join=join)
+
     def to_DataFrame(self, axis=0, join='outer') -> pd.DataFrame:
         """Return DataFrame. Only works for 1D data!"""
         if np.all([a[:].ndim == 1 for a in self.arr.values()]):
@@ -319,13 +328,23 @@ class H5Objects:
         return list(self.h5objdict.keys())
 
     @property
+    def shapes(self) -> Tuple[Tuple]:
+        """Shapes of objects"""
+        return tuple(v.shape for v in self.h5objdict.values())
+
+    @property
+    def ndims(self) -> Tuple[int]:
+        """Dimensions of objects"""
+        return tuple(v.ndim for v in self.h5objdict.values())
+
+    @property
     def basenames(self) -> List[str]:
         """Names of objects"""
         return [os.path.basename(obj.name) for obj in self.h5objdict.values()]
 
     def __getitem__(self, item):
         if isinstance(self.h5objdict[list(self.h5objdict.keys())[0]], h5py.Dataset):
-            return DatasetValues({k: v.values for k, v in self.h5objdict.items()})
+            return DatasetValues({k: v.values[item] for k, v in self.h5objdict.items()})
         raise TypeError('Cannot slice hdf group objects')
 
 

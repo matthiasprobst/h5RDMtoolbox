@@ -8,14 +8,14 @@ are provided by this sub-packages (fluid and piv). As the projec is under develo
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
 
+from typing import Callable, List, Union, Iterable
+
 import forge
 import h5py
-from typing import Callable, List, Union, Iterable
 
 from . import standard_attribute
 from . import units, long_name, standard_name, title, comment, references, source, respuser
 from ._logger import logger
-from .layout import H5Layout
 from .standard_attribute import StandardAttribute
 from .standard_name import StandardName, StandardNameTable
 from .utils import dict2xml, is_valid_email_address
@@ -277,5 +277,5 @@ def use(convention_name: str) -> None:
 current_convention: Union[None, Convention] = None
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['H5Layout', 'datetime_str', 'set_loglevel',
+__all__ = ['datetime_str', 'set_loglevel',
            'StandardName', 'StandardNameTable', 'StandardAttribute']

@@ -8,7 +8,7 @@
 
 *Note, that the project is still beta!*
 
-The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package that provides a set of tools to work
+The "HDF5 Research Data Management Toolbox" (`h5RDMtoolbox`) is a python package that provides a set of tools to work
 with HDF5 files. It is designed to be used in research and development projects. It supports the data creation,
 processing and sharing of data using the HDF5 file format pursuing the
 [FAIR](https://www.nature.com/articles/sdata201618).

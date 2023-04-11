@@ -184,10 +184,10 @@ def main():
                     snt.check_grp(h5, recursive=True, raise_error=False)
                 return
         if args.cmd == 'layout':
-            from .conventions.layout import H5Layout
+            from .conventions import layout
             import pathlib
             if args.list_registered:
-                H5Layout.print_registered()
+                layout.File.print_registered()
                 return
             hdf_filename = None
             if args.check:
@@ -195,9 +195,9 @@ def main():
             if args.layout:
                 layout_filename = pathlib.Path(args.layout)
                 if layout_filename.exists():
-                    h5lay = H5Layout(layout_filename)
+                    h5lay = layout.File(layout_filename)
                 else:
-                    h5lay = H5Layout.load_registered(args.layout, h5repr=None)
+                    h5lay = layout.File.load_registered(args.layout, h5repr=None)
                 if hdf_filename is None:
                     print('No hdf filename. Provide by -f <my_file.hdf>')
                     return
@@ -207,5 +207,5 @@ def main():
                 return
             if args.register:
                 hdf_filename = pathlib.Path(args.register)
-                h5lay = H5Layout(hdf_filename)
+                h5lay = layout.File(hdf_filename)
                 h5lay.register()

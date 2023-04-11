@@ -11,26 +11,27 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
-import h5py
 import json
 import os
-import pandas as pd
 import pathlib
 import re
 import warnings
 import xml.etree.ElementTree as ET
-import yaml
-from IPython.display import display, HTML
 from datetime import datetime
 from enum import Enum
-from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
-from pint.errors import UndefinedUnitError
 from typing import Dict, Union, List, Tuple
+
+import h5py
+import pandas as pd
+import yaml
+from IPython.display import display, HTML
+from omegaconf import DictConfig, OmegaConf
+from pint.errors import UndefinedUnitError
 
 from ._logger import logger
 from .standard_attribute import StandardAttribute
-from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio
+from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio, check_url
 from .. import cache
 from .._config import ureg
 from .._user import UserDir
@@ -38,7 +39,6 @@ from ..utils import generate_temporary_filename
 
 try:
     from tabulate import tabulate
-    import requests
     import xmltodict
 except ImportError:
     raise ImportError('Please install tabulate, requests and xmltodict to use this standard names')
@@ -208,17 +208,11 @@ class StandardNameTableStoreOption(Enum):
     none = 4
 
 
-def url_exists(url: str) -> bool:
-    """Return True if URL exist"""
-    response = requests.head(url, timeout=2)
-    return response.status_code == 200
-
-
 config = {'valid_characters': '[^a-zA-Z0-9_]', 'pattern': '^[0-9 ].*'}
 
 
 class MinimalStandardNameTable:
-    """Minimal version of a standard name table, which only contains name, and the table but no contanct or
+    """Minimal version of a standard name table, which only contains name, and the table but no contact or
     versioning information"""
 
     def __init__(self, name, table,
@@ -408,8 +402,8 @@ class StandardNameTable(MinimalStandardNameTable):
                  institution: str,
                  contact: str,
                  last_modified: Union[str, None] = None,
-                 valid_characters: str = '',
-                 pattern: str = '',
+                 valid_characters: str = None,
+                 pattern: str = None,
                  url: str = None,
                  alias: Dict = None):
         super().__init__(name, table, valid_characters, pattern)
@@ -827,6 +821,25 @@ class StandardNameTable(MinimalStandardNameTable):
                     alias=self.alias
                     )
 
+    def to_csv(self, csv_filename, **kwargs) -> Union[str, None]:
+        """Save the SNT in a CSV file
+
+        Parameters
+        ----------
+        csv_filename : str
+            Path to the CSV file
+        **kwargs
+            Additional keyword arguments passed to `pandas.DataFrame.to_csv`
+
+        Returns
+        -------
+        str or None
+            The path to the CSV file or None. See `pandas.DataFrame.to_csv` for details.
+        """
+        df = pd.DataFrame().from_dict(self.table, orient='index')
+        index = kwargs.pop('index', None)
+        return df.rename_axis('standard_name').reset_index().to_csv(csv_filename, index=index, **kwargs)
+
     def dumps(self):
         """String representation of the standard name table"""
         return json.dumps(self.to_dict())
@@ -877,8 +890,27 @@ class StandardNameTable(MinimalStandardNameTable):
         """Return similar names to key"""
         return [k for k in [*self.table.keys(), *self.alias.keys()] if get_similar_names_ratio(key, k) > 0.75]
 
-    def check_units(self, name, units) -> bool:
-        """Raises an error if units is wrong. """
+    def check_units(self, name: str, units: str, raise_error: bool = True) -> bool:
+        """Check if the units of a standard name are as expected
+        Parameters
+        ----------
+        name: str
+            The standard name
+        units: str
+            The units to check
+        raise_error: bool
+            If True, raise an error if the units are not as expected
+
+        Returns
+        -------
+        bool
+            True if the units are as expected
+
+        Raises
+        ------
+        StandardNameError
+            If the units are not as expected and raise_error is True
+        """
         self.check_name(name, strict=True)  # will raise an error if name not in self._table
         if name in self.table:
             canonical_units = self.table[name]['canonical_units']
@@ -887,8 +919,10 @@ class StandardNameTable(MinimalStandardNameTable):
                 logger.error('The standard name table has a units with value "None" for name %s. Adjusting to "". '
                              'Consider change the entry', name)
             if not equal_base_units(_units_power_fix(canonical_units), units):
-                raise StandardNameError(f'Unit of standard name "{name}" not as expected: '
-                                        f'"{units}" != "{canonical_units}"')
+                if raise_error:
+                    raise StandardNameError(f'Unit of standard name "{name}" not as expected: '
+                                            f'"{units}" != "{canonical_units}"')
+                return False
         return True
 
     def check_file(self, filename, recursive: bool = True, raise_error: bool = True):
@@ -1187,7 +1221,7 @@ class StandardNameTableAttribute(StandardAttribute):
 
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
-                if url_exists(snt.url):
+                if check_url(snt.url):
                     return super().set(value=snt.url, target=self.parent.rootparent)
                 else:
                     warnings.warn(f'URL {snt.url} does not exist. Cannot set standard name table.')
