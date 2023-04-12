@@ -1,2 +1,2 @@
-from .compare import AnyString
 from .file import File
+from .validation import Any, Regex, Equal
