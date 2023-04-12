@@ -1688,7 +1688,7 @@ class File(h5py.File, Group, ConventionAccesor):
         elif isinstance(layout, Path):
             self._layout = LayoutFile(layout, self.hdfrepr)
         elif layout is None:
-            self._layout = LayoutFile.load_registered(name='EmptyLayout', h5repr=self.hdfrepr)
+            self._layout = LayoutFile()
         elif isinstance(layout, LayoutFile):
             self._layout = layout
         else:
@@ -1780,7 +1780,7 @@ class File(h5py.File, Group, ConventionAccesor):
          int
             Number of detected issues.
          """
-        return self.layout.check(self[grp])
+        return self.layout.validate(self[grp])
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.

@@ -1,1 +1,2 @@
-from .file import LayoutFile as File
+from .compare import AnyString
+from .file import File

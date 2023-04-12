@@ -13,7 +13,7 @@ class TestLayout2(unittest.TestCase):
         lay['/'].attrs['title'] = AnyString  # title must exist at root level
         lay['*'].group().attrs['long_name'] = AnyString  # any group must have a long_name
 
-        lay.save('test.pickle')
+        lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
         with h5py.File('test.hdf', 'w') as h5:
@@ -30,7 +30,7 @@ class TestLayout2(unittest.TestCase):
     def test_layout_part2(self):
         lay = layout.File()
         lay['devices/*'].group().attrs['manufacturer'] = AnyString  # any group must have a long_name
-        lay.save('test.pickle')
+        lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
         with h5py.File('test.hdf', 'w') as h5:
@@ -50,7 +50,7 @@ class TestLayout2(unittest.TestCase):
     def test_layout_part_datasets_3(self):
         lay = layout.File()
         lay['*'].dataset().attrs['long_name'] = AnyString  # any group must have a long_name
-        lay.save('test.pickle')
+        lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
         with h5py.File('test.hdf', 'w') as h5:
@@ -69,7 +69,7 @@ class TestLayout2(unittest.TestCase):
         """check if all datasets are 3D and have a long_name attribute"""
         lay = layout.File()
         lay['*'].dataset(ndim=3).attrs['long_name'] = AnyString
-        lay.save('test.pickle')
+        lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
         with h5py.File('test.hdf', 'w') as h5:
@@ -86,7 +86,7 @@ class TestLayout2(unittest.TestCase):
         """check if all datasets "velocity" are 3D and have a long_name attribute"""
         lay = layout.File()
         lay['/'].dataset(name='velocity', ndim=3)
-        lay.save('test.pickle')
+        lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
         with h5py.File('test.hdf', 'w') as h5:
@@ -103,7 +103,7 @@ class TestLayout2(unittest.TestCase):
         # now with a velocity dataset and correct shape
         lay = layout.File()
         lay['/'].dataset(name='velocity', ndim=3)
-        lay.save('test.pickle')
+        lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
         with h5py.File('test.hdf', 'w') as h5:
@@ -126,7 +126,7 @@ class TestLayout2(unittest.TestCase):
         """same as before, but now with wildcard"""
         lay = layout.File()
         lay['grp/*'].dataset(name='velocity', ndim=3)
-        lay.save('test.pickle')
+        lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
         with h5py.File('test.hdf', 'w') as h5:

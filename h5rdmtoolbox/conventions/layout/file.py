@@ -1,11 +1,10 @@
 import pathlib
 import pickle
-from enum import Enum
-from typing import Union, List, Callable
+from typing import Union, List, Callable, Dict
 
 import h5py
 
-from .compare import Equal, Regex
+from .compare import Equal, Regex, AnyString
 from .validation import ValidationResult, ValidationResults
 
 
@@ -24,7 +23,7 @@ class DatasetValidator:
 
     def __init__(self,
                  parent: str,
-                 file: "LayoutFile",
+                 file: "File",
                  name, shape, ndim, dtype):
         self.parent = parent
         # properties to check:
@@ -154,7 +153,7 @@ class AttributeValidator:
 
 class LayoutAttribute:
 
-    def __init__(self, name, file: "LayoutFile"):
+    def __init__(self, name, file: "File"):
         self.name = name
         self.file = file
 
@@ -173,7 +172,7 @@ class DatasetLayoutAttribute(LayoutAttribute):
 
 class LayoutGroup:
 
-    def __init__(self, name, file: "LayoutFile"):
+    def __init__(self, name, file: "File"):
         self.name = LayoutPath(name)
         self.file = file
 
@@ -211,11 +210,11 @@ class LayoutDataset:
         The dimension of the dataset
     dtype : str or None
         The dtype of the dataset
-    file : LayoutFile
-        The LayoutFile object
+    file : File
+        The File object
     """
 
-    def __init__(self, name, shape, ndim, dtype, file: "LayoutFile"):
+    def __init__(self, name, shape, ndim, dtype, file: "File"):
         self.file = file
         if name[-1] == '*':
             parent = name
@@ -244,10 +243,6 @@ class LayoutDataset:
     @property
     def attrs(self):
         return DatasetLayoutAttribute(self.name, self.file)
-
-
-class AnyDataset:
-    pass
 
 
 class LayoutPath(str):
@@ -288,25 +283,51 @@ class LayoutPath(str):
         return self.__add__(other)
 
 
-class LayoutFile(LayoutGroup):
+_defaults = {}
 
-    def __init__(self, filename=None):
+
+class LayoutRegistry:
+    """Registry interface class for File objects."""
+
+    @staticmethod
+    def build_defaults() -> Dict:
+        """Build the default layouts."""
+        # pre-defined layouts:
+        TbxLayout = File()
+        TbxLayout.attrs['__h5rdmtoolbox__'] = '__version of this package'
+        TbxLayout.attrs['title'] = AnyString
+
+        _defaults = {'tbx': TbxLayout}
+        return _defaults
+
+    def __init__(self):
+        self.layouts = self.build_defaults()
+
+    @property
+    def names(self) -> List[str]:
+        """Return a list of all registered layout names."""
+        return list(self.layouts.keys())
+
+    def __getitem__(self, name) -> "File":
+        if name in self.layouts:
+            return self.layouts[name]
+        raise KeyError(f'No layout with name "{name}" found. Available layouts: {self.names}')
+
+
+class File(LayoutGroup):
+    """Main class for defining a layout file."""
+
+    def __init__(self):
         super().__init__('/', self)
-        self.filename = filename
         self.validators = []
         self._not_in = {}
-        # self.any_dataset = {}
-        # self.dataset = {}
-        # self.any_group = {}
-        # self.group = {}
 
-    def __getitem__(self, item):
-        # if item == '*':
-        #     return LayoutAnyGroup(self)
+    def __getitem__(self, item) -> LayoutGroup:
         return LayoutGroup(self.name / item, self)
 
     @property
-    def attrs(self):
+    def attrs(self) -> LayoutAttribute:
+        """Return a LayoutAttribute object for the root group attributes."""
         return LayoutAttribute('/', self)
 
     def validate(self, file: Union[str, pathlib.Path, h5py.File]) -> ValidationResults:
@@ -359,28 +380,34 @@ class LayoutFile(LayoutGroup):
         #     if not v['validator'](file[v['path']].attrs[k]):
         #         print(f'Attribute "{k}" in "{v["path"]}" does not validate')
 
-    def save(self, filename):
-        """Save the LayoutFile to a file."""
+    def save(self, filename: Union[str, pathlib.Path], overwrite=False) -> None:
+        """Save the File to a file.
+
+        Parameters
+        ----------
+        filename: str or pathlib.Path
+            The filename to save the File to.
+        overwrite: bool
+            If True, overwrite existing files.
+
+        Raises
+        ------
+        FileExistsError
+            If the file already exists and overwrite is False.
+        """
+        filename = pathlib.Path(filename)
+        if filename.exists() and not overwrite:
+            raise FileExistsError(f'File "{filename}" already exists.')
         with open(filename, 'wb') as f:
             pickle.dump(self, f)
 
     @staticmethod
-    def load(filename) -> "LayoutFile":
-        """Load a LayoutFile from a file."""
+    def load(filename) -> "File":
+        """Load a File from a file."""
         with open(filename, 'rb') as f:
             return pickle.load(f)
 
-
-class Target(Enum):
-    AnyDataset = 0
-    AnyGroup = 1
-    Any = 2
-    Root = 3
-
-
-def my_standard_name_validator(value):
-    return value == 'velocity'
-
-
-class Optional:
-    pass
+    @property
+    def Registry(self) -> LayoutRegistry:
+        """Return the Registry interface class."""
+        return LayoutRegistry()

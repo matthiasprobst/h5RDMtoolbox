@@ -13,7 +13,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import config, tutorial
 from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.conventions import respuser, standard_name
-from h5rdmtoolbox.utils import generate_temporary_filename, touch_tmp_hdf5_file
+from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -139,10 +139,6 @@ class TestH5TbxWrapperFile(unittest.TestCase):
         strrepr = self.TestFile().__str__()
         self.assertEqual(strrepr, '<class "File" convention: "tbx">')
 
-
-
-
-
     def test_create_dataset(self):
         """File has more parameters to pass as H5Base"""
         with h5tbx.wrapper.core.File(title=self.default_title,
@@ -209,15 +205,6 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             grp = h5.create_group('testgrp2', long_name='a long name')
             self.assertEqual(grp.attrs['long_name'], 'a long name')
             self.assertEqual(grp.long_name, 'a long name')
-
-    def test_Layout(self):
-        with h5tbx.wrapper.core.File(title=self.default_title,
-                                     institution=self.default_institution,
-                                     references=self.default_references,
-                                     standard_name_table=self.default_snt) as h5:
-            h5.create_dataset('test', shape=(3,), long_name='daadw', units='')
-            h5.create_dataset('testgrp/ds2', shape=(30,), long_name='daadw', units='')
-            n_issuess = h5.check()
 
     def test_attrs(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
@@ -720,37 +707,6 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             h5.create_dataset('grp/two', data=1, long_name='long name', units='')
             self.assertEqual(h5.get_dataset_names(), ['grp/three', 'grp/two', 'one', 'two'])
 
-    def test_inspection(self):
-        """file (layout/content) check is used to check whether all metadata is set correct
-        """
-        tmpfile = touch_tmp_hdf5_file()
-        with h5py.File(tmpfile, mode='w') as h5:
-            h5.create_dataset(name='test', data=1)
-        with h5tbx.wrapper.core.File(tmpfile, mode='r') as h5:
-            n = h5.check()
-            # missing at root level:
-            # title
-            # missing at dataset:
-            # units, long_name or standard_name
-            self.assertEqual(n, 0)
-
-        tmpfile = touch_tmp_hdf5_file()
-        with h5py.File(tmpfile, mode='w') as h5:
-            h5.attrs['title'] = 'testfile'
-            h5.create_dataset(name='test', data=1)
-        with h5tbx.wrapper.core.File(tmpfile, mode='r') as h5:
-            n = h5.check()
-            self.assertEqual(n, 0)
-        return
-
-        tmpfile = touch_tmp_hdf5_file()
-        with h5py.File(tmpfile, mode='w') as h5:
-            h5.create_group(name='test')
-
-        with h5tbx.wrapper.core.File(tmpfile, mode='r') as h5:
-            n = h5.check()
-            self.assertEqual(n, 2)
-
     def test_multi_dim_scales(self):
         fname = generate_temporary_filename(suffix='.hdf')
         with h5py.File(fname, 'w') as h5:
@@ -775,18 +731,6 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             x = h5['x'][:]
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
-
-    # def test_repr(self):
-    #     with h5tbx.wrapper.core.File(title=self.default_title,
-    #                     institution=self.default_institution,
-    #                     references=self.default_references,
-    #                     standard_name_table=self.default_snt) as h5:
-    #         h5.create_dataset('test', data=1, units='m', long_name='a test dataset', dtype='int64')
-    #         self.assertEqual(h5tbx.wrapper.tbx.TbxWrapperHDF5StructureStrRepr().__0Ddataset__('test', h5['test']),
-    #                          '\x1b[1mtest\x1b[0m 1 [m], dtype: int64')
-    #         h5.create_dataset('test2', data=1, units='m', long_name='a test dataset', dtype='int32')
-    #         self.assertEqual(h5tbx.wrapper.tbx.TbxWrapperHDF5StructureStrRepr().__0Ddataset__('test2', h5['test2']),
-    #                          '\x1b[1mtest2\x1b[0m 1 [m], dtype: int32')
 
     def test_user(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
