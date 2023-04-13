@@ -1,25 +1,33 @@
+import abc
+import inspect
 import pathlib
 import pickle
 import typing
 
 import h5py
 
-from .validation import ValidationResult, ValidationResults, Validator, Equal, Any
+from .utils import flatten
+from .validation import Validator, Any, Equal
+from .validation.attribute import AttributeEqual, AnyAttribute
+from .validation.results import ValidationResults
+
+# from .validation import (GroupNotExist, ValidationResults, Validator, Equal,
+#                          HDFObjectExist, AttributeEqual, Any, AnyAttribute)
 
 HDF_DS_OR_GRP = typing.Union[h5py.Dataset, h5py.Group]
 
 
-def flatten(list_of_lists: typing.List[typing.List]) -> typing.List:
-    """flattens a list of lists"""
-    # https://stackabuse.com/python-how-to-flatten-list-of-lists/
-    if len(list_of_lists) == 0:
-        return list_of_lists
-    if isinstance(list_of_lists[0], list):
-        return flatten(list_of_lists[0]) + flatten(list_of_lists[1:])
-    return list_of_lists[:1] + flatten(list_of_lists[1:])
+class _Validator(abc.ABC):
+
+    @abc.abstractmethod
+    def __eq__(self, other):
+        pass
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
-class DatasetValidator:
+class DatasetValidator(_Validator):
     """Validates a dataset
 
     Parameters
@@ -58,24 +66,26 @@ class DatasetValidator:
         self.dtype = dtype
 
     @staticmethod
-    def eval(target, **properties) -> typing.Union[typing.List[ValidationResult], None]:
+    def eval(target, **properties) -> typing.Union[ValidationResults, None]:
         """Evaluate the properties of a dataset"""
-        results = []
+        results = ValidationResults()
         if not isinstance(target, h5py.Dataset):
             return None
         for name, validator in properties.items():
             p = getattr(target, name)
             if validator(p):
-                results.append(ValidationResult(True, f'"{name}" in {target.name}'))
+                results.add(validator, None)
                 continue
-            results.append(ValidationResult(False,
-                                            f'Checking property "{name}" of dataset "{target.name}" '
-                                            f'with validator "{validator.__class__.__name__}": '
-                                            f'{p} != {validator.reference}'))
+            results.add(validator)
+
         return results
 
-    def __call__(self, target: h5py.Dataset, *args, **kwargs) -> typing.Union[ValidationResult, None]:
+    def __repr__(self):
+        return f'{self.__class__.__name__}(parent={self.parent_path}, name="{self.name}", shape={self.shape}, ' \
+               f'ndim={self.ndim}, dtype={self.dtype})'
 
+    def __call__(self, target: h5py.Dataset, *args, **kwargs) -> typing.Union[ValidationResults, None]:
+        results = []
         props = {}
         for k, v in zip(('shape', 'ndim', 'dtype'),
                         (self.shape, self.ndim, self.dtype)):
@@ -90,7 +100,7 @@ class DatasetValidator:
             name_successes = {name: self.name(name) for name in av_datasets}
             if not any(name_successes.values()) and not self.name.is_optional:
                 # non-optional validator failed
-                return ValidationResult(False, f'path {self.name.reference} does not exist in {target}')
+                return results.add(GroupNotExist(self.name.reference, target))
 
             # for those dataset that succeeded the name check, now check the other properties:
             results = flatten([self.eval(target[k], **props) for k, v in name_successes.items()])
@@ -113,18 +123,74 @@ class DatasetValidator:
             return wildcard_pathlib in obj_pathlib.parents or obj_pathlib == wildcard_pathlib
 
         # recursively check all groups using visitor:
-        def visitor(_, obj):
+        def visitor(_, obj: HDF_DS_OR_GRP):
+            """function called on each object in the HDF5 file"""
             if isinstance(obj, h5py.Dataset):
                 if parent_name_in_wildcard(obj.name.rsplit('/', 1)[0], self.parent_path):
                     return results.append(self.eval(obj, **props))
 
-        target[base_group].visititems(visitor)
-        if len(results) == 0:
-            return [ValidationResult(True, f'"{self.name}" in {target}'), ]
+        if base_group not in target:
+            results.append(HDFObjectExist(base_group, target.name), GroupNotExist(base_group, target.name))
+        else:
+            target[base_group].visititems(visitor)
+        return results
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return self.parent_path == other.parent_path and self.name == other.name and self.shape == other.shape \
+               and self.ndim == other.ndim and self.dtype == other.dtype
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class GroupValidation(_Validator):
+    """Group validation class. Only validates existence of a group"""
+
+    def __init__(self, path):
+        self.path = path
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(path="{self.path}")'
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return str(self.path) == str(other.path)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __call__(self, target: h5py.Group, *args, **kwargs):
+        results = []
+        has_wildcard = '*' in self.path
+        if has_wildcard:
+            return None
+            # TODO in future: add COUNT(<num>) to lay[*].group('device') = COUNT(1) to specify that "device" must appear at least once. otherwise wildcard has no effect as it is optional anyways
+
+            # split = self.path.split('*')
+            # if len(split) != 2:
+            #     raise RuntimeError('It seems that there are too many wildcards in the path. Only one is allowed: '
+            #                        f'{self.path}')
+            # parent_path, group_name = split
+            # group_name = group_name.strip('/')
+            #
+            # if parent_path in target:
+            #     # recursively run through target and check if group_name exists!
+            #     class visitor(_, obj):
+            #         if isinstance(obj, h5py.Group):
+            #             if group_name in obj:
+            #                 if
+            #                 results.append(ValidationResult(True, f'Group {self.path} exists in {target}'))
+            #     target[parent_path].visititems(visitor)
+
+        exist_validator = HDFObjectExist(self.path)
+        results.add(exist_validator)
         return results
 
 
-class AttributeValidator:
+class AttributeValidator(_Validator):
     """Validation class for attributes"""
 
     def __init__(self,
@@ -143,106 +209,154 @@ class AttributeValidator:
         self.key = key
         self.validator = validator
 
-    def __call__(self, target: HDF_DS_OR_GRP, *args, **kwargs) -> typing.Union[None, typing.List[ValidationResult]]:
-        if not self.parent.parent_path.has_wildcard_suffix:
-            # av_objs = [t for t, obj in target.items() if isinstance(obj, self.obj_flt)]
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return self.parent == other.parent and self.key == other.key and self.validator == other.validator
 
-            if self.parent.parent_path not in target:
-                if self.validator.is_optional:
-                    return None
-                # obj path is not in target. as validator is required, return failed validation result
-                return [ValidationResult(False, f'path {self.parent.parent_path} does not exist in {target}'), ]
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
-            if self.key not in target[self.parent.parent_path].attrs:
-                if self.validator.is_optional:
-                    return None
-                # obj exists but the attribute not. as validator is required, return failed validation result
-                return [ValidationResult(False, f'attribute "{self.key}" does not exist in {target}'), ]
+    def __repr__(self):
+        return f'{self.__class__.__name__}(path="{self.parent.path}", key="{self.key}", ' \
+               f'validator={self.validator.__repr__()})'
 
-            # finally, run the validation if obj and the required attribute exist:
-            if not self.validator(target[self.parent.parent_path].attrs[self.key]):
-                return [ValidationResult(False, f'validation failed for "{self.parent.parent_path}" in {target}'), ]
+    def visititems(self, key, target) -> typing.List[Validator]:
+        """Recursively visit all items in the target and call the method `validate`"""
+        validators = []
 
-            # we made it here, so validation was successful
-            return [ValidationResult(True, f'"{self.parent.parent_path}" in {target}'), ]
+        def visitor(_, obj):
+            validators.append(self.validator(key, obj))
 
-        base_group = self.parent.parent_path.parent
-        if base_group == '':
-            base_group = '/'
+        target.visititems(visitor)
+        return validators
 
-        results = []
+    def __call__(self, target: HDF_DS_OR_GRP, *args, **kwargs) -> typing.Union[None, Validator, typing.List[Validator]]:
+        rec = self.parent.path.has_wildcard_suffix
+        if rec:
+            # call the validator on each object in the group
+            return self.visititems(key=self.key, target=target)
+        return self.validator(key=self.key, target=target)
 
-        # recursively check all groups using visitor:
-        def visitor(name, obj):
-            if isinstance(obj, self.obj_flt):
-                if self.key not in obj.attrs:
-                    if self.validator.is_optional:
-                        return None
-                    return results.append(
-                        ValidationResult(False,
-                                         f'Attribute "{self.key}" is required but not found in "{name}"'))
-                if not self.validator(obj.attrs[self.key]):
-                    if self.validator.is_optional:
-                        return None
-                    return results.append(
-                        ValidationResult(False,
-                                         f'Attribute "{self.key}" in "{name}" does not validate')
-                    )
-                return results.append(ValidationResult(True, f'"{self.key}" in {target}'))
-
-        target[base_group].visititems(visitor)
-        if len(results) == 0:
-            return [ValidationResult(True, f'"{self.name}" in {target}'), ]
-        return results
+        # results = ValidationResults()
+        # if not self.parent.path.has_wildcard_suffix:
+        #     # av_objs = [t for t, obj in target.items() if isinstance(obj, self.obj_flt)]
+        #
+        #     if self.parent.path not in target:
+        #         if self.validator.is_optional:
+        #             return None
+        #         # obj path is not in target. as validator is required, return failed validation result
+        #         return results.add(self.validator)
+        #
+        #     results.add(self.validator(target))
+        #     return results
+        #
+        # base_group = self.parent.path.parent
+        # if base_group == '':
+        #     base_group = '/'
+        #
+        # results = ValidationResults()
+        #
+        # # recursively check all groups using visitor:
+        # def visitor(_, obj):
+        #     if isinstance(obj, self.obj_flt):
+        #         if self.key not in obj.attrs:
+        #             if self.validator.is_optional:
+        #                 return None
+        #             return results.add(self.validator)
+        #         if not self.validator(obj.attrs[self.key]):
+        #             if self.validator.is_optional:
+        #                 return None
+        #             return results.add(self.validator)
+        #         return results.append(self.validator)
+        #
+        #
+        # # TODO think about this: validator(<value>, rec=self.parent.path.has_wildcard_suffix) --> validator handles recursion
+        # exist_validator = HDFObjectExist(base_group)
+        # if not exist_validator(target):
+        #     results.add(exist_validator)
+        # else:
+        #     target[base_group].visititems(visitor)
+        # return results
 
 
 class LayoutAttribute:
+    """Base class for layout attributes."""
 
     def __init__(self, parent: typing.Union["LayoutDataset", "LayoutGroup"]):
         assert isinstance(parent, (LayoutDataset, LayoutGroup))
         self.parent = parent
 
+    def __setitem__(self, key, validator: typing.Union[float, int, str, AttributeValidator]):
+        """Set an attribute validator for the given key.
+
+        Parameters
+        ----------
+        key : str
+            The attribute name.
+        validator : float, int, str, Validator
+            The validator to use for the attribute. If not a Validator, it will be wrapped in an Equal validator.
+
+        Raises
+        ------
+        TypeError
+            If the validator is a class, not an instance.
+        """
+        if inspect.isclass(validator):
+            raise TypeError('validator must be an instance of a Validator, not a class')
+        if isinstance(validator, Any):
+            validator = AnyAttribute()
+        elif isinstance(validator, (float, int, str)):
+            validator = AttributeEqual(validator)
+        attrval = AttributeValidator(parent=self.parent,
+                                     key=key,
+                                     validator=validator)
+        self.parent.file.validators.add(attrval)
+        return attrval
+
 
 class GroupLayoutAttribute(LayoutAttribute):
-
-    def __setitem__(self, key: str, validator: Validator):
-        self.parent.file.validators.append(AttributeValidator(parent=self.parent,
-                                                              key=key,
-                                                              validator=validator))
+    """Layout attribute for groups."""
 
 
 class DatasetLayoutAttribute(LayoutAttribute):
-
-    def __setitem__(self, key, validator: Validator):
-        self.parent.file.validators.append(AttributeValidator(parent=self.parent,
-                                                              key=key,
-                                                              validator=validator))
+    """Layout attribute for datasets."""
 
 
 class LayoutGroup:
 
     def __init__(self,
                  *,
-                 parent_path: typing.Union[str, "LayoutPath"],
+                 path: typing.Union[str, "LayoutPath"],
                  file: "File"):
-        self.parent_path = LayoutPath(parent_path)
+        self.path = LayoutPath(path)
         assert isinstance(file, File)
         self.file = file
 
     def __repr__(self):
-        return f'LayoutGroup("{self.parent_path}")'
+        return f'LayoutGroup("{self.path}")'
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return str(self.path) == str(other.path)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def group(self, name=None) -> "LayoutGroup":
         """Return a new LayoutGroup object for the given group name."""
         if name is None:
             return self
-        return LayoutGroup(parent_path=self.parent_path / name, file=self.file)
+        path = self.path / name
+        self.file.validators.add(GroupValidation(path))
+        return LayoutGroup(path=path, file=self.file)
 
     def dataset(self,
-                name: typing.Union[str, Validator, None] = Any(),
-                shape: typing.Union[typing.Tuple[int], Validator, None] = Any(),
-                ndim: typing.Union[int, Validator, Validator, None] = Any(),
-                dtype: typing.Union[str, Validator, Validator, None] = Any()):
+                name: typing.Union[str, Validator, None] = Any,
+                shape: typing.Union[typing.Tuple[int], Validator, None] = Any,
+                ndim: typing.Union[int, Validator, Validator, None] = Any,
+                dtype: typing.Union[str, Validator, Validator, None] = Any):
         """Return a new LayoutDataset object for the given dataset name.
 
         Parameters
@@ -260,15 +374,15 @@ class LayoutGroup:
                 contain a slash.
 
         """
-        if name == '*' or name is None:  # the name is not checked, thus we can use Any()
-            name_validator = Any()
-            parent_path = self.parent_path
+        if name == '*' or name is None:  # the name is not checked, thus we can use Any
+            name_validator = Any
+            path = self.path
         elif isinstance(name, str):
             name_validator = Equal(name)
-            parent_path = self.parent_path
+            path = self.path
         elif isinstance(name, Validator):
             name_validator = name
-            parent_path = self.parent_path
+            path = self.path
         else:
             raise TypeError(f'Invalid type for name: {type(name)}')
 
@@ -279,7 +393,7 @@ class LayoutGroup:
         if isinstance(dtype, str):
             dtype = Equal(dtype)
 
-        return LayoutDataset(parent_path=parent_path,
+        return LayoutDataset(path=path,
                              name=name_validator,
                              shape=shape,
                              ndim=ndim,
@@ -297,7 +411,7 @@ class LayoutDataset:
 
     Parameters
     ----------
-    parent_path: str
+    path: str
         The parent path of the dataset
     name : str or None
         The basename fo the dataset
@@ -313,13 +427,13 @@ class LayoutDataset:
 
     def __init__(self,
                  *,
-                 parent_path: "LayoutPath",
+                 path: "LayoutPath",
                  name: Validator,
                  shape: Validator,
                  ndim: Validator,
                  dtype: Validator,
                  file: "File"):
-        assert isinstance(parent_path, LayoutPath)
+        assert isinstance(path, LayoutPath)
         assert isinstance(name, Validator)
         assert isinstance(shape, Validator)
         assert isinstance(ndim, Validator)
@@ -327,24 +441,27 @@ class LayoutDataset:
         assert isinstance(file, File)
 
         self.file = file
-        self.parent_path = parent_path
+        self.path = path
         self.name = name
         self.shape = shape
         self.ndim = ndim
         self.dtype = dtype
 
-        self.file.validators.append(DatasetValidator(parent_path=parent_path,
-                                                     file=self.file,
-                                                     name=name,
-                                                     shape=shape,
-                                                     ndim=ndim,
-                                                     dtype=dtype,
-                                                     )
-                                    )
+        attrval = DatasetValidator(parent_path=path,
+                                   file=self.file,
+                                   name=name,
+                                   shape=shape,
+                                   ndim=ndim,
+                                   dtype=dtype,
+                                   )
+        self.file.validators.add(attrval)
 
     @property
     def attrs(self):
         return DatasetLayoutAttribute(self)
+
+    def __repr__(self):
+        return f'<LayoutDataset("{self.path}")>'
 
 
 class LayoutPath(str):
@@ -405,6 +522,10 @@ class LayoutRegistry:
     def __init__(self):
         self.layouts = self.build_defaults()
 
+    def __repr__(self):
+        names = ','.join(f'"{k}"' for k in self.layouts.keys())
+        return f'LayoutRegistry({names},)'
+
     @property
     def names(self) -> typing.List[str]:
         """Return a list of all registered layout names."""
@@ -416,21 +537,68 @@ class LayoutRegistry:
         raise KeyError(f'No layout with name "{name}" found. Available layouts: {self.names}')
 
 
+class ValidatorList:
+    """A list of validators."""
+
+    def __init__(self):
+        self._validators = []
+
+    def __repr__(self):
+        validator_str = ', '.join(k.__repr__() for k in self._validators)
+        return f'[{validator_str}]'
+
+    def __len__(self):
+        return len(self._validators)
+
+    def __contains__(self, item: Validator):
+        for v in self._validators:
+            if v == item:
+                return True
+        return False
+
+    def add(self, validator: Validator):
+        """Append a validator to the list if it is not already in the list."""
+        for v in self._validators:
+            if v == validator:
+                return
+        self._validators.append(validator)
+
+    def remove(self, validator: Validator) -> None:
+        """Removes a validator from the object/list"""
+        new_validators = []
+        for v in self._validators:
+            if v != validator:
+                new_validators.append(v)
+        self._validators = new_validators
+
+    def __getitem__(self, item):
+        return self._validators[item]
+
+
 class File(LayoutGroup):
     """Main class for defining a layout file."""
 
     def __init__(self):
-        super().__init__(parent_path='/', file=self)
-        self.validators = []
+        super().__init__(path='/', file=self)
+        self.validators = ValidatorList()
         self._not_in = {}
 
     def __getitem__(self, item) -> LayoutGroup:
-        return LayoutGroup(parent_path=self.parent_path / item, file=self)
+        return LayoutGroup(path=self.path / item, file=self)
+
+    def __repr__(self) -> str:
+        if len(self.validators) == 0:
+            return f'<Layout File (empty)>'
+        rstr = f'<Layout File ({len(self.validators)} validators):'
+        for i, v in enumerate(self.validators):
+            rstr += f'\n [{i}] {v}'
+        rstr += '>'
+        return rstr
 
     @property
     def attrs(self) -> LayoutAttribute:
         """Return a LayoutAttribute object for the root group attributes."""
-        return LayoutAttribute('/', self)
+        return GroupLayoutAttribute(LayoutGroup(path='/', file=self))
 
     def validate(self, file: typing.Union[str, pathlib.Path, h5py.File]) -> ValidationResults:
         """Run all validators on the given file."""
@@ -438,41 +606,8 @@ class File(LayoutGroup):
         if not isinstance(file, h5py.File):
             with h5py.File(file, mode='r') as h5:
                 return self.validate(h5)
-        validation_results = flatten([validator(file) for validator in self.validators])
-        return ValidationResults([v for v in validation_results if v is not None])
-
-        # for k, v in self.req_attributes.items():
-        #     if v['path'].has_wildcard_suffix:
-        #         base_group = v['path'].parent
-        #         if base_group == '':
-        #             base_group = '/'
-        #
-        #         # recursively check all groups using visitor:
-        #         def visitor(name, obj):
-        #             if k not in obj.attrs:
-        #                 print(f'Attribute "{k}" is required but not found in "{name}"')
-        #             else:
-        #                 if not v['validator'](obj.attrs[k]):
-        #                     print(f'Attribute "{k}" in "{name}" does not validate')
-        #
-        #         file[base_group].visititems(visitor)
-        #         continue
-        #     if v['path'] not in file:
-        #         print(f'Attribute "{k}" is required but not found in "{v["path"]}"')
-        #         continue
-        #     if k not in file[v['path']].attrs:
-        #         print(f'Attribute "{k}" is required but not found in "{v["path"]}"')
-        #         continue
-        #     if not v['validator'](file[v['path']].attrs[k]):
-        #         print(f'Attribute "{k}" in "{v["path"]}" does not validate')
-        #
-        # for k, v in self.opt_attributes.items():
-        #     if v['path'] not in file:
-        #         continue
-        #     if k not in file[v['path']].attrs:
-        #         continue
-        #     if not v['validator'](file[v['path']].attrs[k]):
-        #         print(f'Attribute "{k}" in "{v["path"]}" does not validate')
+        return ValidationResults.concatenate_results([validator(file) for validator in self.validators])
+        # return ValidationResults([v for v in validation_results if v is not None])
 
     def save(self, filename: typing.Union[str, pathlib.Path], overwrite=False) -> None:
         """Save the File to a file.
@@ -501,7 +636,7 @@ class File(LayoutGroup):
         with open(filename, 'rb') as f:
             return pickle.load(f)
 
-    @property
-    def Registry(self) -> LayoutRegistry:
+    @classmethod
+    def Registry(cls) -> LayoutRegistry:
         """Return the Registry interface class."""
         return LayoutRegistry()

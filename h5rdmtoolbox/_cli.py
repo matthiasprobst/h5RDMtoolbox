@@ -187,7 +187,8 @@ def main():
             from .conventions import layout
             import pathlib
             if args.list_registered:
-                layout.File.print_registered()
+                for k in layout.File.Registry().layouts.keys():
+                    print(k)
                 return
             hdf_filename = None
             if args.check:

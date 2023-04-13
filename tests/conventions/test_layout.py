@@ -1,22 +1,63 @@
+import pathlib
 import unittest
 
 import h5py
 
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions import layout
+from h5rdmtoolbox.conventions.layout.file import LayoutRegistry
 from h5rdmtoolbox.conventions.layout.validation import Any
+from h5rdmtoolbox.conventions.layout.validation.attribute import AnyAttribute
 
-import pathlib
-class TestLayout2(unittest.TestCase):
+
+class TestLayout(unittest.TestCase):
 
     def tearDown(self) -> None:
         pathlib.Path('test.pickle').unlink(missing_ok=True)
         pathlib.Path('test.hdf').unlink(missing_ok=True)
 
+    def test_registry(self):
+        self.assertIsInstance(layout.File.Registry(), LayoutRegistry)
+
+    def test_root_attributes(self):
+        lay = layout.File()
+        lay['/'].attrs['version'] = h5tbx.__version__
+        lay['/'].attrs['version'] = h5tbx.__version__
+        self.assertEqual(len(lay.validators), 1)
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+        self.assertEqual(res.total_issues(), 1)
+
+    def test_wildcard_attributes(self):
+        lay = layout.File()
+        with self.assertRaises(TypeError):
+            lay['*'].attrs['long_name'] = Any
+        lay['*'].attrs['long_name'] = Any()
+        self.assertEqual(len(lay.validators), 1)
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+        self.assertEqual(res.total_issues(), 0)
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            h5.create_group('grp')
+            res = lay.validate(h5)
+        self.assertEqual(res.total_issues(), 1)
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            h5.create_group('grp')
+            h5.create_group('grp2')
+            g = h5.create_group('grp2/subgrp')
+            g.attrs['long_name'] = 'my long name'
+            res = lay.validate(h5)
+        self.assertEqual(res.total_issues(), 2)
+
     def test_layout_part1(self):
         lay = layout.File()
-        lay['/'].attrs['title'] = Any()  # title must exist at root level
-        lay['*'].group().attrs['long_name'] = Any(optional=False)  # any group must have a long_name
+        lay['/'].attrs['title'] = AnyAttribute()  # title must exist at root level
+        self.assertEqual(len(lay.validators), 1)
+        lay['*'].group().attrs['long_name'] = AnyAttribute()  # any group must have a long_name
+        self.assertEqual(len(lay.validators), 2)
+        lay['*'].group().attrs['long_name'] = AnyAttribute()  # any group must have a long_name
+        self.assertEqual(len(lay.validators), 2)
 
         pickle_filename = generate_temporary_filename(suffix='.pickle')
         lay.save(pickle_filename, overwrite=True)
@@ -32,13 +73,16 @@ class TestLayout2(unittest.TestCase):
             h5.create_dataset('ds', shape=(3, 4))
 
         r = lay_loaded.validate(filename)
-        r.print()
+
         self.assertEqual(r.total_issues(), 3)
 
         # long name is optional
         lay = layout.File()
         lay['/'].attrs['title'] = Any()  # title must exist at root level
         lay['*'].group().attrs['long_name'] = Any(optional=True)  # any group must have a long_name
+        self.assertEqual(len(lay.validators), 2)
+        lay['*'].group().attrs['long_name'] = Any(optional=True)  # any group must have a long_name
+        self.assertEqual(len(lay.validators), 2)
 
         pickle_filename = generate_temporary_filename(suffix='.pickle')
         lay.save(pickle_filename, overwrite=True)
@@ -54,12 +98,15 @@ class TestLayout2(unittest.TestCase):
             h5.create_dataset('ds', shape=(3, 4))
 
         r = lay_loaded.validate(filename)
-        r.print()
+
         self.assertEqual(r.total_issues(), 1)
 
     def test_layout_part2(self):
         lay = layout.File()
         lay['devices/*'].group().attrs['manufacturer'] = Any()  # any group must have a long_name
+        self.assertEqual(len(lay.validators), 1)
+        lay['devices/*'].group().attrs['manufacturer'] = Any()  # any group must have a long_name
+        self.assertEqual(len(lay.validators), 1)
         lay.save('test.pickle', overwrite=True)
         lay_loaded = layout.File.load('test.pickle')
 
@@ -76,7 +123,6 @@ class TestLayout2(unittest.TestCase):
 
         r = lay_loaded.validate(filename)
         self.assertEqual(r.total_issues(), 1)
-        r.print()
 
     def test_layout_part_datasets_3(self):
         lay = layout.File()
@@ -94,7 +140,7 @@ class TestLayout2(unittest.TestCase):
             dev1.attrs['manufacturer'] = 'manufacturer1'
 
         r = lay_loaded.validate(filename)
-        r.print()
+
         self.assertEqual(r.total_issues(), 1)
 
     def test_layout_part_datasets_4(self):
@@ -112,7 +158,7 @@ class TestLayout2(unittest.TestCase):
             d = h5.create_dataset('a/b/c/d/e/data2', shape=(3, 4, 4, 2))  # not dim=3 but long_name --> 1 issue
             d.attrs['long_name'] = 'long name of the dataset'
         r = lay_loaded.validate(filename)
-        r.print()
+
         self.assertEqual(r.total_issues(), 6)
 
     def test_layout_part_datasets_5(self):
@@ -129,7 +175,7 @@ class TestLayout2(unittest.TestCase):
             h5.create_dataset('grp/velocity', shape=(3, 4, 5))  # not at root level
 
         r = lay_loaded.validate(filename)
-        r.print()
+
         # velocity not in file will raise one issue
         self.assertEqual(r.total_issues(), 1)
 
@@ -145,7 +191,7 @@ class TestLayout2(unittest.TestCase):
             h5.create_dataset('velocity', shape=(3, 4, 5))  # not at root level
 
         r = lay_loaded.validate(filename)
-        r.print()
+
         # velocity not in file will raise one issue
         self.assertEqual(r.total_issues(), 0)
 
@@ -154,7 +200,7 @@ class TestLayout2(unittest.TestCase):
             h5.create_dataset('velocity', shape=(3, 4, 5, 1))  # not at root level
 
         r = lay_loaded.validate(filename)
-        r.print()
+
         # velocity not in file will raise one issue
         self.assertEqual(r.total_issues(), 1)
 
@@ -174,7 +220,7 @@ class TestLayout2(unittest.TestCase):
             h5.create_dataset('grp/subgrp/b/velocity', shape=(3, 4))  # not at root level
 
         r = lay_loaded.validate(filename)
-        r.print()
+
         # velocity not in file will raise one issue
         self.assertEqual(r.total_issues(), 1)
 
@@ -188,6 +234,49 @@ class TestLayout2(unittest.TestCase):
             h5.create_dataset('x_coordinate', shape=(3,))
 
         lay.validate(filename).print()
+
+    def test_group_1(self):
+        lay = layout.File()
+        lay['/'].group('device')  # group /device must exist
+        print(lay)
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 1)
+            h5.create_group('device1')
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 1)
+            h5.create_group('device')
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+            h5.create_group('subgrp/device')
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+
+    def test_group_2(self):
+        lay = layout.File()
+        lay['*'].group('device')  # group "device" expected at any position in the file
+        print(lay)
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+
+            h5.create_group('device1')
+            h5.create_group('subgrp/devices')
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+
+            h5.create_group('device')
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+            del h5['device']
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+
+            h5.create_group('subgrp/device')
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
 
     # def test_layout_(self):
     #     lay = layout.File()
