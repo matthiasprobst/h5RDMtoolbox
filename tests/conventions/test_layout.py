@@ -8,7 +8,8 @@ from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions import layout
 from h5rdmtoolbox.conventions.layout.file import LayoutRegistry
 from h5rdmtoolbox.conventions.layout.validation import Any
-from h5rdmtoolbox.conventions.layout.validation.attribute import AnyAttribute
+from h5rdmtoolbox.conventions.layout.validation import Message
+from h5rdmtoolbox.conventions.layout.validation.attribute import AnyAttribute, AttributeValidator
 
 
 class TestLayout(unittest.TestCase):
@@ -28,6 +29,31 @@ class TestLayout(unittest.TestCase):
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             res = lay.validate(h5)
         self.assertEqual(res.total_issues(), 1)
+
+    def test_attribute_user_defined_validator(self):
+        class StartsWithValidator(AttributeValidator):
+
+            def __init__(self, reference):
+                super().__init__(reference, False)
+
+            def validate(self, key, target):
+                if not self.is_optional:
+                    if key not in target.attrs:
+                        self.failure_message = Message(f'Attribute "{key}" does not exist in {target.name}')
+                        return False
+                if target.attrs[key].startswith(self.reference):
+                    return True
+                return False
+
+        lay = layout.File()
+        lay['/'].attrs['my_attribute'] = StartsWithValidator('test')
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            h5.attrs['my_attribute'] = 'test_this_is'
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+            h5.attrs['my_attribute'] = 'my attribute'
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 1)
 
     def test_wildcard_attributes(self):
         lay = layout.File()
