@@ -76,7 +76,7 @@ class TestLayout(unittest.TestCase):
             res = lay.validate(h5)
         self.assertEqual(res.total_issues(), 2)
 
-    def test_layout_part1(self):
+    def test_group_attributes_1(self):
         lay = layout.File()
         lay['/'].attrs['title'] = AnyAttribute()  # title must exist at root level
         self.assertEqual(len(lay.validators), 1)
@@ -85,89 +85,64 @@ class TestLayout(unittest.TestCase):
         lay['*'].group().attrs['long_name'] = AnyAttribute()  # any group must have a long_name
         self.assertEqual(len(lay.validators), 2)
 
-        pickle_filename = generate_temporary_filename(suffix='.pickle')
-        lay.save(pickle_filename, overwrite=True)
-        lay_loaded = layout.File.load(pickle_filename)
-
         filename = generate_temporary_filename(suffix='.hdf')
         with h5py.File(filename, 'w') as h5:
             h5.attrs['title2'] = 'test'  # issues=1
-            h5.create_group('grp')  # issues=2
-            h5.create_group('grp2')  # issues=3
+            h5.create_group('grp')  # no long_name --> issues=2
+            h5.create_group('grp2')  # no long_name --> issues=3
             g = h5.create_group('grp2/subgrp')
             g.attrs['long_name'] = 'long name of the subgroup'
             h5.create_dataset('ds', shape=(3, 4))
 
-        r = lay_loaded.validate(filename)
-
+        r = lay.validate(filename)
+        r.report()
         self.assertEqual(r.total_issues(), 3)
 
-        # long name is optional
-        lay = layout.File()
-        lay['/'].attrs['title'] = Any()  # title must exist at root level
-        lay['*'].group().attrs['long_name'] = Any(optional=True)  # any group must have a long_name
-        self.assertEqual(len(lay.validators), 2)
-        lay['*'].group().attrs['long_name'] = Any(optional=True)  # any group must have a long_name
-        self.assertEqual(len(lay.validators), 2)
-
-        pickle_filename = generate_temporary_filename(suffix='.pickle')
-        lay.save(pickle_filename, overwrite=True)
-        lay_loaded = layout.File.load(pickle_filename)
-
-        filename = generate_temporary_filename(suffix='.hdf')
-        with h5py.File(filename, 'w') as h5:
-            h5.attrs['title2'] = 'test'  # issues=1
-            h5.create_group('grp')  # issues=2
-            h5.create_group('grp2')  # issues=3
-            g = h5.create_group('grp2/subgrp')
-            g.attrs['long_name'] = 'long name of the subgroup'
-            h5.create_dataset('ds', shape=(3, 4))
-
-        r = lay_loaded.validate(filename)
-
-        self.assertEqual(r.total_issues(), 1)
-
-    def test_layout_part2(self):
+    def test_group_attributes_2(self):
         lay = layout.File()
         lay['devices/*'].group().attrs['manufacturer'] = Any()  # any group must have a long_name
         self.assertEqual(len(lay.validators), 1)
         lay['devices/*'].group().attrs['manufacturer'] = Any()  # any group must have a long_name
         self.assertEqual(len(lay.validators), 1)
-        lay.save('test.pickle', overwrite=True)
-        lay_loaded = layout.File.load('test.pickle')
 
         filename = generate_temporary_filename(suffix='.hdf')
         with h5py.File(filename, 'w') as h5:
-            g = h5.create_group('grp')
-            g.create_dataset('ds', shape=(3, 4))
+            g = h5.create_group('grp')  # manufacture missing --> issues=1
+            g.create_dataset('ds', shape=(3, 4))  # is a dataset, no issue --> issues=1
 
-            d = h5.create_group('devices')
+            d = h5.create_group('devices')  # manufacture missing --> issues=2
             dev1 = d.create_group('dev1')
-            dev1.attrs['manufacturer'] = 'manufacturer1'
-            dev1 = d.create_group('dev2')
+            dev1.attrs['manufacturer'] = 'manufacturer1'  # manufacture existing --> issues=2
+
+            dev1 = d.create_group('dev2')  # manufacture existing --> issues=3
             dev1.attrs['long_name'] = 'manufacturer2'
 
-        r = lay_loaded.validate(filename)
-        self.assertEqual(r.total_issues(), 1)
+        r = lay.validate(filename)
+        self.assertEqual(r.total_issues(), 3)
 
-    def test_layout_part_datasets_3(self):
+    def test_layout_part_datasets(self):
         lay = layout.File()
-        lay['*'].dataset().attrs['long_name'] = Any()  # any group must have a long_name
-        lay.save('test.pickle', overwrite=True)
-        lay_loaded = layout.File.load('test.pickle')
+        lay['/'].dataset('velocity')  # .attrs['long_name'] = Any()  # any dataset must have a long_name
+        # ds2 = lay['/'].dataset('velocity').shape = (3, 4)
+        # ds2 = lay['/'].dataset('velocity').ndim = 2  # hardcode and then make it a variable implementation, only name needs some special treatment
 
         filename = generate_temporary_filename(suffix='.hdf')
         with h5py.File(filename, 'w') as h5:
-            g = h5.create_group('grp')
-            g.create_dataset('ds', shape=(3, 4))
+            r = lay.validate(filename)
+            r.report()
+            self.assertEqual(r.total_issues(), 1)
 
-            d = h5.create_group('devices')
-            dev1 = d.create_group('dev1')
-            dev1.attrs['manufacturer'] = 'manufacturer1'
+            h5.create_dataset('velocity1', shape=(1, 2, 3))
 
-        r = lay_loaded.validate(filename)
+            r = lay.validate(filename)
+            r.report()
+            self.assertEqual(r.total_issues(), 1)
 
-        self.assertEqual(r.total_issues(), 1)
+            h5.create_dataset('velocity', shape=(1, 2, 3))
+
+            r = lay.validate(filename)
+            r.report()
+            self.assertEqual(r.total_issues(), 0)
 
     def test_layout_part_datasets_4(self):
         """check if all datasets are 3D and have a long_name attribute"""

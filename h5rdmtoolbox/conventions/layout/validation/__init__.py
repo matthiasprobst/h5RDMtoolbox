@@ -31,18 +31,19 @@ class Validator(metaclass=abc.ABCMeta):
         return not self.__eq__(other)
 
     def __repr__(self):
+        if self.called:
+            return f'{self.__class__.__name__}({self.reference}, opt={self.is_optional}, passed={self.passed},' \
+                   f' msg={self.message})'
         return f'{self.__class__.__name__}({self.reference}, opt={self.is_optional})'
 
     @abc.abstractmethod
-    def validate(self, value: str, rec: bool) -> bool:
+    def validate(self, value: str) -> bool:
         """validate the value
 
         Parameters
         ----------
         value : str
             The value to validate
-        rec: bool
-            True if the validation is recursive, else False
 
         Returns
         -------
@@ -55,7 +56,7 @@ class Validator(metaclass=abc.ABCMeta):
         """Returns True if the validator is optional, else False"""
         return self._optional
 
-    def __call__(self, value: str, rec: bool) -> "Validator":
+    def __call__(self, value: str) -> "Validator":
         """validate
 
         Parameters
@@ -63,7 +64,7 @@ class Validator(metaclass=abc.ABCMeta):
         value : str
             The regular expression to match against
         """
-        self.passed = self.validate(value, rec)
+        self.passed = self.validate(value)
         self.called = True
         return copy.deepcopy(self)
 

@@ -1,17 +1,7 @@
-import abc
 import typing
-
-import h5py
 
 from . import Validator
 from ..utils import flatten
-
-
-class ValidationResultMessage(abc.ABC):
-    """Abstract class for validation result messages"""
-
-    def __init__(self, msg):
-        self.msg = msg
 
 
 class ValidationResults:
@@ -29,7 +19,7 @@ class ValidationResults:
     def __repr__(self):
         return f'<ValidationResults(issues: {self.total_issues()})>'
 
-    def __getitem__(self, index: int) -> ValidationResultMessage:
+    def __getitem__(self, index: int) -> Validator:
         if not isinstance(index, int):
             raise TypeError('Index must be an integer')
         return self._results[index]
@@ -62,7 +52,7 @@ class ValidationResults:
                 return
         self._results.append(validator)
 
-    def print(self) -> None:
+    def report(self) -> None:
         """Prints all validation results"""
         for r in self._results:
             print(r)
@@ -76,37 +66,3 @@ class ValidationResults:
         for r in self._results[1:]:
             tot += not r.passed
         return tot
-
-
-class GroupNotExist(ValidationResultMessage):
-    """Validation result message for missing groups"""
-
-    def __init__(self, missing_group_name: str, target_group_name: str):
-        msg = f'Group {missing_group_name} does not exist in {target_group_name}'
-        super().__init__(msg)
-        self.missing_group_name = missing_group_name
-        self.target_group_name = target_group_name
-
-    def __repr__(self):
-        return f'<GroupNotExist({self.missing_group_name}, {self.target_group_name})>'
-
-    def __str__(self):
-        return self.msg
-
-
-class AttributeNotExist(ValidationResultMessage):
-    """Validation result message for missing attributes"""
-
-    def __init__(self, missing_property: str, target: typing.Union[h5py.Dataset, h5py.Group]):
-        objname = type(target).__name__
-        msg = f'Missing attribute "{missing_property}" of {objname} "{target.name}"'
-        super().__init__(msg)
-
-
-class PropertyNotExist(ValidationResultMessage):
-    """Validation result message for missing properties"""
-
-    def __init__(self, missing_property: str, target: typing.Union[h5py.Dataset, h5py.Group]):
-        objname = type(target).__name__
-        msg = f'Missing property "{missing_property}" of {objname} "{target.name}"'
-        super().__init__(msg)
