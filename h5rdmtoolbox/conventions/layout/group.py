@@ -8,10 +8,11 @@ from .utils import Message
 class GroupExists(validators.Validator):
     """Validator for existence of a group."""
 
-    def validate(self, target):
+    def validate(self, validation, target):
         if self.is_optional:
             return True
-        if self.reference not in target:
+        group_path = validation.parent.path + self.reference
+        if group_path not in target:
             self.failure_message = Message(f'Group "{self.reference}" does not exist in {target.name}')
             return False
         return True

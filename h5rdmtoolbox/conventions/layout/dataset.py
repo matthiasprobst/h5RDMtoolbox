@@ -59,7 +59,7 @@ class DatasetValidator(validators.Validator):
         self.called = False
         self.candidates = []
 
-    def validate(self, target: h5py.Group):
+    def validate(self, _, target: h5py.Group):
         # check name:
         dataset_objects = [t for t in target.values() if isinstance(t, h5py.Dataset)]
 
