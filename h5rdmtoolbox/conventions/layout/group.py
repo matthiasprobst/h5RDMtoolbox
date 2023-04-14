@@ -1,57 +1,49 @@
 import typing
 
-import h5py
-
-from . import validations
+from . import validations, validators
 from .path import LayoutPath
+from .utils import Message
+
+
+class GroupExists(validators.Validator):
+    """Validator for existence of a group."""
+
+    def validate(self, target):
+        if self.is_optional:
+            return True
+        if self.reference not in target:
+            self.failure_message = Message(f'Group "{self.reference}" does not exist in {target.name}')
+            return False
+        return True
 
 
 class GroupValidation(validations.Validation):
-    """Group validation class. Only validates existence of a group"""
-
-    def __init__(self, path):
-        self.path = path
+    """Validation for a group"""
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(path="{self.path}")'
+        return f'{self.__class__.__name__}(path="{self.parent.path}")'
 
-    def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return False
-        return str(self.path) == str(other.path)
+    @property
+    def validator(self):
+        return self._validator
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __call__(self, target: h5py.Group, *args, **kwargs):
-        results = []
-        has_wildcard = '*' in self.path
-        if has_wildcard:
-            return None
-            # TODO in future: add COUNT(<num>) to lay[*].group('device') = COUNT(1) to specify that "device" must appear at least once. otherwise wildcard has no effect as it is optional anyways
-
-            # split = self.path.split('*')
-            # if len(split) != 2:
-            #     raise RuntimeError('It seems that there are too many wildcards in the path. Only one is allowed: '
-            #                        f'{self.path}')
-            # parent_path, group_name = split
-            # group_name = group_name.strip('/')
-            #
-            # if parent_path in target:
-            #     # recursively run through target and check if group_name exists!
-            #     class visitor(_, obj):
-            #         if isinstance(obj, h5py.Group):
-            #             if group_name in obj:
-            #                 if
-            #                 results.append(ValidationResult(True, f'Group {self.path} exists in {target}'))
-            #     target[parent_path].visititems(visitor)
-
-        exist_validator = HDFObjectExist(self.path)
-        results.add(exist_validator)
-        return results
+    @validator.setter
+    def validator(self, validator: "Validator") -> None:
+        if validator is None:
+            self._validator = None
+            return
+        if isinstance(validator, str):
+            group_name = validator
+            self._validator = GroupExists(reference=group_name, optional=False)
+        elif isinstance(validator, validators.Validator):
+            self._validator = validator
+        else:
+            raise TypeError(f'validator must be a Validator, float, int or str, not {type(validator)}')
+        self.register()
 
 
 class Group:
+    """Layout group interface"""
 
     def __init__(self,
                  *,
@@ -73,13 +65,23 @@ class Group:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def group(self, name=None) -> "LayoutGroup":
-        """Return a new LayoutGroup object for the given group name."""
+    def group(self, name: typing.Union[str, validators.Validator] = None) -> GroupValidation:
+        """Initialize a group validation object
+
+        Parameters
+        ----------
+        name : str, Validator
+            The name of the group which results in initializing with a GroupExists validator or
+            a custom validator.
+
+        Returns
+        -------
+        GroupValidation
+            The group validation object
+        """
         if name is None:
             return self
-        path = self.path / name
-        self.file.validators.add(GroupValidation(path))
-        return Group(path=path, file=self.file)
+        return GroupValidation(self, validator=name)
 
     def dataset(self, name=None, shape=None):
         """

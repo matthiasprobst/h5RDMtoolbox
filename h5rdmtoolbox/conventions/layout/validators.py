@@ -23,21 +23,12 @@ class Validator(metaclass=abc.ABCMeta):
         If True, the validator will not fail if the value is not present or validated
     """
 
-    @abc.abstractmethod
     def __init__(self,
                  reference: typing.Union[int, float, str, None],
                  optional: bool):
         self.reference = reference
         self._optional = optional
         self.called = False
-
-    def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return False
-        return self.reference == other.reference and self.is_optional == other.is_optional
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def __repr__(self):
         if self.called:
@@ -46,7 +37,7 @@ class Validator(metaclass=abc.ABCMeta):
         return f'{self.__class__.__name__}({self.reference}, opt={self.is_optional})'
 
     @abc.abstractmethod
-    def validate(self, value: str, *args, **kwargs) -> bool:
+    def validate(self, validation: "Validation", target: h5py.Group, **kwargs) -> bool:
         """main validation method, to be defined in subclasses"""
 
     @property
@@ -54,17 +45,15 @@ class Validator(metaclass=abc.ABCMeta):
         """Returns True if the validator is optional, else False"""
         return self._optional
 
-    def __call__(self, *args, **kwargs) -> 'Validator':
+    def __call__(self, validation: "Validation", target: h5py.Group, **kwargs) -> 'Validator':
         """validate
 
         Parameters
         ----------
-        args:
-            arguments to be passed to the validation method
         kwargs:
             Additional keyword arguments to be passed to the validation method
         """
-        self.passed = self.validate(*args, **kwargs)
+        self.passed = self.validate(validation, target, **kwargs)
         self.called = True
 
     def success_message(self) -> str:
@@ -91,7 +80,7 @@ class Equal(Validator):
     def __init__(self, reference):
         super().__init__(reference, False)
 
-    def validate(self, other):
+    def validate(self, _, other):
         return self.reference == other
 
 
@@ -101,7 +90,7 @@ class Any(Validator):
     def __init__(self, reference=None):
         super().__init__(reference, False)
 
-    def validate(self, value: str) -> bool:
+    def validate(self, _, value: str) -> bool:
         return True
 
 
@@ -112,7 +101,7 @@ class Regex(Validator):
     def __init__(self, reference):
         super().__init__(reference, True)
 
-    def validate(self, value: str) -> bool:
+    def validate(self, _, value: str) -> bool:
         import re
         return re.match(self.reference, value) is not None
 
@@ -123,5 +112,5 @@ class HDFObjectExist(Validator):
     def __init__(self, reference: typing.Union[h5py.Group, h5py.Dataset]):
         super().__init__(reference, False)
 
-    def validate(self, target: h5py.Group):
+    def validate(self, _, target: h5py.Group):
         return self.reference in target

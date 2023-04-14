@@ -39,8 +39,9 @@ class ValidationList:
             raise TypeError(f'validator must be a Validation, not {type(validation)}')
         if validation.validator is None:
             raise ValueError('Cannot add Validator object with no valid validator method (validator is None).')
+
         for v in self._validations:
-            if v.parent.path + v.key == validation.parent.path + validation.key:
+            if v.parent == validation.parent and v.validator == validation.validator:
                 return
         self._validations.append(validation)
 
@@ -94,6 +95,7 @@ class Layout:
                 return self.validate(h5)
         # make deep copies of the validations and perform validation:
         _validations = [copy.deepcopy(v) for v in self.validations]
+        # _validations = self.validations
         for validation in _validations:
             validation(file)
         return ValidationResults(_validations)

@@ -10,16 +10,46 @@ from .utils import Message
 from .validations import Validation
 
 
+class Attribute:
+
+    def __init__(self, parent, name, value=None):
+        self.group = parent
+        self.path = parent.path  # mimic behaviour needed by validators
+        self.file = parent.file  # mimic behaviour needed by validators
+        self.name = name
+        if value is not None:
+            self.value = value
+
+    @property
+    def value(self):
+        raise NotImplementedError()
+
+    @value.setter
+    def value(self, value) -> None:
+        """build the attribute validation"""
+        av = AttributeValidation(parent=self,
+                                 validator=None)
+        av.validator = value
+
+
 class AttributeEqual(validators.Validator):
     """Base class for validators of attributes"""
 
     def __init__(self, reference):
         super().__init__(reference, False)
 
-    def validate(self, key: str, target: typing.Union[h5py.Dataset, h5py.Group]) -> bool:
-        target_attr_value = target.attrs.get(self.reference, None)
+    def validate(self, validation, target: typing.Union[h5py.Dataset, h5py.Group]) -> bool:
+        attr = validation.parent
+        target_attr_value = target.attrs.get(attr.name, None)
         if target_attr_value is None:
-            self.failure_message = Message(f'Attribute "{self.reference}" does not exist in {target.name}')
+            self.failure_message = Message(f'Attribute "{attr.name}" does not exist in {target.name}')
+            if self.is_optional:
+                True
+            return False
+        if target_attr_value != self.reference:
+            self.failure_message = Message(
+                f'Attribute "{attr.name}" in "{target.name}" has value "{target_attr_value}" '
+                f'but should be "{self.reference}"')
             return False
         return True
 
@@ -71,39 +101,25 @@ class LayoutAttributeManager:
         TypeError
             If the validator is a class, not an instance.
         """
-        attrval = AttributeValidation(parent=self.parent,
-                                      key=key,
-                                      validator=validator)
-        return attrval
+        # attrval = AttributeValidation(parent=self.parent,
+        #                               key=key,
+        #                               validator=validator)
+        Attribute(parent=self.parent, name=key, value=validator)
 
     def __getitem__(self, item) -> "AttributeValidation":
-        return AttributeValidation(parent=self.parent,
-                                   key=item,
-                                   validator=None)
+        return Attribute(parent=self.parent, name=item)
+        # return AttributeValidation(parent=self.parent,
+        #                            key=item,
+        #                            validator=None)
 
 
 class AttributeValidation(Validation):
-    """Validation class for attributes"""
-
     def __init__(self,
-                 parent: typing.Union["Dataset", "Group"],
-                 key: str,
-                 validator: validators.Validator):
-        assert isinstance(parent, (Dataset, Group))
+                 parent,
+                 validator):
+        assert isinstance(parent, Attribute)
         self.parent = parent
-        if isinstance(self.parent, Group):
-            self.obj_flt = h5py.Group
-        elif isinstance(self.parent, Dataset):
-            self.obj_flt = h5py.Dataset
-        else:
-            raise TypeError('parent must be either a "GroupLayoutAttribute" or a "DatasetLayoutAttribute" but '
-                            f'is {type(self.parent)}')
-        self.key = key
         self.validator = validator
-
-    def register(self):
-        """Add to layout validator container"""
-        self.parent.file.validations.add(self)
 
     @property
     def validator(self):
@@ -124,28 +140,3 @@ class AttributeValidation(Validation):
         else:
             raise TypeError(f'validator must be a Validator, float, int or str, not {type(validator)}')
         self.register()
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}(path="{self.parent.path}", key="{self.key}", ' \
-               f'validator={self.validator.__repr__()})'
-
-    def visititems(self, key, target) -> typing.List[validators.Validator]:
-        """Recursively visit all items in the target and call the method `validate`"""
-        validators = []
-
-        def visitor(_, obj):
-            if isinstance(obj, self.obj_flt):
-                validators.append(self.validator(key, obj))
-
-        target.visititems(visitor)
-        return validators
-
-    def __call__(self, target: h5py.Group) -> typing.Union[
-        None, validators.Validator, typing.List[validators.Validator]]:
-        """Performs the validation. This method is called by Layout.validate()"""
-        rec = self.parent.path.has_wildcard_suffix
-        if rec:
-            # call the validator on each object in the group
-            return self.visititems(key=self.key, target=target)
-        return self.validator(key=self.key, target=target)
-

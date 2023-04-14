@@ -6,10 +6,13 @@ import h5py
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions.layout import Layout
-from h5rdmtoolbox.conventions.layout.attrs import LayoutAttributeManager, AttributeValidation
-from h5rdmtoolbox.conventions.layout.group import Group
+from h5rdmtoolbox.conventions.layout.attrs import LayoutAttributeManager, AttributeValidation, Attribute
+from h5rdmtoolbox.conventions.layout.group import Group, GroupValidation, GroupExists
 from h5rdmtoolbox.conventions.layout.path import LayoutPath
 from h5rdmtoolbox.conventions.layout.registry import LayoutRegistry
+from h5rdmtoolbox.conventions.layout.validations import Validation
+from h5rdmtoolbox.conventions.layout.validators import Validator
+from h5rdmtoolbox.conventions.layout.utils import Message
 
 
 class TestLayout(unittest.TestCase):
@@ -24,7 +27,7 @@ class TestLayout(unittest.TestCase):
     def test_Layout(self):
         lay = Layout()
         self.assertIsInstance(lay, Layout)
-        self.assertEqual(len(lay.validators), 0)
+        self.assertEqual(len(lay.validations), 0)
 
         grp = lay['/']
         self.assertIsInstance(grp, Group)
@@ -40,7 +43,7 @@ class TestLayout(unittest.TestCase):
         self.assertEqual(grp2.path.name, 'c')
         self.assertEqual(grp2.path.parent, '/a/b')
 
-        self.assertEqual(len(lay.validators), 0)
+        self.assertEqual(len(lay.validations), 0)
 
     def test_root_attributes(self):
         lay = Layout()
@@ -48,21 +51,21 @@ class TestLayout(unittest.TestCase):
         attrs = grp.attrs
         self.assertIsInstance(attrs, LayoutAttributeManager)
 
-        attr_validator = attrs['version']
-        self.assertIsInstance(attr_validator, AttributeValidation)
-        self.assertEqual(attr_validator.key, 'version')
-        self.assertEqual(attr_validator.validator, None)
+        attr = attrs['version']
+        self.assertIsInstance(attr, Attribute)
+        self.assertEqual(attr.name, 'version')
+        self.assertEqual(attr.group, grp)
 
-        attr_validator.validator = h5tbx.__version__
+        attr.value = h5tbx.__version__
 
         from h5rdmtoolbox.conventions.layout.attrs import AttributeEqual
-        self.assertIsInstance(attr_validator.validator, AttributeEqual)
+        self.assertIsInstance(attr.file.validations[-1].validator, AttributeEqual)
         self.assertEqual(len(lay.validations), 1)
 
-        self.assertEqual(lay.validations[0], attr_validator)
+        self.assertEqual(lay.validations[0].parent, attr)
 
         attrs['version2'] = h5tbx.__version__
-        attrs['version2'] = h5tbx.__version__  # should not be added again!
+        # attrs['version2'] = h5tbx.__version__  # should not be added again!
         self.assertEqual(len(lay.validations), 2)
 
         print('\n', lay.validations)
@@ -70,33 +73,52 @@ class TestLayout(unittest.TestCase):
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             res = lay.validate(h5)
             self.assertEqual(res.total_issues(), 2)
+            h5.attrs['version'] = 'v0.0.0'
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 2)
+            h5.attrs['version'] = h5tbx.__version__
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 1)
 
-    # def test_root_attributes(self):
-    #     lay = layout.File()
-    #     lay['/'].attrs['version'] = h5tbx.__version__
-    #     print(lay['/'].attrs['version'])
-    #     lay['/'].attrs['version'] = h5tbx.__version__
-    #     self.assertEqual(len(lay.validators), 1)
-    #     with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
-    #         res = lay.validate(h5)
-    #     self.assertEqual(res.total_issues(), 1)
+    def test_group_attributes(self):
+        lay = Layout()
+        grp = lay['/a/b/c'].group()
+        self.assertIsInstance(grp, Group)
+        self.assertEqual(grp.path, '/a/b/c')
+
+        grp = lay['/a/b/c'].group(name='d')
+        self.assertIsInstance(grp, Validation)
+        self.assertIsInstance(grp, GroupValidation)
+        self.assertIsInstance(grp.validator, GroupExists)
+        self.assertEqual(grp.validator.reference, 'd')
+
+        grp = lay['/a/b/c'].group(name=GroupExists(reference='e', optional=False))
+        self.assertIsInstance(grp, Validation)
+        self.assertIsInstance(grp, GroupValidation)
+        self.assertIsInstance(grp.validator, GroupExists)
+        self.assertEqual(grp.validator.reference, 'e')
 
     def test_attribute_user_defined_validator(self):
-        class StartsWithValidator(AttributeValidator):
+        class StartsWithValidator(Validator):
 
             def __init__(self, reference):
                 super().__init__(reference, False)
 
-            def validate(self, key, target):
-                if not self.is_optional:
-                    if key not in target.attrs:
-                        self.failure_message = Message(f'Attribute "{key}" does not exist in {target.name}')
-                        return False
-                if target.attrs[key].startswith(self.reference):
+            def validate(self, validation, target):
+                attr = validation.parent
+
+                target_attr_value = target.attrs.get(attr.name, None)
+                if target_attr_value is None:
+                    self.failure_message = Message(f'Attribute "{attr.name}" does not exist in '
+                                                   f'{target.name}')
+                    if self.is_optional:
+                        True
+                    return False
+                if target_attr_value.startswith(self.reference):
                     return True
                 return False
 
-        lay = layout.File()
+        lay = Layout()
         lay['/'].attrs['my_attribute'] = StartsWithValidator('test')
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             h5.attrs['my_attribute'] = 'test_this_is'
