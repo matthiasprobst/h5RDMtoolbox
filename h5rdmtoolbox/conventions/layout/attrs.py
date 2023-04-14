@@ -40,6 +40,7 @@ class AttributeEqual(validators.Validator):
 
     def validate(self, validation, target: typing.Union[h5py.Dataset, h5py.Group]) -> bool:
         attr = validation.parent
+        assert isinstance(attr, Attribute)
         target_attr_value = target.attrs.get(attr.name, None)
         if target_attr_value is None:
             self.failure_message = Message(f'Attribute "{attr.name}" does not exist in {target.name}')
@@ -108,16 +109,78 @@ class LayoutAttributeManager:
         TypeError
             If the validator is a class, not an instance.
         """
-        # attrval = AttributeValidation(parent=self.parent,
-        #                               key=key,
-        #                               validator=validator)
         Attribute(parent=self.parent, name=key, value=validator)
 
     def __getitem__(self, item) -> "AttributeValidation":
         return Attribute(parent=self.parent, name=item)
-        # return AttributeValidation(parent=self.parent,
-        #                            key=item,
-        #                            validator=None)
+
+
+class ConditionalLayoutAttributeManager:
+    """An attribute manager that only allows setting attributes if the parent validation passed"""
+
+    def __init__(self, validation: "Validation"):
+        self.validation = validation  # the validation object to which this attribute belongs
+
+    def __setitem__(self, key, validator):
+        ConditionalAttribute(validation=self.validation, name=key, value=validator)
+
+    def __getitem__(self, item):
+        raise NotImplementedError()
+
+
+class ConditionalAttribute:
+    def __init__(self, validation, name, value=None):
+        self.validation = validation  # the validation object to which this attribute belongs
+        # this attribute is only tested for found objects in the validation
+        self.name = name
+        if value is not None:
+            self.value = value
+
+    @property
+    def value(self):
+        raise NotImplementedError()
+
+    @value.setter
+    def value(self, value) -> None:
+        """build the attribute validation"""
+        av = ConditionalAttributeValidation(parent=self,
+                                            validation=self.validation,
+                                            validator=None)
+        av.validator = value
+
+
+class ConditionalAttributeValidation(Validation):
+
+    def __init__(self, parent, validation, validator):
+        self.parent = parent
+        self.validation = validation  # the validation object to which this attribute belongs
+        self.validator = validator  # the validator to use for this attribute
+
+    def __repr__(self):
+        return f'<ConditionalAttributeValidation {self.validator}>'
+
+    @property
+    def validator(self):
+        return self._validator
+
+    @validator.setter
+    def validator(self, validator: "Validator") -> None:
+        if validator is None:
+            self._validator = None
+            return
+
+        if isinstance(validator, (float, int, str)):
+            self._validator = AttributeEqual(validator)
+        elif inspect.isclass(validator):
+            raise TypeError('validator must be an instance of a Validator, not a class')
+        elif isinstance(validator, validators.Validator):
+            self._validator = validator
+        else:
+            raise TypeError(f'validator must be a Validator, float, int or str, not {type(validator)}')
+        # now this attribute validation object must be attached to the validation object
+        # the target object must already be registed. let' make a sanity check:
+        assert self.validation in self.validation.parent.file.validations
+        self.validation.parent.file.add_conditional_attribute_validation(self.validation, self)
 
 
 class AttributeValidation(Validation):
@@ -127,6 +190,9 @@ class AttributeValidation(Validation):
         assert isinstance(parent, Attribute)
         self.parent = parent
         self.validator = validator
+
+    def __repr__(self):
+        return f'<AttributeValidation {self.validator}>'
 
     @property
     def validator(self):
@@ -147,8 +213,3 @@ class AttributeValidation(Validation):
         else:
             raise TypeError(f'validator must be a Validator, float, int or str, not {type(validator)}')
         self.register()
-
-    # def get_hdf5_filter(self):
-    #     if isinstance(self.parent.group, Group):
-    #         return h5py.Group
-    #     return h5py.Dataset

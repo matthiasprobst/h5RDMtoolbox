@@ -6,11 +6,11 @@ import typing
 import h5py
 
 from . import registry
+from . import utils
 from .attrs import LayoutAttributeManager
 from .results import ValidationResults
 from .validations import Validation
 from .validators import Validator
-from . import utils
 
 HDF_DS_OR_GRP = typing.Union[h5py.Dataset, h5py.Group]
 
@@ -63,7 +63,7 @@ class Layout:
 
     def __init__(self):
         self.validations = ValidationList()
-        self._not_in = {}
+        self.conditional_attribute_validations = {}
 
     def __getitem__(self, item) -> "Group":
         from .group import Group
@@ -130,3 +130,13 @@ class Layout:
     def Registry(cls) -> registry.LayoutRegistry:
         """Return the Registry interface class."""
         return registry.LayoutRegistry()
+
+    def add_conditional_attribute_validation(self, validation, attribute_validation):
+        # first some sanity checks:
+        from .attrs import ConditionalAttributeValidation
+        assert isinstance(validation, Validation)
+        assert isinstance(attribute_validation, ConditionalAttributeValidation)
+        assert validation in self.validations
+        if validation not in self.conditional_attribute_validations:
+            self.conditional_attribute_validations[validation] = []
+        self.conditional_attribute_validations[validation].append(attribute_validation)

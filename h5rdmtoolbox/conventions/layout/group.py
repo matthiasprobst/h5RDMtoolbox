@@ -9,12 +9,14 @@ class GroupExists(validators.Validator):
     """Validator for existence of a group."""
 
     def validate(self, validation, target):
-        if self.is_optional:
-            return True
-        group_path = validation.parent.path + self.reference
+        if not validation.parent.path.has_wildcard_suffix:
+            group_path = validation.parent.path + self.reference
+        else:
+            group_path = self.reference
         if group_path not in target:
             self.failure_message = Message(f'Group "{self.reference}" does not exist in {target.name}')
             return False
+        self.found.append(target[group_path])
         return True
 
 
@@ -35,12 +37,20 @@ class GroupValidation(validations.Validation):
             return
         if isinstance(validator, str):
             group_name = validator
-            self._validator = GroupExists(reference=group_name, optional=False)
+            self._validator = GroupExists(reference=group_name, optional=self.parent.path.has_wildcard_suffix)
         elif isinstance(validator, validators.Validator):
             self._validator = validator
         else:
             raise TypeError(f'validator must be a Validator, float, int or str, not {type(validator)}')
         self.register()
+
+    @property
+    def attrs(self) -> "ConditionalLayoutAttributeManager":
+        """attributes attached to this validation object. only if this validation passed,
+        the attribute can be validated"""
+        # attach the optional attribute check:
+        from .attrs import ConditionalLayoutAttributeManager
+        return ConditionalLayoutAttributeManager(validation=self)
 
 
 class Group:
@@ -84,36 +94,40 @@ class Group:
             return self
         return GroupValidation(self, validator=name)
 
-    def dataset(self, name=None, shape=None):
-        """
-        Parameters
-        ----------
-        name : str, Validator
-            The name of the dataset
-        shape : tuple, Validator
-            The shape of the dataset
-        """
-        if name == '*' or name is None:  # the name is not checked, thus we can use Any
-            name_validator = validators.Any()
-        elif isinstance(name, str):  # explicit name is given, this dataset must exist!
-            name_validator = validators.Equal(name)
-        elif isinstance(name, validators.Validator):
-            name_validator = name
-        else:
-            raise TypeError(f'Invalid type for name: {type(name)}')
+    def dataset(self, name):
+        from .dataset import Dataset
+        ds = Dataset(self, name)
 
-        if shape is None:
-            shape_validator = validators.Any()
-        elif isinstance(shape, validators.Validator):
-            shape_validator = shape
-        else:
-            shape_validator = validators.Equal(shape)
-
-        dataset_validation = DatasetValidation(parent=self,
-                                               name=name_validator,
-                                               shape=shape_validator)
-        self.file.validators.add(dataset_validation)
-        return dataset_validation
+    # def dataset(self, name=None, shape=None):
+    #     """
+    #     Parameters
+    #     ----------
+    #     name : str, Validator
+    #         The name of the dataset
+    #     shape : tuple, Validator
+    #         The shape of the dataset
+    #     """
+    #     if name == '*' or name is None:  # the name is not checked, thus we can use Any
+    #         name_validator = validators.Any()
+    #     elif isinstance(name, str):  # explicit name is given, this dataset must exist!
+    #         name_validator = validators.Equal(name)
+    #     elif isinstance(name, validators.Validator):
+    #         name_validator = name
+    #     else:
+    #         raise TypeError(f'Invalid type for name: {type(name)}')
+    #
+    #     if shape is None:
+    #         shape_validator = validators.Any()
+    #     elif isinstance(shape, validators.Validator):
+    #         shape_validator = shape
+    #     else:
+    #         shape_validator = validators.Equal(shape)
+    #
+    #     dataset_validation = DatasetValidation(parent=self,
+    #                                            name=name_validator,
+    #                                            shape=shape_validator)
+    #     self.file.validators.add(dataset_validation)
+    #     return dataset_validation
 
     @property
     def attrs(self) -> "LayoutAttributeManager":

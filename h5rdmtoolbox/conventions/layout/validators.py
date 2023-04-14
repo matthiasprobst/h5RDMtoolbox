@@ -30,6 +30,7 @@ class Validator(metaclass=abc.ABCMeta):
         self._optional = optional
         self.called = False
         self.passed = False
+        self.found = []  # here we can dump found objects like groups, datasets or attributes
 
     def __repr__(self):
         if self.called:

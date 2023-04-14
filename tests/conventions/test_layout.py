@@ -120,6 +120,43 @@ class TestLayout(unittest.TestCase):
             res = lay.validate(h5)
             self.assertEqual(res.total_issues(), len(lay.validations) - 1)
 
+    def test_group_conditional_attributes(self):
+        lay = Layout()
+        lay['*'].group('velocity')  # no effect. every group may or may not have the group 'velocity'
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 0)
+
+            h5.create_group('velocity')
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 0)
+
+        lay = Layout()
+        lay['*'].group('velocity').attrs['units'] = 'm/s'
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 0)  # group does not exist, attr could not be checked
+        #
+            h5.create_group('velocity')
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 0)  # group exist, attr not
+        #
+        #     # h5.create_group('/velocity')
+        #     # res = lay.validate(h5)
+        #     # self.assertEqual(res.total_issues(), 1)
+        #     #
+        #     # h5['/velocity'].attrs['units'] = 'm/s'
+        #     # res = lay.validate(h5)
+        #     # self.assertEqual(res.total_issues(), 0)
+        #     #
+        #     # h5['/velocity'].attrs['units'] = 'm/s2'
+        #     # res = lay.validate(h5)
+        #     # self.assertEqual(res.total_issues(), 1)
+
     def test_attribute_user_defined_validator(self):
         class StartsWithValidator(Validator):
 

@@ -21,6 +21,7 @@ class Validation(abc.ABC):
         assert isinstance(parent, (Dataset, Group))
         self.parent = parent
         self.validator = validator
+        self.conditional_validators = []  # to be called if self.validator succeeded
 
     @property
     @abc.abstractmethod
@@ -35,6 +36,21 @@ class Validation(abc.ABC):
             return
         self._validator = validator
 
+    def perform_conditional_validation(self, source_validation, target):
+        assert source_validation.validator.passed
+        validators = []
+        if source_validation in self.parent.file.conditional_attribute_validations:
+            # we found a candidate, more specifically a group: target. and there are conditional validators. let's run them:
+            for conditional_validator in self.parent.file.conditional_attribute_validations[source_validation]:
+                from .attrs import AttributeValidation
+                # easiest is to just create a new validator based on the passed one
+                attr_name = conditional_validator.parent.name
+                tmp_validator = AttributeValidation(parent=self.parent.attrs[attr_name],
+                                                    validator=conditional_validator.validator)
+
+                validators.append(tmp_validator.validator(tmp_validator, target))
+        return validators
+
     def visititems(self, target: h5py.Group):
         """Recursively visit all items in the target and call the method `validate`"""
         assert isinstance(target, h5py.Group)
@@ -44,11 +60,19 @@ class Validation(abc.ABC):
         validators: typing.List[Validation] = [new_validation_instance.validator(new_validation_instance, target), ]
         assert validators[0].validator.called
 
+        if validators[0].validator.passed:
+            for condvalidator in self.perform_conditional_validation(validators[0], target):
+                validators.append(condvalidator)
+
         def visitor(_, obj):
             if isinstance(obj, self.get_hdf5_filter()):
                 # we need make a copy otherwise list of validators will be identical
                 new_validation_instance = copy.deepcopy(self)
                 validators.append(new_validation_instance.validator(new_validation_instance, obj))
+
+                if validators[-1].validator.passed:
+                    for condvalidator in self.perform_conditional_validation(self, obj):
+                        validators.append(condvalidator)
 
         target.visititems(visitor)
 

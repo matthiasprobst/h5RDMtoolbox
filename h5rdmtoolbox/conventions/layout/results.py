@@ -65,14 +65,12 @@ class ValidationResults:
     def report(self) -> None:
         """Prints all validation results"""
         for r in self._validations:
-            print(r)
+            print(r.validator.message)
 
     def total_issues(self) -> int:
         """Returns the total number of valid validations"""
-        # return sum(self.results)
-        if len(self._validations) == 0:
-            return 0
-        tot = int(not self._validations[0].validator.passed)
-        for r in self._validations[1:]:
-            tot += not r.validator.passed
+        tot = 0
+        for r in self._validations:
+            if not r.validator.is_optional:
+                tot += not r.validator.passed
         return tot
