@@ -10,6 +10,7 @@ from .attrs import LayoutAttributeManager
 from .results import ValidationResults
 from .validations import Validation
 from .validators import Validator
+from . import utils
 
 HDF_DS_OR_GRP = typing.Union[h5py.Dataset, h5py.Group]
 
@@ -94,11 +95,8 @@ class Layout:
             with h5py.File(file, mode='r') as h5:
                 return self.validate(h5)
         # make deep copies of the validations and perform validation:
-        _validations = [copy.deepcopy(v) for v in self.validations]
-        # _validations = self.validations
-        for validation in _validations:
-            validation(file)
-        return ValidationResults(_validations)
+        results = utils.flatten([validation(file) for validation in copy.deepcopy(self.validations)])
+        return ValidationResults(results)
         # return ValidationResults([v for v in validation_results if v is not None])
 
     def save(self, filename: typing.Union[str, pathlib.Path], overwrite=False) -> None:

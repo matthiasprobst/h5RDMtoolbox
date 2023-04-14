@@ -54,22 +54,29 @@ class AttributeEqual(validators.Validator):
         return True
 
 
+Equal = AttributeEqual
+
+
 class AnyAttribute(validators.Validator):
     """Accepts any attribute value. Per default this is NOT an optional validator"""
 
     def __init__(self, reference=None):
         super().__init__(reference, False)
 
-    def validate(self, key: str, target: str) -> bool:
+    def validate(self, validation, target: typing.Union[h5py.Dataset, h5py.Group]) -> bool:
         """If the validator is optional, it will always will return True as it validates any attribute value.
         If it is not optional, then the key is searched in the target's attributes and if it is not found,
         the validation will fail. The value still plays no role in this validation.
         """
-        if not self.is_optional:
-            if key not in target.attrs:
-                self.failure_message = Message(f'Attribute "{key}" does not exist in {target.name}')
-                return False
+        attr = validation.parent
+        target_attr_value = target.attrs.get(attr.name, None)
+        if target_attr_value is None:
+            self.failure_message = Message(f'Attribute "{attr.name}" does not exist in {target.name}')
+            return self.is_optional
         return True
+
+
+Any = AnyAttribute
 
 
 class LayoutAttributeManager:
@@ -140,3 +147,8 @@ class AttributeValidation(Validation):
         else:
             raise TypeError(f'validator must be a Validator, float, int or str, not {type(validator)}')
         self.register()
+
+    # def get_hdf5_filter(self):
+    #     if isinstance(self.parent.group, Group):
+    #         return h5py.Group
+    #     return h5py.Dataset

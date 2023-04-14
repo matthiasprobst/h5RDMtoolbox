@@ -6,13 +6,13 @@ import h5py
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions.layout import Layout
-from h5rdmtoolbox.conventions.layout.attrs import LayoutAttributeManager, AttributeValidation, Attribute
+from h5rdmtoolbox.conventions.layout.attrs import LayoutAttributeManager, Attribute
 from h5rdmtoolbox.conventions.layout.group import Group, GroupValidation, GroupExists
 from h5rdmtoolbox.conventions.layout.path import LayoutPath
 from h5rdmtoolbox.conventions.layout.registry import LayoutRegistry
+from h5rdmtoolbox.conventions.layout.utils import Message
 from h5rdmtoolbox.conventions.layout.validations import Validation
 from h5rdmtoolbox.conventions.layout.validators import Validator
-from h5rdmtoolbox.conventions.layout.utils import Message
 
 
 class TestLayout(unittest.TestCase):
@@ -129,6 +129,36 @@ class TestLayout(unittest.TestCase):
             self.assertEqual(res.total_issues(), 1)
 
     def test_wildcard_attributes(self):
+        lay = Layout()
+        from h5rdmtoolbox.conventions.layout.attrs import Any
+
+        lay['*'].attrs['long_name'] = Any()
+        print(lay.validations)
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 1)
+
+            h5.attrs['long_name'] = 'test'
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+
+            g = h5.create_group('grp')
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 1)
+
+            g.attrs['long_name'] = 'test'
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+
+            ds = h5.create_dataset('dset', shape=(3, 4))
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 1)
+
+            ds.attrs['long_name'] = 'test'
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
+
+    def test_wildcard_attributes_old(self):
         lay = layout.File()
         with self.assertRaises(TypeError):
             lay['*'].attrs['long_name'] = Any

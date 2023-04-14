@@ -29,6 +29,7 @@ class Validator(metaclass=abc.ABCMeta):
         self.reference = reference
         self._optional = optional
         self.called = False
+        self.passed = False
 
     def __repr__(self):
         if self.called:
@@ -55,6 +56,7 @@ class Validator(metaclass=abc.ABCMeta):
         """
         self.passed = self.validate(validation, target, **kwargs)
         self.called = True
+        return validation
 
     def success_message(self) -> str:
         """Returns the success message"""
@@ -80,7 +82,7 @@ class Equal(Validator):
     def __init__(self, reference):
         super().__init__(reference, False)
 
-    def validate(self, _, other):
+    def validate(self, _, other) -> bool:
         return self.reference == other
 
 
@@ -112,5 +114,5 @@ class HDFObjectExist(Validator):
     def __init__(self, reference: typing.Union[h5py.Group, h5py.Dataset]):
         super().__init__(reference, False)
 
-    def validate(self, _, target: h5py.Group):
+    def validate(self, _, target: h5py.Group) -> bool:
         return self.reference in target
