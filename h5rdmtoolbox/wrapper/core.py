@@ -34,7 +34,7 @@ from .. import utils
 from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
-from ..conventions.layout import File as LayoutFile
+from ..conventions.layout import Layout as LayoutFile
 
 logger = logging.getLogger(__package__)
 

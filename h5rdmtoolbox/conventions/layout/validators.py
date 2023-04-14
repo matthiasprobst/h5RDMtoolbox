@@ -1,17 +1,26 @@
+"""Module for validators
+
+A validator compares a value to a reference value.
+
+The class `Validator` is the abstract class for all validators. It defines the interface for all validators.
+"""
+
 import abc
-import copy
 import typing
 
 import h5py
 
 
 class Validator(metaclass=abc.ABCMeta):
-    """Abstract class for validators
+    """Abstract class for validators.
+    A validator compares a value to a reference value and returns True if the value is valid, else False.
 
     Parameters
     ----------
     reference : any
         reference value
+    optional : bool
+        If True, the validator will not fail if the value is not present or validated
     """
 
     @abc.abstractmethod
@@ -37,36 +46,26 @@ class Validator(metaclass=abc.ABCMeta):
         return f'{self.__class__.__name__}({self.reference}, opt={self.is_optional})'
 
     @abc.abstractmethod
-    def validate(self, value: str) -> bool:
-        """validate the value
-
-        Parameters
-        ----------
-        value : str
-            The value to validate
-
-        Returns
-        -------
-        bool
-            True if the value is valid, else False
-        """
+    def validate(self, value: str, *args, **kwargs) -> bool:
+        """main validation method, to be defined in subclasses"""
 
     @property
     def is_optional(self) -> bool:
         """Returns True if the validator is optional, else False"""
         return self._optional
 
-    def __call__(self, value: str) -> "Validator":
+    def __call__(self, *args, **kwargs) -> 'Validator':
         """validate
 
         Parameters
         ----------
-        value : str
-            The regular expression to match against
+        args:
+            arguments to be passed to the validation method
+        kwargs:
+            Additional keyword arguments to be passed to the validation method
         """
-        self.passed = self.validate(value)
+        self.passed = self.validate(*args, **kwargs)
         self.called = True
-        return copy.deepcopy(self)
 
     def success_message(self) -> str:
         """Returns the success message"""
@@ -126,11 +125,3 @@ class HDFObjectExist(Validator):
 
     def validate(self, target: h5py.Group):
         return self.reference in target
-
-
-class Message:
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __call__(self, *args, **kwargs):
-        return self.msg

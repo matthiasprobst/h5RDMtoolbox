@@ -5,11 +5,11 @@ import h5py
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox.conventions import layout
-from h5rdmtoolbox.conventions.layout.file import LayoutRegistry
-from h5rdmtoolbox.conventions.layout.validation import Any
-from h5rdmtoolbox.conventions.layout.validation import Message
-from h5rdmtoolbox.conventions.layout.validation.attribute import AnyAttribute, AttributeValidator
+from h5rdmtoolbox.conventions.layout import Layout
+from h5rdmtoolbox.conventions.layout.attrs import LayoutAttributeManager, AttributeValidation
+from h5rdmtoolbox.conventions.layout.group import Group
+from h5rdmtoolbox.conventions.layout.path import LayoutPath
+from h5rdmtoolbox.conventions.layout.registry import LayoutRegistry
 
 
 class TestLayout(unittest.TestCase):
@@ -19,16 +19,67 @@ class TestLayout(unittest.TestCase):
         pathlib.Path('test.hdf').unlink(missing_ok=True)
 
     def test_registry(self):
-        self.assertIsInstance(layout.File.Registry(), LayoutRegistry)
+        self.assertIsInstance(Layout.Registry(), LayoutRegistry)
+
+    def test_Layout(self):
+        lay = Layout()
+        self.assertIsInstance(lay, Layout)
+        self.assertEqual(len(lay.validators), 0)
+
+        grp = lay['/']
+        self.assertIsInstance(grp, Group)
+        self.assertEqual(grp.path, '/')
+        self.assertIsInstance(grp.path, LayoutPath)
+        self.assertEqual(grp.path.name, '')
+        self.assertEqual(grp.path.parent, '/')
+
+        grp2 = lay['/a/b/c']
+        self.assertIsInstance(grp2, Group)
+        self.assertEqual(grp2.path, '/a/b/c')
+        self.assertIsInstance(grp2.path, LayoutPath)
+        self.assertEqual(grp2.path.name, 'c')
+        self.assertEqual(grp2.path.parent, '/a/b')
+
+        self.assertEqual(len(lay.validators), 0)
 
     def test_root_attributes(self):
-        lay = layout.File()
-        lay['/'].attrs['version'] = h5tbx.__version__
-        lay['/'].attrs['version'] = h5tbx.__version__
-        self.assertEqual(len(lay.validators), 1)
+        lay = Layout()
+        grp = lay['/']
+        attrs = grp.attrs
+        self.assertIsInstance(attrs, LayoutAttributeManager)
+
+        attr_validator = attrs['version']
+        self.assertIsInstance(attr_validator, AttributeValidation)
+        self.assertEqual(attr_validator.key, 'version')
+        self.assertEqual(attr_validator.validator, None)
+
+        attr_validator.validator = h5tbx.__version__
+
+        from h5rdmtoolbox.conventions.layout.attrs import AttributeEqual
+        self.assertIsInstance(attr_validator.validator, AttributeEqual)
+        self.assertEqual(len(lay.validations), 1)
+
+        self.assertEqual(lay.validations[0], attr_validator)
+
+        attrs['version2'] = h5tbx.__version__
+        attrs['version2'] = h5tbx.__version__  # should not be added again!
+        self.assertEqual(len(lay.validations), 2)
+
+        print('\n', lay.validations)
+
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             res = lay.validate(h5)
-        self.assertEqual(res.total_issues(), 1)
+            self.assertEqual(res.total_issues(), 2)
+
+    # def test_root_attributes(self):
+    #     lay = layout.File()
+    #     lay['/'].attrs['version'] = h5tbx.__version__
+    #     print(lay['/'].attrs['version'])
+    #     lay['/'].attrs['version'] = h5tbx.__version__
+    #     self.assertEqual(len(lay.validators), 1)
+    #     with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+    #         res = lay.validate(h5)
+    #     self.assertEqual(res.total_issues(), 1)
 
     def test_attribute_user_defined_validator(self):
         class StartsWithValidator(AttributeValidator):
@@ -143,6 +194,19 @@ class TestLayout(unittest.TestCase):
             r = lay.validate(filename)
             r.report()
             self.assertEqual(r.total_issues(), 0)
+
+    def test_any_dataset(self):
+        lay = layout.File()
+        ds = lay['*'].dataset()
+        # ds.attrs['standard_name'] = layout.Any()
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            h5.create_dataset('ds', shape=(3, 4))
+            h5.create_dataset('a/b/c/data', shape=(3, 4, 4))
+            d = h5.create_dataset('a/b/c/d/e/data', shape=(3, 4, 4, 2))
+            d.attrs['standard_name'] = 'test'
+            res = lay.validate(h5)
+            self.assertEqual(res.total_issues(), 0)
 
     def test_layout_part_datasets_4(self):
         """check if all datasets are 3D and have a long_name attribute"""

@@ -1,11 +1,9 @@
 import h5py
 
-from . import Validator
-
 
 class PropertyValidator:
 
-    def __init__(self, property_name: str, validator: Validator):
+    def __init__(self, property_name: str, validator: "Validator"):
         self.property_name = property_name
         self.validator = validator
 
@@ -23,5 +21,5 @@ class PropertyValidatorWrapper:
     """Wrapper around a basic Validator like `Equal` for example. It enables
     to compare the value of a property of a dataset to a reference value."""
 
-    def __call__(self, property_name: str, validator: Validator) -> PropertyValidator:
+    def __call__(self, property_name: str, validator: "Validator") -> PropertyValidator:
         return PropertyValidator(property_name, validator)
