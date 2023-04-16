@@ -3,7 +3,7 @@ import unittest
 import h5py
 
 from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Any
+from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex
 
 
 class TestLayout(unittest.TestCase):
@@ -25,9 +25,8 @@ class TestLayout(unittest.TestCase):
         # self.assertIsInstance(lay['group2'], GroupValidation)
 
         self.assertIsInstance(g1.attrs, AttributeValidationManager)
-        g1.attrs.add(Equal('attr1'), Any())
-
-        print(lay)
+        # g1.attrs.add(Equal('attr1'), Any())
+        g1.attrs.add('long_name', 'an_attribute')
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
@@ -35,8 +34,34 @@ class TestLayout(unittest.TestCase):
             g = h5.create_group('group1')
             lay.validate(h5)
             self.assertEqual(lay.fails, 2)
-            g.attrs['attr1'] = 1
+            g.attrs['test'] = '2'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+            g.attrs['long_name'] = '2'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+            g.attrs['long_name'] = 'an_attribute'
             lay.validate(h5)
             self.assertEqual(lay.fails, 1)
 
-        # a11 = g1.attrs['attr1'] = Any()
+            # regex
+            g1.attrs.add('coord', Regex(r'^[x-z]_coordinate$'))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
+            g.attrs['coord'] = 'a_coordinate'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
+            g.attrs['coord'] = 'x_coordinate'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            g1.attrs.add(Regex('.*coord2.*'), Regex(r'^[x-z]_coordinate$'))
+            g.attrs['coord2'] = 'x_coordinate'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            g.attrs['hellocoord2'] = 'a_coordinate'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)

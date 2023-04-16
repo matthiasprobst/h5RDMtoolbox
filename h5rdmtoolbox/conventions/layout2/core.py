@@ -68,8 +68,10 @@ class Any(Validator):
 class Validation:
 
     def __init__(self, validator: Validator):
-        if not isinstance(validator, Validator):
-            raise TypeError(f'validator must be a Validator, not {type(validator)}')
+        if validator is Ellipsis:
+            validator = Any()
+        elif not isinstance(validator, Validator):
+            validator = Equal(validator)
         self.validator = validator
         self.is_optional = False
         self.succeeded = False
@@ -146,13 +148,13 @@ class AttributeValidation(Validation):
             if self.validator(target):
                 validations.append(target)
                 assert self.child is None
+            assert len(validations) in (0, 1)
         if len(validations) == 0:
             if self.is_optional:
                 self.succeeded = True
             else:
                 self.succeeded = False
         else:
-            assert len(validations) == 1
             self.succeeded = True
         print(self, validations, self.is_optional, self.succeeded)
 
@@ -169,7 +171,9 @@ class AttributeValidationManager:
     def __init__(self, parent: "Validation"):
         self.parent = parent
 
-    def add(self, name_validator, value_validator):
+    def add(self,
+            name_validator: typing.Union[str, Validator],
+            value_validator: typing.Union[int, float, str, Validator]):
         av = AttributeValidation(name_validator, self.parent)
         if value_validator is Ellipsis:
             value_validator = Any(None)
