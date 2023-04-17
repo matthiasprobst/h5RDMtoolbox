@@ -14,7 +14,7 @@ class TestLayout(unittest.TestCase):
         # init layout:
         lay = Layout()
 
-        # add gorups:
+        # add groups:
         g1 = lay.define_group('group1')  # lay.add_Group(Equal('group1'))
         g2 = lay[Equal('group2')]
 
@@ -71,6 +71,13 @@ class TestLayout(unittest.TestCase):
             g.attrs['hellocoord2'] = 'a_coordinate'
             lay.validate(h5)
             self.assertEqual(lay.fails, 2)
+
+            print(lay)
+
+    def test_str(self):
+        lay = Layout()
+        lay['/'].define_dataset(ndim=1)
+        print(lay.children[0])
 
     def test_core2(self):
         lay = Layout()

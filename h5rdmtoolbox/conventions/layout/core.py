@@ -38,7 +38,7 @@ class ValidationResult:
             self.result = result
 
     def __repr__(self):
-        return f'ValidationResult({self.validation}, {self.result})'
+        return f'ValidationResult({self.validation.__repr__()}, {self.result.__repr__()})'
 
     @property
     def succeeded(self) -> bool:
@@ -73,11 +73,12 @@ Required = OptReqWrapper(False)
 class Validator(abc.ABC):
     """Base class for all validators."""
 
-    def __init__(self, reference):
+    def __init__(self, reference, sign):
         self.reference = reference
+        self.sign = sign
 
     def __repr__(self):
-        return f'{self.__class__.__name__}("{self.reference}")'
+        return f'{self.__class__.__name__}("{self.reference.__repr__()}")'
 
     @abc.abstractmethod
     def __call__(self, *args, **kwargs):
@@ -85,28 +86,41 @@ class Validator(abc.ABC):
 
 
 class Regex(Validator):
+    """Validator using regex"""
 
-    def __call__(self, value):
+    def __init__(self, reference: str):
+        super().__init__(reference, sign='=')
+
+    def __call__(self, value, *args, **kwargs):
         return re.match(self.reference, value) is not None
+
+    def __str__(self):
+        return f're:{self.reference}'
 
 
 class Equal(Validator):
     """Validator that checks if the value is equal to the reference value.
     A reference value of '*' will always return True."""
 
-    def __call__(self, value):
+    def __init__(self, reference):
+        super().__init__(reference=reference, sign='=')
+
+    def __call__(self, value, *args, **kwargs):
         if self.reference == '*':
             return True
         return value == self.reference
+
+    def __str__(self) -> str:
+        return str(self.reference)
 
 
 class In(Validator):
     """Validator that checks if the value is within the reference value."""
 
     def __init__(self, *reference):
-        super().__init__(reference)
+        super().__init__(reference, sign=' in ')
 
-    def __call__(self, value):
+    def __call__(self, value, *args, **kwargs):
         return value in self.reference
 
 
@@ -114,14 +128,20 @@ class Any(Validator):
     """An optional Validator that always returns True."""
 
     def __init__(self):
-        super().__init__(None)
+        super().__init__(None, sign='=')
         self.is_optional = True
+
+    def __str__(self):
+        return '...'
 
     def __repr__(self):
         return f'{self.__class__.__name__}(opt={self.is_optional})'
 
-    def __call__(self, value):
+    def __call__(self, value, *args, **kwargs):
         return True
+
+    def sign(self):
+        return self.sign
 
 
 class Validation(abc.ABC):
@@ -145,13 +165,13 @@ class Validation(abc.ABC):
         return not self.is_optional
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.validator})'
+        return f'{self.__class__.__name__}({self.validator.__repr__()})'
 
 
 class AttributeValidation(Validation):
     """Validation class for attributes of a group or dataset."""
 
-    def __init__(self, validator, parent: "GroupValidation"):
+    def __init__(self, validator, parent: typing.Union["GroupValidation", "AttributeValidation"]):
         super().__init__(validator)
         self.child = None
         # add this validation to the parent. this validation will be called if the parent validation succeeded:
@@ -159,9 +179,14 @@ class AttributeValidation(Validation):
         parent.add(self)
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.validator}, opt={self.is_optional})>'
+        return f'{self.__class__.__name__}({self.validator.__repr__()}, opt={self.is_optional})>'
+
+    def __str__(self):
+        return f'["{self.parent.path}"].attr(name="{self.validator.__str__()}",' \
+               f' value="{self.child.validator.__str__()}")'
 
     def add(self, child: Validation, overwrite=False):
+        """Add successive validation to this validation object"""
         if self.child is not None and not overwrite:
             raise ValueError('child already exists and overwrite is False')
         if not isinstance(child, Validation):
@@ -195,7 +220,7 @@ class AttributeValidation(Validation):
             validation_results.append(ValidationResult(self, is_valid, self.is_optional))
         return validation_results
 
-    def dumps(self, indent):
+    def dumps(self, indent: int):
         """Prints the validation specification to a string"""
         print(' ' * indent + self.__repr__())
         if self.child:
@@ -203,6 +228,7 @@ class AttributeValidation(Validation):
 
 
 class PropertyValidation(Validation):
+    """Property Validation class"""
 
     def __init__(self, name, validator, parent):
         super().__init__(validator)
@@ -212,10 +238,14 @@ class PropertyValidation(Validation):
         parent.add(self)
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.validator})>'
+        return f'{self.__class__.__name__}({self.validator.__repr__()})>'
+
+    def __str__(self):
+        return f'["{self.parent.parent.path}"].dataset({self.name}{self.validator.sign}{self.validator.__str__()})'
 
     def validate(self, target: h5py.Dataset,
                  validation_results: typing.List[ValidationResult]) -> typing.List[ValidationResult]:
+        """Validate the dataset property"""
         if not isinstance(target, h5py.Dataset):
             raise TypeError(f'PropertyValidation can only be applied to datasets, not {type(target)}')
 
@@ -224,7 +254,7 @@ class PropertyValidation(Validation):
         validation_results.append(ValidationResult(self, is_valid, self.is_optional))
         return validation_results
 
-    def dumps(self, indent):
+    def dumps(self, indent: int):
         """Prints the validation specification to a string"""
         print(' ' * indent + self.__repr__())
 
@@ -244,6 +274,7 @@ class AttributeValidationManager:
     def add(self,
             name_validator: typing.Union[str, Validator],
             value_validator: typing.Union[int, float, str, Validator]):
+        """Add the name and value attribute validators"""
         av = AttributeValidation(name_validator, self.parent)
         if value_validator is Ellipsis:
             value_validator = Any()
@@ -272,7 +303,7 @@ class _BaseGroupAndDatasetValidation(Validation):
             pass
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.validator}, opt={self.is_optional})>'
+        return f'{self.__class__.__name__}({self.validator.__repr__()}, opt={self.is_optional})>'
 
     @property
     def path(self) -> str:
@@ -304,22 +335,32 @@ class _BaseGroupAndDatasetValidation(Validation):
             raise TypeError(f'child must be a Validation, not {type(child)}')
 
         for registrated_child in self.children:
-            if registrated_child.parent == child.parent and registrated_child.validator.reference == child.validator.reference:
+            if registrated_child.parent == child.parent and \
+                    registrated_child.validator.reference == child.validator.reference:
                 return registrated_child
         self.children.append(child)
         return child
 
     add = add_child  # alias
 
-    def dumps(self, indent):
+    def dumps(self, indent: int):
         """Prints the validation specification to a string"""
-        print(' ' * indent + self.__repr__())
+        print(' ' * indent + repr(self))
         for child in self.children:
             child.dumps(indent=indent + 2)
 
 
 class DatasetValidation(_BaseGroupAndDatasetValidation):
     """Dataset validation"""
+
+    def __str__(self):
+        prop_children = [child for child in self.children if isinstance(child, PropertyValidation)]
+        if len(prop_children) == 0:
+            return f'["{self.parent.path}"].dataset(name="{self.validator.__str__()}")'
+        return '\n'.join(
+            f'["{self.parent.path}"].dataset(name="{self.validator.__str__()}",'
+            f' {child.name}={child.validator.__str__()})'
+            for child in prop_children)
 
     def validate(self, h5group: h5py.Group,
                  validation_results: typing.List[ValidationResult]) -> typing.List[ValidationResult]:
@@ -347,6 +388,7 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
     """
 
     def validate(self, target, validation_results) -> typing.List[ValidationResult]:
+        """Validate the group"""
         wildcard = False
         if isinstance(self.validator, Equal):
             if self.validator.reference == '*':
@@ -411,7 +453,7 @@ class Layout(GroupValidation):
         self._validation_results = []
 
     def __repr__(self):
-        return f'Layout({self.children})'
+        return f'Layout({self.children.__repr__()})'
 
     def define_group(self, name: typing.Union[str, Validator]) -> GroupValidation:
         """Add a group validation object"""
@@ -452,7 +494,12 @@ class Layout(GroupValidation):
         """Get failed validations"""
         return [r for r in self.validation_results if r.failed]
 
-    def dumps(self):
+    def print_failed(self):
+        """Print (calls __str__()) all failed validations"""
+        for r in self.get_failed():
+            print(r.validation)
+
+    def dumps(self, indent: int = 0):
         """Prints the validation specification to the console"""
         for child in self.children:
-            child.dumps(0)
+            child.dumps(indent)
