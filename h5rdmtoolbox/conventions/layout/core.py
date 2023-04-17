@@ -508,8 +508,12 @@ class Layout(GroupValidation):
             if child.validator.reference == '*':
                 self._validation_results = child.validate(target, self._validation_results)
             else:
-                for group in get_h5groups(target, False):
-                    self._validation_results = child.validate(group, self._validation_results)
+                groups = get_h5groups(target, False)
+                if len(groups) == 0 and child.is_required:
+                    self._validation_results.append(ValidationResult(child, False, child.is_optional, target))
+                else:
+                    for group in groups:
+                        self._validation_results = child.validate(group, self._validation_results)
         return self.validation_results
 
     @property

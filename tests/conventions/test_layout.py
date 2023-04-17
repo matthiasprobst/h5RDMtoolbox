@@ -14,7 +14,7 @@ class TestLayout(unittest.TestCase):
         # init layout:
         lay = Layout()
 
-        # add groups:
+        # add groups, which MUST exist:
         g1 = lay.define_group('group1')  # lay.add_Group(Equal('group1'))
         g2 = lay[Equal('group2')]
 
@@ -24,6 +24,8 @@ class TestLayout(unittest.TestCase):
 
         self.assertIsInstance(g1.attrs, AttributeValidationManager)
         # g1.attrs.add(Equal('attr1'), Any())
+
+        # add an attribute to group1, which MUST exist:
         g1.attrs.add('long_name', 'an_attribute')
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
