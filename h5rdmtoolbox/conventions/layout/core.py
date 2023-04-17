@@ -8,9 +8,10 @@ import h5py
 
 def get_h5groups(h5group: h5py.Group, wildcard: bool = False) -> typing.List[h5py.Group]:
     """Return a list of all groups in the given group. If wildcard is True, also return all groups (recursively)"""
-    groups = [h5group[k] for k in h5group.keys() if isinstance(h5group[k], h5py.Group)]
     if not wildcard:
-        return groups
+        return [h5group[k] for k in h5group.keys() if isinstance(h5group[k], h5py.Group)]
+
+    groups = []
 
     def visitor(_, obj):
         """Visitor function for h5py.visititems()"""
@@ -18,7 +19,6 @@ def get_h5groups(h5group: h5py.Group, wildcard: bool = False) -> typing.List[h5p
             groups.append(obj)
 
     h5group.visititems(visitor)
-    groups.append(h5group)
     return groups
 
 
@@ -30,15 +30,17 @@ def get_h5datasets(h5group: h5py.Group) -> typing.List[h5py.Dataset]:
 class ValidationResult:
     """Validation Result class."""
 
-    def __init__(self, validation, result: bool, is_optional: bool):
+    def __init__(self, validation, result: bool, is_optional: bool,
+                 fail_obj: typing.Union[h5py.Group, h5py.Dataset] = None):
         self.validation = validation
+        self.fail_obj = fail_obj
         if result is False and is_optional is True:
             self.result = True
         else:
             self.result = result
 
     def __repr__(self):
-        return f'ValidationResult({self.validation.__repr__()}, {self.result.__repr__()})'
+        return f'ValidationResult({self.validation.__repr__()}, {self.result.__repr__()}, obj={self.fail_obj})'
 
     @property
     def succeeded(self) -> bool:
@@ -51,7 +53,7 @@ class ValidationResult:
         return not self.result
 
 
-class OptReqWrapper:
+class OptionalWrapper:
     """Wrapper class for the Optional and Required decorators."""
 
     def __init__(self, optional):
@@ -66,8 +68,31 @@ class OptReqWrapper:
         return obj
 
 
-Optional = OptReqWrapper(True)
-Required = OptReqWrapper(False)
+Optional = OptionalWrapper(True)
+Required = OptionalWrapper(False)
+
+
+# class CountWrapper:
+#     """Decorator to set the maximum number of occurrences of a validation."""
+#
+#     def __call__(self, obj: typing.Union[int, float, str, "Validator"], n):
+#         if isinstance(obj, (int, float, str)):
+#             obj = Equal(obj)
+#         if not isinstance(obj, Validator):
+#             raise TypeError(f'Wrapper can only be used with a Validator objects')
+#         obj.nmax = n
+#         return obj
+# Count = CountWrapper()
+#
+#
+# class OnceWrapper:
+#     """Decorator to set the maximum number of occurrences of a validation to 1."""
+#
+#     def __call__(self, obj: typing.Union[int, float, str, "Validator"]):
+#         return Count(obj, 1)
+#
+#
+# Once = OnceWrapper()
 
 
 class Validator(abc.ABC):
@@ -76,9 +101,10 @@ class Validator(abc.ABC):
     def __init__(self, reference, sign):
         self.reference = reference
         self.sign = sign
+        self.nmax = None  # number of occurrences. see GroupValidation.validate()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}("{self.reference.__repr__()}")'
+        return f'{self.__class__.__name__}({self.reference.__repr__()})'
 
     @abc.abstractmethod
     def __call__(self, *args, **kwargs):
@@ -199,7 +225,7 @@ class AttributeValidation(Validation):
         if isinstance(target, (h5py.Group, h5py.Dataset)):
             attribute_names = list(target.attrs.keys())
             if len(attribute_names) == 0:
-                validation_results.append(ValidationResult(self, False, self.is_optional))
+                validation_results.append(ValidationResult(self, False, self.is_optional, target))
                 return validation_results
 
             valid_flags = []
@@ -212,12 +238,12 @@ class AttributeValidation(Validation):
                     if self.child is not None:
                         validation_results = self.child.validate(target.attrs[k], validation_results)
             # now we ran through all attributes and can set the result of this validation:
-            validation_results.append(ValidationResult(self, any(valid_flags), self.is_optional))
+            validation_results.append(ValidationResult(self, any(valid_flags), self.is_optional, target))
 
         else:
             # validate the value of an attribute
             is_valid = self.validator(target)
-            validation_results.append(ValidationResult(self, is_valid, self.is_optional))
+            validation_results.append(ValidationResult(self, is_valid, self.is_optional, target))
         return validation_results
 
     def dumps(self, indent: int):
@@ -336,7 +362,8 @@ class _BaseGroupAndDatasetValidation(Validation):
 
         for registrated_child in self.children:
             if registrated_child.parent == child.parent and \
-                    registrated_child.validator.reference == child.validator.reference:
+                    registrated_child.validator.reference == child.validator.reference and \
+                    isinstance(registrated_child, type(child)):
                 return registrated_child
         self.children.append(child)
         return child
@@ -393,25 +420,21 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
         if isinstance(self.validator, Equal):
             if self.validator.reference == '*':
                 wildcard = True
+                groups = get_h5groups(target, wildcard=wildcard)
+                groups.append(target)
+                for group in groups:
+                    for child in self.children:
+                        validation_results = child.validate(group, validation_results)
+                return validation_results
 
-        groups = set(get_h5groups(target, wildcard))
-        if len(groups) == 0 and self.is_required:
-            validation_results.append(ValidationResult(self, False, self.is_optional))
-            return validation_results
+        group_name = target.name.rsplit('/', 1)[-1]
+        is_valid = self.validator(group_name)
+        validation_results.append(ValidationResult(self, is_valid, self.is_optional, target))
+        if is_valid:
+            # validation succeeded:
+            for child in self.children:
+                validation_results = child.validate(target, validation_results)
 
-        valid_flags = []
-        for group in groups:
-            group_name = group.name.strip('/')
-            if group_name == '':
-                group_name = '/'
-            is_valid = self.validator(group_name)
-            valid_flags.append(is_valid)
-            if is_valid:
-                # validation succeeded:
-                for child in self.children:
-                    validation_results = child.validate(group, validation_results)
-
-        validation_results.append(ValidationResult(self, any(valid_flags), self.is_optional))
         return validation_results
 
     def define_dataset(self, name: typing.Union[str, Validator, None] = None, **properties) -> DatasetValidation:
@@ -437,12 +460,17 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
             _ = PropertyValidation(name, value, dv)
         return dv
 
-    def define_group(self, name: typing.Union[str, Validator]) -> "GroupValidation":
+    def define_group(self, name: typing.Union[str, Validator, None] = None) -> "GroupValidation":
         """Add a group validation object"""
         if isinstance(name, str):
             name = Equal(name)
+        elif name is None:
+            name = Any()
         gv = GroupValidation(name, self)
         return self.add(gv)
+
+    def exists(self, n):
+        """Refines the number of occ"""
 
 
 class Layout(GroupValidation):
@@ -455,7 +483,7 @@ class Layout(GroupValidation):
     def __repr__(self):
         return f'Layout({self.children.__repr__()})'
 
-    def define_group(self, name: typing.Union[str, Validator]) -> GroupValidation:
+    def define_group(self, name: typing.Union[str, Validator, None] = None) -> GroupValidation:
         """Add a group validation object"""
         if isinstance(name, str):
             name = Equal(name)
@@ -477,7 +505,11 @@ class Layout(GroupValidation):
         assert target.name == '/'
         self._validation_results = []
         for child in self.children:
-            self._validation_results = child.validate(target, self._validation_results)
+            if child.validator.reference == '*':
+                self._validation_results = child.validate(target, self._validation_results)
+            else:
+                for group in get_h5groups(target, False):
+                    self._validation_results = child.validate(group, self._validation_results)
         return self.validation_results
 
     @property
@@ -494,9 +526,17 @@ class Layout(GroupValidation):
         """Get failed validations"""
         return [r for r in self.validation_results if r.failed]
 
-    def print_failed(self):
-        """Print (calls __str__()) all failed validations"""
-        for r in self.get_failed():
+    def print_failed(self, n: int = None):
+        """Print (calls __str__()) all failed validations
+        Parameters
+        ----------
+        n: int
+            Number of failed validations to print. Default prints all
+        """
+        failed_validations = self.get_failed()
+        if n is None:
+            n = len(failed_validations)
+        for r in failed_validations[0:n]:
             print(r.validation)
 
     def dumps(self, indent: int = 0):

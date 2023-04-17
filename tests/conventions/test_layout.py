@@ -22,10 +22,6 @@ class TestLayout(unittest.TestCase):
         self.assertIsInstance(g1, GroupValidation)
         self.assertIsInstance(g2, GroupValidation)
 
-        # # check __getitem__ method:
-        # self.assertIsInstance(lay['group1'], GroupValidation)
-        # self.assertIsInstance(lay['group2'], GroupValidation)
-
         self.assertIsInstance(g1.attrs, AttributeValidationManager)
         # g1.attrs.add(Equal('attr1'), Any())
         g1.attrs.add('long_name', 'an_attribute')
@@ -73,6 +69,52 @@ class TestLayout(unittest.TestCase):
             self.assertEqual(lay.fails, 2)
 
             print(lay)
+
+    def test_docs_example(self):
+        lay = Layout()
+
+        # dv = lay['*'].define_dataset(compression='gzip')
+        # lay['*'].define_dataset().attrs['units'] = ...
+        lay['*'].define_group().attrs['comment'] = Regex(r'^[^ 0-9].*')
+
+        lay['devices'].attrs.add('long_name', 'an_attribute')
+        # lay['/'].define_group().attrs['__version__'] = h5tbx.__version__
+        # lay['devices'].define_group('measurement_devices')
+
+        with h5tbx.File() as h5:
+            # h5.create_dataset('velocity',
+            #                   shape=(10, 20),
+            #                   compression='gzip',
+            #                   attrs={'units': 'm/s'})
+            g = h5.create_group('devices/measurement_devices')
+            g.attrs['comment'] = 'This is a valid comment'
+            # h5.create_group('devices/measurement_devices')
+
+            res = lay.validate(h5)
+            self.assertEqual(lay.fails, 3)  # root and device has no comment
+
+            h5.attrs['comment'] = 'This is a valid comment'
+            res = lay.validate(h5)
+            self.assertEqual(lay.fails, 2)  # device has no comment
+
+            g.attrs['comment'] = ' 0 this is not a valid comment'
+            res = lay.validate(h5)
+            self.assertEqual(lay.fails, 3)  # device has no comment
+
+            h5['devices'].attrs['long_name'] = 'an_attribute'
+
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
+    def test_core4(self):
+        lay = Layout()
+        lay['devices'].define_group('measurement_devices')
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            h5.create_group('devices/measurement_devices')
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+            print(lay.print_failed())
 
     def test_str(self):
         lay = Layout()
