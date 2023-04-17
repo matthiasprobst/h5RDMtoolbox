@@ -214,13 +214,16 @@ class AttributeValidationManager:
             value_validator: typing.Union[int, float, str, Validator]):
         av = AttributeValidation(name_validator, self.parent)
         if value_validator is Ellipsis:
-            value_validator = Any(None)
+            value_validator = Any()
         elif isinstance(value_validator, (str, int, float)):
             value_validator = Equal(value_validator)
         AttributeValidation(value_validator, av)
 
     def __setitem__(self, name_validator, value_validator):
         self.add(name_validator, value_validator)
+
+    def __getitem__(self, name_validator):
+        av = AttributeValidation(name_validator, self.parent)
 
     # def __getitem__(self, validator) -> AttributeValidation:
     #     if not isinstance(validator, Validator):
@@ -313,11 +316,18 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
             self.succeeded = True
         print(self, validations, self.is_optional, self.succeeded)
 
-    def dataset(self, name, **kwargs):
+    def define_dataset(self, name, **kwargs):
         dv = DatasetValidation(name, self)
         self.add(dv)
         for propname, propvalue in kwargs.items():
             pv = PropertyValidation(propname, propvalue, dv)
+
+    def define_group(self, name: typing.Union[str, Validator]):
+        """Add a group validation object"""
+        if isinstance(name, str):
+            name = Equal(name)
+        gv = GroupValidation(name, self)
+        self.add(gv)
 
 
 class Layout(GroupValidation):

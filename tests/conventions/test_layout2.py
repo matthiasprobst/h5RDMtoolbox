@@ -3,7 +3,7 @@ import unittest
 import h5py
 
 from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex, In
+from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex
 
 
 class TestLayout(unittest.TestCase):
@@ -67,10 +67,9 @@ class TestLayout(unittest.TestCase):
             self.assertEqual(lay.fails, 2)
 
     def test(self):
-
         lay = Layout()
         g = lay['group1']
-        g.dataset('dataset1', ndim=Equal(3))
+        g.define_dataset('dataset1', ndim=Equal(3))
         # d2 = lay['group1'] = Dataset('dataset2', ndim=In(1, 2, 3))
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
@@ -84,4 +83,3 @@ class TestLayout(unittest.TestCase):
             g.create_dataset('dataset1', shape=(1, 2, 3))
             lay.validate(h5)
             self.assertEqual(lay.fails, 0)
-
