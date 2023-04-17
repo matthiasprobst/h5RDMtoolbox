@@ -57,6 +57,15 @@ class Equal(Validator):
         return value == self.reference
 
 
+class In(Validator):
+
+    def __init__(self, *reference):
+        super().__init__(reference)
+
+    def __call__(self, value):
+        return value in self.reference
+
+
 class Any(Validator):
     def __init__(self):
         super().__init__(None)
@@ -122,8 +131,9 @@ class AttributeValidation(Validation):
         n = 0
         if self.is_invalid:
             n = 1
-        if self.child is not None:
-            n += self.child.fails
+        child = copy.deepcopy(self.child)
+        if child is not None:
+            n += child.fails
         return n
 
     def add(self, child: Validation, overwrite=False):
@@ -159,6 +169,34 @@ class AttributeValidation(Validation):
         print(self, validations, self.is_optional, self.succeeded)
 
 
+class PropertyValidation(Validation):
+
+    def __init__(self, name, validator, parent):
+        super().__init__(validator)
+        self.name = name
+        # add this validation to the parent. this validation will be called if the parent validation succeeded:
+        self.parent = parent
+        parent.add(self)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.validator})>'
+
+    def validate(self, target: h5py.Dataset):
+        if not isinstance(target, h5py.Dataset):
+            raise TypeError(f'PropertyValidation can only be applied to datasets, not {type(target)}')
+        self.called = True
+        prop = target.__getattribute__(self.name)
+        is_valid = self.validator(prop)
+        if is_valid:
+            self.succeeded = True
+        else:
+            self.succeeded = self.is_optional
+
+    @property
+    def fails(self) -> int:
+        return int(self.is_invalid)
+
+
 class AttributeValidationManager:
     """Attribute validation manager for a group or dataset validation
 
@@ -190,7 +228,7 @@ class AttributeValidationManager:
     #     return AttributeValidation(self.parent, validator)
 
 
-class GroupValidation(Validation):
+class _BaseGroupAndDatasetValidation(Validation):
 
     def __init__(self,
                  validator: Validator,
@@ -217,7 +255,8 @@ class GroupValidation(Validation):
         n = 0
         if self.is_invalid:
             n = 1
-        for child in self.children:
+        children = copy.deepcopy(self.children)
+        for child in children:
             n += child.fails
         return n
 
@@ -235,6 +274,27 @@ class GroupValidation(Validation):
 
     add = add_child  # alias
 
+
+class DatasetValidation(_BaseGroupAndDatasetValidation):
+    def validate(self, target):
+        self.called = True
+        validations = []
+        for dataset in get_h5datasets(target):
+            if self.validator(dataset.name.rsplit('/', 1)[-1]):
+                validations.append(dataset)
+                for child in self.children:
+                    child.validate(dataset)
+        if len(validations) == 0:
+            if self.is_optional:
+                self.succeeded = True
+            else:
+                self.succeeded = False
+        else:
+            self.succeeded = True
+        print(self, validations, self.is_optional, self.succeeded)
+
+
+class GroupValidation(_BaseGroupAndDatasetValidation):
     def validate(self, target):
         self.called = True
         validations = []
@@ -252,6 +312,12 @@ class GroupValidation(Validation):
         else:
             self.succeeded = True
         print(self, validations, self.is_optional, self.succeeded)
+
+    def dataset(self, name, **kwargs):
+        dv = DatasetValidation(name, self)
+        self.add(dv)
+        for propname, propvalue in kwargs.items():
+            pv = PropertyValidation(propname, propvalue, dv)
 
 
 class Layout(GroupValidation):

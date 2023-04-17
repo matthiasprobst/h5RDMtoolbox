@@ -3,7 +3,7 @@ import unittest
 import h5py
 
 from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex
+from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex, In
 
 
 class TestLayout(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestLayout(unittest.TestCase):
 
         # add gorups:
         g1 = lay.add_group('group1')  # lay.add_Group(Equal('group1'))
-        g2 = lay.add_group(Equal('group2'))
+        g2 = lay[Equal('group2')]
 
         # check types:
         self.assertIsInstance(g1, GroupValidation)
@@ -65,3 +65,23 @@ class TestLayout(unittest.TestCase):
             g.attrs['hellocoord2'] = 'a_coordinate'
             lay.validate(h5)
             self.assertEqual(lay.fails, 2)
+
+    def test(self):
+
+        lay = Layout()
+        g = lay['group1']
+        g.dataset('dataset1', ndim=Equal(3))
+        # d2 = lay['group1'] = Dataset('dataset2', ndim=In(1, 2, 3))
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            g = h5.create_group('group1')
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            g.create_dataset('dataset1', shape=(1, 2, 3))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
