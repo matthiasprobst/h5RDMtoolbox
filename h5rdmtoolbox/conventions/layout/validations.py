@@ -36,10 +36,30 @@ class Validation(abc.ABC):
             return
         self._validator = validator
 
+    @property
+    def passed(self):
+        return self.validator.passed
+
+    @property
+    def called(self):
+        return self.validator.called
+
+    @property
+    def is_optional(self):
+        return self.validator.is_optional
+
+    @property
+    def is_required(self):
+        return not self.validator.is_optional
+
+    @property
+    def message(self):
+        return self.validator.message
+
     def perform_conditional_validation(self, source_validation, target):
-        assert source_validation.validator.passed
         validators = []
         if source_validation in self.parent.file.conditional_attribute_validations:
+            assert source_validation.validator.passed
             # we found a candidate, more specifically a group: target. and there are conditional validators. let's run them:
             for conditional_validator in self.parent.file.conditional_attribute_validations[source_validation]:
                 from .attrs import AttributeValidation

@@ -72,5 +72,5 @@ class ValidationResults:
         tot = 0
         for r in self._validations:
             if not r.validator.is_optional:
-                tot += not r.validator.passed
+                tot += r.validator.passed is False
         return tot

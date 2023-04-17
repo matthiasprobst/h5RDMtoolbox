@@ -101,8 +101,8 @@ class Regex(Validator):
     """check if value matches the regular expression.
     """
 
-    def __init__(self, reference):
-        super().__init__(reference, True)
+    def __init__(self, reference, optional=False):
+        super().__init__(reference, optional)
 
     def validate(self, _, value: str) -> bool:
         import re

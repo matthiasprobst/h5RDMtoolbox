@@ -5,14 +5,15 @@ import h5py
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox.conventions.layout import Layout
+from h5rdmtoolbox.conventions.layout import Layout, Optional
+from h5rdmtoolbox.conventions.layout import Regex
 from h5rdmtoolbox.conventions.layout.attrs import LayoutAttributeManager, Attribute, AttributeValidation
 from h5rdmtoolbox.conventions.layout.group import Group, GroupValidation, GroupExists
 from h5rdmtoolbox.conventions.layout.path import LayoutPath
 from h5rdmtoolbox.conventions.layout.registry import LayoutRegistry
 from h5rdmtoolbox.conventions.layout.utils import Message
 from h5rdmtoolbox.conventions.layout.validations import Validation
-from h5rdmtoolbox.conventions.layout.validators import Validator
+from h5rdmtoolbox.conventions.layout.validators import Validator, Equal
 
 
 class TestLayout(unittest.TestCase):
@@ -51,7 +52,7 @@ class TestLayout(unittest.TestCase):
         attrs = grp.attrs
         self.assertIsInstance(attrs, LayoutAttributeManager)
 
-        attr = attrs['version']
+        attr = attrs[Equal('version')]
         self.assertIsInstance(attr, Attribute)
         self.assertEqual(attr.name, 'version')
         self.assertEqual(attr.group, grp)
@@ -64,21 +65,23 @@ class TestLayout(unittest.TestCase):
 
         self.assertEqual(lay.validations[0].parent, attr)
 
+        attrs['title'] = ...
+
         attrs['version2'] = h5tbx.__version__
         # attrs['version2'] = h5tbx.__version__  # should not be added again!
-        self.assertEqual(len(lay.validations), 2)
+        self.assertEqual(len(lay.validations), 3)
 
         print('\n', lay.validations)
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             res = lay.validate(h5)
-            self.assertEqual(res.total_issues(), 2)
+            self.assertEqual(res.total_issues(), 3)
             h5.attrs['version'] = 'v0.0.0'
             res = lay.validate(h5)
-            self.assertEqual(res.total_issues(), 2)
+            self.assertEqual(res.total_issues(), 3)
             h5.attrs['version'] = h5tbx.__version__
             res = lay.validate(h5)
-            self.assertEqual(res.total_issues(), 1)
+            self.assertEqual(res.total_issues(), 2)
 
     def test_group_attributes(self):
         lay = Layout()
@@ -120,6 +123,42 @@ class TestLayout(unittest.TestCase):
             res = lay.validate(h5)
             self.assertEqual(res.total_issues(), len(lay.validations) - 1)
 
+    def test_attribute_regex(self):
+        lay = Layout()
+        # AttributeRegex is automatically identified
+        lay['/'].attrs[Optional('version')] = Regex(reference=r'^v\d+\.\d+\.\d+$')
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 1)
+
+            h5.attrs['version'] = 'v1.0.3'
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 0)
+
+    def test_attribute_regex_2(self):
+        lay = Layout()
+        # AttributeRegex is automatically identified
+        lay['*'].attrs['version'].value = Regex(reference=r'^v\d+\.\d+\.\d+$')
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 0)
+
+            h5.attrs['version'] = 'v1.0.3'
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 0)
+
+            h5.create_group('a/b/c')
+            h5['a/b/c'].attrs['version'] = '0.3'
+            res = lay.validate(h5)
+            res.report()
+            self.assertEqual(res.total_issues(), 1)
+
     def test_group_conditional_attributes(self):
         lay = Layout()
         lay['*'].group('velocity')  # no effect. every group may or may not have the group 'velocity'
@@ -139,7 +178,7 @@ class TestLayout(unittest.TestCase):
             res = lay.validate(h5)
             res.report()
             self.assertEqual(res.total_issues(), 0)  # group does not exist, attr could not be checked
-        #
+            #
             h5.create_group('velocity')
             res = lay.validate(h5)
             res.report()
@@ -240,11 +279,11 @@ class TestLayout(unittest.TestCase):
     #
     # def test_group_attributes_1(self):
     #     lay = layout.File()
-    #     lay['/'].attrs['title'] = AnyAttribute()  # title must exist at root level
+    #     lay['/'].attrs['title'] = AttributeExists()  # title must exist at root level
     #     self.assertEqual(len(lay.validators), 1)
-    #     lay['*'].group().attrs['long_name'] = AnyAttribute()  # any group must have a long_name
+    #     lay['*'].group().attrs['long_name'] = AttributeExists()  # any group must have a long_name
     #     self.assertEqual(len(lay.validators), 2)
-    #     lay['*'].group().attrs['long_name'] = AnyAttribute()  # any group must have a long_name
+    #     lay['*'].group().attrs['long_name'] = AttributeExists()  # any group must have a long_name
     #     self.assertEqual(len(lay.validators), 2)
     #
     #     filename = generate_temporary_filename(suffix='.hdf')

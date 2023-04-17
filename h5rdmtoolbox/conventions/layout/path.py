@@ -7,7 +7,11 @@ class LayoutPath(str):
     @property
     def name(self) -> str:
         """Return the basename of the path."""
-        return self.rsplit('/', 1)[-1]
+        name = self.rsplit('/', 1)[-1]
+        return name
+        # if name == '':
+        #     return '/'
+        # return name
 
     @property
     def parent(self) -> str:

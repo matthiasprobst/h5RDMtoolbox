@@ -57,6 +57,16 @@ class ValidationList:
     def __getitem__(self, item) -> "Validation":
         return self._validations[item]
 
+    @property
+    def required(self) -> typing.List[Validation]:
+        """Return a list of required validators."""
+        return [v for v in self._validations if v.is_required]
+
+    @property
+    def optional(self) -> typing.List[Validation]:
+        """Return a list of optional validators."""
+        return [v for v in self._validations if v.is_optional]
+
 
 class Layout:
     """Main class for defining a layout file."""
