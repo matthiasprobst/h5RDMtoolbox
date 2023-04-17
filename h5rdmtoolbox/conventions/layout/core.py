@@ -505,15 +505,22 @@ class Layout(GroupValidation):
         assert target.name == '/'
         self._validation_results = []
         for child in self.children:
-            if child.validator.reference == '*':
+            if isinstance(child, AttributeValidation):
                 self._validation_results = child.validate(target, self._validation_results)
-            else:
-                groups = get_h5groups(target, False)
-                if len(groups) == 0 and child.is_required:
-                    self._validation_results.append(ValidationResult(child, False, child.is_optional, target))
+            elif isinstance(child, GroupValidation):
+                if child.validator.reference == '*':
+                    self._validation_results = child.validate(target, self._validation_results)
                 else:
-                    for group in groups:
-                        self._validation_results = child.validate(group, self._validation_results)
+                    groups = get_h5groups(target, False)
+                    if len(groups) == 0 and child.is_required:
+                        self._validation_results.append(ValidationResult(child, False, child.is_optional, target))
+                    else:
+                        for group in groups:
+                            self._validation_results = child.validate(group, self._validation_results)
+            elif isinstance(child, DatasetValidation):
+                raise NotImplementedError()
+            else:
+                raise TypeError(f'Unknown child type: {type(child)}')
         return self.validation_results
 
     @property
