@@ -3,7 +3,8 @@ import unittest
 import h5py
 
 from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex
+from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex, \
+    Any
 
 
 class TestLayout(unittest.TestCase):
@@ -13,7 +14,7 @@ class TestLayout(unittest.TestCase):
         lay = Layout()
 
         # add gorups:
-        g1 = lay.add_group('group1')  # lay.add_Group(Equal('group1'))
+        g1 = lay.define_group('group1')  # lay.add_Group(Equal('group1'))
         g2 = lay[Equal('group2')]
 
         # check types:
@@ -30,16 +31,20 @@ class TestLayout(unittest.TestCase):
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
-            self.assertEqual(lay.fails, 2)
+            self.assertEqual(lay.fails, 2)  # both groups are missing
+
             g = h5.create_group('group1')
             lay.validate(h5)
-            self.assertEqual(lay.fails, 2)
+            self.assertEqual(lay.fails, 2)  # one group is missing and the other has no attribute long_name
+
             g.attrs['test'] = '2'
             lay.validate(h5)
-            self.assertEqual(lay.fails, 2)
+            self.assertEqual(lay.fails, 2)  # one group is missing and the other has a wrong attribute
+
             g.attrs['long_name'] = '2'
             lay.validate(h5)
-            self.assertEqual(lay.fails, 2)
+            self.assertEqual(lay.fails, 2)  # one group is missing and the other has a wrong attribute long_name
+
             g.attrs['long_name'] = 'an_attribute'
             lay.validate(h5)
             self.assertEqual(lay.fails, 1)
@@ -66,7 +71,7 @@ class TestLayout(unittest.TestCase):
             lay.validate(h5)
             self.assertEqual(lay.fails, 2)
 
-    def test(self):
+    def test_core2(self):
         lay = Layout()
         g = lay['group1']
         g.define_dataset('dataset1', ndim=Equal(3))
@@ -74,12 +79,35 @@ class TestLayout(unittest.TestCase):
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
-            self.assertEqual(lay.fails, 1)
+            self.assertEqual(lay.fails, 1)  # group1 is missing
 
             g = h5.create_group('group1')
             lay.validate(h5)
-            self.assertEqual(lay.fails, 1)
+            self.assertEqual(lay.fails, 1)  # group exists but dataset1 is missing
 
             g.create_dataset('dataset1', shape=(1, 2, 3))
             lay.validate(h5)
             self.assertEqual(lay.fails, 0)
+
+    def test_wildcard(self):
+        lay = Layout()
+        lay['*'].attrs['long_name'] = 'group'
+        lay['*'].define_dataset(Any()).attrs['long_name'] = 'dataset'
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            # h5.attrs['long_name'] = 'group'
+            # ds = h5.create_dataset('ds', shape=(1, 2, 3))
+            # # lay.validate(h5)
+            # # self.assertEqual(lay.fails, 1)
+            #
+            # ds.attrs['long_name'] = 'dataset'
+            # # lay.validate(h5)
+            # # self.assertEqual(lay.fails, 0)
+            #
+            # ds2 = h5.create_dataset('a/ds2', shape=(1, 2, 3))
+            # ds2.attrs['long_name'] = 'wrong'
+            # lay.validate(h5)
+            # self.assertEqual(lay.fails, 2)
