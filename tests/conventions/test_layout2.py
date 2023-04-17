@@ -2,6 +2,7 @@ import unittest
 
 import h5py
 
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions.layout2.core import Layout, Equal, GroupValidation, AttributeValidationManager, Regex, \
     Any
@@ -98,6 +99,7 @@ class TestLayout(unittest.TestCase):
             lay.validate(h5)
             self.assertEqual(lay.fails, 1)
 
+            lay.dumps()
             # h5.attrs['long_name'] = 'group'
             # ds = h5.create_dataset('ds', shape=(1, 2, 3))
             # # lay.validate(h5)
@@ -111,3 +113,13 @@ class TestLayout(unittest.TestCase):
             # ds2.attrs['long_name'] = 'wrong'
             # lay.validate(h5)
             # self.assertEqual(lay.fails, 2)
+
+    def test_core3(self):
+        lay = Layout()
+        lay['/'].attrs['version'] = h5tbx.__version__
+
+        with h5tbx.File() as h5:
+            h5.attrs['version'] = h5tbx.__version__
+            lay.validate(h5)
+
+        self.assertEqual(lay.fails, 0)
