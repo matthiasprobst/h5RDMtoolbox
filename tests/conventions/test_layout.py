@@ -1,14 +1,59 @@
 import unittest
 
-import h5py
-
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox.conventions.layout import Layout, Equal, GroupValidation, AttributeValidationManager, Regex, \
-    Any
+from h5rdmtoolbox.conventions.layout import *
 
 
 class TestLayout(unittest.TestCase):
+
+    def setUp(self) -> None:
+        h5tbx.use(None)
+
+    def test_registry(self):
+        reg = LayoutRegistry()
+        self.assertIsInstance(reg, LayoutRegistry)
+        self.assertIsInstance(reg.names, list)
+        self.assertIsInstance(reg['tbx'], Layout)
+
+        lay = reg['tbx']
+        with h5tbx.File() as h5:
+            lay.validate(h5)
+            self.assertFalse(lay.is_validated)
+
+            h5.attrs['title'] = 'This is a title'
+
+            lay.validate(h5)
+            lay.report()
+            print(lay.get_failed_validations())
+            self.assertTrue(lay.is_validated)
+
+    def test_validators(self):
+        e = Equal(1)
+        self.assertTrue(e(1))
+        self.assertFalse(e(0))
+
+        vs = ValidString()
+        self.assertTrue(vs('Comment'))
+        self.assertFalse(vs(' invalid'))
+        self.assertFalse(vs('0invalid'))
+
+        e = Equal('*')
+        self.assertTrue(e('dawd'))
+        self.assertTrue(e(Ellipsis))
+
+        i = In(1, 2, 3)
+        self.assertTrue(i(1))
+        self.assertTrue(i(2))
+        self.assertTrue(i(3))
+        self.assertFalse(i(4))
+
+        with h5tbx.File() as h5:
+            h5.create_group('group1')
+            ei = ExistIn('group1')
+            with self.assertRaises(TypeError):
+                ei('group1')
+            self.assertTrue(ei(h5))
 
     def test_core(self):
         # init layout:
@@ -67,46 +112,48 @@ class TestLayout(unittest.TestCase):
             self.assertEqual(lay.fails, 1)
 
             g.attrs['hellocoord2'] = 'a_coordinate'
-            lay.validate(h5)
-            self.assertEqual(lay.fails, 2)
+            hdf_filename = h5.filename
+        lay.validate(hdf_filename)
+        self.assertEqual(lay.fails, 2)
 
-            print(lay)
+        print(lay)
 
     def test_docs_example(self):
         lay = Layout()
 
-        # dv = lay['*'].define_dataset(compression='gzip')
-        # lay['*'].define_dataset().attrs['units'] = ...
+        dv = lay['*'].define_dataset(compression='gzip')
+        lay['*'].define_dataset().attrs['units'] = ...
         lay['*'].define_group().attrs['comment'] = Regex(r'^[^ 0-9].*')
 
         lay['devices'].attrs.add('long_name', 'an_attribute')
-        # lay['/'].define_group().attrs['__version__'] = h5tbx.__version__
-        # lay['devices'].define_group('measurement_devices')
+        lay['/'].define_group().attrs['__version__'] = h5tbx.__version__
+        lay['devices'].define_group('measurement_devices')
 
         with h5tbx.File() as h5:
-            # h5.create_dataset('velocity',
-            #                   shape=(10, 20),
-            #                   compression='gzip',
-            #                   attrs={'units': 'm/s'})
-            g = h5.create_group('devices/measurement_devices')
-            g.attrs['comment'] = 'This is a valid comment'
-            # h5.create_group('devices/measurement_devices')
-
-            res = lay.validate(h5)
-            self.assertEqual(lay.fails, 3)  # root and device has no comment
-
+            # this file should be having everything specified in the layout
+            h5.create_dataset('velocity',
+                              shape=(10, 20),
+                              compression='gzip',
+                              attrs={'units': 'm/s'})
             h5.attrs['comment'] = 'This is a valid comment'
-            res = lay.validate(h5)
-            self.assertEqual(lay.fails, 2)  # device has no comment
-
-            g.attrs['comment'] = ' 0 this is not a valid comment'
-            res = lay.validate(h5)
-            self.assertEqual(lay.fails, 3)  # device has no comment
-
+            g = h5.create_group('devices/measurement_devices')
+            h5['devices'].attrs['comment'] = 'This is a valid comment'
             h5['devices'].attrs['long_name'] = 'an_attribute'
+            h5['devices/measurement_devices'].attrs['comment'] = 'This is a valid comment'
+            h5.attrs['__version__'] = h5tbx.__version__
 
-            lay.validate(h5)
-            self.assertEqual(lay.fails, 2)
+            res = lay.validate(h5)
+            lay.report()
+            self.assertEqual(lay.fails, 0)
+
+            g.attrs['comment'] = '0 This is a valid comment'
+
+            res = lay.validate(h5)
+            self.assertEqual(lay.fails, 1)  # invalid comment
+            self.assertEqual(len(lay.get_succeeded_validations()), len(lay.called_validations) - 1)
+            self.assertFalse(lay.is_validated)
+            lay.print_failed_validations()
+            lay.print_failed_validations(1)
 
     def test_core4(self):
         lay = Layout()
@@ -116,7 +163,6 @@ class TestLayout(unittest.TestCase):
             h5.create_group('devices/measurement_devices')
             lay.validate(h5)
             self.assertEqual(lay.fails, 0)
-            print(lay.print_failed())
 
     def test_str(self):
         lay = Layout()

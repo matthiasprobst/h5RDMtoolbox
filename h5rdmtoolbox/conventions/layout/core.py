@@ -1,4 +1,4 @@
-"""Core module for the layout2 convention."""
+"""Core module for the layout convention."""
 import abc
 import re
 import typing
@@ -6,11 +6,8 @@ import typing
 import h5py
 
 
-def get_h5groups(h5group: h5py.Group, wildcard: bool = False) -> typing.List[h5py.Group]:
-    """Return a list of all groups in the given group. If wildcard is True, also return all groups (recursively)"""
-    if not wildcard:
-        return [h5group[k] for k in h5group.keys() if isinstance(h5group[k], h5py.Group)]
-
+def get_subgroups(h5group: h5py.Group) -> typing.List[h5py.Group]:
+    """Return a list of all groups in the given group."""
     groups = []
 
     def visitor(_, obj):
@@ -43,33 +40,33 @@ class ValidationResult:
         return f'ValidationResult({self.validation.__repr__()}, {self.result.__repr__()}, obj={self.fail_obj})'
 
     @property
-    def succeeded(self) -> bool:
-        """Return True if the validation succeeded."""
-        return self.result
-
-    @property
     def failed(self) -> bool:
         """Return True if the validation failed."""
         return not self.result
 
-
-class OptionalWrapper:
-    """Wrapper class for the Optional and Required decorators."""
-
-    def __init__(self, optional):
-        self.optional = optional
-
-    def __call__(self, obj):
-        if isinstance(obj, (int, float, str)):
-            obj = Equal(obj)
-        if not isinstance(obj, Validator):
-            raise TypeError(f'Cannot make {obj} optional')
-        obj.is_optional = self.optional
-        return obj
+    @property
+    def succeeded(self) -> bool:
+        """Return True if the validation succeeded."""
+        return not self.failed
 
 
-Optional = OptionalWrapper(True)
-Required = OptionalWrapper(False)
+# class OptionalWrapper:
+#     """Wrapper class for the Optional and Required decorators."""
+#
+#     def __init__(self, optional):
+#         self.optional = optional
+#
+#     def __call__(self, obj):
+#         if isinstance(obj, (int, float, str)):
+#             obj = Equal(obj)
+#         if not isinstance(obj, Validator):
+#             raise TypeError(f'Cannot make {obj} optional')
+#         obj.is_optional = self.optional
+#         return obj
+#
+#
+# Optional = OptionalWrapper(True)
+# Required = OptionalWrapper(False)
 
 
 # class CountWrapper:
@@ -141,13 +138,47 @@ class Equal(Validator):
 
 
 class In(Validator):
-    """Validator that checks if the value is within the reference value."""
+    """Validator that checks if the value is within the reference values."""
 
     def __init__(self, *reference):
         super().__init__(reference, sign=' in ')
 
     def __call__(self, value, *args, **kwargs):
         return value in self.reference
+
+
+class ExistIn(Validator):
+    """Validator that checks if an HDF object is within another (to check if dataset or group exists).
+
+    Parameters
+    ----------
+    reference : str
+        The HDF5 object (dataset or group) to check if it exists in the given value in __call__().
+    """
+
+    def __init__(self, reference: str):
+        super().__init__(reference, sign=' exists in ')
+
+    def __call__(self,
+                 value: typing.Union[h5py.Dataset, h5py.Group],
+                 *args, **kwargs) -> typing.Union[bool, h5py.Dataset, h5py.Group]:
+        """Check if the given value exists in the given reference.
+
+        Parameters
+        ----------
+        value : typing.Union[h5py.Dataset, h5py.Group]
+            The object to check.
+
+        Returns
+        -------
+        Union[bool, h5py.Dataset, h5py.Group]
+            If the value exists in the reference, return the value. Otherwise, return False.
+        """
+        if not isinstance(value, (h5py.Dataset, h5py.Group)):
+            raise TypeError(f'Value must be a h5py.Dataset or h5py.Group, not {type(value)}')
+        if self.reference not in value:
+            return False
+        return value.get(self.reference)
 
 
 class Any(Validator):
@@ -166,8 +197,12 @@ class Any(Validator):
     def __call__(self, value, *args, **kwargs):
         return True
 
-    def sign(self):
-        return self.sign
+
+class ValidString(Regex):
+    """Validator that checks if the value is a valid string. Rule is not to start with a space or a number."""
+
+    def __init__(self):
+        super().__init__(r'^[^ 0-9].*')
 
 
 class Validation(abc.ABC):
@@ -180,10 +215,11 @@ class Validation(abc.ABC):
             validator = Equal(validator)
         self.validator = validator
         self.is_optional = False
+        self.called = False
 
+    @abc.abstractmethod
     def validate(self, target: h5py.Group, validation_results: typing.List[ValidationResult]):
         """Validate the target object."""
-        pass
 
     @property
     def is_required(self) -> bool:
@@ -208,8 +244,16 @@ class AttributeValidation(Validation):
         return f'{self.__class__.__name__}({self.validator.__repr__()}, opt={self.is_optional})>'
 
     def __str__(self):
-        return f'["{self.parent.path}"].attr(name="{self.validator.__str__()}",' \
-               f' value="{self.child.validator.__str__()}")'
+        if hasattr(self.parent, 'path'):
+            p = self.parent.path
+        else:
+            p = self.parent
+        if self.child is None:
+            value = self.validator.__str__()
+        else:
+            value = self.child.validator
+        return f'["{p}"].attr(name="{self.validator.__str__()}",' \
+               f' value="{value}")'
 
     def add(self, child: Validation, overwrite=False):
         """Add successive validation to this validation object"""
@@ -222,6 +266,7 @@ class AttributeValidation(Validation):
     def validate(self, target,
                  validation_results: typing.List[ValidationResult]) -> typing.List[ValidationResult]:
         """Validate the attribute."""
+        self.called = True
         if isinstance(target, (h5py.Group, h5py.Dataset)):
             attribute_names = list(target.attrs.keys())
             if len(attribute_names) == 0:
@@ -248,7 +293,7 @@ class AttributeValidation(Validation):
 
     def dumps(self, indent: int):
         """Prints the validation specification to a string"""
-        print(' ' * indent + self.__repr__())
+        print(' ' * indent + repr(self))
         if self.child:
             self.child.dumps(indent + 2)
 
@@ -272,6 +317,7 @@ class PropertyValidation(Validation):
     def validate(self, target: h5py.Dataset,
                  validation_results: typing.List[ValidationResult]) -> typing.List[ValidationResult]:
         """Validate the dataset property"""
+        self.called = True
         if not isinstance(target, h5py.Dataset):
             raise TypeError(f'PropertyValidation can only be applied to datasets, not {type(target)}')
 
@@ -282,7 +328,7 @@ class PropertyValidation(Validation):
 
     def dumps(self, indent: int):
         """Prints the validation specification to a string"""
-        print(' ' * indent + self.__repr__())
+        print(' ' * indent + repr(self))
 
 
 class AttributeValidationManager:
@@ -315,7 +361,16 @@ class AttributeValidationManager:
         AttributeValidation(name_validator, self.parent)
 
 
-class _BaseGroupAndDatasetValidation(Validation):
+class _BaseGroupAndDatasetValidation(Validation, abc.ABC):
+    """Base class for group and dataset validation
+
+    Parameters
+    ----------
+    validator : Validator
+        The validator to be applied to the group name
+    parent : GroupValidation
+        The parent validation object
+    """
 
     def __init__(self,
                  validator: Validator,
@@ -376,6 +431,10 @@ class _BaseGroupAndDatasetValidation(Validation):
         for child in self.children:
             child.dumps(indent=indent + 2)
 
+    @abc.abstractmethod
+    def validate(self, target: h5py.Group, validation_results: typing.List[ValidationResult]):
+        pass
+
 
 class DatasetValidation(_BaseGroupAndDatasetValidation):
     """Dataset validation"""
@@ -392,6 +451,7 @@ class DatasetValidation(_BaseGroupAndDatasetValidation):
     def validate(self, h5group: h5py.Group,
                  validation_results: typing.List[ValidationResult]) -> typing.List[ValidationResult]:
         """Validate datasets of a group"""
+        self.called = True
         valid_flags = []
         for dataset in get_h5datasets(h5group):
             is_valid = self.validator(dataset.name.rsplit('/', 1)[-1])
@@ -405,30 +465,24 @@ class DatasetValidation(_BaseGroupAndDatasetValidation):
 
 class GroupValidation(_BaseGroupAndDatasetValidation):
     """Group validation
-
-    Parameters
-    ----------
-    validator : Validator
-        The validator to be applied to the group name
-    parent : GroupValidation
-        The parent validation object
     """
 
     def validate(self, target, validation_results) -> typing.List[ValidationResult]:
         """Validate the group"""
-        wildcard = False
-        if isinstance(self.validator, Equal):
+        self.called = True
+        if isinstance(self.validator, (Equal, ExistIn)):
             if self.validator.reference == '*':
-                wildcard = True
-                groups = get_h5groups(target, wildcard=wildcard)
+                groups = get_subgroups(target)
                 groups.append(target)
                 for group in groups:
                     for child in self.children:
                         validation_results = child.validate(group, validation_results)
                 return validation_results
 
-        group_name = target.name.rsplit('/', 1)[-1]
-        is_valid = self.validator(group_name)
+        identified_obj = self.validator(target)
+        if isinstance(identified_obj, (h5py.Group, h5py.Dataset)):
+            target = identified_obj
+        is_valid = identified_obj is not False
         validation_results.append(ValidationResult(self, is_valid, self.is_optional, target))
         if is_valid:
             # validation succeeded:
@@ -437,7 +491,10 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
 
         return validation_results
 
-    def define_dataset(self, name: typing.Union[str, Validator, None] = None, **properties) -> DatasetValidation:
+    def define_dataset(self,
+                       name: typing.Union[str, Validator, None] = None,
+                       opt: bool = None,
+                       **properties) -> DatasetValidation:
         """Add a dataset specification
 
         Parameters
@@ -455,15 +512,20 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
         if name is None:
             name = Any()
         dv = DatasetValidation(name, self)
+
         dv = self.add(dv)
         for name, value in properties.items():
             _ = PropertyValidation(name, value, dv)
+
+        # overwrite whatever the name validator says, if the user specified opt
+        if opt is not None:
+            dv.is_optional = opt
         return dv
 
     def define_group(self, name: typing.Union[str, Validator, None] = None) -> "GroupValidation":
         """Add a group validation object"""
         if isinstance(name, str):
-            name = Equal(name)
+            name = ExistIn(name)
         elif name is None:
             name = Any()
         gv = GroupValidation(name, self)
@@ -481,12 +543,16 @@ class Layout(GroupValidation):
         self._validation_results = []
 
     def __repr__(self):
-        return f'Layout({self.children.__repr__()})'
+        if self.total:
+            return f'Layout(passed={self.success_ratio * 100:.1f}%)'
+        return f'Layout()'
 
     def define_group(self, name: typing.Union[str, Validator, None] = None) -> GroupValidation:
         """Add a group validation object"""
         if isinstance(name, str):
-            name = Equal(name)
+            name = ExistIn(name)
+        elif name is None:
+            name = Any()
         gv = GroupValidation(name, self)
         return self.add(gv)
 
@@ -508,19 +574,13 @@ class Layout(GroupValidation):
             if isinstance(child, AttributeValidation):
                 self._validation_results = child.validate(target, self._validation_results)
             elif isinstance(child, GroupValidation):
-                if child.validator.reference == '*':
-                    self._validation_results = child.validate(target, self._validation_results)
-                else:
-                    groups = get_h5groups(target, False)
-                    if len(groups) == 0 and child.is_required:
-                        self._validation_results.append(ValidationResult(child, False, child.is_optional, target))
-                    else:
-                        for group in groups:
-                            self._validation_results = child.validate(group, self._validation_results)
+                self._validation_results = child.validate(target, self._validation_results)
             elif isinstance(child, DatasetValidation):
                 raise NotImplementedError()
             else:
                 raise TypeError(f'Unknown child type: {type(child)}')
+
+        assert len(self.specified_validations) == len(self.called_validations) + len(self.inactive_validations)
         return self.validation_results
 
     @property
@@ -529,22 +589,109 @@ class Layout(GroupValidation):
         return [r for r in self._validation_results if r.validation.is_required]
 
     @property
+    def success_ratio(self):
+        """Success ratio"""
+        return (self.total - self.fails) / self.total
+
+    def report(self):
+        """Print a report of the validation results"""
+        print('Layout Validation report')
+        print('------------------------')
+        print(f'Number of validations (called/specified): {len(self.called_validations)}/'
+              f'{len(self.specified_validations)}')
+        print(f'Number of inactive validations: {len(self.inactive_validations)}')
+        print(f'Success rate: {self.success_ratio * 100:.1f}% (n_fails={self.fails})')
+
+    @property
+    def is_validated(self) -> bool:
+        """True if the validation has been performed"""
+        return self.fails == 0
+
+    @property
     def fails(self) -> int:
         """Number of failed validations"""
-        return sum([int(r.failed) for r in self.validation_results])
+        return sum(int(r.failed) for r in self.validation_results)
 
-    def get_failed(self) -> typing.List[ValidationResult]:
+    @property
+    def total(self) -> int:
+        """Total number of performed validations"""
+        return len(self.validation_results)
+
+    @property
+    def specified_validations(self) -> typing.List[Validation]:
+        """Number of specified validations"""
+
+        def _count(children: typing.List, validations):
+            if children is None:
+                return validations
+            if not isinstance(children, (list, tuple)):
+                children = [children, ]
+            for child in children:
+                validations.append(child)
+                if hasattr(child, 'children'):
+                    validations = _count(child.children, validations)
+                if hasattr(child, 'child'):
+                    validations = _count(child.child, validations)
+            return validations
+
+        return _count(self.children, [])
+
+    @property
+    def called_validations(self) -> typing.List[Validation]:
+        """Return the list of called validations"""
+
+        def _count(children: typing.List, _called_validations):
+            if children is None:
+                return _called_validations
+            if not isinstance(children, (list, tuple)):
+                children = [children, ]
+            for child in children:
+                if child.called:
+                    _called_validations.append(child)
+                if hasattr(child, 'children'):
+                    _called_validations = _count(child.children, _called_validations)
+                if hasattr(child, 'child'):
+                    _called_validations = _count(child.child, _called_validations)
+            return _called_validations
+
+        return _count(self.children, [])
+
+    @property
+    def inactive_validations(self) -> typing.List[Validation]:
+        """Return the list of inactive validations"""
+
+        def _count(children: typing.List, _called_validations):
+            if children is None:
+                return _called_validations
+            if not isinstance(children, (list, tuple)):
+                children = [children, ]
+            for child in children:
+                if not child.called:
+                    _called_validations.append(child)
+                if hasattr(child, 'children'):
+                    _called_validations = _count(child.children, _called_validations)
+                if hasattr(child, 'child'):
+                    _called_validations = _count(child.child, _called_validations)
+            return _called_validations
+
+        return _count(self.children, [])
+
+    def get_failed_validations(self) -> typing.List[ValidationResult]:
         """Get failed validations"""
         return [r for r in self.validation_results if r.failed]
 
-    def print_failed(self, n: int = None):
+    def get_succeeded_validations(self) -> typing.List[ValidationResult]:
+        """Get succeeded validations"""
+        return [r for r in self.validation_results if r.succeeded]
+
+    def print_failed_validations(self, n: int = None):
         """Print (calls __str__()) all failed validations
         Parameters
         ----------
         n: int
             Number of failed validations to print. Default prints all
         """
-        failed_validations = self.get_failed()
+        failed_validations = self.get_failed_validations()
         if n is None:
             n = len(failed_validations)
         for r in failed_validations[0:n]:

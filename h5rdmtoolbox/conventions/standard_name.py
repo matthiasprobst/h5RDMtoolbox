@@ -68,12 +68,13 @@ class EmailError(ValueError):
     """Wrong Email Error"""
 
 
-def verify_unit_object(_units):
-    """Raise error if _units is not processable by pint package"""
+def verify_unit_object(_units) -> bool:
+    """Raise error if _units is not processable by pint package. Otherwise return True"""
     try:
         ureg.Unit(_units)
     except UndefinedUnitError as e:
-        raise UndefinedUnitError(f'Units cannot be understood using pint_xarray package: {_units}. --> {e}')
+        raise UndefinedUnitError(f'Units cannot be understood using ureg package: {_units}. --> {e}')
+    return True
 
 
 def xmlsnt2dict(xml_filename: Path) -> Tuple[dict, dict]:
