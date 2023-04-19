@@ -17,8 +17,8 @@ Overview
 The packages comes with three sub-packages, each covering a different aspect of efficient and sustainable work with
 HDF5 files:
 
-  - :doc:`convention <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
-  - :doc:`wrapper <wrapper/index>`: Efficient high-level objects for efficient work with HDF5 files (extending `h5py`)
+  - :doc:`convention <conventions/index>`: Modular construction of conventions (standardization and specification for HDF files)
+  - :doc:`wrapper <wrapper/index>`: User-friendly wrapper around `h5py` implementation for efficient work with HDF5 files
   - :doc:`database <database/index>`: Querying HDF5 files (A database for HDF5 files)
 
 .. image:: _static/package_overview.svg
@@ -30,8 +30,8 @@ Please navigate through the chapters on the left to learn more about the package
 
       - :doc:`Getting Started <gettingstarted/index>`: A quick introduction to the package
       - :doc:`Wrapper <wrapper/index>`: A high-level wrapper for HDF5 files
-      - :doc:`Database <database/index>`: A database for HDF5 files
       - :doc:`Conventions <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
+      - :doc:`Database <database/index>`: A database for HDF5 files
       - :doc:`HowTo <howto/index>`: A collection of FAQs how to do things
       - :doc:`API Reference <api>`: The API reference
       - :doc:`Glossary <glossary/index>`: A glossary of terms used in the package
@@ -78,8 +78,8 @@ You may install optional dependencies:
 
     Getting Started <gettingstarted/index>
     Wrapper <wrapper/index>
-    Database <database/index>
     Conventions <conventions/index>
+    Database <database/index>
     HowTo <howto/index>
     API Reference <api>
     Glossary <glossary/index>
