@@ -2,6 +2,7 @@
 import abc
 import re
 import typing
+import warnings
 
 import h5py
 
@@ -591,6 +592,12 @@ class Layout(GroupValidation):
     @property
     def success_ratio(self):
         """Success ratio"""
+        if self.total == 0:
+            if not self.specified_validations:
+                warnings.warn('No specifications registered to this layout, thus success '
+                              'ratio will always be 1.0', UserWarning)
+                return 1.0
+            raise ValueError('No validations performed yet')
         return (self.total - self.fails) / self.total
 
     def report(self):

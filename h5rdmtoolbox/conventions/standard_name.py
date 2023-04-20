@@ -893,6 +893,7 @@ class StandardNameTable(MinimalStandardNameTable):
 
     def check_units(self, name: str, units: str, raise_error: bool = True) -> bool:
         """Check if the units of a standard name are as expected
+
         Parameters
         ----------
         name: str
