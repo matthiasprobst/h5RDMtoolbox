@@ -20,6 +20,11 @@ comprehensive documentation with examples [here](h5rdmtoolbox.readthedocs.io/en/
 
 
 ## Installation
+Install from website:
+
+    pip install git+https://github.com/matthiasprobst/h5RDMtoolbox
+
+
 Navigate to the repository directory.
 
 Clone the repository

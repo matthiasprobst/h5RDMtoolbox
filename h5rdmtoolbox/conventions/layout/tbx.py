@@ -1,6 +1,6 @@
 from .core import *
 
-from ..standard_name import verify_unit_object
+from ..standard_name import is_valid_unit
 
 
 class IsValidUnit(Validator):
@@ -13,7 +13,7 @@ class IsValidUnit(Validator):
         return "can be understood by package 'ureg'"
 
     def __call__(self, value):
-        return verify_unit_object(value)
+        return is_valid_unit(value)
 
 
 class IsValidStandardName(Regex):

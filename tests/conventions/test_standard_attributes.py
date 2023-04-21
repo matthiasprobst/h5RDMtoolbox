@@ -1,8 +1,9 @@
 """Testing the standard attributes"""
 import pathlib
-import requests
 import unittest
 import warnings
+
+import requests
 from omegaconf import DictConfig
 from packaging import version
 from pint.errors import UndefinedUnitError
@@ -156,137 +157,16 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertTupleEqual(h5.references, (url, url, url, url, bibtex_entry, bibtex_entry, bibtex_entry))
         h5tbx.use(None)
 
-    # def setUp(self) -> None:
-    #     """setup"""
-    #
-    #     @register_standard_attr(Group, name='software', overwrite=True)
-    #     class SoftwareAttribute(StandardAttribute):
-    #         """property attach to a Group"""
-    #
-    #         def set(self, sftw: Union[software.Software, Dict]):
-    #             """Get `software` as group attribute"""
-    #             if isinstance(sftw, (tuple, list)):
-    #                 raise TypeError('Software information must be provided as dictionary '
-    #                                 f'or object of class Software, not {type(sftw)}')
-    #             if isinstance(sftw, dict):
-    #                 # init the Software to check for errors
-    #                 self.attrs.create('software', json.dumps(software.Software(**sftw).to_dict()))
-    #             else:
-    #                 self.attrs.create('software', json.dumps(sftw.to_dict()))
-    #
-    #         @staticmethod
-    #         def parse(raw, obj=None):
-    #             if raw is None:
-    #                 return software.Software(None, None, None, None)
-    #             if isinstance(raw, dict):
-    #                 return software.Software(**raw)
-    #             try:
-    #                 datadict = json.loads(raw)
-    #             except json.JSONDecodeError:
-    #                 # try figuring out from a string. assuming order and sep=','
-    #                 keys = ('name', 'version', 'url', 'description')
-    #                 datadict = {}
-    #                 raw_split = raw.split(',')
-    #                 n_split = len(raw_split)
-    #                 for i in range(4):
-    #                     if i >= n_split:
-    #                         datadict[keys[i]] = None
-    #                     else:
-    #                         datadict[keys[i]] = raw_split[i].strip()
-    #
-    #             return software.Software.from_dict(datadict)
-    #
-    #         def get(self) -> software.Software:
-    #             """Get `software` from group attribute. The value is expected
-    #             to be a dictionary-string that can be decoded by json.
-    #             However, if it is a real string it is expected that it contains
-    #             name, version url and description separated by a comma.
-    #             """
-    #             return SoftwareAttribute.parse(self.attrs.get('software', None))
-    #
-    #         def delete(self):
-    #             """Delete attribute"""
-    #             self.attrs.__delitem__('standard_name')
-
-    # def test_software(self):
-    #     meta = metadata('numpy')
-    #
-    #     s = software.Software(meta['Name'], version=meta['Version'], url=meta['Home-page'],
-    #                           description=meta['Summary'])
-    #
-    #     with h5tbx.File() as h5:
-    #         h5.software = s
-    #
-    # def test_long_name(self):
-    #     # is available per default
-    #     with h5tbx.File() as h5:
-    #         with self.assertRaises(LongNameError):
-    #             h5.attrs['long_name'] = ' 1234'
-    #         with self.assertRaises(LongNameError):
-    #             h5.attrs['long_name'] = '1234'
-    #         h5.attrs['long_name'] = 'a1234'
-    #         with self.assertRaises(LongNameError):
-    #             h5.create_dataset('ds1', shape=(2,), long_name=' a long name', units='m**2')
-    #         with self.assertRaises(LongNameError):
-    #             h5.create_dataset('ds3', shape=(2,), long_name='123a long name ', units='m**2')
-    #
-    # def test_units(self):
-    #     # is available per default
-    #     import pint
-    #     with h5tbx.File() as h5:
-    #         h5.attrs['units'] = ' '
-    #         h5.attrs['units'] = 'hallo'
-    #
-    #         h5.create_dataset('ds1', shape=(2,), long_name='a long name', units='m**2')
-    #
-    #         with self.assertRaises(pint.errors.UndefinedUnitError):
-    #             h5['ds1'].units = 'no unit'
-    #
-    #         with self.assertRaises(pint.errors.UndefinedUnitError):
-    #             h5.create_dataset('ds2', shape=(2,), long_name='a long name', units='nounit')
-    #
-    # def test_user(self):
-    #     use(None)
-    #     with CoreFile() as h5:
-    #         self.assertEqual(h5.user, None)
-    #         h5.attrs['responsible_person'] = '1123-0814-1234-2343'
-    #         self.assertEqual(h5.user, '1123-0814-1234-2343')
-    #
-    #     with CoreFile() as h5:
-    #         with self.assertRaises(OrcidError):
-    #             h5.user = '11308429'
-    #         with self.assertRaises(OrcidError):
-    #             h5.attrs['responsible_person'] = '11308429'
-    #         with self.assertRaises(OrcidError):
-    #             h5.user = '123-132-123-123'
-    #         with self.assertRaises(OrcidError):
-    #             h5.user = '1234-1324-1234-1234s'
-    #         h5.user = '1234-1324-1234-1234'
-    #         self.assertTrue(h5.user, '1234-1324-1234-1234')
-    #         h5.user = ['1234-1324-1234-1234', ]
-    #         self.assertTrue(h5.user, ['1234-1324-1234-1234', ])
-    #
-    #         g = h5.create_group('g1')
-    #         from h5rdmtoolbox import config
-    #         config.natural_naming = False
-    #         with self.assertRaises(RuntimeError):
-    #             g.attrs.user = '123'
-    #         config.natural_naming = True
-    #     use('tbx')
-    #
-    # def test_set_attribute_to_higher_class(self):
-    #     @register_standard_attr(CoreFile, name=None, overwrite=True)
-    #     class shortyname2(StandardAttribute):
-    #         """Shorty name attribute"""
-    #         pass
-    #
-    #     with CoreFile() as h5:
-    #         # shortyname2 only available for classes inherited from File
-    #         h5.shortyname2 = 'my short name2'
-    #         self.assertIn('shortyname2', h5.attrs.keys())
-    #     with h5tbx.File() as h5:
-    #         h5.shortyname2 = 'my short name2'
-    #         self.assertNotIn('shortyname', h5.attrs.keys())
+    def test_is_valid_unit(self):
+        from h5rdmtoolbox.conventions.standard_name import is_valid_unit
+        from pint import UnitRegistry
+        ureg = UnitRegistry()
+        ureg.define('mole = 6.022140857e23 * mole = mol')
+        self.assertTrue(is_valid_unit('m/s'))
+        self.assertTrue(is_valid_unit('1 m/s'))
+        self.assertTrue(is_valid_unit('kg m/s^-1'))
+        self.assertFalse(is_valid_unit('kg m/s-1'))
+        self.assertFalse(is_valid_unit('kgm/s-1'))
 
     def test_comment(self):
         h5rdmtoolbox.use('tbx')
@@ -523,18 +403,18 @@ class TestStandardAttributes(unittest.TestCase):
         not_existing_orcid = '0000-0001-5747-0739'
         self.assertFalse(conventions.respuser.exist(not_existing_orcid))
 
+    def test_standard_name_assignment(self):
+        translation_dict = {'u': 'x_velocity'}
 
-    def test_translation_table(self):
-        translation = standard_name.StandardNameTableTranslation('pytest', {'u': 'x_velocity'})
-        self.assertIsInstance(translation, standard_name.StandardNameTableTranslation)
-        self.assertDictEqual(translation.translation_dict, {'u': 'x_velocity'})
-        snt = standard_name.StandardNameTable.load_registered('Test-v1')
-        translation.register(snt, overwrite=True)
-        standard_name.StandardNameTableTranslation.print_registered()
-        del translation
-        translation = standard_name.StandardNameTableTranslation.load_registered('test-to-Test-v1')
-        self.assertIsInstance(translation, standard_name.StandardNameTableTranslation)
-        self.assertIsInstance(translation.translation_dict, DictConfig)
+        with h5tbx.File() as h5:
+            h5.create_dataset('u', data=[1, 2, 3])
+            h5.create_dataset('grp/u', data=[1, 2, 3])
+            standard_name.update_datasets(h5, translation_dict, rec=False)
+            self.assertEqual(h5['u'].attrs['standard_name'], 'x_velocity')
+            self.assertFalse('standard_name' in h5['grp/u'].attrs)
+            standard_name.update_datasets(h5, translation_dict, rec=True)
+            self.assertTrue('standard_name' in h5['grp/u'].attrs)
+            self.assertEqual(h5['grp/u'].attrs['standard_name'], 'x_velocity')
 
     def test_StandardNameTableFromYaml(self):
         table = standard_name.StandardNameTable.from_yaml(testdir / 'sntable.yml')
@@ -549,6 +429,60 @@ class TestStandardAttributes(unittest.TestCase):
         table.rename('mean_particle_diameter', 'mean_particle_diameter2')
         self.assertFalse('mean_particle_diameter' in table)
         self.assertTrue('mean_particle_diameter2' in table)
+
+        self.assertListEqual(table.names, ['synthetic_particle_image', 'mean_particle_diameter2'])
+
+        table._table = {'synthetic_particle_image': {
+            'canonical_units': 'pixel',
+        },
+            'mean_particle_diameter2': {
+                'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.',
+                'canonical_units': 'pixel'}
+        }
+        with self.assertRaises(standard_name.DescriptionMissing):
+            table.check_table()
+
+        table._table = {
+            'synthetic_particle_image': {
+                'canonical_units': 'pixel',
+                'description': 'Synthetic particle image velocimetry image containing image particles of a single '
+                               'synthetic recording.'},
+            'mean_particle_diameter2': {
+                'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 '
+                               'sigma with of the gaussian intensity profile of the particle image.',
+                'units': 'pixel'}
+        }
+        with self.assertRaises(standard_name.UnitsMissing):
+            table.check_table()
+
+        table.modify('synthetic_particle_image', description=None, canonical_units='pcount')
+        self.assertEqual(table['synthetic_particle_image'].canonical_units, 'pcount')
+        table.modify('synthetic_particle_image', description='my new description', canonical_units=None)
+        self.assertEqual(table['synthetic_particle_image'].description, 'my new description')
+
+        table.modify('xvelocity', description='velocity in x direction', canonical_units='m/s')
+        self.assertEqual(table['xvelocity'].description, 'velocity in x direction')
+        self.assertEqual(table['xvelocity'].canonical_units, 'm/s')
+
+        table.rename('xvelocity', 'x_velcoity')
+        self.assertFalse('xvelocity' in table)
+        with self.assertRaises(KeyError):
+            table.rename('x_velocity', 'x_velocity2')
+
+        with self.assertRaises(standard_name.StandardNameError):
+            table.check_name('x_velocity2', strict=True)
+
+        with self.assertRaises(ValueError):
+            table.contact = 'not an email'
+
+        n0 = len(table.names)
+        table.update({'a_velocity': {
+            'description': 'velocity in a direction',
+            'canonical_units': 'm/s'
+        }})
+        self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
+        self.assertEqual(table['a_velocity'].canonical_units, 'm/s')
+        self.assertEqual(len(table.names), n0 + 1)
 
     def test_StandardNameTableFromYaml_special(self):
         table = standard_name.StandardNameTable.from_yaml(testdir / 'sntable_with_split.yml')
@@ -626,31 +560,11 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertFalse(table is table2)
         self.assertTrue(table.compare_versionname(table2))
 
-        snttrans = standard_name.StandardNameTableTranslation('test', {'images': 'invalid_synthetic_particle_image'})
-        with self.assertRaises(KeyError):
-            snttrans.verify(table)
-
-        snttrans = standard_name.StandardNameTableTranslation('test', {'images': 'synthetic_particle_image'})
-        self.assertTrue(snttrans.verify(table))
-
-        self.assertEqual(snttrans.translate('images'), 'synthetic_particle_image')
-
         yaml_filename = table.to_yaml(generate_temporary_filename(suffix='.yml'))
         table2 = standard_name.StandardNameTable.from_yaml(yaml_filename)
         self.assertEqual(table, table2)
         table2.set('other', 'desc', 'm')
         self.assertNotEqual(table, table2)
-
-    def test_translate_group(self):
-        h5tbx.use('tbx')
-        with h5tbx.File(standard_name_table=tutorial.get_standard_name_table()) as h5:
-            ds1 = h5.create_dataset('ds1', shape=(2,), units='m', long_name='a long name')
-            ds2 = h5.create_dataset('/grp/ds2', shape=(2,), units='m', long_name='a long name')
-            translation = {'ds1': 'x_coordinate', 'ds2': 'y_coordinate'}
-            sntt = standard_name.StandardNameTableTranslation('test', translation)
-            sntt.translate_group(h5)
-            self.assertEqual(ds1.standard_name, 'x_coordinate')
-            self.assertEqual(ds2.standard_name, 'y_coordinate')
 
     def test_merge(self):
         registered_snts = standard_name.StandardNameTable.get_registered()

@@ -12,7 +12,6 @@ Examples for naming tables:
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
 import json
-import os
 import pathlib
 import re
 import warnings
@@ -37,11 +36,16 @@ from .._config import ureg
 from .._user import UserDir
 from ..utils import generate_temporary_filename
 
-try:
-    from tabulate import tabulate
-    import xmltodict
-except ImportError:
-    raise ImportError('Please install tabulate, requests and xmltodict to use this standard names')
+
+class DescriptionMissing(TypeError):
+    """Exception class for missing description in a standard name table"""
+    pass
+
+
+class UnitsMissing(TypeError):
+    """Exception class for missing units in a standard name table"""
+    pass
+
 
 STRICT = True
 
@@ -68,12 +72,34 @@ class EmailError(ValueError):
     """Wrong Email Error"""
 
 
-def verify_unit_object(_units) -> bool:
-    """Raise error if _units is not processable by pint package. Otherwise return True"""
+def is_valid_unit(unit_string: str) -> bool:
+    """Raise error if _units is not processable by pint package. Otherwise return True
+
+    Parameters
+    ----------
+    unit_string : str
+        unit string to be checked whether it is processable by pint package
+
+    Returns
+    -------
+    bool
+        True if unit string is processable by pint package, otherwise False
+
+    Examples
+    --------
+    >>> is_valid_unit('m s-1')
+    >>> True
+    >>> is_valid_unit('kg m/s^-1')
+    >>> True
+    >>> is_valid_unit('kg m/s-1')
+    >>> False
+    >>> is_valid_unit('kgm/s-1')
+    >>> False
+    """
     try:
-        ureg.Unit(_units)
-    except UndefinedUnitError as e:
-        raise UndefinedUnitError(f'Units cannot be understood using ureg package: {_units}. --> {e}')
+        ureg.Unit(unit_string)
+    except (UndefinedUnitError, TypeError):  # as e:
+        return False  # UndefinedUnitError(f'Units cannot be understood using ureg package: {_units}. --> {e}')
     return True
 
 
@@ -273,9 +299,9 @@ class MinimalStandardNameTable:
         for v in self._table.values():
             if isinstance(v, (dict, DictConfig)):
                 if 'description' not in v:
-                    raise KeyError(f'Keyword "description" missing: {v}')
+                    raise DescriptionMissing(f'Keyword "description" missing: {v}')
                 if 'canonical_units' not in v:
-                    raise KeyError(f'Keyword "canonical_units" missing: {v}')
+                    raise UnitsMissing(f'Keyword "canonical_units" missing: {v}')
             else:
                 raise TypeError(f'Content of Table is unexpected: {self._table}')
 
@@ -284,21 +310,40 @@ class MinimalStandardNameTable:
         if name in self.table:
             raise StandardNameError(f'name "{name}" already exists in table. Use modify() '
                                     'to change the content')
-        verify_unit_object(canonical_units)
+        is_valid_unit(canonical_units)
         self._table[name] = dict(description=description, canonical_units=canonical_units)
 
-    def modify(self, name: str, description: str, canonical_units: str):
-        """Modify a standard name or creates one if non-existing"""
+    def modify(self, name: str, description: Union[str, None], canonical_units: Union[str, None]) -> StandardName:
+        """Modify a standard name or creates one if non-existing
+
+        Parameters
+        ----------
+        name : str
+            The name of the standard name. If the name does not exist, a
+            new standard name will be created.
+        description : Union[str, None]
+            The description of the standard name. None will ignore this parameter
+        canonical_units : Union[str, None]
+            The canonical units of the standard name. None will ignore this parameter
+
+        Returns
+        -------
+        StandardName
+            The modified standard name
+
+        """
         if name not in self.table:
             if not description or not canonical_units:
                 raise ValueError(f'Name {name} does not exist yet. You must provide string values '
                                  'for both description and canonical_units')
             self.table[name] = dict(description=description, canonical_units=canonical_units)
-        else:
-            if description:
-                self.table[name]['description'] = description
-            if canonical_units:
-                self.table[name]['canonical_units'] = canonical_units
+            return self.table[name]
+        if description:
+            self.table[name]['description'] = description
+            return self[name]
+        if canonical_units:
+            self.table[name]['canonical_units'] = canonical_units
+            return self[name]
 
     def rename(self, name, new_name) -> None:
         """Rename an existing standard name. Make sure that description and unit is still
@@ -514,6 +559,10 @@ class StandardNameTable(MinimalStandardNameTable):
 
     def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
         """string representation of the SNT in form of a table"""
+        try:
+            from tabulate import tabulate
+        except ImportError:
+            raise ImportError('Package "tabulate" is missing.')
         if self._name is None:
             name = self.__class__.__name__
         else:
@@ -596,6 +645,11 @@ class StandardNameTable(MinimalStandardNameTable):
         FileNotFoundError
             If the xml file does not exist
         """
+
+        try:
+            import xmltodict
+        except ImportError:
+            raise ImportError('Package "xmltodict" is missing.')
         with open(str(xml_filename), 'r', encoding='utf-8') as file:
             my_xml = file.read()
         xmldict = xmltodict.parse(my_xml)
@@ -988,145 +1042,54 @@ class StandardNameTable(MinimalStandardNameTable):
             print(f' > {f.versionname}')
 
 
-class StandardNameTableTranslation:
-    """Translation Interface which translates a name into a standard name based on a
-    translation dictionary"""
-    raise_error: bool = False
+def update_datasets(group_or_filename: Union[h5py.Group, str, pathlib.Path],
+                    translation_dict: Dict,
+                    rec: bool = True) -> None:
+    """Walk through file and assign standard names to datasets with names indicated in
+    the dictionary `translation_dict`
 
-    def __init__(self, application_name: str, translation_dict: Union[Dict, DictConfig]):
-        self.application_name = application_name
-        self.translation_dict = translation_dict
-        self.filename = None
+    Parameters
+    ----------
+    group_or_filename: Union[h5py.Group, str, pathlib.Path]
+        The source in which to search for datasets and assign standard names to.
+        If a string or pathlib.Path is passed, it is assumed to be an HDF5 filename.
+    translation_dict: Dict
+        Dictionary with keys being the dataset names and values the standard names
+    rec: bool
+        If True, recursively search for datasets
 
-    def __getitem__(self, item):
-        return self.translate(item)
+    Returns
+    -------
+    None
 
-    def __contains__(self, item):
-        return item in self.translation_dict
+    Examples
+    --------
+    >>> # Assign "air_temperature" to all datasets with name "temperature":
+    >>> translation_dict = {'temperature': 'air_temperature'}
+    >>> update_datasets('myfile.hdf', translation_dict)
+    """
+    if isinstance(group_or_filename, (str, pathlib.Path)):
+        with h5py.File(group_or_filename) as h5:
+            return update_datasets(h5['/'], translation_dict, rec=rec)
 
-    @staticmethod
-    def from_yaml(yaml_filename: pathlib.Path) -> "StandardNameTableTranslation":
-        """read from yaml file"""
+    def _assign(ds, sn):
+        ds.attrs['standard_name'] = sn
+        logger.debug(f'Added standard name "{sn}" to dataset "{ds.name}"')
 
-        with open(yaml_filename, 'r') as f:
-            g = yaml.safe_load_all(f)
-            while True:
-                try:
-                    splitdata = next(g)
-                except StopIteration:
-                    break
-                if 'table' in splitdata:
-                    break
+    def sn_update(name: str, node):
+        """function called when visiting HDF objects"""
+        if isinstance(node, h5py.Dataset):
+            if name in translation_dict:
+                sn = translation_dict[name.strip('/')]
+            elif name.rsplit('/', 1)[-1] in translation_dict:
+                sn = translation_dict[name.rsplit('/', 1)[-1]]
+            _assign(node, sn)
 
-        yaml_filename = pathlib.Path(yaml_filename)
-        application_name = yaml_filename.stem.split('-to-', 1)[0]
-        if 'table' in splitdata:
-            sntt = StandardNameTableTranslation(application_name=application_name,
-                                                translation_dict=DictConfig(splitdata['table']))
-        else:
-            raise KeyError(f'Key "table" not found in yaml file {yaml_filename}. It seems that the yaml file is not '
-                           'built as expected.')
-        sntt.filename = yaml_filename
-        return sntt
-
-    def to_yaml(self, target_dir: pathlib.Path,
-                snt: StandardNameTable,
-                parents: bool = True,
-                overwrite: bool = False) -> pathlib.Path:
-        """Dump translation dict to yaml"""
-        name = f'{self.application_name}-to-{snt.versionname}.yml'
-        yaml_filename = pathlib.Path(target_dir) / name
-
-        if yaml_filename.exists() and not overwrite:
-            raise FileExistsError('File exists and overwrite is False')
-        if not yaml_filename.parent.exists() and parents:
-            yaml_filename.parent.mkdir(parents=parents)
-
-        with open(yaml_filename, 'w') as f:
-            yaml.dump({'snt': snt.versionname}, f)
-            f.writelines('---\n')
-            yaml.dump({'table': self.translation_dict}, f)
-        return yaml_filename
-
-    def translate_dataset(self, ds: h5py.Dataset):
-        """Based on the dataset basename the attribute standard_name is created"""
-        ds_basename = os.path.basename(ds.name)
-        ds.attrs['standard_name'] = self.translate(ds_basename)
-
-    def translate_group(self, grp: h5py.Group, rec: bool = True):
-        """Translate all datasets in group and recursive if rec==True"""
-
-        def sn_update(name, node):
-            """function called when visiting HDF objects"""
-            if isinstance(node, h5py.Dataset):
-                if node.name in self.translation_dict:
-                    sn = self.translation_dict[node.name]
-                    node.attrs['standard_name'] = sn
-                    logger.debug(f'translate name %s to standard name %s', name, sn)
-                elif os.path.basename(node.name) in self.translation_dict:
-                    sn = self.translation_dict[os.path.basename(node.name)]
-                    node.attrs['standard_name'] = sn
-                    logger.debug(f'translate name {name} to standard name {sn}')
-
-        if rec:
-            grp.visititems(sn_update)
-        else:
-            sn_update(grp.name, grp)
-
-    def translate(self, name: str) -> Union[str, None]:
-        """Translate name into a standard."""
-        try:
-            return self.translation_dict[name]
-        except KeyError:
-            return None
-
-    def verify(self, snt: StandardNameTable) -> bool:
-        """Verifies if all values re part of the standard name table passed"""
-        for v in self.translation_dict.values():
-            if v not in snt.table:
-                raise KeyError(f'{v} is not part of the standard name table {snt.versionname}')
-        return True
-
-    def register(self, snt: StandardNameTable, overwrite: bool = False) -> None:
-        """Register the standard name table under its versionname.
-
-        Parameters
-        ----------
-        snt: StandardNameTable
-            The standard name table to which the translation dicitonary referrs to
-        overwrite: bool, default=False
-            Whether to overwrite an existing translation name
-        """
-        self.to_yaml(target_dir=UserDir['standard_name_table_translations'],
-                     snt=snt, overwrite=overwrite)
-
-    @staticmethod
-    def load_registered(name: str) -> 'StandardNameTableTranslation':
-        """Load from user data dir
-
-        source_name:
-            Application name from which the names are translated into the standard name table
-        """
-        # search for names:
-        fbasename = f'{name}.yml'
-        if (UserDir['standard_name_table_translations'] / fbasename).exists():
-            return StandardNameTableTranslation.from_yaml(UserDir['standard_name_table_translations'] / fbasename)
-
-        list_of_reg_names = [fname.stem for fname in UserDir['standard_name_table_translations'].glob('*.y*ml')]
-        raise FileNotFoundError(f'File {fbasename} could not be found or passed name was not unique. '
-                                f'Registered tables are: {list_of_reg_names}')
-
-    @staticmethod
-    def get_registered() -> List["StandardNameTableTranslation"]:
-        """Return sorted list of standard names files"""
-        return [StandardNameTableTranslation.from_yaml(f) for f in
-                sorted(UserDir['standard_name_table_translations'].glob('*.y*ml'))]
-
-    @staticmethod
-    def print_registered():
-        """Return sorted list of standard names files"""
-        for f in StandardNameTableTranslation.get_registered():
-            print(f' > {f.filename.stem}')
+    h5grp = group_or_filename
+    if rec:
+        return h5grp.visititems(sn_update)
+    for key, obj in h5grp.items():
+        sn_update(key, obj)
 
 
 def merge(list_of_snt: List[StandardNameTable], name: str, version_number: int, institution: str,
