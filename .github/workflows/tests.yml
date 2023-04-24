@@ -15,7 +15,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
         python-version: [ '3.8', '3.9' , '3.10']
-        mongodb-version: ['6.0']
+        mongodb-version: ['5.0', '6.0']
 
     steps:
       - name: Checkout repo
@@ -40,7 +40,7 @@ jobs:
         if: startsWith(matrix.os, 'windows-')
         uses: ankane/setup-mongodb@v1
         with:
-          mongodb-version: ${{ matrix.mongodb-version }}
+          mongodb-version: 5.0
 
       - name: Start MongoDB (Linux)
         if: startsWith(matrix.os, 'ubuntu-')
