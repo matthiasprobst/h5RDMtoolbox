@@ -36,18 +36,24 @@ jobs:
           pip install -r requirements-dev.txt
           pip install pymongo
 
+#      - name: Install MongoDB
+#        if: startsWith(matrix.os, 'windows-')
+#        run: |
+#          curl -LO "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-5.0.4-signed.msi"
+#          msiexec /q /i mongodb-windows-x86_64-5.0.4-signed.msi ^
+#            ADDLOCAL="all" ^
+#            INSTALLLOCATION="C:\mongodb" ^
+#            START=0 ^
+#            REPAIR=0 ^
+#            REMOVE=0 ^
+#            AUTHSERVICEPRINCIPALNAME=""
+#        shell: cmd
+
       - name: Install MongoDB
         if: startsWith(matrix.os, 'windows-')
-        run: |
-          curl -LO "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-5.0.4-signed.msi"
-          msiexec /q /i mongodb-windows-x86_64-5.0.4-signed.msi ^
-            ADDLOCAL="all" ^
-            INSTALLLOCATION="C:\mongodb" ^
-            START=0 ^
-            REPAIR=0 ^
-            REMOVE=0 ^
-            AUTHSERVICEPRINCIPALNAME=""
-        shell: cmd
+        - uses: ankane/setup-mongodb@v1
+          with:
+            mongodb-version: ${{ matrix.mongodb-version }}
 
       - name: Start MongoDB (Windows)
         if: startsWith(matrix.os, 'windows-')
