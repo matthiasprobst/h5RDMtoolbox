@@ -21,10 +21,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
 
-      - name: Start MongoDB ${{ matrix.mongodb-version }}
-        uses: supercharge/mongodb-github-action@1.8.0
-        with:
-          mongodb-version: ${{ matrix.mongodb-version }}
+#      - name: Start MongoDB ${{ matrix.mongodb-version }}
+#        uses: supercharge/mongodb-github-action@1.8.0
+#        with:
+#          mongodb-version: ${{ matrix.mongodb-version }}
 
       - name: Set Up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -34,6 +34,31 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
+          pip install pymongo
+
+      - name: Install MongoDB
+        if: startsWith(matrix.os, 'windows-')
+        run: |
+          curl -LO "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-5.0.4-signed.msi"
+          msiexec /q /i mongodb-windows-x86_64-5.0.4-signed.msi ^
+            ADDLOCAL="all" ^
+            INSTALLLOCATION="C:\mongodb" ^
+            START=0 ^
+            REPAIR=0 ^
+            REMOVE=0 ^
+            AUTHSERVICEPRINCIPALNAME=""
+        shell: cmd
+
+      - name: Start MongoDB
+        run: |
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            docker run --rm -d --name mongodb -p 27017:27017 mongo:6
+          elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+            "C:\mongodb\bin\mongod.exe" --dbpath "C:\mongodb\data" --bind_ip 127.0.0.1 --port 27017 --auth
+          fi
+        shell: bash
+
+
       - name: Run pytest coverage
         run: |
           pytest --cov --cov-report=xml
