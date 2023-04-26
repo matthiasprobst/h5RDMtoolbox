@@ -4,14 +4,13 @@ import os
 import pathlib
 import pymongo.collection
 import warnings
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pymongo.errors import InvalidDocument
 from typing import Dict, List
 
 from .filequery import distinct
 from ..wrapper.accessory import register_special_dataset
-from ..wrapper.core import Dataset, File, Group
+from ..wrapper.core import Dataset, Group
 from ..wrapper.h5attr import H5_DIM_ATTRS
 
 
@@ -48,6 +47,8 @@ def type2mongo(value: any) -> any:
         return value
     if value is None:
         return None
+    if isinstance(value, np.ndarray):
+        return value.tolist()
     try:
         if np.issubdtype(value, np.floating):
             return float(value)
@@ -171,14 +172,14 @@ class MongoDatasetAccessor:
             for ak, av in ds.attrs.items():
                 if ak not in H5_DIM_ATTRS:
                     if ak not in ignore_attrs:
-                        if ak == 'COORDINATES':
-                            if isinstance(av, (np.ndarray, list)):
-                                for c in av:
-                                    doc[c] = float(ds.parent[c][()])
-                            else:
-                                doc[av] = float(ds.parent[av][()])
-                        else:
-                            doc[ak] = av
+                        # if ak == 'COORDINATES':
+                        #     if isinstance(av, (np.ndarray, list)):
+                        #         for c in av:
+                        #             doc[c] = float(ds.parent[c][()])
+                        #     else:
+                        #         doc[av] = float(ds.parent[av][()])
+                        # else:
+                        doc[ak] = av
             return [doc, ]
 
         if axis == 0:
@@ -267,7 +268,8 @@ class MongoDatasetAccessor:
                 doc.update(additional_fields)
         if update:
             for doc in docs:
-                collection.update_one(doc, {'$set': doc}, upsert=True)
+                _doc = {k: type2mongo(v) for k, v in doc.items()}
+                collection.update_one(_doc, {'$set': _doc}, upsert=True)
         else:
             collection.insert_many(docs, ordered=ordered)
         return collection
@@ -286,82 +288,3 @@ class MongoDatasetAccessor:
     def slice(self, list_of_slices: List["slice"]) -> "xr.DataArray":
         """Slice the array with a mongo return value for a slice"""
         return self._h5ds[tuple([slice(*s) for s in list_of_slices])]
-
-
-@dataclass
-class H5Result:
-    """Result interface. Either accessing a h5py.Dataset or a h5py.Group"""
-    rdict: Dict
-
-    def __post_init__(self):
-        self.file = None
-
-    def __getitem__(self, item):
-        """Return sliced xarray for dataset. For group this will raise an error"""
-        with self as h5:
-            if isinstance(h5, h5py.Group):
-                return h5.__getitem__(item)
-            if 'slice' not in self.rdict:
-                """return full array"""
-                return h5[:]
-            list_of_slices = self.rdict['slice']
-            return h5[tuple([slice(*s) for s in list_of_slices])].__getitem__(item)
-
-    def __enter__(self):
-        if 'filename' not in self.rdict:
-            raise AttributeError('No filename provided')
-        return self.open()
-
-    def open(self):
-        """open the file"""
-        try:
-            self.file = File(self.rdict['filename'])
-        except RuntimeError as e:
-            if self.file is not None:
-                print('closing file')
-                self.file.close()
-            raise RuntimeError(e)
-        return self.file[self.rdict['name']]
-
-    def close(self):
-        """close the file"""
-        self.file.close()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-
-@dataclass
-class H5Results:
-    """Class interfacing a pymongo cursor that contains
-    HDF5 entries build with this package"""
-
-    cursor: pymongo.cursor.Cursor
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        return H5Result(self.cursor.next())
-
-    def __getitem__(self, item) -> H5Result:
-        if isinstance(item, int):
-            for i, c in enumerate(self.cursor.rewind()):
-                if i == item:
-                    return H5Result(c)
-
-    def rewind(self):
-        """rewind the cursor"""
-        self.cursor.rewind()
-        return self
-
-    def get(self, *names, fill_value=np.nan) -> Dict:
-        """Get values of name(s) and return a dictionary"""
-        dictionary = {n: [] for n in names}
-        for c in self.cursor.rewind():
-            for n in names:
-                try:
-                    dictionary[n].append(c[n])
-                except IndexError:
-                    dictionary[n].append(fill_value)
-        return dictionary

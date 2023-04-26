@@ -17,6 +17,7 @@ from .database import filequery
 from .utils import generate_temporary_filename, generate_temporary_directory
 from . import cache
 from .wrapper.core import lower, Lower, File, Group, Dataset
+from typing import Union
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
@@ -99,6 +100,18 @@ def clean_temp_data(full: bool = False):
                 failed_dirs_file.unlink(missing_ok=True)
     else:
         core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
+
+
+def dump(filename: Union[str, pathlib.Path]):
+    """Call h5.dump() on the provided HDF5 file"""
+    with File(filename) as h5:
+        h5.dump()
+
+
+def dumps(filename: Union[str, pathlib.Path]):
+    """Call h5.dumps() on the provided HDF5 file"""
+    with File(filename) as h5:
+        h5.dumps()
 
 
 __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',

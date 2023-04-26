@@ -1069,7 +1069,7 @@ def update_datasets(group_or_filename: Union[h5py.Group, str, pathlib.Path],
     >>> update_datasets('myfile.hdf', translation_dict)
     """
     if isinstance(group_or_filename, (str, pathlib.Path)):
-        with h5py.File(group_or_filename) as h5:
+        with h5py.File(group_or_filename, 'r+') as h5:
             return update_datasets(h5['/'], translation_dict, rec=rec)
 
     def _assign(ds, sn):
@@ -1083,6 +1083,8 @@ def update_datasets(group_or_filename: Union[h5py.Group, str, pathlib.Path],
                 sn = translation_dict[name.strip('/')]
             elif name.rsplit('/', 1)[-1] in translation_dict:
                 sn = translation_dict[name.rsplit('/', 1)[-1]]
+            else:
+                return
             _assign(node, sn)
 
     h5grp = group_or_filename

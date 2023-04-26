@@ -1210,6 +1210,8 @@ class Group(h5py.Group, ConventionAccesor):
         """string representation of group"""
         return self.hdfrepr.__str__(self)
 
+    dumps = sdump
+
 
 # H5Group is depreciated
 class H5Group(Group):
@@ -1543,6 +1545,8 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         if has_dim:
             out += dim_str
         print(out)
+
+    dumps = sdump
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Dataset):

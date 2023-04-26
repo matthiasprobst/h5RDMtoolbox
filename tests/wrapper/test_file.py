@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 import yaml
 
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import config
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
@@ -44,6 +45,10 @@ class TestFile(unittest.TestCase):
         for fname in Path(__file__).parent.glob('*'):
             if fname.suffix not in ('py', '.py', ''):
                 fname.unlink()
+
+    def test_dumps(self):
+        with h5tbx.File() as h5:
+            h5.dumps()
 
     def test_create_dataset(self):
         """File has more parameters to pass as H5Base"""
