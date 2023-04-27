@@ -11,22 +11,21 @@ Examples for naming tables:
     - standard name table (http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html)
     - CGNS data name convention (https://cgns.github.io/CGNS_docs_current/sids/dataname.html)
 """
+import h5py
 import json
+import pandas as pd
 import pathlib
 import re
 import warnings
 import xml.etree.ElementTree as ET
-from datetime import datetime
-from enum import Enum
-from pathlib import Path
-from typing import Dict, Union, List, Tuple
-
-import h5py
-import pandas as pd
 import yaml
 from IPython.display import display, HTML
+from datetime import datetime
+from enum import Enum
 from omegaconf import DictConfig, OmegaConf
+from pathlib import Path
 from pint.errors import UndefinedUnitError
+from typing import Dict, Union, List, Tuple
 
 from ._logger import logger
 from .standard_attribute import StandardAttribute
@@ -310,7 +309,8 @@ class MinimalStandardNameTable:
         if name in self.table:
             raise StandardNameError(f'name "{name}" already exists in table. Use modify() '
                                     'to change the content')
-        is_valid_unit(canonical_units)
+        if not is_valid_unit(canonical_units):
+            raise ValueError(f'Canonical units "{canonical_units}" is not a valid unit object')
         self._table[name] = dict(description=description, canonical_units=canonical_units)
 
     def modify(self, name: str, description: Union[str, None], canonical_units: Union[str, None]) -> StandardName:

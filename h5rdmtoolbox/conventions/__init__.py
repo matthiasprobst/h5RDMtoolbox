@@ -8,10 +8,9 @@ are provided by this sub-packages (fluid and piv). As the projec is under develo
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
 
-from typing import Callable, List, Union, Iterable
-
 import forge
 import h5py
+from typing import Callable, Union
 
 from . import standard_attribute
 from . import units, long_name, standard_name, title, comment, references, source, respuser
@@ -24,17 +23,17 @@ from .._repr import make_italic, make_bold
 __all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'respuser']
 
 
-def list_standard_attributes(obj: Callable = None):
-    """List all registered standard attributes
-
-    Returns
-    -------
-    List[StandardAttribute]
-        List of all registered standard attributes
-    """
-    if None:
-        return standard_attribute.cache.REGISTERED_PROPERTIES
-    return standard_attribute.cache.REGISTERED_PROPERTIES.get(type(obj), {})
+# def list_standard_attributes(obj: Callable = None):
+#     """List all registered standard attributes
+#
+#     Returns
+#     -------
+#     List[StandardAttribute]
+#         List of all registered standard attributes
+#     """
+#     if None:
+#         return standard_attribute.cache.REGISTERED_PROPERTIES
+#     return standard_attribute.cache.REGISTERED_PROPERTIES.get(type(obj), {})
 
 
 def set_loglevel(level):
@@ -93,30 +92,31 @@ class Convention:
         out += '\n'
         return out
 
-    def make_optional(self, method, attr_name, default_value=None):
-        """Make a standard attribute optional in the signature of a method.
-
-        Parameters
-        ----------
-        attr_name : str
-            The name of the standard attribute
-        """
-        if method not in self._methods:
-            raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered.'
-                             f'Allowed methods are: {self._methods.keys()}')
-        if attr_name not in self._methods[method]:
-            raise ValueError(f'Cannot make {attr_name} optional because it is not registered.')
-        self._methods[method][attr_name]['optional'] = True
-        self._methods[method][attr_name]['default'] = default_value
-
-    def make_required(self, method, attr_name):
-        """Make a standard attribute required in the signature of a method."""
-        if method not in self._methods:
-            raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered. '
-                             f'Allowed methods are: {self._methods.keys()}')
-        if attr_name not in self._methods[method]:
-            raise ValueError(f'Cannot make {attr_name} required because it is not registered.')
-        self._methods[method][attr_name]['optional'] = False
+    #
+    # def make_optional(self, method, attr_name, default_value=None):
+    #     """Make a standard attribute optional in the signature of a method.
+    #
+    #     Parameters
+    #     ----------
+    #     attr_name : str
+    #         The name of the standard attribute
+    #     """
+    #     if method not in self._methods:
+    #         raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered.'
+    #                          f'Allowed methods are: {self._methods.keys()}')
+    #     if attr_name not in self._methods[method]:
+    #         raise ValueError(f'Cannot make {attr_name} optional because it is not registered.')
+    #     self._methods[method][attr_name]['optional'] = True
+    #     self._methods[method][attr_name]['default'] = default_value
+    #
+    # def make_required(self, method, attr_name):
+    #     """Make a standard attribute required in the signature of a method."""
+    #     if method not in self._methods:
+    #         raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered. '
+    #                          f'Allowed methods are: {self._methods.keys()}')
+    #     if attr_name not in self._methods[method]:
+    #         raise ValueError(f'Cannot make {attr_name} required because it is not registered.')
+    #     self._methods[method][attr_name]['optional'] = False
 
     def add(self,
             attr_cls: StandardAttribute,
@@ -163,22 +163,27 @@ class Convention:
             else:
                 name = attr_cls.__name__
 
-        if not hasattr(attr_cls, 'set') and not hasattr(attr_cls, 'get'):
+        if not hasattr(attr_cls, 'set'):
             raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it does not '
-                            'have a getter and setter method.')
+                            'have a setter method.')
+
+        if not hasattr(attr_cls, 'get'):
+            raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it does not '
+                            'have a getter method.')
 
         if StandardAttribute not in attr_cls.__bases__:
             raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it is not a '
                             'subclass of `StandardAttribute`.')
 
-        if not isinstance(target_cls, Iterable):
+        if not isinstance(target_cls, (tuple, list)):
             # make it a list
             target_cls = [target_cls]
 
         for cls in target_cls:
-            if hasattr(cls, '__get_cls__'):
-                cls = type(cls())
-            if not issubclass(cls, (h5py.File, h5py.Group, h5py.Dataset)) and not hasattr(cls, '__get_cls__'):
+            # if hasattr(cls, '__get_cls__'):
+            #     cls = type(cls())
+            # if not issubclass(cls, (h5py.File, h5py.Group, h5py.Dataset)) and not hasattr(cls, '__get_cls__'):
+            if not issubclass(cls, (h5py.File, h5py.Group, h5py.Dataset)):
                 raise TypeError(f'{cls} is not a valid HDF5 class')
 
             if cls not in self._properties:

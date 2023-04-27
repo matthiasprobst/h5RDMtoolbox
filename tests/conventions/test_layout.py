@@ -155,6 +155,21 @@ class TestLayout(unittest.TestCase):
             lay.print_failed_validations()
             lay.print_failed_validations(1)
 
+    def test_dataset_validation(self):
+        lay = Layout()
+        lay['/'].define_dataset(name=..., opt=False).attrs['standard_name'] = Equal('x_air_velocity')
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+            h5.attrs['standard_name'] = 'x_air_velocity'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+            ds = h5.create_dataset('u', data=1)
+            ds.attrs['standard_name'] = 'x_air_velocity'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
     def test_core4(self):
         lay = Layout()
         lay['devices'].define_group('measurement_devices')

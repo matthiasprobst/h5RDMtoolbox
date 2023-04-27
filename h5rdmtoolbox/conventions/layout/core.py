@@ -577,7 +577,7 @@ class Layout(GroupValidation):
             elif isinstance(child, GroupValidation):
                 self._validation_results = child.validate(target, self._validation_results)
             elif isinstance(child, DatasetValidation):
-                raise NotImplementedError()
+                self._validation_results = child.validate(target, self._validation_results)
             else:
                 raise TypeError(f'Unknown child type: {type(child)}')
 
