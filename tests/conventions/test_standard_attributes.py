@@ -15,6 +15,7 @@ from h5rdmtoolbox import tutorial
 from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions import units, title, standard_name
+from h5rdmtoolbox.conventions.layout.tbx import IsValidVersionString, IsValidUnit
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -513,6 +514,15 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(sn5.canonical_units, '1/m**2/s')
 
         self.assertTrue(sn1 != sn3)
+
+    def test_validversion(self):
+        self.assertTrue(IsValidVersionString()('v0.1.0'))
+        self.assertFalse(IsValidVersionString()('a.b.c'))
+
+    def test_validunit(self):
+        self.assertTrue(IsValidUnit()('m/s'))
+        self.assertTrue(IsValidUnit()('1 m/s'))
+        self.assertFalse(IsValidUnit()('hello/world'))
 
     def test_responsible_person(self):
         orcid = '0000-0001-8729-0482'
