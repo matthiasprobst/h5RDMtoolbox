@@ -35,46 +35,49 @@ class TestH5Mongo(unittest.TestCase):
             self.mongodb_running = False
 
     def test_insert_relative_filename(self):
-        self.collection.drop()
-        with File() as h5:
-            h5.mongo.insert(collection=self.collection)
-            self.assertEqual(self.collection.find_one({})['filename'], h5.filename)
-        self.collection.drop()
-        with File() as h5:
-            h5.mongo.insert(collection=self.collection, use_relative_filename=True)
-            self.assertEqual(self.collection.find_one({})['filename'], h5.filename)
+        if self.mongodb_running:
+            self.collection.drop()
+            with File() as h5:
+                h5.mongo.insert(collection=self.collection)
+                self.assertEqual(self.collection.find_one({})['filename'], h5.filename)
+                self.collection.drop()
+            with File() as h5:
+                h5.mongo.insert(collection=self.collection, use_relative_filename=True)
+                self.assertEqual(self.collection.find_one({})['filename'], h5.filename)
 
     def test_coordinates(self):
-        self.collection.drop()
-        with File() as h5:
-            h5.create_dataset('x', data=np.arange(0, 4, 1), dtype=int,
-                              attrs=dict(units='', long_name='x_coordinate'), make_scale=True)
-            h5.create_dataset('y', data=np.arange(0, 4, 1), dtype=int,
-                              attrs=dict(units='', long_name='y_coordinate'), make_scale=True)
-            h5.create_dataset('z', data=2, dtype=int,
-                              attrs=dict(units='', long_name='z_coordinate'))
-            h5.create_dataset('images', data=np.random.random((4, 4, 4)),
-                              attrs=dict(units='counts', long_name='a long name'),
-                              attach_scales=([h5['x'], h5['y']], None, None))
-            h5['images'].attrs['COORDINATES'] = ['/z', ]
-            h5.images.mongo.insert(collection=self.collection, axis=None)
+        if self.mongodb_running:
+            self.collection.drop()
+            with File() as h5:
+                h5.create_dataset('x', data=np.arange(0, 4, 1), dtype=int,
+                                  attrs=dict(units='', long_name='x_coordinate'), make_scale=True)
+                h5.create_dataset('y', data=np.arange(0, 4, 1), dtype=int,
+                                  attrs=dict(units='', long_name='y_coordinate'), make_scale=True)
+                h5.create_dataset('z', data=2, dtype=int,
+                                  attrs=dict(units='', long_name='z_coordinate'))
+                h5.create_dataset('images', data=np.random.random((4, 4, 4)),
+                                  attrs=dict(units='counts', long_name='a long name'),
+                                  attach_scales=([h5['x'], h5['y']], None, None))
+                h5['images'].attrs['COORDINATES'] = ['/z', ]
+                h5.images.mongo.insert(collection=self.collection, axis=None)
 
     def test_insert_tree_structure(self):
-        self.collection.drop()
-        with File() as h5:
-            h5.create_dataset('ds_at_root', data=np.random.random((2, 10, 8)),
-                              attrs=dict(units='',
-                                         long_name='ds_at_root'))
-            g = h5.create_group('group1')
-            g.create_dataset('ds1', data=np.random.random((2, 10, 8)),
-                             attrs=dict(units='',
-                                        long_name='ds_at_group1'))
-            g2 = g.create_group('group2')
-            g2.create_dataset('ds2', data=np.random.random((2, 10, 8)),
-                              attrs=dict(units='',
-                                         long_name='ds_at_group2'))
-            h5.mongo.insert(collection=self.collection, flatten_tree=False, recursive=True)
-            self.assertDictEqual(list(self.collection.find({}))[0]['group1'], {'ds1': {'shape': [2, 10, 8],
+        if self.mongodb_running:
+            self.collection.drop()
+            with File() as h5:
+                h5.create_dataset('ds_at_root', data=np.random.random((2, 10, 8)),
+                                  attrs=dict(units='',
+                                             long_name='ds_at_root'))
+                g = h5.create_group('group1')
+                g.create_dataset('ds1', data=np.random.random((2, 10, 8)),
+                                 attrs=dict(units='',
+                                            long_name='ds_at_group1'))
+                g2 = g.create_group('group2')
+                g2.create_dataset('ds2', data=np.random.random((2, 10, 8)),
+                                  attrs=dict(units='',
+                                             long_name='ds_at_group2'))
+                h5.mongo.insert(collection=self.collection, flatten_tree=False, recursive=True)
+                self.assertDictEqual(list(self.collection.find({}))[0]['group1'], {'ds1': {'shape': [2, 10, 8],
                                                                                        'ndim': 3,
                                                                                        'long_name': 'ds_at_group1',
                                                                                        'units': ''},
