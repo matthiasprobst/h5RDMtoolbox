@@ -1,10 +1,9 @@
 """Core module for the layout convention."""
 import abc
+import h5py
 import re
 import typing
 import warnings
-
-import h5py
 
 
 def get_subgroups(h5group: h5py.Group) -> typing.List[h5py.Group]:
@@ -31,7 +30,7 @@ class ValidationResult:
     def __init__(self, validation, result: bool, is_optional: bool,
                  fail_obj: typing.Union[h5py.Group, h5py.Dataset] = None):
         self.validation = validation
-        self.fail_obj = fail_obj
+        self.fail_obj = str(fail_obj)
         if result is False and is_optional is True:
             self.result = True
         else:
@@ -94,14 +93,28 @@ class ValidationResult:
 
 
 class Validator(abc.ABC):
-    """Base class for all validators."""
+    """Base class for all validators.
 
-    def __init__(self, reference, sign):
+    Parameters
+    ----------
+    reference : str, int, float
+        The reference value to compare to.
+    count : int, optional
+        The expected number of success for this validator. If None,
+        the number of successes is not checked.
+    sign : str, optional
+        The sign to use for the string representation of the validator.
+    """
+
+    def __init__(self, reference, count=None, sign: str = ' --> '):
         self.reference = reference
+        self.count = count
         self.sign = sign
         self.nmax = None  # number of occurrences. see GroupValidation.validate()
 
     def __repr__(self):
+        if self.count:
+            return f'{self.__class__.__name__}({self.reference.__repr__()}, count={self.count})'
         return f'{self.__class__.__name__}({self.reference.__repr__()})'
 
     @abc.abstractmethod
@@ -126,8 +139,8 @@ class Equal(Validator):
     """Validator that checks if the value is equal to the reference value.
     A reference value of '*' will always return True."""
 
-    def __init__(self, reference):
-        super().__init__(reference=reference, sign='=')
+    def __init__(self, reference, count: int = None):
+        super().__init__(reference=reference, count=count, sign='=')
 
     def __call__(self, value, *args, **kwargs):
         if self.reference == '*':
@@ -502,6 +515,8 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
         ----------
         name : str, Validator, optional=None
             The name of the dataset, by default None
+        opt : bool, optional=None
+            Whether the validation is optional, by default None
         **properties
             The dictionary containing the properties of an HDF5 dataset and their validators
 
@@ -582,6 +597,24 @@ class Layout(GroupValidation):
                 raise TypeError(f'Unknown child type: {type(child)}')
 
         assert len(self.specified_validations) == len(self.called_validations) + len(self.inactive_validations)
+
+        # for now, every validator was executed without counting the number of fails/successes
+        # A validator however can have a count requirement. We need to check for those that have (count!=None)
+        # if this requirement is met.
+        # therefore run over all validation_results and make a list of all validators that have a count requirement
+        validation_results_with_count = {}
+        for vr in self.validation_results:
+            if vr.validation.validator.count:
+                if vr.validation.validator not in validation_results_with_count:
+                    validation_results_with_count[vr.validation.validator] = []
+                validation_results_with_count[vr.validation.validator].append(vr)
+
+        for k, v in validation_results_with_count.items():
+            expected_counts = k.count
+            actual_counts = sum([vr.succeeded for vr in v])
+            if expected_counts == actual_counts:
+                # remove the failed validation results from the list
+                self._validation_results = [vr for vr in self._validation_results if vr not in v]
         return self.validation_results
 
     @property

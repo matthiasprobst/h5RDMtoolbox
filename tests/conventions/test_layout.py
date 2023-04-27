@@ -157,6 +157,7 @@ class TestLayout(unittest.TestCase):
 
     def test_dataset_validation(self):
         lay = Layout()
+        # any dataset in root MUST have this attribute:
         lay['/'].define_dataset(name=..., opt=False).attrs['standard_name'] = Equal('x_air_velocity')
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
@@ -167,6 +168,28 @@ class TestLayout(unittest.TestCase):
             self.assertEqual(lay.fails, 1)
             ds = h5.create_dataset('u', data=1)
             ds.attrs['standard_name'] = 'x_air_velocity'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+            ds = h5.create_dataset('v', data=1)
+            ds.attrs['standard_name'] = 'y_air_velocity'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+    def test_dataset_validation_2(self):
+        lay = Layout()
+        # ONLY ONE dataset in root MUST have this attribute:
+        lay['/'].define_dataset(name=...).attrs['standard_name'] = Equal('x_coordinate', count=1)
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            u = h5.create_dataset('u', data=1)
+            u.attrs['standard_name'] = 'air_x_velocity'
+            v = h5.create_dataset('v', data=1)
+            v.attrs['standard_name'] = 'air_y_velocity'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+            lay.print_failed_validations()
+
+            x = h5.create_dataset('x', data=1)
+            x.attrs['standard_name'] = 'x_coordinate'
             lay.validate(h5)
             self.assertEqual(lay.fails, 0)
 
