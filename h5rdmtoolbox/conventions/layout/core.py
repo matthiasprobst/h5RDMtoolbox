@@ -273,22 +273,20 @@ class AttributeValidation(Validation):
 
     def __repr__(self) -> str:
         out = f'{self.__class__.__name__}('
-        for validator in self.validators:
-            out += f'{validator[0].__repr__()}={validator[1].__repr__()}, opt={self.is_optional}'
+        valstr = [f'{validator[0].__repr__()}={validator[1].__repr__()}, opt={self.is_optional}' for validator in
+                  self.validators]
+        out += ', '.join(valstr)
         out += ')'
         return out
 
     def __str__(self):
         if hasattr(self.parent, 'path'):
-            p = self.parent.path
+            p = f'{self.parent.path}{self.parent.validator.__str__()}'
         else:
             p = self.parent
-        if self.child is None:
-            value = self.validator.__str__()
-        else:
-            value = self.child.validator
-        return f'["{p}"].attr(name="{self.validator.__str__()}",' \
-               f' value="{value}")'
+        valstr = [f'{validator[0].__repr__()}={validator[1].__repr__()}, opt={self.is_optional}' for validator in
+                  self.validators]
+        return f'["{p}"].attr({valstr})'
 
     def add(self, child: Validation, overwrite=False):
         """Add successive validation to this validation object"""
@@ -327,7 +325,7 @@ class AttributeValidation(Validation):
             validation_results.append(ValidationResult(self, False, self.is_optional, target))
             return validation_results
 
-        validation_flag = 1  # assume that the validation will succeed
+        validation_flags = []  # assume that the validation will succeed
         for name_validator, value_validator in self.validators:
             # we need to run through all attributes before we can set the result of this validation:
             for ak, av in attribute_dict.items():
@@ -337,15 +335,12 @@ class AttributeValidation(Validation):
                     # validate the value:
                     value_is_validated = value_validator(av)
                     if value_is_validated:
-                        validation_flag = 1
+                        validation_flags.append(1)
                         break
-                    else:
-                        validation_flag = 0
-                else:
-                    validation_flag = 0
 
         # all attributes must have been passed:
-        validation_results.append(ValidationResult(self, validation_flag, self.is_optional, target))
+        validation_results.append(
+            ValidationResult(self, len(self.validators) == sum(validation_flags), self.is_optional, target))
         return validation_results
 
     def dumps(self, indent: int):
@@ -370,7 +365,7 @@ class PropertyValidation(Validation):
         return f'{self.__class__.__name__}({self.validator.__repr__()})>'
 
     def __str__(self):
-        return f'["{self.parent.parent.path}"].dataset({self.name}{self.validator.sign}{self.validator.__str__()})'
+        return f'["{self.parent.path}{self.parent.validator.__str__()}"].dataset({self.name}{self.validator.sign}{self.validator.__str__()})'
 
     def validate(self, target: h5py.Dataset,
                  validation_results: typing.List[ValidationResult]) -> typing.List[ValidationResult]:
