@@ -87,8 +87,10 @@ class TestLayout(unittest.TestCase):
             self.assertEqual(lay.fails, 0)
 
     def test_attrs_3(self):
+        """specifying multiple attributes in one go is always an AND-connection"""
         lay = Layout()
         lay.specify_dataset(...).specify_attrs(standard_name=..., units=...)  # every dataset in root must have sn and u
+        lay.specify_dataset(...).specify_attrs(long_name=...)  # every dataset in root must have sn and u
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
@@ -99,7 +101,31 @@ class TestLayout(unittest.TestCase):
             ds.attrs['standard_name'] = 'a'
             ds.attrs['units'] = 'b'
             lay.validate(h5)
+            self.assertEqual(lay.fails, 3)
+
+            h5['test'].attrs['long_name'] = 'a'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
+    def test_attrs_4(self):
+        """specifying a dataset with unknown name but specific attributes"""
+        lay = Layout()
+        # this shall only be valid once (count=1):
+        lay.specify_dataset(...).specify_attrs(dict(standard_name='x_velocity', units=...), count=1)
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+            h5.create_dataset('test', data=1)
+            lay.validate(h5)
             self.assertEqual(lay.fails, 1)
+
+            u = h5.create_dataset('u', data=1)
+            u.attrs['standard_name'] = 'x_velocity'
+            u.attrs['units'] = 'm/s'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
 
     def test_core(self):
         # init layout:

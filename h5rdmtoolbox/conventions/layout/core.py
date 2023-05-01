@@ -261,11 +261,13 @@ class AttributeValidation(Validation):
     def __init__(self,
                  validators: typing.List[typing.Tuple[Validator, Validator]],  # list of name-value-validators
                  # this solves the standard_name once and specific units to it problem.
-                 parent: typing.Union["GroupValidation", "AttributeValidation"]):
+                 parent: typing.Union["GroupValidation", "AttributeValidation"],
+                 count: int = None):
         super().__init__()
         # add this validation to the parent. this validation will be called if the parent validation succeeded:
         self.parent = parent
         self.validators = validators
+        self.count = count
         parent.add(self)  # add this attribute to a parent (group or dataset) validation
 
     def __repr__(self) -> str:
@@ -469,10 +471,10 @@ class _BaseGroupAndDatasetValidation(Validation, abc.ABC):
             raise TypeError(f'attrs must be a dict, not {type(attrs)}')
         return self.specify_attrs(**attrs)
 
-    def specify_attrs(self, **attrs) -> AttributeValidation:
+    def specify_attrs(self, attrs: typing.Dict, count: typing.Union[int, None] = None) -> AttributeValidation:
         """Add one or multiple attribute validators"""
         validators = [(guess_validator(vn), guess_validator(vv)) for vn, vv in attrs.items()]
-        return AttributeValidation(validators=validators, parent=self)
+        return AttributeValidation(validators=validators, parent=self, count=count)
 
     # alias:
     specify_attributes = specify_attrs
@@ -677,12 +679,10 @@ class Layout(GroupValidation):
         validation_results_with_count = {}
         for vr in self.validation_results:
             if isinstance(vr.validation, AttributeValidation):
-                pass  # check for all validators in one AtributeValidation object if is "counted" or not
-                # for name_validator, value_validator in vr.validation.validators:
-                #     if name_validator.count:
-                #         if name_validator not in validation_results_with_count:
-                #             validation_results_with_count[name_validator] = []
-                #         validation_results_with_count[name_validator].append(vr)
+                if vr.validation.count:
+                    if vr.validation not in validation_results_with_count:
+                        validation_results_with_count[vr.validation] = []
+                    validation_results_with_count[vr.validation].append(vr)
             else:
                 if vr.validation.count:
                     if vr.validation.validator not in validation_results_with_count:
