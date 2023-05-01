@@ -6,21 +6,23 @@ from ..standard_name import is_valid_unit
 class IsValidUnit(Validator):
     """Valid units. Does this by checking if the unit can be understood by package 'ureg'"""
 
-    def __init__(self):
-        super().__init__(None, sign='=')
+    def __init__(self, optional: bool = False):
+        super().__init__(None, optional=optional, sign='=')
 
     def __str__(self):
         return "can be understood by package 'ureg'"
 
     def __call__(self, value):
+        if self.is_optional:
+            return True
         return is_valid_unit(value)
 
 
 class IsValidStandardName(Regex):
     """Validates a standard name by checking the pattern"""
 
-    def __init__(self):
-        super().__init__(r'^[a-z][a-z0-9_]*$')
+    def __init__(self, optional: bool = False):
+        super().__init__(r'^[a-z][a-z0-9_]*$', optional=optional)
 
     def __str__(self):
         return "is valid standard name pattern"
@@ -29,8 +31,8 @@ class IsValidStandardName(Regex):
 class IsValidVersionString(Validator):
     """Validates a version string by using the class packaging.version.Version"""
 
-    def __init__(self):
-        super().__init__(None, '=')
+    def __init__(self, optional: bool = False):
+        super().__init__(None, optional=optional, sign='=')
 
     def __str__(self):
         return "is valid version string"

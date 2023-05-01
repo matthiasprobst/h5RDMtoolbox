@@ -11,7 +11,7 @@ def guess_validator(v):
     if v is Ellipsis:
         return Any()
     elif isinstance(v, (str, int, float)):
-        return Equal(v)
+        return Equal(v, optional=False)
     return v
 
 
@@ -115,8 +115,9 @@ class Validator(abc.ABC):
         The sign to use for the string representation of the validator.
     """
 
-    def __init__(self, reference, count=None, sign: str = ' --> '):
+    def __init__(self, reference, optional, count=None, sign: str = ' --> '):
         self.reference = reference
+        self.is_optional = optional
         self.count = count
         self.sign = sign
         self.nmax = None  # number of occurrences. see GroupValidation.validate()
@@ -134,10 +135,12 @@ class Validator(abc.ABC):
 class Regex(Validator):
     """Validator using regex"""
 
-    def __init__(self, reference: str):
-        super().__init__(reference, sign='=')
+    def __init__(self, reference: str, optional: bool):
+        super().__init__(reference, optional=optional, sign='=')
 
     def __call__(self, value, *args, **kwargs):
+        if self.is_optional:
+            return True
         return re.match(self.reference, value) is not None
 
     def __str__(self):
@@ -148,10 +151,12 @@ class Equal(Validator):
     """Validator that checks if the value is equal to the reference value.
     A reference value of '*' will always return True."""
 
-    def __init__(self, reference, count: int = None):
-        super().__init__(reference=reference, count=count, sign='=')
+    def __init__(self, reference, optional: bool, count: int = None):
+        super().__init__(reference=reference, optional=optional, count=count, sign='=')
 
     def __call__(self, value, *args, **kwargs):
+        if self.is_optional:
+            return True
         if self.reference == '*':
             return True
         return value == self.reference
@@ -163,10 +168,12 @@ class Equal(Validator):
 class In(Validator):
     """Validator that checks if the value is within the reference values."""
 
-    def __init__(self, *reference):
-        super().__init__(reference, sign=' in ')
+    def __init__(self, *reference, optional: bool):
+        super().__init__(reference, optional=optional, sign=' in ')
 
     def __call__(self, value, *args, **kwargs):
+        if self.is_optional:
+            return True
         return value in self.reference
 
 
@@ -179,8 +186,8 @@ class ExistIn(Validator):
         The HDF5 object (dataset or group) to check if it exists in the given value in __call__().
     """
 
-    def __init__(self, reference: str):
-        super().__init__(reference, sign=' exists in ')
+    def __init__(self, reference: str, optional: bool = False):
+        super().__init__(reference, optional=optional, sign=' exists in ')
 
     def __call__(self,
                  value: typing.Union[h5py.Dataset, h5py.Group],
@@ -197,6 +204,8 @@ class ExistIn(Validator):
         Union[bool, h5py.Dataset, h5py.Group]
             If the value exists in the reference, return the value. Otherwise, return False.
         """
+        if self.is_optional:
+            return True
         if not isinstance(value, (h5py.Dataset, h5py.Group)):
             raise TypeError(f'Value must be a h5py.Dataset or h5py.Group, not {type(value)}')
         if self.reference not in value:
@@ -208,8 +217,7 @@ class Any(Validator):
     """An optional Validator that always returns True."""
 
     def __init__(self):
-        super().__init__(None, sign='=')
-        self.is_optional = True
+        super().__init__(None, optional=False, sign='=')
 
     def __str__(self):
         return '...'
@@ -224,8 +232,8 @@ class Any(Validator):
 class ValidString(Regex):
     """Validator that checks if the value is a valid string. Rule is not to start with a space or a number."""
 
-    def __init__(self):
-        super().__init__(r'^[^ 0-9].*')
+    def __init__(self, optional: bool = False):
+        super().__init__(r'^[^ 0-9].*', optional=optional)
 
 
 class Validation(abc.ABC):
@@ -624,7 +632,7 @@ class Layout(GroupValidation):
     """Layout validation main interface class to user"""
 
     def __init__(self):
-        super().__init__(Equal(None), None)
+        super().__init__(Equal(None, optional=False), None)
         self._validation_results = []
 
     def __repr__(self):
