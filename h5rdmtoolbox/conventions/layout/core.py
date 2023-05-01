@@ -1,5 +1,6 @@
 """Core module for the layout convention."""
 import abc
+import copy
 import h5py
 import re
 import typing
@@ -328,7 +329,6 @@ class AttributeValidation(Validation):
 
         validation_flag = 1  # assume that the validation will succeed
         for name_validator, value_validator in self.validators:
-            valid_flags = []
             # we need to run through all attributes before we can set the result of this validation:
             for ak, av in attribute_dict.items():
                 # validate the name:
@@ -692,10 +692,15 @@ class Layout(GroupValidation):
         for k, v in validation_results_with_count.items():
             expected_counts = k.count
             actual_counts = sum([vr.succeeded for vr in v])
-            if expected_counts == actual_counts:
-                # remove the failed validation results from the list
-                self._validation_results = [vr for vr in self._validation_results if vr not in v]
-        return self.validation_results
+            # remove the failed validation results from the list
+            self._validation_results = [vr for vr in self._validation_results if vr not in v]
+            if expected_counts != actual_counts:
+                # add as many as are missing (or it may be too many matches!!!):
+                for i in range(abs(expected_counts - actual_counts)):
+                    _v = copy.deepcopy(v[0])
+                    _v.result = False
+                    self._validation_results.append(_v)
+        return self._validation_results
 
     @property
     def validation_results(self) -> typing.List[ValidationResult]:

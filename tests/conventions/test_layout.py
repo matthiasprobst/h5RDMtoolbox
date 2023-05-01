@@ -110,8 +110,10 @@ class TestLayout(unittest.TestCase):
     def test_attrs_4(self):
         """specifying a dataset with unknown name but specific attributes"""
         lay = Layout()
+        # every dataset must have a standard name
+        lay.specify_dataset(...).specify_attrs(dict(standard_name=...))
         # this shall only be valid once (count=1):
-        lay.specify_dataset(...).specify_attrs(dict(standard_name='x_velocity', units=...), count=1)
+        lay.specify_dataset(...).specify_attrs(dict(standard_name='x_velocity', units='m/s'), count=1)
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
@@ -119,13 +121,62 @@ class TestLayout(unittest.TestCase):
 
             h5.create_dataset('test', data=1)
             lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
+            h5['test'].attrs['standard_name'] = 'any sn'
+            lay.validate(h5)
             self.assertEqual(lay.fails, 1)
 
             u = h5.create_dataset('u', data=1)
             u.attrs['standard_name'] = 'x_velocity'
+            u.attrs['units'] = 'wrong unit'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
             u.attrs['units'] = 'm/s'
             lay.validate(h5)
             self.assertEqual(lay.fails, 0)
+
+        lay = Layout()
+        # every dataset must have a standard name
+        lay.specify_dataset(...).specify_attrs(dict(standard_name=...))
+        # this shall only be valid once (count=1):
+        lay.specify_dataset(...).specify_attrs(dict(standard_name='x_velocity', units='m/s'), count=2)
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+            h5.create_dataset('test', data=1)
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 3)
+
+            h5['test'].attrs['standard_name'] = 'any sn'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
+            u = h5.create_dataset('u', data=1)
+            u.attrs['standard_name'] = 'x_velocity'
+            u.attrs['units'] = 'wrong unit'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
+            u.attrs['units'] = 'm/s'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            h5.create_dataset('u2', data=1)
+            # h5['u2'].attrs['standard_name'] = 'y_velocity'
+            h5['u2'].attrs['units'] = 'm/s'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            h5['test'].attrs['standard_name'] = 'x_velocity'
+            h5['test'].attrs['units'] = 'm/s'
+            h5['u2'].attrs['standard_name'] = 'x_velocity'
+            h5['u2'].attrs['units'] = 'm/s'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)  # there are 3 datasets with x_velocity, but only 2 are allowed
 
     def test_core(self):
         # init layout:

@@ -45,7 +45,7 @@ class IsValidVersionString(Validator):
 
 
 TbxLayout = Layout()
-# TbxLayout['/'].attrs['__h5rdmtoolbox_version__'] = IsValidVersionString()  # e.g. v0.1.0
-# TbxLayout['/'].attrs['title'] = ValidString()
-# TbxLayout['*'].specify_dataset(name=..., opt=True).attrs['units'] = IsValidUnit()
-# TbxLayout['*'].specify_dataset(name=..., opt=True).attrs['standard_name'] = IsValidStandardName()
+TbxLayout['/'].attrs['__h5rdmtoolbox_version__'] = IsValidVersionString()  # e.g. v0.1.0
+TbxLayout['/'].attrs['title'] = ValidString()
+TbxLayout['*'].specify_dataset(name=..., opt=True).attrs['units'] = IsValidUnit()
+TbxLayout['*'].specify_dataset(name=..., opt=True).attrs['standard_name'] = IsValidStandardName()
