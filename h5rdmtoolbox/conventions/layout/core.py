@@ -6,6 +6,14 @@ import typing
 import warnings
 
 
+def guess_validator(v):
+    if v is Ellipsis:
+        return Any()
+    elif isinstance(v, (str, int, float)):
+        return Equal(v)
+    return v
+
+
 def get_subgroups(h5group: h5py.Group) -> typing.List[h5py.Group]:
     """Return a list of all groups in the given group."""
     groups = []
@@ -222,12 +230,7 @@ class ValidString(Regex):
 class Validation(abc.ABC):
     """Base class for all validations."""
 
-    def __init__(self, validator: Validator):
-        if validator is Ellipsis:
-            validator = Any()
-        elif not isinstance(validator, Validator):
-            validator = Equal(validator)
-        self.validator = validator
+    def __init__(self):
         self.is_optional = False
         self.called = False
 
@@ -245,17 +248,32 @@ class Validation(abc.ABC):
 
 
 class AttributeValidation(Validation):
-    """Validation class for attributes of a group or dataset."""
+    """Validation class for attributes of a group or dataset.
 
-    def __init__(self, validator, parent: typing.Union["GroupValidation", "AttributeValidation"]):
-        super().__init__(validator)
-        self.child = None
+    Parameters
+    ----------
+    validators : List[Tuple[Validator, Validator]]
+        List of tuples containing the name and value validators.
+    parent : Union[GroupValidation, AttributeValidation]
+        The parent validation, e.g. dataset or group validation
+    """
+
+    def __init__(self,
+                 validators: typing.List[typing.Tuple[Validator, Validator]],  # list of name-value-validators
+                 # this solves the standard_name once and specific units to it problem.
+                 parent: typing.Union["GroupValidation", "AttributeValidation"]):
+        super().__init__()
         # add this validation to the parent. this validation will be called if the parent validation succeeded:
         self.parent = parent
-        parent.add(self)
+        self.validators = validators
+        parent.add(self)  # add this attribute to a parent (group or dataset) validation
 
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self.validator.__repr__()}, opt={self.is_optional})>'
+    def __repr__(self) -> str:
+        out = f'{self.__class__.__name__}('
+        for validator in self.validators:
+            out += f'{validator[0].__repr__()}={validator[1].__repr__()}, opt={self.is_optional}'
+        out += ')'
+        return out
 
     def __str__(self):
         if hasattr(self.parent, 'path'):
@@ -279,30 +297,53 @@ class AttributeValidation(Validation):
 
     def validate(self, target,
                  validation_results: typing.List[ValidationResult]) -> typing.List[ValidationResult]:
-        """Validate the attribute."""
+        """Validate the attribute(s).
+
+        ..note::
+
+            An AttributeValidation can have one or more validators. If any of these fails, the full validation fails.
+            Exception is if one of the failed validators is optional.
+
+        Parameters
+        ----------
+        target : Union[h5py.Group, h5py.Dataset]
+            The target object to validate.
+        validation_results : List[ValidationResult]
+            The list of validation results to append to.
+
+        Returns
+        -------
+        List[ValidationResult]
+            The list of validation results.
+        """
         self.called = True
-        if isinstance(target, (h5py.Group, h5py.Dataset)):
-            attribute_names = list(target.attrs.keys())
-            if len(attribute_names) == 0:
-                validation_results.append(ValidationResult(self, False, self.is_optional, target))
-                return validation_results
+        if not isinstance(target, (h5py.Group, h5py.Dataset)):
+            raise TypeError(f'target must be a h5py.Group or h5py.Dataset, not {type(target)}')
+        attribute_dict = dict(target.attrs.items())
+        if len(attribute_dict) == 0:
+            validation_results.append(ValidationResult(self, False, self.is_optional, target))
+            return validation_results
 
+        validation_flag = 1  # assume that the validation will succeed
+        for name_validator, value_validator in self.validators:
             valid_flags = []
-            for k in attribute_names:
-                # we need to run through all attributes before we can set the result of this validation:
-                is_valid = self.validator(k)
-                valid_flags.append(is_valid)
-                if is_valid:
-                    # validation succeeded:
-                    if self.child is not None:
-                        validation_results = self.child.validate(target.attrs[k], validation_results)
-            # now we ran through all attributes and can set the result of this validation:
-            validation_results.append(ValidationResult(self, any(valid_flags), self.is_optional, target))
+            # we need to run through all attributes before we can set the result of this validation:
+            for ak, av in attribute_dict.items():
+                # validate the name:
+                name_is_validated = name_validator(ak)
+                if name_is_validated:
+                    # validate the value:
+                    value_is_validated = value_validator(av)
+                    if value_is_validated:
+                        validation_flag = 1
+                        break
+                    else:
+                        validation_flag = 0
+                else:
+                    validation_flag = 0
 
-        else:
-            # validate the value of an attribute
-            is_valid = self.validator(target)
-            validation_results.append(ValidationResult(self, is_valid, self.is_optional, target))
+        # all attributes must have been passed:
+        validation_results.append(ValidationResult(self, validation_flag, self.is_optional, target))
         return validation_results
 
     def dumps(self, indent: int):
@@ -316,7 +357,8 @@ class PropertyValidation(Validation):
     """Property Validation class"""
 
     def __init__(self, name, validator, parent):
-        super().__init__(validator)
+        super().__init__()
+        self.validator = validator
         self.name = name
         # add this validation to the parent. this validation will be called if the parent validation succeeded:
         self.parent = parent
@@ -361,18 +403,15 @@ class AttributeValidationManager:
             name_validator: typing.Union[str, Validator],
             value_validator: typing.Union[int, float, str, Validator]):
         """Add the name and value attribute validators"""
-        av = AttributeValidation(name_validator, self.parent)
-        if value_validator is Ellipsis:
-            value_validator = Any()
-        elif isinstance(value_validator, (str, int, float)):
-            value_validator = Equal(value_validator)
-        AttributeValidation(value_validator, av)
+        name_validator = guess_validator(name_validator)
+        value_validator = guess_validator(value_validator)
+        AttributeValidation(validators=[(name_validator, value_validator), ], parent=self.parent)
 
     def __setitem__(self, name_validator, value_validator):
         self.add(name_validator, value_validator)
 
     def __getitem__(self, name_validator):
-        AttributeValidation(name_validator, self.parent)
+        return AttributeValidation(name_validator, self.parent)
 
 
 class _BaseGroupAndDatasetValidation(Validation, abc.ABC):
@@ -389,7 +428,12 @@ class _BaseGroupAndDatasetValidation(Validation, abc.ABC):
     def __init__(self,
                  validator: Validator,
                  parent: Validation):
-        super().__init__(validator)
+        super().__init__()
+        if validator is Ellipsis:
+            validator = Any()
+        elif not isinstance(validator, Validator):
+            validator = Equal(validator)
+        self.validator = validator
         self.parent = parent
         self.children = []
         try:
@@ -412,6 +456,27 @@ class _BaseGroupAndDatasetValidation(Validation, abc.ABC):
         """Attribute validation manager for this group or dataset"""
         return AttributeValidationManager(self)
 
+    @attrs.setter
+    def attrs(self, attrs: typing.Dict):
+        """Set multiple attribute validators at once. See also specify_attrs()
+
+        Parameters
+        ----------
+        attrs : typing.Dict
+            The attribute validators to be set
+        """
+        if not isinstance(attrs, dict):
+            raise TypeError(f'attrs must be a dict, not {type(attrs)}')
+        return self.specify_attrs(**attrs)
+
+    def specify_attrs(self, **attrs) -> AttributeValidation:
+        """Add one or multiple attribute validators"""
+        validators = [(guess_validator(vn), guess_validator(vv)) for vn, vv in attrs.items()]
+        return AttributeValidation(validators=validators, parent=self)
+
+    # alias:
+    specify_attributes = specify_attrs
+
     def add_child(self, child: Validation) -> Validation:
         """Add a child validation object to be called after this validation succeeded
 
@@ -430,10 +495,17 @@ class _BaseGroupAndDatasetValidation(Validation, abc.ABC):
             raise TypeError(f'child must be a Validation, not {type(child)}')
 
         for registrated_child in self.children:
-            if registrated_child.parent == child.parent and \
-                    registrated_child.validator.reference == child.validator.reference and \
-                    isinstance(registrated_child, type(child)):
-                return registrated_child
+            if registrated_child.parent == child.parent:
+                if type(registrated_child) == type(child):
+                    if isinstance(child, AttributeValidation):
+                        if len(child.validators) == len(registrated_child.validators):
+                            if all([child.validators[i][0].reference == registrated_child.validators[i][0].reference
+                                    and child.validators[i][1].reference == registrated_child.validators[i][1].reference
+                                    for i in range(len(child.validators))]):
+                                return registrated_child
+                    else:
+                        if registrated_child.validator.reference == child.validator.reference:
+                            return registrated_child
         self.children.append(child)
         return child
 
@@ -505,10 +577,10 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
 
         return validation_results
 
-    def define_dataset(self,
-                       name: typing.Union[str, Validator, None] = None,
-                       opt: bool = None,
-                       **properties) -> DatasetValidation:
+    def specify_dataset(self,
+                        name: typing.Union[str, Validator, None] = None,
+                        opt: bool = None,
+                        **properties) -> DatasetValidation:
         """Add a dataset specification
 
         Parameters
@@ -538,7 +610,7 @@ class GroupValidation(_BaseGroupAndDatasetValidation):
             dv.is_optional = opt
         return dv
 
-    def define_group(self, name: typing.Union[str, Validator, None] = None) -> "GroupValidation":
+    def specify_group(self, name: typing.Union[str, Validator, None] = None) -> "GroupValidation":
         """Add a group validation object"""
         if isinstance(name, str):
             name = ExistIn(name)
@@ -563,7 +635,7 @@ class Layout(GroupValidation):
             return f'Layout(passed={self.success_ratio * 100:.1f}%)'
         return f'Layout()'
 
-    def define_group(self, name: typing.Union[str, Validator, None] = None) -> GroupValidation:
+    def specify_group(self, name: typing.Union[str, Validator, None] = None) -> GroupValidation:
         """Add a group validation object"""
         if isinstance(name, str):
             name = ExistIn(name)
@@ -576,7 +648,7 @@ class Layout(GroupValidation):
         # TODO if not yet registered, register it, otherwise return existing
         if item == '/':
             return self
-        return self.define_group(item)
+        return self.specify_group(item)
 
     def validate(self, target: h5py.Group) -> typing.List[ValidationResult]:
         """Validate the file using this layout specification"""
@@ -604,10 +676,18 @@ class Layout(GroupValidation):
         # therefore run over all validation_results and make a list of all validators that have a count requirement
         validation_results_with_count = {}
         for vr in self.validation_results:
-            if vr.validation.validator.count:
-                if vr.validation.validator not in validation_results_with_count:
-                    validation_results_with_count[vr.validation.validator] = []
-                validation_results_with_count[vr.validation.validator].append(vr)
+            if isinstance(vr.validation, AttributeValidation):
+                pass  # check for all validators in one AtributeValidation object if is "counted" or not
+                # for name_validator, value_validator in vr.validation.validators:
+                #     if name_validator.count:
+                #         if name_validator not in validation_results_with_count:
+                #             validation_results_with_count[name_validator] = []
+                #         validation_results_with_count[name_validator].append(vr)
+            else:
+                if vr.validation.count:
+                    if vr.validation.validator not in validation_results_with_count:
+                        validation_results_with_count[vr.validation.validator] = []
+                    validation_results_with_count[vr.validation.validator].append(vr)
 
         for k, v in validation_results_with_count.items():
             expected_counts = k.count

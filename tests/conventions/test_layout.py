@@ -55,12 +55,58 @@ class TestLayout(unittest.TestCase):
                 ei('group1')
             self.assertTrue(ei(h5))
 
+    def test_attrs_1(self):
+        lay = Layout()
+        lay['/'].attrs['long_name'] = ...
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)  # the root group has no attribute long_name
+            h5.attrs['long_name'] = 'a long name'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)  # the root group has no attribute long_name
+
+    def test_attrs_2(self):
+        lay = Layout()
+        lay['/'].attrs['long_name'] = ...
+        lay['/'].attrs['user'] = 'MP'
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+            h5.attrs['long_name'] = 'a long name'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            h5.attrs['user'] = '_MP'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            h5.attrs['user'] = 'MP'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+    def test_attrs_3(self):
+        lay = Layout()
+        lay.specify_dataset(...).specify_attrs(standard_name=..., units=...)  # every dataset in root must have sn and u
+
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+            h5.create_dataset('test', data=1)
+            ds = h5.create_dataset('test2', data=1)
+            ds.attrs['standard_name'] = 'a'
+            ds.attrs['units'] = 'b'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
     def test_core(self):
         # init layout:
         lay = Layout()
 
         # add groups, which MUST exist:
-        g1 = lay.define_group('group1')  # lay.add_Group(Equal('group1'))
+        g1 = lay.specify_group('group1')  # lay.add_Group(Equal('group1'))
         g2 = lay[Equal('group2')]
 
         # check types:
@@ -121,13 +167,13 @@ class TestLayout(unittest.TestCase):
     def test_docs_example(self):
         lay = Layout()
 
-        dv = lay['*'].define_dataset(compression='gzip')
-        lay['*'].define_dataset().attrs['units'] = ...
-        lay['*'].define_group().attrs['comment'] = Regex(r'^[^ 0-9].*')
+        dv = lay['*'].specify_dataset(compression='gzip')
+        lay['*'].specify_dataset().attrs['units'] = ...
+        lay['*'].specify_group().attrs['comment'] = Regex(r'^[^ 0-9].*')
 
         lay['devices'].attrs.add('long_name', 'an_attribute')
-        lay['/'].define_group().attrs['__version__'] = h5tbx.__version__
-        lay['devices'].define_group('measurement_devices')
+        lay['/'].specify_group().attrs['__version__'] = h5tbx.__version__
+        lay['devices'].specify_group('measurement_devices')
 
         with h5tbx.File() as h5:
             # this file should be having everything specified in the layout
@@ -158,7 +204,7 @@ class TestLayout(unittest.TestCase):
     def test_dataset_validation(self):
         lay = Layout()
         # any dataset in root MUST have this attribute:
-        lay['/'].define_dataset(name=..., opt=False).attrs['standard_name'] = Equal('x_air_velocity')
+        lay['/'].specify_dataset(name=..., opt=False).attrs['standard_name'] = Equal('x_air_velocity')
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
@@ -175,10 +221,24 @@ class TestLayout(unittest.TestCase):
             lay.validate(h5)
             self.assertEqual(lay.fails, 1)
 
+    def test_multiple_attributes(self):
+        # one dataset must exist with x_pixel_coordinate.
+        # this exact dataset must have the units 'pixel'
+        lay = Layout()
+        # g = lay['/'].specify_group(name=..., attrs={'a': 'aa',
+        #                                            'b': 'bb'})
+        g = lay['/'].specify_group(name=...)
+        g.attrs = {'title': ..., 'user': ...}
+        # g.specify_attrs(title=..., user=...)
+        any_ds = lay['/'].specify_dataset(name=..., opt=False)
+        any_ds.specify_attrs(standard_name='x_pixel_coordinate', units='pixel')
+        # any_ds.attrs = {'standard_name': 'x_pixel_coordinate', 'units': 'pixel'}
+        print(lay.specified_validations)
+
     def test_dataset_validation_2(self):
         lay = Layout()
         # ONLY ONE dataset in root MUST have this attribute:
-        lay['/'].define_dataset(name=...).attrs['standard_name'] = Equal('x_coordinate', count=1)
+        lay['/'].specify_dataset(name=...).attrs['standard_name'] = Equal('x_coordinate', count=1)
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             u = h5.create_dataset('u', data=1)
             u.attrs['standard_name'] = 'air_x_velocity'
@@ -195,7 +255,7 @@ class TestLayout(unittest.TestCase):
 
     def test_core4(self):
         lay = Layout()
-        lay['devices'].define_group('measurement_devices')
+        lay['devices'].specify_group('measurement_devices')
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             h5.create_group('devices/measurement_devices')
@@ -204,13 +264,13 @@ class TestLayout(unittest.TestCase):
 
     def test_str(self):
         lay = Layout()
-        lay['/'].define_dataset(ndim=1)
+        lay['/'].specify_dataset(ndim=1)
         print(lay.children[0])
 
     def test_core2(self):
         lay = Layout()
         g = lay['group1']
-        g.define_dataset('dataset1', ndim=Equal(3))
+        g.specify_dataset('dataset1', ndim=Equal(3))
         # d2 = lay['group1'] = Dataset('dataset2', ndim=In(1, 2, 3))
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
@@ -228,7 +288,7 @@ class TestLayout(unittest.TestCase):
     def test_wildcard(self):
         lay = Layout()
         lay['*'].attrs['long_name'] = 'group'
-        lay['*'].define_dataset(Any()).attrs['long_name'] = 'dataset'
+        lay['*'].specify_dataset(Any()).attrs['long_name'] = 'dataset'
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
