@@ -9,8 +9,11 @@ class IsValidUnit(Validator):
     def __init__(self, optional: bool = False):
         super().__init__(None, optional=optional, sign='=')
 
-    def __str__(self):
-        return "can be understood by package 'ureg'"
+    def __set_message__(self, target: str, success: bool):
+        if success:
+            self._message = f'"{target}" is unit'
+        else:
+            self._message = f'"{target}" is not a unit'
 
     def validate(self, value):
         if self.is_optional:

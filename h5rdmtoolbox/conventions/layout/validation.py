@@ -182,12 +182,15 @@ class AttributeValidation(Validation):
 
         # all attributes must have been passed:
         is_valid = len(self.validators) == sum(validation_flags)
+        _m = []
+        for v in self.validators:
+            _m.append(f'{v[0].__repr__()}={v[1].__repr__()}')
         if is_valid:
             message = f'"{target.name}" has all required attributes: ' \
-                      f'[{", ".join([v[0].__repr__() for v in self.validators])}]'
+                      f'{_m}'
         else:
             message = f'"{target.name}" is missing required attributes: ' \
-                      f'[{", ".join([v[0].__repr__() for v in self.validators])}]'
+                      f'{_m}'
         validation_results.append(
             ValidationResult(self, is_valid, message=message)
         )

@@ -1,9 +1,8 @@
 """Testing the standard attributes"""
 import pathlib
+import requests
 import unittest
 import warnings
-
-import requests
 from omegaconf import DictConfig
 from packaging import version
 from pint.errors import UndefinedUnitError
@@ -160,14 +159,12 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_is_valid_unit(self):
         from h5rdmtoolbox.conventions.standard_name import is_valid_unit
-        from pint import UnitRegistry
-        ureg = UnitRegistry()
-        ureg.define('mole = 6.022140857e23 * mole = mol')
         self.assertTrue(is_valid_unit('m/s'))
         self.assertTrue(is_valid_unit('1 m/s'))
         self.assertTrue(is_valid_unit('kg m/s^-1'))
         self.assertFalse(is_valid_unit('kg m/s-1'))
         self.assertFalse(is_valid_unit('kgm/s-1'))
+        self.assertTrue(is_valid_unit('pixel'))
 
     def test_comment(self):
         h5rdmtoolbox.use('tbx')

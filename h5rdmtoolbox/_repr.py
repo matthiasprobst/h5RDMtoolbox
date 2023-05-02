@@ -364,7 +364,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         if key == 'standard_name':
             # TODO give standard name a dropdown which shows description and canonical_units
             return f"""<li style="list-style-type: none; font-style:
-             italic">{key} : {_value_str}</li>"""
+             italic">{key}: {_value_str}</li>"""
         return f'<li style="list-style-type: none; font-style: italic">{key} : {_value_str}</li>'
 
 

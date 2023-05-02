@@ -69,7 +69,8 @@ class Validator(abc.ABC):
     def __set_message__(self, target: str, success: bool):
         if success:
             self._message = f'{self.__class__.__name__} succeeded for target "{target}"'
-        self._message = f'{self.__class__.__name__} failed for target "{target}"'
+        else:
+            self._message = f'{self.__class__.__name__} failed for target "{target}"'
 
     @message.setter
     def message(self, target_success):
@@ -112,7 +113,8 @@ class Equal(Validator):
         """Returns human-readable message of the validation result."""
         if success:
             self._message = f'{self.reference} is equal to "{target}"'
-        self._message = f'{self.reference} is not equal to "{target}"'
+        else:
+            self._message = f'{self.reference} is not equal to "{target}"'
 
 
 class In(Validator):
@@ -130,7 +132,8 @@ class In(Validator):
         """Returns human-readable message of the validation result."""
         if success:
             self._message = f'{self.reference} is in "{target}"'
-        self._message = f'{self.reference} is not exist in "{target}"'
+        else:
+            self._message = f'{self.reference} is not exist in "{target}"'
 
 
 class GroupValidator(Validator, abc.ABC):

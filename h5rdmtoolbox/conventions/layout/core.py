@@ -194,6 +194,7 @@ class Layout(validation.BaseGroupAndDatasetValidation):
                 for i in range(abs(expected_counts - actual_counts)):
                     _v = copy.deepcopy(v[0])
                     _v.result = False
+                    _v.message = f'Expected {expected_counts} matche(s), but found {actual_counts} for {_v.validation}'
                     self._validation_results.append(_v)
         return self._validation_results
 
