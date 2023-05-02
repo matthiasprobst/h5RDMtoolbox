@@ -1,5 +1,5 @@
 from .core import *
-
+from .validators import Regex, ValidString
 from ..standard_name import is_valid_unit
 
 
@@ -12,7 +12,7 @@ class IsValidUnit(Validator):
     def __str__(self):
         return "can be understood by package 'ureg'"
 
-    def __call__(self, value):
+    def validate(self, value):
         if self.is_optional:
             return True
         return is_valid_unit(value)
@@ -37,7 +37,7 @@ class IsValidVersionString(Validator):
     def __str__(self):
         return "is valid version string"
 
-    def __call__(self, value):
+    def validate(self, value):
         from packaging.version import Version, InvalidVersion
         try:
             Version(value)

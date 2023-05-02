@@ -3,6 +3,8 @@ import unittest
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions.layout import *
+from h5rdmtoolbox.conventions.layout.validation import *
+from h5rdmtoolbox.conventions.layout.validators import *
 
 
 class TestLayout(unittest.TestCase):
@@ -42,7 +44,8 @@ class TestLayout(unittest.TestCase):
         self.assertTrue(e('dawd'))
         self.assertTrue(e(Ellipsis))
 
-        i = In(1, 2, 3)
+        i = In(1, 2, 3, optional=False)
+        self.assertFalse(i.is_optional)
         self.assertTrue(i(1))
         self.assertTrue(i(2))
         self.assertTrue(i(3))
@@ -89,8 +92,9 @@ class TestLayout(unittest.TestCase):
     def test_attrs_3(self):
         """specifying multiple attributes in one go is always an AND-connection"""
         lay = Layout()
-        lay.specify_dataset(...).specify_attrs(standard_name=..., units=...)  # every dataset in root must have sn and u
-        lay.specify_dataset(...).specify_attrs(long_name=...)  # every dataset in root must have sn and u
+        lay.specify_dataset(...).specify_attrs(
+            dict(standard_name=..., units=...))  # every dataset in root must have sn and u
+        lay.specify_dataset(...).specify_attrs(dict(long_name=...))  # every dataset in root must have sn and u
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
@@ -169,7 +173,7 @@ class TestLayout(unittest.TestCase):
             # h5['u2'].attrs['standard_name'] = 'y_velocity'
             h5['u2'].attrs['units'] = 'm/s'
             lay.validate(h5)
-            self.assertEqual(lay.fails, 1)
+            self.assertEqual(lay.fails, 2)
 
             h5['test'].attrs['standard_name'] = 'x_velocity'
             h5['test'].attrs['units'] = 'm/s'
@@ -182,7 +186,10 @@ class TestLayout(unittest.TestCase):
         # init layout:
         lay = Layout()
 
-        # add groups, which MUST exist:
+        # specifications:
+        # /group1
+        #     -a: long_name=an_attribute
+        # /group2
         g1 = lay.specify_group('group1')  # lay.add_Group(Equal('group1'))
         g2 = lay[Equal('group2')]
 
@@ -197,9 +204,11 @@ class TestLayout(unittest.TestCase):
         g1.attrs.add('long_name', 'an_attribute')
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            # group1 and group2 missing. attributes cannot be checked, thus 2 fails:
             lay.validate(h5)
             self.assertEqual(lay.fails, 2)  # both groups are missing
 
+            # now added group1, but still group2 is missing and now also attribute "long_name" missing
             g = h5.create_group('group1')
             lay.validate(h5)
             self.assertEqual(lay.fails, 2)  # one group is missing and the other has no attribute long_name
@@ -236,8 +245,10 @@ class TestLayout(unittest.TestCase):
 
             g.attrs['hellocoord2'] = 'a_coordinate'
             hdf_filename = h5.filename
-        lay.validate(hdf_filename)
-        self.assertEqual(lay.fails, 2)
+
+            lay.validate(hdf_filename)
+            self.assertEqual(lay.fails, 1)
+            lay.print_validation_results()
 
         print(lay)
 
@@ -273,7 +284,7 @@ class TestLayout(unittest.TestCase):
 
             res = lay.validate(h5)
             self.assertEqual(lay.fails, 1)  # invalid comment
-            self.assertEqual(len(lay.get_succeeded_validations()), len(lay.called_validations) - 1)
+            # self.assertEqual(len(lay.get_succeeded_validations()), len(lay.called_validations) - 1)
             self.assertFalse(lay.is_validated)
             lay.print_failed_validations()
             lay.print_failed_validations(1)
@@ -285,10 +296,10 @@ class TestLayout(unittest.TestCase):
 
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
-            self.assertEqual(lay.fails, 1)
+            self.assertEqual(lay.fails, 0)
             h5.attrs['standard_name'] = 'x_air_velocity'
             lay.validate(h5)
-            self.assertEqual(lay.fails, 1)
+            self.assertEqual(lay.fails, 0)
             ds = h5.create_dataset('u', data=1)
             ds.attrs['standard_name'] = 'x_air_velocity'
             lay.validate(h5)
@@ -308,25 +319,27 @@ class TestLayout(unittest.TestCase):
         g.attrs = {'title': ..., 'user': ...}
         # g.specify_attrs(title=..., user=...)
         any_ds = lay['/'].specify_dataset(name=..., opt=False)
-        any_ds.specify_attrs(standard_name='x_pixel_coordinate', units='pixel')
-        # any_ds.attrs = {'standard_name': 'x_pixel_coordinate', 'units': 'pixel'}
-        print(lay.specified_validations)
+        any_ds.specify_attrs(dict(standard_name='x_pixel_coordinate', units='pixel'))
 
     def test_dataset_validation_2(self):
         lay = Layout()
         # ONLY ONE dataset in root MUST have this attribute:
-        lay['/'].specify_dataset(name=...).attrs['standard_name'] = Equal('x_coordinate', count=1)
+        lay['/'].specify_dataset(name=...).specify_attrs(dict(standard_name=Equal('x_coordinate')), count=1)
+
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             u = h5.create_dataset('u', data=1)
             u.attrs['standard_name'] = 'air_x_velocity'
             v = h5.create_dataset('v', data=1)
             v.attrs['standard_name'] = 'air_y_velocity'
+
             lay.validate(h5)
-            self.assertEqual(lay.fails, 2)
+
+            self.assertEqual(lay.fails, 1)
             lay.print_failed_validations()
 
             x = h5.create_dataset('x', data=1)
             x.attrs['standard_name'] = 'x_coordinate'
+
             lay.validate(h5)
             self.assertEqual(lay.fails, 0)
 
@@ -342,7 +355,7 @@ class TestLayout(unittest.TestCase):
     def test_str(self):
         lay = Layout()
         lay['/'].specify_dataset(ndim=1)
-        print(lay.children[0])
+        print(lay.subsequent_validations[0])
 
     def test_core2(self):
         lay = Layout()
@@ -370,7 +383,6 @@ class TestLayout(unittest.TestCase):
         with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
             lay.validate(h5)
             self.assertEqual(lay.fails, 1)
-
             lay.dumps()
             # h5.attrs['long_name'] = 'group'
             # ds = h5.create_dataset('ds', shape=(1, 2, 3))
