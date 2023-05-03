@@ -49,8 +49,34 @@ class IsValidVersionString(Validator):
             return False
 
 
+class IsValidContact(Validator):
+    """Validates a contact string by checking if it is one or multiple valid ORCIDs"""
+
+    def __init__(self, optional: bool = False):
+        super().__init__(None, optional=optional, sign='=')
+
+    def __set_message__(self, target: str, success: bool):
+        if success:
+            self._message = f'"{target}" has valid ORCID(s)'
+        else:
+            self._message = f'"{target}" has not a valid ORCID(s)'
+
+    def validate(self, value) -> bool:
+        """validate"""
+        from ..contact import exist
+        if isinstance(value, (list, tuple)):
+            orcids = value
+        elif isinstance(value, str):
+            orcids = value.split(',')
+        for o in orcids:
+            if not exist(o.strip()):
+                return False
+        return True
+
+
 TbxLayout = Layout()
 TbxLayout['/'].attrs['__h5rdmtoolbox_version__'] = IsValidVersionString()  # e.g. v0.1.0
 TbxLayout['/'].attrs['title'] = ValidString()
+TbxLayout['/'].attrs['contact'] = IsValidContact()
 TbxLayout['*'].specify_dataset(name=...).specify_attrs(dict(standard_name=IsValidStandardName(),
                                                             units=IsValidUnit()))

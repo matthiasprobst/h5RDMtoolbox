@@ -13,14 +13,14 @@ import h5py
 from typing import Callable, Union
 
 from . import standard_attribute
-from . import units, long_name, standard_name, title, comment, references, source, respuser
+from . import units, long_name, standard_name, title, comment, references, source, contact
 from ._logger import logger
 from .standard_attribute import StandardAttribute
 from .standard_name import StandardName, StandardNameTable
 from .utils import dict2xml, is_valid_email_address
 from .._repr import make_italic, make_bold
 
-__all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'respuser']
+__all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'contact.py']
 
 
 # def list_standard_attributes(obj: Callable = None):

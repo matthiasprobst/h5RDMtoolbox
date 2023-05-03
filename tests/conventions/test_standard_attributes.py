@@ -403,12 +403,12 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_responsible_person(self):
         orcid = '0000-0001-8729-0482'
-        self.assertTrue(conventions.respuser.is_valid_orcid_pattern(orcid))
-        self.assertFalse(conventions.respuser.is_valid_orcid_pattern('123-123-123-123'))
-        self.assertFalse(conventions.respuser.is_valid_orcid_pattern(orcid[0:-1]))
-        self.assertTrue(conventions.respuser.exist(orcid))
+        self.assertTrue(conventions.contact.is_valid_orcid_pattern(orcid))
+        self.assertFalse(conventions.contact.is_valid_orcid_pattern('123-123-123-123'))
+        self.assertFalse(conventions.contact.is_valid_orcid_pattern(orcid[0:-1]))
+        self.assertTrue(conventions.contact.exist(orcid))
         not_existing_orcid = '0000-0001-5747-0739'
-        self.assertFalse(conventions.respuser.exist(not_existing_orcid))
+        self.assertFalse(conventions.contact.exist(not_existing_orcid))
 
     def test_standard_name_assignment(self):
         translation_dict = {'u': 'x_velocity'}

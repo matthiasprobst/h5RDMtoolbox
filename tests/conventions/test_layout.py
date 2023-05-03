@@ -28,7 +28,7 @@ class TestLayout(unittest.TestCase):
             lay.validate(h5)
             lay.report()
             print(lay.get_failed_validations())
-            self.assertTrue(lay.is_validated)
+            self.assertFalse(lay.is_validated)
 
     def test_validators(self):
         e = Equal(1)

@@ -99,8 +99,8 @@ class H5tbxConfig:
         If True, expose user properties to HDF5 attributes. Say, `user` is a property of `File`,
         then the following two lines are equivalent:
         >>> with File() as h5:
-        >>>     file.responsible_person
-        >>>     file.attrs['responsible_person']
+        >>>     file.contact
+        >>>     file.attrs['contact']
         Default is True.
     """
     return_xarray: bool = True

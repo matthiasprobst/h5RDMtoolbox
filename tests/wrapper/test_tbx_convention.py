@@ -12,7 +12,7 @@ import yaml
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import config, tutorial
 from h5rdmtoolbox._config import ureg
-from h5rdmtoolbox.conventions import respuser, standard_name
+from h5rdmtoolbox.conventions import contact, standard_name
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
@@ -117,17 +117,17 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             self.assertIsInstance(attr_str, AttributeString)
             grp.attrs['mystr'] = attr_str
 
-            with self.assertRaises(respuser.OrcidError):
+            with self.assertRaises(contact.OrcidError):
                 h5.create_dataset('time', data=np.linspace(0, 1, 10),
                                   units='s', long_name='time',
-                                  make_scale=True, responsible_person='matze')
+                                  make_scale=True, contact='matze')
             self.assertNotIn('time', h5)
             ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
                                          units='s', long_name='time',
-                                         make_scale=True, responsible_person='0000-0000-0000-0000',
+                                         make_scale=True, contact='0000-0000-0000-0000',
                                          overwrite=True)
-            self.assertEqual(ds_scale.responsible_person, '0000-0000-0000-0000')
-            self.assertEqual(ds_scale.attrs['responsible_person'], '0000-0000-0000-0000')
+            self.assertEqual(ds_scale.contact, '0000-0000-0000-0000')
+            self.assertEqual(ds_scale.attrs['contact'], '0000-0000-0000-0000')
 
             h5.create_dataset('ds', data=1, standard_name='x_coordinate', units='m')
             sn = h5['ds'].attrs['standard_name']
@@ -737,10 +737,10 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      institution=self.default_institution,
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
-            with self.assertRaises(respuser.OrcidError):
-                h5.responsible_person = '000-123'
-            h5.attrs['responsible_person'] = '0000-1233-1234-1234'
-            self.assertEqual(h5.attrs['responsible_person'], '0000-1233-1234-1234')
+            with self.assertRaises(contact.OrcidError):
+                h5.contact = '000-123'
+            h5.attrs['contact'] = '0000-1233-1234-1234'
+            self.assertEqual(h5.attrs['contact'], '0000-1233-1234-1234')
 
     def tearDown(self) -> None:
         """cleanup all files created during tests"""

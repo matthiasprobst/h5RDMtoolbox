@@ -2,6 +2,7 @@ import re
 import requests
 from typing import List
 
+from ._logger import logger
 from .standard_attribute import StandardAttribute
 
 ORCID_PATTERN: str = '^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$'
@@ -17,22 +18,43 @@ def is_valid_orcid_pattern(orcid_str: str) -> bool:
 
 
 def exist(orcid: str) -> bool:
-    """Check if the ORCID exists"""
-    if not is_valid_orcid_pattern(orcid):
-        raise OrcidError(f'Not an ORCID ID: {orcid}')
-    url = f'https://orcid.org/{orcid}'
+    """Check if the ORCID exists by querying the ORCID API.
+
+    Parameters
+    ----------
+    orcid: str
+        ORCID to check. May be an URL or an ORCID ID.
+
+    Returns
+    -------
+    bool
+        True if the ORCID exists, False otherwise.
+    """
+    if not isinstance(orcid, str):
+        raise TypeError(f'Expecting a string representing an ORCID but got {type(orcid)}')
+    if orcid.startswith('https://orcid.org/'):
+        orcid_id = orcid.split('https://orcid.org/')[1]
+        if not is_valid_orcid_pattern(orcid_id):
+            logger.error(f'Not an ORCID ID: {orcid_id}')
+            return False
+        # orcid ID is ok, let the requests package handle the rest
+        url = orcid
+    else:
+        if not is_valid_orcid_pattern(orcid):
+            raise OrcidError(f'Not an ORCID ID: {orcid}')
+        url = f'https://orcid.org/{orcid}'
     headers = {'Accept': 'application/vnd.orcid+json'}
     response = requests.get(url, headers=headers)
-    if response.status_code == 200:
+    if response.status_code == 200:  # 200=OK
         return True
     return False
 
 
-class RespUserAttribute(StandardAttribute):
+class ContactAttribute(StandardAttribute):
     """RespUser can be one or multiple persons in charge or related to the
     file, group or dataset"""
 
-    name = 'responsible_person'
+    name = 'contact'
 
     def get(self):
         """Get user"""
@@ -40,7 +62,8 @@ class RespUserAttribute(StandardAttribute):
         return user
 
     def set(self, orcid):
-        """Add user
+        """Add contact
+
         Parameters
         ----------
         orcid: str or List[str]
