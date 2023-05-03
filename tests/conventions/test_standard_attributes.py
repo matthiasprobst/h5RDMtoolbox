@@ -428,7 +428,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.name, 'test')
         self.assertEqual(table.version_number, 1)
         self.assertEqual(table.institution, 'ITS')
-        self.assertEqual(table.contact, 'matthias.probst@kit.edu')
+        self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(table.valid_characters, '')
         self.assertEqual(table.pattern, '')
         self.assertIsInstance(table._table, DictConfig)
@@ -496,7 +496,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.name, 'test')
         self.assertEqual(table.version_number, 1)
         self.assertEqual(table.institution, 'ITS')
-        self.assertEqual(table.contact, 'matthias.probst@kit.edu')
+        self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(table.valid_characters, '')
         self.assertEqual(table.pattern, '')
         self.assertIsInstance(table._table, DictConfig)
@@ -576,7 +576,7 @@ class TestStandardAttributes(unittest.TestCase):
     def test_merge(self):
         registered_snts = standard_name.StandardNameTable.get_registered()
         new_snt = standard_name.merge(registered_snts, name='newtable', institution=None,
-                                      version_number=1, contact='matthias.probst@kit.edu')
+                                      version_number=1, contact='https://orcid.org/0000-0001-8729-0482')
         self.assertTrue(new_snt.name, 'newtable')
 
     def test_empty_SNT(self):
@@ -584,7 +584,7 @@ class TestStandardAttributes(unittest.TestCase):
                                               table=None,
                                               version_number=1,
                                               institution='my_institution',
-                                              contact='mycontact@gmail.com')
+                                              contact='https://orcid.org/0000-0001-8729-0482')
         self.assertIsInstance(snt.table, dict)
         self.assertEqual(snt.filename, None)
 
@@ -594,4 +594,4 @@ class TestStandardAttributes(unittest.TestCase):
                                             table=None,
                                             version_number=1,
                                             institution='my_institution',
-                                            contact='mycontact')
+                                            contact='https://orcid.org/9999-9999-9999-9999')

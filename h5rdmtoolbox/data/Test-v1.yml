@@ -1,7 +1,7 @@
 name: Test
 version_number: 1
 institution: my_institution
-contact: contact@python.com
+contact: 'https://orcid.org/0000-0001-8729-0482'
 valid_characters: ''
 pattern: ''
 last_modified: 2022-09-26_20:46:26

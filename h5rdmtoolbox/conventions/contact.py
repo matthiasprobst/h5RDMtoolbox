@@ -41,7 +41,8 @@ def exist(orcid: str) -> bool:
         url = orcid
     else:
         if not is_valid_orcid_pattern(orcid):
-            raise OrcidError(f'Not an ORCID ID: {orcid}')
+            logger.error(f'Not an ORCID ID: {orcid}')
+            return False
         url = f'https://orcid.org/{orcid}'
     headers = {'Accept': 'application/vnd.orcid+json'}
     response = requests.get(url, headers=headers)

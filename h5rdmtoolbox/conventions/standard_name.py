@@ -29,7 +29,7 @@ from typing import Dict, Union, List, Tuple
 
 from ._logger import logger
 from .standard_attribute import StandardAttribute
-from .utils import equal_base_units, is_valid_email_address, dict2xml, get_similar_names_ratio, check_url
+from .utils import equal_base_units, dict2xml, get_similar_names_ratio, check_url, is_valid_email_address
 from .. import cache
 from .._config import ureg
 from .._user import UserDir
@@ -408,11 +408,13 @@ class StandardNameTable(MinimalStandardNameTable):
     institution: str
         Institution that maintains the standard name table
     contact: str
-        Contact person of the institution
+        Contact person(s) of the institution. Must be a valid ORCID ID.
 
         .. note::
 
-            The email address is validated on common email address patterns.
+            The CF-convention uses email. We use an ORCID, which gives way more information. Even if the person
+            retiered from the project, the ORCID will still be valid and additional infomration in that profile
+            will help indentifying an existing and helping contact.
 
     last_modified: str
         Date of last modification of the standard name table
@@ -432,7 +434,7 @@ class StandardNameTable(MinimalStandardNameTable):
     >>>             name='Test_SNC',
     >>>             table={},
     >>>             version_number=1,
-    >>>             contact='contact@python.com',
+    >>>             contact='https://orcid.org/0000-0001-8729-0482',
     >>>             institution='my_institution'
     >>>             )
     >>> sc
@@ -487,11 +489,15 @@ class StandardNameTable(MinimalStandardNameTable):
 
     @contact.setter
     def contact(self, contact):
-        """Set contact (email)"""
-        if not isinstance(contact, str):
-            raise ValueError(f'Invalid type for contact Expcting str but got {type(contact)}')
-        if not is_valid_email_address(contact):
-            raise EmailError(f'Invalid email address: {contact}')
+        """Set contact (ORCID ID)"""
+        from .contact import exist as is_valid_orcid
+        is_email = is_valid_email_address(contact)
+        is_orcid = is_valid_orcid(contact)
+        if not is_orcid and not is_email:
+            if not is_orcid:
+                raise ValueError(f'Invalid ORCID ID: {contact}')
+            if not is_email:
+                raise ValueError(f'Invalid email address: {contact}')
         self._contact = contact
 
     @property
@@ -557,12 +563,25 @@ class StandardNameTable(MinimalStandardNameTable):
         """Compare versionname"""
         return self.versionname == other.versionname
 
-    def get_table(self, sort_by: str = 'name', maxcolwidths=None) -> str:
+    def get_table(self, sort_by: str = 'name', **kwargs) -> str:
         """string representation of the SNT in form of a table"""
         try:
             from tabulate import tabulate
         except ImportError:
             raise ImportError('Package "tabulate" is missing.')
+        df = pd.DataFrame(self.table).T
+        if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
+            sorted_df = df.sort_index()
+        elif sort_by.lower() in ('units', 'unit', 'canoncial_units'):
+            sorted_df = df.sort_values('canonical_units')
+        else:
+            sorted_df = df
+        tablefmt = kwargs.pop('tablefmt', 'psql')
+        headers = kwargs.pop('headers', 'keys')
+        return tabulate(sorted_df, headers=headers, tablefmt=tablefmt, **kwargs)
+
+    def sdump(self, sort_by: str = 'name', maxcolwidths=None) -> None:
+        """Dumps (prints) the content as string"""
         if self._name is None:
             name = self.__class__.__name__
         else:
@@ -571,19 +590,7 @@ class StandardNameTable(MinimalStandardNameTable):
             version = self._version_number
         else:
             version = 'None'
-        df = pd.DataFrame(self.table).T
-        if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
-            sorted_df = df.sort_index()
-        elif sort_by.lower() in ('units', 'unit', 'canoncial_units'):
-            sorted_df = df.sort_values('canonical_units')
-        else:
-            sorted_df = df
-        _table = tabulate(sorted_df, headers='keys', tablefmt='psql', maxcolwidths=maxcolwidths)
-        return f"{name} (version: {version})\n{_table}"
-
-    def sdump(self, sort_by: str = 'name', maxcolwidths=None) -> None:
-        """Dumps (prints) the content as string"""
-        print(self.get_table(sort_by=sort_by, maxcolwidths=maxcolwidths))
+        print(f"{name} (version: {version})\n{self.get_table}")
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
@@ -1111,7 +1118,7 @@ Empty_Standard_Name_Table = StandardNameTable(name='EmptyStandardNameTable',
                                               table={},
                                               version_number=0,
                                               institution=None,
-                                              contact='none@none.none',
+                                              contact='https://orcid.org/0000-0001-8729-0482',
                                               last_modified=None,
                                               valid_characters='')
 
