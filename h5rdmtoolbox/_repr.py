@@ -1,11 +1,10 @@
-import os
-from abc import abstractmethod
-from time import perf_counter_ns
-
 import h5py
+import os
 import pkg_resources
 from IPython.display import HTML, display
+from abc import abstractmethod
 from numpy import ndarray
+from time import perf_counter_ns
 
 from . import config
 
@@ -57,9 +56,11 @@ def warningtext(string):
     """make string orange"""
     return f"{BColors.WARNING}{string}{BColors.ENDC}"
 
+
 def failtext(string):
     """make string red"""
     return f"{BColors.FAIL}{string}{BColors.ENDC}"
+
 
 def failprint(string):
     """print string in red"""
@@ -69,6 +70,7 @@ def failprint(string):
 def oktext(string):
     """make string green"""
     return f"{BColors.OKGREEN}{string}{BColors.ENDC}"
+
 
 def okprint(string):
     """print string in red"""
@@ -358,6 +360,10 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         if isinstance(_value, ndarray):
             _value_str = _value.__str__().replace("' '", "', '")
+        elif isinstance(_value, str):
+            if _value.startswith('http://') or _value.startswith('https://') or \
+                    _value.startswith('ftp') or _value.startswith('www.'):
+                _value_str = f'<a href="{_value}">{_value}</a>'
         else:
             _value_str = _value
 
