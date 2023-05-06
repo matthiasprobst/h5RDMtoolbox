@@ -1734,7 +1734,7 @@ class File(h5py.File, Group, ConventionAccesor):
 
         if attrs is None:
             attrs = {}
-        attrs, skwargs, kwargs = process_attributes('init_file', attrs, kwargs)
+        attrs, skwargs, kwargs = process_attributes('__init__', attrs, kwargs)
         _tmp_init = False
 
         if _tmp_init:

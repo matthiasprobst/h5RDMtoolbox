@@ -109,19 +109,19 @@ class Convention:
                                    prop=prop,
                                    method=method)
 
-    def add(self,
-            attr_cls: StandardAttribute,
-            target_cls: Callable,
-            target_property: str,
-            method: str,
-            add_to_method: Union[bool, str] = False,
-            position: dict = None,
-            optional: bool = False,
-            alt: str = None,
-            default_value: str = None,
-            name: str = None,
-            overwrite: bool = False
-            ):
+    def _add(self,
+             attr_cls: StandardAttribute,
+             target_cls: Callable,
+             target_property: str,
+             method: str,
+             add_to_method: Union[bool, str] = False,
+             position: dict = None,
+             optional: bool = False,
+             alt: str = None,
+             default_value: str = None,
+             name: str = None,
+             overwrite: bool = False
+             ):
         """Add a standard attribute to a class and modify signature of the methods if required.
 
         Parameters
@@ -187,7 +187,8 @@ class Convention:
 
             if name in self._properties[target_property] and not overwrite:
                 raise AttributeError(
-                    f'Cannot register property {name} to {prop} because it has already a property with this name.')
+                    f'Cannot register property {name} to {target_property} because it has already a property with '
+                    'this name.')
 
             self._properties[target_property][name] = attr_cls
             logger.debug(f'Register special hdf std_attr {name} as property to class {target_property}')
@@ -268,17 +269,17 @@ class ConventionInterface:
             ):
         """Add a standard attribute to a HDF5 object File"""
 
-        self.convention.add(attr_cls=attr_cls,
-                            target_cls=self.cls,
-                            target_property=self.prop,
-                            method=self.method,
-                            add_to_method=add_to_method,
-                            position=position,
-                            optional=optional,
-                            alt=alt,
-                            default_value=default_value,
-                            name=name,
-                            overwrite=overwrite)
+        self.convention._add(attr_cls=attr_cls,
+                             target_cls=self.cls,
+                             target_property=self.prop,
+                             method=self.method,
+                             add_to_method=add_to_method,
+                             position=position,
+                             optional=optional,
+                             alt=alt,
+                             default_value=default_value,
+                             name=name,
+                             overwrite=overwrite)
 
 
 # class __Convention(_Convention):

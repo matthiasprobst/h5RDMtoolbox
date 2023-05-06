@@ -21,11 +21,10 @@ class TestConventions(unittest.TestCase):
             with self.assertRaises(AttributeError):
                 title = h5.title
         cv = h5tbx.conventions.Convention('test')
-        cv.add(attr_cls=h5tbx.conventions.title.TitleAttribute,
-               target_cls=h5tbx.File,
-               add_to_method=True,
-               position={'before': 'layout'},
-               optional=True)
+        cv['__init__'].add(attr_cls=h5tbx.conventions.title.TitleAttribute,
+                           add_to_method=True,
+                           position={'before': 'layout'},
+                           optional=True)
         cv.register()
         h5tbx.use('test')
         with h5tbx.File() as h5:
@@ -39,7 +38,7 @@ class TestConventions(unittest.TestCase):
 
         cv = h5tbx.conventions.Convention('test')
         with self.assertRaises(TypeError):
-            cv.add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
+            cv['__init__'].add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
 
         class TitleAttribute:
             """Title attribute"""
@@ -51,7 +50,7 @@ class TestConventions(unittest.TestCase):
 
         cv = h5tbx.conventions.Convention('test')
         with self.assertRaises(TypeError):
-            cv.add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
+            cv['__init__'].add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
 
         class TitleAttribute:
             """Title attribute"""
@@ -67,17 +66,13 @@ class TestConventions(unittest.TestCase):
 
         cv = h5tbx.conventions.Convention('test')
         with self.assertRaises(TypeError):
-            cv.add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
+            cv['__init__'].add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
 
         class TitleAttribute(h5tbx.conventions.standard_name.StandardAttribute):
             """Title attribute"""
             name = 'title'
 
-        cv.add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
+        cv['__init__'].add(attr_cls=TitleAttribute, add_to_method=True)
         # add another time fails
         with self.assertRaises(AttributeError):
-            cv.add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
-
-        # add again fails
-        with self.assertRaises(TypeError):
-            cv.add(attr_cls=TitleAttribute, target_cls=unittest.TestCase)
+            cv['__init__'].add(attr_cls=TitleAttribute, add_to_method=True)
