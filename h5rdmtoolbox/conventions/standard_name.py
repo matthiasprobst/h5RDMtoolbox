@@ -173,6 +173,9 @@ class StandardName:
     def __repr__(self):
         return f'<StandardName: {self.name} [{self.canonical_units}] | SNT: {self.snt.name} | desc: {self.description}>'
 
+    def __str__(self):
+        return self.name
+
     def __eq__(self, other):
         if isinstance(other, StandardName):
             return all([self.name == other.name,
@@ -580,7 +583,7 @@ class StandardNameTable(MinimalStandardNameTable):
         headers = kwargs.pop('headers', 'keys')
         return tabulate(sorted_df, headers=headers, tablefmt=tablefmt, **kwargs)
 
-    def sdump(self, sort_by: str = 'name', maxcolwidths=None) -> None:
+    def sdump(self, sort_by: str = 'name', **kwargs) -> None:
         """Dumps (prints) the content as string"""
         if self._name is None:
             name = self.__class__.__name__
@@ -590,7 +593,7 @@ class StandardNameTable(MinimalStandardNameTable):
             version = self._version_number
         else:
             version = 'None'
-        print(f"{name} (version: {version})\n{self.get_table}")
+        print(f"{name} (version: {version})\n{self.get_table(sort_by, **kwargs)}")
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""

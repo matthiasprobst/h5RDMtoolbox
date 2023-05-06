@@ -1,26 +1,25 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
-import logging
-import os
-import pathlib
-import shutil
-import warnings
-from collections.abc import Iterable
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import List, Dict, Union, Tuple, Callable
-
 import h5py
+import logging
 import numpy as np
+import os
 import pandas as pd
+import pathlib
 # noinspection PyUnresolvedReferences
 import pint
+import shutil
+import warnings
 import xarray as xr
 import yaml
+from collections.abc import Iterable
+from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
+from pathlib import Path
 from tqdm import tqdm
+from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -79,7 +78,9 @@ def lower(string: str) -> Lower:
 def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
     # go through list of registered standard attributes, and check whether they are in kwargs:
-    kwargs, skwargs = _pop_standard_attributes(kwargs, cache_entry=conventions.current_convention._methods[meth_name])
+    kwargs, skwargs = _pop_standard_attributes(
+        kwargs, cache_entry=conventions.current_convention._methods[meth_name]
+    )
 
     # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
     for skey, vas in skwargs.items():
@@ -120,7 +121,9 @@ class ConventionAccesor:
 
     @property
     def standard_attributes(self) -> Dict:
-        return self.convention._properties[self.__class__]
+        if len(self.convention._properties) == 0:
+            return {}
+        return self.convention._properties[self.__class__.__name__]
 
 
 class Group(h5py.Group, ConventionAccesor):
@@ -134,6 +137,9 @@ class Group(h5py.Group, ConventionAccesor):
                 del self.attrs[item]
                 return
         super().__delattr__(item)
+
+    # def __dir__(self):
+    #     return super().__dir__() + list(self.standard_attributes.keys())
 
     @property
     def attrs(self):

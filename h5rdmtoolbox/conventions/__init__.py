@@ -7,7 +7,6 @@ The standrd name definitions (name, description, units) are to be provided in XM
 are provided by this sub-packages (fluid and piv). As the projec is under development, they are generated
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
-
 import forge
 import h5py
 from typing import Callable, Union
@@ -20,7 +19,7 @@ from .standard_name import StandardName, StandardNameTable
 from .utils import dict2xml, is_valid_email_address
 from .._repr import make_italic, make_bold
 
-__all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'contact.py']
+__all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'contact']
 
 
 # def list_standard_attributes(obj: Callable = None):
@@ -52,19 +51,27 @@ class StandardAttributeError(Exception):
 
 
 class Convention:
-    """A convention is a set of standard attributes that are used to describe the data in a file."""
 
     def __init__(self, name):
+        from ..wrapper.core import File, Group, Dataset
         self.name = name
         self._properties = {}
-        self._methods = {'init_file': {},
+        self._methods = {'__init__': {},
                          'create_group': {},
                          'create_dataset': {},
                          'create_string_dataset': {}}
+        self.method_cls_assignment = {'__init__': File,
+                                      'create_group': Group,
+                                      'create_dataset': Group,
+                                      'create_string_dataset': Group}
+        self.property_cls_assignment = {'__init__': File,
+                                        'create_group': Group,
+                                        'create_dataset': Dataset,
+                                        'create_string_dataset': Dataset}
 
     def __repr__(self):
         header = f'Convention({self.name})'
-        out = f'{make_bold(header)}\n'
+        out = f'{make_bold(header)}'
 
         header = make_bold('\n> Properties')
         out += f'{header}:'
@@ -92,35 +99,21 @@ class Convention:
         out += '\n'
         return out
 
-    #
-    # def make_optional(self, method, attr_name, default_value=None):
-    #     """Make a standard attribute optional in the signature of a method.
-    #
-    #     Parameters
-    #     ----------
-    #     attr_name : str
-    #         The name of the standard attribute
-    #     """
-    #     if method not in self._methods:
-    #         raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered.'
-    #                          f'Allowed methods are: {self._methods.keys()}')
-    #     if attr_name not in self._methods[method]:
-    #         raise ValueError(f'Cannot make {attr_name} optional because it is not registered.')
-    #     self._methods[method][attr_name]['optional'] = True
-    #     self._methods[method][attr_name]['default'] = default_value
-    #
-    # def make_required(self, method, attr_name):
-    #     """Make a standard attribute required in the signature of a method."""
-    #     if method not in self._methods:
-    #         raise ValueError(f'Cannot make {attr_name} optional because method {method} is not registered. '
-    #                          f'Allowed methods are: {self._methods.keys()}')
-    #     if attr_name not in self._methods[method]:
-    #         raise ValueError(f'Cannot make {attr_name} required because it is not registered.')
-    #     self._methods[method][attr_name]['optional'] = False
+    def __getitem__(self, method):
+        # get the class from the method the user wants to add a standard attribute to
+        cls = self.method_cls_assignment[method]
+        # get the class for which the standard attribute is added as property
+        prop = self.property_cls_assignment[method]
+        return ConventionInterface(self,
+                                   cls=cls,
+                                   prop=prop,
+                                   method=method)
 
     def add(self,
             attr_cls: StandardAttribute,
             target_cls: Callable,
+            target_property: str,
+            method: str,
             add_to_method: Union[bool, str] = False,
             position: dict = None,
             optional: bool = False,
@@ -186,47 +179,34 @@ class Convention:
             if not issubclass(cls, (h5py.File, h5py.Group, h5py.Dataset)):
                 raise TypeError(f'{cls} is not a valid HDF5 class')
 
-            if cls not in self._properties:
-                self._properties[cls] = {}
+            if target_property not in self._properties:
+                self._properties[target_property] = {}
 
-            if overwrite and name in self._properties[cls]:
-                del self._properties[cls][name]
+            if overwrite and name in self._properties[target_property]:
+                del self._properties[target_property][name]
 
-            if name in self._properties[cls] and not overwrite:
+            if name in self._properties[target_property] and not overwrite:
                 raise AttributeError(
-                    f'Cannot register property {name} to {cls} because it has already a property with this name.')
-            self._properties[cls][name] = attr_cls
-            logger.debug(f'Register special hdf std_attr {name} to {cls}')
+                    f'Cannot register property {name} to {prop} because it has already a property with this name.')
+
+            self._properties[target_property][name] = attr_cls
+            logger.debug(f'Register special hdf std_attr {name} as property to class {target_property}')
+
+            if cls not in self._methods:
+                self._methods[cls] = {}
+
+            if method not in self._methods[cls]:
+                self._methods[cls][method] = {}
 
             if add_to_method:
-                from ..wrapper.core import Dataset, Group, File
-                if Dataset in cls.__mro__:
-                    if isinstance(add_to_method, str):
-                        method = add_to_method
-                    else:
-                        method = 'create_dataset'
-                    if name not in self._methods[method]:
-                        self._methods[method][name] = {'cls': cls,
-                                                       'optional': optional,
-                                                       'default': default_value,
-                                                       'position': position,
-                                                       'alt': alt}
-                    continue
-                if File in cls.__mro__:
-                    if name not in self._methods['init_file']:
-                        self._methods['init_file'][name] = {'cls': cls,
-                                                            'optional': optional,
-                                                            'default': default_value,
-                                                            'position': position,
-                                                            'alt': alt}
-                    continue
-                if Group in cls.__mro__:
-                    if name not in self._methods['create_group']:
-                        self._methods['create_group'][name] = {'cls': cls,
-                                                               'optional': optional,
-                                                               'default': default_value,
-                                                               'position': position,
-                                                               'alt': alt}
+                if method not in cls.__dict__:
+                    raise AttributeError(f'Cannot add standard attribute {name} to method {method} of {cls} because it '
+                                         f'does not exist.')
+                self._methods[cls][method][name] = {'cls': cls,
+                                                    'optional': optional,
+                                                    'default': default_value,
+                                                    'position': position,
+                                                    'alt': alt}
 
     def _add_signature(self):
         for name, values in self._methods['create_string_dataset'].items():
@@ -241,7 +221,7 @@ class Convention:
             from ..wrapper.core import Group
             Group.create_group = forge.insert(forge.arg(f'{name}', default=values['default']),
                                               **values['position'])(Group.create_group)
-        for name, values in self._methods['init_file'].items():
+        for name, values in self._methods['__init__'].items():
             from ..wrapper.core import File
             File.__init__ = forge.insert(forge.arg(f'{name}', default=values['default']),
                                          **values['position'])(File.__init__)
@@ -256,12 +236,71 @@ class Convention:
         for name, values in self._methods['create_group'].items():
             from ..wrapper.core import Group
             Group.create_group = forge.delete(f'{name}')(Group.create_group)
-        for name, values in self._methods['init_file'].items():
+        for name, values in self._methods['__init__'].items():
             from ..wrapper.core import File
             File.__init__ = forge.delete(f'{name}')(File.__init__)
 
     def register(self):
         registered_conventions[self.name] = self
+
+
+class ConventionInterface:
+
+    def __init__(self,
+                 convention: Convention,
+                 cls,
+                 prop,
+                 method):
+        self.convention = convention
+        self.method = method
+        self.prop = prop
+        self.cls = cls
+
+    def add(self,
+            attr_cls: StandardAttribute,
+            add_to_method: bool,
+            position: dict = None,
+            optional: bool = False,
+            alt: str = None,
+            default_value: str = None,
+            name: str = None,
+            overwrite: bool = False
+            ):
+        """Add a standard attribute to a HDF5 object File"""
+
+        self.convention.add(attr_cls=attr_cls,
+                            target_cls=self.cls,
+                            target_property=self.prop,
+                            method=self.method,
+                            add_to_method=add_to_method,
+                            position=position,
+                            optional=optional,
+                            alt=alt,
+                            default_value=default_value,
+                            name=name,
+                            overwrite=overwrite)
+
+
+# class __Convention(_Convention):
+#     """A convention is a set of standard attributes that are used to describe the data in a file."""
+#
+#     @property
+#     def File(self) -> H5ObjConventionInterface:
+#         """File as the target class is passed the the HDF5 Object Convention Interface class"""
+#         from ..wrapper.core import File
+#         return H5ObjConventionInterface(self, cls=File)
+#
+#     @property
+#     def Dataset(self) -> H5ObjConventionInterface:
+#         """Dataset as the target class is passed the the HDF5 Object Convention Interface class"""
+#         from ..wrapper.core import Dataset
+#         return H5ObjConventionInterface(self, cls=Dataset)
+#
+#     @property
+#     def Group(self) -> H5ObjConventionInterface:
+#         """Group as the target class is passed the the HDF5 Object Convention Interface class"""
+#         from ..wrapper.core import Group
+#         return H5ObjConventionInterface(self, cls=Group)
 
 
 def use(convention_name: str) -> None:
