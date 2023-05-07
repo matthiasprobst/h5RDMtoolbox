@@ -83,7 +83,10 @@ class Regex(Validator):
     def __init__(self, reference: str, optional: bool = False):
         super().__init__(reference, optional=optional, sign='=')
 
-    def validate(self, value):
+    def validate(self, value: str):
+        """match the value against the reference regex"""
+        if not isinstance(value, str):
+            return False
         if self.is_optional:
             return True
         return re.match(self.reference, value) is not None
