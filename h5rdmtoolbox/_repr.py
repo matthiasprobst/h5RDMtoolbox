@@ -1,6 +1,7 @@
 import h5py
 import os
 import pkg_resources
+import typing
 from IPython.display import HTML, display
 from abc import abstractmethod
 from numpy import ndarray
@@ -75,6 +76,33 @@ def oktext(string):
 def okprint(string):
     """print string in red"""
     print(oktext(string))
+
+
+def process_string_for_link(string: str) -> typing.Union[str, bool]:
+    """process string to make links actually clickable in html
+
+    Parameters
+    ----------
+    string: str
+        string to process
+
+    Returns
+    -------
+    str
+        processed string
+    bool
+        True if string actually contains a link
+
+    """
+    import re
+    for p in ("(https?://\S+)", "(ftp://\S+)", "(www\.\S+)"):
+        pattern = re.compile(p)
+        match = re.search(pattern, string)
+        if match:
+            url = match.group(0)
+            return string.replace(url, f'<a href="{url}">{url}</a>'), True
+
+    return string, False
 
 
 class _HDF5StructureRepr:
@@ -346,13 +374,15 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                             _value[i] = f'{v[0:self.max_attr_length]}...'
         else:
             _value_str = f'{value}'
-            if self.max_attr_length:
-                if len(_value_str) > self.max_attr_length:
-                    _value = f'{_value_str[0:self.max_attr_length]}...'
+            _value, is_url = process_string_for_link(_value_str)
+            if not is_url:
+                if self.max_attr_length:
+                    if len(_value_str) > self.max_attr_length:
+                        _value = f'{_value_str[0:self.max_attr_length]}...'
+                    else:
+                        _value = value
                 else:
                     _value = value
-            else:
-                _value = value
 
         if key in ('DIMENSION_LIST', 'REFERENCE_LIST'):
             _value = _value.__str__().replace('<', '&#60;')
@@ -360,10 +390,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         if isinstance(_value, ndarray):
             _value_str = _value.__str__().replace("' '", "', '")
-        elif isinstance(_value, str):
-            if _value.startswith('http://') or _value.startswith('https://') or \
-                    _value.startswith('ftp') or _value.startswith('www.'):
-                _value_str = f'<a href="{_value}">{_value}</a>'
+        # elif isinstance(_value, str):
+        #     _value_str = process_string_for_link(_value)
         else:
             _value_str = _value
 

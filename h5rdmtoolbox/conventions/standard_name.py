@@ -458,7 +458,7 @@ class StandardNameTable(MinimalStandardNameTable):
                  url: str = None,
                  alias: Dict = None):
         super().__init__(name, table, valid_characters, pattern)
-        self._version_number = version_number
+        self._version_number = int(version_number)
         self._institution = institution
         self.contact = contact
         self._filename = None
@@ -470,6 +470,7 @@ class StandardNameTable(MinimalStandardNameTable):
         else:
             self._last_modified = last_modified
         self._alias = alias
+        self._gitlab = {}
 
     @property
     def alias(self) -> Union[Dict, DictConfig]:
@@ -532,9 +533,22 @@ class StandardNameTable(MinimalStandardNameTable):
             version = 'None'
         else:
             version = self._version_number
-        return f"{name} (version number: {version})"
+        return f"{name} (version number: {version}, url: {self.url})"
 
     def __str__(self):
+        if self.url:
+            if self._gitlab:
+                try:
+                    import gitlab
+                except ImportError:
+                    return json.dumps(self._gitlab)
+                try:
+                    gl = gitlab.Gitlab(self._gitlab['url'], private_token=None)
+                    pl = gl.projects.get(id=self._gitlab['project_id'])
+                    return pl.readme_url.rsplit('/', 1)[0] + '/' + self._gitlab['file_path']
+                except:
+                    return json.dumps(self._gitlab)
+            return self.url
         return self.name
 
     def __getitem__(self, item) -> StandardName:
@@ -842,11 +856,15 @@ class StandardNameTable(MinimalStandardNameTable):
             pl.files.raw(file_path=file_path, ref=ref_name, streamed=True, action=f.write)
 
         if file_path.endswith('.yaml') or file_path.endswith('.yml'):
-            return StandardNameTable.from_yaml(tmpfilename)
-        if file_path.endswith('.xml'):
-            return StandardNameTable.from_xml(tmpfilename)
-        raise NotImplementedError(f'Cannot handle file name extension {file_path.rsplit(".", 1)[1]}. '
-                                  'Expected yml/yaml or xml')
+            snt = StandardNameTable.from_yaml(tmpfilename)
+        elif file_path.endswith('.xml'):
+            snt = StandardNameTable.from_xml(tmpfilename)
+        else:
+            raise NotImplementedError(f'Cannot handle file name extension {file_path.rsplit(".", 1)[1]}. '
+                                      'Expected yml/yaml or xml')
+        snt.url = url
+        snt._gitlab = dict(url=url, project_id=project_id, ref_name=ref_name, file_path=file_path)
+        return snt
 
     @staticmethod
     def from_dict(d: dict) -> "StandardNameTable":
@@ -1186,8 +1204,8 @@ class StandardNameTableAttribute(StandardAttribute):
         if isinstance(snt, str):
             StandardNameTable.print_registered()
             if snt[0] == '{':
-                sntdict = json.loads(snt)
-                snt = StandardNameTable.from_dict(sntdict)
+                snt_dict = json.loads(snt)
+                snt = StandardNameTable.from_dict(snt_dict)
             else:
                 snt = StandardNameTable.load_registered(snt)
 
@@ -1199,7 +1217,11 @@ class StandardNameTableAttribute(StandardAttribute):
         if snt.STORE_AS == StandardNameTableStoreOption.none:
             if snt.url:
                 if check_url(snt.url):
-                    return super().set(value=snt.url, target=self.parent.rootparent)
+                    if snt._gitlab:  # snt came from gitlab project
+                        # save the gitlab dictionary as json string in the attribute
+                        return super().set(value=json.dumps(snt._gitlab), target=self.parent.rootparent)
+                    else:
+                        return super().set(value=snt.url, target=self.parent.rootparent)
                 else:
                     warnings.warn(f'URL {snt.url} does not exist. Cannot set standard name table.')
             else:
@@ -1230,5 +1252,9 @@ class StandardNameTableAttribute(StandardAttribute):
             raise AttributeError(f'No standard name table found for file {self.parent.file.filename}')
 
         if snt.startswith('{'):
-            return json.loads(snt)
+            snt_dict = json.loads(snt)
+            if set(("url", "project_id", "ref_name", "file_path")).issubset(snt_dict):
+                # it is a gitlab project
+                return StandardNameTable.from_gitlab(**snt_dict)
+            return snt_dict
         return StandardNameTable.from_web(snt)

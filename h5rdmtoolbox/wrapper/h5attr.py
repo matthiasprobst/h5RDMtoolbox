@@ -128,8 +128,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 if name in conventions.current_convention._properties[parent.__class__]:
                     try:
                         return conventions.current_convention._properties[parent.__class__][name](parent).set(value)
-                    except TypeError:
-                        raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}"')
+                    except TypeError as e:
+                        raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)
 
     def __repr__(self):
@@ -200,3 +200,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 if k.startswith('__') and k.endswith('__'):
                     continue
             print(f'{k:{keylen}}:  {v}')
+
+    @property
+    def raw(self) -> "h5py._hl.attrs.AttributeManager":
+        """Return the original h5py attribute object manager"""
+        from h5py._hl import attrs
+        from h5py._objects import phil
+        with phil:
+            return attrs.AttributeManager(self._parent)

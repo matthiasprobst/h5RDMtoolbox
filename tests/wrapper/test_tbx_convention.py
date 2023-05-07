@@ -1,13 +1,12 @@
-import logging
-import unittest
-from pathlib import Path
-
 import h5py
+import logging
 import numpy as np
 import pint.errors
 import requests.exceptions
+import unittest
 import xarray as xr
 import yaml
+from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import config, tutorial
@@ -662,7 +661,6 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      institution=self.default_institution,
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
-
             lname = h5.find({'long_name': {'$regex': '(.*)'}}, '$Dataset')
             self.assertEqual(lname, [])
 
@@ -685,6 +683,26 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             h5['grp'].comment = 'This is a comment'
             r = h5.find({'comment': {'$regex': '(.*)'}}, '$Group')
             self.assertEqual(r, [h5['grp'], ])
+
+    def test_setting_standard_name_table_from_web(self):
+        cf = standard_name.StandardNameTable.from_web(
+            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+            name='standard_name_table')
+        # with h5tbx.wrapper.core.File(standard_name_table=cf) as h5:
+        #     snt = h5.standard_name_table
+        #     self.assertIsInstance(snt, standard_name.StandardNameTable)
+        #     self.assertEqual(snt.version_number, 79)
+        oc = standard_name.StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                         file_path='open_centrifugal_fan_database-v1.yaml',
+                                                         project_id='35443',
+                                                         ref_name='main')
+        with h5tbx.wrapper.core.File(standard_name_table=oc) as h5:
+            self.assertEqual(h5.attrs.raw['standard_name_table'],
+                             '{"url": "https://git.scc.kit.edu", "project_id": "35443", '
+                             '"ref_name": "main", "file_path": "open_centrifugal_fan_database-v1.yaml"}')
+            snt = h5.standard_name_table
+            self.assertIsInstance(snt, standard_name.StandardNameTable)
+            self.assertEqual(snt.version_number, 1)
 
     def test_get_group_names(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
