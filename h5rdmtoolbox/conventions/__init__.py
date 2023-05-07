@@ -56,10 +56,7 @@ class Convention:
         from ..wrapper.core import File, Group, Dataset
         self.name = name
         self._properties = {}
-        self._methods = {'__init__': {},
-                         'create_group': {},
-                         'create_dataset': {},
-                         'create_string_dataset': {}}
+        self._methods = {File: {}, Group: {}, Dataset: {}}
         self.method_cls_assignment = {'__init__': File,
                                       'create_group': Group,
                                       'create_dataset': Group,
@@ -79,23 +76,25 @@ class Convention:
         if len(self._properties) == 0:
             out += f' ({make_italic("Nothing registered")})'
 
-        for k, v in self._properties.items():
-            out += f'\n{k.__name__}:'
-            for k2, v2 in v.items():
-                out += f'\n    * {k2}: {v2.__name__}'
+        for obj, properties in self._properties.items():
+            out += f'\n{obj.__name__}:'
+            for prop_name, sattr in properties.items():
+                out += f'\n    * {prop_name}: {sattr.__name__}'
 
         header = make_bold('\n> Methods')
         out += f'{header}:'
 
-        for k, v in self._methods.items():
-            out += f'\n  {k}:'
-            if len(v) == 0:
-                out += f' ({make_italic("Nothing registered")})'
-            for k2, v2 in v.items():
-                if v2['optional']:
-                    out += f'\n    * {k2} (opt={v2["default"]})'
-                else:
-                    out += f'\n    * {k2}'
+        for cls, methods in self._methods.items():
+            for name, opts in methods.items():
+                out += f'\n  {cls.__name__}.{name}():'
+                if len(opts) == 0:
+                    out += f' ({make_italic("Nothing registered")})'
+                for prop_name, prop_opts in opts.items():
+                    # for property_name, property_dict in methods.items():
+                    if prop_opts['optional']:
+                        out += f'\n    * {prop_name} (optional)'
+                    else:
+                        out += f'\n    * {prop_name}'
         out += '\n'
         return out
 
@@ -191,6 +190,7 @@ class Convention:
                     'this name.')
 
             self._properties[target_property][name] = attr_cls
+
             logger.debug(f'Register special hdf std_attr {name} as property to class {target_property}')
 
             if cls not in self._methods:
@@ -210,39 +210,63 @@ class Convention:
                                                     'alt': alt}
 
     def _add_signature(self):
-        for name, values in self._methods['create_string_dataset'].items():
-            from ..wrapper.core import Group
-            Group.create_string_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
-                                                       **values['position'])(Group.create_string_dataset)
-        for name, values in self._methods['create_dataset'].items():
-            from ..wrapper.core import Group
-            Group.create_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
-                                                **values['position'])(Group.create_dataset)
-        for name, values in self._methods['create_group'].items():
-            from ..wrapper.core import Group
-            Group.create_group = forge.insert(forge.arg(f'{name}', default=values['default']),
-                                              **values['position'])(Group.create_group)
-        for name, values in self._methods['__init__'].items():
-            from ..wrapper.core import File
-            File.__init__ = forge.insert(forge.arg(f'{name}', default=values['default']),
-                                         **values['position'])(File.__init__)
+        for cls, methods in self._methods.items():
+            for name, props in methods.items():
+                for prop_name, prop_opts in props.items():
+                    setattr(cls, name, forge.insert(forge.arg(f'{prop_name}',
+                                                              default=prop_opts['default']),
+                                                    **prop_opts['position'])(cls.__dict__[name]))
+        # for name, values in self._methods['create_dataset'].items():
+        #     from ..wrapper.core import Group
+        #     Group.create_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
+        #                                         **values['position'])(Group.create_dataset)
+        # for name, values in self._methods['create_group'].items():
+        #     from ..wrapper.core import Group
+        #     Group.create_group = forge.insert(forge.arg(f'{name}', default=values['default']),
+        #                                       **values['position'])(Group.create_group)
+        # for name, values in self._methods['__init__'].items():
+        #     from ..wrapper.core import File
+        #     File.__init__ = forge.insert(forge.arg(f'{name}', default=values['default']),
+        #                                  **values['position'])(File.__init__)
 
     def _delete_signature(self):
-        for name, values in self._methods['create_string_dataset'].items():
-            from ..wrapper.core import Group
-            Group.create_string_dataset = forge.delete(f'{name}')(Group.create_string_dataset)
-        for name, values in self._methods['create_dataset'].items():
-            from ..wrapper.core import Group
-            Group.create_dataset = forge.delete(f'{name}')(Group.create_dataset)
-        for name, values in self._methods['create_group'].items():
-            from ..wrapper.core import Group
-            Group.create_group = forge.delete(f'{name}')(Group.create_group)
-        for name, values in self._methods['__init__'].items():
-            from ..wrapper.core import File
-            File.__init__ = forge.delete(f'{name}')(File.__init__)
+        for cls, methods in self._methods.items():
+            for name, props in methods.items():
+                for prop_name, prop_attrs in props.items():
+                    setattr(cls, name, forge.delete(f'{prop_name}')(cls.__dict__[name]))
+                # cls.__dict__[name] = forge.delete(f'{name}')(cls.__dict__[name])
+        # for name, values in self._methods['create_string_dataset'].items():
+        #     from ..wrapper.core import Group
+        #     Group.create_string_dataset = forge.delete(f'{name}')(Group.create_string_dataset)
+        # for name, values in self._methods['create_dataset'].items():
+        #     from ..wrapper.core import Group
+        #     Group.create_dataset = forge.delete(f'{name}')(Group.create_dataset)
+        # for name, values in self._methods['create_group'].items():
+        #     from ..wrapper.core import Group
+        #     Group.create_group = forge.delete(f'{name}')(Group.create_group)
+        # for name, values in self._methods['__init__'].items():
+        #     from ..wrapper.core import File
+        #     File.__init__ = forge.delete(f'{name}')(File.__init__)
 
     def register(self):
         registered_conventions[self.name] = self
+
+    def _change_attr_prop(self, method_name, attr_name, attr_prop, value):
+        for obj in self._methods.values():
+            if method_name in obj:
+                if attr_name in obj[method_name]:
+                    obj[method_name][attr_name][attr_prop] = value
+                    return
+        raise ValueError(f'Cannot change property {attr_prop} of attribute {attr_name} to {value} '
+                         f'for {method_name} because it does not exist.')
+
+    def make_required(self, method_name, attr_name):
+        """Make an attribute required for a method"""
+        self._change_attr_prop(method_name, attr_name, 'optional', False)
+
+    def make_optional(self, method_name, attr_name):
+        """Make an attribute optional for a method"""
+        self._change_attr_prop(method_name, attr_name, 'optional', True)
 
 
 class ConventionInterface:

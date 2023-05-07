@@ -1,6 +1,7 @@
 import unittest
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import tutorial
 
 
 class TestConventions(unittest.TestCase):
@@ -76,3 +77,11 @@ class TestConventions(unittest.TestCase):
         # add another time fails
         with self.assertRaises(AttributeError):
             cv['__init__'].add(attr_cls=TitleAttribute, add_to_method=True)
+
+        cv.__repr__()
+
+    def test_working_with_file(self):
+        h5tbx.use('tbx')
+        snt = tutorial.get_standard_name_table()
+        with h5tbx.File(standard_name_table=snt) as h5:
+            h5.create_dataset('test', data=1.2, units='m/s', standard_name='x_velocity')

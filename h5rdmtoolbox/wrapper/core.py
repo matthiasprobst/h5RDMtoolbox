@@ -75,11 +75,13 @@ def lower(string: str) -> Lower:
 #         return wrapper
 #     return decorator
 
-def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
+def process_attributes(cls, meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
     # go through list of registered standard attributes, and check whether they are in kwargs:
+    if meth_name not in conventions.current_convention._methods[cls]:
+        return attrs, {}, kwargs
     kwargs, skwargs = _pop_standard_attributes(
-        kwargs, cache_entry=conventions.current_convention._methods[meth_name]
+        kwargs, cache_entry=conventions.current_convention._methods[cls][meth_name]
     )
 
     # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
@@ -95,7 +97,7 @@ def process_attributes(meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict,
     attrs.update(skwargs)
 
     # run through skwargs. if key is required but not available this should raise an error!
-    for k, v in conventions.current_convention._methods[meth_name].items():
+    for k, v in conventions.current_convention._methods[cls][meth_name].items():
         if v['optional']:
             if skwargs[k] is None:
                 attrs.pop(k)
@@ -386,7 +388,7 @@ class Group(h5py.Group, ConventionAccesor):
         if attrs is None:
             attrs = {}
 
-        attrs, skwargs, kwargs = process_attributes('create_group', attrs, kwargs)
+        attrs, skwargs, kwargs = process_attributes(Group, 'create_group', attrs, kwargs)
         if name in self:
             if isinstance(self[name], h5py.Group):
                 if overwrite is True:
@@ -433,7 +435,7 @@ class Group(h5py.Group, ConventionAccesor):
 
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
-        attrs, skwargs, kwargs = process_attributes('create_string_dataset', attrs, kwargs)
+        attrs, skwargs, kwargs = process_attributes(Group, 'create_string_dataset', attrs, kwargs)
 
         if isinstance(data, str):
             n_letter = len(data)
@@ -530,7 +532,7 @@ class Group(h5py.Group, ConventionAccesor):
 
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
-        attrs, skwargs, kwargs = process_attributes('create_dataset', attrs, kwargs)
+        attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs)
 
         # kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
 
@@ -1734,7 +1736,7 @@ class File(h5py.File, Group, ConventionAccesor):
 
         if attrs is None:
             attrs = {}
-        attrs, skwargs, kwargs = process_attributes('__init__', attrs, kwargs)
+        attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs)
         _tmp_init = False
 
         if _tmp_init:

@@ -50,23 +50,20 @@ class TestStandardAttributes(unittest.TestCase):
                 return super().get() + '!!'
 
         cv = conventions.Convention('short_name_convention')
-        cv.add(shortyname,
-               target_cls=h5tbx.wrapper.core.Group,
-               add_to_method=True,
-               position={'after': 'name'},
-               optional=True)
+        cv['create_group'].add(shortyname,
+                               add_to_method=True,
+                               position={'after': 'name'},
+                               optional=True)
 
         # this shall be a required attribute:
-        cv.add(ShortyAttribute,
-               target_cls=h5tbx.wrapper.core.Group,
-               add_to_method=True,
-               position={'after': 'name'},
-               optional=False)
-        cv.add(ShortyAttribute,
-               target_cls=h5tbx.wrapper.core.Dataset,
-               add_to_method=True,
-               position={'after': 'name'},
-               optional=False)
+        cv['create_group'].add(ShortyAttribute,
+                               add_to_method=True,
+                               position={'after': 'name'},
+                               optional=False)
+        cv['create_dataset'].add(ShortyAttribute,
+                                 add_to_method=True,
+                                 position={'after': 'name'},
+                                 optional=False)
 
         cv.register()
         self.assertIn(cv.name, h5tbx.conventions.registered_conventions)
@@ -117,11 +114,10 @@ class TestStandardAttributes(unittest.TestCase):
         url = 'https://h5rdmtoolbox.readthedocs.io/en/latest/'
 
         cv = conventions.Convention('test_references')
-        cv.add(attr_cls=conventions.references.ReferencesAttribute,
-               target_cls=h5tbx.wrapper.core.File,
-               add_to_method=True,
-               position={'before': 'layout'},
-               optional=True)
+        cv['__init__'].add(attr_cls=conventions.references.ReferencesAttribute,
+                           add_to_method=True,
+                           position={'before': 'layout'},
+                           optional=True)
         cv.register()
         h5tbx.use(cv.name)
 

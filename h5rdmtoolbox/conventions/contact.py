@@ -35,13 +35,13 @@ def exist(orcid: str) -> bool:
     if orcid.startswith('https://orcid.org/'):
         orcid_id = orcid.split('https://orcid.org/')[1]
         if not is_valid_orcid_pattern(orcid_id):
-            logger.error(f'Not an ORCID ID: {orcid_id}')
+            logger.debug(f'Not an ORCID ID: {orcid_id}')
             return False
         # orcid ID is ok, let the requests package handle the rest
         url = orcid
     else:
         if not is_valid_orcid_pattern(orcid):
-            logger.error(f'Not an ORCID ID: {orcid}')
+            logger.debug(f'Not an ORCID ID: {orcid}')
             return False
         url = f'https://orcid.org/{orcid}'
     headers = {'Accept': 'application/vnd.orcid+json'}

@@ -28,12 +28,12 @@ Layouts
 .. autosummary::
     :toctree: generated/
 
-    h5rdmtoolbox.conventions.layout.Layout
-    h5rdmtoolbox.conventions.layout.Equal
-    h5rdmtoolbox.conventions.layout.Regex
-    h5rdmtoolbox.conventions.layout.Any
-    h5rdmtoolbox.conventions.layout.ExistIn
-    h5rdmtoolbox.conventions.layout.In
+    h5rdmtoolbox.conventions.layout.core.Layout
+    h5rdmtoolbox.conventions.layout.validators.Equal
+    h5rdmtoolbox.conventions.layout.validators.Regex
+    h5rdmtoolbox.conventions.layout.validators.Any
+    h5rdmtoolbox.conventions.layout.validators.ExistIn
+    h5rdmtoolbox.conventions.layout.validators.In
 
 
 

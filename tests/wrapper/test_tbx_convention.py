@@ -561,9 +561,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
             grp = h5.create_group('group')
-            self.assertEqual(grp.long_name, None)
-            grp.long_name = 'long name of group'
-            self.assertEqual(grp.long_name, 'long name of group')
+            self.assertEqual(grp.comment, None)
+            grp.comment = 'long name of group'
+            self.assertEqual(grp.comment, 'long name of group')
 
     def test_assign_data_to_existing_dset(self):
         config.natural_naming = True
@@ -662,6 +662,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      institution=self.default_institution,
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
+
             lname = h5.find({'long_name': {'$regex': '(.*)'}}, '$Dataset')
             self.assertEqual(lname, [])
 
@@ -681,8 +682,8 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                             '$Dataset')
             self.assertEqual(lname, [h5['test'], ])
 
-            h5['grp'].long_name = 'grp1'
-            r = h5.find({'long_name': {'$regex': '(.*)'}}, '$Group')
+            h5['grp'].comment = 'This is a comment'
+            r = h5.find({'comment': {'$regex': '(.*)'}}, '$Group')
             self.assertEqual(r, [h5['grp'], ])
 
     def test_get_group_names(self):
