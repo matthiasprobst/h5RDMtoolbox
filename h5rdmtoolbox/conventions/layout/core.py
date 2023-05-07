@@ -40,7 +40,7 @@ class Layout(validation.BaseGroupAndDatasetValidation):
     def success_ratio(self):
         """Success ratio"""
         if self.total == 0:
-            if not self.specified_validations:
+            if not self.specifications:
                 warnings.warn('No specifications registered to this layout, thus success '
                               'ratio will always be 1.0', UserWarning)
                 return 1.0
