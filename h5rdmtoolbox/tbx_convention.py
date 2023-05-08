@@ -12,29 +12,28 @@ cv['__init__'].add(
 )
 
 cv['__init__'].add(attr_cls=conventions.StandardAttribute.AnyString('institution'),
-                   # target_cls=File,
                    add_to_method=True,
                    position={'before': 'layout'},
                    optional=True)
 cv['__init__'].add(attr_cls=conventions.references.ReferencesAttribute,
-                   # target_cls=File,
                    add_to_method=True,
                    position={'before': 'layout'},
                    optional=True)
 cv['__init__'].add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
-                   # target_cls=File,
                    add_to_method=True,
                    position={'before': 'layout'},
                    optional=True)
 cv['__init__'].add(attr_cls=conventions.comment.CommentAttribute,
-                   # target_cls=File,
                    add_to_method=True,
                    position={'after': 'standard_name_table'},
                    optional=True)
 cv['__init__'].add(attr_cls=conventions.contact.ContactAttribute,
-                   # target_cls=File,
                    add_to_method=True,
                    position={'after': 'mode'},
+                   optional=True)
+cv['__init__'].add(attr_cls=conventions.source.SourceAttribute,
+                   add_to_method=True,
+                   position={'after': 'comment'},
                    optional=True)
 
 # Dataset

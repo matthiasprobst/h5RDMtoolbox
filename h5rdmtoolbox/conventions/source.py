@@ -58,12 +58,7 @@ class Hardware(SourceBase):
 
     def __str__(self):
         """Return a string representation of the hardware"""
-        output = f"Device: {self.device}\nManufacturer: {self.manufacturer}\nSerial number: {self.serial_number}\n"
-
-        for key, value in self.additional_attributes.items():
-            output += f"{key.capitalize()}: {value}\n"
-
-        return output
+        return f', '.join([f'{k.capitalize()}: {v}' for k, v in self.items() if v is not None])
 
     def check(self):
         """Check"""
@@ -111,13 +106,13 @@ class Software(SourceBase):
         Name of the software
     version : Union[str, packaging.version.Version]
         Version of the software. Will be transformed to a packaging.version.Version object.
-    description : str
-        Description of the software
     url : str
         URL of the software. Will be checked if it is valid.
+    description : str, optional
+        Description of the software
     author : str, optional
         Author of the software, by default None
-    license : str, optional
+    lic : str, optional
         License of the software, by default None
     language : str, optional
         Language of the software, by default None
@@ -130,19 +125,19 @@ class Software(SourceBase):
     def __init__(self,
                  name: str,
                  version: Union[str, packaging.version.Version],
-                 description: str,
                  url: str,
+                 description: str = None,
                  author: str = None,
-                 license: str = None,
+                 lic: str = None,
                  language: str = None,
                  platform: str = None,
                  **kwargs):
         self.name = name
-        self.version = packaging.version.Version(version)
+        self.version = str(packaging.version.Version(version))
         self.description = description
         self.url = url
         self.author = author
-        self.license = license
+        self.lic = lic
         self.language = language
         self.platform = platform
         self.additional_attributes = kwargs
@@ -156,24 +151,19 @@ class Software(SourceBase):
 
     def __str__(self):
         """Return a string representation of the software"""
-        output = f"Name: {self.name}\nVersion: {self.version}\nDescription: {self.description}\nAuthor: {self.author}\nURL: {self.url}\n"
-
-        for key, value in self.additional_attributes.items():
-            output += f"{key.capitalize()}: {value}\n"
-
-        return output
+        return f', '.join([f'{k.capitalize()}: {v}' for k, v in self.items() if v is not None])
 
     def required_items(self):
         """Return all required items of the software"""
         return dict(name=self.name,
                     version=self.version,
-                    description=self.description,
                     url=self.url).items()
 
     def optional_items(self):
         """Return all required items of the software"""
         return dict(author=self.author,
-                    license=self.license,
+                    description=self.description,
+                    lic=self.lic,
                     language=self.language,
                     platform=self.platform,
                     **self.additional_attributes).items()
@@ -185,7 +175,7 @@ class Software(SourceBase):
                     description=self.description,
                     author=self.author,
                     url=self.url,
-                    license=self.license,
+                    lic=self.lic,
                     language=self.language,
                     platform=self.platform,
                     **self.additional_attributes).items()
@@ -210,11 +200,8 @@ class Software(SourceBase):
 
     def dumps(self) -> str:
         """Calls json.dumps() on the dict representation of the object"""
-        return json.dumps({'software': dict(name=self.name, version=str(self.version),
-                                            url=self.url, description=self.description,
-                                            author=self.author, license=self.license,
-                                            language=self.language, platform=self.platform,
-                                            **self.additional_attributes)})
+        filled_values = {k: v for k, v in self.items() if v is not None}
+        return json.dumps({'software': filled_values})
 
 
 class Source:
