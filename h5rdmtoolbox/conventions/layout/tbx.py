@@ -1,3 +1,5 @@
+import numpy as np
+
 from .core import *
 from .validators import Regex, ValidString
 from ..standard_name import is_valid_unit
@@ -64,7 +66,9 @@ class IsValidContact(Validator):
     def validate(self, value) -> bool:
         """validate"""
         from ..contact import exist
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, np.ndarray):
+            orcids = list(value)
+        elif isinstance(value, (list, tuple)):
             orcids = value
         elif isinstance(value, str):
             orcids = value.split(',')

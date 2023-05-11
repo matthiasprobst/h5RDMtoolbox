@@ -38,7 +38,7 @@ def set_loglevel(logger, level):
 
 set_loglevel(core_logger, config.init_logger_level)
 
-from .conventions import Convention, use, current_convention, registered_conventions
+from .conventions import Convention, use
 
 cv_h5py = Convention('h5py')
 cv_h5py.register()
@@ -115,5 +115,4 @@ def dumps(filename: Union[str, pathlib.Path]):
 
 
 __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
-           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset',
-           'current_convention']
+           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset']

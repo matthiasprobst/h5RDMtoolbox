@@ -123,10 +123,10 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             self.assertNotIn('time', h5)
             ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
                                          units='s', long_name='time',
-                                         make_scale=True, contact='0000-0000-0000-0000',
+                                         make_scale=True, contact='0000-0001-8729-0482',
                                          overwrite=True)
-            self.assertEqual(ds_scale.contact, '0000-0000-0000-0000')
-            self.assertEqual(ds_scale.attrs['contact'], '0000-0000-0000-0000')
+            self.assertEqual(ds_scale.contact, '0000-0001-8729-0482')
+            self.assertEqual(ds_scale.attrs['contact'], '0000-0001-8729-0482')
 
             h5.create_dataset('ds', data=1, standard_name='x_coordinate', units='m')
             sn = h5['ds'].attrs['standard_name']
@@ -407,9 +407,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
             grp = h5.create_group('grp1/grp2/grp3')
-            self.assertIsInstance(grp, Group)
+            self.assertIsInstance(grp, h5tbx.Group)
             dset = grp.create_dataset('test', data=1, units='', long_name='some long name')
-            self.assertIsInstance(dset, Dataset)
+            self.assertIsInstance(dset, h5tbx.Dataset)
             self.assertEqual(dset.rootparent, h5['/'])
 
     def test_rename(self):
@@ -758,8 +758,8 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      standard_name_table=self.default_snt) as h5:
             with self.assertRaises(contact.OrcidError):
                 h5.contact = '000-123'
-            h5.attrs['contact'] = '0000-1233-1234-1234'
-            self.assertEqual(h5.attrs['contact'], '0000-1233-1234-1234')
+            h5.attrs['contact'] = '0000-0001-8729-0482'
+            self.assertEqual(h5.attrs['contact'], '0000-0001-8729-0482')
 
     def tearDown(self) -> None:
         """cleanup all files created during tests"""

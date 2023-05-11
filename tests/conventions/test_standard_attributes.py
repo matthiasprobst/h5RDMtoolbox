@@ -272,17 +272,17 @@ class TestStandardAttributes(unittest.TestCase):
                                            url='https://h5rdmtoolbox.readthedocs.io/en/latest/',
                                            description='This is my software')
         self.assertEqual(sftw.name, 'h5rdmtoolbox')
-        self.assertEqual(sftw.version, version.Version('1.0'))
+        self.assertEqual(sftw.version, '1.0')
         self.assertEqual(sftw.url, 'https://h5rdmtoolbox.readthedocs.io/en/latest/')
         self.assertEqual(sftw.description, 'This is my software')
         self.assertEqual(sorted(sftw.required_items()),
                          sorted([('name', 'h5rdmtoolbox'),
-                                 ('version', version.Version('1.0')),
-                                 ('description', 'This is my software'),
+                                 ('version', '1.0'),
                                  ('url', 'https://h5rdmtoolbox.readthedocs.io/en/latest/')]))
         self.assertEqual(sorted(sftw.optional_items()),
                          sorted([('author', None),
-                                 ('license', None),
+                                 ('description', 'This is my software'),
+                                 ('lic', None),
                                  ('language', None),
                                  ('platform', None)]))
         self.assertEqual(sftw._pattern, '^[0-9].*')

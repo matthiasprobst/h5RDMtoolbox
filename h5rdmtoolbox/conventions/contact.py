@@ -81,7 +81,7 @@ class ContactAttribute(StandardAttribute):
             for o in orcid:
                 if not isinstance(o, str):
                     TypeError(f'Expecting a string or list of strings representing an ORCID but got {type(o)}')
-                if not is_valid_orcid_pattern(o):
+                if not exist(o):
                     raise OrcidError(f'Not an ORCID ID: {o}')
         if len(orcid) == 1:
             super().set(orcid[0])

@@ -74,6 +74,7 @@ class StandardAttribute(ABC):
             target = self.parent
         if name is None:
             name = self.get_name()
+        # call the h5py AttributeManager (which is the parent class)
         super(type(target.attrs), target.attrs).__setitem__(name, value)
 
     def get(self, src=None, name=None, default=None):
