@@ -1,4 +1,5 @@
 """dataset decoders"""
+import numpy as np
 import xarray as xr
 
 from .. import conventions
@@ -13,14 +14,17 @@ def dataset_value_decoder(func):
         """wrapper that decodes the xarray.DataArray"""
         xarr = func(*args, **kwargs)
 
+        if not isinstance(xarr, xr.DataArray):
+            return xarr
+
+        if xarr.dtype.type is np.str_:
+            return xarr
+
         if not conventions.current_convention.use_scale_and_offset:
             return xarr
 
-        scale = xarr.attrs.get(conventions.current_convention.scale_attribute_name, None)
-        offset = xarr.attrs.get(conventions.current_convention.offset_attribute_name, None)
-
-        xarr.attrs.pop('scale')
-        xarr.attrs.pop('offset')
+        scale = xarr.attrs.pop(conventions.current_convention.scale_attribute_name, None)
+        offset = xarr.attrs.pop(conventions.current_convention.offset_attribute_name, None)
 
         if scale and offset:
             with xr.set_options(keep_attrs=True):
