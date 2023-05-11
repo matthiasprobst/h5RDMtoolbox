@@ -53,10 +53,36 @@ class StandardAttributeError(Exception):
 
 
 class Convention:
+    """Convention class
 
-    def __init__(self, name):
+    Parameters
+    ----------
+    name : str
+        Name of the convention
+    offset_attribute_name : Union[str, None], optional='offset'
+        Name to be used for the offset attribute. If None, the concept of offset is not used.
+    scale_attribute_name : Union[str, None], optional='scale'
+        Name to be used for the scale attribute. If None, the concept of scale is not used.
+
+    .. note::
+
+        Concept of offset and scale:
+        If a dataset has the attribute 'offset' and/or 'scale' (the attribute names can be
+        changed by the user using `offset_attribute_name` and `scale_attribute_name`), the
+        return value is processed as follows:
+        .. math::
+            x_{new} = (x \cdot f_{scale}) + f_{offset}
+        This behaviour can be disabled by passing `None` to `offset_attribute_name` and/or
+        `scale_attribute_name`.
+    """
+
+    def __init__(self, name, offset_attribute_name='offset', scale_attribute_name='scale'):
         from ..wrapper.core import File, Group, Dataset
         self.name = name
+        self.use_scale_and_offset = not (offset_attribute_name is None or scale_attribute_name is None)
+        self.offset_attribute_name = offset_attribute_name
+        self.scale_attribute_name = scale_attribute_name
+
         self._properties = {}
         self._methods = {File: {}, Group: {}, Dataset: {}}
         self.method_cls_assignment = {'__init__': File,

@@ -77,6 +77,16 @@ cv['create_dataset'].add(attr_cls=conventions.source.SourceAttribute,
                          add_to_method=True,
                          position={'after': 'comment'},
                          optional=True)
+cv['create_dataset'].add(attr_cls=conventions.units.ScaleAttribute,
+                         # target_cls=Dataset,
+                         add_to_method=True,
+                         position={'after': 'data'},
+                         optional=True)
+cv['create_dataset'].add(attr_cls=conventions.units.OffsetAttribute,
+                         # target_cls=Dataset,
+                         add_to_method=True,
+                         position={'after': 'data'},
+                         optional=True)
 
 # Group
 cv['create_group'].add(attr_cls=conventions.comment.CommentAttribute,

@@ -34,6 +34,7 @@ from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import Layout as LayoutFile
+from .ds_decoder import dataset_value_decoder
 
 logger = logging.getLogger(__package__)
 
@@ -125,7 +126,7 @@ class ConventionAccesor:
     def standard_attributes(self) -> Dict:
         if len(self.convention._properties) == 0:
             return {}
-        return self.convention._properties[self.__class__.__name__]
+        return self.convention._properties[self.__class__]
 
 
 class Group(h5py.Group, ConventionAccesor):
@@ -1418,6 +1419,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         else:
             super().__setitem__(key, value)
 
+    @dataset_value_decoder
     def __getitem__(self, args, new_dtype=None, nparray=False) -> Union[xr.DataArray, np.ndarray]:
         """Return sliced HDF dataset. If global setting `return_xarray`
         is set to True, a `xr.DataArray` is returned, otherwise the default
@@ -1515,6 +1517,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
             if isinstance(_arr, np.ndarray):
                 return tuple(_arr)
             return _arr
+
         return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
     def __repr__(self) -> str:

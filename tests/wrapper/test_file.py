@@ -1,10 +1,10 @@
-import logging
-import unittest
-from pathlib import Path
-
 import h5py
+import logging
 import numpy as np
+import pint
+import unittest
 import yaml
+from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import config
@@ -45,6 +45,23 @@ class TestFile(unittest.TestCase):
         for fname in Path(__file__).parent.glob('*'):
             if fname.suffix not in ('py', '.py', ''):
                 fname.unlink()
+
+    def test_offset_scale(self):
+        h5tbx.use('tbx')
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('pressure',
+                                   data=4.3,
+                                   units='V',
+                                   offset=0.1,
+                                   scale=0.2 * pint.Unit('Pa/V'), #0.2 * pint.Unit('Pa/V'),
+                                   long_name='pressure')
+
+            self.assertEqual(ds.units, 'V')
+            self.assertEqual(ds.scale, pint.Quantity(0.2, 'Pa/V'))
+            self.assertEqual(ds.offset, 0.1)
+            arr = ds[()]
+            self.assertEqual(arr.units, 'Pa')
+            print(arr)
 
     def test_dumps(self):
         with h5tbx.File() as h5:
