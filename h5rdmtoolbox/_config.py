@@ -115,6 +115,8 @@ class H5tbxConfig:
     init_logger_level: Union[int, str] = 'ERROR'
     dtime_fmt: str = '%Y%m%d%H%M%S%f'
     expose_user_prop_to_attrs: bool = True
+    scale_attribute_name: str = 'scale'
+    offset_attribute_name: str = 'offset'
 
 
 DEFAULT_CONFIG: H5tbxConfig = H5tbxDictConfig(OmegaConf.structured(H5tbxConfig()))

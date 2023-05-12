@@ -20,6 +20,9 @@ class UnitsAttribute(StandardAttribute):
         units = super().get()
         if units is None:
             return None
+        scale = self.parent.attrs.get('scale', None)
+        if scale:
+            units = str(ureg.Unit(units) * scale.units)
         return f'{ureg.Unit(units)}'
 
     def set(self, units: Union[str, pint.Unit]):
@@ -35,8 +38,9 @@ class UnitsAttribute(StandardAttribute):
             _units = units
         standard_name = super().get(name='standard_name')
         if standard_name:
-            if not self.parent.standard_name_table.check_units(standard_name, _units):
-                raise UnitsError(f'Units "{_units}" are not compatible with standard_name "{standard_name}"')
+            if 'standard_name_table' in self.parent.standard_attributes:
+                if not self.parent.standard_name_table.check_units(standard_name, _units):
+                    raise UnitsError(f'Units "{_units}" are not compatible with standard_name "{standard_name}"')
         self.parent.attrs.create(self.name, _units)
 
 
@@ -64,7 +68,7 @@ class ScaleAttribute(StandardAttribute):
 
         if isinstance(scale, str):
             try:
-                _scale = ureg.Quantity('scale')
+                _scale = ureg.Quantity(scale)
             except (pint.UndefinedUnitError, ValueError) as e:
                 raise ScaleError(f'Invalid scale. Orig error: {e}')
         elif isinstance(scale, pint.Quantity):

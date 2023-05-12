@@ -47,21 +47,19 @@ class TestFile(unittest.TestCase):
                 fname.unlink()
 
     def test_offset_scale(self):
-        h5tbx.use('tbx')
-        with h5tbx.File() as h5:
-            ds = h5.create_dataset('pressure',
-                                   data=4.3,
-                                   units='V',
-                                   offset=0.1,
-                                   scale=0.2 * pint.Unit('Pa/V'), #0.2 * pint.Unit('Pa/V'),
-                                   long_name='pressure')
+        for scale in (0.2 * pint.Unit('Pa/V'), 0.2 * pint.Unit('Pa/V')):
+            with h5tbx.File() as h5:
+                ds = h5.create_dataset('pressure',
+                                       data=4.3,
+                                       units='V',
+                                       offset=0.1,
+                                       scale=scale)
 
-            self.assertEqual(ds.units, 'V')
-            self.assertEqual(ds.scale, pint.Quantity(0.2, 'Pa/V'))
-            self.assertEqual(ds.offset, 0.1)
-            arr = ds[()]
-            self.assertEqual(arr.units, 'Pa')
-            print(arr)
+                self.assertEqual(ds.units, 'Pa')
+                self.assertEqual(ds.scale, pint.Quantity(0.2, 'Pa/V'))
+                self.assertEqual(ds.offset, 0.1)
+                arr = ds[()]
+                self.assertEqual(arr.units, 'Pa')
 
     def test_dumps(self):
         with h5tbx.File() as h5:

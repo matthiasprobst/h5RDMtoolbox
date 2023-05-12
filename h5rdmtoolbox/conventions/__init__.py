@@ -94,6 +94,23 @@ class Convention:
                                         'create_dataset': Dataset,
                                         'create_string_dataset': Dataset}
 
+        if self.use_scale_and_offset:
+            self['create_dataset'].add(attr_cls=units.ScaleAttribute,
+                                       # target_cls=Dataset,
+                                       add_to_method=True,
+                                       position={'after': 'data'},
+                                       optional=True)
+            self['create_dataset'].add(attr_cls=units.OffsetAttribute,
+                                       # target_cls=Dataset,
+                                       add_to_method=True,
+                                       position={'after': 'data'},
+                                       optional=True)
+            self['create_dataset'].add(attr_cls=units.UnitsAttribute,
+                                     # target_cls=Dataset,
+                                     add_to_method=True,
+                                     position={'after': 'data'},
+                                     optional=True)
+
     def __repr__(self):
         header = f'Convention({self.name})'
         out = f'{make_bold(header)}'

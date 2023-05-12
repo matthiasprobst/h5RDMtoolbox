@@ -23,6 +23,7 @@ from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
+from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
@@ -34,7 +35,6 @@ from .._config import ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import Layout as LayoutFile
-from .ds_decoder import dataset_value_decoder
 
 logger = logging.getLogger(__package__)
 
@@ -629,6 +629,14 @@ class Group(h5py.Group, ConventionAccesor):
 
         ds = self._h5ds(_ds.id)
 
+        # first set scale and offset if given:
+        scale = attrs.pop(conventions.current_convention.scale_attribute_name, None)
+        offset = attrs.pop(conventions.current_convention.offset_attribute_name, None)
+        if scale is not None:
+            ds.attrs[conventions.current_convention.scale_attribute_name] = scale
+        if offset is not None:
+            ds.attrs[conventions.current_convention.offset_attribute_name] = offset
+
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
             try:
@@ -1036,7 +1044,7 @@ class Group(h5py.Group, ConventionAccesor):
         self[name] = h5py.ExternalLink(filename, path)
         return self[name]
 
-    def from_yaml(self, yamlfile: Path):
+    def from_yaml(self, yaml_filename: Path):
         """creates groups, datasets and attributes defined in a yaml file.
         Creation is performed relative to the current group level.
 
@@ -1052,7 +1060,7 @@ class Group(h5py.Group, ConventionAccesor):
           grp/supgrp:
             comment: This is a group comment
         """
-        with open(yamlfile, 'r') as f:
+        with open(yaml_filename, 'r') as f:
             data = yaml.safe_load(f)
 
         if 'groups' in data:
@@ -1071,7 +1079,7 @@ class Group(h5py.Group, ConventionAccesor):
                 try:
                     self.create_dataset(ds, **kwargs)
                 except Exception as e:
-                    logger.critical('Dataset %s from yaml definition not written due to %s', ds, e)
+                    raise Exception('Dataset %s from yaml definition not written due to %s', ds, e)
 
         if 'attrs' in data:
             for objname in data['attrs']:
@@ -1082,7 +1090,7 @@ class Group(h5py.Group, ConventionAccesor):
                     try:
                         self[objname].attrs[ak] = av
                     except Exception as e:
-                        logger.critical('Could not write attribute %s to %s due to %s', ak, objname, e)
+                        raise Exception('Could not write attribute %s to %s due to %s', ak, objname, e)
 
     def get_by_attribute(self, attribute_name, attribute_value=None,
                          h5type=None, recursive=True) -> List[Union[h5py.Dataset, h5py.Group]]:

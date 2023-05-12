@@ -1158,6 +1158,11 @@ class StandardNameAttribute(StandardAttribute):
                 if snt.check_name(new_standard_name):
                     if STRICT:
                         if 'units' in self.parent.attrs:
+                            # scale = self.parent.scale
+                            # if scale is not None:
+                            #     units_to_be_checked = str(ureg.Unit(self.parent.units) * self.parent.scale.units)
+                            # else:
+                            #     units_to_be_checked = self.parent.units
                             if not snt.check_units(new_standard_name, self.parent.units):
                                 raise ValueError(f'Units {self.parent.units} failed he unit check of standard name '
                                                  f'table {snt.versionname} for standard name {new_standard_name}')

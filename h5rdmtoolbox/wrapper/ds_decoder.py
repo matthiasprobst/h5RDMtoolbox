@@ -28,10 +28,11 @@ def dataset_value_decoder(func):
 
         if scale and offset:
             with xr.set_options(keep_attrs=True):
-                return ((xarr + offset).pint.quantify() * scale).pint.dequantify()
+                # note, that xarr has already the correctly (scaled) units!
+                return (xarr + offset) * scale.magnitude
         elif scale:
             with xr.set_options(keep_attrs=True):
-                return (xarr.pint.quantify() * scale).pint.dequantify()
+                return xarr * scale.magnitude
         elif offset:
             with xr.set_options(keep_attrs=True):
                 return xarr + offset

@@ -153,6 +153,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             ds = h5.create_dataset('u', shape=(), long_name='velocity', units='')
             self.assertEqual(ds.name, '/u')
             self.assertEqual(ds.attrs['units'], '')
+            self.assertEqual(ds.units, '')
             self.assertEqual(ds.attrs['long_name'], 'velocity')
         with h5tbx.wrapper.core.File(title=self.default_title,
                                      institution=self.default_institution,
@@ -515,6 +516,35 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
+
+    def test_standard_name_and_and_scale(self):
+        """The units of a dataset is the raw (packed) unit, e.g. volts. If the dataset
+        has scale and the unit is requested, then the unit of the scale is returned."""
+        with h5tbx.wrapper.core.File(standard_name_table=self.default_snt) as h5:
+            u = h5.create_dataset(name='u',
+                                  standard_name='x_velocity',
+                                  data=np.ones((10, 20)),
+                                  units='V',
+                                  scale='2.0 m/s/V')
+            self.assertEqual(u.units, 'm/s')
+            self.assertEqual(u.values[0, 0], 1.0)
+            self.assertEqual(u[0, 0].values, 2.0)
+            v = h5.create_dataset(name='v',
+                                  standard_name='y_velocity',
+                                  data=np.ones((10, 20)),
+                                  units='m/s',
+                                  offset=1.)
+            self.assertEqual(v.units, 'm/s')
+            self.assertEqual(v.values[0, 0], 1.0)
+            self.assertEqual(v[0, 0].values, 2.0)
+        h5tbx.use(None)
+        with h5tbx.wrapper.core.File() as h5:
+            u = h5.create_dataset(name='u',
+                                  data=np.ones((10, 20)))
+            u.attrs['units'] = 'V'
+            u.attrs['scale'] = '2.0 m/s/V'
+            self.assertEqual(u.attrs['units'], 'm/s')
+        h5tbx.use('tbx')
 
     def test_units(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
