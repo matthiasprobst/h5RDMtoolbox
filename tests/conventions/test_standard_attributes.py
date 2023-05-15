@@ -4,7 +4,6 @@ import requests
 import unittest
 import warnings
 from omegaconf import DictConfig
-from packaging import version
 from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox

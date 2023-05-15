@@ -111,6 +111,41 @@ class TestLayout(unittest.TestCase):
             lay.validate(h5)
             self.assertEqual(lay.fails, 2)
 
+    def test_opt_units(self):
+        from h5rdmtoolbox.conventions.layout.tbx import IsValidUnit
+        lay = Layout()
+        lay.specify_dataset(...).specify_attrs(dict(units=IsValidUnit(optional=True)))
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+            h5.create_dataset('test', data=1)
+
+            h5['test'].attrs['units'] = 'invalid'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+    def test_contact(self):
+        from h5rdmtoolbox.conventions.layout.tbx import IsValidContact
+        lay = Layout()
+        lay.specify_attrs(dict(contact=IsValidContact()))
+        with h5py.File(generate_temporary_filename(suffix='.hdf'), 'w') as h5:
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            h5.attrs['contact'] = 'invalid'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            h5.attrs['contact'] = 'https://orcid.org/0000-0001-8729-0482'
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+            h5.attrs['contact'] = ['https://orcid.org/0000-0001-8729-0482',
+                                   'https://orcid.org/0000-0001-8729-0482']
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
     def test_attrs_4(self):
         """specifying a dataset with unknown name but specific attributes"""
         lay = Layout()
