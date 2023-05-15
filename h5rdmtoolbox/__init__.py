@@ -18,6 +18,8 @@ from .utils import generate_temporary_filename, generate_temporary_directory
 from . import cache
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from typing import Union
+from . import conventions
+from . import tbx_convention
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
@@ -38,11 +40,10 @@ def set_loglevel(logger, level):
 
 set_loglevel(core_logger, config.init_logger_level)
 
-from .conventions import Convention, use
-
-cv_h5py = Convention('h5py')
+cv_h5py = conventions.Convention('h5py')
 cv_h5py.register()
-from . import tbx_convention
+
+use = conventions.use
 
 use(config['default_convention'])
 
@@ -112,6 +113,11 @@ def dumps(filename: Union[str, pathlib.Path]):
     """Call h5.dumps() on the provided HDF5 file"""
     with File(filename) as h5:
         h5.dumps()
+
+
+def get_current_convention():
+    """get the current convention"""
+    return conventions.current_convention
 
 
 __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',

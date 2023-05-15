@@ -487,9 +487,9 @@ class Group(h5py.Group, ConventionAccesor):
         overwrite : bool, default=None
             If the dataset does not already exist, the new dataset is written and this parameter has no effect.
             If the dataset exists and ...
-            ... overwrite is None: h5py behaviour is enabled meaning that if a dataset exists h5py will raise
-            ... overwrite is True: dataset is deleted and rewritten according to method parameters
-            ... overwrite is False: dataset creation has no effect. Existing dataset is returned.
+                * ... overwrite is None: h5py behaviour is enabled meaning that if a dataset exists h5py will raise an error
+                * ... overwrite is True: dataset is deleted and rewritten according to method parameters
+                * ... overwrite is False: dataset creation has no effect. Existing dataset is returned.
         chunks : bool or according to h5py.File.create_dataset documentation
             Needs to be True if later resizing is planned
         make_scale: bool, default=False
@@ -513,8 +513,6 @@ class Group(h5py.Group, ConventionAccesor):
 
             Standard arguments are defined by a convention and hence expected keywords
             depend on the registered standard attributes.
-            For the current convention, the arguments are:
-                * None given
 
         Returns
         -------

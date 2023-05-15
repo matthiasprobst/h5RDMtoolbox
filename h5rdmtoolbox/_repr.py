@@ -41,11 +41,12 @@ class BColors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+    ITALIC = '\033[3m'
 
 
 def make_italic(string):
     """make string italic"""
-    return f'\x1B[3m{string}\x1B[0m'
+    return f"{BColors.ITALIC}{string}{BColors.ENDC}"
 
 
 def make_bold(string):
@@ -78,7 +79,7 @@ def okprint(string):
     print(oktext(string))
 
 
-def process_string_for_link(string: str) -> typing.Union[str, bool]:
+def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
     """process string to make links actually clickable in html
 
     Parameters
@@ -369,7 +370,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             _value = value.copy()
             for i, v in enumerate(value):
                 if isinstance(v, str):
-                    if self.max_attr_length:
+                    _value[i], is_url = process_string_for_link(v)
+                    if not is_url and self.max_attr_length:
                         if len(v) > self.max_attr_length:
                             _value[i] = f'{v[0:self.max_attr_length]}...'
         else:

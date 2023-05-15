@@ -15,13 +15,14 @@ from . import standard_attribute
 from . import units, long_name, standard_name, title, comment, references, source, contact
 from ._logger import logger
 from .layout import Layout, validators
+from .layout.validators import Validator
 from .standard_attribute import StandardAttribute
 from .standard_name import StandardName, StandardNameTable
 from .utils import dict2xml, is_valid_email_address
 from .._repr import make_italic, make_bold
 
 __all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'contact',
-           'Layout', 'validators']
+           'Layout', 'validators', 'Validator']
 
 
 # def list_standard_attributes(obj: Callable = None):
@@ -112,34 +113,42 @@ class Convention:
                                      optional=True)
 
     def __repr__(self):
-        header = f'Convention({self.name})'
+        header = f'Convention("{self.name}")'
         out = f'{make_bold(header)}'
 
-        header = make_bold('\n> Properties')
-        out += f'{header}:'
+        # header = make_bold('\n> Properties')
+        # out += f'{header}:'
+        #
+        # if len(self._properties) == 0:
+        #     out += f' ({make_italic("Nothing registered")})'
+        #
+        # for obj, properties in self._properties.items():
+        #     out += f'\n{obj.__name__}:'
+        #     for prop_name, sattr in properties.items():
+        #         out += f'\n    * {prop_name}: {sattr.__name__}'
 
-        if len(self._properties) == 0:
-            out += f' ({make_italic("Nothing registered")})'
-
-        for obj, properties in self._properties.items():
-            out += f'\n{obj.__name__}:'
-            for prop_name, sattr in properties.items():
-                out += f'\n    * {prop_name}: {sattr.__name__}'
-
-        header = make_bold('\n> Methods')
-        out += f'{header}:'
+        # header = make_bold('\n> Methods')
+        # out += f'{header}:'
 
         for cls, methods in self._methods.items():
             for name, opts in methods.items():
                 out += f'\n  {cls.__name__}.{name}():'
                 if len(opts) == 0:
                     out += f' ({make_italic("Nothing registered")})'
+                    continue
+                # if props exist list them. first required, then optional
+                prop_dict = {'optional': {}, 'required': {}}
                 for prop_name, prop_opts in opts.items():
                     # for property_name, property_dict in methods.items():
                     if prop_opts['optional']:
-                        out += f'\n    * {prop_name} (optional)'
+                        prop_dict['optional'][prop_name] = prop_opts
                     else:
-                        out += f'\n    * {prop_name}'
+                        prop_dict['required'][prop_name] = prop_opts
+
+                for prop_name, prop in prop_dict['required'].items():
+                    out += f'\n    * {make_bold(prop_name)}'
+                for prop_name, prop in prop_dict['optional'].items():
+                    out += f'\n    * {make_italic(prop_name)} (optional)'
         out += '\n'
         return out
 

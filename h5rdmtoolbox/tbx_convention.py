@@ -72,6 +72,10 @@ cv['create_dataset'].add(attr_cls=conventions.source.SourceAttribute,
                          add_to_method=True,
                          position={'after': 'comment'},
                          optional=True)
+
+# cv._methods[h5tbx.wrapper.core.Group]['create_dataset']['units']['optional'] = False
+cv.make_required('create_dataset', 'units')
+
 # cv['create_dataset'].add(attr_cls=conventions.units.ScaleAttribute,
 #                          # target_cls=Dataset,
 #                          add_to_method=True,
