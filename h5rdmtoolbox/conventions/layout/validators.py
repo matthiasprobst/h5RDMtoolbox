@@ -16,15 +16,12 @@ class Validator(abc.ABC):
     count : int, optional
         The expected number of success for this validator. If None,
         the number of successes is not checked.
-    sign : str, optional
-        The sign to use for the string representation of the validator.
     """
 
-    def __init__(self, reference: typing.Any, optional, count=None, sign: str = ' --> '):
+    def __init__(self, reference: typing.Any, optional, count=None):
         self.reference = reference
         self.is_optional = optional
         self.count = count
-        self.sign = sign
         self.nmax = None  # number of occurrences. see GroupValidation.validate()
         self._message = f'Validator {self.__class__.__name__} has not yet been called or no message has been set!'
         self.is_called = False
@@ -81,7 +78,7 @@ class Regex(Validator):
     """Validator using regex"""
 
     def __init__(self, reference: str, optional: bool = False):
-        super().__init__(reference, optional=optional, sign='=')
+        super().__init__(reference, optional=optional)
 
     def validate(self, value: str):
         """match the value against the reference regex"""
@@ -100,7 +97,7 @@ class Equal(Validator):
     A reference value of '*' will always return True."""
 
     def __init__(self, reference, optional: bool = False, count: int = None):
-        super().__init__(reference=reference, optional=optional, count=count, sign='=')
+        super().__init__(reference=reference, optional=optional, count=count)
 
     def validate(self, value):
         if self.is_optional:
@@ -108,9 +105,6 @@ class Equal(Validator):
         if self.reference == '*':
             return True
         return value == self.reference
-
-    def __str__(self) -> str:
-        return str(self.reference)
 
     def __set_message__(self, target, success):
         """Returns human-readable message of the validation result."""
@@ -124,7 +118,7 @@ class In(Validator):
     """Validator that checks if the value is within the reference values."""
 
     def __init__(self, *reference, optional: bool = False):
-        super().__init__(reference, optional=optional, sign=' in ')
+        super().__init__(reference, optional=optional)
 
     def validate(self, value, *args, **kwargs):
         if self.is_optional:
@@ -171,7 +165,7 @@ class ExistIn(GroupValidator):
     """
 
     def __init__(self, reference: str, optional: bool = False):
-        super().__init__(reference, optional=optional, sign=' exists in ')
+        super().__init__(reference, optional=optional)
 
     def validate(self,
                  value: typing.Union[h5py.Dataset, h5py.Group]) -> typing.Union[None, h5py.Dataset, h5py.Group]:
@@ -207,7 +201,7 @@ class Any(Validator):
     """An optional Validator that always returns True."""
 
     def __init__(self):
-        super().__init__(None, optional=True, sign='=')
+        super().__init__(None, optional=True)
 
     def __str__(self):
         return '...'

@@ -12,6 +12,17 @@ class TestLayout(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
+    def test_layout_success_ratio(self):
+        lay = Layout()
+        with self.assertWarns(UserWarning):
+            self.assertEqual(lay.success_ratio, 1.0)
+        lay['/'].attrs['long_name'] = ...
+        # with self.assertRaises(ValueError):
+        #     lay.success_ratio
+        with h5py.File(generate_temporary_filename(), 'w') as h5:
+            with self.assertRaises(ValueError):
+                self.assertEqual(lay.success_ratio, 1.0)
+
     def test_registry(self):
         reg = LayoutRegistry()
         self.assertIsInstance(reg, LayoutRegistry)

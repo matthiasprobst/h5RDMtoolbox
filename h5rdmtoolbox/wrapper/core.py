@@ -682,7 +682,6 @@ class Group(h5py.Group, ConventionAccesor):
                  ignore_attribute_error: bool = False):
         """See find()"""
         from ..database import filequery
-        objfilter = utils.process_obj_filter_input(objfilter)
         return filequery.find(
             self,
             flt,
@@ -698,7 +697,6 @@ class Group(h5py.Group, ConventionAccesor):
                  ) -> List:
         """Find a distinct key (only one result is returned although multiple objects match the filter)"""
         from ..database.filequery import distinct
-        objfilter = utils.process_obj_filter_input(objfilter)
         return distinct(self, key, objfilter)
 
     def find(self, flt: Union[Dict, str],
@@ -728,7 +726,6 @@ class Group(h5py.Group, ConventionAccesor):
         h5obj: h5py.Dataset or h5py.Group
         """
         from ..database import filequery
-        objfilter = utils.process_obj_filter_input(objfilter)
         return filequery.find(
             h5obj=self,
             flt=flt,

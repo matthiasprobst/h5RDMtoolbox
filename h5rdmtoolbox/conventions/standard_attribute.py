@@ -1,3 +1,5 @@
+"""standard attribute module"""
+
 import h5py
 from abc import ABC
 

@@ -7,6 +7,7 @@ import pathlib
 import re
 from itertools import chain
 from typing import List, Union, Dict, Callable, Tuple
+from ..utils import process_obj_filter_input
 
 
 # implementation similar to pymongo:
@@ -227,6 +228,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
     # start with some input checks:
     if not isinstance(flt, Dict):
         raise TypeError(f'Filter must be a dictionary not {type(flt)}')
+    objfilter = process_obj_filter_input(objfilter)
 
     # actual filter:
     results = []
@@ -261,6 +263,7 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
     understood to be an attribute name. However, by adding a $ in front, class
     properties can be found, too, e.g. $shape will return all distinct shapes of the
     passed group."""
+    objfilter = process_obj_filter_input(objfilter)
     if key[0] == '$':
         rpc = RecPropCollect(key[1:], objfilter)
 

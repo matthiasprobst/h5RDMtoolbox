@@ -9,7 +9,7 @@ class IsValidUnit(Validator):
     """Valid units. Does this by checking if the unit can be understood by package 'ureg'"""
 
     def __init__(self, optional: bool = False):
-        super().__init__(None, optional=optional, sign='=')
+        super().__init__(None, optional=optional)
 
     def __set_message__(self, target: str, success: bool):
         if success:
@@ -37,7 +37,7 @@ class IsValidVersionString(Validator):
     """Validates a version string by using the class packaging.version.Version"""
 
     def __init__(self, optional: bool = False):
-        super().__init__(None, optional=optional, sign='=')
+        super().__init__(None, optional=optional)
 
     def __str__(self):
         return "is valid version string"
@@ -55,7 +55,7 @@ class IsValidContact(Validator):
     """Validates a contact string by checking if it is one or multiple valid ORCIDs"""
 
     def __init__(self, optional: bool = False):
-        super().__init__(None, optional=optional, sign='=')
+        super().__init__(None, optional=optional)
 
     def __set_message__(self, target: str, success: bool):
         if success:

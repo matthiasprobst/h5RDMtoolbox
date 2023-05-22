@@ -13,7 +13,7 @@ from . import wrapper
 from ._logger import create_package_logger
 from ._user import UserDir
 from ._version import __version__
-from .database import filequery
+from .database import filequery, FileDB, FolderDB
 from .utils import generate_temporary_filename, generate_temporary_directory
 from . import cache
 from .wrapper.core import lower, Lower, File, Group, Dataset
