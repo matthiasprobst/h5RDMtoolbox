@@ -16,6 +16,19 @@ class TestUtils(unittest.TestCase):
                                                     attrs={'dtime': now})
         self.assertTrue(h5tbx.UserDir['tmp'] in tmp_hdf5file.parents)
 
+    def test_has_datasets(self):
+        with h5tbx.File() as h5:
+            self.assertFalse(h5tbx.utils.has_datasets(h5))
+            h5.create_dataset('test', data=1)
+            self.assertTrue(h5tbx.utils.has_datasets(h5))
+            self.assertFalse(h5tbx.utils.has_groups(h5))
+            h5.create_group('testgroup')
+            self.assertTrue(h5tbx.utils.has_groups(h5))
+
+        self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
+        self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
+
+
 
 
 

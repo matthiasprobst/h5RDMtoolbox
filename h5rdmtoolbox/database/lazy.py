@@ -37,6 +37,11 @@ class LGroup:
         return super().__getattribute__(item)
 
     @property
+    def basename(self) -> str:
+        """Return the basename of the group"""
+        return self.name.split('/')[-1]
+
+    @property
     def attrs(self) -> LAttributeManager:
         """Return the attributes of the group as a LAttributeManager object"""
         return LAttributeManager(self._attrs)
@@ -67,8 +72,10 @@ def _get_dataset_properties(h5obj):
                 external=h5obj.external)
 
 
-def lazy(h5obj) -> Union[LDataset, LGroup]:
+def lazy(h5obj) -> Union[None, LDataset, LGroup]:
     """Make a lazy object from a h5py object"""
+    if h5obj is None:
+        return None
     if isinstance(h5obj, h5py.Group):
         return LGroup(h5obj.file.filename, h5obj.name, dict(h5obj.attrs), {})
     elif isinstance(h5obj, h5py.Dataset):

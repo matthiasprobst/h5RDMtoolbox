@@ -17,7 +17,23 @@ class VectorDataset(Accessor):
         self._grp = h5grp
 
     def __call__(self, *args, **kwargs) -> HDFXrDataset:
-        """Returns a xarray dataset with the vector components as data variables."""
+        """Returns a xarray dataset with the vector components as data variables.
+
+        Either dataset names or datasets can be provided as arguments or keyword arguments.
+        For the latter, the keys are used for the dataset names in the resulting xarray-dataset.
+
+        Examples
+        --------
+        >>> import h5rdmtoolbox as h5tbx
+        >>> import numpy as np
+        >>> from h5rdmtoolbox.extensions import vector
+
+        >>> with h5tbx.File() as h5:
+        ...     h5.create_dataset('u', data=np.random.rand(21, 10)))
+        ...     h5.create_dataset('v', data=np.random.rand(21, 10))
+        ...     h5.create_dataset('w', data=np.random.rand(21, 10))
+        ...     h5.Vector(uvel='u', vvel='v', wvel='w')
+        """
         if len(args) and len(kwargs):
             raise ValueError('Either args or kwargs must be provided but not both')
         hdf_datasets = {}
@@ -31,7 +47,9 @@ class VectorDataset(Accessor):
             hdf_datasets[ds.name.strip('/')] = ds
 
         for name, ds in kwargs.items():
-            if not isinstance(ds, h5py.Dataset):
+            if isinstance(ds, str):
+                ds = self._grp[ds]
+            elif not isinstance(ds, h5py.Dataset):
                 raise TypeError(f'Invalid type: {type(ds)}')
             hdf_datasets[name.strip('/')] = ds
 

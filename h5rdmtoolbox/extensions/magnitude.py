@@ -42,8 +42,8 @@ class MagnitudeAccessor:
         with xr.set_options(keep_attrs=True):
             mag = np.sqrt(mag2).pint.dequantify()
 
+        joined_names = '_'.join(data_vars)
         if name is None:
-            joined_names = '_'.join(data_vars)
             name = f'magnitude_of_{joined_names}'
         if name in self._obj:
             if not overwrite:
@@ -53,7 +53,7 @@ class MagnitudeAccessor:
         processing_comment = 'processing_comment'
         while processing_comment in mag.attrs:
             processing_comment = f'_{processing_comment}'
-        mag.attrs['processing_comment'] = 'computed from: {joined_names.replace("_", ", ")'
+        mag.attrs['processing_comment'] = f'computed from: {joined_names.replace("_", ", ")}'
         if attrs:
             mag.attrs.update(attrs)
         if inplace:

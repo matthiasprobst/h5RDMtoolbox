@@ -14,7 +14,7 @@ from ._logger import create_package_logger
 from ._user import UserDir
 from ._version import __version__
 from .database import filequery, FileDB, FolderDB
-from .utils import generate_temporary_filename, generate_temporary_directory
+from .utils import generate_temporary_filename, generate_temporary_directory, has_datasets, has_groups
 from . import cache
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from typing import Union
@@ -121,4 +121,5 @@ def get_current_convention():
 
 
 __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
-           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset']
+           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset',
+           'has_datasets', 'has_groups', 'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower']

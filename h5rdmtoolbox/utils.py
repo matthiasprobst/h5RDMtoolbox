@@ -13,6 +13,28 @@ from . import config
 from ._version import __version__
 
 
+def has_datasets(target: Union[h5py.Group, pathlib.Path]) -> bool:
+    """Check if file has datasets"""
+    if not isinstance(target, h5py.Group):
+        with h5py.File(target) as h5:
+            return has_datasets(h5)
+    for obj in target.values():
+        if isinstance(obj, h5py.Dataset):
+            return True
+    return False
+
+
+def has_groups(target: Union[h5py.Group, pathlib.Path]) -> bool:
+    """Check if file has groups"""
+    if not isinstance(target, h5py.Group):
+        with h5py.File(target) as h5:
+            return has_groups(h5)
+    for obj in target.values():
+        if isinstance(obj, h5py.Group):
+            return True
+    return False
+
+
 def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     """Generally removes all characters that are no number
     or letter. Per default, underscores and forward slashes
