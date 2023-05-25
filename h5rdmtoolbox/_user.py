@@ -20,6 +20,16 @@ class DirManger:
                           'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
                           }
 
+        user_tmp_dir = self._get_dir('tmp')
+        itmp = len(list(user_tmp_dir.glob("tmp*")))
+        session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
+        while session_tmp_dir.exists():
+            itmp += 1
+            session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
+
+        session_tmp_dir.mkdir(parents=True, exist_ok=True)
+        self._session_tmp_dir = session_tmp_dir
+
     def __getitem__(self, item):
         return self._get_dir(item)
 
@@ -83,18 +93,11 @@ class DirManger:
             _root_tmp_dir = self._get_dir('root') / 'tmp'
             if not _root_tmp_dir.exists():
                 _root_tmp_dir.mkdir()
-                print(_root_tmp_dir)
             return _root_tmp_dir
         if name == 'session_tmp':
-            user_tmp_dir = self._get_dir('tmp')
-            itmp = len(list(user_tmp_dir.glob("tmp*")))
-            session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
-            while session_tmp_dir.exists():
-                itmp += 1
-                session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
-
-            session_tmp_dir.mkdir(parents=True, exist_ok=True)
-            return session_tmp_dir
+            if not self._session_tmp_dir.exists():
+                self._session_tmp_dir.mkdir(parents=True)
+            return self._session_tmp_dir
         raise ValueError(f'Unknown user directory name: "{name}"')
 
 

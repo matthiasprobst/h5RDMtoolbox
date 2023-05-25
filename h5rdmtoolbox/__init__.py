@@ -56,53 +56,6 @@ class Files:
         return filequery.Files(*args, **kwargs)
 
 
-@atexit.register
-def clean_temp_data(full: bool = False):
-    """cleaning up the tmp directory"""
-    failed_dirs = []
-    failed_dirs_file = UserDir['tmp'] / 'failed.txt'
-    if full:
-        if UserDir['tmp'].exists():
-            try:
-                shutil.rmtree(UserDir['tmp'])
-                UserDir['tmp'].mkdir(exist_ok=True, parents=True)
-            except PermissionError as e:
-                print(f'removing tmp folder "{UserDir["tmp"]}" failed due to "{e}".')
-        return
-
-    _tmp_session_dir = UserDir["session_tmp"]
-    if _tmp_session_dir.exists():
-        try:
-            # logger not available anymore
-            # core_logger.debug(f'Attempting to delete {_tmp_session_dir}')
-            shutil.rmtree(UserDir['session_tmp'])
-            # core_logger.debug(f'Successfully deleted {_tmp_session_dir}')
-        except PermissionError as e:
-            failed_dirs.append(UserDir['session_tmp'])
-            print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
-                  f'manually delete the directory.')
-        finally:
-            lines = []
-            if failed_dirs_file.exists():
-                with open(failed_dirs_file, 'r') as f:
-                    lines = f.readlines()
-                    for line in lines:
-                        try:
-                            shutil.rmtree(line.strip())
-                        except Exception:
-                            if pathlib.Path(line).exists():
-                                failed_dirs.append(line)
-
-            if lines or failed_dirs:
-                with open(failed_dirs_file, 'w') as f:
-                    for fd in failed_dirs:
-                        f.writelines(f'{fd}\n')
-            else:
-                failed_dirs_file.unlink(missing_ok=True)
-    else:
-        core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
-
-
 def dump(filename: Union[str, pathlib.Path]):
     """Call h5.dump() on the provided HDF5 file"""
     with File(filename) as h5:
@@ -123,3 +76,61 @@ def get_current_convention():
 __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
            'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset',
            'has_datasets', 'has_groups', 'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower']
+
+atexit_verbose = True
+@atexit.register
+def clean_temp_data(full: bool = False):
+    """cleaning up the tmp directory"""
+    if atexit_verbose:
+        print('cleaning up tmp directory')
+    failed_dirs = []
+    failed_dirs_file = UserDir['tmp'] / 'failed.txt'
+    if full:
+        if UserDir['tmp'].exists():
+            try:
+                shutil.rmtree(UserDir['tmp'])
+                UserDir['tmp'].mkdir(exist_ok=True, parents=True)
+            except PermissionError as e:
+                print(f'removing tmp folder "{UserDir["tmp"]}" failed due to "{e}".')
+        return
+
+    _tmp_session_dir = UserDir["session_tmp"]
+    if _tmp_session_dir.exists():
+        try:
+            # logger not available anymore
+            # core_logger.debug(f'Attempting to delete {_tmp_session_dir}')
+            if atexit_verbose:
+                print(f'try deleting tmp in session dir: {_tmp_session_dir}')
+            # for fd in _tmp_session_dir.iterdir():
+            #     if fd.is_file():
+            #         fd.unlink(missing_ok=True)
+            #     else:
+            shutil.rmtree(_tmp_session_dir)
+            # core_logger.debug(f'Successfully deleted {_tmp_session_dir}')
+        except PermissionError as e:
+            if atexit_verbose:
+                print(f'[!] failed deleting tmp session dir: {_tmp_session_dir}')
+            failed_dirs.append(UserDir['session_tmp'])
+            if atexit_verbose:
+                print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
+                      f'manually delete the directory.')
+        finally:
+            lines = []
+            if failed_dirs_file.exists():
+                with open(failed_dirs_file, 'r') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        try:
+                            shutil.rmtree(line.strip())
+                        except Exception:
+                            if pathlib.Path(line).exists():
+                                failed_dirs.append(line)
+
+            if lines or failed_dirs:
+                with open(failed_dirs_file, 'w') as f:
+                    for fd in failed_dirs:
+                        f.writelines(f'{fd}\n')
+            else:
+                failed_dirs_file.unlink(missing_ok=True)
+    else:
+        core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
