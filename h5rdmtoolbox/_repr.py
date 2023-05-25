@@ -96,7 +96,7 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
 
     """
     import re
-    for p in ("(https?://\S+)", "(ftp://\S+)", "(www\.\S+)"):
+    for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
         pattern = re.compile(p)
         match = re.search(pattern, string)
         if match:
@@ -184,9 +184,9 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
         """string representation of a 0D dataset"""
         value = h5dataset.values[()]
         if isinstance(value, float):
-            value = f'{float(value)} '
+            value = f'{float(value):f} '
         elif isinstance(value, int):
-            value = f'{int(value)} '
+            value = f'{int(value):i} '
         return f"\033[1m{name}\033[0m {value}, dtype: {h5dataset.dtype}"
 
     def __NDdataset__(self, name, h5dataset):
