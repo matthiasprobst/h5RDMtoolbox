@@ -977,9 +977,10 @@ class Group(h5py.Group, ConventionAccesor):
             dim_attr = {'DIMS': dataarr.dims}
         else:
             dim_attr = {}
+        dataarr.attrs.update(dim_attr)
         ds = self.create_dataset(name,
                                  shape=dataarr.shape,
-                                 attrs=dataarr.attrs.update(dim_attr),
+                                 attrs=dataarr.attrs,
                                  overwrite=overwrite,
                                  attach_scales=attach_scales)
         ds[()] = dataarr.values
