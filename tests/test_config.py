@@ -30,8 +30,9 @@ class TestConfig(unittest.TestCase):
         from h5rdmtoolbox._config import ureg
         q = ureg('1 mm')
         self.assertEqual(f'{q}', '1 mm')
-        config.ureg_format = 'L~'
-        self.assertEqual(f'{q}', r'\begin{pmatrix}1\end{pmatrix}\ \mathrm{mm}')
+        config.ureg_format = 'Lx~'
+        self.assertEqual(f'{q}', '\\SI[]{1}{\\milli\\meter}')
+        config.ureg_format = 'C~'
 
     def test_write_config(self):
         h5tbx.write_default_config()

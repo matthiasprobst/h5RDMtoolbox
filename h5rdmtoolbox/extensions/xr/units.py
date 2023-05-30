@@ -1,5 +1,3 @@
-# noinspection PyUnresolvedReferences
-import pint_xarray
 import xarray as xr
 
 

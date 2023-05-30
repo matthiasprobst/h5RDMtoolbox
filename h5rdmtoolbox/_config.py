@@ -6,17 +6,21 @@ Check it out here: https://omegaconf.readthedocs.io/en/2.1_branch/structured_con
 import enum
 from dataclasses import dataclass
 from omegaconf import OmegaConf, DictConfig
-from pint_xarray import unit_registry
+
+from pint import UnitRegistry
 from typing import Union
 
 from ._user import UserDir
 
-ureg = unit_registry
+# noinspection PyUnresolvedReferences
+import pint_xarray
+
+
+ureg = UnitRegistry()
+ureg.default_format = 'C~'
 
 user_config_dir = UserDir['root']
 user_config_filename = UserDir['root'] / 'user_config.yaml'
-
-ureg.default_format = 'C~'
 
 
 class H5tbxDictConfig(DictConfig):

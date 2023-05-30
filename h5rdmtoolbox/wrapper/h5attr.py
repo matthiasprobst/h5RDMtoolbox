@@ -36,6 +36,7 @@ class AttributeString(str):
 
     def to_pint(self) -> "pint.util.Quantity":
         """Returns a pint.Quantity object"""
+        assert ureg.default_format == config.ureg_format
         return ureg(self)
 
 
