@@ -1,16 +1,16 @@
 import datetime
+import h5py
 import logging
+import numpy as np
+import pandas as pd
 import pathlib
 import unittest
 from datetime import datetime
 
-import h5py
-import numpy as np
-import pandas as pd
-
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox._config import ureg
+from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -427,3 +427,22 @@ class TestCore(unittest.TestCase):
                     self.assertEqual(obj.attrs['mean_with_unit'], str(ureg(test_val)))
 
                 self.assertEqual(obj.attrs.get('non_existing_attribute'), None)
+
+    def test_create_from_yaml(self):
+
+        h5y = h5yaml.H5Yaml('fromyaml.yaml')
+        with h5tbx.File() as h5:
+            h5y.write(h5)
+            self.assertIn('grp', h5)
+            self.assertIn('grp/supgrp', h5)
+            self.assertEqual('Title of the file', h5.attrs['title'])
+            self.assertEqual('0000-1234-1234-1234', h5.attrs['contact'])
+            h5.dumps()
+
+        with h5tbx.File() as h5:
+            h5.create_from_yaml('fromyaml.yaml')
+            self.assertIn('grp', h5)
+            self.assertIn('grp/supgrp', h5)
+            self.assertEqual('Title of the file', h5.attrs['title'])
+            self.assertEqual('0000-1234-1234-1234', h5.attrs['contact'])
+            h5.dumps()

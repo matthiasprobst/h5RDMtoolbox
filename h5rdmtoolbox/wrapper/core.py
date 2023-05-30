@@ -391,19 +391,19 @@ class Group(h5py.Group, ConventionAccesor):
 
         attrs, skwargs, kwargs = process_attributes(Group, 'create_group', attrs, kwargs)
         if name in self:
-            if isinstance(self[name], h5py.Group):
-                if overwrite is True:
-                    del self[name]
-                elif update_attrs:
-                    g = self[name]
-                    for ak, av in attrs.items():
-                        g.attrs[ak] = av
-                    return g
-                else:
-                    # let h5py.Group raise the error...
-                    h5py.Group.create_group(self, name, track_order=track_order)
-            else:  # isinstance(self[name], h5py.Dataset):
-                raise RuntimeError('The name you passed is already ued for a dataset!')
+            if not isinstance(self[name], h5py.Group):
+                raise RuntimeError('The name you passed is already used for a dataset!')
+
+            if overwrite is True:
+                del self[name]
+            elif update_attrs:
+                g = self[name]
+                for ak, av in attrs.items():
+                    g.attrs[ak] = av
+                return g
+            else:
+                # let h5py.Group raise the error...
+                h5py.Group.create_group(self, name, track_order=track_order)
 
         if _is_not_valid_natural_name(self, name, config.natural_naming):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
@@ -1039,53 +1039,24 @@ class Group(h5py.Group, ConventionAccesor):
         self[name] = h5py.ExternalLink(filename, path)
         return self[name]
 
-    def from_yaml(self, yaml_filename: Path):
+    def create_from_yaml(self, yaml_filename: Path):
         """creates groups, datasets and attributes defined in a yaml file.
         Creation is performed relative to the current group level.
 
         Note the required yaml file structure, e.g.
-        datasets:
-          grp/supgrp/y:
-            data: 2
-            overwrite: True
-        groups:
-          grp/supgrp:
-            attrs:
-        attrs:
-          grp/supgrp:
+        title='Title of the file'
+        contact='0000-1234-1234-1234'
+        grp/supgrp/y:
+          data: 2
+          overwrite: True
+          attrs:
+            units: 'm/s'
+        grp/supgrp:
+          attrs:
             comment: This is a group comment
         """
-        with open(yaml_filename, 'r') as f:
-            data = yaml.safe_load(f)
-
-        if 'groups' in data:
-            for grp in data['groups']:
-                kwargs = data['groups'][grp]
-                logger.debug("dumping group defined by yaml file. name: %s, kwargs: %s", grp, kwargs)
-                try:
-                    self.create_group(grp, **kwargs)
-                except Exception as e:
-                    logger.critical('Group %s from yaml definition not written due to %s', grp, e)
-
-        if 'datasets' in data:
-            for ds in data['datasets']:
-                kwargs = data['datasets'][ds]
-                logger.debug("dumping dataset defined by yaml file. name: %s, kwargs: %s", ds, kwargs)
-                try:
-                    self.create_dataset(ds, **kwargs)
-                except Exception as e:
-                    raise Exception('Dataset %s from yaml definition not written due to %s', ds, e)
-
-        if 'attrs' in data:
-            for objname in data['attrs']:
-                kwargs = data['attrs'][objname]
-                logger.debug(
-                    f"dumping attribute data defined by yaml file for {objname}: {kwargs}")
-                for ak, av in data['attrs'][objname].items():
-                    try:
-                        self[objname].attrs[ak] = av
-                    except Exception as e:
-                        raise Exception('Could not write attribute %s to %s due to %s', ak, objname, e)
+        from . import h5yaml
+        h5yaml.H5Yaml('fromyaml.yaml').write(self)
 
     def get_by_attribute(self, attribute_name, attribute_value=None,
                          h5type=None, recursive=True) -> List[Union[h5py.Dataset, h5py.Group]]:
