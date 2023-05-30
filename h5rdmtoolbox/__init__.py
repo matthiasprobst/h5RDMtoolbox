@@ -14,7 +14,7 @@ from ._logger import create_package_logger
 from ._user import UserDir
 from ._version import __version__
 from .database import filequery, FileDB, FolderDB
-from .utils import generate_temporary_filename, generate_temporary_directory
+from .utils import generate_temporary_filename, generate_temporary_directory, has_datasets, has_groups
 from . import cache
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from typing import Union
@@ -56,9 +56,33 @@ class Files:
         return filequery.Files(*args, **kwargs)
 
 
+def dump(filename: Union[str, pathlib.Path]):
+    """Call h5.dump() on the provided HDF5 file"""
+    with File(filename) as h5:
+        h5.dump()
+
+
+def dumps(filename: Union[str, pathlib.Path]):
+    """Call h5.dumps() on the provided HDF5 file"""
+    with File(filename) as h5:
+        h5.dumps()
+
+
+def get_current_convention():
+    """get the current convention"""
+    return conventions.current_convention
+
+
+__all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
+           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset',
+           'has_datasets', 'has_groups', 'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower']
+
+atexit_verbose = True
 @atexit.register
 def clean_temp_data(full: bool = False):
     """cleaning up the tmp directory"""
+    if atexit_verbose:
+        print('cleaning up tmp directory')
     failed_dirs = []
     failed_dirs_file = UserDir['tmp'] / 'failed.txt'
     if full:
@@ -75,12 +99,21 @@ def clean_temp_data(full: bool = False):
         try:
             # logger not available anymore
             # core_logger.debug(f'Attempting to delete {_tmp_session_dir}')
-            shutil.rmtree(UserDir['session_tmp'])
+            if atexit_verbose:
+                print(f'try deleting tmp in session dir: {_tmp_session_dir}')
+            # for fd in _tmp_session_dir.iterdir():
+            #     if fd.is_file():
+            #         fd.unlink(missing_ok=True)
+            #     else:
+            shutil.rmtree(_tmp_session_dir)
             # core_logger.debug(f'Successfully deleted {_tmp_session_dir}')
         except PermissionError as e:
+            if atexit_verbose:
+                print(f'[!] failed deleting tmp session dir: {_tmp_session_dir}')
             failed_dirs.append(UserDir['session_tmp'])
-            print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
-                  f'manually delete the directory.')
+            if atexit_verbose:
+                print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
+                      f'manually delete the directory.')
         finally:
             lines = []
             if failed_dirs_file.exists():
@@ -101,24 +134,3 @@ def clean_temp_data(full: bool = False):
                 failed_dirs_file.unlink(missing_ok=True)
     else:
         core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
-
-
-def dump(filename: Union[str, pathlib.Path]):
-    """Call h5.dump() on the provided HDF5 file"""
-    with File(filename) as h5:
-        h5.dump()
-
-
-def dumps(filename: Union[str, pathlib.Path]):
-    """Call h5.dumps() on the provided HDF5 file"""
-    with File(filename) as h5:
-        h5.dumps()
-
-
-def get_current_convention():
-    """get the current convention"""
-    return conventions.current_convention
-
-
-__all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
-           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset']

@@ -950,30 +950,39 @@ class Group(h5py.Group, ConventionAccesor):
             ds[:] = np.stack(imgdata, axis=axis)
         return ds
 
-    def create_dataset_from_xarray_dataarray(self, dataarr: xr.DataArray, name: str = None,
-                                             overwrite: bool = False) -> None:
+    def create_dataset_from_xarray_dataarray(self,
+                                             dataarr: xr.DataArray,
+                                             name: str = None,
+                                             overwrite:bool=False,
+                                             overwrite_coords: bool = False) -> None:
         """create hdf dataset from xarray DataArray. All attributes are written to the
         hdf dataset. If coordinates are present, they are written as dimension scales.
         If only dimensions are present, the dim names are written as attributes using
         `DIMS` as key."""
         ds_coords = {}
-        for coord in dataarr.coords.keys():
-            ds = self.create_dataset(coord,
-                                     data=dataarr.coords[coord].values,
-                                     attrs=dataarr.coords[coord].attrs,
-                                     overwrite=overwrite)
-            ds.make_scale()
-            ds_coords[coord] = ds
+        attach_scales = [None]*dataarr.ndim
+        for idim, dim in enumerate(dataarr.dims):
+            if dim not in self or overwrite_coords:
+                ds = self.create_dataset(dim,
+                                         data=dataarr.coords[dim].values,
+                                         attrs=dataarr.coords[dim].attrs,
+                                         overwrite=overwrite_coords)
+                ds.make_scale()
+                ds_coords[dim] = ds
+            if dim in self:
+                attach_scales[idim] = dim
         if name is None:
             name = dataarr.name
         if len(ds_coords) == 0:
             dim_attr = {'DIMS': dataarr.dims}
         else:
             dim_attr = {}
+        dataarr.attrs.update(dim_attr)
         ds = self.create_dataset(name,
                                  shape=dataarr.shape,
-                                 attrs=dataarr.attrs.update(dim_attr),
-                                 overwrite=overwrite)
+                                 attrs=dataarr.attrs,
+                                 overwrite=overwrite,
+                                 attach_scales=attach_scales)
         ds[()] = dataarr.values
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:

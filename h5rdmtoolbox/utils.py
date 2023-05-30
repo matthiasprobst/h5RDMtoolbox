@@ -13,6 +13,28 @@ from . import config
 from ._version import __version__
 
 
+def has_datasets(target: Union[h5py.Group, pathlib.Path]) -> bool:
+    """Check if file has datasets"""
+    if not isinstance(target, h5py.Group):
+        with h5py.File(target) as h5:
+            return has_datasets(h5)
+    for obj in target.values():
+        if isinstance(obj, h5py.Dataset):
+            return True
+    return False
+
+
+def has_groups(target: Union[h5py.Group, pathlib.Path]) -> bool:
+    """Check if file has groups"""
+    if not isinstance(target, h5py.Group):
+        with h5py.File(target) as h5:
+            return has_groups(h5)
+    for obj in target.values():
+        if isinstance(obj, h5py.Group):
+            return True
+    return False
+
+
 def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     """Generally removes all characters that are no number
     or letter. Per default, underscores and forward slashes
@@ -49,7 +71,7 @@ def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
     return _cleaned_str
 
 
-def generate_temporary_filename(prefix='tmp', suffix: str = '') -> pathlib.Path:
+def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = False) -> pathlib.Path:
     """generates a temporary filename in user tmp file directory
 
     Parameters
@@ -67,6 +89,9 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '') -> pathlib.Path:
     _filename = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
     while _filename.exists():
         _filename = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
+    if touch:
+        with h5py.File(_filename, 'w'):
+            pass
     return _filename
 
 

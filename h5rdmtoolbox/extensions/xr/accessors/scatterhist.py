@@ -12,67 +12,66 @@ import xarray as xr
 from ....plotting import build_label_unit_str
 
 
-@xr.register_dataarray_accessor("scatterhist")
+def scatter_hist(x, y, binwidth=1.0, **kwargs):
+    """Code taken from https://matplotlib.org/3.1.0/gallery/lines_bars_and_markers/scatter_hist.html"""
+    # definitions for the axes
+    left, width = 0.1, 0.65
+    bottom, height = 0.1, 0.65
+    spacing = 0.005
+
+    color = kwargs.pop('color', 'k')
+
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom + height + spacing, width, 0.2]
+    rect_histy = [left + width + spacing, bottom, 0.2, height]
+
+    # start with a rectangular Figure
+    plt.figure(figsize=(8, 8))
+
+    ax_scatter = plt.axes(rect_scatter)
+    ax_scatter.tick_params(direction='in', top=True, right=True)
+    ax_histx = plt.axes(rect_histx)
+    ax_histx.tick_params(direction='in', labelbottom=False)
+    ax_histy = plt.axes(rect_histy)
+    ax_histy.tick_params(direction='in', labelleft=False)
+
+    # the scatter plot:
+    ax_scatter.scatter(x, y, color=color, **kwargs)
+
+    # now determine nice limits by hand:
+    lim = np.ceil(np.abs([x, y]).max() / binwidth) * binwidth
+    ax_scatter.set_xlim((-lim, lim))
+    ax_scatter.set_ylim((-lim, lim))
+
+    bins = np.arange(-lim, lim + binwidth, binwidth)
+    ax_histx.hist(x, bins=bins, color=color, density=True)
+    ax_histy.hist(y, bins=bins, orientation='horizontal', color=color, density=True)
+
+    # ax_histx.set_xlim(ax_scatter.get_xlim())
+    # ax_histy.set_ylim(ax_scatter.get_ylim())
+    ax_histx.set_ylim([0, 1])
+    ax_histy.set_xlim([0, 1])
+
+    return ax_scatter, ax_histx, ax_histy
+
+
+@xr.register_dataset_accessor("scatterhist")
 class ScatterHist:
-    """Scatter-histogram-plot for xr.DataArrays
+    """Scatter-histogram-plot for xr.Dataset objects
 
     Example:
     --------
-    da = xr.DataArray( ... )
-    da[:].scatterhist(marker='+', color='k')
+    ds = xr.Dataset( ... )
+    ds.scatterhist('x', 'y', marker='+', color='k')
     """
 
     def __init__(self, xarray_obj):
         self._obj = xarray_obj
 
-    def __call__(self, *args, **kwargs):
-        self.plot(*args, **kwargs)
-
-    def plot(self, **kwargs):
-        """Plot a scatter histogram.
-        Code taken from https://matplotlib.org/3.1.0/gallery/lines_bars_and_markers/scatter_hist.html"""
-        ds_x = self._obj[list(self._obj.coords.variables.keys())[kwargs.get('axis', 0)]]
-        ds_y = self._obj
-        x = ds_x.values
-        y = ds_y.data
-
-        # definitions for the axes
-        left, width = 0.1, 0.65
-        bottom, height = 0.1, 0.65
-        spacing = 0.005
-
-        rect_scatter = [left, bottom, width, height]
-        rect_histx = [left, bottom + height + spacing, width, 0.2]
-        rect_histy = [left + width + spacing, bottom, 0.2, height]
-
-        # start with a rectangular Figure
-        fig = kwargs.get('fig', plt.figure(figsize=kwargs.get('figsize', (8, 8))))
-
-        ax_scatter = plt.axes(rect_scatter)
-        ax_scatter.tick_params(direction='in', top=True, right=True)
-        ax_histx = plt.axes(rect_histx)
-        ax_histx.tick_params(direction='in', labelbottom=False)
-        ax_histy = plt.axes(rect_histy)
-        ax_histy.tick_params(direction='in', labelleft=False)
-
-        # the scatter plot:
-        ax_scatter.scatter(x, y,
-                           marker=kwargs.pop('marker', None),
-                           s=kwargs.pop('s', None),
-                           color=kwargs.get('color', 'k'))
-
-        # now determine nice limits by hand:
-        bins = kwargs.get('bins', 10)
-        xmean = np.nanmean(x)
-        dx = np.nanmax(x) - np.nanmin(x)
-        xbinwidth = dx / bins
-        _xlim = (xmean - dx / 2, xmean + dx / 2)
-        ymean = np.nanmean(y)
-        dy = np.nanmax(y) - np.nanmin(y)
-        ybinwidth = dy / bins
-        _ylim = (ymean - dy / 2, ymean + dy / 2)
-        ax_scatter.set_xlim(kwargs.get('xlim', _xlim))
-        ax_scatter.set_ylim(kwargs.get('ylim', _ylim))
+    def __call__(self, x: str, y: str, **kwargs):
+        ds_x = self._obj[x]
+        ds_y = self._obj[y]
+        ax_scatter, ax_histx, ax_histy = scatter_hist(ds_x.values.ravel(), ds_y.values.ravel(), **kwargs)
 
         xunits = ds_x.attrs.get('units', None)
         if 'standard_name' in ds_x.attrs:
@@ -99,15 +98,3 @@ class ScatterHist:
             ax_scatter.set_ylabel(build_label_unit_str(yname, yunits))
         else:
             ax_scatter.set_ylabel(yname)
-
-        xbins = np.arange(_xlim[0], _xlim[1], xbinwidth)
-        ybins = np.arange(_ylim[0], _ylim[1], ybinwidth)
-        ax_histx.hist(x, bins=kwargs.get('xbins', xbins),
-                      color=kwargs.get('color', 'k'))
-        ax_histy.hist(y, bins=kwargs.get('ybins', ybins), orientation='horizontal',
-                      color=kwargs.get('color', 'k'))
-
-        ax_histx.set_xlim(ax_scatter.get_xlim())
-        ax_histy.set_ylim(ax_scatter.get_ylim())
-
-        return fig

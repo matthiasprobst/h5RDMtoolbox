@@ -24,22 +24,16 @@ Please find the comprehensive documentation with examples [here](h5rdmtoolbox.re
 
 
 ## Installation
+Use python 3.8 or higher (tested until 3.10).
+
 Install from website:
 
     pip install git+https://github.com/matthiasprobst/h5RDMtoolbox
 
 
-Navigate to the repository directory.
+For **development**, clone the repository and install it in editable mode:
 
-Clone the repository
-
-     git clone https://github.com/matthiasprobst/h5RDMtoolbox
-
-Make sure you have python3.8 or higher installed. Then run:
-
-    pip install h5RDMtoolbox
-or for editable mode:
-
+    git clone https://github.com/matthiasprobst/h5RDMtoolbox
     pip install -e h5RDMtoolbox
 
 There are optional dependencies, e.g. for PIV-specific features. Specify them in square brackets after the package 
