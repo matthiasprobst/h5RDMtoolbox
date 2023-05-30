@@ -43,8 +43,9 @@ class TestFile(unittest.TestCase):
 
     def tearDown(self) -> None:
         for fname in Path(__file__).parent.glob('*'):
-            if fname.suffix not in ('py', '.py', ''):
-                fname.unlink()
+            if fname.suffix not in ('py', '.py', '.yaml'):
+                if fname.is_file():
+                    fname.unlink()
 
     def test_offset_scale(self):
         for scale in (0.2 * pint.Unit('Pa/V'), 0.2 * pint.Unit('Pa/V')):
@@ -307,11 +308,11 @@ class TestFile(unittest.TestCase):
 
     def test_from_yaml_to_hdf(self):
         dictionary = {
-            'datasets': {'boundary/outlet boundary/y':
-                             {'data': 2, 'attrs': {'units': 'm', 'standard_name': 'y_coordinate',
-                                                   'comment': 'test', 'another_attr': 100.2,
-                                                   'array': [1, 2, 3]}}},
-            'groups': {'test/grp': {'attrs': {'long_name': 'a test group'}}}
+            'boundary/outlet boundary/y':
+                {'data': 2, 'attrs': {'units': 'm', 'standard_name': 'y_coordinate',
+                                      'comment': 'test', 'another_attr': 100.2,
+                                      'array': [1, 2, 3]}},
+            'test/grp': {'attrs': {'long_name': 'a test group'}}
         }
         yaml_file = generate_temporary_filename(suffix='.yaml')
         with open(yaml_file, 'w') as f:
@@ -319,7 +320,7 @@ class TestFile(unittest.TestCase):
 
         hdf_filename = generate_temporary_filename(suffix='.hdf')
         with File(hdf_filename, 'w') as h5:
-            h5.from_yaml(yaml_file)
+            h5.create_from_yaml(yaml_file)
             self.assertIn('test/grp', h5)
             self.assertIn('boundary/outlet boundary/y', h5)
             self.assertTrue(h5['boundary/outlet boundary/y'].attrs['units'], 'm')

@@ -16,6 +16,7 @@ from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = logging.getLogger('h5rdmtoolbox.wrapper')
 set_loglevel('ERROR')
+__this_dir__ = pathlib.Path(__file__).parent
 
 
 class TestCore(unittest.TestCase):
@@ -430,7 +431,7 @@ class TestCore(unittest.TestCase):
 
     def test_create_from_yaml(self):
 
-        h5y = h5yaml.H5Yaml('fromyaml.yaml')
+        h5y = h5yaml.H5Yaml(__this_dir__ / '../data/from_yaml.yaml')
         with h5tbx.File() as h5:
             h5y.write(h5)
             self.assertIn('grp', h5)
@@ -440,7 +441,7 @@ class TestCore(unittest.TestCase):
             h5.dumps()
 
         with h5tbx.File() as h5:
-            h5.create_from_yaml('fromyaml.yaml')
+            h5.create_from_yaml(__this_dir__ / '../data/from_yaml.yaml')
             self.assertIn('grp', h5)
             self.assertIn('grp/supgrp', h5)
             self.assertEqual('Title of the file', h5.attrs['title'])

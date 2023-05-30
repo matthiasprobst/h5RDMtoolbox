@@ -665,11 +665,11 @@ class TestH5TbxWrapperFile(unittest.TestCase):
 
     def test_from_yaml_to_hdf(self):
         dictionary = {
-            'datasets': {'boundary/outlet boundary/y': {'data': 2, 'units': 'm', 'standard_name': 'y_coordinate',
+            'boundary/outlet boundary/y': {'data': 2, 'units': 'm', 'standard_name': 'y_coordinate',
                                                         'attrs': {'comment': 'This is an OK comment',
                                                                   'another_attr': 100.2,
-                                                                  'array': [1, 2, 3]}}},
-            'groups': {'test/grp': {'long_name': 'a test group'}}
+                                                                  'array': [1, 2, 3]}},
+            'test/grp': {'long_name': 'a test group'}
         }
         yaml_file = generate_temporary_filename(suffix='.yaml')
         with open(yaml_file, 'w') as f:
@@ -681,7 +681,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      institution=self.default_institution,
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
-            h5.from_yaml(yaml_file)
+            h5.create_from_yaml(yaml_file)
             self.assertIn('test/grp', h5)
             self.assertIn('boundary/outlet boundary/y', h5)
             self.assertTrue(h5['boundary/outlet boundary/y'].units, 'm')

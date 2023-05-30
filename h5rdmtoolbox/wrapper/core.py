@@ -1065,7 +1065,7 @@ class Group(h5py.Group, ConventionAccesor):
             comment: This is a group comment
         """
         from . import h5yaml
-        h5yaml.H5Yaml('fromyaml.yaml').write(self)
+        h5yaml.H5Yaml(yaml_filename).write(self)
 
     def get_by_attribute(self, attribute_name, attribute_value=None,
                          h5type=None, recursive=True) -> List[Union[h5py.Dataset, h5py.Group]]:
