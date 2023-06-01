@@ -77,7 +77,9 @@ __all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_c
            'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset',
            'has_datasets', 'has_groups', 'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower']
 
-atexit_verbose = True
+atexit_verbose = False
+
+
 @atexit.register
 def clean_temp_data(full: bool = False):
     """cleaning up the tmp directory"""

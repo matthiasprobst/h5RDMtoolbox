@@ -12,6 +12,46 @@ class TestLayout(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
+    def test_notstring_dataset(self):
+        lay = Layout()
+        any_group = lay['*']
+        any_group.specify_dataset(name=..., opt=True, include_string_datasets=False).specify_attrs(
+            dict(units=Equal('m/s'), ))
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('a', data=1, attrs=dict(units='m/s'))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+            h5.create_dataset('s', data='my string', attrs=dict(long_name='a string dataset'))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+    def test_any_group(self):
+        lay = Layout()
+        any_group = lay['*']
+        any_group.specify_dataset(name=..., opt=True).specify_attrs(dict(units=Equal('m/s'), ))
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('a', data=1, attrs=dict(units='m/s'))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('grp/a', data=1, attrs=dict(units='m/s'))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 0)
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('grp/a', data=1, attrs=dict(units='km/s'))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 1)
+
+            h5.create_dataset('grp/subgrp/b', data=1, attrs=dict(units='km/s'))
+            h5.create_dataset('grp/subgrp/subsubgrp/c', data=1, attrs=dict(units='m/s'))
+            lay.validate(h5)
+            self.assertEqual(lay.fails, 2)
+
     def test_layout_success_ratio(self):
         lay = Layout()
         with self.assertWarns(UserWarning):

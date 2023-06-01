@@ -378,6 +378,13 @@ class BaseGroupAndDatasetValidation(Validation, abc.ABC):
 class DatasetValidation(BaseGroupAndDatasetValidation):
     """Dataset validation"""
 
+    def __init__(self,
+                 validator: Validator,
+                 parent: typing.Union[Validation, None],
+                 include_string_datasets: bool = False):
+        super().__init__(validator, parent)
+        self.include_string_datasets = include_string_datasets
+
     def __str__(self):
         prop_children = [child for child in self.subsequent_validations if isinstance(child, PropertyValidation)]
         if len(prop_children) == 0:
@@ -392,7 +399,7 @@ class DatasetValidation(BaseGroupAndDatasetValidation):
         """Validate datasets of a group"""
         self.called = True
         valid_flags = []
-        for dataset in get_h5datasets(h5group):
+        for dataset in get_h5datasets(h5group, include_string_datasets=self.include_string_datasets):
             is_valid = copy.deepcopy(self.validator)(dataset.name.rsplit('/', 1)[-1])
             valid_flags.append(is_valid)
             if is_valid:
@@ -451,6 +458,7 @@ class GroupValidation(BaseGroupAndDatasetValidation):
     def specify_dataset(self,
                         name: typing.Union[str, Validator, None] = None,
                         opt: bool = None,
+                        include_string_datasets: bool=False,
                         **properties) -> DatasetValidation:
         """Add a dataset specification
 
@@ -460,6 +468,8 @@ class GroupValidation(BaseGroupAndDatasetValidation):
             The name of the dataset, by default None
         opt : bool, optional=None
             Whether the validation is optional, by default None
+        include_string_datasets: bool, optional=False
+            Whether to include string datasets in the validation, by default False
         **properties
             The dictionary containing the properties of an HDF5 dataset and their validators
 
@@ -470,7 +480,7 @@ class GroupValidation(BaseGroupAndDatasetValidation):
         """
         if name is None:
             name = Any()
-        dv = DatasetValidation(name, self)
+        dv = DatasetValidation(name, self, include_string_datasets=include_string_datasets)
 
         dv = self.add_subsequent_validation(dv)
         for name, value in properties.items():
