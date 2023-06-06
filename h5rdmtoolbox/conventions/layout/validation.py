@@ -158,7 +158,7 @@ class AttributeValidation(Validation):
         attribute_dict = dict(target.attrs.items())
         if len(attribute_dict) == 0:
             _m = []
-            for  v in self.validators:
+            for v in self.validators:
                 _m.append(f'{v[0].__repr__()}={v[1].__repr__()}')
             validation_results.append(ValidationResult(self,
                                                        False,
@@ -458,7 +458,7 @@ class GroupValidation(BaseGroupAndDatasetValidation):
     def specify_dataset(self,
                         name: typing.Union[str, Validator, None] = None,
                         opt: bool = None,
-                        include_string_datasets: bool=False,
+                        include_string_datasets: bool = False,
                         **properties) -> DatasetValidation:
         """Add a dataset specification
 
