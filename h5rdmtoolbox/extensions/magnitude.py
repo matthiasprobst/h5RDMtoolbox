@@ -38,7 +38,7 @@ class MagnitudeAccessor:
         """
         mag2 = self._obj[data_vars[0]].pint.quantify() ** 2
         for data_var in data_vars[1:]:
-            self._obj[data_var].pint.quantify() ** 2
+            mag2 += self._obj[data_var].pint.quantify() ** 2
         with xr.set_options(keep_attrs=True):
             mag = np.sqrt(mag2).pint.dequantify()
 

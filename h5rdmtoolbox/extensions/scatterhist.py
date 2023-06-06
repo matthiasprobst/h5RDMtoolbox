@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
-from ....plotting import build_label_unit_str
+from ..plotting import build_label_unit_str
 
 
 def scatter_hist(x, y, binwidth=1.0, **kwargs):
