@@ -2,12 +2,21 @@ HDF Research Data Management Toolbox
 ====================================
 
 The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package that provides a set of tools to work
-with HDF5 files. It is intended to help researches in projects achieving
-`FAIR <https://www.nature.com/articles/sdata201618>`_ data management based on HDF5 files. It
-supports users with data creation, processing and sharing. :doc:`Conventions <conventions/index>` can be designed flexible
-and to the needs of the respective project or collaboration. They are respected by the interface
-(:doc:`wrapper <wrapper/index>`) built around the core package `h5py`. Additionally, the package provides tools to
-:doc:`query <database/index>` HDF5 files in a file system or through a database (mongoDB).
+**efficiently** and **sustainably** with HDF5 files. It is intended to help researches in projects achieving
+`FAIR <https://www.nature.com/articles/sdata201618>`_ data management based on HDF5 files.
+
+It supports users with
+ - :doc:`data creation <wrapper/index>`
+ - :doc:`processing <wrapper/index>`
+ - :doc:`sharing <database/index>`
+
+In order to achieve sustainable data that can be shared within a project/collaboration or a community standards or
+`conventions <conventions/index>` within the respective environment need to be respected, The toolbox provides a tool to integrate meta-data-
+standards during the steps of creation, processing and sharing of data.
+
+HDF5 files can be used as a :doc:`database <database/index>` directly or can be integrated in a non-relational database
+(mongoDB) with the toolbox. This
+allows to identify data based on meta information. Above standards help to identify data and to make it findable.
 
 
 .. note::
@@ -32,9 +41,9 @@ HDF5 files:
 Please navigate through the chapters on the left to learn more about the package. They are organized in the following:
 
       - :doc:`Getting Started <gettingstarted/index>`: A quick introduction to the package
-      - :doc:`Wrapper <wrapper/index>`: A high-level wrapper for HDF5 files
+      - :doc:`Create and process Files <wrapper/index>`: A high-level wrapper for HDF5 files
       - :doc:`Conventions <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
-      - :doc:`Database <database/index>`: A database for HDF5 files
+      - :doc:`HDF5 Database solutions <database/index>`: A database for HDF5 files
       - :doc:`HowTo <howto/index>`: A collection of FAQs how to do things
       - :doc:`API Reference <api>`: The API reference
       - :doc:`Glossary <glossary/index>`: A glossary of terms used in the package
