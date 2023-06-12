@@ -20,6 +20,7 @@ from .wrapper.core import lower, Lower, File, Group, Dataset
 from typing import Union
 from . import conventions
 from . import tbx_convention
+from . import plotting
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
