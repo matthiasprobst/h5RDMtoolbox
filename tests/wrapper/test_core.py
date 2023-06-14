@@ -9,7 +9,6 @@ from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
@@ -368,7 +367,7 @@ class TestCore(unittest.TestCase):
             self.assertTrue(abs((file_now - now).total_seconds()) < 1)
             self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
             self.assertEqual(h5.version, __version__)
-            self.assertEqual(h5.filesize.units, ureg.byte)
+            self.assertEqual(h5.filesize.units, h5tbx.get_ureg().byte)
             self.assertIsInstance(h5.hdf_filename, pathlib.Path)
 
     def test_special_attribute_types(self):
@@ -418,13 +417,13 @@ class TestCore(unittest.TestCase):
                     self.assertEqual(obj.attrs['mean_with_unit'], test_val)
                     attrs_with_unit = obj.attrs['mean_with_unit'].to_pint()
                     self.assertEqual(f"{obj.attrs['mean_with_unit'].to_pint()}", '1.2 m')
-                    self.assertEqual(h5tbx.config.ureg_format, 'C~')
-                    self.assertEqual(ureg.default_format, 'C~')
-                    self.assertEqual(ureg.default_format, h5tbx.config.ureg_format)
+                    self.assertEqual(h5tbx.get_config('ureg_format'), 'C~')
+                    self.assertEqual(h5tbx.get_ureg().default_format, 'C~')
+                    self.assertEqual(h5tbx.get_ureg().default_format, h5tbx.get_config('ureg_format'))
                     self.assertEqual(f"{obj.attrs['mean_with_unit'].to_pint()}", '1.2 m')
-                    self.assertEqual(attrs_with_unit, ureg(test_val))
+                    self.assertEqual(attrs_with_unit, h5tbx.get_ureg()(test_val))
                     obj.attrs['mean_with_unit'] = attrs_with_unit
-                    self.assertEqual(obj.attrs['mean_with_unit'], str(ureg(test_val)))
+                    self.assertEqual(obj.attrs['mean_with_unit'], str(h5tbx.get_ureg()(test_val)))
 
                 self.assertEqual(obj.attrs.get('non_existing_attribute'), None)
 

@@ -11,7 +11,6 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import conventions
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox._config import ureg
 from h5rdmtoolbox._user import testdir
 from h5rdmtoolbox.conventions import units, title, standard_name
 from h5rdmtoolbox.conventions.layout.tbx import IsValidVersionString, IsValidUnit
@@ -188,7 +187,7 @@ class TestStandardAttributes(unittest.TestCase):
                 ds.units = ('test',)
             self.assertEqual(ds.units, 'm')
             # creat pint unit object:
-            ds.units = ureg.mm
+            ds.units = h5tbx.get_ureg().mm
             self.assertEqual(ds.units, 'mm')
             del ds.units
             self.assertEqual(ds.units, None)

@@ -31,7 +31,7 @@ from ._logger import logger
 from .standard_attribute import StandardAttribute
 from .utils import equal_base_units, dict2xml, get_similar_names_ratio, check_url, is_valid_email_address
 from .. import cache
-from .._config import ureg
+from .. import get_ureg
 from .._user import UserDir
 from ..utils import generate_temporary_filename
 
@@ -96,7 +96,7 @@ def is_valid_unit(unit_string: str) -> bool:
     >>> False
     """
     try:
-        ureg.Unit(unit_string)
+        get_ureg().Unit(unit_string)
     except (UndefinedUnitError, TypeError):  # as e:
         return False  # UndefinedUnitError(f'Units cannot be understood using ureg package: {_units}. --> {e}')
     return True
@@ -161,7 +161,7 @@ class StandardName:
                  ):
         self.name = name
         self.description = description
-        self.canonical_units = f'{ureg.Unit(_units_power_fix(canonical_units))}'
+        self.canonical_units = f'{get_ureg().Unit(_units_power_fix(canonical_units))}'
         if snt is None:
             # select a "minimal snt", which has no valid online resource but allows performing checks
             snt = MinimalStandardNameTable(None, {})
@@ -1160,7 +1160,7 @@ class StandardNameAttribute(StandardAttribute):
                         if 'units' in self.parent.attrs:
                             # scale = self.parent.scale
                             # if scale is not None:
-                            #     units_to_be_checked = str(ureg.Unit(self.parent.units) * self.parent.scale.units)
+                            #     units_to_be_checked = str(get_ureg().Unit(self.parent.units) * self.parent.scale.units)
                             # else:
                             #     units_to_be_checked = self.parent.units
                             if not snt.check_units(new_standard_name, self.parent.units):

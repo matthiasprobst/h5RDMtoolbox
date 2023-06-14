@@ -3,24 +3,22 @@ import atexit
 import logging
 import pathlib
 import shutil
+from typing import Union
 
-from ._config import CONFIG
-from ._config import user_config_filename, write_default_config, write_user_config, DEFAULT_CONFIG
-
-config = CONFIG
-
+from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
+from . import cache
+from . import conventions
+from . import plotting
+from . import tbx_convention
 from . import wrapper
 from ._logger import create_package_logger
 from ._user import UserDir
 from ._version import __version__
 from .database import filequery, FileDB, FolderDB
 from .utils import generate_temporary_filename, generate_temporary_directory, has_datasets, has_groups
-from . import cache
 from .wrapper.core import lower, Lower, File, Group, Dataset
-from typing import Union
-from . import conventions
-from . import tbx_convention
-from . import plotting
+# noinspection PyUnresolvedReferences
+import pint_xarray
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
@@ -39,14 +37,14 @@ def set_loglevel(logger, level):
     logger.debug(f'changed logger level for {logger.name} from {old_level} to {level}')
 
 
-set_loglevel(core_logger, config.init_logger_level)
+set_loglevel(core_logger, get_config()['init_logger_level'])
 
 cv_h5py = conventions.Convention('h5py')
 cv_h5py.register()
 
 use = conventions.use
 
-use(config['default_convention'])
+use(get_config()['default_convention'])
 
 
 class Files:
@@ -73,10 +71,6 @@ def get_current_convention():
     """get the current convention"""
     return conventions.current_convention
 
-
-__all__ = ['__version__', '__author__', 'UserDir', 'use', 'core_logger', 'user_config_filename',
-           'generate_temporary_filename', 'generate_temporary_directory', 'File', 'Files', 'Group', 'Dataset',
-           'has_datasets', 'has_groups', 'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower']
 
 atexit_verbose = False
 
@@ -137,3 +131,10 @@ def clean_temp_data(full: bool = False):
                 failed_dirs_file.unlink(missing_ok=True)
     else:
         core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
+
+
+__all__ = ('__version__', '__author__', 'UserDir', 'use', 'core_logger',
+           'generate_temporary_filename', 'generate_temporary_directory',
+           'File', 'Files', 'Group', 'Dataset', 'has_datasets', 'has_groups',
+           'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower',
+           'set_config', 'get_config', 'get_ureg')

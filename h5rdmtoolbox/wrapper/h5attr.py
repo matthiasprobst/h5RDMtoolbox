@@ -7,10 +7,8 @@ from h5py._objects import ObjectID
 from typing import Dict
 
 from .h5utils import get_rootparent
-from .. import config
-from .. import conventions
-from .. import utils
-from .._config import ureg
+from .. import get_config, conventions, utils
+from .. import get_ureg
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
@@ -36,8 +34,8 @@ class AttributeString(str):
 
     def to_pint(self) -> "pint.util.Quantity":
         """Returns a pint.Quantity object"""
-        assert ureg.default_format == config.ureg_format
-        return ureg(self)
+        assert get_ureg().default_format == get_config('ureg_format')
+        return get_ureg()(self)
 
 
 class WrapperAttributeManager(h5py.AttributeManager):
@@ -59,7 +57,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
 
-        if config.expose_user_prop_to_attrs and parent.__class__ in conventions.current_convention._properties:
+        if get_config('expose_user_prop_to_attrs') and parent.__class__ in conventions.current_convention._properties:
             if name in conventions.current_convention._properties[parent.__class__]:
                 return conventions.current_convention._properties[parent.__class__][name](self._parent).get()
 
@@ -148,7 +146,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return outstr[:-1]
 
     def __getattr__(self, item):
-        if config.natural_naming:
+        if get_config('natural_naming'):
             if item in self.__dict__:
                 return super().__getattribute__(item)
             if item in self.keys():
@@ -161,7 +159,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             super().__setattr__(key, value)
             return
         if not isinstance(value, ObjectID):
-            if config.natural_naming:
+            if get_config('natural_naming'):
                 self.__setitem__(key, value)
                 return
             else:

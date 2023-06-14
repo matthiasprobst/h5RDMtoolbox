@@ -8,8 +8,7 @@ from h5py import File
 from re import sub as re_sub
 from typing import Union
 
-from . import _user
-from . import config
+from . import _user, get_config
 from ._version import __version__
 
 
@@ -159,7 +158,7 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
     elif isinstance(value, pathlib.Path):
         _value = str(value)
     elif isinstance(value, datetime.datetime):
-        _value = value.strftime(config.dtime_fmt)
+        _value = value.strftime(get_config('dtime_fmt'))
     else:
         _value = value
 

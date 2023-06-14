@@ -8,7 +8,7 @@ import re
 # xarray does not allow to change the unit representation in axis labels. The following is a workaround:
 import warnings
 
-from . import config
+from . import get_config
 
 __XARRAY_UNITS_PATTERN__ = r"(.*?)\[([^\[\]]*?)\]$"
 __AV_UNIT_FORMATS__ = ('/', '()', '[]', '//', 'in')
@@ -46,7 +46,7 @@ def build_label_unit_str(name: str, units: str,
                          units_format: str = None) -> str:
     """generates the label string from a name and a units based on the units format"""
     if units_format is None:
-        units_format = config.xarray_unit_repr_in_plots
+        units_format = get_config('xarray_unit_repr_in_plots')
     units = units.replace("**", "^")
     if units_format == 'in':
         return f'{name} in ${units}$'
@@ -64,7 +64,7 @@ class XarrayLabelManipulation(plt.Axes):
     @staticmethod
     def _adjust_units_label(label, units_format=None):
         if units_format is None:
-            units_format = config.xarray_unit_repr_in_plots
+            units_format = get_config('xarray_unit_repr_in_plots')
 
         if units_format not in __AV_UNIT_FORMATS__:
             raise ValueError(f'Unknown units format {units_format}.')

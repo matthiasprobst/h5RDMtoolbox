@@ -9,8 +9,7 @@ import yaml
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import config, tutorial
-from h5rdmtoolbox._config import ureg
+from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import contact, standard_name
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper import set_loglevel
@@ -231,12 +230,12 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
-            config.natural_naming = False
+            h5tbx.set_config(natural_naming=False)
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.natural_naming = True
+            h5tbx.set_config(natural_naming=True)
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -428,24 +427,24 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
             dset = h5.create_dataset('temp', units='degC', long_name='temperature dataset', data=20)
-            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
+            self.assertEqual(h5tbx.get_ureg().Unit(dset.units), h5tbx.get_ureg().Unit('degC'))
             self.assertEqual(float(dset[()].values), 20)
             dset.to_units('K', inplace=True)
-            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
+            self.assertEqual(h5tbx.get_ureg().Unit(dset.units), h5tbx.get_ureg().Unit('K'))
             self.assertEqual(float(dset[()].values), 293)
             dset.to_units('degC', inplace=True)
-            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
+            self.assertEqual(h5tbx.get_ureg().Unit(dset.units), h5tbx.get_ureg().Unit('degC'))
             dset_K = dset.to_units('K', inplace=False)
-            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
-            self.assertEqual(ureg.Unit(dset_K.units), ureg.Unit('K'))
+            self.assertEqual(h5tbx.get_ureg().Unit(dset.units), h5tbx.get_ureg().Unit('degC'))
+            self.assertEqual(h5tbx.get_ureg().Unit(dset_K.units), h5tbx.get_ureg().Unit('K'))
 
             dset = h5.create_dataset('temp2', units='degC',
                                      long_name='temperature dataset', data=[20, 30])
-            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('degC'))
+            self.assertEqual(h5tbx.get_ureg().Unit(dset.units), h5tbx.get_ureg().Unit('degC'))
             self.assertEqual(float(dset[()].values[0]), 20)
             self.assertEqual(float(dset[()].values[1]), 30)
             dset.to_units('K', inplace=True)
-            self.assertEqual(ureg.Unit(dset.units), ureg.Unit('K'))
+            self.assertEqual(h5tbx.get_ureg().Unit(dset.units), h5tbx.get_ureg().Unit('K'))
             self.assertEqual(float(dset[()].values[0]), 293)
             self.assertEqual(float(dset[()].values[1]), 303)
 
@@ -484,12 +483,12 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      institution=self.default_institution,
                                      references=self.default_references,
                                      standard_name_table=self.default_snt) as h5:
-            config.natural_naming = False
+            h5tbx.set_config(natural_naming=False)
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.natural_naming = True
+            h5tbx.set_config(natural_naming=True)
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -595,7 +594,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             self.assertEqual(grp.comment, 'long name of group')
 
     def test_assign_data_to_existing_dset(self):
-        config.natural_naming = True
+        h5tbx.set_config(natural_naming=True)
         with h5tbx.wrapper.core.File(title=self.default_title,
                                      institution=self.default_institution,
                                      references=self.default_references,
@@ -605,7 +604,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             self.assertEqual(ds[0, 0], 5)
 
     def test_create_dataset_from_xarray(self):
-        config.natural_naming = True
+        h5tbx.set_config(natural_naming=True)
         with h5tbx.wrapper.core.File(title=self.default_title,
                                      institution=self.default_institution,
                                      references=self.default_references,
@@ -666,9 +665,9 @@ class TestH5TbxWrapperFile(unittest.TestCase):
     def test_from_yaml_to_hdf(self):
         dictionary = {
             'boundary/outlet boundary/y': {'data': 2, 'units': 'm', 'standard_name': 'y_coordinate',
-                                                        'attrs': {'comment': 'This is an OK comment',
-                                                                  'another_attr': 100.2,
-                                                                  'array': [1, 2, 3]}},
+                                           'attrs': {'comment': 'This is an OK comment',
+                                                     'another_attr': 100.2,
+                                                     'array': [1, 2, 3]}},
             'test/grp': {'long_name': 'a test group'}
         }
         yaml_file = generate_temporary_filename(suffix='.yaml')

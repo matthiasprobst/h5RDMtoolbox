@@ -2,7 +2,7 @@ import pint
 from typing import Union
 
 from .standard_attribute import StandardAttribute
-from .._config import ureg
+from .. import get_ureg
 
 
 class UnitsError(Exception):
@@ -17,19 +17,20 @@ class UnitsAttribute(StandardAttribute):
     def get(self):
         """Return the standardized name of the dataset. The attribute name is `standard_name`.
         Returns `None` if it does not exist."""
+        ureg = get_ureg()
         units = super().get()
         if units is None:
             return None
         scale = self.parent.attrs.get('scale', None)
         if scale:
-            units = str(ureg.Unit(units) * scale.units)
-        return f'{ureg.Unit(units)}'
+            units = str(get_ureg().Unit(units) * scale.units)
+        return f'{get_ureg().Unit(units)}'
 
     def set(self, units: Union[str, pint.Unit]):
         """Set units"""
         if units:
             if isinstance(units, str):
-                _units = f'{ureg.Unit(units)}'
+                _units = f'{get_ureg().Unit(units)}'
             elif isinstance(units, pint.Unit):
                 _units = f'{units}'
             else:
@@ -59,7 +60,7 @@ class ScaleAttribute(StandardAttribute):
         scale = super().get()
         if scale is None:
             return None
-        return ureg.Quantity(scale)
+        return get_ureg().Quantity(scale)
 
     def set(self, scale: Union[str, pint.Quantity]):
         """Set scale"""
@@ -68,7 +69,7 @@ class ScaleAttribute(StandardAttribute):
 
         if isinstance(scale, str):
             try:
-                _scale = ureg.Quantity(scale)
+                _scale = get_ureg().Quantity(scale)
             except (pint.UndefinedUnitError, ValueError) as e:
                 raise ScaleError(f'Invalid scale. Orig error: {e}')
         elif isinstance(scale, pint.Quantity):

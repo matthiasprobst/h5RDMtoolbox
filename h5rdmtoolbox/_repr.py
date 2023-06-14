@@ -7,7 +7,7 @@ from abc import abstractmethod
 from numpy import ndarray
 from time import perf_counter_ns
 
-from . import config
+from . import get_config
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
@@ -252,7 +252,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __NDdataset__(self, name, h5dataset):
         ds_dirname = os.path.dirname(h5dataset.name)
         _shape = h5dataset.shape
-        if config.advanced_shape_repr:
+        if get_config('advanced_shape_repr'):
             _shape_repr = '('
             ndim = h5dataset.ndim
             for i in range(ndim):

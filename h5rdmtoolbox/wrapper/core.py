@@ -12,7 +12,6 @@ import pint
 import shutil
 import warnings
 import xarray as xr
-import yaml
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
@@ -27,11 +26,8 @@ from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
-from .. import _repr
-from .. import config
-from .. import conventions
-from .. import utils
-from .._config import ureg
+from .. import _repr, get_config, conventions, utils
+from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import Layout as LayoutFile
@@ -302,7 +298,7 @@ class Group(h5py.Group, ConventionAccesor):
         try:
             return super().__getattribute__(item)
         except AttributeError as e:
-            if not config.natural_naming:
+            if not get_config('natural_naming'):
                 # raise an error if natural naming is NOT enabled
                 raise AttributeError(e)
 
@@ -405,7 +401,7 @@ class Group(h5py.Group, ConventionAccesor):
                 # let h5py.Group raise the error...
                 h5py.Group.create_group(self, name, track_order=track_order)
 
-        if _is_not_valid_natural_name(self, name, config.natural_naming):
+        if _is_not_valid_natural_name(self, name, get_config('natural_naming')):
             raise ValueError(f'The group name "{name}" is not valid. It is an '
                              f'attribute of the class and cannot be used '
                              f'while natural naming is enabled')
@@ -549,14 +545,14 @@ class Group(h5py.Group, ConventionAccesor):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        compression = kwargs.pop('compression', config.hdf_compression)
-        compression_opts = kwargs.pop('compression_opts', config.hdf_compression_opts)
+        compression = kwargs.pop('compression', get_config('hdf_compression'))
+        compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
 
         if name:
-            if _is_not_valid_natural_name(self, name, config.natural_naming):
+            if _is_not_valid_natural_name(self, name, get_config('natural_naming')):
                 raise ValueError(f'The dataset name "{name}" is not a valid. It is an '
                                  f'attribute of the class and cannot be used '
                                  f'while natural naming is enabled')
@@ -805,7 +801,7 @@ class Group(h5py.Group, ConventionAccesor):
             raise ValueError(
                 f'Wrong input for "csv_filenames: {type(csv_filenames)}')
 
-        compression, compression_opts = config.hdf_compression, config.hdf_compression_opts
+        compression, compression_opts = get_config('hdf_compression'), get_config('hdf_compression_opts')
 
         if n_files > 1 and combine_opt == 'concatenate':
             dfs = [pd.concat(dfs, axis=axis), ]
@@ -885,7 +881,7 @@ class Group(h5py.Group, ConventionAccesor):
         """
 
         # take compression from kwargs or config:
-        _compression, _compression_opts = config.hdf_compression, config.hdf_compression_opts
+        _compression, _compression_opts = get_config('hdf_compression'), get_config('hdf_compression_opts')
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
 
@@ -953,14 +949,14 @@ class Group(h5py.Group, ConventionAccesor):
     def create_dataset_from_xarray_dataarray(self,
                                              dataarr: xr.DataArray,
                                              name: str = None,
-                                             overwrite:bool=False,
+                                             overwrite: bool = False,
                                              overwrite_coords: bool = False) -> None:
         """create hdf dataset from xarray DataArray. All attributes are written to the
         hdf dataset. If coordinates are present, they are written as dimension scales.
         If only dimensions are present, the dim names are written as attributes using
         `DIMS` as key."""
         ds_coords = {}
-        attach_scales = [None]*dataarr.ndim
+        attach_scales = [None] * dataarr.ndim
         for idim, dim in enumerate(dataarr.dims):
             if dim not in self or overwrite_coords:
                 ds = self.create_dataset(dim,
@@ -1412,7 +1408,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
 
         args = args if isinstance(args, tuple) else (args,)
 
-        if not config.return_xarray or nparray:
+        if not get_config('return_xarray') or nparray:
             return super().__getitem__(args, new_dtype=new_dtype)
 
         # check if any entry in args is of type Ellipsis:
@@ -1672,7 +1668,7 @@ class File(h5py.File, Group, ConventionAccesor):
             The file size in units of bytes.
 
         """
-        return os.path.getsize(self.filename) * ureg.byte
+        return os.path.getsize(self.filename) * get_ureg().byte
 
     @property
     def layout(self) -> LayoutFile:

@@ -1,5 +1,6 @@
 """Extension to compute magnitude of xarray datasets"""
 import numpy as np
+
 import xarray as xr
 from typing import Union, Dict
 

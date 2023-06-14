@@ -7,7 +7,6 @@ import yaml
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import config
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper import set_loglevel
@@ -76,12 +75,15 @@ class TestFile(unittest.TestCase):
         with File(mode='w') as h5:
             h5.create_dataset('ds', shape=(), attrs={'mean': 1.2})
 
-            config.natural_naming = False
+            h5tbx.set_config(natural_naming=False)
 
-            with self.assertRaises(AttributeError):
-                self.assertEqual(h5.attrs.mean, 1.2)
-
-            config.natural_naming = True
+            h5tbx.set_config(natural_naming=True)
+            self.assertEqual(h5tbx.get_config('natural_naming'), True)
+            with h5tbx.set_config(natural_naming=False):
+                self.assertEqual(h5tbx.get_config('natural_naming'), False)
+                with self.assertRaises(AttributeError):
+                    self.assertEqual(h5.attrs.mean, 1.2)
+            self.assertEqual(h5tbx.get_config('natural_naming'), True)
 
             h5.attrs.title = 'title of file'
             self.assertEqual(h5.attrs['title'], 'title of file')
@@ -265,12 +267,12 @@ class TestFile(unittest.TestCase):
 
     def test_attrs(self):
         with File(mode='w') as h5:
-            config.natural_naming = False
+            h5tbx.set_config(natural_naming=False)
 
             with self.assertRaises(AttributeError):
                 self.assertEqual(h5.attrs.mean, 1.2)
 
-            config.natural_naming = True
+            h5tbx.set_config(natural_naming=True)
 
             h5.attrs.title = 'title of file'
 
@@ -300,7 +302,7 @@ class TestFile(unittest.TestCase):
             self.assertEqual(grp.rootparent, h5['/'])
 
     def test_assign_data_to_existing_dset(self):
-        config.natural_naming = True
+        h5tbx.set_config(natural_naming=True)
         with File(mode='w') as h5:
             ds = h5.create_dataset('ds', shape=(2, 3))
             ds[0, 0] = 5
