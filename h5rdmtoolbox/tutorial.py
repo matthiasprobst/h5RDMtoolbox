@@ -11,6 +11,7 @@ from .utils import generate_temporary_directory
 from .wrapper.core import File
 
 __this_dir__ = pathlib.Path(__file__).parent
+testdir = __this_dir__ / '../tests/data'
 
 
 def get_standard_name_table() -> StandardNameTable:

@@ -6,12 +6,8 @@ import warnings
 from omegaconf import DictConfig
 from pint.errors import UndefinedUnitError
 
-import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import conventions
-from h5rdmtoolbox import generate_temporary_filename
-from h5rdmtoolbox import tutorial
-from h5rdmtoolbox._user import testdir
+from h5rdmtoolbox import conventions, generate_temporary_filename, tutorial
 from h5rdmtoolbox.conventions import units, title, standard_name
 from h5rdmtoolbox.conventions.layout.tbx import IsValidVersionString, IsValidUnit
 
@@ -161,8 +157,8 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertTrue(is_valid_unit('pixel'))
 
     def test_comment(self):
-        h5rdmtoolbox.use('tbx')
-        with h5rdmtoolbox.File() as h5:
+        h5tbx.use('tbx')
+        with h5tbx.File() as h5:
             self.assertEqual(h5.comment, None)
             with self.assertRaises(conventions.comment.CommentError):
                 h5.comment = ' This is a comment, which starts with a space.'
@@ -178,8 +174,8 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_units(self):
         """Test title attribute"""
-        h5rdmtoolbox.use('tbx')
-        with h5rdmtoolbox.File() as h5:
+        h5tbx.use('tbx')
+        with h5tbx.File() as h5:
             ds = h5.create_dataset('test', data=[1, 2, 3], units='m', long_name='test')
             with self.assertRaises(UndefinedUnitError):
                 ds.units = 'test'
@@ -192,7 +188,7 @@ class TestStandardAttributes(unittest.TestCase):
             del ds.units
             self.assertEqual(ds.units, None)
 
-        with h5rdmtoolbox.File() as h5:
+        with h5tbx.File() as h5:
             with self.assertRaises(title.TitleError):
                 h5.title = ' test'
             with self.assertRaises(title.TitleError):
@@ -206,8 +202,8 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_title(self):
         """Test title attribute"""
-        h5rdmtoolbox.use('tbx')
-        with h5rdmtoolbox.File() as h5:
+        h5tbx.use('tbx')
+        with h5tbx.File() as h5:
             with self.assertRaises(title.TitleError):
                 h5.title = ' test'
             with self.assertRaises(title.TitleError):
@@ -244,7 +240,7 @@ class TestStandardAttributes(unittest.TestCase):
                                  ('temperature_range', [0, 50]),
                                  ('temperature_range_unit', ['C', 'C'])]))
 
-        with h5rdmtoolbox.File() as h5:
+        with h5tbx.File() as h5:
             h5.create_dataset('test', data=[1, 2, 3],
                               source=htwr, units='m', long_name='test')
             self.assertIsInstance(h5['test'].source, conventions.source.Hardware)
@@ -297,7 +293,7 @@ class TestStandardAttributes(unittest.TestCase):
                                         url='ww.h5rmtoolbox.de',
                                         description='This is my software')
 
-        with h5rdmtoolbox.File() as h5:
+        with h5tbx.File() as h5:
             ds1 = h5.create_dataset('test1', data=[1, 2, 3], units='m', long_name='test')
             ds2 = h5.create_dataset('test2', data=[1, 2, 3], units='m', long_name='test',
                                     source=sftw)
@@ -417,76 +413,135 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertTrue('standard_name' in h5['grp/u'].attrs)
             self.assertEqual(h5['grp/u'].attrs['standard_name'], 'x_velocity')
 
-    def test_StandardNameTableFromYaml(self):
-        table = standard_name.StandardNameTable.from_yaml(testdir / 'sntable.yml')
-        self.assertEqual(table.name, 'test')
-        self.assertEqual(table.version_number, 1)
-        self.assertEqual(table.institution, 'ITS')
-        self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
-        self.assertEqual(table.valid_characters, '')
-        self.assertEqual(table.pattern, '')
-        self.assertIsInstance(table._table, DictConfig)
-        self.assertIsInstance(table.get_table(), str)
-        table.rename('mean_particle_diameter', 'mean_particle_diameter2')
-        self.assertFalse('mean_particle_diameter' in table)
-        self.assertTrue('mean_particle_diameter2' in table)
+    try:
+        import pooch
+        run_tests = True
+    except ImportError:
+        run_tests = False
+        warnings.warn(f'Cannot test certain things about standard name table because "pooch" is not installed.')
 
-        self.assertListEqual(table.names, ['synthetic_particle_image', 'mean_particle_diameter2'])
+    if run_tests:
+        def test_StandardNameTableFromYaml(self):
+            table = standard_name.StandardNameTable.from_yaml(tutorial.testdir / 'sntable.yml')
+            self.assertEqual(table.name, 'test')
+            self.assertEqual(table.version_number, 1)
+            self.assertEqual(table.institution, 'ITS')
+            self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
+            self.assertEqual(table.valid_characters, '')
+            self.assertEqual(table.pattern, '')
+            self.assertIsInstance(table._table, DictConfig)
+            self.assertIsInstance(table.get_table(), str)
+            table.rename('mean_particle_diameter', 'mean_particle_diameter2')
+            self.assertFalse('mean_particle_diameter' in table)
+            self.assertTrue('mean_particle_diameter2' in table)
 
-        table._table = {'synthetic_particle_image': {
-            'canonical_units': 'pixel',
-        },
-            'mean_particle_diameter2': {
-                'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.',
-                'canonical_units': 'pixel'}
-        }
-        with self.assertRaises(standard_name.DescriptionMissing):
-            table.check_table()
+            self.assertListEqual(table.names, ['synthetic_particle_image', 'mean_particle_diameter2'])
 
-        table._table = {
-            'synthetic_particle_image': {
+            table._table = {'synthetic_particle_image': {
                 'canonical_units': 'pixel',
-                'description': 'Synthetic particle image velocimetry image containing image particles of a single '
-                               'synthetic recording.'},
-            'mean_particle_diameter2': {
-                'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 '
-                               'sigma with of the gaussian intensity profile of the particle image.',
-                'units': 'pixel'}
-        }
-        with self.assertRaises(standard_name.UnitsMissing):
-            table.check_table()
+            },
+                'mean_particle_diameter2': {
+                    'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.',
+                    'canonical_units': 'pixel'}
+            }
+            with self.assertRaises(standard_name.DescriptionMissing):
+                table.check_table()
 
-        table.modify('synthetic_particle_image', description=None, canonical_units='pcount')
-        self.assertEqual(table['synthetic_particle_image'].canonical_units, 'pcount')
-        table.modify('synthetic_particle_image', description='my new description', canonical_units=None)
-        self.assertEqual(table['synthetic_particle_image'].description, 'my new description')
+            table._table = {
+                'synthetic_particle_image': {
+                    'canonical_units': 'pixel',
+                    'description': 'Synthetic particle image velocimetry image containing image particles of a single '
+                                   'synthetic recording.'},
+                'mean_particle_diameter2': {
+                    'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 '
+                                   'sigma with of the gaussian intensity profile of the particle image.',
+                    'units': 'pixel'}
+            }
+            with self.assertRaises(standard_name.UnitsMissing):
+                table.check_table()
 
-        table.modify('xvelocity', description='velocity in x direction', canonical_units='m/s')
-        self.assertEqual(table['xvelocity'].description, 'velocity in x direction')
-        self.assertEqual(table['xvelocity'].canonical_units, 'm/s')
+            table.modify('synthetic_particle_image', description=None, canonical_units='pcount')
+            self.assertEqual(table['synthetic_particle_image'].canonical_units, 'pcount')
+            table.modify('synthetic_particle_image', description='my new description', canonical_units=None)
+            self.assertEqual(table['synthetic_particle_image'].description, 'my new description')
 
-        table.rename('xvelocity', 'x_velcoity')
-        self.assertFalse('xvelocity' in table)
-        with self.assertRaises(KeyError):
-            table.rename('x_velocity', 'x_velocity2')
+            table.modify('xvelocity', description='velocity in x direction', canonical_units='m/s')
+            self.assertEqual(table['xvelocity'].description, 'velocity in x direction')
+            self.assertEqual(table['xvelocity'].canonical_units, 'm/s')
 
-        with self.assertRaises(standard_name.StandardNameError):
-            table.check_name('x_velocity2', strict=True)
+            table.rename('xvelocity', 'x_velcoity')
+            self.assertFalse('xvelocity' in table)
+            with self.assertRaises(KeyError):
+                table.rename('x_velocity', 'x_velocity2')
 
-        with self.assertRaises(ValueError):
-            table.contact = 'not an email'
+            with self.assertRaises(standard_name.StandardNameError):
+                table.check_name('x_velocity2', strict=True)
 
-        n0 = len(table.names)
-        table.update({'a_velocity': {
-            'description': 'velocity in a direction',
-            'canonical_units': 'm/s'
-        }})
-        self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
-        self.assertEqual(table['a_velocity'].canonical_units, 'm/s')
-        self.assertEqual(len(table.names), n0 + 1)
+            with self.assertRaises(ValueError):
+                table.contact = 'not an email'
+
+            n0 = len(table.names)
+            table.update({'a_velocity': {
+                'description': 'velocity in a direction',
+                'canonical_units': 'm/s'
+            }})
+            self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
+            self.assertEqual(table['a_velocity'].canonical_units, 'm/s')
+            self.assertEqual(len(table.names), n0 + 1)
+
+        def test_StandardNameTableFromWeb(self):
+            cf = standard_name.StandardNameTable.from_web(
+                url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+                name='standard_name_table')
+            self.assertEqual(cf.name, 'standard_name_table')
+            self.assertEqual(cf.versionname, 'standard_name_table-v79')
+            self.assertTrue(standard_name.check_url(cf.url))
+            self.assertFalse(standard_name.check_url(cf.url + '123'))
+
+            try:
+                requests.get('https://git.scc.kit.edu', timeout=5)
+                connected = True
+            except (requests.ConnectionError,
+                    requests.Timeout) as e:
+                connected = False
+                warnings.warn('Cannot check Standard name table from '
+                              f'gitlab: {e}')
+            if connected:
+                opencefa = standard_name.StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                                       file_path='open_centrifugal_fan_database-v1.yaml',
+                                                                       project_id='35443',
+                                                                       ref_name='main')
+                self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
+                self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+
+        def test_from_yaml(self):
+            table = standard_name.StandardNameTable.from_yaml(tutorial.testdir / 'sntable.yml')
+            self.assertIsInstance(table.filename, pathlib.Path)
+            self.assertIsInstance(table['synthetic_particle_image'], standard_name.StandardName)
+
+            with self.assertRaises(ValueError):
+                table.modify('not_in_table',
+                             description=None,
+                             canonical_units=None)
+
+            table.modify('synthetic_particle_image',
+                         description='changed the description',
+                         canonical_units='m')
+
+            self.assertTrue(table.has_valid_structure())
+            table2 = table.copy()
+            self.assertTrue(table == table2)
+            self.assertFalse(table is table2)
+            self.assertTrue(table.compare_versionname(table2))
+
+            yaml_filename = table.to_yaml(generate_temporary_filename(suffix='.yml'))
+            table2 = standard_name.StandardNameTable.from_yaml(yaml_filename)
+            self.assertEqual(table, table2)
+            table2.set('other', 'desc', 'm')
+            self.assertNotEqual(table, table2)
 
     def test_StandardNameTableFromYaml_special(self):
-        table = standard_name.StandardNameTable.from_yaml(testdir / 'sntable_with_split.yml')
+        table = standard_name.StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
         self.assertEqual(table.name, 'test')
         self.assertEqual(table.version_number, 1)
         self.assertEqual(table.institution, 'ITS')
@@ -515,57 +570,6 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertTrue(table.check_name('synthetic_particle_image'))
         self.assertTrue(table.check_name('particle_image', strict=True))
         self.assertIsInstance(table['particle_image'], standard_name.StandardName)
-
-    def test_StandardNameTableFromWeb(self):
-        cf = standard_name.StandardNameTable.from_web(
-            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
-            name='standard_name_table')
-        self.assertEqual(cf.name, 'standard_name_table')
-        self.assertEqual(cf.versionname, 'standard_name_table-v79')
-        self.assertTrue(standard_name.check_url(cf.url))
-        self.assertFalse(standard_name.check_url(cf.url + '123'))
-
-        try:
-            requests.get('https://git.scc.kit.edu', timeout=5)
-            connected = True
-        except (requests.ConnectionError,
-                requests.Timeout) as e:
-            connected = False
-            warnings.warn('Cannot check Standard name table from '
-                          f'gitlab: {e}')
-        if connected:
-            opencefa = standard_name.StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                                   file_path='open_centrifugal_fan_database-v1.yaml',
-                                                                   project_id='35443',
-                                                                   ref_name='main')
-            self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
-            self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
-
-    def test_from_yaml(self):
-        table = standard_name.StandardNameTable.from_yaml(testdir / 'sntable.yml')
-        self.assertIsInstance(table.filename, pathlib.Path)
-        self.assertIsInstance(table['synthetic_particle_image'], standard_name.StandardName)
-
-        with self.assertRaises(ValueError):
-            table.modify('not_in_table',
-                         description=None,
-                         canonical_units=None)
-
-        table.modify('synthetic_particle_image',
-                     description='changed the description',
-                     canonical_units='m')
-
-        self.assertTrue(table.has_valid_structure())
-        table2 = table.copy()
-        self.assertTrue(table == table2)
-        self.assertFalse(table is table2)
-        self.assertTrue(table.compare_versionname(table2))
-
-        yaml_filename = table.to_yaml(generate_temporary_filename(suffix='.yml'))
-        table2 = standard_name.StandardNameTable.from_yaml(yaml_filename)
-        self.assertEqual(table, table2)
-        table2.set('other', 'desc', 'm')
-        self.assertNotEqual(table, table2)
 
     def test_merge(self):
         registered_snts = standard_name.StandardNameTable.get_registered()

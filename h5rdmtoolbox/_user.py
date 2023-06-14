@@ -115,4 +115,3 @@ def _get_pkg_resource_filename(fname):
 config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
 config_filename = config_dir / 'h5rdmtoolbox.yaml'
 
-testdir = pathlib.Path(__file__).parent / '../tests/data'

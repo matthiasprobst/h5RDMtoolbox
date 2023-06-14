@@ -713,25 +713,25 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             r = h5.find({'comment': {'$regex': '(.*)'}}, '$Group')
             self.assertEqual(r, [h5['grp'], ])
 
-    def test_setting_standard_name_table_from_web(self):
-        cf = standard_name.StandardNameTable.from_web(
-            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
-            name='standard_name_table')
-        # with h5tbx.wrapper.core.File(standard_name_table=cf) as h5:
-        #     snt = h5.standard_name_table
-        #     self.assertIsInstance(snt, standard_name.StandardNameTable)
-        #     self.assertEqual(snt.version_number, 79)
-        oc = standard_name.StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                         file_path='open_centrifugal_fan_database-v1.yaml',
-                                                         project_id='35443',
-                                                         ref_name='main')
-        with h5tbx.wrapper.core.File(standard_name_table=oc) as h5:
-            self.assertEqual(h5.attrs.raw['standard_name_table'],
-                             '{"url": "https://git.scc.kit.edu", "project_id": "35443", '
-                             '"ref_name": "main", "file_path": "open_centrifugal_fan_database-v1.yaml"}')
-            snt = h5.standard_name_table
-            self.assertIsInstance(snt, standard_name.StandardNameTable)
-            self.assertEqual(snt.version_number, 1)
+        def test_setting_standard_name_table_from_web(self):
+            cf = standard_name.StandardNameTable.from_web(
+                url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+                name='standard_name_table')
+            # with h5tbx.wrapper.core.File(standard_name_table=cf) as h5:
+            #     snt = h5.standard_name_table
+            #     self.assertIsInstance(snt, standard_name.StandardNameTable)
+            #     self.assertEqual(snt.version_number, 79)
+            oc = standard_name.StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                             file_path='open_centrifugal_fan_database-v1.yaml',
+                                                             project_id='35443',
+                                                             ref_name='main')
+            with h5tbx.wrapper.core.File(standard_name_table=oc) as h5:
+                self.assertEqual(h5.attrs.raw['standard_name_table'],
+                                 '{"url": "https://git.scc.kit.edu", "project_id": "35443", '
+                                 '"ref_name": "main", "file_path": "open_centrifugal_fan_database-v1.yaml"}')
+                snt = h5.standard_name_table
+                self.assertIsInstance(snt, standard_name.StandardNameTable)
+                self.assertEqual(snt.version_number, 1)
 
     def test_get_group_names(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
