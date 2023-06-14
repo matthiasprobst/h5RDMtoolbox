@@ -88,7 +88,7 @@ class XarrayLabelManipulation(plt.Axes):
 
                 return f"{name} [{_raw_unit.replace('**', '^')}]"
 
-            if units_string[1:-1] in ('', ' ', 'dimensionless', None):
+            if units_string in ('[]', '[ ]', '[dimensionless]', None):
                 return build_label_unit_str(name, '-', units_format)
 
             return build_label_unit_str(name, units_string, units_format)
