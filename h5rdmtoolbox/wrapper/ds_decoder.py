@@ -1,6 +1,7 @@
 """dataset decoders"""
 import h5py
 import numpy as np
+import pathlib
 import xarray as xr
 
 from .. import conventions
@@ -8,21 +9,29 @@ from .. import conventions
 USE_OFFSET_AND_SCALE = True
 
 
-class FlagDataArray(xr.DataArray):
-    """Wrapper around xarray.DataArray to allow working with flag data"""
-    __slots__ = ('_filename', '_parent_slice', '_dataset_name')
+class H5DataArray(xr.DataArray):
+    """Wrapper around xarray.DataArray to provide additional
+    information about source (HDF5 dataset and slice)"""
+
+    __slots__ = ('h5parent', 'h5slice')
 
     def __init__(self, *args, **kwargs):
-        _filename = kwargs.pop('filename', None)
-        _parent_slice = kwargs.pop('parent_slice', None)
+        h5parent = kwargs.pop('h5parent', None)
+        h5slice = kwargs.pop('h5slice', None)
         super().__init__(*args, **kwargs)
-        self._filename = _filename
-        self._parent_slice = _parent_slice
-        self._dataset_name = self.attrs.get('FLAG_DATASET', None)
+        self.h5parent = h5parent
+        self.h5slice = h5slice
 
-    def __getitem__(self, key) -> "FlagDataArray":
+    @property
+    def h5filename(self) -> pathlib.Path:
+        """The HDF5 filename from where data was taken"""
+        return self.h5parent.hdf_filename
+
+    def __getitem__(self, key) -> "H5DataArray":
         ret = super().__getitem__(key)
-        return FlagDataArray(ret, filename=self._filename, parent_slice=key)
+        return H5DataArray(ret,
+                           h5parent=self.h5parent,
+                           h5slice=key)
 
 
 def dataset_value_decoder(func):
@@ -58,10 +67,10 @@ def dataset_value_decoder(func):
             with xr.set_options(keep_attrs=True):
                 return xarr + offset
 
-        if ds.has_flag_data:
-            return FlagDataArray(xarr,
-                                 filename=ds.file.filename,
-                                 parent_slice=parent_slice)
-        return xarr
+        # if ds.has_flag_data:
+        #     return FlagDataArray(xarr,
+        #                          filename=ds.file.filename,
+        #                          parent_slice=parent_slice)
+        return H5DataArray(xarr, h5parent=ds, h5slice=parent_slice)
 
     return wrapper

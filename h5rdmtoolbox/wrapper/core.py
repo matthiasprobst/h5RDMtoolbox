@@ -248,6 +248,7 @@ class Group(h5py.Group, ConventionAccesor):
             super().__init__(_id)
         else:
             raise ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
+        self.hdf_filename = Path(self.file.filename)
 
     def __setitem__(self,
                     name: str,
@@ -1631,6 +1632,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
             raise ValueError('Could not initialize Dataset. A h5py.h5f.FileID object must be passed')
 
         super().__init__(_id)
+        self.hdf_filename = Path(self.file.filename)
 
     def to_units(self, new_units: str, inplace: bool = False):
         """Changes the physical unit of the dataset using pint_xarray.

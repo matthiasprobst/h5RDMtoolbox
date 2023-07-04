@@ -456,8 +456,11 @@ class TestCore(unittest.TestCase):
             h5.dumps()
 
     def test_flag(self):
-        with File() as h5:
-            flag = h5.create_dataset('flag', data=[1, 0, 0])
+        with h5tbx.File() as h5:
             ds = h5.create_dataset('ds', shape=(3,))
+            # with self.assertRaises(KeyError):
+            #     self.assertEqual(ds[0:2].flag.where(1, 0).shape, (2,))
+            flag = h5.create_dataset('flag', data=[1, 0, 0])
             ds.attach_flags(flag)
-            self.assertEqual(ds[0:2].flag.where(1, 0).shape, (2,))
+            data = ds[:]
+        self.assertEqual(data[0:2].flag.where(1, 0).shape, (2,))
