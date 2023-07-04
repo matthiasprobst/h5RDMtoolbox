@@ -79,6 +79,8 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = Fa
         prefix string to put in front of name
     suffix: str, optional=''
         suffix (including '.')
+    touch: bool, optional=False
+        If True, the empty file is created
 
     Returns
     -------

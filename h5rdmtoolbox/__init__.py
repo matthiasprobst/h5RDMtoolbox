@@ -2,6 +2,8 @@
 import atexit
 import logging
 import pathlib
+# noinspection PyUnresolvedReferences
+import pint_xarray
 import shutil
 from typing import Union
 
@@ -15,10 +17,9 @@ from ._logger import create_package_logger
 from ._user import UserDir
 from ._version import __version__
 from .database import filequery, FileDB, FolderDB
+from .extensions import flag  # make flag xarray accessor available per default
 from .utils import generate_temporary_filename, generate_temporary_directory, has_datasets, has_groups
 from .wrapper.core import lower, Lower, File, Group, Dataset
-# noinspection PyUnresolvedReferences
-import pint_xarray
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'

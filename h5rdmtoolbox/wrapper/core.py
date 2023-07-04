@@ -37,6 +37,8 @@ logger = logging.getLogger(__package__)
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
 
+FLAG_DATASET_CONST = 'FLAG_DATASET'
+
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
     """Pop all standard attributes from kwargs and return them in a dict."""
@@ -462,6 +464,7 @@ class Group(h5py.Group, ConventionAccesor):
                        chunks=True,
                        make_scale=False,
                        attach_scales=None,
+                       attach_flags=None,
                        attrs=None,
                        **kwargs  # standard attributes and other keyword arguments
                        ):
@@ -499,6 +502,12 @@ class Group(h5py.Group, ConventionAccesor):
             Also note, that if data is a xr.DataArray and attach_scales is not None,
             coordinates of xr.DataArray are ignored and only attach_scales is
             considered.
+        attach_flags: Union[None, str, h5py.Dataset], optional=None
+            If not None, attach flags to dataset. If str, it is interpreted as
+            internal hdf path. If h5py.Dataset, it is interpreted as dataset to attach
+            flags to. Default is None, which means no flags are attached. If a flag
+            dataset is attached the return object is a xr.Dataset object, which additionally
+            includes the flag data array.
         attrs : dict, optional
             Allows to set attributes directly after dataset creation. Default is
             None, which is an empty dict
@@ -580,6 +589,18 @@ class Group(h5py.Group, ConventionAccesor):
             _data = np.asarray(data)
         else:
             _data = data
+
+        if attach_flags is not None:
+            # associate the dataset with flag data. the flag dataset must have the same
+            # shape as this dataset. The flag dataset must already exist.
+            if isinstance(attach_flags, str):
+                flag_ds = self[attach_flags]
+            else:
+                flag_ds = attach_flags
+            if flag_ds.shape != _data.shape:
+                raise ValueError(f'Flag dataset shape {flag_ds.shape} does not match dataset shape '
+                                 f'{_data.shape}')
+            attrs[FLAG_DATASET_CONST] = flag_ds.name
 
         _maxshape = kwargs.get('maxshape', shape)
 
@@ -1361,6 +1382,39 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         """
         return DatasetValues(self)
 
+    def attach_flags(self, flag_dataset: Union[str, h5py.Dataset]):
+        """Attach a flag dataset to the current dataset. The flag dataset
+        must have the same shape as the current dataset.
+
+        Parameters
+        ----------
+        flag_dataset : Union[str, h5py.Dataset]
+            The flag dataset to attach. Can be a string or a h5py.Dataset object.
+
+        Returns
+        -------
+        Dataset
+            The current dataset object.
+        """
+        if isinstance(flag_dataset, str):
+            flag_dataset = self.parent[flag_dataset]
+        if flag_dataset.shape != self.shape:
+            raise ValueError('Shape of flag dataset does not match the shape of the current dataset!')
+        self.attrs[FLAG_DATASET_CONST] = flag_dataset.name
+        return self
+
+    @property
+    def has_flag_data(self):
+        """Check if the dataset has a flag dataset attached."""
+        return FLAG_DATASET_CONST in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
+
+    @property
+    def flag_data(self):
+        """Return the flag dataset if available."""
+        if self.has_flag_data:
+            return self.parent[self.attrs[FLAG_DATASET_CONST]]
+        return None
+
     def modify(self, **properties) -> "Dataset":
         """modify property of dataset such as `chunks` or `dtpye`. This is
         not possible with the original implementation in `h5py`. Note, that
@@ -1372,6 +1426,37 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         """Rename the dataset. This may be time and data intensive as
         a new dataset is created first!"""
         return self.parent.modify_dataset_properties(self, name=new_name)
+
+    def sel(self, method=None, **coord_selections):
+        """Select data based on coordinates and specific value(s). This is useful if the index
+        is not known. Only works for a single dimension and for method 'exact'."""
+        if len(coord_selections) not in (0, 1):
+            raise NotImplementedError('Only one coordinate implemented')
+
+        av_coord_datasets = {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims}
+        coord_name = list(coord_selections.keys())[0]
+        coord_values = list(coord_selections.values())[0]
+        sel_coord = av_coord_datasets[coord_name]
+
+        sel_coord_data = sel_coord[()]
+        if method is None:
+            # get index of coordinate that matches exactly
+            idx = np.where(sel_coord_data == coord_values)[0]
+            if idx.size == 0:
+                raise ValueError(f'No matching coordinate found for coordinate {coord_name} and value {coord_values}. '
+                                 f'Consider using method "nearest".')
+            if len(idx) == 1:
+                idx = int(idx[0])
+        else:
+            raise NotImplementedError('Only exact match method implemented')
+
+        non_axis_indices = [slice(None)] * self.ndim
+        for icoord, coord_name in enumerate(av_coord_datasets.keys()):
+            if coord_name in coord_selections:
+                non_axis_indices[icoord] = idx
+                break
+
+        return self.__getitem__(tuple(non_axis_indices))
 
     def __getattr__(self, item):
         if self.__class__ in conventions.current_convention._properties:
@@ -1453,8 +1538,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
                                                               attrs=pop_hdf_attributes(dim_ds.attrs))
                         else:
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
-                                                              data=[
-                                                                  dim_ds[()], ],
+                                                              data=[dim_ds[()], ],
                                                               attrs=pop_hdf_attributes(dim_ds.attrs))
                     else:
                         if isinstance(dim_ds_data, np.ndarray):

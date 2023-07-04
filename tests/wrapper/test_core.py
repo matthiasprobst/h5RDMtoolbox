@@ -147,6 +147,15 @@ class TestCore(unittest.TestCase):
             self.assertTrue(ds[..., :].equals(ds[:, :, :]))
             self.assertTrue(ds[...].equals(ds[:, :, :]))
 
+    def test_coord_selection(self):
+        with h5tbx.File() as h5:
+            x = h5.create_dataset('x', data=np.linspace(0, 1, 10), make_scale=True)
+            y = h5.create_dataset('y', data=np.linspace(0, 1, 20), make_scale=True)
+            time = h5.create_dataset('time', data=np.linspace(0, 1, 30), make_scale=True)
+            ds = h5.create_dataset('data', shape=(10, 20, 30), attach_scales=(x, y, time))
+
+            print(ds.sel(time=0.0))
+
     def test_modify_static_properties(self):
         with h5tbx.File() as h5:
             ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
@@ -445,3 +454,10 @@ class TestCore(unittest.TestCase):
             self.assertEqual('Title of the file', h5.attrs['title'])
             self.assertEqual('0000-1234-1234-1234', h5.attrs['contact'])
             h5.dumps()
+
+    def test_flag(self):
+        with File() as h5:
+            flag = h5.create_dataset('flag', data=[1, 0, 0])
+            ds = h5.create_dataset('ds', shape=(3,))
+            ds.attach_flags(flag)
+            self.assertEqual(ds[0:2].flag.where(1, 0).shape, (2,))

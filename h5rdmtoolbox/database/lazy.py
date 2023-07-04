@@ -25,15 +25,24 @@ class LAttributeManager:
 class LGroup:
     """Lazy Group"""
 
+    __slots__ = '__obj_attrs', 'filename', 'name', '_attrs', 'properties'
+
     def __init__(self, filename, name, attrs, properties):
         self.filename = filename
         self.name = name
         self._attrs = attrs
         self.properties = properties
+        self.__obj_attrs = ('file', 'name', 'attrs',
+                            'ndim', 'shape', 'dtype', 'size',
+                            'chunks', 'compression', 'compression_opts',
+                            'shuffle', 'dims')
 
     def __getattr__(self, item):
         if item in self.properties:
             return self.properties[item]
+        if item in self.__obj_attrs:
+            with h5py.File(self.filename) as h5:
+                return h5[self.name].__getattribute__(item)
         return super().__getattribute__(item)
 
     @property
@@ -49,6 +58,13 @@ class LGroup:
 
 class LDataset(LGroup):
     """Lazy Dataset"""
+
+    def __init__(self, filename, name, attrs, properties):
+        super().__init__(filename, name, attrs, properties)
+        self.__obj_attrs = ('file', 'name', 'attrs',
+                            'ndim', 'shape', 'dtype', 'size',
+                            'chunks', 'compression', 'compression_opts',
+                            'shuffle', 'dims')
 
     def __getitem__(self, item):
         from .. import File
