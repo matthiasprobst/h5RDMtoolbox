@@ -457,10 +457,12 @@ class TestCore(unittest.TestCase):
 
     def test_flag(self):
         with h5tbx.File() as h5:
-            ds = h5.create_dataset('ds', shape=(3,))
+            time = h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
+            ds = h5.create_dataset('ds', data=[5, 10, 0], attach_scales='time')
             # with self.assertRaises(KeyError):
             #     self.assertEqual(ds[0:2].flag.where(1, 0).shape, (2,))
-            flag = h5.create_dataset('flag', data=[1, 0, 0])
-            ds.attach_flags(flag)
+            flag = h5.create_dataset('flag', data=[1, 0, 0], attach_scales='time')
+            ds.attach_ancillary_dataset(flag)
             data = ds[:]
+            print(ds.ancillary_datasets)
         self.assertEqual(data[0:2].flag.where(1, 0).shape, (2,))
