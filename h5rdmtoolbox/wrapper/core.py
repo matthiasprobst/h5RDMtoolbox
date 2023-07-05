@@ -31,13 +31,13 @@ from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import Layout as LayoutFile
-
+from .. import consts
 logger = logging.getLogger(__package__)
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
 
-ANCILLARY_DATASET_CONST = 'ANCILLARY_DATASETS'
+
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -600,7 +600,7 @@ class Group(h5py.Group, ConventionAccesor):
                     raise ValueError(f'Associated dataset {name} has shape {ads.shape} '
                                      f'which does not match dataset shape {_data.shape}')
             import json
-            attrs[ANCILLARY_DATASET_CONST] = json.dumps(associated_datasets)
+            attrs[consts.ANCILLARY_DATASET] = json.dumps(associated_datasets)
 
         _maxshape = kwargs.get('maxshape', shape)
 
@@ -1384,6 +1384,8 @@ class Dataset(h5py.Dataset, ConventionAccesor):
 
     @property
     def ancillary_datasets(self) -> Dict:
+        """Return a dictionary of ancillary datasets attached to this dataset. The dictionary
+        contains the name(s) (hdf internal path) and the dataset object(s)."""
         def _to_ds(parent, source):
             if isinstance(source, str):
                 return parent[source]
@@ -1391,7 +1393,10 @@ class Dataset(h5py.Dataset, ConventionAccesor):
                 return source
             return Dataset(source)
 
-        return {name: _to_ds(self.parent, path) for name, path in self.attrs.get(ANCILLARY_DATASET_CONST, {}).items()}
+        anc_ds = self.attrs.get(consts.ANCILLARY_DATASET, {})
+        if anc_ds:
+            return {name: _to_ds(self.parent, path) for name, path in anc_ds.items()}
+        return {}
 
     def attach_ancillary_dataset(self, ancillary_dataset: Union[str, h5py.Dataset]):
         """Attach a flag dataset to the current dataset. The flag dataset
@@ -1414,13 +1419,13 @@ class Dataset(h5py.Dataset, ConventionAccesor):
             raise ValueError('Shape of flag dataset does not match the shape of the current dataset!')
         ancillary_datasets = self.ancillary_datasets
         ancillary_datasets[ancillary_dataset.basename] = ancillary_dataset.name
-        self.attrs[ANCILLARY_DATASET_CONST] = ancillary_datasets
+        self.attrs[consts.ANCILLARY_DATASET] = ancillary_datasets
         return self
 
     # @property
     # def has_flag_data(self):
     #     """Check if the dataset has a flag dataset attached."""
-    #     return ANCILLARY_DATASET_CONST in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
+    #     return ANCILLARY_DATASET in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
 
     def modify(self, **properties) -> "Dataset":
         """modify property of dataset such as `chunks` or `dtpye`. This is

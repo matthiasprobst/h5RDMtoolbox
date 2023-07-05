@@ -152,13 +152,13 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __call__(self, group, indent=0, preamble=None):
         if preamble:
             print(preamble)
-        for attr_name, attr_value in group.attrs.items():
+        for attr_name, attr_value in group.attrs.raw.items():
             if not attr_name.isupper():
                 print(self.base_intent * indent + self.__attrs__(attr_name, attr_value))
         for key, item in group.items():
             if isinstance(item, h5py.Dataset):
                 print(self.base_intent * indent + self.__dataset__(key, item))
-                for attr_name, attr_value in item.attrs.items():
+                for attr_name, attr_value in item.attrs.raw.items():
                     if not attr_name.isupper() and attr_name not in self.ignore_attrs:
                         print(self.base_intent * (indent + 2) + self.__attrs__(attr_name, attr_value))
             elif isinstance(item, h5py.Group):
@@ -314,7 +314,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         # open attribute section:
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in h5dataset.attrs.items():
+        for k, v in h5dataset.attrs.raw.items():
             if k not in self.ignore_attrs:
                 _html_ds_attrs += self.__attrs__(k, v)
         # close attribute section
@@ -347,7 +347,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html += """\n
                     <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in group.attrs.items():
+        for k, v in group.attrs.raw.items():
             _html += self.__attrs__(k, v)
         # close attribute section
         _html += """

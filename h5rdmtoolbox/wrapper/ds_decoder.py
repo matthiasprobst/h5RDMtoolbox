@@ -3,9 +3,7 @@ import h5py
 import numpy as np
 import xarray as xr
 
-from .. import conventions
-
-USE_OFFSET_AND_SCALE = True
+from .. import conventions, consts
 
 
 def dataset_value_decoder(func):
@@ -22,9 +20,11 @@ def dataset_value_decoder(func):
         if not isinstance(xarr, xr.DataArray):
             return xarr
 
-        for name, ads in ds.ancillary_datasets.items():
-            xarr = xarr.assign_coords({name: ads[parent_slice]})
-            xarr.attrs.pop('ANCILLARY_DATASETS')
+        anc_ds = ds.ancillary_datasets
+        if anc_ds:
+            for name, ads in anc_ds.items():
+                xarr = xarr.assign_coords({name: ads[parent_slice]})
+            xarr.attrs.pop(consts.ANCILLARY_DATASET)
 
         if xarr.dtype.type is np.str_:
             return xarr
