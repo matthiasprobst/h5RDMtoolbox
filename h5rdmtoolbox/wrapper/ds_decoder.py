@@ -24,7 +24,8 @@ def dataset_value_decoder(func):
         if anc_ds:
             for name, ads in anc_ds.items():
                 xarr = xarr.assign_coords({name: ads[parent_slice]})
-            xarr.attrs.pop(consts.ANCILLARY_DATASET)
+            xarr.attrs[consts.ANCILLARY_DATASET] = [name for name in anc_ds.keys()]
+            # print(xarr.attrs.pop(consts.ANCILLARY_DATASET))
 
         if xarr.dtype.type is np.str_:
             return xarr

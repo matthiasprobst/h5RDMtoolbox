@@ -1,6 +1,5 @@
 """Extension to compute magnitude of xarray datasets"""
 import numpy as np
-
 import xarray as xr
 from typing import Union, Dict
 
@@ -57,6 +56,7 @@ class MagnitudeAccessor:
         mag.attrs['processing_comment'] = f'computed from: {joined_names.replace("_", ", ")}'
         if attrs:
             mag.attrs.update(attrs)
+
         if inplace:
             self._obj[name] = mag
             return self._obj
