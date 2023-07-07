@@ -71,6 +71,21 @@ class LDataset(LGroup):
         with File(self.filename, mode='r') as h5:
             return h5[self.name][item]
 
+    def coords(self):
+        from .. import File
+        with File(self.filename) as h5:
+            return h5[self.name].coords()
+
+    def isel(self, **coords):
+        from .. import File
+        with File(self.filename) as h5:
+            return h5[self.name].isel(**coords)
+
+    def sel(self, **coords):
+        from .. import File
+        with File(self.filename) as h5:
+            return h5[self.name].sel(**coords)
+
 
 def _get_dataset_properties(h5obj):
     return dict(ndim=h5obj.ndim,

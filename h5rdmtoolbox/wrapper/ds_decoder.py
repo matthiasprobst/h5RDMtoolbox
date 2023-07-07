@@ -23,6 +23,10 @@ def dataset_value_decoder(func):
         anc_ds = ds.ancillary_datasets
         if anc_ds:
             for name, ads in anc_ds.items():
+                ads_data = ads[parent_slice]
+                # if ads_data.coords != xarr.coords:
+                #     raise ValueError(f'Coordinates of ancillary dataset "{name}" do not match '
+                #                         f'coordinates of dataset "{ds.name}"')
                 xarr = xarr.assign_coords({name: ads[parent_slice]})
             xarr.attrs[consts.ANCILLARY_DATASET] = [name for name in anc_ds.keys()]
             # print(xarr.attrs.pop(consts.ANCILLARY_DATASET))

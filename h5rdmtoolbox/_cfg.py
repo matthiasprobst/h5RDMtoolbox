@@ -1,4 +1,4 @@
-"""package configuration"""
+"""package configuration. largely based on xarray's configuration concept. no credits taken!"""
 from pint import UnitRegistry
 from typing import Dict, Union
 
@@ -47,19 +47,10 @@ _VALIDATORS = {
 }
 
 
-class ConfigSetter:
+class set_config:
     """Set the configuration parameters."""
 
-    def __enter__(self):
-        return
-
-    def __exit__(self, *args, **kwargs):
-        self._update(self.old)
-
-    def __init__(self):
-        self.old = {}
-
-    def __call__(self, **kwargs):
+    def __init__(self, **kwargs):
         self.old = {}
         for k, v in kwargs.items():
             if k in _VALIDATORS and not _VALIDATORS[k](v):
@@ -71,11 +62,17 @@ class ConfigSetter:
                 get_ureg().default_format = str(v)
         self._update(kwargs)
 
+    def __enter__(self):
+        return
+
+    def __exit__(self, *args, **kwargs):
+        self._update(self.old)
+
     def _update(self, options_dict: Dict):
         CONFIG.update(options_dict)
 
 
-set_config = ConfigSetter()
+# set_config = ConfigSetter()
 
 
 def get_config(key=None):

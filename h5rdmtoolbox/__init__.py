@@ -55,15 +55,27 @@ class Files:
         return filequery.Files(*args, **kwargs)
 
 
-def dump(filename: Union[str, pathlib.Path]):
-    """Call h5.dump() on the provided HDF5 file"""
-    with File(filename) as h5:
+def dump(src: Union[str, File, pathlib.Path]) -> None:
+    """Call h5.dump() on the provided HDF5 file
+
+    Parameters
+    ----------
+    src : str, File, pathlib.Path
+        the HDF5 file or filename to dump
+    """
+    if isinstance(src, File):
+        with File(src.hdf_filename) as h5:
+            return h5.dump()
+    with File(src) as h5:
         h5.dump()
 
 
-def dumps(filename: Union[str, pathlib.Path]):
+def dumps(src: Union[str, File, pathlib.Path]):
     """Call h5.dumps() on the provided HDF5 file"""
-    with File(filename) as h5:
+    if isinstance(src, File):
+        with File(src.hdf_filename) as h5:
+            return h5.dumps()
+    with File(src) as h5:
         h5.dumps()
 
 

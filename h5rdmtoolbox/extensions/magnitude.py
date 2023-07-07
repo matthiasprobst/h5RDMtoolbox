@@ -26,8 +26,8 @@ class MagnitudeAccessor:
             Names of data variables to compute magnitude from.
         name: str
             Name of the magnitude variable to be used in the dataset.
-            If None, the name is automatically generated. Example: 'magnitude_of_u_v_w'
-            if data_vars = ['u', 'v', 'w']
+            If None, the name is automatically generated.
+            Example: if data_vars = ['u', 'v', 'w'], then name is 'magnitude_of_u_v_w'
         inplace: bool
             If True, the magnitude variable is added to the dataset.
             Otherwise, a new dataset is returned.
@@ -37,10 +37,24 @@ class MagnitudeAccessor:
             If True, the magnitude variable is overwritten if it already exists in the dataset.
         """
         mag2 = self._obj[data_vars[0]].pint.quantify() ** 2
+        from .. import consts
+        # anc_ds = []
+        # anc_ds.append(self._obj[data_vars[0]].attrs.get(consts.ANCILLARY_DATASET, ()))
         for data_var in data_vars[1:]:
             mag2 += self._obj[data_var].pint.quantify() ** 2
-        with xr.set_options(keep_attrs=True):
-            mag = np.sqrt(mag2).pint.dequantify()
+            # anc_ds.append(self._obj[data_var].attrs.get(consts.ANCILLARY_DATASET, ()))
+        # with xr.set_options(keep_attrs=True):
+        mag = np.sqrt(mag2).pint.dequantify()
+
+        # drop ancillary dataset information:
+        mag.attrs.pop(consts.ANCILLARY_DATASET, None)
+
+        # gather ancillary dataset information from vector components:
+        _anc = [self._obj[da].attrs.get(consts.ANCILLARY_DATASET, None) for da in data_vars]
+
+        _anc = [a for a in _anc if a is not None]
+        if _anc:
+            mag.attrs[consts.ANCILLARY_DATASET] = list(set([item for sublist in _anc for item in sublist]))
 
         joined_names = '_'.join(data_vars)
         if name is None:

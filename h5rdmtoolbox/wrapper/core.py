@@ -27,17 +27,16 @@ from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, conventions, utils
+from .. import consts
 from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.layout import Layout as LayoutFile
-from .. import consts
+
 logger = logging.getLogger(__package__)
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
-
-
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -465,7 +464,7 @@ class Group(h5py.Group, ConventionAccesor):
                        chunks=True,
                        make_scale=False,
                        attach_scales=None,
-                       associated_datasets=None,
+                       ancillary_datasets=None,
                        attrs=None,
                        **kwargs  # standard attributes and other keyword arguments
                        ):
@@ -503,7 +502,7 @@ class Group(h5py.Group, ConventionAccesor):
             Also note, that if data is a xr.DataArray and attach_scales is not None,
             coordinates of xr.DataArray are ignored and only attach_scales is
             considered.
-        attach_flags: Union[None, str, h5py.Dataset], optional=None
+        ancillary_datasets: Union[None, str, h5py.Dataset], optional=None
             If not None, attach flags to dataset. If str, it is interpreted as
             internal hdf path. If h5py.Dataset, it is interpreted as dataset to attach
             flags to. Default is None, which means no flags are attached. If a flag
@@ -535,11 +534,12 @@ class Group(h5py.Group, ConventionAccesor):
         if attrs is None:
             attrs = {}
 
-        if associated_datasets is None:
-            associated_datasets = {}
+        if ancillary_datasets is None:
+            ancillary_datasets = {}
 
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
+            data.name = name
         attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs)
 
         # kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
@@ -594,13 +594,13 @@ class Group(h5py.Group, ConventionAccesor):
         else:
             _data = data
 
-        if associated_datasets:
-            for name, ads in associated_datasets.items():
+        if ancillary_datasets:
+            for name, ads in ancillary_datasets.items():
                 if ads.shape != _data.shape:
                     raise ValueError(f'Associated dataset {name} has shape {ads.shape} '
                                      f'which does not match dataset shape {_data.shape}')
             import json
-            attrs[consts.ANCILLARY_DATASET] = json.dumps(associated_datasets)
+            attrs[consts.ANCILLARY_DATASET] = json.dumps(ancillary_datasets)
 
         _maxshape = kwargs.get('maxshape', shape)
 
@@ -1386,6 +1386,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
     def ancillary_datasets(self) -> Dict:
         """Return a dictionary of ancillary datasets attached to this dataset. The dictionary
         contains the name(s) (hdf internal path) and the dataset object(s)."""
+
         def _to_ds(parent, source):
             if isinstance(source, str):
                 return parent[source]
@@ -1414,7 +1415,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
             The current dataset object.
         """
         if isinstance(ancillary_dataset, str):
-            flag_dataset = self.parent[ancillary_dataset]
+            ancillary_dataset = self.parent[ancillary_dataset]
         if ancillary_dataset.shape != self.shape:
             raise ValueError('Shape of flag dataset does not match the shape of the current dataset!')
         ancillary_datasets = self.ancillary_datasets
@@ -1439,36 +1440,67 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         a new dataset is created first!"""
         return self.parent.modify_dataset_properties(self, name=new_name)
 
-    def sel(self, method=None, **coord_selections):
+    def coords(self):
+        return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims}
+
+    def isel(self, **coords) -> xr.DataArray:
+        """Index selection by providing the coordinate name.
+
+        Parameters
+        ----------
+        coords: Dict
+            Dictionary with coordinate name as key and slice or index as value
+
+        Returns
+        -------
+        xr.DataArray
+            The sliced HDF5 dataset.
+
+        Exampels
+        --------
+        >>> with h5tbx.File(filename) as h5:
+        >>>     h5.vel.isel(time=0, z=3)
+        """
+        if len(coords) == 0:
+            return self[()]
+        ds_coords = self.coords()
+        for cname in coords.keys():
+            if cname not in ds_coords:
+                raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
+
+        sl = {cname: slice(None) for cname in ds_coords.keys()}
+        for cname, item in coords.items():
+            sl[cname] = item
+        return self[tuple([v for v in sl.values()])]
+
+    def sel(self, method=None, **coords):
         """Select data based on coordinates and specific value(s). This is useful if the index
         is not known. Only works for a single dimension and for method 'exact'."""
-        if len(coord_selections) not in (0, 1):
-            raise NotImplementedError('Only one coordinate implemented')
+        av_coord_datasets = self.coords()
+        isel = {}
+        for coord_name, coord_values in coords.items():
+            if coord_name not in av_coord_datasets:
+                raise KeyError(f'Coordinate {coord_name} not in {list(av_coord_datasets.keys())}')
+            sel_coord_data = av_coord_datasets[coord_name][()]
+            if method is None or method == 'exact':
+                idx = np.where(sel_coord_data == coord_values)[0]
 
-        av_coord_datasets = {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims}
-        coord_name = list(coord_selections.keys())[0]
-        coord_values = list(coord_selections.values())[0]
-        sel_coord = av_coord_datasets[coord_name]
+                if idx.size == 0:
+                    raise ValueError(
+                        f'No matching coordinate found for coordinate {coord_name} and value {coord_values}. '
+                        f'Consider using method "nearest".')
+                if len(idx) == 1:
+                    idx = int(idx[0])
 
-        sel_coord_data = sel_coord[()]
-        if method is None:
-            # get index of coordinate that matches exactly
-            idx = np.where(sel_coord_data == coord_values)[0]
-            if idx.size == 0:
-                raise ValueError(f'No matching coordinate found for coordinate {coord_name} and value {coord_values}. '
-                                 f'Consider using method "nearest".')
-            if len(idx) == 1:
-                idx = int(idx[0])
-        else:
-            raise NotImplementedError('Only exact match method implemented')
-
-        non_axis_indices = [slice(None)] * self.ndim
-        for icoord, coord_name in enumerate(av_coord_datasets.keys()):
-            if coord_name in coord_selections:
-                non_axis_indices[icoord] = idx
-                break
-
-        return self.__getitem__(tuple(non_axis_indices))
+            elif method == 'nearest':
+                # idx = (sel_coord_data - coord_values).argmin()[()]
+                # print(idx)
+                _absmin = np.abs(sel_coord_data - coord_values)
+                idx = int(np.argmin(_absmin))
+            else:
+                raise NotImplementedError('Only exact and nearest match method implemented')
+            isel[coord_name] = idx
+        return self.isel(**isel)
 
     def __getattr__(self, item):
         if self.__class__ in conventions.current_convention._properties:
