@@ -66,6 +66,9 @@ class LDataset(LGroup):
                             'chunks', 'compression', 'compression_opts',
                             'shuffle', 'dims')
 
+    def __repr__(self):
+        return f'<LDataset "{self.name}">'
+
     def __getitem__(self, item):
         from .. import File
         with File(self.filename, mode='r') as h5:
