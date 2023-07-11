@@ -1,10 +1,12 @@
 """h5rdtoolbox repository"""
-import atexit
 import logging
 import pathlib
+import shutil
+
+import atexit
 # noinspection PyUnresolvedReferences
 import pint_xarray
-import shutil
+import xarray as xr
 from typing import Union
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
@@ -144,6 +146,8 @@ def clean_temp_data(full: bool = False):
     else:
         core_logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
 
+
+xr.set_options(display_expand_data=False)
 
 __all__ = ('__version__', '__author__', 'UserDir', 'use', 'core_logger',
            'generate_temporary_filename', 'generate_temporary_directory',
