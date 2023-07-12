@@ -3,6 +3,7 @@ import h5py
 from typing import Union
 
 
+
 class LAttributeManager:
     """Lazy Attribute Manager"""
 
@@ -73,6 +74,14 @@ class LDataset(LGroup):
         from .. import File
         with File(self.filename, mode='r') as h5:
             return h5[self.name][item]
+
+    def __enter__(self):
+        from .. import File
+        self._file = File(self.filename)
+        return self._file[self.name]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._file.close()
 
     def coords(self):
         from .. import File
