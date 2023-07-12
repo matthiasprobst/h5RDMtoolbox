@@ -4,6 +4,7 @@ import numpy as np
 import xarray as xr
 
 from .. import conventions, consts
+from .. import get_config
 
 
 def dataset_value_decoder(func):
@@ -58,6 +59,9 @@ def dataset_value_decoder(func):
         #     return FlagDataArray(xarr,
         #                          filename=ds.file.filename,
         #                          parent_slice=parent_slice)
+        if get_config('add_source_info_to_xr'):
+            xarr.attrs['__hdf_src_info__'] = {'filename': str(ds.hdf_filename),
+                                              'name': ds.name}
         return xarr
         # return H5DataArray(xarr, h5parent=ds, h5slice=parent_slice)
 
