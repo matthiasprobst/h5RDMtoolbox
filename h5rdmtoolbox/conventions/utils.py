@@ -1,5 +1,6 @@
 """utilities of package conventions"""
 import pathlib
+import pint
 import re
 import requests
 import warnings
@@ -21,11 +22,28 @@ def get_similar_names_ratio(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
 
-def equal_base_units(unit1, unit2):
-    """Return if two units are equivalent"""
-    base_unit1 = get_ureg()(unit1).to_base_units().units.__format__(get_ureg().default_format)
-    base_unit2 = get_ureg()(unit2).to_base_units().units.__format__(get_ureg().default_format)
-    return base_unit1 == base_unit2
+# def equal_base_units(unit1, unit2):
+#     """Return if two units are equivalent"""
+#
+#     base_unit1 = get_ureg()(unit1).to_base_units().units.__format__(get_ureg().default_format)
+#     base_unit2 = get_ureg()(unit2).to_base_units().units.__format__(get_ureg().default_format)
+#     return base_unit1 == base_unit2
+
+
+def equal_base_units(u1: Union[str, pint.Unit, pint.Quantity],
+                     u2: Union[str, pint.Unit, pint.Quantity]) -> bool:
+    """Returns True if base units are equal, False otherwise"""
+
+    def _convert(u):
+        if isinstance(u, str):
+            return 1 * get_ureg()(u)
+        if isinstance(u, pint.Unit):
+            return 1 * u
+        if isinstance(u, pint.Quantity):
+            return u
+        raise TypeError(f"u must be a str, pint.Unit or pint.Quantity, not {type(u)}")
+
+    return _convert(u1).to_base_units().units == _convert(u2).to_base_units().units
 
 
 def is_valid_email_address(email: str) -> bool:
@@ -53,7 +71,6 @@ def check_url(url, raise_error: bool = False, print_warning: bool = False, timeo
     if print_warning:
         warnings.warn(msg, UserWarning)
     return False
-
 
 
 def dict2xml(filename: Union[str, pathlib.Path], name: str, dictionary: Dict, **metadata) -> Path:
