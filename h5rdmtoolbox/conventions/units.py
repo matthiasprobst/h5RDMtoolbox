@@ -1,12 +1,9 @@
 import pint
 from typing import Union
 
+from .errors import UnitsError
 from .standard_attribute import StandardAttribute
 from .. import get_ureg
-
-
-class UnitsError(Exception):
-    """Units Error"""
 
 
 class UnitsAttribute(StandardAttribute):
@@ -40,7 +37,7 @@ class UnitsAttribute(StandardAttribute):
         standard_name = super().get(name='standard_name')
         if standard_name:
             if 'standard_name_table' in self.parent.standard_attributes:
-                if not self.parent.standard_name_table.check_units(standard_name, _units):
+                if not self.parent.standard_name_table[standard_name].equal_unit(_units):
                     raise UnitsError(f'Units "{_units}" are not compatible with standard_name "{standard_name}"')
         self.parent.attrs.create(self.name, _units)
 

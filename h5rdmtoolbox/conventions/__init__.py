@@ -12,16 +12,17 @@ import h5py
 from typing import Callable, Union
 
 from . import standard_attribute
-from . import units, long_name, standard_name, title, comment, references, source, contact
+from . import tbx
+from . import units, long_name, title, comment, references, source, contact
 from ._logger import logger
 from .layout import Layout, validators
 from .layout.validators import Validator
 from .standard_attribute import StandardAttribute
-from .standard_name import StandardName, StandardNameTable
+from .tbx import StandardName, StandardNameTable
 from .utils import dict2xml, is_valid_email_address
 from .._repr import make_italic, make_bold
 
-__all__ = ['units', 'long_name', 'standard_name', 'title', 'comment', 'references', 'source', 'contact',
+__all__ = ['units', 'long_name', 'title', 'comment', 'references', 'source', 'contact',
            'Layout', 'validators', 'Validator']
 
 
@@ -107,10 +108,10 @@ class Convention:
                                        position={'after': 'data'},
                                        optional=True)
             self['create_dataset'].add(attr_cls=units.UnitsAttribute,
-                                     # target_cls=Dataset,
-                                     add_to_method=True,
-                                     position={'after': 'data'},
-                                     optional=True)
+                                       # target_cls=Dataset,
+                                       add_to_method=True,
+                                       position={'after': 'data'},
+                                       optional=True)
 
     def __repr__(self):
         header = f'Convention("{self.name}")'

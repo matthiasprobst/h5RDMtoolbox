@@ -1,3 +1,6 @@
+# DEPRECIATED!!!!
+
+
 """Name identifier classes
 
 A name identifier class controls the usage of the HDF5 attribute "standard_name".
@@ -101,22 +104,6 @@ def is_valid_unit(unit_string: str) -> bool:
         return False  # UndefinedUnitError(f'Units cannot be understood using ureg package: {_units}. --> {e}')
     return True
 
-
-def xmlsnt2dict(xml_filename: Path) -> Tuple[dict, dict]:
-    """reads an SNT as xml file and returns data and meta dictionaries"""
-    tree = ET.parse(xml_filename)
-    root = tree.getroot()
-    standard_names = {}
-    meta = {'name': root.tag}
-    for r in root:
-        if r.tag != 'entry':
-            meta.update({r.tag: r.text})
-
-    for child in root.iter('entry'):
-        standard_names[child.attrib['id']] = {}
-        for c in child:
-            standard_names[child.attrib['id']][c.tag] = c.text
-    return standard_names, meta
 
 
 def _units_power_fix(_str: str):
@@ -357,40 +344,42 @@ class MinimalStandardNameTable:
         self.set(new_name, **existing_sn)
         del self._table[name]
 
-    def check_syntax(self, name: str) -> bool:
-        """Checks if the syntax of the name is correct according to the syntax rules of the StandardNameTable."""
-        if not len(name) > 0:
+    def check_syntax(self, standard_name: str) -> bool:
+        """Formal check if the syntax of the provided standard name is correct
+        according to the syntax rules of the StandardNameTable.
+        Note, that it is not checked, if the standard name exists in the table!"""
+        if not len(standard_name) > 0:
             raise StandardNameError('Name too short!')
 
-        if name[0] == ' ':
+        if standard_name[0] == ' ':
             raise StandardNameError('Name must not start with a space!')
 
-        if name[-1] == ' ':
+        if standard_name[-1] == ' ':
             raise StandardNameError('Name must not end with a space!')
 
-        if re.sub(self.valid_characters, '', name) != name:
-            raise StandardNameError('Invalid special characters in name '
-                                    f'"{name}": Only "{self.valid_characters}" '
+        if re.sub(self.valid_characters, '', standard_name) != standard_name:
+            raise StandardNameError('Invalid special characters in standard_name '
+                                    f'"{standard_name}": Only "{self.valid_characters}" '
                                     'is allowed.')
 
         if self.pattern != '' and self.pattern is not None:
-            if re.match(self.pattern, name):
+            if re.match(self.pattern, standard_name):
                 raise StandardNameError('Name must not start with a number!')
         return True
 
-    def check_name(self, name, strict: bool = None) -> bool:
+    def check_name(self, standard_name, strict: bool = None) -> bool:
         """Verifies general requirements like lower-case writing and no
         invalid character exist in the name.
         If strict is True, it is further checked whether the name exists
         in the standard name table. This is a global setting which can be changed
         in `conventions.standard_attributes.standard_name.STRICT`"""
-        self.check_syntax(name)
+        self.check_syntax(standard_name)
         if strict:
-            if name not in self.table:
-                if name not in self.alias:
-                    err_msg = f'Standard name "{name}" not in name table {self.versionname}.'
+            if standard_name not in self.table:
+                if standard_name not in self.alias:
+                    err_msg = f'Standard name "{standard_name}" not in standard name table {self.versionname}.'
                     if self.table:
-                        similar_names = self.find_similar_names(name)
+                        similar_names = self.find_similar_names(standard_name)
                         if similar_names:
                             err_msg += f'\nSimilar names are {similar_names}'
                         raise StandardNameError(err_msg)

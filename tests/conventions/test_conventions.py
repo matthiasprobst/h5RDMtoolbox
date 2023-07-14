@@ -69,7 +69,7 @@ class TestConventions(unittest.TestCase):
         with self.assertRaises(TypeError):
             cv['__init__'].add(attr_cls=TitleAttribute, target_cls=h5tbx.File)
 
-        class TitleAttribute(h5tbx.conventions.standard_name.StandardAttribute):
+        class TitleAttribute(h5tbx.conventions.standard_attribute.StandardAttribute):
             """Title attribute"""
             name = 'title'
 

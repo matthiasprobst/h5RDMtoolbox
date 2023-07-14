@@ -60,10 +60,12 @@ class HDFArrayAccessor:
                 if _data.ndim == 0:
                     _ = kwargs.pop('compression_opts', None)
                     _ = kwargs.pop('compression', None)
-                    cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
+                    cds = h5group.create_dataset(coord,
+                                                 data=self._obj.coords[coord].values,
                                                  attrs=coord_attrs, **kwargs)
                 else:
-                    cds = h5group.create_dataset(coord, data=self._obj.coords[coord].values,
+                    cds = h5group.create_dataset(coord,
+                                                 data=self._obj.coords[coord].values,
                                                  attrs=coord_attrs, **kwargs)
                 for k, v in self._obj.coords[coord].attrs.items():
                     cds.attrs[k] = v

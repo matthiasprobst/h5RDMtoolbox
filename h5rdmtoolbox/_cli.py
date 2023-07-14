@@ -1,10 +1,9 @@
 """collection of command line interface functions"""
 
 import argparse
+import h5py
 import webbrowser
 from pprint import pprint
-
-import h5py
 
 from . import File
 from ._version import __version__
@@ -54,17 +53,17 @@ def main():
     sp_standard_name = subparsers.add_parser('standard_name', help='standard name menu')
     sp_standard_name.set_defaults(cmd='standard_name')
     sp_standard_name.add_argument('--list-registered', action='store_true',
-                                 help='List all registered standard name tables.')
+                                  help='List all registered standard name tables.')
     sp_standard_name.add_argument('-t', '--table',
-                                 type=str,
-                                 required=False,
-                                 default=None,
-                                 help='Registered standard name or filename of a standard table.')
+                                  type=str,
+                                  required=False,
+                                  default=None,
+                                  help='Registered standard name or filename of a standard table.')
     sp_standard_name.add_argument('-f', '--file',
-                                 type=str,
-                                 required=False,
-                                 default=None,
-                                 help='Filename to run check on.')
+                                  type=str,
+                                  required=False,
+                                  default=None,
+                                  help='Filename to run check on.')
     # MONGODB
     sp_mongo = subparsers.add_parser('mongodb', help='mongodb menu')
     sp_mongo.set_defaults(cmd='mongodb')
@@ -168,7 +167,7 @@ def main():
                     h5.mongo.insert(collection=collection, recursive=True, update=True)
             return
         if args.cmd == 'standard_name':
-            from .conventions.standard_name import StandardNameTable
+            from .conventions.tbx import StandardNameTable
             import pathlib
             if args.list_registered:
                 StandardNameTable.print_registered()
@@ -181,7 +180,7 @@ def main():
                     snt = StandardNameTable.load_registered(args.table)
                 print(f' > Checking file "{args.file}" with standard name table "{snt.versionname}"')
                 with File(args.file) as h5:
-                    snt.check_grp(h5, recursive=True, raise_error=False)
+                    snt.check_hdf_group(h5, recursive=True, raise_error=False)
                 return
         if args.cmd == 'layout':
             from .conventions import layout

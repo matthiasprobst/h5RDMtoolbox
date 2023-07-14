@@ -2,7 +2,8 @@ import unittest
 
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions import utils
-from h5rdmtoolbox.conventions.standard_name import xmlsnt2dict, StandardNameTable
+from h5rdmtoolbox.conventions.tbx import StandardNameTable
+from h5rdmtoolbox.conventions.utils import xmlsnt2dict
 
 
 class TestTranslation(unittest.TestCase):

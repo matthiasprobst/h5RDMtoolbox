@@ -26,7 +26,8 @@ def derivative_of_X_wrt_to_Y(standard_name, snt) -> StandardName:
         if all([snt.check(n) for n in groups]):
             sn1 = snt[groups[0]]
             sn2 = snt[groups[1]]
-            new_units = (sn1.units / sn2.units).units
+            new_units = (1*sn1.units / 1*sn2.units).units
             new_description = f"Derivative of {sn1.name} wrt to {sn2.name}"
-            return StandardName(standard_name, new_units, new_description, snt)
-    raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")
+            return StandardName(standard_name, new_units, new_description)
+    return False
+    # raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")

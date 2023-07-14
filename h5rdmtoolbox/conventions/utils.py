@@ -7,7 +7,7 @@ import warnings
 import xml.etree.ElementTree as ET
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Union, Tuple
 
 from .. import get_ureg
 
@@ -73,7 +73,10 @@ def check_url(url, raise_error: bool = False, print_warning: bool = False, timeo
     return False
 
 
-def dict2xml(filename: Union[str, pathlib.Path], name: str, dictionary: Dict, **metadata) -> Path:
+def dict2xml(filename: Union[str, pathlib.Path],
+             name: str,
+             dictionary: Dict,
+             **metadata) -> Path:
     """writes standard_names dictionary into a xml in style of cf-standard-name-table
 
     data must be a Tuple where first entry is the dictionary and the second one is metadata
@@ -95,6 +98,23 @@ def dict2xml(filename: Union[str, pathlib.Path], name: str, dictionary: Dict, **
     tree = ET.ElementTree(root)
     tree.write(filename, encoding="utf-8", xml_declaration=True)
     return Path(filename)
+
+
+def xmlsnt2dict(xml_filename: Path) -> Tuple[dict, dict]:
+    """reads an SNT as xml file and returns data and meta dictionaries"""
+    tree = ET.parse(xml_filename)
+    root = tree.getroot()
+    standard_names = {}
+    meta = {'name': root.tag}
+    for r in root:
+        if r.tag != 'entry':
+            meta.update({r.tag: r.text})
+
+    for child in root.iter('entry'):
+        standard_names[child.attrib['id']] = {}
+        for c in child:
+            standard_names[child.attrib['id']][c.tag] = c.text
+    return standard_names, meta
 
 
 def xml_to_html_table_view(xml_filename: Union[str, pathlib.Path],

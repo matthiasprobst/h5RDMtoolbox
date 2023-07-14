@@ -6,7 +6,7 @@ import pathlib
 import xarray as xr
 from typing import List
 
-from .conventions.standard_name import StandardNameTable
+from .conventions.tbx import StandardNameTable
 from .utils import generate_temporary_directory
 from .wrapper.core import File
 
@@ -14,12 +14,17 @@ __this_dir__ = pathlib.Path(__file__).parent
 testdir = __this_dir__ / '../tests/data'
 
 
+def get_standard_name_table_yaml_file() -> pathlib.Path:
+    """Return the path to the standard name table yaml file"""
+    return __this_dir__ / 'data/Test-v1.yml'
+
+
 def get_standard_name_table() -> StandardNameTable:
     """Return an example standard name table"""
     if False:
         url = 'https://raw.githubusercontent.com/matthiasprobst/h5RDMtoolbox/main/h5rdmtoolbox/data/Test-v1.yml'
         return StandardNameTable.from_web(url)
-    return StandardNameTable.from_yaml(__this_dir__ / 'data/Test-v1.yml')
+    return StandardNameTable.from_yaml(get_standard_name_table_yaml_file())
 
 
 def get_xr_dataset(name):

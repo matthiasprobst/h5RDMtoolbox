@@ -19,7 +19,7 @@ cv['__init__'].add(attr_cls=conventions.references.ReferencesAttribute,
                    add_to_method=True,
                    position={'before': 'layout'},
                    optional=True)
-cv['__init__'].add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
+cv['__init__'].add(attr_cls=conventions.tbx.StandardNameTableAttribute,
                    add_to_method=True,
                    position={'before': 'layout'},
                    optional=True)
@@ -37,9 +37,9 @@ cv['__init__'].add(attr_cls=conventions.source.SourceAttribute,
                    optional=True)
 
 # Dataset
-cv['create_dataset'].add(attr_cls=conventions.standard_name.StandardNameTableAttribute,
+cv['create_dataset'].add(attr_cls=conventions.tbx.StandardNameTableAttribute,
                          add_to_method=False)
-cv['create_dataset'].add(attr_cls=conventions.standard_name.StandardNameAttribute,
+cv['create_dataset'].add(attr_cls=conventions.tbx.StandardNameAttribute,
                          # target_cls=Dataset,
                          position={'after': 'data'},
                          add_to_method=True,

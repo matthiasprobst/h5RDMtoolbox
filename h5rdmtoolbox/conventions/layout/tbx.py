@@ -1,8 +1,40 @@
 import numpy as np
+from pint.errors import UndefinedUnitError
 
+from h5rdmtoolbox import get_ureg
 from .core import *
 from .validators import Regex, ValidString
-from ..standard_name import is_valid_unit
+
+
+def is_valid_unit(unit_string: str) -> bool:
+    """Raise error if _units is not processable by pint package. Otherwise return True
+
+    Parameters
+    ----------
+    unit_string : str
+        unit string to be checked whether it is processable by pint package
+
+    Returns
+    -------
+    bool
+        True if unit string is processable by pint package, otherwise False
+
+    Examples
+    --------
+    >>> is_valid_unit('m s-1')
+    >>> True
+    >>> is_valid_unit('kg m/s^-1')
+    >>> True
+    >>> is_valid_unit('kg m/s-1')
+    >>> False
+    >>> is_valid_unit('kgm/s-1')
+    >>> False
+    """
+    try:
+        get_ureg().Unit(unit_string)
+    except (UndefinedUnitError, TypeError):  # as e:
+        return False  # UndefinedUnitError(f'Units cannot be understood using ureg package: {_units}. --> {e}')
+    return True
 
 
 class IsValidUnit(Validator):

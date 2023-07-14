@@ -10,7 +10,9 @@ from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions import contact, standard_name
+from h5rdmtoolbox.conventions import contact
+from h5rdmtoolbox.conventions.errors import UnitsError
+from h5rdmtoolbox.conventions.tbx import standard_name, errors
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
@@ -160,7 +162,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      standard_name_table=self.default_snt) as h5:
             ds = h5.create_dataset('velocity', shape=(), standard_name='x_velocity', units='m/s')
             self.assertEqual(ds.attrs['units'], 'm/s')
-            self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
+            self.assertEqual(ds.attrs['standard_name'].name, 'x_velocity')
         with h5tbx.wrapper.core.File(title=self.default_title,
                                      institution=self.default_institution,
                                      references=self.default_references,
@@ -169,7 +171,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                    standard_name='x_velocity',
                                    units='m/s')
             self.assertEqual(ds.attrs['units'], 'm/s')
-            self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
+            self.assertEqual(ds.attrs['standard_name'].name, 'x_velocity')
         da = xr.DataArray(data=[1, 2, 3], attrs={'units': 'm/s'})
         with h5tbx.wrapper.core.File(title=self.default_title,
                                      institution=self.default_institution,
@@ -185,7 +187,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      standard_name_table=self.default_snt) as h5:
             ds = h5.create_dataset('velocity', data=da)
             self.assertEqual(ds.attrs['units'], 'm/s')
-            self.assertEqual(ds.attrs['standard_name'], 'x_velocity')
+            self.assertEqual(str(ds.attrs['standard_name']), 'x_velocity')
 
     def test_create_string_dataset(self):
         with h5tbx.wrapper.core.File(title=self.default_title,
@@ -219,14 +221,14 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             h5.standard_name_table = convention
             self.assertIsInstance(h5.standard_name_table, standard_name.StandardNameTable)
             ds = h5.create_dataset('ds', shape=(), long_name='x_velocity', units='m/s')
-            with self.assertRaises(standard_name.StandardNameError):
+            with self.assertRaises(errors.StandardNameError):
                 ds.attrs['standard_name'] = ' x_velocity'
             standard_name.STRICT = False
             ds.attrs['standard_name'] = 'x_velocityyy'
-            with self.assertRaises(standard_name.StandardNameError):
+            with self.assertRaises(errors.StandardNameError):
                 ds.attrs['standard_name'] = '!x_velocityyy'
             standard_name.STRICT = True
-            with self.assertRaises(standard_name.StandardNameError):
+            with self.assertRaises(errors.StandardNameError):
                 ds.attrs['standard_name'] = 'x_velocityyy'
             del h5['ds']
 
@@ -551,7 +553,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                                      references=self.default_references,
                                      mode='w',
                                      standard_name_table=self.default_snt) as h5:
-            with self.assertRaises(standard_name.StandardNameError):
+            with self.assertRaises(errors.StandardNameTableError):
                 h5.create_dataset(name='x', standard_name='x_coordinate', shape=(10, 20), units='')
             self.assertNotIn('x', h5)  # the dataset should not have been created
 
@@ -559,10 +561,10 @@ class TestH5TbxWrapperFile(unittest.TestCase):
             self.assertEqual(ds.units, 'm')
             ds.units = 'mm'
             self.assertEqual(ds.units, 'mm')
-            with self.assertRaises(standard_name.StandardNameError):
+            with self.assertRaises(UnitsError):
                 ds.units = 'kg'
             # cannot check units although obviously wrong, because it is not listed in convention
-            with self.assertRaises(standard_name.StandardNameError):
+            with self.assertRaises(errors.StandardNameTableError):
                 h5.create_dataset(name='y', units='m/s',
                                   standard_name='y_coordinate', shape=(10, 20))
             self.assertNotIn('u', h5)  # the dataset should not have been created
@@ -570,7 +572,7 @@ class TestH5TbxWrapperFile(unittest.TestCase):
                               standard_name='y_velocity', shape=(10, 20))
             self.assertIn('y_vel', h5)
             self.assertTupleEqual(h5['y_vel'].shape, (10, 20))
-            with self.assertRaises(standard_name.StandardNameError):
+            with self.assertRaises(errors.StandardNameTableError):
                 h5.create_dataset(name='u', units='m/kg',
                                   standard_name='x_velocity', shape=(10, 20))
             self.assertNotIn('u', h5)  # the dataset should not have been created
