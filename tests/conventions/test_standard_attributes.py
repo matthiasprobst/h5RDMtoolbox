@@ -320,9 +320,11 @@ class TestStandardAttributes(unittest.TestCase):
         with self.assertRaises(tbx.errors.StandardNameError):
             sn_fail = tbx.StandardName(name='', units='m')
 
-        with self.assertRaises(ValueError):
-            tbx.StandardName(name=' x', units='m', )
-        sn_fail = tbx.StandardName(name='x ', units='m', description='a description')
+        with self.assertRaises(StandardNameError):
+            tbx.StandardName(name=' x', units='m', description='a description')
+
+        with self.assertRaises(StandardNameError):
+            sn_fail = tbx.StandardName(name='x ', units='m', description='a description')
 
         sn1 = tbx.StandardName(name='acc',
                                description='a description',

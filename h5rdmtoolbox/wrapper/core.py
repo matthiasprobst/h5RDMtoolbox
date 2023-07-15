@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
-from tqdm import tqdm
 from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
@@ -177,7 +176,7 @@ class Group(h5py.Group, ConventionAccesor):
             return [v for v in self.values() if isinstance(v, h5py.Group)]
         return self.find({'$basename': {'$regex': pattern}}, '$Group', rec=rec)
 
-    def modify_dataset_properties(self, dataset, **dataset_properties):
+    def modify_dataset_properties(self, dataset, tqdm_pbar: bool = False, **dataset_properties):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
         and then copy it back with the new properties. 'static' properties are considered properties
         that cannot be changed once the dataset has been written, such as max_shape, dtype etc."""
@@ -207,36 +206,49 @@ class Group(h5py.Group, ConventionAccesor):
             warnings.warn('No changes were applied because new properties a no different to present ones', UserWarning)
             return dataset
 
+        if tqdm_pbar:
+            try:
+                from tqdm import tqdm
+            except ImportError:
+                raise ImportError('tqdm is not installed. Please install it to use the progress bar.')
         with File() as temp_h5dest:
-            progress_bar = tqdm(total=4, desc='Progress')
-            progress_bar.desc = 'Copy dataset to temporary file'
+            if tqdm_pbar:
+                progress_bar = tqdm(total=4, desc='Progress')
+                progress_bar.desc = 'Copy dataset to temporary file'
 
             self.copy(dataset_basename, temp_h5dest)
-            progress_bar.update(1)
+            if tqdm_pbar:
+                progress_bar.update(1)
 
             tmp_ds = temp_h5dest[dataset_basename]
 
-            progress_bar.desc = 'Delete old dataset'
+            if tqdm_pbar:
+                progress_bar.desc = 'Delete old dataset'
+
             # delete dataset from this file
             del self[dataset_basename]
-            progress_bar.update(1)
+            if tqdm_pbar:
+                progress_bar.update(1)
 
-            progress_bar.desc = 'Creating new dataset'
+                progress_bar.desc = 'Creating new dataset'
+
             attrs = dict(tmp_ds.attrs.items())
             # create new dataset with same name but different chunks:
             new_ds = self.create_dataset(name=_orig_dataset_properties.pop('name'),
                                          shape=tmp_ds.shape,
                                          attrs=attrs,
                                          **_orig_dataset_properties)
-            progress_bar.update(1)
+            if tqdm_pbar:
+                progress_bar.update(1)
 
-            progress_bar.desc = 'Writing the data chunk-wise'
+                progress_bar.desc = 'Writing the data chunk-wise'
             # copy the data chunk-wise
             for chunk_slice in tmp_ds.iter_chunks():
                 new_ds.values[chunk_slice] = tmp_ds.values[chunk_slice]
-            progress_bar.update(1)
 
-            progress_bar.close()
+            if tqdm_pbar:
+                progress_bar.update(1)
+                progress_bar.close()
 
         return new_ds
 

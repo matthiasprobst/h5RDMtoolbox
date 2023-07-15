@@ -6,6 +6,9 @@ from typing import Union, Dict
 from h5rdmtoolbox import get_ureg
 from .errors import StandardNameError
 
+VALID_CHARACTERS = '[^a-zA-Z0-9_]'
+PATTERN = '^[0-9 ].*'
+
 
 def _units_power_fix(_str: str):
     """Fixes strings like 'm s-1' to 'm s^-1'"""
@@ -60,6 +63,14 @@ class StandardName:
             raise TypeError(f'Standard name must be type string but is {type(standard_name)}')
         if len(standard_name) == 0:
             raise StandardNameError('Name too short!')
+        if re.sub(VALID_CHARACTERS, '', standard_name) != standard_name:
+            raise StandardNameError('Invalid special characters in name '
+                                    f'"{standard_name}": Only "{VALID_CHARACTERS}" '
+                                    'is allowed.')
+
+        if PATTERN != '' and PATTERN is not None:
+            if re.match(PATTERN, standard_name):
+                raise StandardNameError(f'Standard name "{standard_name}" does not match pattern "{PATTERN}"')
 
     def to_dict(self) -> Dict:
         """Return dictionary representation of StandardName"""
