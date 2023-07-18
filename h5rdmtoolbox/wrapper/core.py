@@ -80,7 +80,7 @@ def process_attributes(cls, meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[
     kwargs, skwargs = _pop_standard_attributes(
         kwargs, cache_entry=conventions.current_convention._methods[cls][meth_name]
     )
-
+    
     # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
     for skey, vas in skwargs.items():
         if skey in attrs:
@@ -735,8 +735,8 @@ class Group(h5py.Group, ConventionAccesor):
         """
         Examples for filter parameters:
         filter = {'long_name': 'any objects long name'} --> searches in attributes only
-        filter = {'$name': 'name'}  --> searches in groups and datasets for the (path)name
-        filter = {'basename': 'name'}  --> searches in groups and datasets for the basename (without path)
+        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
+        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
 
         Parameters
         ----------

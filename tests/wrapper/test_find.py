@@ -22,6 +22,11 @@ class TestFind(unittest.TestCase):
             h5.dump()
             self.filename = h5.hdf_filename
 
+    def test_find_name(self):
+        """find based on hdf name"""
+        with h5tbx.File(self.filename) as h5:
+            h5.find({'$name': '/'})
+
     def test_find_rec_False(self):
         with h5tbx.File(self.filename) as h5:
             print('\nfind basename=velocity in sub/:')

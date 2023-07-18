@@ -7,6 +7,7 @@ import pathlib
 import re
 from itertools import chain
 from typing import List, Union, Dict, Callable, Tuple
+
 from ..utils import process_obj_filter_input
 
 
@@ -143,6 +144,9 @@ class RecAttrCollect:
                     self.found_objects.append(obj.attrs[self._attribute_name])
 
 
+AV_SPECIAL_FILTERS = ('$basename', '$name')
+
+
 def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter, ignore_attribute_error: bool = False):
     """
 
@@ -191,7 +195,8 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
             if recursive:
                 rf = RecFind(_operator[ok], qk[1:], ov, objfilter=objfilter,
                              ignore_attribute_error=ignore_attribute_error)
-                h5obj.visititems(rf)
+                rf(name='/', h5obj=h5obj)  # visit the root group
+                h5obj.visititems(rf)  # will not visit the root group
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
             else:
@@ -199,6 +204,15 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                     if objfilter:
                         if not isinstance(hv, objfilter):
                             continue
+                    if qk not in AV_SPECIAL_FILTERS and not ignore_attribute_error:
+                        raise AttributeError(
+                            f'Unknown key "{qk}". Must be one of these: {AV_SPECIAL_FILTERS}'
+                            ' or a valid h5py object attribute. '
+                            'You may also consider setting the object filter to "$Dataset" or "$Group" '
+                            'because e.g. filtering for "$shape" only works for datasets. '
+                            'If you dont want this error to be raised and ignored instead, '
+                            'pass "ignore_attribute_error=True" '
+                            f'Original h5py error: {e}')
                     try:
                         if qk == '$basename':
                             objattr = pathlib.Path(hv.__getattribute__('name')).name
@@ -206,15 +220,8 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                             objattr = hv.__getattribute__(qk[1:])
                         if _operator[ok](objattr, ov):
                             found_objs.append(hv)
-                    except AttributeError as e:
-                        if not ignore_attribute_error:
-                            raise AttributeError(
-                                f'Unknown key "{qk}". Must be "$basename" or a valid h5py object attribute. '
-                                'You may also consider setting the object filter to "$Dataset" or "$Group" '
-                                'because e.g. filtering for "$shape" only works for datasets. '
-                                'If you dont want this error to be raised and ignored instead, '
-                                'pass "ignore_attribute_error=True" '
-                                f'Original h5py error: {e}')
+                    except Exception as e:
+                        raise Exception(f'Error while filtering for "{qk}" with "{ok}" and "{ov}"') from e
     return found_objs
 
 
