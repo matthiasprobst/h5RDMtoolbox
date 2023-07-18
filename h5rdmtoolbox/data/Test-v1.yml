@@ -1,5 +1,5 @@
 name: Test
-version_number: 1
+version: v1.0
 institution: my_institution
 contact: 'https://orcid.org/0000-0001-8729-0482'
 valid_characters: ''

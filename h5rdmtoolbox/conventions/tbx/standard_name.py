@@ -24,7 +24,8 @@ class StandardName:
     def __init__(self, name: str,
                  units: Union[str, pint.Unit] = None,
                  description: str = None,
-                 canonical_units: str = None):
+                 canonical_units: str = None,
+                 alias: str = None):
         StandardName.check_syntax(name)
         self.name = name
         if canonical_units is not None:
@@ -43,6 +44,9 @@ class StandardName:
         q = 1 * self.units
         self.unit = q.to_base_units().units
         self.description = description
+        if alias is not None:
+            self.check_syntax(alias)
+        self.alias = alias
 
     def __str__(self):
         return self.name

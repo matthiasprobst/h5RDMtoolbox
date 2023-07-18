@@ -2,18 +2,45 @@ import h5py
 import pandas as pd
 import pathlib
 import pint
+import re
+import requests
+import warnings
 import yaml
 from IPython.display import display, HTML
-from datetime import datetime
-from typing import List, Union, Dict
+from datetime import datetime, timezone
+from typing import List, Union, Dict, Tuple
 
 from . import errors
 from .standard_name import StandardName
 from .transformation import derivative_of_X_wrt_to_Y
 from .._logger import logger
-from ..utils import dict2xml
+from ..utils import dict2xml, get_similar_names_ratio
 from ..._user import UserDir
-from ...utils import generate_temporary_filename
+from ...utils import generate_temporary_filename, generate_temporary_directory
+
+__this_dir__ = pathlib.Path(__file__).parent
+
+README_HEADER = """---
+title: Standard Name Table for Fan simulations and measurements
+---
+
+# Standard Name Table for Fan simulations and measurements
+
+| Standard Name |     units     | Description |
+|---------------|:-------------:|:------------|
+"""
+
+LATEX_UNDERSCORE = '\\_'
+
+
+# wrapper that updates datetime in meta
+def update_modification_date(func):
+    def wrapper(self, *args, **kwargs):
+        self._meta['last_modified'] = datetime.now(timezone.utc).isoformat()
+        # self._meta['last_modified'] = datetime.now().isoformat()
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class StandardNameTable:
@@ -30,14 +57,14 @@ class StandardNameTable:
     >>> table.check('derivative_of_x_velocity_wrt_to_x_coordinate')
     True
     """
-    __slots__ = ('table', '_meta', '_alias', '_name', '_version_number', 'transformations')
+    __slots__ = ('table', '_meta', '_alias', '_name', '_version', 'transformations')
 
-    def __init__(self, name, version_number, table, alias=None, **meta):
+    def __init__(self, name, version, table, alias=None, **meta):
         if table is None:
             table = {}
         self.table = table
         self._name = name
-        self._version_number = version_number
+        meta['version'] = StandardNameTable.validate_version(version)
         # fix key canonical_units
         for k, v in self.table.items():
             if 'canonical_units' in v:
@@ -69,29 +96,58 @@ class StandardNameTable:
                               DeprecationWarning)
             else:
                 units = entry['units']
-            return StandardName(standard_name,
-                                units,
-                                entry['description'])
+            return StandardName(name=standard_name,
+                                units=units,
+                                description=entry['description'],
+                                alias=entry.get('alias', None))
         for transformation in self.transformations:
             sn = transformation(standard_name, self)
             if sn:
                 return sn
-        raise errors.StandardNameError(f'{standard_name} not found in {self.name}')
+
+        if standard_name in self.list_of_aliases:
+            return self[self.aliases[standard_name]]
+
+        # provide a suggestion for similar standard names
+        similar_names = [k for k in [*self.table.keys(), *self.list_of_aliases] if
+                         get_similar_names_ratio(standard_name, k) > 0.75]
+        if similar_names:
+            raise errors.StandardNameError(f'{standard_name} not found in Standard Name table "{self.name}".'
+                                           ' Did you mean one of these: '
+                                           f'{similar_names}?')
+        raise errors.StandardNameError(f'{standard_name} not found in Standard Name table "{self.name}".')
 
     def __getattr__(self, item):
         if item in self.meta:
             return self.meta[item]
         return self.__getattribute__(item)
 
+    @staticmethod
+    def validate_version(version_string: str) -> str:
+        """Validate version number. Must be MAJOR.MINOR(a|b|rc|dev). If validated, return version string, else
+        raise ValueError."""
+        if version_string is None:
+            version_string = '0.0'
+            warnings.warn(f'Version number is not set. Setting version number to {version_string}.')
+        version_string = str(version_string)
+        if not re.match(r'^v\d+\.\d+(a|b|rc|dev)?$', version_string):
+            raise ValueError(f'Version number "{version_string}" is not valid. Expecting MAJOR.MINOR(a|b|rc|dev).')
+        return version_string
+
+    @property
+    def aliases(self) -> Dict:
+        """returns a dictionary of alias names and the respective standard name"""
+        return {v['alias']: k for k, v in self.table.items() if 'alias' in v}
+
+    @property
+    def list_of_aliases(self) -> Tuple[str]:
+        """Returns list of available aliases"""
+        return tuple([v['alias'] for v in self.table.values() if 'alias' in v])
+
     @property
     def alias(self) -> Dict:
         """Return alias dictionary"""
         return self._alias
-
-    @property
-    def versionname(self) -> str:
-        """Return version name which is constructed like this: <name>-v<version_number>"""
-        return f'{self._name}-v{self._version_number}'
 
     @property
     def name(self) -> str:
@@ -104,14 +160,14 @@ class StandardNameTable:
         return self._meta
 
     @property
-    def version_number(self) -> str:
+    def version(self) -> str:
         """Return version number of the Standard Name Table"""
-        return self._version_number
+        return self._meta.get('version', None)
 
     @property
     def versionname(self) -> str:
-        """Return version name which is constructed like this: <name>-v<version_number>"""
-        return f'{self.name}-v{self.version_number}'
+        """Return version name which is constructed like this: <name>-<version>"""
+        return f'{self.name}-{self.version}'
 
     def update(self, **standard_names):
         """Update the table with new standard names"""
@@ -221,6 +277,12 @@ class StandardNameTable:
         self.table.update({sn.name: {'units': str(sn.units), 'description': sn.description}})
         return self
 
+    def sort(self) -> "StandardNameTable":
+        """Sorts the standard name table"""
+        _tmp_yaml_filename = generate_temporary_filename(suffix='.yaml')
+        self.to_yaml(_tmp_yaml_filename)
+        return StandardNameTable.from_yaml(_tmp_yaml_filename)
+
     # Loader: ---------------------------------------------------------------
     @staticmethod
     def from_yaml(yaml_filename):
@@ -232,9 +294,9 @@ class StandardNameTable:
             table = _dict.pop('table')
             if 'name' not in _dict:
                 _dict['name'] = pathlib.Path(yaml_filename).stem
-            version_number = _dict.pop('version_number', None)
+            version = _dict.pop('version', None)
             name = _dict.pop('name', None)
-            return StandardNameTable(name=name, version_number=version_number, table=table, **_dict)
+            return StandardNameTable(name=name, version=version, table=table, **_dict)
 
     @staticmethod
     def from_xml(xml_filename: Union[str, pathlib.Path],
@@ -417,6 +479,80 @@ class StandardNameTable:
         return snt
 
     @staticmethod
+    def from_zenodo(doi: str,
+                    filename: str = None,
+                    destination_directory: Union[str, pathlib.Path] = None) -> "StandardNameTable":
+        """Download standard name table from Zenodo based on URL
+
+        Parameters
+        ----------
+        doi: str
+            DOI
+        filename: str
+            If multiple files exist in the Zenodo repository, you must specify the exact name
+        destination_directory: Union[str, pathlib.Path]
+            Folder directory where to save the file. Name of file is taken from the repository
+
+        Returns
+        -------
+        snt: StandardNameTable
+            Instance of this class
+
+
+        Example
+        -------
+        >>> StandardNameTable.from_zenodo(doi="8158764")
+        """
+        base_url = "https://zenodo.org/api"
+        record_url = f"{base_url}/records/{doi}"
+
+        if destination_directory is None:
+            destination_directory = generate_temporary_directory()
+        destination_directory = pathlib.Path(destination_directory)
+
+        # Get the record metadata
+        response = requests.get(record_url)
+        if response.status_code != 200:
+            raise ValueError(f"Unable to retrieve record metadata. Status code: {response.status_code}")
+
+        record_data = response.json()
+
+        # Find the file link
+        if 'files' not in record_data:
+            raise ValueError("Error: No files found in the record.")
+
+        files = record_data['files']
+        if len(files) > 1 and filename is None:
+            raise ValueError('More than one file found. Specify the filename. '
+                             f'Must be one of these: {[f["key"] for f in files]}')
+        if filename is not None:
+            for f in files:
+                if f['key'] == filename:
+                    file_data = f
+                    break
+        else:
+            file_data = files[0]  # Assuming you want the first file
+
+        if 'links' not in file_data or 'self' not in file_data['links']:
+            raise ValueError("Unable to find download link for the file.")
+
+        download_link = file_data['links']['self']
+
+        # Download the file
+        response = requests.get(download_link, stream=True)
+        if response.status_code != 200:
+            raise ValueError(f"Unable to download the file. Status code: {response.status_code}")
+
+        destination_filename = destination_directory / file_data['key']
+        with open(destination_filename, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        snt = StandardNameTable.from_yaml(destination_filename)
+        snt._meta.update(dict(zenodo_doi=doi))
+        return snt
+
+    @staticmethod
     def load_registered(name: str) -> 'StandardNameTable':
         """Load from user data dir"""
         # search for names:
@@ -433,15 +569,21 @@ class StandardNameTable:
     # End Loader: -----------------------------------------------------------
 
     # Export: ---------------------------------------------------------------
-    def to_yaml(self, yaml_filename):
+    @update_modification_date
+    def to_yaml(self, yaml_filename: Union[str, pathlib.Path]):
         """Export a StandardNameTable to a YAML file"""
         snt_dict = self.to_dict()
-        with open(yaml_filename, 'w') as f:
-            yaml.dump(snt_dict, f)
 
+        with open(yaml_filename, 'w') as f:
+            meta_lines = '\n'.join(f'{k}: {v}' for k, v in self.meta.items())
+            f.writelines(meta_lines + '\n')
+
+            yaml.safe_dump({'table': snt_dict['table']}, f)
+
+    @update_modification_date
     def to_xml(self,
                xml_filename: pathlib.Path,
-               datetime_str=None) -> pathlib.Path:
+               datetime_str: Union[str, None] = None) -> pathlib.Path:
         """Save the SNT in a XML file
 
         Parameters
@@ -449,7 +591,8 @@ class StandardNameTable:
         xml_filename: pathlib.Path
             Path to use for the XML file
         datetime_str: str, optional
-            Datetime format to use for the last_modified field
+            Datetime format to use for the last_modified field. If None, then
+            ISO 6801 format is used.
 
         Returns
         -------
@@ -457,8 +600,9 @@ class StandardNameTable:
             Path to the XML file
         """
         if datetime_str is None:
-            datetime_str = '%Y-%m-%d_%H:%M:%S'
-        last_modified = datetime.now().strftime(datetime_str)
+            last_modified = datetime.now(datetime.timezone.utc).isoformat()
+        else:
+            last_modified = datetime.now().strftime(datetime_str)
 
         xml_parent = xml_filename.parent
         xml_name = xml_filename.name
@@ -469,7 +613,7 @@ class StandardNameTable:
         meta = self.meta
         meta.update(last_modified=last_modified)
 
-        meta.update(dict(version_number=self.version_number))
+        meta.update(dict(version=self.version))
 
         return dict2xml(filename=xml_filename,
                         name=self.name,
@@ -482,6 +626,61 @@ class StandardNameTable:
         if trg.exists() and not overwrite:
             raise FileExistsError(f'Standard name table {self.versionname} already exists!')
         self.to_yaml(trg)
+
+    def to_markdown(self, markdown_filename):
+        markdown_filename = pathlib.Path(markdown_filename)
+        with open(markdown_filename, 'w') as f:
+            f.write(README_HEADER)
+            for k, v in self.sort().table.items():
+                f.write(f'| {k} | {v["units"]} | {v["description"]} |\n')
+        return markdown_filename
+
+    def to_html(self, html_filename, open_webbrwoser: bool = False):
+
+        html_filename = pathlib.Path(html_filename)
+
+        markdown_filename = self.to_markdown(generate_temporary_filename(suffix='.md'))
+
+        # Read the Markdown file
+        markdown_filename = pathlib.Path(markdown_filename)
+
+        template_filename = __this_dir__ / 'html' / 'template.html'
+
+        import subprocess
+        # Convert Markdown to HTML using pandoc
+        subprocess.call(['pandoc', str(markdown_filename.absolute()),
+                         '--template',
+                         str(template_filename),
+                         '-o', str(html_filename.absolute())])
+
+        if open_webbrwoser:
+            import webbrowser
+            webbrowser.open('file://' + str(html_filename.resolve()))
+        return html_filename
+
+    def to_latex(self, latex_filename,
+                 column_parameter: str = 'p{0.4\\textwidth}lp{.40\\textwidth}',
+                 caption: str = 'Standard Name Table',
+                 with_header_and_footer: bool = True):
+        """Export a StandardNameTable to a LaTeX file"""
+        latex_filename = pathlib.Path(latex_filename)
+        LATEX_HEADER = f"""\\begin{{table}}[htbp]
+\\centering
+\\caption{caption}
+\\begin{{tabular}}{column_parameter}
+"""
+        LATEX_FOOTER = """\\end{tabular}"""
+        with open(latex_filename, 'w') as f:
+            if with_header_and_footer:
+                f.write(LATEX_HEADER)
+            for k, v in self.sort().table.items():
+                desc = v["description"]
+                desc[0].upper()
+                f.write(
+                    f'{k.replace("_", LATEX_UNDERSCORE)} & {v["units"]} & {desc.replace("_", LATEX_UNDERSCORE)} \\\\\n')
+            if with_header_and_footer:
+                f.write(LATEX_FOOTER)
+        return latex_filename
 
     # End Export ---------------------------------------------------------------
 
