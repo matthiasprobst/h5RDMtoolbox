@@ -1,15 +1,17 @@
 """h5rdtoolbox repository"""
+import atexit
 import logging
 import pathlib
-import shutil
-
-import atexit
 # noinspection PyUnresolvedReferences
 import pint_xarray
+import shutil
 import xarray as xr
 from typing import Union
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
+from . import orcid
+
+pint_xarray.unit_registry = get_ureg()
 from . import cache
 from . import conventions
 from . import plotting
@@ -153,4 +155,4 @@ __all__ = ('__version__', '__author__', 'UserDir', 'use', 'core_logger',
            'generate_temporary_filename', 'generate_temporary_directory',
            'File', 'Files', 'Group', 'Dataset', 'has_datasets', 'has_groups',
            'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower',
-           'set_config', 'get_config', 'get_ureg')
+           'set_config', 'get_config', 'get_ureg', 'orcid')

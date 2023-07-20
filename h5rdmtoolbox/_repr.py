@@ -8,6 +8,7 @@ from numpy import ndarray
 from time import perf_counter_ns
 
 from . import get_config
+from .orcid import is_valid_orcid_pattern, get_html_repr
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
@@ -101,6 +102,8 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
         match = re.search(pattern, string)
         if match:
             url = match.group(0)
+            if is_valid_orcid_pattern(url):
+                return get_html_repr(url), True
             return string.replace(url, f'<a href="{url}">{url}</a>'), True
 
     return string, False
