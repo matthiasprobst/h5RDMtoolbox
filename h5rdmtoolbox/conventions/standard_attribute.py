@@ -1,109 +1,107 @@
 """standard attribute module"""
+import abc
+import warnings
+from typing import Dict
 
-import h5py
-from abc import ABC
+from .validators import RegexValidator, ORCIDValidator, PintUnitsValidator, PintQuantityValidator, ReferencesValidator
+from .validators.base import StandardAttributeValidator
+from .. import get_ureg
 
 
-# dictionary that holds all registered standard attributes:
+def _pint_quantity(q):
+    return get_ureg()(q)
 
 
-class StandardAttribute(ABC):
-    """Abstract base class for user-defined standard attributes that are registered after instantiation
-    of the HDF5 File object.
+def _pint_unit(u):
+    return get_ureg().Unit(u)
 
-    Parameters
-    ----------
-    parent: h5py.Group or h5py.Dataset
-        HDF5 object to which the attribute is to be set
 
-    Examples
-    --------
-    Say you want to regulate the usage of the std_attr `long_name` in your project, that must be lowercase.
-    You can do so by creating a class that inherits from `StandardAttribute` and implements the setter method
-    like so:
+known_types = {'int': int,
+               'float': float,
+               'str': str,
+               'bool': bool,
+               'list': list,
+               'tuple': tuple,
+               'dict': dict,
+               'pint.Quantity': _pint_quantity,
+               'pint.Unit': _pint_unit}
 
-    .. code-block:: python
+av_validators = {'$regex': RegexValidator,
+                 '$pintunit': PintUnitsValidator,
+                 '$pintquantity': PintQuantityValidator,
+                 '$orcid': ORCIDValidator,
+                 '$url': ReferencesValidator}
 
-        >>> class LongNameAttribute(StandardAttribute):
-        ...     name = 'long_name'
-        ...
-        ...     def set(self, value: str) -> None:
-        ...         if not value.is_lower():
-        ...             raise ValueError('Long name must be lower case')
-        ...         super().set('long_name', value)
-        ...
-        >>> from h5rdmtoolbox.wrapper.core import Dataset
-        >>> LongNameAttribute.register(Dataset)
 
-    Then you can use the std_attr like so:
+def get_validator(**validator: Dict):
+    """return the respective StandardAttributeValidator
 
-    .. code-block:: python
-
-        >>> with h5py.File('test.h5', 'w') as f:
-        ...     f.attrs.long_name = 'test'
-        ...     print(f.attrs.long_name)
-        test
-
-    .. warning::
-
-        Don't call `self.parent.attrs[<name>] = <value>` in the set method. If you expose a standard attribute
-        to the attribute manager you risk calling the getter methods in an infinite loop. So always use
-        `super().set(<value>)`.
+    validator_identifier: str:
+        E.g. $regex, $orcid, $in, $standard_name, $standard_name_unit
     """
+    assert len(validator) == 1
+    name, value = tuple(validator.items())[0]
+    if name in av_validators:
+        return av_validators[name](value)
+    raise ValueError(f'No validator class found for "{name}"')
 
-    def __init__(self, parent=None):
-        self.parent = parent
 
-    @staticmethod
-    def validate(name, value, obj=None):
-        """validate the value of the attribute"""
-        return True
+class StandardAttributeError(Exception):
+    pass
 
-    def set(self, value, target=None, name=None):
-        """Set std_attr to HDF5 object. Superclass method is used to avoid
-        infinite recursion.
 
-        Parameters
-        ----------
-        value: str
-            Value to be set as attribute of src
-        target: h5py.Group or h5py.Dataset
-            HDF5 object to which the attribute is to be set
-        name: str
-            Name of the attribute to be set
-        """
-        if target is None:
-            target = self.parent
-        if name is None:
-            name = self.get_name()
-        # call the h5py AttributeManager (which is the parent class)
-        super(type(target.attrs), target.attrs).__setitem__(name, value)
+class StandardAttribute(abc.ABC):
 
-    def get(self, src=None, name=None, default=None):
-        """Get std_attr from HDF5 object. Superclass method is used to avoid
-        infinite recursion."""
-        if src is None:
-            src = self.parent
-        if name is None:
-            name = self.get_name()
+    def __init__(self, name, validator, method, description,
+                 optional=False, default_value=None,
+                 position=None,
+                 return_type: str = None,
+                 **kwargs):
+        self.name = name  # the attrs key
+        if isinstance(validator, str):
+            validator = {validator: None}
+        self.validator = get_validator(**validator)
+        assert isinstance(self.validator, StandardAttributeValidator)
+        self.method = method
+        self.description = description
+        self.optional = optional
+        self.default_value = default_value
+        self.position = position
+        if return_type is None:
+            return_type = 'str'
+        if return_type not in known_types:
+            raise ValueError(f'Unknown return type: {return_type}')
+        self.return_type = return_type
+        for k in kwargs.keys():
+            warnings.warn(f'Ignoring parameter {k}', UserWarning)
+
+    def __repr__(self):
+        return f'<StdAttr("{self.name}"): "{self.description}">'
+
+    def set(self, parent, value):
+        # first call the validator on the value:
+        if not self.validator(value, parent):
+            raise StandardAttributeError(f'The attribute "{self.name}" is standardized. '
+                                         f'It seems, that the input "{value}" is not valid. '
+                                         f'Here is the description of the standard attribute, '
+                                         f'which may help to find the issue: "{self.description}"')
+        super(type(parent.attrs), parent.attrs).__setitem__(self.name, value)
+
+    def get(self, parent):
         try:
-            return super(type(src.attrs), src.attrs).__getitem__(name)
+            ret_val = super(type(parent.attrs), parent.attrs).__getitem__(self.name)
         except KeyError:
-            return default
+            ret_val = self.default_value
+        return known_types[self.return_type](ret_val)
 
-    def get_name(self) -> str:
-        """Get name of the std_attr. If the std_attr has no name or is None,
-        the class name is returned."""
-        if hasattr(self, 'name'):
-            name = self.name
-            if name is None:
-                return self.__class__.__name__
-            return name
-        return self.__class__.__name__
-
-    @staticmethod
-    def AnyString(attr_name: str):
-        class any_string(StandardAttribute):
-            name = attr_name
-
-        return any_string
+# class RegexStandardAttribute(StandardAttribute):
+#
+#     def select_validator(self, validator):
+#         if isinstance(validator, dict):
+#             validator = get_validator(**validator)
+#         elif isinstance(validator, StandardAttributeValidator):
+#             pass
+#         else:
+#             raise TypeError(f'Unexpected type for the validator: {type(validator)}')
+#         assert validator is not None
+#         return validator

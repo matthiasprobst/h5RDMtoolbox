@@ -20,6 +20,7 @@ from ...utils import generate_temporary_filename, generate_temporary_directory
 
 __this_dir__ = pathlib.Path(__file__).parent
 
+VERSION_PATTERN = r'^v\d+(\.\d+)?(a|b|rc|dev)?$'
 README_HEADER = """---
 title: Standard Name Table for Fan simulations and measurements
 ---
@@ -64,6 +65,8 @@ class StandardNameTable:
             table = {}
         self.table = table
         self._name = name
+        if version is None and meta.get('version_number', None) is not None:
+            version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
         # fix key canonical_units
         for k, v in self.table.items():
@@ -130,7 +133,7 @@ class StandardNameTable:
             version_string = '0.0'
             warnings.warn(f'Version number is not set. Setting version number to {version_string}.')
         version_string = str(version_string)
-        if not re.match(r'^v\d+\.\d+(a|b|rc|dev)?$', version_string):
+        if not re.match(VERSION_PATTERN, version_string):
             raise ValueError(f'Version number "{version_string}" is not valid. Expecting MAJOR.MINOR(a|b|rc|dev).')
         return version_string
 
@@ -350,6 +353,8 @@ class StandardNameTable:
                 k, v = list(aliasentry.values())
                 alias[k] = v
 
+        if 'version' not in meta:
+            meta['version'] = f"v{meta.get('version_number', None)}"
         snt = StandardNameTable(table=table,
                                 alias=alias,
                                 **meta
@@ -502,6 +507,10 @@ class StandardNameTable:
         Example
         -------
         >>> StandardNameTable.from_zenodo(doi="8158764")
+
+        Notes
+        -----
+        Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
         base_url = "https://zenodo.org/api"
         record_url = f"{base_url}/records/{doi}"

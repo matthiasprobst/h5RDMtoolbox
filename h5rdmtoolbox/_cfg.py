@@ -2,7 +2,7 @@
 from pint import UnitRegistry
 from typing import Dict, Union
 
-ureg = UnitRegistry()
+ureg = UnitRegistry(force_ndarray_like=True)
 
 
 def is_valid_logger_level(level: Union[str, int]):

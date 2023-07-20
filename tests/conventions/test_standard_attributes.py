@@ -7,7 +7,7 @@ from pint.errors import UndefinedUnitError
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import conventions, tutorial
 from h5rdmtoolbox.conventions import tbx
-from h5rdmtoolbox.conventions import units, title
+from h5rdmtoolbox.conventions import units
 from h5rdmtoolbox.conventions.layout.tbx import IsValidVersionString, IsValidUnit
 from h5rdmtoolbox.conventions.layout.tbx import is_valid_unit
 from h5rdmtoolbox.conventions.tbx.errors import StandardNameError
@@ -189,33 +189,6 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(ds.units, 'mm')
             del ds.units
             self.assertEqual(ds.units, None)
-
-        with h5tbx.File() as h5:
-            with self.assertRaises(title.TitleError):
-                h5.title = ' test'
-            with self.assertRaises(title.TitleError):
-                h5.title = 'test '
-            with self.assertRaises(title.TitleError):
-                h5.title = '9test'
-            h5.title = 'test'
-            self.assertEqual(h5.title, 'test')
-            del h5.title
-            self.assertEqual(h5.title, None)
-
-    def test_title(self):
-        """Test title attribute"""
-        h5tbx.use('tbx')
-        with h5tbx.File() as h5:
-            with self.assertRaises(title.TitleError):
-                h5.title = ' test'
-            with self.assertRaises(title.TitleError):
-                h5.title = 'test '
-            with self.assertRaises(title.TitleError):
-                h5.title = '9test'
-            h5.title = 'test'
-            self.assertEqual(h5.title, 'test')
-            del h5.title
-            self.assertEqual(h5.title, None)
 
     def test_source(self):
         h5tbx.use('tbx')
@@ -415,6 +388,26 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
             from h5rdmtoolbox import get_ureg
             self.assertEqual(table['a_velocity'].units, get_ureg()('m/s'))
+
+        def test_StandardNameTableVersion(self):
+            versions = [
+                ("v79", True),
+                ("v1.2", True),
+                ("v2.3a", True),
+                ("v3.0dev", True),
+                ("v3.0.1dev", False),
+                ("v4.5rc", True),
+                ("v4.5.6rc", False),
+                ("v7.8b", True),
+                ("v10", True),
+                ("invalid_version", False),
+            ]
+            for version, valid in versions:
+                if valid:
+                    self.assertEqual(tbx.StandardNameTable.validate_version(version), version)
+                else:
+                    with self.assertRaises(ValueError):
+                        tbx.StandardNameTable.validate_version(version)
 
         def test_StandardNameTableFromWeb(self):
             cf = tbx.StandardNameTable.from_web(

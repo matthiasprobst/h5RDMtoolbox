@@ -61,26 +61,15 @@ def lower(string: str) -> Lower:
     return Lower(string)
 
 
-# def decorator_factory(argument):
-#     def decorator(function):
-#         def wrapper(*args, **kwargs):
-#             funny_stuff()
-#             something_with_argument(argument)
-#             result = function(*args, **kwargs)
-#             more_funny_stuff()
-#             return result
-#         return wrapper
-#     return decorator
-
 def process_attributes(cls, meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
     # go through list of registered standard attributes, and check whether they are in kwargs:
-    if meth_name not in conventions.current_convention._methods[cls]:
+    if meth_name not in conventions.current_convention.methods[cls]:
         return attrs, {}, kwargs
     kwargs, skwargs = _pop_standard_attributes(
-        kwargs, cache_entry=conventions.current_convention._methods[cls][meth_name]
+        kwargs, cache_entry=conventions.current_convention.methods[cls][meth_name]
     )
-    
+
     # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
     for skey, vas in skwargs.items():
         if skey in attrs:
@@ -94,7 +83,7 @@ def process_attributes(cls, meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[
     attrs.update(skwargs)
 
     # run through skwargs. if key is required but not available this should raise an error!
-    for k, v in conventions.current_convention._methods[cls][meth_name].items():
+    for k, v in conventions.current_convention.methods[cls][meth_name].items():
         if v['optional']:
             if skwargs[k] is None:
                 attrs.pop(k)
@@ -120,9 +109,9 @@ class ConventionAccesor:
 
     @property
     def standard_attributes(self) -> Dict:
-        if len(self.convention._properties) == 0:
+        if len(self.convention.properties) == 0:
             return {}
-        return self.convention._properties[self.__class__]
+        return self.convention.properties[self.__class__]
 
 
 class Group(h5py.Group, ConventionAccesor):
@@ -131,8 +120,8 @@ class Group(h5py.Group, ConventionAccesor):
     hdfrepr = H5Repr()
 
     def __delattr__(self, item):
-        if self.__class__ in conventions.current_convention._properties:
-            if item in conventions.current_convention._properties[self.__class__]:
+        if self.__class__ in conventions.current_convention.properties:
+            if item in conventions.current_convention.properties[self.__class__]:
                 del self.attrs[item]
                 return
         super().__delattr__(item)
@@ -305,9 +294,12 @@ class Group(h5py.Group, ConventionAccesor):
         return ret
 
     def __getattr__(self, item):
-        if self.__class__ in conventions.current_convention._properties:
-            if item in conventions.current_convention._properties[self.__class__]:
-                return conventions.current_convention._properties[self.__class__][item](self).get()
+        if self.__class__ in conventions.current_convention.properties:
+            if item in conventions.current_convention.properties[self.__class__]:
+                if item in ('offset',):
+                    return conventions.current_convention.properties[self.__class__][item](self).get()
+                else:
+                    return conventions.current_convention.properties[self.__class__][item].get(self)
 
         try:
             return super().__getattribute__(item)
@@ -336,9 +328,9 @@ class Group(h5py.Group, ConventionAccesor):
             raise AttributeError(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in conventions.current_convention._properties:
-            if key in conventions.current_convention._properties[self.__class__]:
-                return conventions.current_convention._properties[self.__class__][key](self).set(value)
+        if self.__class__ in conventions.current_convention.properties:
+            if key in conventions.current_convention.properties[self.__class__]:
+                return conventions.current_convention.properties[self.__class__][key](self).set(value)
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
@@ -1270,8 +1262,8 @@ class Dataset(h5py.Dataset, ConventionAccesor):
     """Inherited Dataset group of the h5py package"""
 
     def __delattr__(self, item):
-        if self.__class__ in conventions.current_convention._properties:
-            if item in conventions.current_convention._properties[self.__class__]:
+        if self.__class__ in conventions.current_convention.properties:
+            if item in conventions.current_convention.properties[self.__class__]:
                 del self.attrs[item]
                 return
         super().__delattr__(item)
@@ -1515,9 +1507,9 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         return self.isel(**isel)
 
     def __getattr__(self, item):
-        if self.__class__ in conventions.current_convention._properties:
-            if item in conventions.current_convention._properties[self.__class__]:
-                return conventions.current_convention._properties[self.__class__][item](self).get()
+        if self.__class__ in conventions.current_convention.properties:
+            if item in conventions.current_convention.properties[self.__class__]:
+                return conventions.current_convention.properties[self.__class__][item].get(self)
         if item not in self.__dict__:
             for d in self.dims:
                 if len(d) > 0:
@@ -1527,9 +1519,12 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in conventions.current_convention._properties:
-            if key in conventions.current_convention._properties[self.__class__]:
-                return conventions.current_convention._properties[self.__class__][key](self).set(value)
+        if self.__class__ in conventions.current_convention.properties:
+            if key in conventions.current_convention.properties[self.__class__]:
+                if key in ('offset',):
+                    return conventions.current_convention.properties[self.__class__][key](self).set(value)
+                else:
+                    return conventions.current_convention.properties[self.__class__][key].set(self, value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -1888,10 +1883,13 @@ class File(h5py.File, Group, ConventionAccesor):
         self.layout = layout
 
     def __setattr__(self, key, value):
-        if self.__class__ in conventions.current_convention._properties:
-            if key in conventions.current_convention._properties[self.__class__]:
+        if self.__class__ in conventions.current_convention.properties:
+            if key in conventions.current_convention.properties[self.__class__]:
                 # assign the current object to the requested standard attribute
-                return conventions.current_convention._properties[self.__class__][key](self).set(value)
+                if key in ('offset',):
+                    return conventions.current_convention.properties[self.__class__][key](self).set(value)
+                else:
+                    return conventions.current_convention.properties[self.__class__][key].set(self, value)
         return super().__setattr__(key, value)
 
     def __repr__(self) -> str:

@@ -9,11 +9,15 @@ in the fluid.py file but in later versions the conventions will only be provided
 """
 import forge
 import h5py
+import inspect
+import pathlib
+import yaml
 from typing import Callable, Union
 
 from . import standard_attribute
 from . import tbx
-from . import units, long_name, title, comment, references, source, contact
+# from . import units, long_name, comment, references, source, contact
+from . import units
 from ._logger import logger
 from .layout import Layout, validators
 from .layout.validators import Validator
@@ -22,21 +26,9 @@ from .tbx import StandardName, StandardNameTable
 from .utils import dict2xml, is_valid_email_address
 from .._repr import make_italic, make_bold
 
-__all__ = ['units', 'long_name', 'title', 'comment', 'references', 'source', 'contact',
+__all__ = ['units', 'long_name',
+           # 'title', 'comment', 'references', 'source', 'contact',
            'Layout', 'validators', 'Validator']
-
-
-# def list_standard_attributes(obj: Callable = None):
-#     """List all registered standard attributes
-#
-#     Returns
-#     -------
-#     List[StandardAttribute]
-#         List of all registered standard attributes
-#     """
-#     if None:
-#         return standard_attribute.cache.REGISTERED_PROPERTIES
-#     return standard_attribute.cache.REGISTERED_PROPERTIES.get(type(obj), {})
 
 
 def set_loglevel(level):
@@ -78,15 +70,18 @@ class Convention:
         `scale_attribute_name`.
     """
 
-    def __init__(self, name, offset_attribute_name='offset', scale_attribute_name='scale'):
+    def __init__(self,
+                 name,
+                 offset_attribute_name='offset',
+                 scale_attribute_name='scale'):
         from ..wrapper.core import File, Group, Dataset
         self.name = name
         self.use_scale_and_offset = not (offset_attribute_name is None or scale_attribute_name is None)
         self.offset_attribute_name = offset_attribute_name
         self.scale_attribute_name = scale_attribute_name
 
-        self._properties = {}
-        self._methods = {File: {}, Group: {}, Dataset: {}}
+        self.properties = {}
+        self.methods = {File: {}, Group: {}, Dataset: {}}
         self.method_cls_assignment = {'__init__': File,
                                       'create_group': Group,
                                       'create_dataset': Group,
@@ -97,21 +92,32 @@ class Convention:
                                         'create_string_dataset': Dataset}
 
         if self.use_scale_and_offset:
-            self['create_dataset'].add(attr_cls=units.ScaleAttribute,
-                                       # target_cls=Dataset,
-                                       add_to_method=True,
-                                       position={'after': 'data'},
-                                       optional=True)
+            from .standard_attribute import StandardAttribute
+            scale_attr = StandardAttribute(name='scale',
+                                           validator='$pintquantity',
+                                           method='create_dataset',
+                                           description='Scale factor for the dataset values.',
+                                           optional=True,
+                                           position={'after': 'data'},
+                                           return_type='pint.Quantity',
+                                           default_value=1.0)
+            self.add(scale_attr)
+
+            # self['create_dataset'].add(attr_cls=units.ScaleAttribute,
+            #                            # target_cls=Dataset,
+            #                            add_to_method=True,
+            #                            position={'after': 'data'},
+            #                            optional=True)
             self['create_dataset'].add(attr_cls=units.OffsetAttribute,
                                        # target_cls=Dataset,
                                        add_to_method=True,
                                        position={'after': 'data'},
                                        optional=True)
-            self['create_dataset'].add(attr_cls=units.UnitsAttribute,
-                                       # target_cls=Dataset,
-                                       add_to_method=True,
-                                       position={'after': 'data'},
-                                       optional=True)
+            # self['create_dataset'].add(attr_cls=units.UnitsAttribute,
+            #                            # target_cls=Dataset,
+            #                            add_to_method=True,
+            #                            position={'after': 'data'},
+            #                            optional=True)
 
     def __repr__(self):
         header = f'Convention("{self.name}")'
@@ -120,10 +126,10 @@ class Convention:
         # header = make_bold('\n> Properties')
         # out += f'{header}:'
         #
-        # if len(self._properties) == 0:
+        # if len(self.properties) == 0:
         #     out += f' ({make_italic("Nothing registered")})'
         #
-        # for obj, properties in self._properties.items():
+        # for obj, properties in self.properties.items():
         #     out += f'\n{obj.__name__}:'
         #     for prop_name, sattr in properties.items():
         #         out += f'\n    * {prop_name}: {sattr.__name__}'
@@ -131,7 +137,7 @@ class Convention:
         # header = make_bold('\n> Methods')
         # out += f'{header}:'
 
-        for cls, methods in self._methods.items():
+        for cls, methods in self.methods.items():
             for name, opts in methods.items():
                 out += f'\n  {cls.__name__}.{name}():'
                 if len(opts) == 0:
@@ -162,6 +168,61 @@ class Convention:
                                    cls=cls,
                                    prop=prop,
                                    method=method)
+
+    @staticmethod
+    def from_yaml(yaml_filename, name=None) -> "Convention":
+        yaml_filename = pathlib.Path(yaml_filename)
+        if name is None:
+            name = yaml_filename.stem
+        c = Convention(name=name)
+        with open(yaml_filename) as f:
+            yaml_dict = yaml.safe_load(f)
+        for k, v in yaml_dict.items():
+            if isinstance(v, dict):
+                stda = StandardAttribute(name=k, **v)
+                c.add(stda)
+        return c
+
+    def add(self, std_attr: StandardAttribute):
+        if not isinstance(std_attr.method, (list, tuple)):
+            methods = [std_attr.method, ]
+        else:
+            methods = std_attr.method
+        for method in methods:
+            if isinstance(method, str):
+                method_name = method
+                optional = False
+            else:
+                method_name, optional = list(method.items())[0]
+                if isinstance(optional, dict):
+                    optional = optional['optional']
+                elif isinstance(optional, bool):
+                    pass
+                else:
+                    raise TypeError(f'Unexpected format for method definition: {method}')
+            target_cls = self.property_cls_assignment[method_name]
+            if target_cls not in self.properties:
+                self.properties[target_cls] = {}
+            self.properties[target_cls][std_attr.name] = std_attr
+
+            if target_cls not in self.methods:
+                self.methods[target_cls] = {}
+
+            add_to_method = True
+            if add_to_method:
+                cls = self.method_cls_assignment[method_name]
+                if method_name not in cls.__dict__:
+                    raise AttributeError(
+                        f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
+                        'because it does not exist.'
+                    )
+                if method_name not in self.methods[cls]:
+                    self.methods[cls][method_name] = {}
+                self.methods[cls][method_name][std_attr.name] = {'cls': target_cls,
+                                                                 'optional': optional,
+                                                                 'default': std_attr.default_value,
+                                                                 'position': std_attr.position,
+                                                                 'alt': None}
 
     def _add(self,
              attr_cls: StandardAttribute,
@@ -233,73 +294,85 @@ class Convention:
             if not issubclass(cls, (h5py.File, h5py.Group, h5py.Dataset)):
                 raise TypeError(f'{cls} is not a valid HDF5 class')
 
-            if target_property not in self._properties:
-                self._properties[target_property] = {}
+            if target_property not in self.properties:
+                self.properties[target_property] = {}
 
-            if overwrite and name in self._properties[target_property]:
-                del self._properties[target_property][name]
+            if overwrite and name in self.properties[target_property]:
+                del self.properties[target_property][name]
 
-            if name in self._properties[target_property] and not overwrite:
+            if name in self.properties[target_property] and not overwrite:
                 raise AttributeError(
                     f'Cannot register property {name} to {target_property} because it has already a property with '
                     'this name.')
 
-            self._properties[target_property][name] = attr_cls
+            self.properties[target_property][name] = attr_cls
 
             logger.debug(f'Register special hdf std_attr {name} as property to class {target_property}')
 
-            if cls not in self._methods:
-                self._methods[cls] = {}
+            if cls not in self.methods:
+                self.methods[cls] = {}
 
-            if method not in self._methods[cls]:
-                self._methods[cls][method] = {}
+            if method not in self.methods[cls]:
+                self.methods[cls][method] = {}
 
             if add_to_method:
                 if method not in cls.__dict__:
                     raise AttributeError(f'Cannot add standard attribute {name} to method {method} of {cls} because it '
                                          f'does not exist.')
-                self._methods[cls][method][name] = {'cls': cls,
-                                                    'optional': optional,
-                                                    'default': default_value,
-                                                    'position': position,
-                                                    'alt': alt}
+                self.methods[cls][method][name] = {'cls': cls,
+                                                   'optional': optional,
+                                                   'default': default_value,
+                                                   'position': position,
+                                                   'alt': alt}
 
     def _add_signature(self):
-        for cls, methods in self._methods.items():
+        for cls, methods in self.methods.items():
             for name, props in methods.items():
                 for prop_name, prop_opts in props.items():
-                    setattr(cls, name, forge.insert(forge.arg(f'{prop_name}',
-                                                              default=prop_opts['default']),
-                                                    **prop_opts['position'])(cls.__dict__[name]))
-        # for name, values in self._methods['create_dataset'].items():
+                    if isinstance(prop_opts['position'], dict):
+                        setattr(cls, name, forge.insert(forge.arg(f'{prop_name}',
+                                                                  default=prop_opts['default']),
+                                                        **prop_opts['position'])(cls.__dict__[name]))
+                    else:
+                        signature = inspect.signature(cls.__dict__[name])
+                        params = [param for param in signature.parameters.values() if
+                                  param.kind == inspect.Parameter.KEYWORD_ONLY]
+                        if len(params) == 0:
+                            params = [param for param in signature.parameters.values() if
+                                      param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
+                        setattr(cls, name, forge.insert(forge.kwo(f'{prop_name}',
+                                                                  default=prop_opts['default'],
+                                                                  ),
+                                                        after=params[-1].name)(cls.__dict__[name]))
+        # for name, values in self.methods['create_dataset'].items():
         #     from ..wrapper.core import Group
         #     Group.create_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
         #                                         **values['position'])(Group.create_dataset)
-        # for name, values in self._methods['create_group'].items():
+        # for name, values in self.methods['create_group'].items():
         #     from ..wrapper.core import Group
         #     Group.create_group = forge.insert(forge.arg(f'{name}', default=values['default']),
         #                                       **values['position'])(Group.create_group)
-        # for name, values in self._methods['__init__'].items():
+        # for name, values in self.methods['__init__'].items():
         #     from ..wrapper.core import File
         #     File.__init__ = forge.insert(forge.arg(f'{name}', default=values['default']),
         #                                  **values['position'])(File.__init__)
 
     def _delete_signature(self):
-        for cls, methods in self._methods.items():
+        for cls, methods in self.methods.items():
             for name, props in methods.items():
                 for prop_name, prop_attrs in props.items():
                     setattr(cls, name, forge.delete(f'{prop_name}')(cls.__dict__[name]))
                 # cls.__dict__[name] = forge.delete(f'{name}')(cls.__dict__[name])
-        # for name, values in self._methods['create_string_dataset'].items():
+        # for name, values in self.methods['create_string_dataset'].items():
         #     from ..wrapper.core import Group
         #     Group.create_string_dataset = forge.delete(f'{name}')(Group.create_string_dataset)
-        # for name, values in self._methods['create_dataset'].items():
+        # for name, values in self.methods['create_dataset'].items():
         #     from ..wrapper.core import Group
         #     Group.create_dataset = forge.delete(f'{name}')(Group.create_dataset)
-        # for name, values in self._methods['create_group'].items():
+        # for name, values in self.methods['create_group'].items():
         #     from ..wrapper.core import Group
         #     Group.create_group = forge.delete(f'{name}')(Group.create_group)
-        # for name, values in self._methods['__init__'].items():
+        # for name, values in self.methods['__init__'].items():
         #     from ..wrapper.core import File
         #     File.__init__ = forge.delete(f'{name}')(File.__init__)
 
@@ -307,7 +380,7 @@ class Convention:
         registered_conventions[self.name] = self
 
     def _change_attr_prop(self, method_name, attr_name, attr_prop, value):
-        for obj in self._methods.values():
+        for obj in self.methods.values():
             if method_name in obj:
                 if attr_name in obj[method_name]:
                     obj[method_name][attr_name][attr_prop] = value
@@ -383,8 +456,10 @@ class ConventionInterface:
 #         return H5ObjConventionInterface(self, cls=Group)
 
 
-def use(convention_name: str) -> None:
+def use(convention_name: Union[str, Convention]) -> None:
     """Use a convention by name"""
+    if isinstance(convention_name, Convention):
+        convention_name = convention_name.name
     global current_convention
     if convention_name is None:
         convention_name = 'h5py'

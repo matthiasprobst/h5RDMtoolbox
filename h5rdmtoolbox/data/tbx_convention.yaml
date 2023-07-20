@@ -1,0 +1,90 @@
+institution: Karlsruhe Institute of Technology
+contact: https://orcid.org/0000-0001-8729-0482
+
+title:
+  type: str
+  validator:
+    $regex:
+      ^[A-Z].*(?<!\s)$
+  method:
+    __init__  # --> for File object
+  default_value:
+    None
+  position:
+    None
+  description:
+    The attribute 'title' describes the content of the file. It must start with a capital letter and must not end with a space.
+
+institution:
+  validator:
+    $regex:
+      '.*'
+  method:
+    __init__:
+      optional: True
+  description:
+    Name of institution mainly involved in the data
+
+references:
+  type:
+    - str
+    - List[str]
+  validator:
+    $url
+  method:
+    __init__:
+      optional: True
+    create_group:
+      optional: True
+    create_dataset:
+      optional: True
+  description:
+    Web resources servering as references for the data
+
+comment:
+  type: str
+  validator:
+    $regex:
+      ^[A-Z].*[a-zA-Z.]$
+  method:
+    __init__:
+      optional: True
+    create_group:
+      optional: True
+    create_dataset:
+      optional: True
+  description:
+    A comment to further describe the data.
+
+
+units:
+  type: str
+  validator:
+    $pintunit  # alternative: $standard_name_unit
+  method:
+    create_dataset
+  description:
+    The attribute 'units' describes the physical unit of the dataset and must be accepted by the `pint` package
+
+contact:
+  type: str
+  method:
+    __init__:
+      optional: False
+    create_group:
+      optional: True
+    create_dataset:
+      optional: True
+  validator:
+    $orcid
+  description: contact or responsible person described by an ORCID-ID
+
+
+long_name:
+  validator:
+    $regex:
+      ^[a-zA-Z].*(?<!\s)$
+  description:
+    An comprehensive description of the dataset
+  method:
+    create_dataset

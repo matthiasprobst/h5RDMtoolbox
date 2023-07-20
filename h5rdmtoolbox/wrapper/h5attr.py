@@ -57,9 +57,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
 
-        if get_config('expose_user_prop_to_attrs') and parent.__class__ in conventions.current_convention._properties:
-            if name in conventions.current_convention._properties[parent.__class__]:
-                return conventions.current_convention._properties[parent.__class__][name](self._parent).get()
+        if get_config('expose_user_prop_to_attrs') and parent.__class__ in conventions.current_convention.properties:
+            if name in conventions.current_convention.properties[parent.__class__]:
+                return conventions.current_convention.properties[parent.__class__][name].get(parent)
 
         if isinstance(ret, str):
             if ret == '':
@@ -122,11 +122,14 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
         parent = self._parent
         # obj_type = parent.__class__
-        if parent.__class__ in conventions.current_convention._properties:
-            if parent.__class__ in conventions.current_convention._properties:
-                if name in conventions.current_convention._properties[parent.__class__]:
+        if parent.__class__ in conventions.current_convention.properties:
+            if parent.__class__ in conventions.current_convention.properties:
+                if name in conventions.current_convention.properties[parent.__class__]:
                     try:
-                        return conventions.current_convention._properties[parent.__class__][name](parent).set(value)
+                        if name not in ('offset'):
+                            return conventions.current_convention.properties[parent.__class__][name].set(parent, value)
+                        else:
+                            return conventions.current_convention.properties[parent.__class__][name](parent).set(value)
                     except TypeError as e:
                         raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)
