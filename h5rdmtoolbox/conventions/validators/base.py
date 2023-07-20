@@ -8,5 +8,5 @@ class StandardAttributeValidator:
         pass
 
     @abc.abstractmethod
-    def __call__(self, value, parent, **kwargs) -> bool:
+    def __call__(self, value, parent, **kwargs):
         pass

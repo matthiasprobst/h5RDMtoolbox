@@ -19,6 +19,10 @@ def get_standard_name_table_yaml_file() -> pathlib.Path:
     return __this_dir__ / 'data/Test-v1.yml'
 
 
+def get_standard_attribute_yaml_filename() -> pathlib.Path:
+    """Return the path to the standard attribute yaml file"""
+    return __this_dir__ / 'data/tbx_convention.yaml'
+
 def get_standard_name_table() -> StandardNameTable:
     """Return an example standard name table"""
     if False:

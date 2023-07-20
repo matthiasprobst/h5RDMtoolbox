@@ -41,11 +41,6 @@ def set_loglevel(level):
 registered_conventions = {}
 
 
-class StandardAttributeError(Exception):
-    """Exception for standard attribute errors"""
-    pass
-
-
 class Convention:
     """Convention class
 
@@ -190,39 +185,37 @@ class Convention:
             methods = std_attr.method
         for method in methods:
             if isinstance(method, str):
-                method_name = method
-                optional = False
-            else:
-                method_name, optional = list(method.items())[0]
-                if isinstance(optional, dict):
-                    optional = optional['optional']
-                elif isinstance(optional, bool):
-                    pass
-                else:
-                    raise TypeError(f'Unexpected format for method definition: {method}')
-            target_cls = self.property_cls_assignment[method_name]
-            if target_cls not in self.properties:
-                self.properties[target_cls] = {}
-            self.properties[target_cls][std_attr.name] = std_attr
+                method_names = [method, ]
+                optionals = [False, ]
+            elif isinstance(method, dict):
+                method_names = list(method.keys())
+                optionals = [m['optional'] for m in method.values()]
 
-            if target_cls not in self.methods:
-                self.methods[target_cls] = {}
+            for method_name, optional in zip(method_names, optionals):
 
-            add_to_method = True
-            if add_to_method:
-                cls = self.method_cls_assignment[method_name]
-                if method_name not in cls.__dict__:
-                    raise AttributeError(
-                        f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
-                        'because it does not exist.'
-                    )
-                if method_name not in self.methods[cls]:
-                    self.methods[cls][method_name] = {}
-                self.methods[cls][method_name][std_attr.name] = {'cls': target_cls,
-                                                                 'optional': optional,
-                                                                 'default': std_attr.default_value,
-                                                                 'position': std_attr.position,
-                                                                 'alt': None}
+                target_cls = self.property_cls_assignment[method_name]
+                if target_cls not in self.properties:
+                    self.properties[target_cls] = {}
+                self.properties[target_cls][std_attr.name] = std_attr
+
+                if target_cls not in self.methods:
+                    self.methods[target_cls] = {}
+
+                add_to_method = True
+                if add_to_method:
+                    cls = self.method_cls_assignment[method_name]
+                    if method_name not in cls.__dict__:
+                        raise AttributeError(
+                            f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
+                            'because it does not exist.'
+                        )
+                    if method_name not in self.methods[cls]:
+                        self.methods[cls][method_name] = {}
+                    self.methods[cls][method_name][std_attr.name] = {'cls': target_cls,
+                                                                     'optional': optional,
+                                                                     'default': std_attr.default_value,
+                                                                     'position': std_attr.position,
+                                                                     'alt': None}
 
     def _add(self,
              attr_cls: StandardAttribute,

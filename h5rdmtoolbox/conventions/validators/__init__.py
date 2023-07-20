@@ -1,5 +1,5 @@
 from .orcid import ORCIDValidator
 from .pint import PintQuantityValidator, PintUnitsValidator
-from .regex import RegexValidator
-
-from .references import ReferencesValidator
+from .references import ReferencesValidator, BibTeXValidator, URLValidator
+from .strings import MinLengthValidator
+from .strings import RegexValidator, MinLengthValidator, MaxLengthValidator
