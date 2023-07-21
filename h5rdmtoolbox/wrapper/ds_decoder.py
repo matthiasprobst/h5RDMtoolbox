@@ -44,7 +44,7 @@ def dataset_value_decoder(func):
 
         if scale and offset:
             with xr.set_options(keep_attrs=True):
-                return ((xarr.pint.quantify(unit_registry=get_ureg()) + offset) * scale).pint.dequantify(
+                return ((xarr + offset).pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
                     format=get_config()['ureg_format'])
 
         elif scale:

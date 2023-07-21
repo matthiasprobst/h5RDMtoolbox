@@ -97,10 +97,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
                         return ret
                 return ret
             return AttributeString(ret)
-        import numpy as np
-        if isinstance(ret, np.ndarray):
-            if ret.dtype == np.dtype('O'):
-                return [WrapperAttributeManager._parse_return_value(_id, x) for x in ret]
         return ret
 
     @with_phil
@@ -113,50 +109,50 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if name in conventions.current_convention.properties[parent.__class__]:
                 return conventions.current_convention.properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
-        if isinstance(ret, str):
-            if ret == '':
-                return ret
-            if ret[0] == '{':
-                dictionary = json.loads(ret)
-                for k, v in dictionary.items():
-                    if isinstance(v, str):
-                        if not v:
-                            dictionary[k] = ''
-                        else:
-                            if v[0] == '/':
-                                if isinstance(self._id, h5py.h5g.GroupID):
-                                    rootgrp = get_rootparent(h5py.Group(self._id))
-                                    dictionary[k] = rootgrp.get(v)
-                                elif isinstance(self._id, h5py.h5d.DatasetID):
-                                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                                    dictionary[k] = rootgrp.get(v)
-                return dictionary
-            if ret[0] == '/':
-                # it may be group or dataset path or actually just a filepath stored by the user
-                if isinstance(self._id, h5py.h5g.GroupID):
-                    # call like this, otherwise recursive call!
-                    rootgrp = get_rootparent(h5py.Group(self._id))
-                    if rootgrp.get(ret) is None:
-                        # not a dataset or group, maybe just a filename that has been stored
-                        return ret
-                    return rootgrp.get(ret).name
-                else:
-                    rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-                    return rootgrp.get(ret).name
-            if ret[0] == '(':
-                if ret[-1] == ')':
-                    # might be a tuple object
-                    return ast.literal_eval(ret)
-                return ret
-            if ret[0] == '[':
-                if ret[-1] == ']':
-                    # might be a list object
-                    try:
-                        return ast.literal_eval(ret)
-                    except (ValueError, NameError, AttributeError):
-                        return ret
-                return ret
-            return AttributeString(ret)
+        # if isinstance(ret, str):
+        #     if ret == '':
+        #         return ret
+        #     if ret[0] == '{':
+        #         dictionary = json.loads(ret)
+        #         for k, v in dictionary.items():
+        #             if isinstance(v, str):
+        #                 if not v:
+        #                     dictionary[k] = ''
+        #                 else:
+        #                     if v[0] == '/':
+        #                         if isinstance(self._id, h5py.h5g.GroupID):
+        #                             rootgrp = get_rootparent(h5py.Group(self._id))
+        #                             dictionary[k] = rootgrp.get(v)
+        #                         elif isinstance(self._id, h5py.h5d.DatasetID):
+        #                             rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+        #                             dictionary[k] = rootgrp.get(v)
+        #         return dictionary
+        #     if ret[0] == '/':
+        #         # it may be group or dataset path or actually just a filepath stored by the user
+        #         if isinstance(self._id, h5py.h5g.GroupID):
+        #             # call like this, otherwise recursive call!
+        #             rootgrp = get_rootparent(h5py.Group(self._id))
+        #             if rootgrp.get(ret) is None:
+        #                 # not a dataset or group, maybe just a filename that has been stored
+        #                 return ret
+        #             return rootgrp.get(ret).name
+        #         else:
+        #             rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
+        #             return rootgrp.get(ret).name
+        #     if ret[0] == '(':
+        #         if ret[-1] == ')':
+        #             # might be a tuple object
+        #             return ast.literal_eval(ret)
+        #         return ret
+        #     if ret[0] == '[':
+        #         if ret[-1] == ']':
+        #             # might be a list object
+        #             try:
+        #                 return ast.literal_eval(ret)
+        #             except (ValueError, NameError, AttributeError):
+        #                 return ret
+        #         return ret
+        #     return AttributeString(ret)
         return ret
 
     @with_phil
@@ -178,10 +174,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if parent.__class__ in conventions.current_convention.properties:
                 if name in conventions.current_convention.properties[parent.__class__]:
                     try:
-                        if name not in ('offset'):
-                            return conventions.current_convention.properties[parent.__class__][name].set(parent, value)
-                        else:
-                            return conventions.current_convention.properties[parent.__class__][name](parent).set(value)
+                        return conventions.current_convention.properties[parent.__class__][name].set(parent, value)
                     except TypeError as e:
                         raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)

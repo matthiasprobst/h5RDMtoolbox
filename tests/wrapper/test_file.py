@@ -20,7 +20,6 @@ class TestFile(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        use('tbx')
         use(None)
         with File(mode='w') as h5:
             h5.attrs['one'] = 1
@@ -47,7 +46,8 @@ class TestFile(unittest.TestCase):
                     fname.unlink()
 
     def test_offset_scale(self):
-        for scale in (0.2 * pint.Unit('Pa/V'), 0.2 * pint.Unit('Pa/V')):
+        h5tbx.use('h5tbx')
+        for scale in (0.2 * pint.Unit('Pa/V'), 0.2 * pint.Unit('Pa/V'), '0.2 Pa/V', '0.2Pa/V'):
             with h5tbx.File() as h5:
                 ds = h5.create_dataset('pressure',
                                        data=4.3,
@@ -55,7 +55,7 @@ class TestFile(unittest.TestCase):
                                        offset=0.1,
                                        scale=scale)
 
-                self.assertEqual(ds.units, 'Pa')
+                self.assertEqual(ds.units, 'V')
                 self.assertEqual(ds.scale, pint.Quantity(0.2, 'Pa/V'))
                 self.assertEqual(ds.offset, 0.1)
                 arr = ds[()]

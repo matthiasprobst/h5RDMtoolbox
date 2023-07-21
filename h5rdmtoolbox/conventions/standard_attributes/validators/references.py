@@ -3,7 +3,7 @@ import requests
 import warnings
 from typing import Union, List
 
-from .base import StandardAttributeValidator
+from . import StandardAttributeValidator
 
 
 def validate_url(url: str) -> bool:

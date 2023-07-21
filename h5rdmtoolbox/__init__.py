@@ -43,7 +43,14 @@ def set_loglevel(logger, level):
 
 set_loglevel(core_logger, get_config()['init_logger_level'])
 
-cv_h5py = conventions.Convention('h5py')
+cv_h5py = conventions.Convention('h5py',
+                                 offset_attribute_name=False,
+                                 scale_attribute_name=False)
+cv_h5py.register()
+
+cv_h5py = conventions.Convention('h5tbx',
+                                 offset_attribute_name=True,
+                                 scale_attribute_name=True)
 cv_h5py.register()
 
 use = conventions.use

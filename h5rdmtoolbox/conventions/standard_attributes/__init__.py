@@ -1,20 +1,22 @@
 """standard attribute module"""
 import abc
+import json
+import numpy as np
 import warnings
 from typing import Dict, List
 
-from .validators import (RegexValidator,
-                         ORCIDValidator,
-                         PintUnitsValidator,
-                         PintQuantityValidator,
-                         ReferencesValidator,
-                         BibTeXValidator,
-                         URLValidator,
-                         MinLengthValidator,
-                         MaxLengthValidator)
-from .validators.base import StandardAttributeValidator
-from .. import get_ureg
-from ..wrapper.h5attr import WrapperAttributeManager
+from . import errors
+from .validators import StandardAttributeValidator
+from .validators.core import TypeValidator, InValidator
+from .validators.orcid import ORCIDValidator
+from .validators.pint import PintQuantityValidator, PintUnitsValidator
+from .validators.references import ReferencesValidator, BibTeXValidator, URLValidator
+from .validators.standard_name import StandardNameValidator, StandardNameTableValidator, StandardName, StandardNameTable
+from .validators.strings import RegexValidator, MinLengthValidator, MaxLengthValidator
+from ... import get_ureg
+from ...wrapper.h5attr import WrapperAttributeManager
+
+__all__ = ['StandardName', 'StandardNameTable']
 
 
 def _pint_quantity(q):
@@ -25,35 +27,21 @@ def _pint_unit(u):
     return get_ureg().Unit(u)
 
 
-class StandardNameValidator(StandardAttributeValidator):
-    def __call__(self, standard_name, parent, **kwargs):
-        snt = parent.rootparent.attrs.get('standard_name_table', None)
-        if snt.startswith('https://zenodo.org/record/'):
-            from .tbx.table import StandardNameTable
-            snt = StandardNameTable.from_zenodo(doi=snt.split('https://zenodo.org/record/')[1].strip('/'))
+def make_dict(ref):
+    """If input is string repr of dict, return dict"""
+    if isinstance(ref, np.ndarray):
+        ref = ref.tolist()
+    elif isinstance(ref, str):
+        if ref[0] == '{':
+            return json.loads(ref)
+        return ref
+    _out = []
+    for r in ref:
+        if isinstance(r, str) and r[0] == '{':
+            _out.append(json.loads(r))
         else:
-            raise NotImplementedError('Only Zenodo is supported at the moment')
-
-        if snt is None:
-            raise KeyError('No standard name table defined for this file!')
-
-        units = parent.attrs.get('units', None)
-        if units is None:
-            raise KeyError('No units defined for this variable!')
-
-        if not snt.check(standard_name, units):
-            raise ValueError(f'Standard name {standard_name} with units {units} is invalid')
-        return standard_name
-
-
-class StandardNameTableValidator(StandardAttributeValidator):
-    def __call__(self, standard_name_table, *args, **kwargs):
-        # from .tbx.table import StandardNameTable
-        # if standard_name_table.startswith('https://zenodo.org/record/'):
-        #     standard_name_table = StandardNameTable.from_zenodo(standard_name_table)
-        # else:
-        #     raise NotImplementedError('Only Zenodo is supported at the moment')
-        return standard_name_table
+            _out.append(r)
+    return _out
 
 
 known_types = {'int': int,
@@ -64,9 +52,12 @@ known_types = {'int': int,
                'tuple': tuple,
                'dict': dict,
                'pint.Quantity': _pint_quantity,
-               'pint.Unit': _pint_unit}
+               'pint.Unit': _pint_unit,
+               'sdict': make_dict}
 
-av_validators = {'$regex': RegexValidator,
+av_validators = {'$type': TypeValidator,
+                 '$in': InValidator,
+                 '$regex': RegexValidator,
                  '$pintunit': PintUnitsValidator,
                  '$pintquantity': PintQuantityValidator,
                  '$orcid': ORCIDValidator,
@@ -90,10 +81,6 @@ def get_validator(**validator: Dict) -> List[StandardNameValidator]:
         if name not in av_validators:
             raise ValueError(f'No validator class found for "{name}"')
     return [av_validators[name](value) for name, value in validator.items()]
-
-
-class StandardAttributeError(Exception):
-    pass
 
 
 class StandardAttribute(abc.ABC):
@@ -132,11 +119,11 @@ class StandardAttribute(abc.ABC):
             for validator in self.validator:
                 validated_value = validator(value, parent)
         except Exception as e:
-            raise StandardAttributeError(f'The attribute "{self.name}" is standardized. '
-                                         f'It seems, that the input "{value}" is not valid. '
-                                         f'Here is the description of the standard attribute, '
-                                         f'which may help to find the issue: "{self.description}" '
-                                         f'Original error: {e}') from e
+            raise errors.StandardAttributeError(f'The attribute "{self.name}" is standardized. '
+                                                f'It seems, that the input "{value}" is not valid. '
+                                                f'Here is the description of the standard attribute, '
+                                                f'which may help to find the issue: "{self.description}" '
+                                                f'Original error: {e}') from e
         super(type(parent.attrs), parent.attrs).__setitem__(self.name, validated_value)
 
     def get(self, parent):

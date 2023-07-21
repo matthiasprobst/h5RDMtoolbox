@@ -14,21 +14,13 @@ import pathlib
 import yaml
 from typing import Callable, Union
 
-from . import standard_attribute
-from . import tbx
-# from . import units, long_name, comment, references, source, contact
-from . import units
 from ._logger import logger
 from .layout import Layout, validators
 from .layout.validators import Validator
-from .standard_attribute import StandardAttribute
-from .tbx import StandardName, StandardNameTable
-from .utils import dict2xml, is_valid_email_address
+from .standard_attributes import StandardAttribute
 from .._repr import make_italic, make_bold
 
-__all__ = ['units', 'long_name',
-           # 'title', 'comment', 'references', 'source', 'contact',
-           'Layout', 'validators', 'Validator']
+__all__ = ['Layout', 'validators', 'Validator']
 
 
 def set_loglevel(level):
@@ -67,13 +59,28 @@ class Convention:
 
     def __init__(self,
                  name,
-                 offset_attribute_name='offset',
-                 scale_attribute_name='scale'):
+                 offset_attribute_name: Union[bool, str] = None,  # 'offset',
+                 scale_attribute_name: Union[bool, str] = None):  # 'scale'):
         from ..wrapper.core import File, Group, Dataset
         self.name = name
-        self.use_scale_and_offset = not (offset_attribute_name is None or scale_attribute_name is None)
-        self.offset_attribute_name = offset_attribute_name
-        self.scale_attribute_name = scale_attribute_name
+        self.use_scale_and_offset = (offset_attribute_name is True or scale_attribute_name is True)
+
+        if self.use_scale_and_offset:
+
+            if scale_attribute_name:
+                if scale_attribute_name is True:
+                    self.scale_attribute_name = 'scale'
+                else:
+                    self.scale_attribute_name = scale_attribute_name
+
+            if offset_attribute_name:
+                if offset_attribute_name is True:
+                    self.offset_attribute_name = 'offset'
+                else:
+                    self.offset_attribute_name = offset_attribute_name
+        else:
+            self.scale_attribute_name = None
+            self.offset_attribute_name = None
 
         self.properties = {}
         self.methods = {File: {}, Group: {}, Dataset: {}}
@@ -87,8 +94,7 @@ class Convention:
                                         'create_string_dataset': Dataset}
 
         if self.use_scale_and_offset:
-            from .standard_attribute import StandardAttribute
-            scale_attr = StandardAttribute(name='scale',
+            scale_attr = StandardAttribute(name=self.scale_attribute_name,
                                            validator='$pintquantity',
                                            method='create_dataset',
                                            description='Scale factor for the dataset values.',
@@ -97,17 +103,26 @@ class Convention:
                                            return_type='pint.Quantity',
                                            default_value=1.0)
             self.add(scale_attr)
+            offset_attr = StandardAttribute(name=self.offset_attribute_name,
+                                            validator={'$type': (int, float)},
+                                            method='create_dataset',
+                                            description='Scale factor for the dataset values.',
+                                            optional=True,
+                                            position={'after': 'data'},
+                                            # return_type='pint.Quantity',
+                                            default_value=0.0)
+            self.add(offset_attr)
 
-            # self['create_dataset'].add(attr_cls=units.ScaleAttribute,
-            #                            # target_cls=Dataset,
-            #                            add_to_method=True,
-            #                            position={'after': 'data'},
-            #                            optional=True)
-            self['create_dataset'].add(attr_cls=units.OffsetAttribute,
-                                       # target_cls=Dataset,
-                                       add_to_method=True,
-                                       position={'after': 'data'},
-                                       optional=True)
+            units_attr = StandardAttribute(name='units',
+                                           validator='$pintunit',
+                                           method='create_dataset',
+                                           description='Physical unit of the dataset.',
+                                           optional=True,
+                                           position={'after': 'data'},
+                                           # return_type='pint.Unit',
+                                           # return_type='str',
+                                           default_value=None)
+            self.add(units_attr)
             # self['create_dataset'].add(attr_cls=units.UnitsAttribute,
             #                            # target_cls=Dataset,
             #                            add_to_method=True,
@@ -469,5 +484,4 @@ def use(convention_name: Union[str, Convention]) -> None:
 current_convention: Union[None, Convention] = None
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['datetime_str', 'set_loglevel',
-           'StandardName', 'StandardNameTable', 'StandardAttribute']
+__all__ = ['datetime_str', 'set_loglevel', 'StandardAttribute']

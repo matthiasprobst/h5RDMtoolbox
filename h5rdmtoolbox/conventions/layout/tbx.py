@@ -83,6 +83,9 @@ class IsValidVersionString(Validator):
             return False
 
 
+from ...orcid import ORCID
+
+
 class IsValidContact(Validator):
     """Validates a contact string by checking if it is one or multiple valid ORCIDs"""
 
@@ -97,7 +100,6 @@ class IsValidContact(Validator):
 
     def validate(self, value) -> bool:
         """validate"""
-        from ..contact import exist
         if isinstance(value, np.ndarray):
             orcids = list(value)
         elif isinstance(value, (list, tuple)):
@@ -105,8 +107,11 @@ class IsValidContact(Validator):
         elif isinstance(value, str):
             orcids = value.split(',')
         for o in orcids:
-            if not exist(o.strip()):
-                return False
+            try:
+                valid_orcid = ORCID(o.strip()).exists()
+            except ValueError:
+                valid_orcid = False
+            return valid_orcid
         return True
 
 

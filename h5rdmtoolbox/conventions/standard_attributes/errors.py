@@ -1,4 +1,10 @@
-"""errors for tbx convention"""
+class UnitsError(Exception):
+    """Units Error"""
+
+
+class StandardAttributeError(Exception):
+    """Error during standard attribute handling"""
+    pass
 
 
 class StandardNameError(Exception):

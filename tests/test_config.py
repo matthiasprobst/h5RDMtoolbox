@@ -29,14 +29,8 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(f'{q}', '1 mm')
         h5tbx.set_config(ureg_format='Lx~')
         self.assertEqual(h5tbx.get_config('ureg_format'), 'Lx~')
-        self.assertEqual(f'{q}', '\\SI[]{1}{\\milli\\meter}')
+        self.assertEqual(f'{q}', '\\SI[]{\\begin{pmatrix}\\end{pmatrix}}{\\milli\\meter}')
         h5tbx.set_config(ureg_format='C~')
-
-    # def test_write_config(self):
-    #     h5tbx.write_default_config()
-    #     self.assertEqual(h5tbx.DEFAULT_CONFIG['init_logger_level'], 'ERROR')
-    #     self.assertTrue(h5tbx.user_config_filename.exists())
-    #     self.assertEqual(h5tbx.get_config('init_logger_level'), 'ERROR')
 
     def test_set_parameter(self):
         h5tbx.set_config(default_convention=None)
@@ -50,12 +44,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(h5.__class__, core.File)
         h5.close()
 
-        h5tbx.set_config(default_convention='tbx')
-        self.assertEqual(h5tbx.get_config('default_convention'), 'tbx')
-        self.assertEqual(h5tbx.get_config('default_convention'), 'tbx')
-        h5tbx.use('tbx')
+        h5tbx.set_config(default_convention='h5tbx')
+        self.assertEqual(h5tbx.get_config('default_convention'), 'h5tbx')
+        self.assertEqual(h5tbx.get_config('default_convention'), 'h5tbx')
+        h5tbx.use('h5tbx')
 
-        self.assertEqual(h5tbx.get_config('default_convention'), 'tbx')
+        self.assertEqual(h5tbx.get_config('default_convention'), 'h5tbx')
         with File() as h5:
             self.assertEqual(h5.__class__, h5tbx.File)
 

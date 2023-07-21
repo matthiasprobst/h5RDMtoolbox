@@ -6,7 +6,7 @@ import pathlib
 import xarray as xr
 from typing import List
 
-from .conventions.tbx import StandardNameTable
+from .conventions.standard_attributes.validators.standard_name import StandardNameTable
 from .utils import generate_temporary_directory
 from .wrapper.core import File
 
@@ -21,7 +21,8 @@ def get_standard_name_table_yaml_file() -> pathlib.Path:
 
 def get_standard_attribute_yaml_filename() -> pathlib.Path:
     """Return the path to the standard attribute yaml file"""
-    return __this_dir__ / 'data/tbx_convention.yaml'
+    return __this_dir__ / 'data/tutorial_convention.yaml'
+
 
 def get_standard_name_table() -> StandardNameTable:
     """Return an example standard name table"""
@@ -159,7 +160,7 @@ class Conventions:
     @staticmethod
     def fetch_cf_standard_name_table():
         """download cf-standard-name-table"""
-        from h5rdmtoolbox.conventions.standard_name import StandardNameTable
+        from h5rdmtoolbox.conventions.standard_attributes.validators.standard_name import StandardNameTable
         url = "https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml"
         return StandardNameTable.from_web(url)
 

@@ -1,6 +1,5 @@
-from .base import StandardAttributeValidator
-
-from ...orcid import ORCID
+from . import StandardAttributeValidator
+from ....orcid import ORCID
 
 
 class ORCIDValidator(StandardAttributeValidator):

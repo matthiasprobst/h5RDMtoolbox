@@ -1,4 +1,5 @@
 """Testing the standard attributes"""
+import inspect
 import requests
 import unittest
 import warnings
@@ -6,149 +7,161 @@ from pint.errors import UndefinedUnitError
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import conventions, tutorial
-from h5rdmtoolbox.conventions import tbx
-from h5rdmtoolbox.conventions import units
 from h5rdmtoolbox.conventions.layout.tbx import IsValidVersionString, IsValidUnit
 from h5rdmtoolbox.conventions.layout.tbx import is_valid_unit
-from h5rdmtoolbox.conventions.tbx.errors import StandardNameError
-from h5rdmtoolbox.conventions.tbx.utils import update_datasets
-from h5rdmtoolbox.conventions.utils import check_url
+from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable, StandardName
+from h5rdmtoolbox.conventions.standard_attributes.errors import StandardAttributeError, StandardNameError, UnitsError
+from h5rdmtoolbox.conventions.standard_attributes.utils import check_url
+from h5rdmtoolbox.conventions.standard_attributes.validators.standard_name import update_datasets
 
 
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
+        try:
+            requests.get('https://git.scc.kit.edu', timeout=5)
+            self.connected = True
+        except (requests.ConnectionError,
+                requests.Timeout) as e:
+            self.connected = False
+            warnings.warn('No internet connection', UserWarning)
+
+    def test_standard_attribute_regex(self):
         h5tbx.use(None)
+        long_name = h5tbx.conventions.StandardAttribute('long_name',
+                                                        validator={'$regex': '^[a-zA-Z].*(?<!\s)$'},
+                                                        method={'create_dataset': {'optional': True}},
+                                                        description='A long name of a dataset',
+                                                        )
 
-    def test_registration(self):
+        long_name_convention = h5tbx.conventions.Convention('long_name_convention')
+        long_name_convention.add(long_name)
+        long_name_convention.register()
+        h5tbx.use(long_name_convention.name)
 
-        class shortyname(h5tbx.conventions.StandardAttribute):
-            """Shorty name attribute"""
+        self.assertEqual(long_name.name, 'long_name')
 
-            def set(self, value):
-                """Only take the first 3 characters"""
-                super().set(value[0:3])
+        curr_convention = h5tbx.conventions.current_convention
+        self.assertEqual(curr_convention.name, 'long_name_convention')
+        curr_convention.add(long_name)
 
-            def get(self, src=None, name=None, default=None):
-                """Get the short_name and add a '!'"""
-                return super().get() + '!'
-
-        class ShortyAttribute(h5tbx.conventions.StandardAttribute):
-            """Shorty name attribute"""
-
-            name = 'another_shorty_name'
-
-            def set(self, value):
-                """Only take the first 3 characters"""
-                super().set(value[0:4])
-
-            def get(self, src=None, name=None, default=None):
-                """Get the short_name and add a '!'"""
-                return super().get() + '!!'
-
-        cv = conventions.Convention('short_name_convention')
-        cv['create_group'].add(shortyname,
-                               add_to_method=True,
-                               position={'after': 'name'},
-                               optional=True)
-
-        # this shall be a required attribute:
-        cv['create_group'].add(ShortyAttribute,
-                               add_to_method=True,
-                               position={'after': 'name'},
-                               optional=False)
-        cv['create_dataset'].add(ShortyAttribute,
-                                 add_to_method=True,
-                                 position={'after': 'name'},
-                                 optional=False)
-
-        cv.register()
-        self.assertIn(cv.name, h5tbx.conventions.registered_conventions)
-        h5tbx.use(cv.name)
-        self.assertEqual(cv, h5tbx.conventions.current_convention)
+        self.assertTrue('long_name' in inspect.signature(h5tbx.Group.create_dataset).parameters.keys())
 
         with h5tbx.File() as h5:
-            h5.short_name = 'short'
-            h5.shortyname = 'not_effect'
-            self.assertNotIn('short_name', h5.attrs.keys())
-            self.assertNotIn('shortyname', h5.attrs.keys())
+            h5.create_dataset('test', data=1, long_name='test')
+            self.assertEqual(h5['test'].attrs['long_name'], 'test')
 
-            h5['/'].short_name = 'short'
-            h5['/'].shortyname = 'shorty'
-            h5['/'].another_shorty_name = 'shorty'
-            self.assertEqual(h5.attrs['shortyname'], 'sho')
-            self.assertEqual(h5['/'].attrs['shortyname'], 'sho!')
-            self.assertEqual(h5['/'].attrs['another_shorty_name'], 'shor!!')
-
-            with self.assertRaises(h5tbx.conventions.StandardAttributeError):
-                h5.create_dataset('test', data=1)
-            h5.create_dataset('test', data=1, another_shorty_name='shorty')
-            self.assertEqual(h5['test'].another_shorty_name, 'shor!!')
-
-            self.assertEqual(h5['/'].shortyname, 'sho!')
-            self.assertEqual(h5['/'].another_shorty_name, 'shor!!')
-
-            self.assertEqual(h5.shortyname, 'not_effect')
-            h5tbx.use(None)
-            with self.assertRaises(AttributeError):
-                self.assertNotEqual(h5['/'].shortyname, 'sho!')
-            self.assertEqual(h5.attrs['shortyname'], 'sho')
+            with self.assertRaises(StandardAttributeError):
+                h5.create_dataset('test2', data=1, long_name='123test')
 
     def test_references(self):
-        # bibtex dict example taken from https://bibtexparser.readthedocs.io/en/master/tutorial.html#step-2-parse-it
-        bibtex_entry = {'journal': 'Nice Journal',
-                        'comments': 'A comment',
-                        'pages': '12--23',
-                        'month': 'jan',
-                        'abstract': 'This is an abstract. This line should be long enough to test\nmultilines...',
-                        'title': 'An amazing title',
-                        'year': '2013',
-                        'volume': '12',
-                        'ID': 'Cesar2013',
-                        'author': 'Jean Cesar',
-                        'keyword': 'keyword1, keyword2',
-                        'ENTRYTYPE': 'article'}
+        bibtex_entry = {'article': {'journal': 'Nice Journal',
+                                    'comments': 'A comment',
+                                    'pages': '12--23',
+                                    'month': 'jan',
+                                    'abstract': 'This is an abstract. '
+                                                'This line should be long enough to test\nmultilines...',
+                                    'title': 'An amazing title',
+                                    'year': '2013',
+                                    'volume': '12',
+                                    'ID': 'Cesar2013',
+                                    'author': 'Jean Cesar',
+                                    'keyword': 'keyword1, keyword2'}
+                        }
         url = 'https://h5rdmtoolbox.readthedocs.io/en/latest/'
 
+        bibtex_attr = h5tbx.conventions.StandardAttribute('bibtex',
+                                                          validator='$bibtex',
+                                                          method={'create_dataset': {'optional': True},
+                                                                  'create_group': {'optional': True},
+                                                                  '__init__': {'optional': True}},
+                                                          description='A reference to a publication in bibtext format',
+                                                          )
+        url_attr = h5tbx.conventions.StandardAttribute('url',
+                                                       validator='$url',
+                                                       method={'create_dataset': {'optional': True},
+                                                               'create_group': {'optional': True},
+                                                               '__init__': {'optional': True}},
+                                                       description='A reference to an URL',
+                                                       )
+
+        reference_attr = h5tbx.conventions.StandardAttribute('references',
+                                                             validator='$ref',
+                                                             method={'create_dataset': {'optional': True},
+                                                                     'create_group': {'optional': True},
+                                                                     '__init__': {'optional': True}},
+                                                             description='A reference to a publication in bibtext '
+                                                                         'format or an URL',
+                                                             return_type='sdict'
+                                                             )
         cv = conventions.Convention('test_references')
-        cv['__init__'].add(attr_cls=conventions.references.ReferencesAttribute,
-                           add_to_method=True,
-                           position={'before': 'layout'},
-                           optional=True)
+        cv.add(bibtex_attr)
+        cv.add(url_attr)
+        cv.add(reference_attr)
+
         cv.register()
         h5tbx.use(cv.name)
 
+        for std_attr in ('url', 'bibtex', 'references'):
+            self.assertTrue(std_attr in inspect.signature(h5tbx.Group.create_dataset).parameters.keys())
+            self.assertTrue(std_attr in inspect.signature(h5tbx.Group.create_group).parameters.keys())
+            self.assertTrue(std_attr in inspect.signature(h5tbx.File.__init__).parameters.keys())
+
         with h5tbx.File() as h5:
+            if self.connected:
+                h5.url = url
+                self.assertEqual(h5.url, url)
+
+            with self.assertRaises(StandardAttributeError):
+                h5.url = 'invalid'
+
             h5.references = bibtex_entry
             self.assertDictEqual(h5.references, bibtex_entry)
 
-            h5.references = url
-            self.assertEqual(h5.references, url)
+            if self.connected:
+                h5.references = url
+                self.assertEqual(h5.references, url)
 
-            h5.references = (bibtex_entry, url)
-            self.assertTupleEqual(h5.references, (url, bibtex_entry))
+                h5.references = (bibtex_entry, url)
+                self.assertEqual(h5.references[0], bibtex_entry)
+                self.assertEqual(h5.references[1], url)
 
-            h5.references = (url, bibtex_entry)
-            self.assertTupleEqual(h5.references, (url, bibtex_entry))
-
-            h5.references = (url, bibtex_entry, url)
-            self.assertTupleEqual(h5.references, (url, url, bibtex_entry))
-
-            h5.references = (bibtex_entry, url, bibtex_entry)
-            self.assertTupleEqual(h5.references, (url, bibtex_entry, bibtex_entry))
-
-            h5.references = (url, bibtex_entry, url, url)
-            self.assertTupleEqual(h5.references, (url, url, url, bibtex_entry))
-
-            h5.references = (url, url, bibtex_entry, url, url)
-            self.assertTupleEqual(h5.references, (url, url, url, url, bibtex_entry))
-
-            h5.references = (url, url, bibtex_entry, bibtex_entry, url, url)
-            self.assertTupleEqual(h5.references, (url, url, url, url, bibtex_entry, bibtex_entry))
-
-            h5.references = (url, url, url, url, bibtex_entry, bibtex_entry, bibtex_entry)
-            self.assertTupleEqual(h5.references, (url, url, url, url, bibtex_entry, bibtex_entry, bibtex_entry))
+    def test_standard_name_convention(self):
         h5tbx.use(None)
+        units_attr = h5tbx.conventions.StandardAttribute('units',
+                                                         validator='$pintunit',
+                                                         method={'create_dataset': {'optional': False}},
+                                                         description='A unit of a dataset',
+                                                         )
+        standard_name = h5tbx.conventions.StandardAttribute('standard_name',
+                                                            validator='$standard_name',
+                                                            method={'create_dataset': {'optional': False}},
+                                                            description='A standard name of a dataset',
+                                                            )
+        snt = h5tbx.conventions.StandardAttribute('standard_name_table',
+                                                  validator='$standard_name_table',
+                                                  method={'__init__': {'optional': True, }},
+                                                  default_value='https://zenodo.org/record/8158764',
+                                                  description='A standard name table',
+                                                  )
+
+        cv = conventions.Convention('test_standard_name')
+        cv.add(units_attr)
+        cv.add(standard_name)
+        cv.add(snt)
+        cv.register()
+        h5tbx.use(cv.name)
+
+        self.assertIn('standard_name', inspect.signature(h5tbx.Group.create_dataset).parameters.keys())
+        self.assertIn('units', inspect.signature(h5tbx.Group.create_dataset).parameters.keys())
+        self.assertIn('standard_name_table', inspect.signature(h5tbx.File.__init__).parameters.keys())
+
+        if self.connected:
+            with h5tbx.File(standard_name_table='https://zenodo.org/record/8158764') as h5:
+                print(h5.standard_name_table)
+
+                h5.create_dataset('test', data=1, standard_name='x_velocity', units='m/s')
+                print(h5['test'])
 
     def test_is_valid_unit(self):
         self.assertTrue(is_valid_unit('m/s'))
@@ -159,16 +172,34 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertTrue(is_valid_unit('pixel'))
 
     def test_comment(self):
-        h5tbx.use('tbx')
+
+        comment = h5tbx.conventions.StandardAttribute(
+            name='comment',
+            validator={'$regex': r'^[A-Z].*$',
+                       '$minlength': 10,
+                       '$maxlength': 101},
+            method={'__init__': {'optional': True},
+                    'create_dataset': {'optional': True},
+                    'create_group': {'optional': True}},
+            description='Additional information about the file'
+        )
+        self.assertEqual(len(comment.validator), 3)
+
+        cv = conventions.Convention('test_comment')
+        cv.add(comment)
+        cv.register()
+
+        h5tbx.use(cv.name)
+
         with h5tbx.File() as h5:
             self.assertEqual(h5.comment, None)
-            with self.assertRaises(conventions.comment.CommentError):
+            with self.assertRaises(StandardAttributeError):
                 h5.comment = ' This is a comment, which starts with a space.'
-            with self.assertRaises(conventions.comment.CommentError):
+            with self.assertRaises(StandardAttributeError):
                 h5.comment = '9 This is a comment, which starts with a number.'
-            with self.assertRaises(conventions.comment.CommentError):
+            with self.assertRaises(StandardAttributeError):
                 h5.comment = 'Too short'
-            with self.assertRaises(conventions.comment.CommentError):
+            with self.assertRaises(StandardAttributeError):
                 h5.comment = 'Too long' * 100
 
             h5.comment = 'This comment is ok.'
@@ -176,12 +207,22 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_units(self):
         """Test title attribute"""
-        h5tbx.use('tbx')
+        units_attr = h5tbx.conventions.StandardAttribute('units',
+                                                         validator='$pintunit',
+                                                         method={'create_dataset': {'optional': False}},
+                                                         description='A unit of a dataset')
+        cv = h5tbx.conventions.Convention('ucv')
+        cv.add(units_attr)
+        cv.register()
+        h5tbx.use('ucv')
+
         with h5tbx.File() as h5:
-            ds = h5.create_dataset('test', data=[1, 2, 3], units='m', long_name='test')
-            with self.assertRaises(UndefinedUnitError):
+            ds = h5.create_dataset('test',
+                                   data=[1, 2, 3],
+                                   units='m')
+            with self.assertRaises(StandardAttributeError):
                 ds.units = 'test'
-            with self.assertRaises(units.UnitsError):
+            with self.assertRaises(StandardAttributeError):
                 ds.units = ('test',)
             self.assertEqual(ds.units, 'm')
             # creat pint unit object:
@@ -191,117 +232,43 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(ds.units, None)
 
     def test_source(self):
-        h5tbx.use('tbx')
+        source_attr = h5tbx.conventions.StandardAttribute(
+            name='data_base_source',
+            validator={'$in': ('experimental',
+                               'numerical',
+                               'analytical',
+                               'synthetically')},
+            method={'__init__': {'optional': True},
+                    'create_dataset': {'optional': True},
+                    'create_group': {'optional': True}},
+            description='Base source of data: experimental, numerical, '
+                        'analytical or synthetically'
+        )
 
-        htwr = conventions.source.Hardware(device='PressureSensorX',
-                                           manufacturer='PressureCompany',
-                                           serial_number='1234567890',
-                                           description='Pressure senor for testing',
-                                           temperature_range=[0, 50],
-                                           temperature_range_unit=['C', 'C'])
-        self.assertEqual(htwr.device, 'PressureSensorX')
-        self.assertEqual(htwr.manufacturer, 'PressureCompany')
-        self.assertEqual(htwr.serial_number, '1234567890')
-        self.assertEqual(htwr.description, 'Pressure senor for testing')
-        self.assertEqual(htwr.temperature_range, [0, 50])
-        self.assertEqual(htwr.temperature_range_unit, ['C', 'C'])
-        self.assertEqual(sorted(htwr.required_items()),
-                         sorted([('device', 'PressureSensorX'),
-                                 ('manufacturer', 'PressureCompany'),
-                                 ('serial_number', '1234567890')]))
-        self.assertEqual(htwr._pattern, '^[0-9].*')
-        self.assertEqual(sorted(htwr.optional_items()),
-                         sorted([('description', 'Pressure senor for testing'),
-                                 ('temperature_range', [0, 50]),
-                                 ('temperature_range_unit', ['C', 'C'])]))
+        cv = conventions.Convention('source_convention')
+        cv.add(source_attr)
+        cv.register()
 
-        with h5tbx.File() as h5:
-            h5.create_dataset('test', data=[1, 2, 3],
-                              source=htwr, units='m', long_name='test')
-            self.assertIsInstance(h5['test'].source, conventions.source.Hardware)
+        h5tbx.use(cv.name)
 
-        with self.assertRaises(ValueError):
-            conventions.source.Hardware(device='1PressureSensorX',
-                                        manufacturer='PressureCompany',
-                                        serial_number='1234567890',
-                                        description='Pressure senor for testing',
-                                        temperature_range=[0, 50],
-                                        temperature_range_unit=['C', 'C'])
-
-        with self.assertRaises(ValueError):
-            conventions.source.Hardware(device=None,
-                                        manufacturer='PressureCompany',
-                                        serial_number='1234567890',
-                                        description='Pressure senor for testing',
-                                        temperature_range=[0, 50],
-                                        temperature_range_unit=['C', 'C'])
-
-        sftw = conventions.source.Software(name='h5rdmtoolbox',
-                                           version='1.0',
-                                           url='https://h5rdmtoolbox.readthedocs.io/en/latest/',
-                                           description='This is my software')
-        self.assertEqual(sftw.name, 'h5rdmtoolbox')
-        self.assertEqual(sftw.version, '1.0')
-        self.assertEqual(sftw.url, 'https://h5rdmtoolbox.readthedocs.io/en/latest/')
-        self.assertEqual(sftw.description, 'This is my software')
-        self.assertEqual(sorted(sftw.required_items()),
-                         sorted([('name', 'h5rdmtoolbox'),
-                                 ('version', '1.0'),
-                                 ('url', 'https://h5rdmtoolbox.readthedocs.io/en/latest/')]))
-        self.assertEqual(sorted(sftw.optional_items()),
-                         sorted([('author', None),
-                                 ('description', 'This is my software'),
-                                 ('lic', None),
-                                 ('language', None),
-                                 ('platform', None)]))
-        self.assertEqual(sftw._pattern, '^[0-9].*')
-
-        with self.assertRaises(ValueError):
-            conventions.source.Software(name='1h5rdmtoolbox',
-                                        version='1.0',
-                                        url='https://h5rdmtoolbox.readthedocs.io/en/latest/',
-                                        description='This is my software')
-
-        with self.assertRaises(ValueError):
-            conventions.source.Software(name='1h5rdmtoolbox',
-                                        version='1.0',
-                                        url='ww.h5rmtoolbox.de',
-                                        description='This is my software')
-
-        with h5tbx.File() as h5:
-            ds1 = h5.create_dataset('test1', data=[1, 2, 3], units='m', long_name='test')
-            ds2 = h5.create_dataset('test2', data=[1, 2, 3], units='m', long_name='test',
-                                    source=sftw)
-            self.assertEqual(ds1.source, None)
-            self.assertEqual(ds2.source, sftw)
-
-            h5tbx.use(None)
-            h5.create_dataset('test3', data=[1, 2, 3], attrs={'source': None})
-            h5.create_dataset('test4', data=[1, 2, 3], attrs={'source': {'name': 'h5rdmtoolbox'}})
-            h5.create_dataset('test5', data=[1, 2, 3], attrs={'source': 1.5})
-            h5tbx.use('tbx')
-            with self.assertRaises(RuntimeError):
-                print(h5.test3.source)
-            with self.assertRaises(ValueError):
-                print(h5.test4.source)
-            with self.assertRaises(RuntimeError):
-                print(h5.test5.source)
-            h5.test5.source = sftw
-            self.assertIsInstance(h5.test5.source, conventions.source.Software)
+        with h5tbx.File(data_base_source='experimental') as h5:
+            self.assertEqual(h5.data_base_source, 'experimental')
+            with self.assertRaises(StandardAttributeError):
+                h5.data_base_source = 'invlaid'
 
     def test_standard_name(self):
-        with self.assertRaises(tbx.errors.StandardNameError):
-            sn_fail = tbx.StandardName(name='', units='m')
+        with self.assertRaises(StandardNameError):
+            sn_fail = StandardName(name='', units='m')
 
         with self.assertRaises(StandardNameError):
-            tbx.StandardName(name=' x', units='m', description='a description')
+            StandardName(name=' x', units='m', description='a description')
 
         with self.assertRaises(StandardNameError):
-            sn_fail = tbx.StandardName(name='x ', units='m', description='a description')
+            sn_fail = StandardName(name='x ', units='m', description='a description')
 
-        sn1 = tbx.StandardName(name='acc',
-                               description='a description',
-                               units='m**2/s')
+        sn1 = StandardName(name='acc',
+                           description='a description',
+                           units='m**2/s')
         self.assertEqual(sn1.units, h5tbx.get_ureg().Unit('m**2/s'))
 
         with self.assertRaises(StandardNameError):
@@ -315,15 +282,6 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertTrue(IsValidUnit()('m/s'))
         self.assertTrue(IsValidUnit()('1 m/s'))
         self.assertFalse(IsValidUnit()('hello/world'))
-
-    def test_responsible_person(self):
-        orcid = '0000-0001-8729-0482'
-        self.assertTrue(conventions.contact.is_valid_orcid_pattern(orcid))
-        self.assertFalse(conventions.contact.is_valid_orcid_pattern('123-123-123-123'))
-        self.assertFalse(conventions.contact.is_valid_orcid_pattern(orcid[0:-1]))
-        self.assertTrue(conventions.contact.exist(orcid))
-        not_existing_orcid = '0000-0001-5747-0739'
-        self.assertFalse(conventions.contact.exist(not_existing_orcid))
 
     def test_standard_name_assignment(self):
         translation_dict = {'u': 'x_velocity'}
@@ -347,7 +305,7 @@ class TestStandardAttributes(unittest.TestCase):
 
     if run_tests:
         def test_StandardNameTableFromYaml(self):
-            table = tbx.StandardNameTable.from_yaml(tutorial.testdir / 'sntable.yml')
+            table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable.yml')
             self.assertEqual(table.name, 'test')
             self.assertEqual(table.version_number, 1)
             self.assertEqual(table.institution, 'ITS')
@@ -404,38 +362,31 @@ class TestStandardAttributes(unittest.TestCase):
             ]
             for version, valid in versions:
                 if valid:
-                    self.assertEqual(tbx.StandardNameTable.validate_version(version), version)
+                    self.assertEqual(StandardNameTable.validate_version(version), version)
                 else:
                     with self.assertRaises(ValueError):
-                        tbx.StandardNameTable.validate_version(version)
+                        StandardNameTable.validate_version(version)
 
         def test_StandardNameTableFromWeb(self):
-            cf = tbx.StandardNameTable.from_web(
+            cf = StandardNameTable.from_web(
                 url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
                 name='standard_name_table')
             self.assertEqual(cf.name, 'standard_name_table')
             self.assertEqual(cf.versionname, 'standard_name_table-v79')
-            self.assertTrue(check_url(cf.url))
-            self.assertFalse(check_url(cf.url + '123'))
+            if self.connected:
+                self.assertTrue(check_url(cf.url))
+                self.assertFalse(check_url(cf.url + '123'))
 
-            try:
-                requests.get('https://git.scc.kit.edu', timeout=5)
-                connected = True
-            except (requests.ConnectionError,
-                    requests.Timeout) as e:
-                connected = False
-                warnings.warn('Cannot check Standard name table from '
-                              f'gitlab: {e}')
-            if connected:
-                opencefa = tbx.StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                             file_path='open_centrifugal_fan_database-v1.yaml',
-                                                             project_id='35443',
-                                                             ref_name='main')
+            if self.connected:
+                opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                         file_path='open_centrifugal_fan_database-v1.yaml',
+                                                         project_id='35443',
+                                                         ref_name='main')
                 self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
                 self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
 
     def test_StandardNameTableFromYaml_special(self):
-        table = tbx.StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
+        table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
         self.assertEqual(table.name, 'test')
         self.assertEqual(table.version_number, 1)
         self.assertEqual(table.institution, 'ITS')
@@ -462,19 +413,18 @@ class TestStandardAttributes(unittest.TestCase):
                              )
         self.assertTrue(table.check_name('synthetic_particle_image'))
         self.assertFalse(table.check_name('particle_image'))
-        self.assertIsInstance(table['synthetic_particle_image'], tbx.StandardName)
+        self.assertIsInstance(table['synthetic_particle_image'], StandardName)
 
     # def test_merge(self):
-    #     registered_snts = tbx.StandardNameTable.get_registered()
+    #     registered_snts = StandardNameTable.get_registered()
     #     new_snt = tbx.merge(registered_snts, name='newtable', institution=None,
     #                         version_number=1, contact='https://orcid.org/0000-0001-8729-0482')
     #     self.assertTrue(new_snt.name, 'newtable')
 
     def test_empty_SNT(self):
-        snt = tbx.StandardNameTable('test_snt',
-                                    table={},
-                                    version_number=1,
-                                    institution='my_institution',
-                                    contact='https://orcid.org/0000-0001-8729-0482')
-        # self.assertIsInstance(snt.table, dict)
-        # self.assertEqual(snt.filename, None)
+        snt = StandardNameTable(name='test_snt',
+                                table={},
+                                version='v1.0dev',
+                                institution='my_institution',
+                                contact='https://orcid.org/0000-0001-8729-0482')
+        self.assertIsInstance(snt.table, dict)

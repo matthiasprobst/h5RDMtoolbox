@@ -22,7 +22,7 @@ CONFIG = dict(return_xarray=True,
               xarray_unit_repr_in_plots='/',
               require_unit=True,  # datasets require units
               ureg_format='C~',
-              default_convention='h5py',
+              default_convention='h5tbx',
               init_logger_level='ERROR',
               dtime_fmt='%Y%m%d%H%M%S%f',
               expose_user_prop_to_attrs=True,
@@ -39,7 +39,7 @@ _VALIDATORS = {
     'xarray_unit_repr_in_plots': lambda x: x in ('', '/', '(', '['),
     'require_unit': lambda x: isinstance(x, bool),
     'ureg_format': lambda x: isinstance(x, str),
-    'default_convention': lambda x: isinstance(x, str) or x is None,  # and in ('h5py', 'h5tbx')
+    'default_convention': lambda x: str(x) in ('h5py', 'h5tbx', 'None'),
     'init_logger_level': lambda x: x in is_valid_logger_level(x),
     'dtime_fmt': lambda x: isinstance(x, str),
     'expose_user_prop_to_attrs': lambda x: isinstance(x, bool),
@@ -56,9 +56,9 @@ class set_config:
         self.old = {}
         for k, v in kwargs.items():
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError(f'PIV parameter {k} has invalid value: {v}')
+                raise ValueError(f'Config parameter "{k}" has invalid value: "{v}"')
             if k not in CONFIG:
-                raise KeyError(f'Not a configuration key: {k}')
+                raise KeyError(f'Not a configuration key: "{k}"')
             self.old[k] = CONFIG[k]
             if k == 'ureg_format':
                 get_ureg().default_format = str(v)

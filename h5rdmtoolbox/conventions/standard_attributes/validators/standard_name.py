@@ -8,15 +8,17 @@ import warnings
 import yaml
 from IPython.display import display, HTML
 from datetime import datetime, timezone
-from typing import List, Union, Dict, Tuple
+from typing import Callable
+from typing import Dict, Union
+from typing import List, Tuple
 
-from . import errors
-from .standard_name import StandardName
-from .transformation import derivative_of_X_wrt_to_Y
-from .._logger import logger
+from h5rdmtoolbox import get_ureg
+from . import StandardAttributeValidator
+from .. import errors
 from ..utils import dict2xml, get_similar_names_ratio
-from ..._user import UserDir
-from ...utils import generate_temporary_filename, generate_temporary_directory
+from ..._logger import logger
+from ...._user import UserDir
+from ....utils import generate_temporary_filename, generate_temporary_directory
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -32,6 +34,80 @@ title: Standard Name Table for Fan simulations and measurements
 """
 
 LATEX_UNDERSCORE = '\\_'
+
+VALID_CHARACTERS = '[^a-zA-Z0-9_]'
+PATTERN = '^[0-9 ].*'
+
+
+def _units_power_fix(_str: str):
+    """Fixes strings like 'm s-1' to 'm s^-1'"""
+    s = re.search('[a-zA-Z][+|-]', _str)
+    if s:
+        return _str[0:s.span()[0] + 1] + '^' + _str[s.span()[1] - 1:]
+    return _str
+
+
+class StandardName:
+    """Standard Name class"""
+
+    def __init__(self, name: str,
+                 units: Union[str, pint.Unit] = None,
+                 description: str = None,
+                 canonical_units: str = None,
+                 alias: str = None):
+        StandardName.check_syntax(name)
+        self.name = name
+        if canonical_units is not None:
+            warnings.warn('Parameter "canonical_units" is depreciated. Use "units" instead.', DeprecationWarning)
+            units = canonical_units
+        if description is None:
+            # TODO if canonical_units is removed, then default value None must be removed for description, too
+            raise ValueError('A description must be provided')
+        if isinstance(units, str):
+            self.units = get_ureg().Unit(_units_power_fix(units))
+        elif isinstance(units, pint.Unit):
+            self.units = units
+        else:
+            raise TypeError(f"units must be a str or a pint.Unit, not {type(units)}")
+        # convert units to base units:
+        q = 1 * self.units
+        self.unit = q.to_base_units().units
+        self.description = description
+        if alias is not None:
+            self.check_syntax(alias)
+        self.alias = alias
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f'<StandardName: "{self.name}" units="{self.units}", description="{self.description}">'
+
+    def equal_unit(self, other_unit: pint):
+        """compares the base units of this standard name with another unit provided as a string
+        or pint.Unit"""
+        from ..utils import equal_base_units
+        return equal_base_units(self.units, other_unit)
+
+    @staticmethod
+    def check_syntax(standard_name: str):
+        """formal check of the syntax"""
+        if not isinstance(standard_name, str):
+            raise TypeError(f'Standard name must be type string but is {type(standard_name)}')
+        if len(standard_name) == 0:
+            raise errors.StandardNameError('Name too short!')
+        if re.sub(VALID_CHARACTERS, '', standard_name) != standard_name:
+            raise errors.StandardNameError('Invalid special characters in name '
+                                           f'"{standard_name}": Only "{VALID_CHARACTERS}" '
+                                           'is allowed.')
+
+        if PATTERN != '' and PATTERN is not None:
+            if re.match(PATTERN, standard_name):
+                raise errors.StandardNameError(f'Standard name "{standard_name}" does not match pattern "{PATTERN}"')
+
+    def to_dict(self) -> Dict:
+        """Return dictionary representation of StandardName"""
+        return dict(name=self.name, units=self.units, description=self.description)
 
 
 # wrapper that updates datetime in meta
@@ -49,7 +125,7 @@ class StandardNameTable:
 
     Examples
     --------
-    >>> from h5rdmtoolbox.conventions.tbx import StandardNameTable
+    >>> from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable
     >>> table = StandardNameTable.from_yaml('standard_name_table.yaml')
     >>> # check a standard name
     >>> table.check('x_velocity')
@@ -254,7 +330,7 @@ class StandardNameTable:
 
         Examples
         --------
-        >>> from h5rdmtoolbox.conventions.tbx import StandardNameTable, StandardName
+        >>> from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable, StandardName
         >>> table = StandardNameTable.from_yaml('standard_name_table.yaml')
         >>> table.set('x_velocity', 'm s-1', 'x component of velocity')
         >>> # or
@@ -513,6 +589,9 @@ class StandardNameTable:
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
         base_url = "https://zenodo.org/api"
+
+        if doi.startswith('https://zenodo.org/record/'):
+            doi = doi.split('/')[-1]
         record_url = f"{base_url}/records/{doi}"
 
         if destination_directory is None:
@@ -559,6 +638,8 @@ class StandardNameTable:
 
         snt = StandardNameTable.from_yaml(destination_filename)
         snt._meta.update(dict(zenodo_doi=doi))
+        # TODO: store locally in user data dir and load from there the next time since we have a DOI and
+        # th content will not change anymore
         return snt
 
     @staticmethod
@@ -695,7 +776,14 @@ class StandardNameTable:
 
     def to_dict(self):
         """Export a StandardNameTable to a dictionary"""
-        return dict(**self.meta, table=self.table)
+        d = dict(name=self.name, **self.meta, table=self.table)
+        d.update(dict(last_modified=str(d['last_modified'])))
+        return d
+
+    def to_sdict(self):
+        """Export a StandardNameTable to a dictionary as string"""
+        import json
+        return json.dumps(self.to_dict())
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
@@ -724,7 +812,7 @@ class StandardNameTable:
         headers = kwargs.pop('headers', 'keys')
         return tabulate(sorted_df, headers=headers, tablefmt=tablefmt, **kwargs)
 
-    def sdump(self, sort_by: str = 'name', **kwargs) -> None:
+    def dumps(self, sort_by: str = 'name', **kwargs) -> None:
         """Dumps (prints) the content as string"""
         meta_str = '\n'.join([f'{key}: {value}' for key, value in self.meta.items()])
         print(f"{meta_str}\n{self.get_pretty_table(sort_by, **kwargs)}")
@@ -739,3 +827,135 @@ class StandardNameTable:
         """Return sorted list of standard names files"""
         for f in StandardNameTable.get_registered():
             print(f' > {f}')
+
+
+class StandardNameValidator(StandardAttributeValidator):
+    """Validator for attribute standard_name"""
+
+    def __call__(self, standard_name, parent, **kwargs):
+        snt = parent.rootparent.attrs.get('standard_name_table', None)
+
+        if snt is None:
+            raise KeyError('No standard name table defined for this file!')
+
+        snt = parse_snt(snt)
+
+        units = parent.attrs.get('units', None)
+        if units is None:
+            raise KeyError('No units defined for this variable!')
+
+        if not snt.check(standard_name, units):
+            raise ValueError(f'Standard name {standard_name} with units {units} is invalid')
+        return standard_name
+
+
+class StandardNameTableValidator(StandardAttributeValidator):
+    """Validates a standard name table"""
+
+    def __call__(self, standard_name_table, *args, **kwargs):
+        return parse_snt(standard_name_table).to_sdict()
+
+
+def parse_snt(standard_name_table: Union[str, dict, StandardNameTable]) -> StandardNameTable:
+    """Returns a StandardNameTable object from a string, dict or StandardNameTable object"""
+    if isinstance(standard_name_table, StandardNameTable):
+        return standard_name_table
+    if isinstance(standard_name_table, dict):
+        return StandardNameTable(**standard_name_table)
+    if isinstance(standard_name_table, str):
+        # could be web address or local file
+        if standard_name_table.startswith('https://zenodo.org/record/'):
+            return StandardNameTable.from_zenodo(standard_name_table)
+        else:
+            fname = pathlib.Path(standard_name_table)
+            if fname.exists() and fname.suffix in ('.yaml', '.yml'):
+                return StandardNameTable.from_yaml(fname)
+            else:
+                raise FileNotFoundError(f'File {fname} not found or not a yaml file')
+    raise TypeError(f'Invalid type for standard_name_table: {type(standard_name_table)}')
+
+
+"""Transformation for standard names"""
+
+
+class Transformation:
+    """Transformation for standard names"""
+
+    def __init__(self, snt, func: Callable):
+        self.snt = snt
+        self.func = func
+
+    def __call__(self, standard_name):
+        return self.func(standard_name, self.snt)
+
+
+def derivative_of_X_wrt_to_Y(standard_name, snt) -> StandardName:
+    """Check if a standard name is a derivative of X wrt to Y"""
+    match = re.match(r"^derivative_of_(.*)_wrt_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 2
+        if all([snt.check(n) for n in groups]):
+            sn1 = snt[groups[0]]
+            sn2 = snt[groups[1]]
+            new_units = (1 * sn1.units / 1 * sn2.units).units
+            new_description = f"Derivative of {sn1.name} wrt to {sn2.name}"
+            return StandardName(standard_name, new_units, new_description)
+    return False
+    # raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")
+
+
+"""Utils"""
+
+
+def update_datasets(group_or_filename: Union[h5py.Group, str, pathlib.Path],
+                    translation_dict: Dict,
+                    rec: bool = True) -> None:
+    """Walk through file and assign standard names to datasets with names indicated in
+    the dictionary `translation_dict`
+
+    Parameters
+    ----------
+    group_or_filename: Union[h5py.Group, str, pathlib.Path]
+        The source in which to search for datasets and assign standard names to.
+        If a string or pathlib.Path is passed, it is assumed to be an HDF5 filename.
+    translation_dict: Dict
+        Dictionary with keys being the dataset names and values the standard names
+    rec: bool
+        If True, recursively search for datasets
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Assign "air_temperature" to all datasets with name "temperature":
+    >>> translation_dict = {'temperature': 'air_temperature'}
+    >>> update_datasets('myfile.hdf', translation_dict)
+    """
+    if isinstance(group_or_filename, (str, pathlib.Path)):
+        with h5py.File(group_or_filename, 'r+') as h5:
+            return update_datasets(h5['/'], translation_dict, rec=rec)
+
+    def _assign(ds, sn):
+        ds.attrs['standard_name'] = sn
+        logger.debug(f'Added standard name "{sn}" to dataset "{ds.name}"')
+
+    def sn_update(name: str, node):
+        """function called when visiting HDF objects"""
+        if isinstance(node, h5py.Dataset):
+            if name in translation_dict:
+                sn = translation_dict[name.strip('/')]
+            elif name.rsplit('/', 1)[-1] in translation_dict:
+                sn = translation_dict[name.rsplit('/', 1)[-1]]
+            else:
+                return
+            _assign(node, sn)
+
+    h5grp = group_or_filename
+    if rec:
+        return h5grp.visititems(sn_update)
+    for key, obj in h5grp.items():
+        sn_update(key, obj)

@@ -96,7 +96,8 @@ class ORCID(str):
 
     def exists(self,
                check_offline: bool = True,
-               timeout: Union[int, None] = None):
+               timeout: Union[int, None] = None,
+               raise_error: bool = True) -> bool:
         """Check if it can be found online"""
         headers = {'Accept': 'application/vnd.orcid+json'}
         try:
@@ -106,7 +107,9 @@ class ORCID(str):
                 # no internet connection, look in registered ORCIDs
                 warnings.warn('validating the ORCID offline by comparing with registered, known ORCIDs', UserWarning)
                 return known_orcids.exists(self)
-            raise Exception(e)
+            if raise_error:
+                raise Exception(e)
+            return False
         if response.status_code == 200:  # 200=OK
             known_orcids.add(self)
             return True
