@@ -139,7 +139,7 @@ if mongo_installed:
                     h5.attrs['np_ndarray'] = np.array([1.2, -2.3])
                     h5['images'].attrs['np_ndarray'] = np.array([1.2, -2.3])
                     h5['images'].attrs['float'] = 1.2
-                    h5['images'].attrs['np_float'] = np.float(1.2)
+                    h5['images'].attrs['np_float'] = np.float64(1.2)
 
                     h5.images.mongo.insert(axis=0, collection=self.collection)
 

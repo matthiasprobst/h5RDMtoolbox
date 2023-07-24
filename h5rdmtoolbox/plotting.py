@@ -39,12 +39,29 @@ def decode_label(label: str) -> (str, str):
         match = re.search(__XARRAY_UNITS_PATTERN__, label)
         return match.group(1), match.group(2)
     except RuntimeError as e:
-        raise RuntimeError(f'Could not parse label {label} with pattern {__XARRAY_UNITS_PATTERN__}. Orig. err: {e}')
+        raise RuntimeError(
+            f'Could not parse label {label} with pattern {__XARRAY_UNITS_PATTERN__}. Orig. err: {e}'
+        ) from e
 
 
 def build_label_unit_str(name: str, units: str,
                          units_format: str = None) -> str:
-    """generates the label string from a name and a units based on the units format"""
+    """generates the label string from a name and a units based on the units format.
+    
+    Parameters
+    ----------
+    name: str
+      Variable name
+    units: Union[str, None]
+      Variable unit. None takes the default from the configuration ("xarray_unit_repr_in_plots")
+    units_format: str, None
+      "in", "/", "[", "("
+
+    Returns
+    -------
+    str
+        Processed label string, e.g. "<name> in <units>"
+    """
     if units_format is None:
         units_format = get_config('xarray_unit_repr_in_plots')
     units = units.replace("**", "^")
@@ -56,6 +73,8 @@ def build_label_unit_str(name: str, units: str,
         return f'{name} [${units}$]'
     if units_format in ('(', ')', '()'):
         return f'{name} (${units}$)'
+    raise ValueError(f'Unexpected value for "units_format": {units_format}. Must be one of the following: '
+                     f'"in", "/", "[", "("')
 
 
 class XarrayLabelManipulation(plt.Axes):

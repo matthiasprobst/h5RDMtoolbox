@@ -8,9 +8,7 @@ import warnings
 import yaml
 from IPython.display import display, HTML
 from datetime import datetime, timezone
-from typing import Callable
-from typing import Dict, Union
-from typing import List, Tuple
+from typing import Callable, Dict, Union, List, Tuple
 
 from h5rdmtoolbox import get_ureg
 from . import StandardAttributeValidator
@@ -18,7 +16,7 @@ from .. import errors
 from ..utils import dict2xml, get_similar_names_ratio
 from ..._logger import logger
 from ...._user import UserDir
-from ....utils import generate_temporary_filename, generate_temporary_directory
+from ....utils import generate_temporary_filename
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -134,13 +132,27 @@ class StandardNameTable:
     >>> table.check('derivative_of_x_velocity_wrt_to_x_coordinate')
     True
     """
-    __slots__ = ('table', '_meta', '_alias', '_name', '_version', 'transformations')
+    __slots__ = ('table', '_meta', '_alias', '_name', '_version',
+                 'devices', 'locations', 'transformations')
 
-    def __init__(self, name, version, table, alias=None, **meta):
+    def __init__(self,
+                 name: str,
+                 version: str,
+                 table: Dict,
+                 alias: Dict = None,
+                 devices: List[str] = None,
+                 locations: List[str] = None,
+                 **meta):
         if table is None:
             table = {}
         self.table = table
         self._name = name
+        if devices is None:
+            devices = []
+        self.devices = devices
+        if locations is None:
+            locations = []
+        self.locations = locations
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
@@ -150,7 +162,13 @@ class StandardNameTable:
                 v['units'] = v['canonical_units']
                 del v['canonical_units']
         self._meta = meta
-        self.transformations = (derivative_of_X_wrt_to_Y,)
+        self.transformations = (derivative_of_X_wrt_to_Y,
+                                magnitude_of,
+                                square_of,
+                                product_of_X_and_Y,
+                                ratio_of_X_and_Y,
+                                difference_of_X_across_device,
+                                difference_of_X_and_y_across_device)
         if alias is None:
             self._alias = {}
         else:
@@ -191,10 +209,10 @@ class StandardNameTable:
         similar_names = [k for k in [*self.table.keys(), *self.list_of_aliases] if
                          get_similar_names_ratio(standard_name, k) > 0.75]
         if similar_names:
-            raise errors.StandardNameError(f'{standard_name} not found in Standard Name table "{self.name}".'
+            raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".'
                                            ' Did you mean one of these: '
                                            f'{similar_names}?')
-        raise errors.StandardNameError(f'{standard_name} not found in Standard Name table "{self.name}".')
+        raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".')
 
     def __getattr__(self, item):
         if item in self.meta:
@@ -561,8 +579,7 @@ class StandardNameTable:
 
     @staticmethod
     def from_zenodo(doi: str,
-                    filename: str = None,
-                    destination_directory: Union[str, pathlib.Path] = None) -> "StandardNameTable":
+                    filename: str = None) -> "StandardNameTable":
         """Download standard name table from Zenodo based on URL
 
         Parameters
@@ -571,8 +588,6 @@ class StandardNameTable:
             DOI
         filename: str
             If multiple files exist in the Zenodo repository, you must specify the exact name
-        destination_directory: Union[str, pathlib.Path]
-            Folder directory where to save the file. Name of file is taken from the repository
 
         Returns
         -------
@@ -588,15 +603,15 @@ class StandardNameTable:
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
-        base_url = "https://zenodo.org/api"
-
         if doi.startswith('https://zenodo.org/record/'):
             doi = doi.split('/')[-1]
-        record_url = f"{base_url}/records/{doi}"
 
-        if destination_directory is None:
-            destination_directory = generate_temporary_directory()
-        destination_directory = pathlib.Path(destination_directory)
+        destination_filename = UserDir['standard_name_tables'] / f'{doi}.yaml'
+        if destination_filename.exists():
+            return StandardNameTable.from_yaml(destination_filename)
+
+        base_url = "https://zenodo.org/api"
+        record_url = f"{base_url}/records/{doi}"
 
         # Get the record metadata
         response = requests.get(record_url)
@@ -631,15 +646,13 @@ class StandardNameTable:
         if response.status_code != 200:
             raise ValueError(f"Unable to download the file. Status code: {response.status_code}")
 
-        destination_filename = destination_directory / file_data['key']
         with open(destination_filename, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
 
         snt = StandardNameTable.from_yaml(destination_filename)
         snt._meta.update(dict(zenodo_doi=doi))
-        # TODO: store locally in user data dir and load from there the next time since we have a DOI and
-        # th content will not change anymore
+
         return snt
 
     @staticmethod
@@ -776,7 +789,7 @@ class StandardNameTable:
 
     def to_dict(self):
         """Export a StandardNameTable to a dictionary"""
-        d = dict(name=self.name, **self.meta, table=self.table)
+        d = dict(name=self.name, **self.meta, devices=self.devices, table=self.table)
         d.update(dict(last_modified=str(d['last_modified'])))
         return d
 
@@ -790,10 +803,10 @@ class StandardNameTable:
         df = pd.DataFrame(self.table).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             display(HTML(df.sort_index().to_html(**kwargs)))
-        elif sort_by.lower() in ('units', 'unit', 'canoncial_units'):
+        elif sort_by.lower() in ('units', 'unit', 'canonical_units'):
             display(HTML(df.sort_values('canonical_units').to_html(**kwargs)))
         else:
-            raise ValueError(f'Invalid value for sortby: {sort_by}')
+            raise ValueError(f'Invalid value for sort by: {sort_by}')
 
     def get_pretty_table(self, sort_by: str = 'name', **kwargs) -> str:
         """string representation of the SNT in form of a table"""
@@ -804,7 +817,7 @@ class StandardNameTable:
         df = pd.DataFrame(self.table).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             sorted_df = df.sort_index()
-        elif sort_by.lower() in ('units', 'unit', 'canoncial_units'):
+        elif sort_by.lower() in ('units', 'unit', 'canonical_units'):
             sorted_df = df.sort_values('canonical_units')
         else:
             sorted_df = df
@@ -889,6 +902,67 @@ class Transformation:
         return self.func(standard_name, self.snt)
 
 
+def magnitude_of(standard_name, snt) -> StandardName:
+    match = re.match(r"^magnitude_of_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 1
+        sn = groups[0]
+        snt.check(sn)
+        new_description = f"Magnitude of {sn.name}"
+        return StandardName(standard_name, sn.units, new_description)
+    return False
+
+
+def square_of(standard_name, snt) -> StandardName:
+    match = re.match(r"^square_of_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 1
+        sn = groups[0]
+        snt.check(sn)
+        new_description = f"Square of {sn.name}"
+        new_units = (1 * sn.units * sn.units).units
+        return StandardName(standard_name, new_units, new_description)
+    return False
+
+
+def difference_of_X_across_device(standard_name, snt) -> StandardName:
+    """Difference of X across device"""
+    match = re.match(r"^difference_of_(.*)_across_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 2
+        if groups[1] not in snt.devices:
+            raise KeyError(f'Device {groups[1]} not found in registry of the standard name table. '
+                           f'Available devices are: {snt.devices}')
+        sn = groups[0]
+        snt.check(sn)
+        new_description = f"Difference of {sn} across the device {groups[1]}"
+        return StandardName(standard_name, snt[sn].units, new_description)
+    return False
+
+
+def difference_of_X_and_y_across_device(standard_name, snt) -> StandardName:
+    """Difference of X and Y across device"""
+    match = re.match(r"^difference_of_(.*)_and(.*)_across_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 3
+        if groups[2] not in snt.devices:
+            raise KeyError(f'Device {groups[0]} not found in registry of the standard name table. '
+                           f'Available devices are: {snt.devices}')
+        sn1 = snt.check(groups[0])
+        sn2 = snt.check(groups[1])
+        new_description = f"Difference of {sn1.name} adn {sn2.name} across the device {groups[1]}"
+        return StandardName(standard_name, sn1.units, new_description)
+    return False
+
+
 def derivative_of_X_wrt_to_Y(standard_name, snt) -> StandardName:
     """Check if a standard name is a derivative of X wrt to Y"""
     match = re.match(r"^derivative_of_(.*)_wrt_(.*)$",
@@ -904,6 +978,39 @@ def derivative_of_X_wrt_to_Y(standard_name, snt) -> StandardName:
             return StandardName(standard_name, new_units, new_description)
     return False
     # raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")
+
+
+def product_of_X_and_Y(standard_name, snt) -> StandardName:
+    """Check if a standard name is a derivative of X wrt to Y"""
+    match = re.match(r"^product_of_(.*)_and_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 2
+        if all([snt.check(n) for n in groups]):
+            sn1 = snt[groups[0]]
+            sn2 = snt[groups[1]]
+            new_units = (1 * sn1.units * sn2.units).units
+            new_description = f"Product of {sn1.name} and {sn2.name}"
+            return StandardName(standard_name, new_units, new_description)
+    return False
+    # raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")
+
+
+def ratio_of_X_and_Y(standard_name, snt) -> StandardName:
+    """Check if a standard name is a derivative of X wrt to Y"""
+    match = re.match(r"^ratio_of_(.*)_and_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 2
+        if all([snt.check(n) for n in groups]):
+            sn1 = snt[groups[0]]
+            sn2 = snt[groups[1]]
+            new_units = (1 * sn1.units / sn2.units).units
+            new_description = f"Ratio of {sn1.name} and {sn2.name}"
+            return StandardName(standard_name, new_units, new_description)
+    return False
 
 
 """Utils"""

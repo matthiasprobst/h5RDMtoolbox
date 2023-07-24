@@ -12,11 +12,14 @@ with HDF5 files. It is designed to be used in research and development projects.
 processing and sharing of data using the HDF5 file format pursuing the
 [FAIR](https://www.nature.com/articles/sdata201618) principles.
 
-All functionalities are wrapped around the [`h5py` package](https://www.h5py.org/). Flexible, user-defined conventions,
-which are standardized attributes and file layout specifications achieve the goals of sustainable data management.
+All functionalities are wrapped around the [`h5py` package](https://www.h5py.org/). By defining standardized attributes
+and a layout, the file content, especially the meta data can be controlled. By employing such "conventions", researchers
+can achieve improved consistency and structure in metadata, enabling easier **data discovery**, **interpretation**, and
+**exchange**, which ultimately results in broader **data reuse** within the scientific community
 
-By including other packages such as `xarray`, visualization of data becomes fast and easy. Also, a database-solution for
-HDF5 files is provided.
+By including other packages such as `xarray`, the meta information are carried with the data. This reduces the 
+risk of errors, facilities the work and enables higher quality visualization as meta information are added automatically 
+to the plot. Finally, a **database-solution** for HDF5 files is provided, too.
 
 ## Documentation
 
@@ -35,8 +38,8 @@ For **development**, clone the repository and install it in editable mode:
     git clone https://github.com/matthiasprobst/h5RDMtoolbox
     pip install -e h5RDMtoolbox
 
-There are optional dependencies, that can be installed to enable additional features. They are listed in 
-the next section.
+There are optional dependencies, that can be installed to enable additional features. They are listed in the next
+section.
 
 ### Requirements/Dependencies
 
@@ -60,10 +63,9 @@ the next section.
 Install optional dependencies by specifying them in square brackets after the package name, e.g.:
 
     pip install h5RDMtoolbox[mongodb]
-    
-    
 
 [mongodb]
+
 - pymongo>=4.2.0: Database solution for HDF5 files
 
 [io]
@@ -72,6 +74,7 @@ Install optional dependencies by specifying them in square brackets after the pa
 - opencv-python>=4.5.3.56: Reading of image files (other than pco)
 
 [snt]
+
 - pooch: Downloading of files from the internet
 - xmltodict: Reading of xml files
 - tabulate>=0.8.10: Pretty printing of tables

@@ -1,3 +1,4 @@
+"""ORCID module handling researcher IDs"""
 import appdirs
 import pathlib
 import re
@@ -5,7 +6,7 @@ import requests
 import warnings
 from IPython.display import display, HTML
 
-from typing import Union
+from typing import Union, List
 
 
 class KnownOrcids:
@@ -16,13 +17,15 @@ class KnownOrcids:
         self._orcids = None
 
     @property
-    def orcids(self):
+    def orcids(self) -> List[str]:
+        """return list of known orcids"""
         if self._orcids is None:
             self._orcids = self.load()
         return self._orcids
 
     @property
     def filename(self):
+        """return filename of where known orcids"""
         if self._filename is None:
             root_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
             self._filename = root_dir / 'known_and_validated_orcids.txt'
@@ -108,7 +111,7 @@ class ORCID(str):
                 warnings.warn('validating the ORCID offline by comparing with registered, known ORCIDs', UserWarning)
                 return known_orcids.exists(self)
             if raise_error:
-                raise Exception(e)
+                raise Exception(e) from e
             return False
         if response.status_code == 200:  # 200=OK
             known_orcids.add(self)

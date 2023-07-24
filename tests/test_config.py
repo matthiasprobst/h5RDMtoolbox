@@ -29,8 +29,9 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(f'{q}', '1 mm')
         h5tbx.set_config(ureg_format='Lx~')
         self.assertEqual(h5tbx.get_config('ureg_format'), 'Lx~')
-        self.assertEqual(f'{q}', '\\SI[]{\\begin{pmatrix}\\end{pmatrix}}{\\milli\\meter}')
+        self.assertEqual(f'{q}', '\\SI[]{\\begin{pmatrix}1\\end{pmatrix}}{\\milli\\meter}')
         h5tbx.set_config(ureg_format='C~')
+        self.assertEqual(f'{q}', '1 mm')
 
     def test_set_parameter(self):
         h5tbx.set_config(default_convention=None)

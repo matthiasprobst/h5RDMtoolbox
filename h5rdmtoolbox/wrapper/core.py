@@ -1194,7 +1194,7 @@ class Group(h5py.Group, ConventionAccesor):
              collapsed: bool = True,
              max_attr_length: Union[int, None] = None,
              chunks: bool = False,
-             maxshape: bool = False):
+             maxshape: bool = False) -> None:
         """Outputs xarray-inspired _html representation of the file content if a
         notebook environment is used
 
@@ -1218,7 +1218,7 @@ class Group(h5py.Group, ConventionAccesor):
 
     def sdump(self):
         """string representation of group"""
-        return self.hdfrepr.__str__(self)
+        return self.hdfrepr.str_repr(self)
 
     dumps = sdump
 

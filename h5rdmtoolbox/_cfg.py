@@ -14,21 +14,21 @@ def is_valid_logger_level(level: Union[str, int]):
     return level in (0, 10, 20, 30, 40, 50)
 
 
-CONFIG = dict(return_xarray=True,
-              advanced_shape_repr=True,
-              natural_naming=True,
-              hdf_compression='gzip',
-              hdf_compression_opts=5,
-              xarray_unit_repr_in_plots='/',
-              require_unit=True,  # datasets require units
-              ureg_format='C~',
-              default_convention='h5tbx',
-              init_logger_level='ERROR',
-              dtime_fmt='%Y%m%d%H%M%S%f',
-              expose_user_prop_to_attrs=True,
-              scale_attribute_name='scale',
-              offset_attribute_name='offset',
-              add_source_info_to_xr=True)
+CONFIG = {'return_xarray': True,
+          'advanced_shape_repr': True,
+          'natural_naming': True,
+          'hdf_compression': 'gzip',
+          'hdf_compression_opts': 5,
+          'xarray_unit_repr_in_plots': '/',
+          'require_unit': True,  # datasets require units
+          'ureg_format': 'C~',
+          'default_convention': 'h5tbx',
+          'init_logger_level': 'ERROR',
+          'dtime_fmt': '%Y%m%d%H%M%S%f',
+          'expose_user_prop_to_attrs': True,
+          'scale_attribute_name': 'scale',
+          'offset_attribute_name': 'offset',
+          'add_source_info_to_xr': True}
 
 _VALIDATORS = {
     'return_xarray': lambda x: isinstance(x, bool),
@@ -81,8 +81,7 @@ def get_config(key=None):
     """Return the configuration parameters."""
     if key is None:
         return CONFIG
-    else:
-        return CONFIG[key]
+    return CONFIG[key]
 
 
 def get_ureg() -> UnitRegistry:

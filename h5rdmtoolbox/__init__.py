@@ -78,7 +78,7 @@ def dump(src: Union[str, File, pathlib.Path]) -> None:
         with File(src.hdf_filename) as h5:
             return h5.dump()
     with File(src) as h5:
-        h5.dump()
+        return h5.dump()
 
 
 def dumps(src: Union[str, File, pathlib.Path]):
@@ -87,7 +87,7 @@ def dumps(src: Union[str, File, pathlib.Path]):
         with File(src.hdf_filename) as h5:
             return h5.dumps()
     with File(src) as h5:
-        h5.dumps()
+        return h5.dumps()
 
 
 def get_current_convention():

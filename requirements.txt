@@ -7,12 +7,11 @@ tqdm>=4.64.0
 IPython>=8.4.0
 pyyaml
 xarray>=2022.3.0
-pint>=0.19.2
+pint==0.21.1
 pint_xarray>=0.2.1
 regex>=2020.7.9
 pymongo>=4.2.0
 packaging
-omegaconf~=2.2.3
 pytest>=7.1.2
 pytest-cov
 psutil>=5.9.1

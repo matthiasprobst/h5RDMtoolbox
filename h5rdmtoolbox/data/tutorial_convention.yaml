@@ -85,17 +85,23 @@ standard_name:
     create_dataset:
       optional: False
   description:
-    'The standard name of a dataset. It must be defined in the standard name table 
+    The standard name of a dataset. It must be defined in the standard name table 
     or be a valid transformation of one of the defined names. The standard name table 
     must be provided with the HDF5 files as a root attribute. The standard attribute units 
-    must also set.'
+    must also set.
   dependencies:
     - standard_name_table
     - units
 
 standard_name_table:
   validator:
-    $standard_name_table
+    $standard_name_table:
+      devices:  # devices to be check when transformation "difference_of_X_across_<Device>" is called
+        - fan
+        - orifice
+      locations:  # characteristic positions to be checked when transformation "X_at_<Position>" is called or "difference_of_X_between_<Position1>_and_<Position2>"
+        - fan_inlet  # point or surface. could be an attribute of the group locations: dict:{'name': 'fan_inlet', type: 'face', point=(0, 0, 0.5), vector=(0, 0, 1), description=....}  # xy-face | point: {..., type: 'point', x: '0.0', y: '0.0', z: '0.0'}
+        - fan_outlet
   method:
     __init__:
       optional: True

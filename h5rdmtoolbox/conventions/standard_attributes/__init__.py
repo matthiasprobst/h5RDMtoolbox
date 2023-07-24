@@ -2,6 +2,7 @@
 import abc
 import json
 import numpy as np
+import pathlib
 import warnings
 from typing import Dict, List
 
@@ -27,6 +28,21 @@ def _pint_unit(u):
     return get_ureg().Unit(u)
 
 
+def _standard_name_table(snt):
+    if isinstance(snt, dict):
+        return StandardNameTable.from_yaml(snt)
+    elif isinstance(snt, str):
+        if snt.startswith('{'):
+            return StandardNameTable(**json.loads(snt))
+        if snt.startswith('https://zenodo.org/record/'):
+            return StandardNameTable.from_zenodo(doir=snt)
+        if snt.startswith('https://'):
+            return StandardNameTable.from_url(snt)
+        if pathlib.Path(snt).exists():
+            return StandardNameTable.from_yaml(snt)
+    raise TypeError(f'Unexpected type for the standard name table: {type(snt)}')
+
+
 def make_dict(ref):
     """If input is string repr of dict, return dict"""
     if isinstance(ref, np.ndarray):
@@ -44,33 +60,6 @@ def make_dict(ref):
     return _out
 
 
-known_types = {'int': int,
-               'float': float,
-               'str': str,
-               'bool': bool,
-               'list': list,
-               'tuple': tuple,
-               'dict': dict,
-               'pint.Quantity': _pint_quantity,
-               'pint.Unit': _pint_unit,
-               'sdict': make_dict}
-
-av_validators = {'$type': TypeValidator,
-                 '$in': InValidator,
-                 '$regex': RegexValidator,
-                 '$pintunit': PintUnitsValidator,
-                 '$pintquantity': PintQuantityValidator,
-                 '$orcid': ORCIDValidator,
-                 '$url': URLValidator,
-                 '$ref': ReferencesValidator,
-                 '$bibtex': BibTeXValidator,
-                 '$standard_name': StandardNameValidator,
-                 '$standard_name_table': StandardNameTableValidator,
-                 '$minlength': MinLengthValidator,
-                 '$maxlength': MaxLengthValidator,
-                 }
-
-
 def get_validator(**validator: Dict) -> List[StandardNameValidator]:
     """return the respective StandardAttributeValidator
 
@@ -84,12 +73,18 @@ def get_validator(**validator: Dict) -> List[StandardNameValidator]:
 
 
 class StandardAttribute(abc.ABC):
+    """StandardAttribute class for the standardized attributes"""
 
     def __init__(self, name, validator, method, description,
                  optional=False, default_value=None,
                  position=None,
                  return_type: str = None,
+                 requirements: List[str] = None,
+                 dependencies: List[str] = None,
                  **kwargs):
+        if isinstance(requirements, str):
+            requirements = [requirements]
+        self.requirements = requirements
         self.name = name  # the attrs key
         if isinstance(validator, str):
             validator = {validator: None}
@@ -101,6 +96,9 @@ class StandardAttribute(abc.ABC):
         self.optional = optional
         self.default_value = default_value
         self.position = position
+        if dependencies is None:
+            dependencies = []
+        self.dependencies = dependencies
         if return_type is None:
             return_type = None
         else:
@@ -108,7 +106,7 @@ class StandardAttribute(abc.ABC):
                 raise ValueError(f'Unknown return type: {return_type}')
         self.return_type = return_type
         for k in kwargs.keys():
-            warnings.warn(f'Ignoring parameter {k}', UserWarning)
+            warnings.warn(f'Ignoring parameter "{k}"', UserWarning)
 
     def __repr__(self):
         return f'<StdAttr("{self.name}"): "{self.description}">'
@@ -135,6 +133,7 @@ class StandardAttribute(abc.ABC):
             return WrapperAttributeManager._parse_return_value(parent._id, ret_val)
         return known_types[self.return_type](ret_val)
 
+
 # class RegexStandardAttribute(StandardAttribute):
 #
 #     def select_validator(self, validator):
@@ -146,3 +145,31 @@ class StandardAttribute(abc.ABC):
 #             raise TypeError(f'Unexpected type for the validator: {type(validator)}')
 #         assert validator is not None
 #         return validator
+
+
+known_types = {'int': int,
+               'float': float,
+               'str': str,
+               'bool': bool,
+               'list': list,
+               'tuple': tuple,
+               'dict': dict,
+               'pint.Quantity': _pint_quantity,
+               'pint.Unit': _pint_unit,
+               'sdict': make_dict,
+               'standard_name_table': _standard_name_table}
+
+av_validators = {'$type': TypeValidator,
+                 '$in': InValidator,
+                 '$regex': RegexValidator,
+                 '$pintunit': PintUnitsValidator,
+                 '$pintquantity': PintQuantityValidator,
+                 '$orcid': ORCIDValidator,
+                 '$url': URLValidator,
+                 '$ref': ReferencesValidator,
+                 '$bibtex': BibTeXValidator,
+                 '$standard_name': StandardNameValidator,
+                 '$standard_name_table': StandardNameTableValidator,
+                 '$minlength': MinLengthValidator,
+                 '$maxlength': MaxLengthValidator,
+                 }

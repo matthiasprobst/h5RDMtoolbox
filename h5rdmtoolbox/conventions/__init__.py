@@ -14,6 +14,7 @@ import pathlib
 import yaml
 from typing import Callable, Union
 
+from . import errors
 from ._logger import logger
 from .layout import Layout, validators
 from .layout.validators import Validator
@@ -62,6 +63,8 @@ class Convention:
                  offset_attribute_name: Union[bool, str] = None,  # 'offset',
                  scale_attribute_name: Union[bool, str] = None):  # 'scale'):
         from ..wrapper.core import File, Group, Dataset
+
+        self._registered_standard_attributes = []
         self.name = name
         self.use_scale_and_offset = (offset_attribute_name is True or scale_attribute_name is True)
 
@@ -181,6 +184,7 @@ class Convention:
 
     @staticmethod
     def from_yaml(yaml_filename, name=None) -> "Convention":
+        """Create a convention from a yaml file."""
         yaml_filename = pathlib.Path(yaml_filename)
         if name is None:
             name = yaml_filename.stem
@@ -194,6 +198,21 @@ class Convention:
         return c
 
     def add(self, std_attr: StandardAttribute):
+        """Add a standard attribute to the convention."""
+        _registered_names = [s.name for s in self._registered_standard_attributes]
+        if std_attr.name in _registered_names:
+            raise errors.ConventionError('A standard attribute with the name {std_attr.name} is already registered.')
+        if std_attr.requirements is not None:
+            if not all(r in _registered_names for r in std_attr.requirements):
+                # collect the missing ones:
+                _missing_requirements = []
+                for r in std_attr.requirements:
+                    if r not in _registered_names:
+                        _missing_requirements.append(r)
+                raise errors.ConventionError(f'Not all requirements for {std_attr.name} are registered. '
+                                             f'Please add them to the convention first: {_missing_requirements}')
+
+        self._registered_standard_attributes.append(std_attr)
         if not isinstance(std_attr.method, (list, tuple)):
             methods = [std_attr.method, ]
         else:

@@ -26,9 +26,9 @@ def get_standard_attribute_yaml_filename() -> pathlib.Path:
 
 def get_standard_name_table() -> StandardNameTable:
     """Return an example standard name table"""
-    if False:
-        url = 'https://raw.githubusercontent.com/matthiasprobst/h5RDMtoolbox/main/h5rdmtoolbox/data/Test-v1.yml'
-        return StandardNameTable.from_web(url)
+    # if False:
+    #     url = 'https://raw.githubusercontent.com/matthiasprobst/h5RDMtoolbox/main/h5rdmtoolbox/data/Test-v1.yml'
+    #     return StandardNameTable.from_web(url)
     return StandardNameTable.from_yaml(get_standard_name_table_yaml_file())
 
 

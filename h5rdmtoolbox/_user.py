@@ -34,10 +34,10 @@ class DirManger:
         return self._get_dir(item)
 
     def names(self):
-        return self.UserDir.keys()
+        return self.user_dirs.keys()
 
     def __contains__(self, item):
-        return item in self.UserDir.keys()
+        return item in self.user_dirs
 
     def _get_dir(self, name: str) -> pathlib.Path:
         """Get a path to a file or directory in the user directory.
@@ -114,4 +114,3 @@ def _get_pkg_resource_filename(fname):
 
 config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'
 config_filename = config_dir / 'h5rdmtoolbox.yaml'
-
