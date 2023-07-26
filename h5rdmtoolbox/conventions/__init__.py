@@ -3,8 +3,8 @@
 This sub-package provides conventions such as standard_names
 
 The concept of standard_names is adopted from the climate forecast community (see cfconventions.org)
-The standrd name definitions (name, description, units) are to be provided in XML files. Two xml files
-are provided by this sub-packages (fluid and piv). As the projec is under development, they are generated
+The standard name definitions (name, description, units) are to be provided in XML files. Two xml files
+are provided by this sub-packages (fluid and piv). As the project is under development, they are generated
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
 import forge
@@ -12,7 +12,7 @@ import h5py
 import inspect
 import pathlib
 import yaml
-from typing import Callable, Union
+from typing import Callable, Union, List
 
 from . import errors
 from ._logger import logger
@@ -21,7 +21,7 @@ from .layout.validators import Validator
 from .standard_attributes import StandardAttribute
 from .._repr import make_italic, make_bold
 
-__all__ = ['Layout', 'validators', 'Validator']
+__all__ = ['Layout', 'validators', 'Validator', 'Convention']
 
 
 def set_loglevel(level):
@@ -41,10 +41,12 @@ class Convention:
     ----------
     name : str
         Name of the convention
-    offset_attribute_name : Union[str, None], optional='offset'
-        Name to be used for the offset attribute. If None, the concept of offset is not used.
-    scale_attribute_name : Union[str, None], optional='scale'
-        Name to be used for the scale attribute. If None, the concept of scale is not used.
+    contact : str
+        ORCID of the researcher
+    institution : str, optional
+        Institution of the researcher (if different from that of contact)
+    use_scale_offset: bool=False
+        Whether to enable the scale-offset feature or not. Default is False
 
     .. note::
 
@@ -57,33 +59,22 @@ class Convention:
         This behaviour can be disabled by passing `None` to `offset_attribute_name` and/or
         `scale_attribute_name`.
     """
+    scale_attribute_name = 'scale'
+    offset_attribute_name = 'offset'
 
     def __init__(self,
-                 name,
-                 offset_attribute_name: Union[bool, str] = None,  # 'offset',
-                 scale_attribute_name: Union[bool, str] = None):  # 'scale'):
+                 name: str,
+                 contact: str,  # ORCID of researcher
+                 institution: str = None,  # only if different than that from contact
+                 use_scale_offset: bool = False):
         from ..wrapper.core import File, Group, Dataset
 
-        self._registered_standard_attributes = []
+        self.contact = contact
+        self.institution = institution
+
+        self._registered_standard_attributes = {}
         self.name = name
-        self.use_scale_and_offset = (offset_attribute_name is True or scale_attribute_name is True)
-
-        if self.use_scale_and_offset:
-
-            if scale_attribute_name:
-                if scale_attribute_name is True:
-                    self.scale_attribute_name = 'scale'
-                else:
-                    self.scale_attribute_name = scale_attribute_name
-
-            if offset_attribute_name:
-                if offset_attribute_name is True:
-                    self.offset_attribute_name = 'offset'
-                else:
-                    self.offset_attribute_name = offset_attribute_name
-        else:
-            self.scale_attribute_name = None
-            self.offset_attribute_name = None
+        self.use_scale_and_offset = use_scale_offset
 
         self.properties = {}
         self.methods = {File: {}, Group: {}, Dataset: {}}
@@ -135,6 +126,7 @@ class Convention:
     def __repr__(self):
         header = f'Convention("{self.name}")'
         out = f'{make_bold(header)}'
+        out += f'\ncontact: {self.contact}'
 
         # header = make_bold('\n> Properties')
         # out += f'{header}:'
@@ -166,9 +158,10 @@ class Convention:
                         prop_dict['required'][prop_name] = prop_opts
 
                 for prop_name, prop in prop_dict['required'].items():
-                    out += f'\n    * {make_bold(prop_name)}'
+                    out += f'\n    * {make_bold(prop_name)}: {self._registered_standard_attributes[prop_name].description}'
                 for prop_name, prop in prop_dict['optional'].items():
-                    out += f'\n    * {make_italic(prop_name)} (optional)'
+                    out += f'\n    * {make_italic(prop_name)} (optional={prop["default"]}): ' \
+                           f'{self._registered_standard_attributes[prop_name].description}'
         out += '\n'
         return out
 
@@ -183,25 +176,15 @@ class Convention:
                                    method=method)
 
     @staticmethod
-    def from_yaml(yaml_filename, name=None) -> "Convention":
+    def from_yaml(yaml_filename, register=True) -> "Convention":
         """Create a convention from a yaml file."""
-        yaml_filename = pathlib.Path(yaml_filename)
-        if name is None:
-            name = yaml_filename.stem
-        c = Convention(name=name)
-        with open(yaml_filename) as f:
-            yaml_dict = yaml.safe_load(f)
-        for k, v in yaml_dict.items():
-            if isinstance(v, dict):
-                stda = StandardAttribute(name=k, **v)
-                c.add(stda)
-        return c
+        return from_yaml(yaml_filename, register=register)
 
     def add(self, std_attr: StandardAttribute):
         """Add a standard attribute to the convention."""
-        _registered_names = [s.name for s in self._registered_standard_attributes]
+        _registered_names = list(self._registered_standard_attributes.keys())
         if std_attr.name in _registered_names:
-            raise errors.ConventionError('A standard attribute with the name {std_attr.name} is already registered.')
+            raise errors.ConventionError(f'A standard attribute with the name "{std_attr.name}" is already registered.')
         if std_attr.requirements is not None:
             if not all(r in _registered_names for r in std_attr.requirements):
                 # collect the missing ones:
@@ -209,10 +192,10 @@ class Convention:
                 for r in std_attr.requirements:
                     if r not in _registered_names:
                         _missing_requirements.append(r)
-                raise errors.ConventionError(f'Not all requirements for {std_attr.name} are registered. '
+                raise errors.ConventionError(f'Not all requirements for "{std_attr.name}" are registered. '
                                              f'Please add them to the convention first: {_missing_requirements}')
 
-        self._registered_standard_attributes.append(std_attr)
+        self._registered_standard_attributes[std_attr.name] = std_attr
         if not isinstance(std_attr.method, (list, tuple)):
             methods = [std_attr.method, ]
         else:
@@ -245,11 +228,17 @@ class Convention:
                         )
                     if method_name not in self.methods[cls]:
                         self.methods[cls][method_name] = {}
-                    self.methods[cls][method_name][std_attr.name] = {'cls': target_cls,
-                                                                     'optional': optional,
-                                                                     'default': std_attr.default_value,
-                                                                     'position': std_attr.position,
-                                                                     'alt': None}
+                    if isinstance(std_attr.method, str):
+                        alt = None
+                    else:
+                        alt = std_attr.method[method_name].get('alt', None)
+                    self.methods[cls][method_name][std_attr.name] = {
+                        'cls': target_cls,
+                        'optional': optional,
+                        'default': std_attr.default_value,
+                        'position': std_attr.position,
+                        'alt': alt
+                    }
 
     def _add(self,
              attr_cls: StandardAttribute,
@@ -504,3 +493,35 @@ current_convention: Union[None, Convention] = None
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
 __all__ = ['datetime_str', 'set_loglevel', 'StandardAttribute']
+
+
+def from_yaml(yaml_filename: Union[str, pathlib.Path],
+              register: bool = True) -> List[StandardAttribute]:
+    """Read convention from from a yaml file
+
+    Parameters
+    ----------
+    yaml_filename: Union[str, pathlib.Path]
+        Path to yaml file
+    register:
+        Whether to register the convention for direct use. Default is True
+
+    Returns
+    -------
+    cv: Convention
+        The convention object
+    """
+    yaml_filename = pathlib.Path(yaml_filename)
+    with open(yaml_filename, 'r') as f:
+        attrs = yaml.safe_load(f)
+    std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if isinstance(values, dict)]
+    meta = {name: value for name, value in attrs.items() if not isinstance(value, dict)}
+    if 'name' not in meta:
+        meta['name'] = yaml_filename.stem
+    meta = {name.strip('_'): value for name, value in meta.items()}
+    cv = Convention(**meta)
+    for s in std_attrs:
+        cv.add(s)
+    if register:
+        cv.register()
+    return cv

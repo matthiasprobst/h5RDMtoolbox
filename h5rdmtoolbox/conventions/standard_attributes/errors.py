@@ -4,7 +4,6 @@ class UnitsError(Exception):
 
 class StandardAttributeError(Exception):
     """Error during standard attribute handling"""
-    pass
 
 
 class StandardNameError(Exception):

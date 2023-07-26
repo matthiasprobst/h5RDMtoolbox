@@ -659,7 +659,7 @@ class Group(h5py.Group, ConventionAccesor):
                 for k, v in attrs.items():
                     ds.attrs[k] = v
             except Exception as e:
-                logger.error(f'Could not set attributes {attrs} for dataset {name}')
+                logger.error(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}"')
                 del self[name]
                 raise e
         if isinstance(data, np.ndarray):

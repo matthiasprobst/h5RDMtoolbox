@@ -1,3 +1,5 @@
+"""Validator module for use of ORCIDs"""
+
 from . import StandardAttributeValidator
 from ....orcid import ORCID
 
@@ -12,7 +14,7 @@ class ORCIDValidator(StandardAttributeValidator):
             orcid = [orcid, ]
             for o in orcid:
                 if not isinstance(o, str):
-                    TypeError(f'Expecting a string or list of strings representing an ORCID but got {type(o)}')
+                    raise TypeError(f'Expecting a string or list of strings representing an ORCID but got {type(o)}')
 
                 _orcid = ORCID(o)
                 if not _orcid.exists():

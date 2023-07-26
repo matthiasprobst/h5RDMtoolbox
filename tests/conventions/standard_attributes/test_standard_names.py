@@ -6,7 +6,7 @@ import warnings
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable, StandardName
-from h5rdmtoolbox.conventions.standard_attributes.errors import StandardNameError
+from h5rdmtoolbox.conventions.standard_attributes.errors import StandardNameError, StandardAttributeError
 from h5rdmtoolbox.conventions.standard_attributes.utils import check_url
 
 try:
@@ -169,6 +169,25 @@ class TestStandardAttributes(unittest.TestCase):
                                 contact='https://orcid.org/0000-0001-8729-0482')
         self.assertIsInstance(snt.table, dict)
 
+    def test_from_zenodo(self):
+        cv = h5tbx.conventions.from_yaml(
+            r'C:/Users/da4323/Documents/programming/GitHub/h5RDMtoolbox/docs/conventions/piv_specific.yaml',
+            register=True)
+        cv.register()
+        h5tbx.use(cv)
+        with h5tbx.File(piv_method='multi_grid',
+                        piv_medium='air',
+                        seeding_material='dehs',
+                        contact='https://orcid.org/0000-0001-8729-0482') as h5:
+            h5.dump()
+
+            print(h5.seeding_material)
+            print(h5.standard_attributes['piv_medium'].description)
+
+            with self.assertRaises(StandardAttributeError):
+                h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
+            h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
+
     def test_standard_name_convention(self):
         h5tbx.use(None)
         units_attr = h5tbx.conventions.StandardAttribute('units',
@@ -192,7 +211,8 @@ class TestStandardAttributes(unittest.TestCase):
                                                   return_type='standard_name_table'
                                                   )
 
-        cv = h5tbx.conventions.Convention('test_standard_name')
+        cv = h5tbx.conventions.Convention('test_standard_name',
+                                          contact=h5tbx.__author_orcid__)
         cv.add(units_attr)
         cv.add(standard_name)
         cv.add(snt)

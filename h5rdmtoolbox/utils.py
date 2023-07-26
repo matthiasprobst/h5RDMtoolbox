@@ -4,12 +4,23 @@ import h5py
 import json
 import pathlib
 import pint
+import requests
 from h5py import File
 from re import sub as re_sub
 from typing import Union
 
 from . import _user, get_config
 from ._version import __version__
+
+
+def has_internet_connection(timeout: int = 5) -> bool:
+    """Figure out whether there's an internet connection"""
+    try:
+        requests.get('https://git.scc.kit.edu', timeout=timeout)
+        return True
+    except (requests.ConnectionError,
+            requests.Timeout):
+        return False
 
 
 def has_datasets(target: Union[h5py.Group, pathlib.Path]) -> bool:

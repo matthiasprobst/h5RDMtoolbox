@@ -17,7 +17,7 @@ from .validators.strings import RegexValidator, MinLengthValidator, MaxLengthVal
 from ... import get_ureg
 from ...wrapper.h5attr import WrapperAttributeManager
 
-__all__ = ['StandardName', 'StandardNameTable']
+__all__ = ['StandardName', 'StandardNameTable', 'StandardAttribute']
 
 
 def _pint_quantity(q):
@@ -31,16 +31,16 @@ def _pint_unit(u):
 def _standard_name_table(snt):
     if isinstance(snt, dict):
         return StandardNameTable.from_yaml(snt)
-    elif isinstance(snt, str):
-        if snt.startswith('{'):
-            return StandardNameTable(**json.loads(snt))
-        if snt.startswith('https://zenodo.org/record/'):
-            return StandardNameTable.from_zenodo(doir=snt)
-        if snt.startswith('https://'):
-            return StandardNameTable.from_url(snt)
-        if pathlib.Path(snt).exists():
-            return StandardNameTable.from_yaml(snt)
-    raise TypeError(f'Unexpected type for the standard name table: {type(snt)}')
+    if not isinstance(snt, str):
+        raise TypeError(f'Unexpected type for the standard name table: {type(snt)}')
+    if snt.startswith('{'):
+        return StandardNameTable(**json.loads(snt))
+    if snt.startswith('https://zenodo.org/record/'):
+        return StandardNameTable.from_zenodo(doi=snt)
+    if snt.startswith('https://'):
+        return StandardNameTable.from_url(snt)
+    if pathlib.Path(snt).exists():
+        return StandardNameTable.from_yaml(snt)
 
 
 def make_dict(ref):
@@ -75,7 +75,11 @@ def get_validator(**validator: Dict) -> List[StandardNameValidator]:
 class StandardAttribute(abc.ABC):
     """StandardAttribute class for the standardized attributes"""
 
-    def __init__(self, name, validator, method, description,
+    def __init__(self,
+                 name,
+                 validator,
+                 method,
+                 description,
                  optional=False, default_value=None,
                  position=None,
                  return_type: str = None,
@@ -93,6 +97,8 @@ class StandardAttribute(abc.ABC):
         assert isinstance(self.validator[0], StandardAttributeValidator)
         self.method = method
         self.description = description
+        if not isinstance(optional, bool):
+            raise TypeError(f'The parameter "optional" must be of type "bool" but is {type(optional)}')
         self.optional = optional
         self.default_value = default_value
         self.position = position
@@ -105,7 +111,7 @@ class StandardAttribute(abc.ABC):
             if return_type not in known_types:
                 raise ValueError(f'Unknown return type: {return_type}')
         self.return_type = return_type
-        for k in kwargs.keys():
+        for k in kwargs:
             warnings.warn(f'Ignoring parameter "{k}"', UserWarning)
 
     def __repr__(self):
@@ -117,10 +123,7 @@ class StandardAttribute(abc.ABC):
             for validator in self.validator:
                 validated_value = validator(value, parent)
         except Exception as e:
-            raise errors.StandardAttributeError(f'The attribute "{self.name}" is standardized. '
-                                                f'It seems, that the input "{value}" is not valid. '
-                                                f'Here is the description of the standard attribute, '
-                                                f'which may help to find the issue: "{self.description}" '
+            raise errors.StandardAttributeError(f'Setting "{value}" for standard attribute "{self.name}" failed. '
                                                 f'Original error: {e}') from e
         super(type(parent.attrs), parent.attrs).__setitem__(self.name, validated_value)
 

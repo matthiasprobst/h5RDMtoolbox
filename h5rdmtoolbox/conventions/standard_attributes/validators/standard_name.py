@@ -16,9 +16,11 @@ from .. import errors
 from ..utils import dict2xml, get_similar_names_ratio
 from ..._logger import logger
 from ...._user import UserDir
-from ....utils import generate_temporary_filename
+from ....utils import generate_temporary_filename, has_internet_connection
 
 __this_dir__ = pathlib.Path(__file__).parent
+
+TIMEOUT = 5
 
 VERSION_PATTERN = r'^v\d+(\.\d+)?(a|b|rc|dev)?$'
 README_HEADER = """---
@@ -184,12 +186,12 @@ class StandardNameTable:
 
     def __getitem__(self, standard_name: str) -> StandardName:
         """Return table entry"""
+        logger.debug(f'Checking "{standard_name}"')
         if standard_name in self.table:
             entry = self.table[standard_name]
             if 'canonical_units' in entry:
                 units = entry['canonical_units']
-                import warnings
-                warnings.warn(f'canonical_units is deprecated. Use units instead.',
+                warnings.warn('canonical_units is deprecated. Use units instead.',
                               DeprecationWarning)
             else:
                 units = entry['units']
@@ -197,10 +199,14 @@ class StandardNameTable:
                                 units=units,
                                 description=entry['description'],
                                 alias=entry.get('alias', None))
+
+        logger.debug(f'No exact match of standard name "{standard_name}" in table')
+
         for transformation in self.transformations:
             sn = transformation(standard_name, self)
             if sn:
                 return sn
+        logger.debug(f'No transformation applied successfully on "{standard_name}"')
 
         if standard_name in self.list_of_aliases:
             return self[self.aliases[standard_name]]
@@ -279,6 +285,7 @@ class StandardNameTable:
         for transformation in self.transformations:
             if transformation(standard_name, self):
                 return True
+            logger.debug(f'No transformation applied successfully on "{standard_name}"')
         return False
 
     def check(self, standard_name: str, units: Union[pint.Unit, str] = None) -> bool:
@@ -298,8 +305,6 @@ class StandardNameTable:
         If raise_error is False, log a warning if a dataset has an invalid standard_name.
         """
 
-        valid_group = True
-
         def _check_ds(name, node):
             if isinstance(node, h5py.Dataset):
                 if 'standard_name' in node.attrs:
@@ -307,13 +312,11 @@ class StandardNameTable:
 
                     valid = self.check(node.attrs['standard_name'], units=units)
                     if not valid:
-                        valid_group = False
                         if raise_error:
                             raise errors.StandardNameError(f'Dataset "{name}" has invalid standard_name '
                                                            f'"{node.attrs["standard_name"]}"')
-                        else:
-                            logger.error(f'Dataset "{name}" has invalid standard_name '
-                                         f'"{node.attrs["standard_name"]}"')
+                        logger.error(f'Dataset "{name}" has invalid standard_name '
+                                     f'"{node.attrs["standard_name"]}"')
                     # units = node.attrs['units']
                     # if units is None:
                     #     logger.warning(f'Dataset %s has not attribute %s! Assuming it is dimensionless', name,
@@ -332,7 +335,7 @@ class StandardNameTable:
         else:
             _check_ds(None, h5grp)
 
-        return valid_group
+        return True
 
     def check_hdf_file(self, filename,
                        recursive: bool = True,
@@ -366,7 +369,7 @@ class StandardNameTable:
             raise ValueError('Invalid arguments. Either a StandardName object or name, units and description '
                              'must be provided')
         else:
-            _data = dict(name=None, units=None, description=None)
+            _data = {'name': None, 'units': None, 'description': None}
             for k, v in zip(_data.keys(), args):
                 _data[k] = v
             _data.update(kwargs)
@@ -608,13 +611,17 @@ class StandardNameTable:
 
         destination_filename = UserDir['standard_name_tables'] / f'{doi}.yaml'
         if destination_filename.exists():
+            logger.debug(f'Loading standard name table from file: {destination_filename}')
             return StandardNameTable.from_yaml(destination_filename)
+
+        if not has_internet_connection():
+            raise RuntimeError('The standard name table cannot be downloaded. Please check your internet connection.')
 
         base_url = "https://zenodo.org/api"
         record_url = f"{base_url}/records/{doi}"
 
         # Get the record metadata
-        response = requests.get(record_url)
+        response = requests.get(record_url, timeout=TIMEOUT)
         if response.status_code != 200:
             raise ValueError(f"Unable to retrieve record metadata. Status code: {response.status_code}")
 
@@ -642,7 +649,7 @@ class StandardNameTable:
         download_link = file_data['links']['self']
 
         # Download the file
-        response = requests.get(download_link, stream=True)
+        response = requests.get(download_link, stream=True, timeout=TIMEOUT)
         if response.status_code != 200:
             raise ValueError(f"Unable to download the file. Status code: {response.status_code}")
 
@@ -858,7 +865,7 @@ class StandardNameValidator(StandardAttributeValidator):
             raise KeyError('No units defined for this variable!')
 
         if not snt.check(standard_name, units):
-            raise ValueError(f'Standard name {standard_name} with units {units} is invalid')
+            raise ValueError(f'Standard name {standard_name} with units {units} is invalid.')
         return standard_name
 
 
@@ -879,12 +886,10 @@ def parse_snt(standard_name_table: Union[str, dict, StandardNameTable]) -> Stand
         # could be web address or local file
         if standard_name_table.startswith('https://zenodo.org/record/'):
             return StandardNameTable.from_zenodo(standard_name_table)
-        else:
-            fname = pathlib.Path(standard_name_table)
-            if fname.exists() and fname.suffix in ('.yaml', '.yml'):
-                return StandardNameTable.from_yaml(fname)
-            else:
-                raise FileNotFoundError(f'File {fname} not found or not a yaml file')
+        fname = pathlib.Path(standard_name_table)
+        if fname.exists() and fname.suffix in ('.yaml', '.yml'):
+            return StandardNameTable.from_yaml(fname)
+        raise FileNotFoundError(f'File {fname} not found or not a yaml file')
     raise TypeError(f'Invalid type for standard_name_table: {type(standard_name_table)}')
 
 
@@ -929,21 +934,22 @@ def square_of(standard_name, snt) -> StandardName:
     return False
 
 
-def difference_of_X_across_device(standard_name, snt) -> StandardName:
+def difference_of_X_across_device(standard_name, snt) -> Union[StandardName, bool]:
     """Difference of X across device"""
     match = re.match(r"^difference_of_(.*)_across_(.*)$",
                      standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 2
-        if groups[1] not in snt.devices:
-            raise KeyError(f'Device {groups[1]} not found in registry of the standard name table. '
-                           f'Available devices are: {snt.devices}')
-        sn = groups[0]
-        snt.check(sn)
-        new_description = f"Difference of {sn} across the device {groups[1]}"
-        return StandardName(standard_name, snt[sn].units, new_description)
-    return False
+
+    if not match:
+        return False
+    groups = match.groups()
+    assert len(groups) == 2
+    if groups[1] not in snt.devices:
+        raise KeyError(f'Device {groups[1]} not found in registry of the standard name table. '
+                       f'Available devices are: {snt.devices}.')
+    sn = groups[0]
+    snt.check(sn)
+    new_description = f"Difference of {sn} across the device {groups[1]}"
+    return StandardName(standard_name, snt[sn].units, new_description)
 
 
 def difference_of_X_and_y_across_device(standard_name, snt) -> StandardName:

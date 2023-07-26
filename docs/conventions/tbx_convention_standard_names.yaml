@@ -1,6 +1,5 @@
-__institution__: Karlsruhe Institute of Technology
-__contact__: https://orcid.org/0000-0001-8729-0482
-__name__: tutorial_convention
+institution: Karlsruhe Institute of Technology
+contact: https://orcid.org/0000-0001-8729-0482
 
 title:
   type: str
@@ -34,11 +33,11 @@ references:
     $url
   method:
     __init__:
-      optional: True
+      optional: False
     create_group:
       optional: True
     create_dataset:
-      optional: True
+      optional: True   
   description:
     Web resources servering as references for the data
 
@@ -49,13 +48,14 @@ comment:
       ^[A-Z].*[a-zA-Z.]$
   method:
     __init__:
-      optional: True
+      optional: False
     create_group:
       optional: True
     create_dataset:
       optional: True
   description:
     A comment to further describe the data.
+    
 
 units:
   type: str
@@ -79,44 +79,13 @@ contact:
     $orcid
   description: contact or responsible person described by an ORCID-ID
 
-standard_name:
-  validator:
-    $standard_name
-  method:
-    create_dataset:
-      optional: False
-  description:
-    The standard name of a dataset. It must be defined in the standard name table
-    or be a valid transformation of one of the defined names. The standard name table
-    must be provided with the HDF5 files as a root attribute. The standard attribute units
-    must also set.
-  dependencies:
-    - standard_name_table
-    - units
-
-standard_name_table:
-  validator:
-    $standard_name_table
-  method:
-    __init__:
-      optional: True
-  default_value:
-    https://zenodo.org/record/8158764
-  dependencies:
-    - standard_name
-    - units
-  description:
-    The standard name table is a web resource providing the standard names, their units and descriptions.
-    To be used with the standard attributes 'standard_name' and 'units'.
 
 long_name:
   validator:
     $regex:
       ^[a-zA-Z].*(?<!\s)$
-    $minlength:
-      6
   description:
     An comprehensive description of the dataset
   method:
-    create_dataset:
-      optional: True
+    - create_dataset
+    - create_group

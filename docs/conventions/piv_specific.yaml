@@ -1,0 +1,154 @@
+__name__: planar-piv-convention
+__institution__: https://orcid.org/members/001G000001e5aUTIAY
+__contact__: https://orcid.org/0000-0001-8729-0482
+__use_scale_offset__: True
+
+title:
+  type: str
+  validator:
+    $regex:
+      ^[A-Z].*(?<!\s)$
+  method:
+    __init__  # --> for File object
+  default_value:
+    None
+  position:
+    None
+  description:
+    The attribute 'title' describes the content of the file. It must start with a capital letter and must not end with a space.
+
+contact:
+  validator:
+    $orcid
+  description:
+    Contact or responsible person represented by an ORCID-ID.
+  method:
+    create_dataset:
+      optional: True
+    create_group:
+      optional: True
+    __init__:
+      optional: False
+
+piv_method:
+  validator:
+    $in:
+      - single_pass
+      - multi_pass
+      - multi_grid
+  description: List of expected PIV algorithms.
+  method:
+    __init__:
+      optional: False
+
+piv_medium:
+  validator:
+    $in:
+      - air
+      - water
+  description:
+    The medium of the flow.
+  method:
+    __init__:
+      optional: False
+
+seeding_material:
+  validator:
+    $in:
+      - dehs  # 0.5-1.5 um
+      - di_ethyl_hexyl_sebacate 
+      - helium_filled_soap_bubbles   # 200-3000 um
+      - glcerine_water_mixture   # 0.5-2.0 um
+      - smoke   # < 1
+      - di_otyl_phathalate   # 1-10 um
+      - glass_micro_balloons   # 30-100 um
+      - glass_micro_spheres   # 0.2-3 um
+      - tio2   # 0.1-5 um
+      - al2o3  # 0.2-5 um
+      - polystyrene  # 0.5-10 um
+  description:
+    The material of the PIV tracing particles.
+  method:
+    __init__:
+      optional: False
+
+standard_name:
+  validator:
+    $standard_name
+  method:
+    create_dataset:
+      optional: False
+      alt: long_name
+  requirements:
+    - units
+  description:
+    Standard names
+
+standard_name_table:
+  validator:
+    $in:
+      - https://zenodo.org/record/8158764
+  method:
+    __init__:
+      optional: True
+  default_value:
+    https://zenodo.org/record/8158764
+  requirements:
+    - standard_name
+    - units
+  return_type: standard_name_table
+  description: The standard name table of the convention.
+
+long_name:
+  validator:
+    $regex:
+      ^[a-zA-Z].*(?<!\s)$
+  description:
+    An comprehensive description of the dataset
+  method:
+    create_dataset:
+      optional: False
+      alt: standard_name
+    create_group:
+      optional: True
+
+comment:
+  type: str
+  validator:
+    $regex:
+      ^[A-Z].*[a-zA-Z.]$
+  method:
+    __init__:
+      optional: True
+    create_group:
+      optional: True
+    create_dataset:
+      optional: True
+  description:
+    A comment to further describe the data.
+
+references:
+  type:
+    - str
+    - List[str]
+  validator:
+    $url
+  method:
+    __init__:
+      optional: True
+    create_group:
+      optional: True
+    create_dataset:
+      optional: True   
+  description:
+    Web resources servering as references for the data
+
+institution:
+  validator:
+    $regex:
+      $orcid
+  method:
+    __init__:
+      optional: True
+  description:
+    Name of institution mainly involved in the data

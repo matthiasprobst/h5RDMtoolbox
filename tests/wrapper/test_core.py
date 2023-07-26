@@ -347,7 +347,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(ds.chunks, (1, 20, 10))
 
         imgreader._index = 0
-        h5tbx.use('tbx')
+        h5tbx.use('h5tbx')
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0,
                                               attrs=dict(units='', long_name='test'))

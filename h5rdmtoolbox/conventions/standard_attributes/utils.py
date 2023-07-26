@@ -128,14 +128,14 @@ def xml_to_html_table_view(xml_filename: Union[str, pathlib.Path],
         raise FileExistsError(f'File {html_filename} already exists')
 
     # read the xml file:
-    with open(xml_filename, 'r') as f:
+    with open(xml_filename, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
     for i, line in enumerate(lines):
         if '{filename}' in line:
             lines[i] = line.format(filename=str(xml_filename))
 
-    with open(html_filename, 'w') as f:
+    with open(html_filename, 'w', encoding='utf-8') as f:
         f.writelines(lines)
 
     return html_filename

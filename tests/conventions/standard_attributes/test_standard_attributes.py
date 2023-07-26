@@ -1,37 +1,47 @@
 """Testing the standard attributes"""
 import inspect
-import requests
 import unittest
-import warnings
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions.standard_attributes import StandardName
+from h5rdmtoolbox import __author_orcid__
 from h5rdmtoolbox.conventions import Convention
-from h5rdmtoolbox.conventions.standard_attributes.errors import StandardAttributeError, StandardNameError
+from h5rdmtoolbox.conventions.standard_attributes.errors import StandardAttributeError
 from h5rdmtoolbox.conventions.standard_attributes.validators.standard_name import update_datasets
 
 
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
-        try:
-            requests.get('https://git.scc.kit.edu', timeout=5)
-            self.connected = True
-        except (requests.ConnectionError,
-                requests.Timeout) as e:
-            self.connected = False
-            warnings.warn('No internet connection', UserWarning)
+        self.connected = h5tbx.utils.has_internet_connection()
 
     def test_standard_attribute_regex(self):
         h5tbx.use(None)
         long_name = h5tbx.conventions.StandardAttribute('long_name',
-                                                        validator={'$regex': '^[a-zA-Z].*(?<!\s)$'},
-                                                        method={'create_dataset': {'optional': True}},
+                                                        validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                                        method={
+                                                            'create_dataset': {
+                                                                'optional': False,
+                                                                'alt': 'comment'
+                                                            }
+                                                        },
                                                         description='A long name of a dataset',
                                                         )
+        comment_name = h5tbx.conventions.StandardAttribute('comment',
+                                                           validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
+                                                                      '$minlength': 10},
+                                                           method={
+                                                               'create_dataset': {
+                                                                   'optional': False,
+                                                                   'alt': 'long_name'
+                                                               }
+                                                           },
+                                                           description='A comment',
+                                                           )
 
-        long_name_convention = h5tbx.conventions.Convention('long_name_convention')
+        long_name_convention = h5tbx.conventions.Convention('long_name_convention',
+                                                            contact=__author_orcid__)
         long_name_convention.add(long_name)
+        long_name_convention.add(comment_name)
         long_name_convention.register()
         h5tbx.use(long_name_convention.name)
 
@@ -91,7 +101,8 @@ class TestStandardAttributes(unittest.TestCase):
                                                                          'format or an URL',
                                                              return_type='sdict'
                                                              )
-        cv = Convention('test_references')
+        cv = Convention('test_references',
+                        contact=__author_orcid__)
         cv.add(bibtex_attr)
         cv.add(url_attr)
         cv.add(reference_attr)
@@ -123,9 +134,6 @@ class TestStandardAttributes(unittest.TestCase):
                 self.assertEqual(h5.references[0], bibtex_entry)
                 self.assertEqual(h5.references[1], url)
 
-
-
-
     def test_comment(self):
 
         comment = h5tbx.conventions.StandardAttribute(
@@ -140,7 +148,7 @@ class TestStandardAttributes(unittest.TestCase):
         )
         self.assertEqual(len(comment.validator), 3)
 
-        cv = Convention('test_comment')
+        cv = Convention('test_comment', contact=__author_orcid__)
         cv.add(comment)
         cv.register()
 
@@ -166,7 +174,8 @@ class TestStandardAttributes(unittest.TestCase):
                                                          validator='$pintunit',
                                                          method={'create_dataset': {'optional': False}},
                                                          description='A unit of a dataset')
-        cv = h5tbx.conventions.Convention('ucv')
+        cv = h5tbx.conventions.Convention('ucv',
+                                          contact=__author_orcid__)
         cv.add(units_attr)
         cv.register()
         h5tbx.use('ucv')
@@ -200,7 +209,8 @@ class TestStandardAttributes(unittest.TestCase):
                         'analytical or synthetically'
         )
 
-        cv = Convention('source_convention')
+        cv = Convention('source_convention',
+                        contact=__author_orcid__)
         cv.add(source_attr)
         cv.register()
 
@@ -210,7 +220,6 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(h5.data_base_source, 'experimental')
             with self.assertRaises(StandardAttributeError):
                 h5.data_base_source = 'invlaid'
-
 
     def test_standard_name_assignment(self):
         translation_dict = {'u': 'x_velocity'}

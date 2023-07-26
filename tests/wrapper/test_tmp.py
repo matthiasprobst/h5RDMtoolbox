@@ -13,12 +13,12 @@ class TestTmp(unittest.TestCase):
 
     def setUp(self):
         yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.Convention.from_yaml(yaml_filename, 'tutorial-convention')
+        cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
         cv.register()
-        h5tbx.use('tutorial-convention')
+        h5tbx.use('tutorial_convention')
 
     def test_tmp(self):
-        h5tbx.use('tutorial-convention')
+        h5tbx.use('tutorial_convention')
         with h5tbx.File(standard_name_table=get_standard_name_table(),
                         contact='https://orcid.org/0000-0001-8729-0482') as h5:
             h5.create_dataset(name='test', shape=(1, 2), units='m/s', standard_name='x_velocity')
