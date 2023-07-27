@@ -4,6 +4,7 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __author_orcid__
+from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import Convention
 from h5rdmtoolbox.conventions.standard_attributes.errors import StandardAttributeError
 from h5rdmtoolbox.conventions.standard_attributes.validators.standard_name import update_datasets
@@ -233,3 +234,15 @@ class TestStandardAttributes(unittest.TestCase):
             update_datasets(h5, translation_dict, rec=True)
             self.assertTrue('standard_name' in h5['grp/u'].attrs)
             self.assertEqual(h5['grp/u'].attrs['standard_name'], 'x_velocity')
+
+    def test_standard_name_table(self):
+        convention_filename = tutorial.get_standard_attribute_yaml_filename()
+
+        local_cv = h5tbx.conventions.Convention.from_yaml(convention_filename)
+        local_cv.register()
+        local_cv
+        h5tbx.use(local_cv)
+
+        with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', mode='r+') as h5:
+            h5.standard_name_table = 'https://zenodo.org/record/8158764'
+            print(h5.standard_name_table)

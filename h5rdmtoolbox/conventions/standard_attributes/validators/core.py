@@ -36,7 +36,28 @@ class TypeValidator(StandardAttributeValidator):
 
 
 class InValidator(StandardAttributeValidator):
-    """Validates if the attribute value is in the list of expected values"""
+    """Validates if the attribute value is in the list of expected values.
+    During definition, the list of expected values is passed as a list of strings,
+    see the example usage below, where the validator is used in the standard
+    attribute "data_source"
+
+    Parameters
+    ----------
+    expectation: List[str]
+        List of expected values
+
+    Example
+    -------
+    >>> import h5rdmtoolbox as h5tbx
+    >>> data_source = h5tbx.conventions.StandardAttribute(
+    >>>         name='units',
+    >>>         validator={'$in': ['numerical', 'experimental', 'anayltical']},
+    >>>         method={'__init__':
+    >>>                 {'optional': True}
+    >>>                },
+    >>>         description='The source of data'
+    >>>     )
+    """
 
     def __init__(self, expectation: List[str]):
         if not isinstance(expectation, (tuple, list)):

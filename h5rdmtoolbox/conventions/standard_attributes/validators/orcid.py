@@ -1,5 +1,7 @@
 """Validator module for use of ORCIDs"""
 
+from typing import Union, List
+
 from . import StandardAttributeValidator
 from ....orcid import ORCID
 
@@ -9,7 +11,7 @@ class ORCIDValidator(StandardAttributeValidator):
     connection exists, the url is checked, otherwise and if previously
     validated, the ORCID is locally validated."""
 
-    def __call__(self, orcid, *args, **kwargs):
+    def __call__(self, orcid, *args, **kwargs) -> Union[str, List[str]]:
         if not isinstance(orcid, (list, tuple)):
             orcid = [orcid, ]
             for o in orcid:
@@ -19,4 +21,6 @@ class ORCIDValidator(StandardAttributeValidator):
                 _orcid = ORCID(o)
                 if not _orcid.exists():
                     raise ValueError(f'Not an ORCID ID: {o}')
-        return True
+        if len(orcid) == 1:
+            return orcid[0]
+        return orcid

@@ -61,14 +61,20 @@ def lower(string: str) -> Lower:
     return Lower(string)
 
 
-def process_attributes(cls, meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
+def process_attributes(cls,
+                       meth_name: str,
+                       attrs: Dict,
+                       kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
     # go through list of registered standard attributes, and check whether they are in kwargs:
     if meth_name not in conventions.current_convention.methods[cls]:
         return attrs, {}, kwargs
+
     kwargs, skwargs = _pop_standard_attributes(
         kwargs, cache_entry=conventions.current_convention.methods[cls][meth_name]
     )
+    # only consider non-None standard attributes
+    skwargs = {k: v for k, v in skwargs.items() if v is not None}
 
     # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
     for skey, vas in skwargs.items():
@@ -85,8 +91,8 @@ def process_attributes(cls, meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[
     # run through skwargs. if key is required but not available this should raise an error!
     for k, v in conventions.current_convention.methods[cls][meth_name].items():
         if v['optional']:
-            if skwargs[k] is None:
-                attrs.pop(k)
+            if k in skwargs and skwargs[k] is None:
+                attrs.pop(k, None)
         else:
             if k not in skwargs or skwargs[k] is None:  # missing or None
                 if v['alt'] is None:
@@ -97,7 +103,7 @@ def process_attributes(cls, meth_name: str, attrs: Dict, kwargs: Dict) -> Tuple[
                     raise conventions.standard_attributes.errors.StandardAttributeError(
                         f'The standard attribute "{k}" is required but not provided. The alternative '
                         f'attribute "{v["alt"]}" is also not provided.')
-                attrs.pop(k)
+                attrs.pop(k, None)
 
     return attrs, skwargs, kwargs
 
@@ -118,6 +124,18 @@ class Group(h5py.Group, ConventionAccesor):
     """Inherited Group of the package h5py
     """
     hdfrepr = H5Repr()
+
+    @property
+    def groupnames(self):
+        if self._groupnames is None:
+            self._groupnames = [k for k, v in self.items() if isinstance(v, h5py.Group)]
+        return self._groupnames
+
+    @property
+    def datasetnames(self):
+        if self._datasetnames is None:
+            self._datasetnames = [k for k, v in self.items() if isinstance(v, h5py.Dataset)]
+        return self._datasetnames
 
     def __delattr__(self, item):
         if self.__class__ in conventions.current_convention.properties:
@@ -249,6 +267,8 @@ class Group(h5py.Group, ConventionAccesor):
         else:
             raise ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
         self.hdf_filename = Path(self.file.filename)
+        self._groupnames = None
+        self._datasetnames = None
 
     def __setitem__(self,
                     name: str,
@@ -294,6 +314,13 @@ class Group(h5py.Group, ConventionAccesor):
         return ret
 
     def __getattr__(self, item):
+        try:
+            return super().__getattribute__(item)
+        except (RuntimeError, AttributeError) as e:
+            if not get_config('natural_naming'):
+                # raise an error if natural naming is NOT enabled
+                raise Exception(e)
+
         if self.__class__ in conventions.current_convention.properties:
             if item in conventions.current_convention.properties[self.__class__]:
                 return conventions.current_convention.properties[self.__class__][item].get(self)
@@ -308,19 +335,16 @@ class Group(h5py.Group, ConventionAccesor):
         if item in self.__dict__:
             return super().__getattribute__(item)
         try:
-            if item in self:
-                if isinstance(self[item], h5py.Group):
-                    return self._h5grp(self[item].id)
+            if item in self.groupnames:
+                return self._h5grp(self[item].id)
+            elif item in self.datasetnames:
                 return self._h5ds(self[item].id)
-            else:
-                # try replacing underscores with spaces:
-                _item = item.replace('_', ' ')
-                if _item in self:
-                    if isinstance(self[_item], h5py.Group):
-                        return self.__class__(self[_item].id)
-                    return self._h5ds(self[_item].id)
-                else:
-                    return super().__getattribute__(item)
+            _item = item.replace('_', ' ')
+            if _item in self.groupnames:
+                return self._h5grp(self[_item].id)
+            elif _item in self.datasetnames:
+                return self._h5ds(self[_item].id)
+            return super().__getattribute__(item)
         except AttributeError:
             raise AttributeError(item)
 
@@ -377,9 +401,9 @@ class Group(h5py.Group, ConventionAccesor):
         overwrite : bool, default=None
             If the group does not already exist, the new group is written and this parameter has no effect.
             If the group exists and ...
-            ... overwrite is None: h5py behaviour is enabled meaning that if a group exists h5py will raise
-            ... overwrite is True: group is deleted and rewritten according to method parameters
-            ... overwrite is False: group creation has no effect. Existing group is returned.
+            ... overwrite is None, then h5py behaviour is enabled meaning that if a group exists h5py will raise
+            ... overwrite is True, then group is deleted and rewritten according to method parameters
+            ... overwrite is False, then group creation has no effect. Existing group is returned.
         attrs : dict, optional
             Attributes of the group, default is None which is an empty dict
         track_order : bool or None
@@ -487,9 +511,9 @@ class Group(h5py.Group, ConventionAccesor):
         overwrite : bool, default=None
             If the dataset does not already exist, the new dataset is written and this parameter has no effect.
             If the dataset exists and ...
-                * ... overwrite is None: h5py behaviour is enabled meaning that if a dataset exists h5py will raise an error
-                * ... overwrite is True: dataset is deleted and rewritten according to method parameters
-                * ... overwrite is False: dataset creation has no effect. Existing dataset is returned.
+            - ... overwrite is None, then h5py behaviour is enabled meaning that if a dataset exists h5py will raise an error
+            - ... overwrite is True, then dataset is deleted and rewritten according to method parameters
+            - ... overwrite is False, then dataset creation has no effect. Existing dataset is returned.
         chunks : bool or according to h5py.File.create_dataset documentation
             Needs to be True if later resizing is planned
         make_scale: bool, default=False
@@ -1183,11 +1207,15 @@ class Group(h5py.Group, ConventionAccesor):
     def get_group_names(self, recursive=True):
         """Return all group names in this group and if recursive==True also
         all below"""
+        if recursive is False:
+            return self.groupnames
         return self._get_obj_names(h5py.Group, recursive)
 
     def get_dataset_names(self, recursive=True):
         """Return all dataset names in this group and if recursive==True also
         all below"""
+        if recursive is False:
+            return self.datasetnames
         return self._get_obj_names(h5py.Dataset, recursive)
 
     def dump(self,
@@ -1726,6 +1754,8 @@ class File(h5py.File, Group, ConventionAccesor):
     An additional argument is added to the h5py.File with "layout" to specify the layout of the file.
     The layout specifies the structure of the file and the expected content of each group and dataset.
     A check can be performed to verify that the file is in accordance with the layout.
+
+
     .. seealso:: :meth:`check`
 
 
@@ -1741,7 +1771,7 @@ class File(h5py.File, Group, ConventionAccesor):
         The mode in which to open the file. The default is 'r'.
     layout : Path | str | LayoutFile, optional
         The layout of the file.
-    **kwargs
+    **kwargs : Dict
         Additional keyword arguments are passed to h5py.File.
 
 
@@ -1822,17 +1852,21 @@ class File(h5py.File, Group, ConventionAccesor):
 
     def __init__(self,
                  name: Path = None,
-                 mode='r',
+                 mode: str = None,
                  *,
                  layout: Union[Path, str, LayoutFile, None] = None,
                  attrs: Dict = None,
                  **kwargs):
-
         if name is None:
             _tmp_init = True
             logger.debug("An empty File class is initialized")
             name = utils.touch_tmp_hdf5_file()
-            mode = 'r+'
+            if mode is None:
+                mode = 'r+'
+            else:
+                mode = mode
+        if mode is None:
+            mode = 'r'
         elif isinstance(name, ObjectID):
             pass
         elif not isinstance(name, (str, Path)):
@@ -1849,7 +1883,18 @@ class File(h5py.File, Group, ConventionAccesor):
 
         if attrs is None:
             attrs = {}
-        attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs)
+
+        if mode == 'r':
+            if "__init__" in conventions.current_convention.methods[self.__class__]:
+                kwargs, skwargs = _pop_standard_attributes(
+                    kwargs, cache_entry=conventions.current_convention.methods[self.__class__]["__init__"]
+                )
+                warnings.warn(f'mode is read only. Provided standard attributes are ignored: {skwargs.keys()}')
+            # ignore standard attributes during read-only
+            skwargs = {}
+        else:
+            attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs)
+
         _tmp_init = False
 
         if _tmp_init:

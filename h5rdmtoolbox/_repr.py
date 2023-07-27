@@ -1,6 +1,7 @@
 import h5py
 import os
 import pkg_resources
+import re
 import typing
 from IPython.display import HTML, display
 from abc import abstractmethod
@@ -96,15 +97,16 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
         True if string actually contains a link
 
     """
-    import re
     for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
-        pattern = re.compile(p)
-        match = re.search(pattern, string)
-        if match:
-            url = match.group(0)
-            if is_valid_orcid_pattern(url):
-                return get_html_repr(url), True
-            return string.replace(url, f'<a href="{url}">{url}</a>'), True
+        urls = re.findall(p, string)
+        if urls:
+            for url in urls:
+                if is_valid_orcid_pattern(url):
+                    orcid_url_repr = get_html_repr(url)
+                    string = string.replace(url, orcid_url_repr)
+                else:
+                    string = string.replace(url, f'<a href="{url}">{url}</a>')
+            return string, True
 
     return string, False
 

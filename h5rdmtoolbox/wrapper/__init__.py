@@ -13,4 +13,5 @@ def set_loglevel(level):
     for handler in _logger.logger.handlers:
         handler.setLevel(level)
 
+
 __all__ = ['set_loglevel']

@@ -15,7 +15,13 @@ from .validators.references import ReferencesValidator, BibTeXValidator, URLVali
 from .validators.standard_name import StandardNameValidator, StandardNameTableValidator, StandardName, StandardNameTable
 from .validators.strings import RegexValidator, MinLengthValidator, MaxLengthValidator
 from ... import get_ureg
+from ...wrapper.core import File, Group
 from ...wrapper.h5attr import WrapperAttributeManager
+from ...utils import DocStringParser
+
+__doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
+                         Group: {'create_group': DocStringParser(Group.create_group),
+                                 'create_dataset': DocStringParser(Group.create_dataset)}}
 
 __all__ = ['StandardName', 'StandardNameTable', 'StandardAttribute']
 

@@ -1,9 +1,9 @@
 import h5py
+import json
 import pandas as pd
 import pathlib
 import pint
 import re
-import requests
 import warnings
 import yaml
 from IPython.display import display, HTML
@@ -16,7 +16,7 @@ from .. import errors
 from ..utils import dict2xml, get_similar_names_ratio
 from ..._logger import logger
 from ...._user import UserDir
-from ....utils import generate_temporary_filename, has_internet_connection
+from ....utils import generate_temporary_filename, download_zenodo_file
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -582,14 +582,14 @@ class StandardNameTable:
 
     @staticmethod
     def from_zenodo(doi: str,
-                    filename: str = None) -> "StandardNameTable":
+                    name: str = None) -> "StandardNameTable":
         """Download standard name table from Zenodo based on URL
 
         Parameters
         ----------
         doi: str
             DOI
-        filename: str
+        name: str
             If multiple files exist in the Zenodo repository, you must specify the exact name
 
         Returns
@@ -606,58 +606,8 @@ class StandardNameTable:
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
-        if doi.startswith('https://zenodo.org/record/'):
-            doi = doi.split('/')[-1]
-
-        destination_filename = UserDir['standard_name_tables'] / f'{doi}.yaml'
-        if destination_filename.exists():
-            logger.debug(f'Loading standard name table from file: {destination_filename}')
-            return StandardNameTable.from_yaml(destination_filename)
-
-        if not has_internet_connection():
-            raise RuntimeError('The standard name table cannot be downloaded. Please check your internet connection.')
-
-        base_url = "https://zenodo.org/api"
-        record_url = f"{base_url}/records/{doi}"
-
-        # Get the record metadata
-        response = requests.get(record_url, timeout=TIMEOUT)
-        if response.status_code != 200:
-            raise ValueError(f"Unable to retrieve record metadata. Status code: {response.status_code}")
-
-        record_data = response.json()
-
-        # Find the file link
-        if 'files' not in record_data:
-            raise ValueError("Error: No files found in the record.")
-
-        files = record_data['files']
-        if len(files) > 1 and filename is None:
-            raise ValueError('More than one file found. Specify the filename. '
-                             f'Must be one of these: {[f["key"] for f in files]}')
-        if filename is not None:
-            for f in files:
-                if f['key'] == filename:
-                    file_data = f
-                    break
-        else:
-            file_data = files[0]  # Assuming you want the first file
-
-        if 'links' not in file_data or 'self' not in file_data['links']:
-            raise ValueError("Unable to find download link for the file.")
-
-        download_link = file_data['links']['self']
-
-        # Download the file
-        response = requests.get(download_link, stream=True, timeout=TIMEOUT)
-        if response.status_code != 200:
-            raise ValueError(f"Unable to download the file. Status code: {response.status_code}")
-
-        with open(destination_filename, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-        snt = StandardNameTable.from_yaml(destination_filename)
+        yaml_filename = download_zenodo_file(doi=doi, name=name)
+        snt = StandardNameTable.from_yaml(yaml_filename)
         snt._meta.update(dict(zenodo_doi=doi))
 
         return snt
@@ -802,7 +752,6 @@ class StandardNameTable:
 
     def to_sdict(self):
         """Export a StandardNameTable to a dictionary as string"""
-        import json
         return json.dumps(self.to_dict())
 
     def dump(self, sort_by: str = 'name', **kwargs):
@@ -873,7 +822,11 @@ class StandardNameTableValidator(StandardAttributeValidator):
     """Validates a standard name table"""
 
     def __call__(self, standard_name_table, *args, **kwargs):
-        return parse_snt(standard_name_table).to_sdict()
+        # return parse_snt(standard_name_table).to_sdict()
+        snt = parse_snt(standard_name_table)
+        if 'zenodo_doi' in snt.meta:
+            return snt.meta['zenodo_doi']
+        return snt.to_sdict()
 
 
 def parse_snt(standard_name_table: Union[str, dict, StandardNameTable]) -> StandardNameTable:

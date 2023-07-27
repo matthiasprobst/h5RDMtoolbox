@@ -105,6 +105,8 @@ standard_name_table:
   dependencies:
     - standard_name
     - units
+  return_type:
+    standard_name_table
   description:
     The standard name table is a web resource providing the standard names, their units and descriptions.
     To be used with the standard attributes 'standard_name' and 'units'.

@@ -18,8 +18,9 @@ from . import errors
 from ._logger import logger
 from .layout import Layout, validators
 from .layout.validators import Validator
-from .standard_attributes import StandardAttribute
+from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .._repr import make_italic, make_bold
+from ..utils import download_zenodo_file
 
 __all__ = ['Layout', 'validators', 'Validator', 'Convention']
 
@@ -160,7 +161,7 @@ class Convention:
                 for prop_name, prop in prop_dict['required'].items():
                     out += f'\n    * {make_bold(prop_name)}: {self._registered_standard_attributes[prop_name].description}'
                 for prop_name, prop in prop_dict['optional'].items():
-                    out += f'\n    * {make_italic(prop_name)} (optional={prop["default"]}): ' \
+                    out += f'\n    * {make_italic(prop_name)} (default={prop["default"]}): ' \
                            f'{self._registered_standard_attributes[prop_name].description}'
         out += '\n'
         return out
@@ -345,6 +346,14 @@ class Convention:
         for cls, methods in self.methods.items():
             for name, props in methods.items():
                 for prop_name, prop_opts in props.items():
+
+                    __doc_string_parser__[cls][name].add_additional_parameters(
+                        {prop_name: {'default': prop_opts['default'],
+                                     'type': 'str',
+                                     'description': self._registered_standard_attributes[
+                                         prop_name].description}}
+                    )
+
                     if isinstance(prop_opts['position'], dict):
                         setattr(cls, name, forge.insert(forge.arg(f'{prop_name}',
                                                                   default=prop_opts['default']),
@@ -360,37 +369,17 @@ class Convention:
                                                                   default=prop_opts['default'],
                                                                   ),
                                                         after=params[-1].name)(cls.__dict__[name]))
-        # for name, values in self.methods['create_dataset'].items():
-        #     from ..wrapper.core import Group
-        #     Group.create_dataset = forge.insert(forge.arg(f'{name}', default=values['default']),
-        #                                         **values['position'])(Group.create_dataset)
-        # for name, values in self.methods['create_group'].items():
-        #     from ..wrapper.core import Group
-        #     Group.create_group = forge.insert(forge.arg(f'{name}', default=values['default']),
-        #                                       **values['position'])(Group.create_group)
-        # for name, values in self.methods['__init__'].items():
-        #     from ..wrapper.core import File
-        #     File.__init__ = forge.insert(forge.arg(f'{name}', default=values['default']),
-        #                                  **values['position'])(File.__init__)
+        for cls, methods in self.methods.items():
+            for name, props in methods.items():
+                __doc_string_parser__[cls][name].update_docstring()
 
     def _delete_signature(self):
         for cls, methods in self.methods.items():
             for name, props in methods.items():
                 for prop_name, prop_attrs in props.items():
                     setattr(cls, name, forge.delete(f'{prop_name}')(cls.__dict__[name]))
-                # cls.__dict__[name] = forge.delete(f'{name}')(cls.__dict__[name])
-        # for name, values in self.methods['create_string_dataset'].items():
-        #     from ..wrapper.core import Group
-        #     Group.create_string_dataset = forge.delete(f'{name}')(Group.create_string_dataset)
-        # for name, values in self.methods['create_dataset'].items():
-        #     from ..wrapper.core import Group
-        #     Group.create_dataset = forge.delete(f'{name}')(Group.create_dataset)
-        # for name, values in self.methods['create_group'].items():
-        #     from ..wrapper.core import Group
-        #     Group.create_group = forge.delete(f'{name}')(Group.create_group)
-        # for name, values in self.methods['__init__'].items():
-        #     from ..wrapper.core import File
-        #     File.__init__ = forge.delete(f'{name}')(File.__init__)
+                    __doc_string_parser__[cls][name].restore_docstring()
+                    # orig_docs[cls][name]['callable'].__doc__ = orig_docs[cls][name]['doc']
 
     def register(self):
         registered_conventions[self.name] = self
@@ -525,3 +514,8 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path],
     if register:
         cv.register()
     return cv
+
+
+def from_zenodo(doi, name=None):
+    """Download a YAML file from a zenodo repository"""
+    return from_yaml(download_zenodo_file(doi, name))

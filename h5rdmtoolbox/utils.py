@@ -4,13 +4,31 @@ import h5py
 import json
 import pathlib
 import pint
+import re
 import requests
 from h5py import File
 from re import sub as re_sub
-from typing import Union
+from typing import Dict, Union, Callable
 
 from . import _user, get_config
 from ._version import __version__
+
+
+def dummy(a, b=5):
+    """Dummy method
+
+    Parameters
+    ----------
+    a: int
+        Some number
+    b: float, optional=5
+        Another number
+
+    Returns
+    -------
+    henry: str
+        A string
+    """
 
 
 def has_internet_connection(timeout: int = 5) -> bool:
@@ -186,24 +204,268 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
                                f'Original error: {e2}') from e2
 
 
-def process_obj_filter_input(objfilter) -> Union[h5py.Dataset, h5py.Group]:
+OBJ_FLT_DICT = {'group': h5py.Group,
+                'groups': h5py.Group,
+                'dataset': h5py.Dataset,
+                'datasets': h5py.Dataset,
+                '$group': h5py.Group,
+                '$groups': h5py.Group,
+                '$dataset': h5py.Dataset,
+                '$datasets': h5py.Dataset}
+
+
+def process_obj_filter_input(objfilter: str) -> Union[h5py.Dataset, h5py.Group]:
+    """Return the object based on the input string
+
+    Raises
+    ------
+    ValueError
+        If the input string is not in the list of valid strings (see OBJ_FLT_DICT)
+    TypeError
+        If the input is not a string or a h5py object (h5py.Dataset or h5py.Group)
+
+    Returns
+    -------
+    h5py.Dataset or h5py.Group
+        The object to filter for
+    """
     if isinstance(objfilter, str):
-        if objfilter.lower() == 'group':
-            return h5py.Group
-        if objfilter.lower() == 'groups':
-            return h5py.Group
-        if objfilter.lower() == 'dataset':
-            return h5py.Dataset
-        if objfilter.lower() == 'datasets':
-            return h5py.Dataset
-        if objfilter.lower() == '$group':
-            return h5py.Group
-        if objfilter.lower() == '$groups':
-            return h5py.Group
-        if objfilter.lower() == '$dataset':
-            return h5py.Dataset
-        if objfilter.lower() == '$datasets':
-            return h5py.Dataset
-        raise NameError(
-            f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+        try:
+            return OBJ_FLT_DICT[objfilter.lower()]
+        except KeyError:
+            raise ValueError(f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+    if not isinstance(objfilter, (h5py.Dataset, h5py.Group)):
+        raise TypeError(f'Expected values for argument objfilter are "dataset" or "group", not {type(objfilter)}')
     return objfilter
+
+
+class DocStringParser:
+    """Parses a docstring into abstract, parameters, returns and notes, allowing for additional parameters to be added
+    and then reassembled into a new docstring"""
+
+    def __init__(self, cls_or_method: Callable, additional_parameters: Dict = None):
+        self._callable = cls_or_method
+        self.original_docstring = cls_or_method.__doc__
+        self.abstract, self.parameters, self.returns, self.notes = DocStringParser.parse_docstring(
+            self.original_docstring
+        )
+        self.additional_parameters = {}
+        if additional_parameters is None:
+            additional_parameters = {}
+        self.add_additional_parameters(additional_parameters)
+
+    def get_original_doc_string(self):
+        """Returns the original docstring"""
+        return self.original_docstring
+
+    def get_docstring(self) -> str:
+        """Returns the docstring"""
+        """Reassembles the docstring from the parsed components"""
+        new_doc = ''
+        if self.abstract:
+            for a in self.abstract:
+                new_doc += f'{a}\n'
+        new_doc += f'\n\nParameters\n----------'
+        for k in self.parameters:
+            # if k['name'].startswith('**'):
+            new_doc += f"\n{k['name']}: {k['type']} = {k['default']}\n\t{k['description']}"
+
+        new_doc += f'\n\nStandard Attributes\n-------------------'
+        for ak, av in self.additional_parameters.items():
+            new_doc += f"\n{ak}: {av['type']} = {av['default']}\n\t{av['description']}"
+        new_doc += '\n'
+
+        if self.returns:
+            new_doc += f'\n\nReturns\n-------'
+
+            for k in self.returns:
+                new_doc += f"\n{k['name']}: {k['type']}\n\t{k['description']}"
+
+        if self.notes:
+            new_doc += f'\n\nNotes'
+            for n in self.notes:
+                new_doc += f'\n{n}'
+
+        return new_doc
+
+    def restore_docstring(self):
+        """Restores the original docstring"""
+        self._callable.__doc__ = self.original_docstring
+
+    def update_docstring(self) -> None:
+        """Updates the docstring of the class, method or function with the new docstring"""
+        import h5rdmtoolbox as h5tbx
+        if self._callable.__name__ == 'create_dataset':
+            h5tbx.Group.__dict__[self._callable.__name__].__doc__ = self.get_docstring()
+        elif self._callable.__name__ == 'create_group':
+            h5tbx.Group.__dict__[self._callable.__name__].__doc__ = self.get_docstring()
+        else:
+            h5tbx.File.__dict__['__init__'].__doc__ = self.get_docstring()
+
+    def add_additional_parameters(self, additional_parameters: Dict):
+        """Adds additional parameters to the docstring
+
+        Parameters
+        ----------
+        additional_parameters: Dict
+            Dictionary of additional parameters to add to the docstring
+            Must contain
+        """
+        _required = ('description', 'default', 'type')
+        for k, v in additional_parameters.items():
+            for _r in _required:
+                if _r not in v:
+                    raise ValueError(f'Item "{_r}" missing for additional parameter "{k}"')
+        for k, v in additional_parameters.items():
+            self.additional_parameters.update({k: v})
+
+    @staticmethod
+    def parse_parameter(param_str):
+        # Regular expression pattern to extract parameter name, type, and default value
+        pattern = r'^\s*([\w\d_*]+)\s*:\s*(.+?)(?:\s*,\s*optional(?:\s*=\s*(.*))?)?$'
+
+        # Matching the regex pattern with the parameter string
+        match = re.match(pattern, param_str)
+
+        if match:
+            param_name = match.group(1).strip()
+            param_type = match.group(2).strip()
+            param_default = match.group(3).strip() if match.group(3) else None
+            return param_name, param_type, param_default
+
+    @staticmethod
+    def parse_docstring(docstring):
+        """Parses a docstring into abstract, parameters, returns and notes"""
+        if not docstring:
+            return {}
+        lines = docstring.strip().split('\n')
+
+        current_section = None
+        abstract = None
+        kw = []
+        rkw = []
+        notes_lines = []
+        nlines = len(lines)
+        for iline, line in enumerate(lines):
+            line = line.strip()
+
+            if line in ['Parameters', 'Returns', 'Notes']:
+                current_section = line.lower()
+                if abstract is None:
+                    abstract = [l.strip() for l in lines[:iline]]
+            elif current_section == 'parameters':
+                if line:
+                    # if current_param is None:
+                    param_info = line.split(':')
+                    if len(param_info) >= 2:
+                        param_name, param_type, param_default = DocStringParser.parse_parameter(line)
+
+                        desc_lines = []
+                        for i in range(iline + 1, nlines):
+                            if lines[i] == '' or DocStringParser.parse_parameter(lines[i]) is not None:
+                                break
+                            desc_lines.append(lines[i].strip())
+                        desc = '\n\t'.join(desc_lines)
+                        current_param = {
+                            'name': param_name,
+                            'type': param_type,
+                            'default': param_default,
+                            'description': desc.strip(),
+                        }
+                        kw.append(current_param)
+            elif current_section == 'notes':
+                notes_lines.append(line.strip())
+            elif current_section == 'returns':
+                param_info = line.split(':')
+                if len(param_info) >= 2:
+                    param_name, param_type, param_default = DocStringParser.parse_parameter(line)
+                    desc_lines = []
+                    for i in range(iline + 1, nlines):
+                        if lines[i] == '' or DocStringParser.parse_parameter(lines[i]) is not None:
+                            break
+                        desc_lines.append(lines[i].strip())
+                    desc = '\n\t'.join(desc_lines)
+                    current_ret_param = {
+                        'name': param_name,
+                        'type': param_type,
+                        'default': param_default,
+                        'description': desc.strip(),
+                    }
+                    rkw.append(current_ret_param)
+
+        return abstract, kw, rkw, notes_lines
+
+
+def download_zenodo_file(doi: int, name: str = None,
+                         timeout: int = 5):
+    """Downloads a file from Zenodo
+
+    Parameters
+    ----------
+    doi: int
+        The DOI of the Zenodo record
+    name: str, optional=None
+        The name of the file to download.
+        If None, the first file in the record will be downloaded
+    timeout: int, optional=5
+        The timeout in seconds for the request
+
+    Returns
+    -------
+    filename: str
+        The path to the downloaded file
+    """
+    from . import UserDir
+    doi = str(doi)
+    if doi.startswith('https://zenodo.org/record/'):
+        doi = doi.split('/')[-1]
+
+    filename = UserDir['standard_name_tables'] / f'{doi}.yaml'
+
+    if filename.exists():
+        return filename
+
+    if not has_internet_connection():
+        raise RuntimeError('The standard name table cannot be downloaded. Please check your internet connection.')
+
+    base_url = "https://zenodo.org/api"
+    record_url = f"{base_url}/records/{doi}"
+
+    # Get the record metadata
+    response = requests.get(record_url, timeout=timeout)
+    if response.status_code != 200:
+        raise ValueError(f"Unable to retrieve record metadata. Status code: {response.status_code}")
+
+    record_data = response.json()
+
+    # Find the file link
+    if 'files' not in record_data:
+        raise ValueError("Error: No files found in the record.")
+
+    files = record_data['files']
+    if len(files) > 1 and name is None:
+        raise ValueError('More than one file found. Specify the name. '
+                         f'Must be one of these: {[f["key"] for f in files]}')
+    if name is not None:
+        for f in files:
+            if f['key'] == name:
+                file_data = f
+                break
+    else:
+        file_data = files[0]  # Assuming you want the first file
+
+    if 'links' not in file_data or 'self' not in file_data['links']:
+        raise ValueError("Unable to find download link for the file.")
+
+    download_link = file_data['links']['self']
+
+    # Download the file
+    response = requests.get(download_link, stream=True, timeout=timeout)
+    if response.status_code != 200:
+        raise ValueError(f"Unable to download the file. Status code: {response.status_code}")
+
+    with open(filename, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+    return filename
