@@ -11,8 +11,6 @@ title:
     __init__
   default_value:
     $EMPTY
-  position:
-    $EMPTY
   description:
     The attribute 'title' describes the content of the file. It must start with a capital letter and must not end with a space.
 
