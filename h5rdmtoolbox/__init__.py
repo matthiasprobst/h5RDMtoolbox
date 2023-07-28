@@ -1,19 +1,20 @@
 """h5rdtoolbox repository"""
+import atexit
 import logging
 import pathlib
-import shutil
-
-import atexit
 # noinspection PyUnresolvedReferences
 import pint_xarray
+import shutil
 import xarray as xr
 from typing import Union
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
+from . import orcid
+
+pint_xarray.unit_registry = get_ureg()
 from . import cache
 from . import conventions
 from . import plotting
-from . import tbx_convention
 from . import wrapper
 from ._logger import create_package_logger
 from ._user import UserDir
@@ -24,6 +25,7 @@ from .wrapper.core import lower, Lower, File, Group, Dataset
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
+__author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
 
 core_logger = create_package_logger('h5rdmtoolbox')
 
@@ -41,8 +43,15 @@ def set_loglevel(logger, level):
 
 set_loglevel(core_logger, get_config()['init_logger_level'])
 
-cv_h5py = conventions.Convention('h5py')
+cv_h5py = conventions.Convention('h5py',
+                                 contact=__author_orcid__,
+                                 use_scale_offset=False)
 cv_h5py.register()
+
+cv_h5tbx = conventions.Convention('h5tbx',
+                                 contact=__author_orcid__,
+                                 use_scale_offset=True)
+cv_h5tbx.register()
 
 use = conventions.use
 
@@ -69,7 +78,7 @@ def dump(src: Union[str, File, pathlib.Path]) -> None:
         with File(src.hdf_filename) as h5:
             return h5.dump()
     with File(src) as h5:
-        h5.dump()
+        return h5.dump()
 
 
 def dumps(src: Union[str, File, pathlib.Path]):
@@ -78,7 +87,7 @@ def dumps(src: Union[str, File, pathlib.Path]):
         with File(src.hdf_filename) as h5:
             return h5.dumps()
     with File(src) as h5:
-        h5.dumps()
+        return h5.dumps()
 
 
 def get_current_convention():
@@ -149,8 +158,8 @@ def clean_temp_data(full: bool = False):
 
 xr.set_options(display_expand_data=False)
 
-__all__ = ('__version__', '__author__', 'UserDir', 'use', 'core_logger',
+__all__ = ('__version__', '__author__', '__author_orcid__', 'UserDir', 'use', 'core_logger',
            'generate_temporary_filename', 'generate_temporary_directory',
            'File', 'Files', 'Group', 'Dataset', 'has_datasets', 'has_groups',
            'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower',
-           'set_config', 'get_config', 'get_ureg')
+           'set_config', 'get_config', 'get_ureg', 'orcid')

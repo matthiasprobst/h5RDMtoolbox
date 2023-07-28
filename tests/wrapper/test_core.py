@@ -154,11 +154,10 @@ class TestCore(unittest.TestCase):
             time = h5.create_dataset('time', data=np.linspace(0, 1, 30), make_scale=True)
             ds = h5.create_dataset('data', shape=(10, 20, 30), attach_scales=(x, y, time))
 
-            print(ds.sel(time=0.0))
-
     def test_modify_static_properties(self):
         with h5tbx.File() as h5:
-            ds_scale = h5.create_dataset('time', data=np.linspace(0, 1, 10),
+            ds_scale = h5.create_dataset('time',
+                                         data=np.linspace(0, 1, 10),
                                          make_scale=True)
             ds = h5.create_dataset('grp/data', shape=(10, 20, 30),
                                    data=np.random.rand(10, 20, 30),
@@ -348,23 +347,23 @@ class TestCore(unittest.TestCase):
             self.assertEqual(ds.chunks, (1, 20, 10))
 
         imgreader._index = 0
-        h5tbx.use('tbx')
+        h5tbx.use('h5tbx')
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0,
-                                              units='', long_name='test')
+                                              attrs=dict(units='', long_name='test'))
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
             # reset imgreader
             imgreader._index = 0
             ds = h5.create_dataset_from_image(imgreader, 'testimg2', axis=-1,
-                                              units='', long_name='test')
+                                              attrs=dict(units='', long_name='test'))
             self.assertEqual(ds.shape, (20, 10, 5))
             self.assertEqual(ds.chunks, (20, 10, 1))
 
         # write more tests for create_dataset_from_image:
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
-                                              'testimg', axis=0, units='', long_name='test')
+                                              'testimg', axis=0, attrs=dict(units='', long_name='test'))
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
 
@@ -464,5 +463,5 @@ class TestCore(unittest.TestCase):
             flag = h5.create_dataset('flag', data=[1, 0, 0], attach_scales='time')
             ds.attach_ancillary_dataset(flag)
             data = ds[:]
-            print(ds.ancillary_datasets)
+
         self.assertEqual(data[0:2].flag.where(1, 0).shape, (2,))

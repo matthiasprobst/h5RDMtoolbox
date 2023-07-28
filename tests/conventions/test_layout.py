@@ -3,6 +3,8 @@ import unittest
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions.layout import *
+from h5rdmtoolbox.conventions.layout.tbx import IsValidVersionString
+from h5rdmtoolbox.conventions.layout.tbx import is_valid_unit, IsValidUnit
 from h5rdmtoolbox.conventions.layout.validation import *
 from h5rdmtoolbox.conventions.layout.validators import *
 
@@ -11,6 +13,22 @@ class TestLayout(unittest.TestCase):
 
     def setUp(self) -> None:
         h5tbx.use(None)
+
+    def test_is_valid_unit(self):
+        self.assertTrue(is_valid_unit('m/s'))
+        self.assertTrue(is_valid_unit('1 m/s'))
+        self.assertTrue(is_valid_unit('kg m/s^-1'))
+        self.assertFalse(is_valid_unit('kg m/s-1'))
+        self.assertFalse(is_valid_unit('kgm/s-1'))
+        self.assertTrue(is_valid_unit('pixel'))
+
+        self.assertTrue(IsValidUnit()('m/s'))
+        self.assertTrue(IsValidUnit()('1 m/s'))
+        self.assertFalse(IsValidUnit()('hello/world'))
+
+    def test_validversion(self):
+        self.assertTrue(IsValidVersionString()('v0.1.0'))
+        self.assertFalse(IsValidVersionString()('a.b.c'))
 
     def test_notstring_dataset(self):
         lay = Layout()

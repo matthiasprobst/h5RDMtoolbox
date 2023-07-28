@@ -5,10 +5,11 @@ Conventions
 
 In order to interpret data it must come with comprehensible auxiliary data (metadata). The usage must be specified and
 shared with all users involved data creation or analysis. Thus, rules on how meta data is used needs to
-be specified. In the context of this repository, we distinguish "standard attributes" and
-"layouts". Together they form a "convention" which shall ensure, that data is created and stored in a consistent way
-and become automatically processable by other software, too.
+be specified.
 
+The toolbox introduces the classes "StandardAttribute" and "Layout" to standardize important HDF5 attributes and to define the tree-structure of the file for post-validation. Such specification is called "convention" if it is shared via a repository like Zenodo, which allows versioning and adding persistant identifiers, respectiely.
+
+Standard attributes and the layout are defined in yaml files and are therefore easy to share and read.
 
 .. admonition:: Conventions
     :class: tip

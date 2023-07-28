@@ -1,6 +1,7 @@
 import h5py
 import os
 import pkg_resources
+import re
 import typing
 from IPython.display import HTML, display
 from abc import abstractmethod
@@ -8,6 +9,7 @@ from numpy import ndarray
 from time import perf_counter_ns
 
 from . import get_config
+from .orcid import is_valid_orcid_pattern, get_html_repr
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
 try:
@@ -95,13 +97,16 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
         True if string actually contains a link
 
     """
-    import re
     for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
-        pattern = re.compile(p)
-        match = re.search(pattern, string)
-        if match:
-            url = match.group(0)
-            return string.replace(url, f'<a href="{url}">{url}</a>'), True
+        urls = re.findall(p, string)
+        if urls:
+            for url in urls:
+                if is_valid_orcid_pattern(url):
+                    orcid_url_repr = get_html_repr(url)
+                    string = string.replace(url, orcid_url_repr)
+                else:
+                    string = string.replace(url, f'<a href="{url}">{url}</a>')
+            return string, True
 
     return string, False
 
@@ -112,38 +117,39 @@ class _HDF5StructureRepr:
         self.base_intent = '  '
         self.max_attr_length = None
         self.collapsed = True
+        self._obj_cfg = {}
         if ignore_attrs is None:
             self.ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
         else:
             self.ignore_attrs = ignore_attrs
 
-    def __dataset__(self, name, h5dataset) -> str:
+    def __dataset__(self, name, h5obj) -> str:
         """overwrite the H5Repr parent method"""
-        if h5dataset.dtype.char == 'S':
+        if h5obj.dtype.char == 'S':
             # handel string datasets:
-            return self.__stringdataset__(name, h5dataset)
-        if h5dataset.ndim == 0:
-            return self.__0Ddataset__(name, h5dataset)
-        return self.__NDdataset__(name, h5dataset)
+            return self.__stringdataset__(name, h5obj)
+        if h5obj.ndim == 0:
+            return self.__0Ddataset__(name, h5obj)
+        return self.__NDdataset__(name, h5obj)
 
     @abstractmethod
-    def __stringdataset__(self, key, value):
+    def __stringdataset__(self, name, h5obj):
         """dataset representation"""
 
     @abstractmethod
-    def __0Ddataset__(self, key, value):
+    def __0Ddataset__(self, name, h5obj):
         """dataset representation"""
 
     @abstractmethod
-    def __NDdataset__(self, key, value):
+    def __NDdataset__(self, name, h5obj):
         """dataset representation"""
 
     @abstractmethod
-    def __group__(self, key, value):
+    def __group__(self, name, h5obj):
         """dataset representation"""
 
     @abstractmethod
-    def __attrs__(self, key, value):
+    def __attrs__(self, name, h5obj):
         """dataset representation"""
 
 
@@ -168,36 +174,36 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
                 #     if not attr_name.isupper() and attr_name not in self.ignore_attrs:
                 #         print(self.base_intent * (indent + 2) + self.__attr_str__(attr_name, attr_value))
 
-    def __dataset__(self, key, item) -> str:
-        if item.dtype.char == 'S':
+    def __dataset__(self, name: str, h5obj: h5py.Dataset) -> str:
+        if h5obj.dtype.char == 'S':
             # handel string datasets:
-            return self.__stringdataset__(key, item)
-        if item.ndim == 0:
-            return self.__0Ddataset__(key, item)
-        return self.__NDdataset__(key, item)
+            return self.__stringdataset__(name, h5obj)
+        if h5obj.ndim == 0:
+            return self.__0Ddataset__(name, h5obj)
+        return self.__NDdataset__(name, h5obj)
 
-    def __stringdataset__(self, name, h5dataset) -> str:
+    def __stringdataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         """string representation of a string dataset"""
-        return f"\033[1m{name}\033[0m: {h5dataset.values[()]}"
+        return f"\033[1m{name}\033[0m: {h5obj.values[()]}"
 
-    def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
+    def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         """string representation of a 0D dataset"""
-        value = h5dataset.values[()]
+        value = h5obj.values[()]
         if isinstance(value, float):
             value = f'{float(value):f} '
         elif isinstance(value, int):
             value = f'{int(value):i} '
-        return f"\033[1m{name}\033[0m {value}, dtype: {h5dataset.dtype}"
+        return f"\033[1m{name}\033[0m {value}, dtype: {h5obj.dtype}"
 
-    def __NDdataset__(self, name, h5dataset):
+    def __NDdataset__(self, name, h5obj: h5py.Dataset):
         """string representation of a ND dataset"""
-        return f"\033[1m{name}\033[0m: {h5dataset.shape}, dtype: {h5dataset.dtype}"
+        return f"\033[1m{name}\033[0m: {h5obj.shape}, dtype: {h5obj.dtype}"
 
-    def __group__(self, key, item) -> str:
-        return f"/\033[1m{key}\033[0m"
+    def __group__(self, name, item) -> str:
+        return f"/\033[1m{name}\033[0m"
 
-    def __attrs__(self, key, value) -> str:
-        return f'\033[3ma: {key}\033[0m: {value}'
+    def __attrs__(self, name, value) -> str:
+        return f'\033[3ma: {name}\033[0m: {value}'
 
 
 class HDF5StructureHTMLRepr(_HDF5StructureRepr):
@@ -215,8 +221,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             h5group = group['/']
 
         self.collapsed = collapsed
-        self.chunks = chunks
-        self.maxshape = maxshape
+
+        self._obj_cfg.update({'chunks': chunks,
+                              'maxshape': maxshape})
 
         _id = h5group.name + perf_counter_ns().__str__()
 
@@ -228,37 +235,37 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html += "\n</div>"
         return _html
 
-    def __stringdataset__(self, name, h5dataset) -> str:
-        _id1 = f'ds-1-{h5dataset.name}-{perf_counter_ns().__str__()}'
-        _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
+    def __stringdataset__(self, name, h5obj) -> str:
+        _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
+        _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname' 
-                for="{_id2}">{name}</label>: {h5dataset.values[()]}
+                for="{_id2}">{name}</label>: {h5obj.values[()]}
                 """
         return _html
 
-    def __0Ddataset__(self, name: str, h5dataset: h5py.Dataset) -> str:
-        _id1 = f'ds-1-{h5dataset.name}-{perf_counter_ns().__str__()}'
-        _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
+    def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
+        _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
+        _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname' for="{_id2}">{name}</label>
-                <span class="h5tb-dims">{h5dataset.values[()]} ({h5dataset.dtype})</span>"""
+                <span class="h5tb-dims">{h5obj.values[()]} ({h5obj.dtype})</span>"""
         return _html
 
-    def __NDdataset__(self, name, h5dataset):
-        ds_dirname = os.path.dirname(h5dataset.name)
-        _shape = h5dataset.shape
+    def __NDdataset__(self, name, h5obj: h5py.Dataset):
+        ds_dirname = os.path.dirname(h5obj.name)
+        _shape = h5obj.shape
         if get_config('advanced_shape_repr'):
             _shape_repr = '('
-            ndim = h5dataset.ndim
+            ndim = h5obj.ndim
             for i in range(ndim):
                 orig_dim_name = None
                 try:
-                    orig_dim_name = h5dataset.dims[i][0].name
+                    orig_dim_name = h5obj.dims[i][0].name
                 except RuntimeError:
                     pass  # no dimension scale could be found
                 if orig_dim_name:
@@ -281,40 +288,40 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         else:
             _shape_repr = _shape
 
-        if self.chunks:
-            chunks_str = f' chunks={h5dataset.chunks}'
+        if self._obj_cfg['chunks']:
+            chunks_str = f' chunks={h5obj.chunks}'
         else:
             chunks_str = ''
 
-        if self.maxshape:
-            maxshape_str = f' maxshape={h5dataset.maxshape}'
+        if self._obj_cfg['maxshape']:
+            maxshape_str = f' maxshape={h5obj.maxshape}'
         else:
             maxshape_str = ''
 
-        _id1 = f'ds-1-{h5dataset.name}-{perf_counter_ns().__str__()}'
-        _id2 = f'ds-2-{h5dataset.name}-{perf_counter_ns().__str__()}'
+        _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
+        _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                     <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
                     <label class='h5tb-varname' for="{_id2}">{name}</label>
-                    <span class="h5tb-dims">{_shape_repr} [{h5dataset.dtype}]{chunks_str}{maxshape_str}</span>"""
+                    <span class="h5tb-dims">{_shape_repr} [{h5obj.dtype}]{chunks_str}{maxshape_str}</span>"""
         return _html
 
-    def __dataset__(self, name, h5dataset) -> str:
+    def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
-        if h5dataset.dtype.char == 'S':
-            _html_pre = self.__stringdataset__(name, h5dataset)
+        if h5obj.dtype.char == 'S':
+            _html_pre = self.__stringdataset__(name, h5obj)
         else:
-            if h5dataset.ndim == 0:
-                _html_pre = self.__0Ddataset__(name, h5dataset)
+            if h5obj.ndim == 0:
+                _html_pre = self.__0Ddataset__(name, h5obj)
             else:
-                _html_pre = self.__NDdataset__(name, h5dataset)
+                _html_pre = self.__NDdataset__(name, h5obj)
 
         # now all attributes of the dataset:
         # open attribute section:
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in h5dataset.attrs.raw.items():
+        for k, v in h5obj.attrs.raw.items():
             if k not in self.ignore_attrs:
                 _html_ds_attrs += self.__attrs__(k, v)
         # close attribute section
@@ -325,10 +332,10 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html_ds = _html_pre + _html_ds_attrs + _html_post
         return _html_ds
 
-    def __group__(self, key, group: h5py.Group):
-        nkeys = len(group.keys())
-        _id = f'ds-{key}-{perf_counter_ns().__str__()}'
-        _groupname = os.path.basename(group.name)
+    def __group__(self, name, h5obj: h5py.Group):
+        nkeys = len(h5obj.keys())
+        _id = f'ds-{name}-{perf_counter_ns().__str__()}'
+        _groupname = os.path.basename(h5obj.name)
         checkbox_state = 'checked'
         if _groupname == '':
             _groupname = '/'  # recover root name
@@ -347,14 +354,14 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html += """\n
                     <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in group.attrs.raw.items():
+        for k, v in h5obj.attrs.raw.items():
             _html += self.__attrs__(k, v)
         # close attribute section
         _html += """
                     </ul>"""
 
-        datasets = [(k, v) for k, v in group.items() if isinstance(v, h5py.Dataset) or isinstance(v, h5py.Dataset)]
-        groups = [(k, v) for k, v in group.items() if isinstance(v, h5py.Group) or isinstance(v, h5py.Group)]
+        datasets = [(k, v) for k, v in h5obj.items() if isinstance(v, h5py.Dataset)]
+        groups = [(k, v) for k, v in h5obj.items() if isinstance(v, h5py.Group)]
 
         for k, v in datasets:
             _html += self.__dataset__(k, v)
@@ -365,28 +372,28 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html += '\n</ul>'
         return _html
 
-    def __attrs__(self, key, value):
-        if isinstance(value, ndarray):
-            _value = value.copy()
-            for i, v in enumerate(value):
+    def __attrs__(self, name, h5obj):
+        if isinstance(h5obj, ndarray):
+            _value = h5obj.copy()
+            for i, v in enumerate(h5obj):
                 if isinstance(v, str):
                     _value[i], is_url = process_string_for_link(v)
                     if not is_url and self.max_attr_length:
                         if len(v) > self.max_attr_length:
                             _value[i] = f'{v[0:self.max_attr_length]}...'
         else:
-            _value_str = f'{value}'
+            _value_str = f'{h5obj}'
             _value, is_url = process_string_for_link(_value_str)
             if not is_url:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
                         _value = f'{_value_str[0:self.max_attr_length]}...'
                     else:
-                        _value = value
+                        _value = h5obj
                 else:
-                    _value = value
+                    _value = h5obj
 
-        if key in ('DIMENSION_LIST', 'REFERENCE_LIST'):
+        if name in ('DIMENSION_LIST', 'REFERENCE_LIST'):
             _value = _value.__str__().replace('<', '&#60;')
             _value = _value.replace('>', '&#62;')
 
@@ -397,11 +404,11 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         else:
             _value_str = _value
 
-        if key == 'standard_name':
+        if name == 'standard_name':
             # TODO give standard name a dropdown which shows description and canonical_units
             return f"""<li style="list-style-type: none; font-style:
-             italic">{key}: {_value_str}</li>"""
-        return f'<li style="list-style-type: none; font-style: italic">{key} : {_value_str}</li>'
+             italic">{name}: {_value_str}</li>"""
+        return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 
 class H5Repr:
@@ -418,10 +425,16 @@ class H5Repr:
         else:
             self.html_repr = html_repr
 
-    def __str__(self, group) -> str:
-        return self.str_repr(group=group)
-
     def __html__(self, group, collapsed: bool = True, preamble: str = None,
-                 chunks: bool = False, maxshape: bool = False):
+                 chunks: bool = False, maxshape: bool = False) -> None:
         display(
-            HTML(self.html_repr(group=group, collapsed=collapsed, preamble=preamble, chunks=chunks, maxshape=maxshape)))
+            HTML(
+                self.html_repr(
+                    group=group,
+                    collapsed=collapsed,
+                    preamble=preamble,
+                    chunks=chunks,
+                    maxshape=maxshape
+                )
+            )
+        )

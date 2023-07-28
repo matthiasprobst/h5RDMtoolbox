@@ -18,7 +18,7 @@ class Transformation:
 
 def derivative_of_X_wrt_to_Y(standard_name, snt) -> StandardName:
     """Check if a standard name is a derivative of X wrt to Y"""
-    match = re.match(r"^derivative_of_(.*)_wrt_to_(.*)$",
+    match = re.match(r"^derivative_of_(.*)_wrt_(.*)$",
                      standard_name)
     if match:
         groups = match.groups()

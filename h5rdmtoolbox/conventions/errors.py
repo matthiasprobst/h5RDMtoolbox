@@ -1,2 +1,2 @@
-class UnitsError(Exception):
-    """Units Error"""
+class ConventionError(Exception):
+    """Error associated with the convention"""

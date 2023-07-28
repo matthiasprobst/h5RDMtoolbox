@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 
 from .. import conventions, consts
-from .. import get_config
+from .. import get_config, get_ureg
 
 
 def dataset_value_decoder(func):
@@ -44,21 +44,17 @@ def dataset_value_decoder(func):
 
         if scale and offset:
             with xr.set_options(keep_attrs=True):
-                # note, that xarr has already the correctly (scaled) units!
-                return (xarr + offset) * scale.magnitude
-                # return H5DataArray((xarr + offset) * scale.magnitude, h5parent=ds, h5slice=parent_slice)
+                return ((xarr + offset).pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
+                    format=get_config()['ureg_format'])
+
         elif scale:
             with xr.set_options(keep_attrs=True):
-                return xarr * scale.magnitude
+                return (xarr.pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
+                    format=get_config()['ureg_format'])
         elif offset:
             with xr.set_options(keep_attrs=True):
                 return xarr + offset
-                # return H5DataArray(xarr + offset, h5parent=ds, h5slice=parent_slice)
 
-        # if ds.has_flag_data:
-        #     return FlagDataArray(xarr,
-        #                          filename=ds.file.filename,
-        #                          parent_slice=parent_slice)
         if get_config('add_source_info_to_xr'):
             xarr.attrs['__hdf_src_info__'] = {'filename': str(ds.hdf_filename),
                                               'name': ds.name}

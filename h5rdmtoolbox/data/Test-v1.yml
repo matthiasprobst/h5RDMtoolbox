@@ -1,10 +1,16 @@
 name: Test
-version_number: 1
+version: v1.0
 institution: my_institution
 contact: 'https://orcid.org/0000-0001-8729-0482'
-valid_characters: ''
-pattern: ''
+valid_characters: '[^a-zA-Z0-9_]'
+pattern: '^[0-9 ].*'
 last_modified: 2022-09-26_20:46:26
+devices:
+  - fan
+  - orifice
+locations:
+  - fan_inlet
+  - fan_outlet
 table:
   time:
     canonical_units: s

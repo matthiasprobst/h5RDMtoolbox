@@ -2,7 +2,7 @@
 from pint import UnitRegistry
 from typing import Dict, Union
 
-ureg = UnitRegistry()
+ureg = UnitRegistry(force_ndarray_like=True)
 
 
 def is_valid_logger_level(level: Union[str, int]):
@@ -14,21 +14,21 @@ def is_valid_logger_level(level: Union[str, int]):
     return level in (0, 10, 20, 30, 40, 50)
 
 
-CONFIG = dict(return_xarray=True,
-              advanced_shape_repr=True,
-              natural_naming=True,
-              hdf_compression='gzip',
-              hdf_compression_opts=5,
-              xarray_unit_repr_in_plots='/',
-              require_unit=True,  # datasets require units
-              ureg_format='C~',
-              default_convention='h5py',
-              init_logger_level='ERROR',
-              dtime_fmt='%Y%m%d%H%M%S%f',
-              expose_user_prop_to_attrs=True,
-              scale_attribute_name='scale',
-              offset_attribute_name='offset',
-              add_source_info_to_xr=True)
+CONFIG = {'return_xarray': True,
+          'advanced_shape_repr': True,
+          'natural_naming': True,
+          'hdf_compression': 'gzip',
+          'hdf_compression_opts': 5,
+          'xarray_unit_repr_in_plots': '/',
+          'require_unit': True,  # datasets require units
+          'ureg_format': 'C~',
+          'default_convention': 'h5tbx',
+          'init_logger_level': 'ERROR',
+          'dtime_fmt': '%Y%m%d%H%M%S%f',
+          'expose_user_prop_to_attrs': True,
+          'scale_attribute_name': 'scale',
+          'offset_attribute_name': 'offset',
+          'add_source_info_to_xr': True}
 
 _VALIDATORS = {
     'return_xarray': lambda x: isinstance(x, bool),
@@ -39,7 +39,7 @@ _VALIDATORS = {
     'xarray_unit_repr_in_plots': lambda x: x in ('', '/', '(', '['),
     'require_unit': lambda x: isinstance(x, bool),
     'ureg_format': lambda x: isinstance(x, str),
-    'default_convention': lambda x: isinstance(x, str) or x is None,  # and in ('h5py', 'h5tbx')
+    'default_convention': lambda x: str(x) in ('h5py', 'h5tbx', 'None'),
     'init_logger_level': lambda x: x in is_valid_logger_level(x),
     'dtime_fmt': lambda x: isinstance(x, str),
     'expose_user_prop_to_attrs': lambda x: isinstance(x, bool),
@@ -56,9 +56,9 @@ class set_config:
         self.old = {}
         for k, v in kwargs.items():
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError(f'PIV parameter {k} has invalid value: {v}')
+                raise ValueError(f'Config parameter "{k}" has invalid value: "{v}"')
             if k not in CONFIG:
-                raise KeyError(f'Not a configuration key: {k}')
+                raise KeyError(f'Not a configuration key: "{k}"')
             self.old[k] = CONFIG[k]
             if k == 'ureg_format':
                 get_ureg().default_format = str(v)
@@ -81,8 +81,7 @@ def get_config(key=None):
     """Return the configuration parameters."""
     if key is None:
         return CONFIG
-    else:
-        return CONFIG[key]
+    return CONFIG[key]
 
 
 def get_ureg() -> UnitRegistry:

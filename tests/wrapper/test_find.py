@@ -13,14 +13,19 @@ class TestFind(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
-        use('tbx')
-        with h5tbx.File(standard_name_table=tutorial.get_standard_name_table()) as h5:
+        use(None)
+        with h5tbx.File() as h5:
             h5.attrs['project'] = 'tutorial'
-            h5.create_dataset('velocity', data=[1, 2, -1], units='m/s', standard_name='x_velocity')
+            h5.create_dataset('velocity', data=[1, 2, -1])
             g = h5.create_group('sub')
-            g.create_dataset('velocity', data=[4, 0, -3, 12, 3], units='m/s', standard_name='x_velocity')
+            g.create_dataset('velocity', data=[4, 0, -3, 12, 3])
             h5.dump()
             self.filename = h5.hdf_filename
+
+    def test_find_name(self):
+        """find based on hdf name"""
+        with h5tbx.File(self.filename) as h5:
+            h5.find({'$name': '/'})
 
     def test_find_rec_False(self):
         with h5tbx.File(self.filename) as h5:

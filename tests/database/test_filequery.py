@@ -127,7 +127,7 @@ class TestFileQuery(unittest.TestCase):
 
             self.assertEqual(gd.find({'long_name': 'Pressure'}, rec=True), [])
             self.assertEqual(gd.find({'long_name': 'Pressure'}, rec=False), [])
-            self.assertEqual(gd.find({'$shape': (3, 5, 10, 20)}, rec=True), [gd.u])
+            self.assertEqual(gd.find({'$shape': (3, 5, 10, 20)}, rec=True, objfilter='$Dataset'), [gd.u])
             with self.assertRaises(AttributeError):
                 gd.find({'$fail': (3, 5, 10, 20)}, objfilter='$Dataset', rec=True)
 

@@ -18,7 +18,7 @@ class Layout(validation.BaseGroupAndDatasetValidation):
     def __repr__(self):
         if self.total:
             return f'Layout(passed={self.success_ratio * 100:.1f}%)'
-        return f'Layout()'
+        return 'Layout()'
 
     def __getitem__(self, item: typing.Union[str, Validator]) -> validation.Validation:
         return self.specify_group(item)
@@ -31,7 +31,7 @@ class Layout(validation.BaseGroupAndDatasetValidation):
     def get_explanation(self, target: str, success: bool) -> str:
         raise NotImplementedError('Layout does not have an explanation')
 
-    def print_validation_results(self, fails: bool = True, successes=True) -> None:
+    def print_validation_results(self) -> None:
         """Print human-readable validation results."""
         for vr in self._validation_results:
             print(vr)
@@ -140,6 +140,7 @@ class Layout(validation.BaseGroupAndDatasetValidation):
         return self.add_subsequent_validation(gv)
 
     def specify_dataset(self, name, opt: bool = None, **properties) -> validation.DatasetValidation:
+        """Specify a dataset"""
         return self.specify_group(name='/').specify_dataset(name, opt, **properties)
 
     def validate(self, target: h5py.Group) -> typing.List[validation.ValidationResult]:
@@ -191,10 +192,10 @@ class Layout(validation.BaseGroupAndDatasetValidation):
             self._validation_results = [vr for vr in self._validation_results if vr not in v]
             if expected_counts != actual_counts:
                 # add as many as are missing (or it may be too many matches!!!):
-                for i in range(abs(expected_counts - actual_counts)):
+                for _ in range(abs(expected_counts - actual_counts)):
                     _v = copy.deepcopy(v[0])
                     _v.result = False
-                    _v.message = f'Expected {expected_counts} matche(s), but found {actual_counts} for {_v.validation}'
+                    _v.message = f'Expected {expected_counts} match(s), but found {actual_counts} for {_v.validation}'
                     self._validation_results.append(_v)
         return self._validation_results
 
