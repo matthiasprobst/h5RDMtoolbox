@@ -11,6 +11,7 @@ import forge
 import inspect
 import pathlib
 import yaml
+from pydoc import locate
 from typing import Union, List
 
 from . import errors
@@ -223,8 +224,11 @@ class Convention:
                                           param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
                             position = {'after': params[-1].name}
 
+                    input_type = locate(std_attr.input_type)
+
                     setattr(cls, method_name, forge.insert(forge.arg(f'{std_attr_name}',
-                                                                     default=std_attr.default_value),
+                                                                     default=std_attr.default_value,
+                                                                     type=input_type),
                                                            **position)(cls.__dict__[method_name]))
         for cls, methods in self.methods.items():
             for name, props in methods.items():

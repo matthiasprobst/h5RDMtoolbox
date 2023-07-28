@@ -64,17 +64,24 @@ class TestStandardAttributes(unittest.TestCase):
 
         # self.assertListEqual(table.names, ['synthetic_particle_image', 'mean_particle_diameter2'])
 
-        table.table = {'synthetic_particle_image': {
+        with self.assertRaises(AttributeError):
+            table.table = {'synthetic_particle_image': {
+                'units': 'pixel',
+            },
+                'mean_particle_diameter2': {
+                    'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.',
+                    'units': 'pixel'}
+            }
+
+        table._table = {'synthetic_particle_image': {
             'units': 'pixel',
         },
             'mean_particle_diameter2': {
                 'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.',
                 'units': 'pixel'}
         }
-        # with self.assertRaises(tbx.DescriptionMissing):
-        #     table.check_table()
 
-        table.table = {
+        table._table = {
             'synthetic_particle_image': {
                 'units': 'pixel',
                 'description': 'Synthetic particle image velocimetry image containing image particles of a single '
@@ -222,6 +229,11 @@ class TestStandardAttributes(unittest.TestCase):
 
         if self.connected:
             with h5tbx.File(standard_name_table='https://zenodo.org/record/8158764') as h5:
-                print(h5.standard_name_table)
+                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
 
                 h5.create_dataset('test', data=1, standard_name='x_velocity', units='m/s')
+
+                snt = h5.standard_name_table
+
+                with self.assertRaises(AttributeError):
+                    snt.devices = ['fan', 'orifice']

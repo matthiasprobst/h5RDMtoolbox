@@ -134,8 +134,8 @@ class StandardNameTable:
     >>> table.check('derivative_of_x_velocity_wrt_to_x_coordinate')
     True
     """
-    __slots__ = ('table', '_meta', '_alias', '_name', '_version',
-                 'devices', 'locations', 'transformations')
+    __slots__ = ('_table', '_meta', '_alias', '_name', '_version',
+                 '_devices', '_locations', '_transformations')
 
     def __init__(self,
                  name: str,
@@ -147,14 +147,14 @@ class StandardNameTable:
                  **meta):
         if table is None:
             table = {}
-        self.table = table
+        self._table = table
         self._name = name
         if devices is None:
             devices = []
-        self.devices = devices
+        self._devices = devices
         if locations is None:
             locations = []
-        self.locations = locations
+        self._locations = locations
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
@@ -164,17 +164,67 @@ class StandardNameTable:
                 v['units'] = v['canonical_units']
                 del v['canonical_units']
         self._meta = meta
-        self.transformations = (derivative_of_X_wrt_to_Y,
-                                magnitude_of,
-                                square_of,
-                                product_of_X_and_Y,
-                                ratio_of_X_and_Y,
-                                difference_of_X_across_device,
-                                difference_of_X_and_y_across_device)
+        self._transformations = (derivative_of_X_wrt_to_Y,
+                                 magnitude_of,
+                                 square_of,
+                                 product_of_X_and_Y,
+                                 ratio_of_X_and_Y,
+                                 difference_of_X_across_device,
+                                 difference_of_X_and_y_across_device)
         if alias is None:
             self._alias = {}
         else:
             self._alias = alias
+
+    @property
+    def locations(self):
+        return self._locations
+
+    @property
+    def transformations(self):
+        return self._transformations
+
+    @property
+    def table(self):
+        return self._table
+
+    @property
+    def devices(self):
+        return self._devices
+
+    @property
+    def alias(self):
+        return self._alias
+
+    @property
+    def aliases(self) -> Dict:
+        """returns a dictionary of alias names and the respective standard name"""
+        return {v['alias']: k for k, v in self.table.items() if 'alias' in v}
+
+    @property
+    def list_of_aliases(self) -> Tuple[str]:
+        """Returns list of available aliases"""
+        return tuple([v['alias'] for v in self.table.values() if 'alias' in v])
+
+    @property
+    def name(self) -> str:
+        """Return name of the Standard Name Table"""
+        return self._name
+
+    @property
+    def meta(self) -> Dict:
+        """Return meta data dictionary"""
+        return self._meta
+
+    @property
+    def version(self) -> str:
+        """Return version number of the Standard Name Table"""
+        return self._meta.get('version', None)
+
+    @property
+    def versionname(self) -> str:
+        """Return version name which is constructed like this: <name>-<version>"""
+        return f'{self.name}-{self.version}'
 
     def __repr__(self):
         _meta = self.meta.pop('alias', None)
@@ -236,41 +286,6 @@ class StandardNameTable:
         if not re.match(VERSION_PATTERN, version_string):
             raise ValueError(f'Version number "{version_string}" is not valid. Expecting MAJOR.MINOR(a|b|rc|dev).')
         return version_string
-
-    @property
-    def aliases(self) -> Dict:
-        """returns a dictionary of alias names and the respective standard name"""
-        return {v['alias']: k for k, v in self.table.items() if 'alias' in v}
-
-    @property
-    def list_of_aliases(self) -> Tuple[str]:
-        """Returns list of available aliases"""
-        return tuple([v['alias'] for v in self.table.values() if 'alias' in v])
-
-    @property
-    def alias(self) -> Dict:
-        """Return alias dictionary"""
-        return self._alias
-
-    @property
-    def name(self) -> str:
-        """Return name of the Standard Name Table"""
-        return self._name
-
-    @property
-    def meta(self) -> Dict:
-        """Return meta data dictionary"""
-        return self._meta
-
-    @property
-    def version(self) -> str:
-        """Return version number of the Standard Name Table"""
-        return self._meta.get('version', None)
-
-    @property
-    def versionname(self) -> str:
-        """Return version name which is constructed like this: <name>-<version>"""
-        return f'{self.name}-{self.version}'
 
     def update(self, **standard_names):
         """Update the table with new standard names"""
