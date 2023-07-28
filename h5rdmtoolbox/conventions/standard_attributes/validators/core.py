@@ -51,10 +51,8 @@ class InValidator(StandardAttributeValidator):
     >>> import h5rdmtoolbox as h5tbx
     >>> data_source = h5tbx.conventions.StandardAttribute(
     >>>         name='units',
-    >>>         validator={'$in': ['numerical', 'experimental', 'anayltical']},
-    >>>         method={'__init__':
-    >>>                 {'optional': True}
-    >>>                },
+    >>>         validator={'$in': ['numerical', 'experimental', 'analytical']},
+    >>>         method='__init__'
     >>>         description='The source of data'
     >>>     )
     """
@@ -66,6 +64,6 @@ class InValidator(StandardAttributeValidator):
 
     def __call__(self, value, parent):
         if value not in self.ref:
-            raise ValueError(f'The value "{value}" has not in {self.ref}. '
+            raise ValueError(f'The value "{value}" is not in {self.ref}. '
                              f'Expecting one of these: {self.ref}')
         return value

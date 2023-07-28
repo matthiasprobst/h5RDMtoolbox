@@ -214,7 +214,7 @@ OBJ_FLT_DICT = {'group': h5py.Group,
                 '$datasets': h5py.Dataset}
 
 
-def process_obj_filter_input(objfilter: str) -> Union[h5py.Dataset, h5py.Group]:
+def process_obj_filter_input(objfilter: str) -> Union[h5py.Dataset, h5py.Group, None]:
     """Return the object based on the input string
 
     Raises
@@ -226,9 +226,11 @@ def process_obj_filter_input(objfilter: str) -> Union[h5py.Dataset, h5py.Group]:
 
     Returns
     -------
-    h5py.Dataset or h5py.Group
+    h5py.Dataset or h5py.Group or None
         The object to filter for
     """
+    if objfilter is None:
+        return
     if isinstance(objfilter, str):
         try:
             return OBJ_FLT_DICT[objfilter.lower()]
@@ -259,8 +261,9 @@ class DocStringParser:
         return self.original_docstring
 
     def get_docstring(self) -> str:
-        """Returns the docstring"""
         """Reassembles the docstring from the parsed components"""
+        from .conventions.standard_attributes import DefaultValue
+
         new_doc = ''
         if self.abstract:
             for a in self.abstract:
@@ -272,7 +275,10 @@ class DocStringParser:
 
         new_doc += f'\n\nStandard Attributes\n-------------------'
         for ak, av in self.additional_parameters.items():
-            new_doc += f"\n{ak}: {av['type']} = {av['default']}\n\t{av['description']}"
+            if av['default'] == DefaultValue.EMPTY:
+                new_doc += f"\n{ak}: {av['type']} \n\t{av['description']}"
+            else:
+                new_doc += f"\n{ak}: {av['type']} = {av['default']}\n\t{av['description']}"
         new_doc += '\n'
 
         if self.returns:

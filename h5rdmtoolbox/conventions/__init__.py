@@ -8,11 +8,10 @@ are provided by this sub-packages (fluid and piv). As the project is under devel
 in the fluid.py file but in later versions the conventions will only be provided as xml files.
 """
 import forge
-import h5py
 import inspect
 import pathlib
 import yaml
-from typing import Callable, Union, List
+from typing import Union, List
 
 from . import errors
 from ._logger import logger
@@ -79,38 +78,27 @@ class Convention:
 
         self.properties = {}
         self.methods = {File: {}, Group: {}, Dataset: {}}
-        self.method_cls_assignment = {'__init__': File,
-                                      'create_group': Group,
-                                      'create_dataset': Group,
-                                      'create_string_dataset': Group}
-        self.property_cls_assignment = {'__init__': File,
-                                        'create_group': Group,
-                                        'create_dataset': Dataset,
-                                        'create_string_dataset': Dataset}
 
         if self.use_scale_and_offset:
             scale_attr = StandardAttribute(name=self.scale_attribute_name,
                                            validator='$pintquantity',
-                                           method='create_dataset',
+                                           target_methods='create_dataset',
                                            description='Scale factor for the dataset values.',
-                                           optional=True,
                                            position={'after': 'data'},
                                            return_type='pint.Quantity',
-                                           default_value=1.0)
+                                           default_value=StandardAttribute.NONE)  # will set None as default but will not write None to attribute
             self.add(scale_attr)
             offset_attr = StandardAttribute(name=self.offset_attribute_name,
                                             validator={'$type': (int, float)},
-                                            method='create_dataset',
+                                            target_methods='create_dataset',
                                             description='Scale factor for the dataset values.',
-                                            optional=True,
                                             position={'after': 'data'},
-                                            # return_type='pint.Quantity',
-                                            default_value=0.0)
+                                            default_value=StandardAttribute.NONE)
             self.add(offset_attr)
 
             units_attr = StandardAttribute(name='units',
                                            validator='$pintunit',
-                                           method='create_dataset',
+                                           target_methods='create_dataset',
                                            description='Physical unit of the dataset.',
                                            optional=True,
                                            position={'after': 'data'},
@@ -129,52 +117,36 @@ class Convention:
         out = f'{make_bold(header)}'
         out += f'\ncontact: {self.contact}'
 
-        # header = make_bold('\n> Properties')
-        # out += f'{header}:'
-        #
-        # if len(self.properties) == 0:
-        #     out += f' ({make_italic("Nothing registered")})'
-        #
-        # for obj, properties in self.properties.items():
-        #     out += f'\n{obj.__name__}:'
-        #     for prop_name, sattr in properties.items():
-        #         out += f'\n    * {prop_name}: {sattr.__name__}'
-
-        # header = make_bold('\n> Methods')
-        # out += f'{header}:'
-
-        for cls, methods in self.methods.items():
-            for name, opts in methods.items():
-                out += f'\n  {cls.__name__}.{name}():'
-                if len(opts) == 0:
+        for cls, method_standard_attributes in self.methods.items():
+            for method_name, standard_attributes in method_standard_attributes.items():
+                out += f'\n  {cls.__name__}.{method_name}():'
+                if len(standard_attributes) == 0:
                     out += f' ({make_italic("Nothing registered")})'
                     continue
                 # if props exist list them. first required, then optional
-                prop_dict = {'optional': {}, 'required': {}}
-                for prop_name, prop_opts in opts.items():
+                prop_dict = {'positional': {}, 'keyword': {}}
+                for std_attr_name, std_attr in standard_attributes.items():
                     # for property_name, property_dict in methods.items():
-                    if prop_opts['optional']:
-                        prop_dict['optional'][prop_name] = prop_opts
+                    if std_attr.is_positional():
+                        prop_dict['positional'][std_attr_name] = std_attr
                     else:
-                        prop_dict['required'][prop_name] = prop_opts
+                        prop_dict['keyword'][std_attr_name] = std_attr
 
-                for prop_name, prop in prop_dict['required'].items():
-                    out += f'\n    * {make_bold(prop_name)}: {self._registered_standard_attributes[prop_name].description}'
-                for prop_name, prop in prop_dict['optional'].items():
-                    out += f'\n    * {make_italic(prop_name)} (default={prop["default"]}): ' \
-                           f'{self._registered_standard_attributes[prop_name].description}'
+                for k, v in prop_dict['positional'].items():
+                    out += f'\n    * {make_bold(k)}:\n\t\t' \
+                           f'{v.description}'
+                for k, v in prop_dict['keyword'].items():
+                    default_value = v.default_value
+                    if default_value == StandardAttribute.NONE:
+                        default_value = 'None'
+
+                    out += f'\n    * {make_italic(k)} (default={default_value}):\n\t\t' \
+                           f'{v.description}'
         out += '\n'
         return out
 
-    def __getitem__(self, method):
-        # get the class from the method the user wants to add a standard attribute to
-        cls = self.method_cls_assignment[method]
-        # get the class for which the standard attribute is added as property
-        prop = self.property_cls_assignment[method]
-        return ConventionInterface(self,
-                                   cls=cls,
-                                   prop=prop,
-                                   method=method)
+    def __getitem__(self, std_name) -> StandardAttribute:
+        return self._registered_standard_attributes[std_name]
 
     @staticmethod
     def from_yaml(yaml_filename, register=True) -> "Convention":
@@ -197,178 +169,63 @@ class Convention:
                                              f'Please add them to the convention first: {_missing_requirements}')
 
         self._registered_standard_attributes[std_attr.name] = std_attr
-        if not isinstance(std_attr.method, (list, tuple)):
-            methods = [std_attr.method, ]
-        else:
-            methods = std_attr.method
-        for method in methods:
-            if isinstance(method, str):
-                method_names = [method, ]
-                optionals = [False, ]
-            elif isinstance(method, dict):
-                method_names = list(method.keys())
-                optionals = [m['optional'] for m in method.values()]
 
-            for method_name, optional in zip(method_names, optionals):
+        assert isinstance(std_attr.target_methods, tuple)
+        assert isinstance(std_attr.target_cls, tuple)
 
-                target_cls = self.property_cls_assignment[method_name]
-                if target_cls not in self.properties:
-                    self.properties[target_cls] = {}
-                self.properties[target_cls][std_attr.name] = std_attr
+        for method_name, target_cls in zip(std_attr.target_methods, std_attr.target_cls):
 
-                if target_cls not in self.methods:
-                    self.methods[target_cls] = {}
+            target_cls = StandardAttribute.PROPERTY_CLS_ASSIGNMENT[method_name]
+            if target_cls not in self.properties:
+                self.properties[target_cls] = {}
+            self.properties[target_cls][std_attr.name] = std_attr
 
-                add_to_method = True
-                if add_to_method:
-                    cls = self.method_cls_assignment[method_name]
-                    if method_name not in cls.__dict__:
-                        raise AttributeError(
-                            f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
-                            'because it does not exist.'
-                        )
-                    if method_name not in self.methods[cls]:
-                        self.methods[cls][method_name] = {}
-                    if isinstance(std_attr.method, str):
-                        alt = None
-                    else:
-                        alt = std_attr.method[method_name].get('alt', None)
-                    self.methods[cls][method_name][std_attr.name] = {
-                        'cls': target_cls,
-                        'optional': optional,
-                        'default': std_attr.default_value,
-                        'position': std_attr.position,
-                        'alt': alt
-                    }
+            if target_cls not in self.methods:
+                self.methods[target_cls] = {}
 
-    def _add(self,
-             attr_cls: StandardAttribute,
-             target_cls: Callable,
-             target_property: str,
-             method: str,
-             add_to_method: Union[bool, str] = False,
-             position: dict = None,
-             optional: bool = False,
-             alt: str = None,
-             default_value: str = None,
-             name: str = None,
-             overwrite: bool = False
-             ):
-        """Add a standard attribute to a class and modify signature of the methods if required.
-
-        Parameters
-        ----------
-        attr_cls : StandardAttribute
-            The standard attribute class to be added
-        target_cls : Callable
-            The class to which the standard attribute is added
-        add_to_method : bool, optional
-            If True, the standard attribute is added to the signature the respected method, thus it can be
-            passed to the method. Depending on the following parameters, the standard attribute is optional
-            or required and has a specific default value.
-        position : dict, optional
-            The position of the standard attribute in the signature of the method.
-            E.g. {'index': 1} or {'position': {'after': 'name'}}
-        optional : bool, optional
-            If True, the standard attribute is optional in the signature of the method.
-        alt : str, optional
-            The name of an alternative standard attribute that is used if the standard attribute is not provided.
-            If neither the standard attribute nor the alternative attribute is provided, an error is raised.
-            Only valid if `optional` is False.
-        default_value : str, optional
-            The default value of the standard attribute in the signature of the method.
-        name : str, optional
-            The name of the standard attribute. If None, the name of the class is used.
-        overwrite : bool, optional
-            If True, the standard attribute is overwritten if it already exists.
-        """
-        if name is None:
-            if hasattr(attr_cls, 'name'):
-                name = attr_cls.name
-            else:
-                name = attr_cls.__name__
-
-        if not hasattr(attr_cls, 'set'):
-            raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it does not '
-                            'have a setter method.')
-
-        if not hasattr(attr_cls, 'get'):
-            raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it does not '
-                            'have a getter method.')
-
-        if StandardAttribute not in attr_cls.__bases__:
-            raise TypeError(f'Cannot register standard attribute {attr_cls} to {target_cls} because it is not a '
-                            'subclass of `StandardAttribute`.')
-
-        if not isinstance(target_cls, (tuple, list)):
-            # make it a list
-            target_cls = [target_cls]
-
-        for cls in target_cls:
-            # if hasattr(cls, '__get_cls__'):
-            #     cls = type(cls())
-            # if not issubclass(cls, (h5py.File, h5py.Group, h5py.Dataset)) and not hasattr(cls, '__get_cls__'):
-            if not issubclass(cls, (h5py.File, h5py.Group, h5py.Dataset)):
-                raise TypeError(f'{cls} is not a valid HDF5 class')
-
-            if target_property not in self.properties:
-                self.properties[target_property] = {}
-
-            if overwrite and name in self.properties[target_property]:
-                del self.properties[target_property][name]
-
-            if name in self.properties[target_property] and not overwrite:
-                raise AttributeError(
-                    f'Cannot register property {name} to {target_property} because it has already a property with '
-                    'this name.')
-
-            self.properties[target_property][name] = attr_cls
-
-            logger.debug(f'Register special hdf std_attr {name} as property to class {target_property}')
-
-            if cls not in self.methods:
-                self.methods[cls] = {}
-
-            if method not in self.methods[cls]:
-                self.methods[cls][method] = {}
-
+            add_to_method = True  # for now all standard attributes are always added to the method (signature)
             if add_to_method:
-                if method not in cls.__dict__:
-                    raise AttributeError(f'Cannot add standard attribute {name} to method {method} of {cls} because it '
-                                         f'does not exist.')
-                self.methods[cls][method][name] = {'cls': cls,
-                                                   'optional': optional,
-                                                   'default': default_value,
-                                                   'position': position,
-                                                   'alt': alt}
+                cls = StandardAttribute.METHOD_CLS_ASSIGNMENT[method_name]
+                if method_name not in cls.__dict__:
+                    raise AttributeError(
+                        f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
+                        'because it does not exist.'
+                    )
+                if method_name not in self.methods[cls]:
+                    self.methods[cls][method_name] = {}
+
+                self.methods[cls][method_name][std_attr.name] = std_attr
 
     def _add_signature(self):
         for cls, methods in self.methods.items():
-            for name, props in methods.items():
-                for prop_name, prop_opts in props.items():
+            for method_name, std_attrs in methods.items():
+                for std_attr_name, std_attr in std_attrs.items():
 
-                    __doc_string_parser__[cls][name].add_additional_parameters(
-                        {prop_name: {'default': prop_opts['default'],
-                                     'type': 'str',
-                                     'description': self._registered_standard_attributes[
-                                         prop_name].description}}
+                    __doc_string_parser__[cls][method_name].add_additional_parameters(
+                        {std_attr_name: {'default': std_attr.default_value,
+                                         'type': std_attr.input_type,
+                                         'description': std_attr.description}}
                     )
 
-                    if isinstance(prop_opts['position'], dict):
-                        setattr(cls, name, forge.insert(forge.arg(f'{prop_name}',
-                                                                  default=prop_opts['default']),
-                                                        **prop_opts['position'])(cls.__dict__[name]))
+                    if isinstance(std_attr.position, dict):
+                        position = std_attr.position
                     else:
-                        signature = inspect.signature(cls.__dict__[name])
-                        params = [param for param in signature.parameters.values() if
-                                  param.kind == inspect.Parameter.KEYWORD_ONLY]
-                        if len(params) == 0:
+                        signature = inspect.signature(cls.__dict__[method_name])
+                        if std_attr.is_positional():
                             params = [param for param in signature.parameters.values() if
                                       param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
-                        setattr(cls, name, forge.insert(forge.kwo(f'{prop_name}',
-                                                                  default=prop_opts['default'],
-                                                                  ),
-                                                        after=params[-1].name)(cls.__dict__[name]))
+                            position = {'after': params[-1].name}
+                        else:
+                            params = [param for param in signature.parameters.values() if
+                                      param.kind == inspect.Parameter.KEYWORD_ONLY]
+                            if len(params) == 0:
+                                params = [param for param in signature.parameters.values() if
+                                          param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
+                            position = {'after': params[-1].name}
+
+                    setattr(cls, method_name, forge.insert(forge.arg(f'{std_attr_name}',
+                                                                     default=std_attr.default_value),
+                                                           **position)(cls.__dict__[method_name]))
         for cls, methods in self.methods.items():
             for name, props in methods.items():
                 __doc_string_parser__[cls][name].update_docstring()
@@ -383,82 +240,6 @@ class Convention:
 
     def register(self):
         registered_conventions[self.name] = self
-
-    def _change_attr_prop(self, method_name, attr_name, attr_prop, value):
-        for obj in self.methods.values():
-            if method_name in obj:
-                if attr_name in obj[method_name]:
-                    obj[method_name][attr_name][attr_prop] = value
-                    return
-        raise ValueError(f'Cannot change property {attr_prop} of attribute {attr_name} to {value} '
-                         f'for {method_name} because it does not exist.')
-
-    def make_required(self, method_name, attr_name):
-        """Make an attribute required for a method"""
-        self._change_attr_prop(method_name, attr_name, 'optional', False)
-
-    def make_optional(self, method_name, attr_name):
-        """Make an attribute optional for a method"""
-        self._change_attr_prop(method_name, attr_name, 'optional', True)
-
-
-class ConventionInterface:
-
-    def __init__(self,
-                 convention: Convention,
-                 cls,
-                 prop,
-                 method):
-        self.convention = convention
-        self.method = method
-        self.prop = prop
-        self.cls = cls
-
-    def add(self,
-            attr_cls: StandardAttribute,
-            add_to_method: bool,
-            position: dict = None,
-            optional: bool = False,
-            alt: str = None,
-            default_value: str = None,
-            name: str = None,
-            overwrite: bool = False
-            ):
-        """Add a standard attribute to a HDF5 object File"""
-
-        self.convention._add(attr_cls=attr_cls,
-                             target_cls=self.cls,
-                             target_property=self.prop,
-                             method=self.method,
-                             add_to_method=add_to_method,
-                             position=position,
-                             optional=optional,
-                             alt=alt,
-                             default_value=default_value,
-                             name=name,
-                             overwrite=overwrite)
-
-
-# class __Convention(_Convention):
-#     """A convention is a set of standard attributes that are used to describe the data in a file."""
-#
-#     @property
-#     def File(self) -> H5ObjConventionInterface:
-#         """File as the target class is passed the the HDF5 Object Convention Interface class"""
-#         from ..wrapper.core import File
-#         return H5ObjConventionInterface(self, cls=File)
-#
-#     @property
-#     def Dataset(self) -> H5ObjConventionInterface:
-#         """Dataset as the target class is passed the the HDF5 Object Convention Interface class"""
-#         from ..wrapper.core import Dataset
-#         return H5ObjConventionInterface(self, cls=Dataset)
-#
-#     @property
-#     def Group(self) -> H5ObjConventionInterface:
-#         """Group as the target class is passed the the HDF5 Object Convention Interface class"""
-#         from ..wrapper.core import Group
-#         return H5ObjConventionInterface(self, cls=Group)
 
 
 def use(convention_name: Union[str, Convention]) -> None:
@@ -486,7 +267,9 @@ __all__ = ['datetime_str', 'set_loglevel', 'StandardAttribute']
 
 def from_yaml(yaml_filename: Union[str, pathlib.Path],
               register: bool = True) -> List[StandardAttribute]:
-    """Read convention from from a yaml file
+    """Read convention from from a yaml file. A convention YAML file
+    requires to have valid standard attribute entries and must contain
+    the keys "__name__" and "__contact__".
 
     Parameters
     ----------
@@ -499,10 +282,21 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path],
     -------
     cv: Convention
         The convention object
+
+    Raises
+    ------
+    ValueError
+        If the YAML file does not contain "__name__" or "__contact__"
     """
     yaml_filename = pathlib.Path(yaml_filename)
     with open(yaml_filename, 'r') as f:
         attrs = yaml.safe_load(f)
+
+    if '__name__' not in attrs:
+        raise ValueError(f'YAML file {yaml_filename} does not contain "__name__". Is the file a valid convention?')
+    if '__contact__' not in attrs:
+        raise ValueError(f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
+
     std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if isinstance(values, dict)]
     meta = {name: value for name, value in attrs.items() if not isinstance(value, dict)}
     if 'name' not in meta:

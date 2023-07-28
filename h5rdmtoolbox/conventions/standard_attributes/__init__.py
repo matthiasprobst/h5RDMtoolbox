@@ -4,7 +4,7 @@ import json
 import numpy as np
 import pathlib
 import warnings
-from typing import Dict, List
+from typing import Dict, List, Union, Tuple
 
 from . import errors
 from .validators import StandardAttributeValidator
@@ -14,10 +14,11 @@ from .validators.pint import PintQuantityValidator, PintUnitsValidator
 from .validators.references import ReferencesValidator, BibTeXValidator, URLValidator
 from .validators.standard_name import StandardNameValidator, StandardNameTableValidator, StandardName, StandardNameTable
 from .validators.strings import RegexValidator, MinLengthValidator, MaxLengthValidator
+from ..consts import DefaultValue
 from ... import get_ureg
-from ...wrapper.core import File, Group
-from ...wrapper.h5attr import WrapperAttributeManager
 from ...utils import DocStringParser
+from ...wrapper.core import File, Group, Dataset
+from ...wrapper.h5attr import WrapperAttributeManager
 
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),
@@ -79,15 +80,52 @@ def get_validator(**validator: Dict) -> List[StandardNameValidator]:
 
 
 class StandardAttribute(abc.ABC):
-    """StandardAttribute class for the standardized attributes"""
+    """StandardAttribute class for the standardized attributes
+
+    Parameters
+    ----------
+    name: str
+        The name of the attribute
+    validator: str | dict
+        The validator for the attribute. If the validator takes a parameter, pass it as dict.
+        Examples for no-parameter validator: "$pintunits", "$standard_name", "$orcid", "$url"
+        Examples for validator with parameter: {"$regex": "^[a-z0-9_]*$"}, {"$in": ["a", "b", "c"]}
+    target_methods: str | List[str]
+        The method to which the attribute belongs. If the standard attribute is positional for all methods to
+        which it applies, pass a list of strings, e.g. target_methods=["create_group", "create_dataset"].
+        If it is positional and is only valid for one method, pass a string, e.g. target_methods="create_group".
+    description: str
+        The description of the attribute
+    default_value: any, optional=DefaultValue.EMPTY
+        If the attribute is positional, it has no default value, then pass DefaultValue.EMPTY (the default).
+        Otherwise, pass the default value. The default value applies to all methods to which the attribute applies.
+    position: int, optional=None
+        The position of the attribute. None puts it at the end.
+    return_type: str, optional=None
+        The return type of the method. If None (default), the return type is the one naturally return by the
+        toolbox
+
+    """
+    EMPTY = DefaultValue.EMPTY  # quasi positional
+    NONE = DefaultValue.NONE  # keyword argument is None. None will not be written to the file
+
+    METHOD_CLS_ASSIGNMENT = {'__init__': File,
+                             'create_group': Group,
+                             'create_dataset': Group,
+                             'create_string_dataset': Group}
+    PROPERTY_CLS_ASSIGNMENT = {'__init__': File,
+                               'create_group': Group,
+                               'create_dataset': Dataset,
+                               'create_string_dataset': Dataset}
 
     def __init__(self,
                  name,
                  validator,
-                 method,
+                 target_methods: Union[str, Tuple[str], Tuple[str, str], Tuple[str, str, str]],
                  description,
-                 optional=False, default_value=None,
-                 position=None,
+                 default_value=DefaultValue.EMPTY,
+                 alternative_standard_attribute: str = None,
+                 position: Union[None, Dict[str, str]] = None,
                  return_type: str = None,
                  requirements: List[str] = None,
                  dependencies: List[str] = None,
@@ -95,18 +133,47 @@ class StandardAttribute(abc.ABC):
         if isinstance(requirements, str):
             requirements = [requirements]
         self.requirements = requirements
+        self.alternative_standard_attribute = alternative_standard_attribute
+        if isinstance(default_value, str):
+            _default_value = default_value.lower()
+            if _default_value == '$none':
+                default_value = self.NONE
+            elif _default_value == '$empty':
+                default_value = self.EMPTY
+            elif _default_value == 'none':
+                default_value = None
+
+        if alternative_standard_attribute is not None and default_value is self.EMPTY:
+            # an alternative standard name is given but no default value. Set default value to the alternative
+            default_value = self.EMPTY
+        self.default_value = default_value
+
+        self.input_type = 'str'
         self.name = name  # the attrs key
         if isinstance(validator, str):
             validator = {validator: None}
         self.validator = get_validator(**validator)
         assert isinstance(self.validator, list)
         assert isinstance(self.validator[0], StandardAttributeValidator)
-        self.method = method
+
+        if not isinstance(target_methods, (str, Tuple, List)):
+            raise TypeError(f'The parameter "target_methods" for standard attribute "{name}" '
+                            'must be a string or a tuple of strings, not '
+                            f'{type(target_methods)}')
+
+        if isinstance(target_methods, str):
+            target_methods = (target_methods,)
+        else:
+            target_methods = tuple(target_methods)
+
+        for tm in target_methods:
+            if tm not in ('create_dataset', 'create_group', '__init__'):
+                raise ValueError("Expected on of these methods: 'create_dataset', 'create_group', '__init__' but "
+                                 f"found {tm}")
+
+        self.target_methods = target_methods
+        self.target_cls = tuple([self.PROPERTY_CLS_ASSIGNMENT[tm] for tm in target_methods])
         self.description = description
-        if not isinstance(optional, bool):
-            raise TypeError(f'The parameter "optional" must be of type "bool" but is {type(optional)}')
-        self.optional = optional
-        self.default_value = default_value
         self.position = position
         if dependencies is None:
             dependencies = []
@@ -121,7 +188,13 @@ class StandardAttribute(abc.ABC):
             warnings.warn(f'Ignoring parameter "{k}"', UserWarning)
 
     def __repr__(self):
-        return f'<StdAttr("{self.name}"): "{self.description}">'
+        if self.is_positional():
+            return f'<PositionalStdAttr("{self.name}"): "{self.description}">'
+        return f'<KeywordStdAttr("{self.name}"): default_value="{self.default_value}" | "{self.description}">'
+
+    def is_positional(self):
+        """has no default value"""
+        return self.default_value == DefaultValue.EMPTY
 
     def set(self, parent, value):
         # first call the validator on the value:

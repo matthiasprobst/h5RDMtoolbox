@@ -16,3 +16,9 @@ class TestConventions(unittest.TestCase):
         self.assertEqual(h5tbx.conventions.current_convention.name, 'h5tbx')
         with self.assertRaises(ValueError):
             h5tbx.use('invalid_convention')
+
+    def test_from_zenodo(self):
+        with self.assertRaises(ValueError):
+            cv = h5tbx.conventions.from_zenodo(doi=8158764)
+        with self.assertRaises(ValueError):
+            cv = h5tbx.conventions.from_zenodo(doi=1826462820292)

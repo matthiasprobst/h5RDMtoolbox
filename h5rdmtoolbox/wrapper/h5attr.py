@@ -5,6 +5,7 @@ import pint
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
 from typing import Dict
+from ..conventions import consts
 
 from .h5utils import get_rootparent
 from .. import get_config, conventions, utils
@@ -163,18 +164,35 @@ class WrapperAttributeManager(h5py.AttributeManager):
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
         """
+
         if name == '_parent':
             return
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
+        curr_cv = conventions.current_convention
+
         parent = self._parent
         # obj_type = parent.__class__
-        if parent.__class__ in conventions.current_convention.properties:
-            if parent.__class__ in conventions.current_convention.properties:
-                if name in conventions.current_convention.properties[parent.__class__]:
+        if parent.__class__ in curr_cv.properties:
+            if parent.__class__ in curr_cv.properties:
+                if name in curr_cv.properties[parent.__class__]:
                     try:
-                        return conventions.current_convention.properties[parent.__class__][name].set(parent, value)
+                        if value is 'None':
+                            value = None
+                        sattr = curr_cv._registered_standard_attributes[name]
+                        # if value is None:
+                            # if default is EMPTY, then the value is ignored:
+                        if value is consts.DefaultValue.EMPTY:
+                            # no value given, but is mandatory. check if there's an alternative
+                            if sattr.alternative_standard_attribute is None:
+                                raise ValueError(f'Parameter (standard attribute) "{name}" must be provided and '
+                                                 f'cannot be None!')
+                            return
+                        if value is consts.DefaultValue.NONE:
+                            # no value given and not mandatory. just not set it and do nothing
+                            return
+                        return curr_cv.properties[parent.__class__][name].set(parent, value)
                     except TypeError as e:
                         raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)

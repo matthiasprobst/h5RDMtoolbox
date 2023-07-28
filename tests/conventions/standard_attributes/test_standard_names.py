@@ -170,19 +170,15 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(snt.table, dict)
 
     def test_from_zenodo(self):
-        cv = h5tbx.conventions.from_yaml(
-            r'C:/Users/da4323/Documents/programming/GitHub/h5RDMtoolbox/docs/conventions/piv_specific.yaml',
-            register=True)
+        cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
         cv.register()
         h5tbx.use(cv)
-        with h5tbx.File(piv_method='multi_grid',
+        with h5tbx.File(title='Test title',
+                        piv_method='multi_grid',
                         piv_medium='air',
                         seeding_material='dehs',
                         contact='https://orcid.org/0000-0001-8729-0482') as h5:
             h5.dump()
-
-            print(h5.seeding_material)
-            print(h5.standard_attributes['piv_medium'].description)
 
             with self.assertRaises(StandardAttributeError):
                 h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
@@ -192,18 +188,18 @@ class TestStandardAttributes(unittest.TestCase):
         h5tbx.use(None)
         units_attr = h5tbx.conventions.StandardAttribute('units',
                                                          validator='$pintunit',
-                                                         method={'create_dataset': {'optional': False}},
+                                                         target_methods='create_dataset',
                                                          description='A unit of a dataset',
                                                          )
         standard_name = h5tbx.conventions.StandardAttribute('standard_name',
                                                             validator='$standard_name',
-                                                            method={'create_dataset': {'optional': False}},
+                                                            target_methods='create_dataset',
                                                             description='A standard name of a dataset',
                                                             )
         snt_yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
         snt = h5tbx.conventions.StandardAttribute('standard_name_table',
                                                   validator='$standard_name_table',
-                                                  method={'__init__': {'optional': True, }},
+                                                  target_methods='__init__',
                                                   # default_value='https://zenodo.org/record/8158764',
                                                   default_value=snt_yaml_filename,
                                                   description='A standard name table',
@@ -216,6 +212,7 @@ class TestStandardAttributes(unittest.TestCase):
         cv.add(units_attr)
         cv.add(standard_name)
         cv.add(snt)
+
         cv.register()
         h5tbx.use(cv.name)
 
@@ -228,14 +225,3 @@ class TestStandardAttributes(unittest.TestCase):
                 print(h5.standard_name_table)
 
                 h5.create_dataset('test', data=1, standard_name='x_velocity', units='m/s')
-                print(h5['test'])
-
-                snt = h5.standard_name_table
-                snt.devices = ['fan', 'orifice']
-
-                h5.standard_name_table = snt
-
-                # check transformations:
-                h5.create_dataset('test2', data=1,
-                                  standard_name='difference_of_x_velocity_across_fan',
-                                  units='m/s')
