@@ -48,10 +48,10 @@ cv_h5py = conventions.Convention('h5py',
                                  use_scale_offset=False)
 cv_h5py.register()
 
-cv_h5py = conventions.Convention('h5tbx',
+cv_h5tbx = conventions.Convention('h5tbx',
                                  contact=__author_orcid__,
                                  use_scale_offset=True)
-cv_h5py.register()
+cv_h5tbx.register()
 
 use = conventions.use
 
