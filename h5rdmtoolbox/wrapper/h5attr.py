@@ -178,7 +178,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if parent.__class__ in curr_cv.properties:
                 if name in curr_cv.properties[parent.__class__]:
                     try:
-                        if value is 'None':
+                        if value == 'None':
                             value = None
                         sattr = curr_cv._registered_standard_attributes[name]
                         # if value is None:
