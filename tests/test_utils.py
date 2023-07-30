@@ -17,6 +17,7 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(h5tbx.UserDir['tmp'] in tmp_hdf5file.parents)
 
     def test_has_datasets(self):
+        h5tbx.use(None)
         with h5tbx.File() as h5:
             self.assertFalse(h5tbx.utils.has_datasets(h5))
             h5.create_dataset('test', data=1)

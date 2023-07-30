@@ -23,6 +23,30 @@ class TestCore(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
+    def test_natural_naming(self):
+        h5tbx.use(None)
+        h5tbx.set_config(natural_naming=False)
+        with h5tbx.File() as h5:
+            h5.create_dataset('dset', data=1)
+            h5.create_dataset('grp/dset', data=1)
+            self.assertEqual(h5['dset'].name, '/dset')
+            self.assertEqual(h5['grp'].name, '/grp')
+
+        h5tbx.set_config(natural_naming=True)
+        with h5tbx.File() as h5:
+            h5.create_dataset('dset', data=1)
+            h5.create_dataset('grp/dset', data=1)
+
+            self.assertEqual(h5.grp.name, '/grp')
+            self.assertEqual(h5.dset.name, '/dset')
+            self.assertEqual(h5.grp.dset.name, '/grp/dset')
+
+        # should also work after closing the file:
+        with h5tbx.File(h5.hdf_filename) as h5:
+            self.assertEqual(h5.grp.name, '/grp')
+            self.assertEqual(h5.dset.name, '/dset')
+            self.assertEqual(h5.grp.dset.name, '/grp/dset')
+
     def test_lower(self):
         self.assertEqual(h5tbx.Lower('Hello'), 'hello')
         self.assertIsInstance(h5tbx.lower('Hello'), h5tbx.Lower)

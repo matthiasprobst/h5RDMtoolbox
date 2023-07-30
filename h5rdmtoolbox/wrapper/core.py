@@ -147,6 +147,22 @@ def process_attributes(cls,
     return attrs, skwargs, kwargs
 
 
+def register_as_property(cls, name: str, obj):
+    if get_config('natural_naming'):
+        _split = name.rsplit('/', 1)
+        if len(_split) == 1:
+            _name = name
+        else:
+            cls = cls[_split[0]]
+            _name = _split[1]
+        _name = _name.replace(' ', '_')
+
+        if hasattr(cls, _name):
+            warnings.warn(f'Cannot make dataset "{name}" available as property of the class "{cls}".'
+                          ' This warning is shown because natural naming is enabled.', UserWarning)
+        setattr(cls, _name, obj)
+
+
 class ConventionAccesor:
     @property
     def convention(self):
@@ -163,6 +179,12 @@ class Group(h5py.Group, ConventionAccesor):
     """Inherited Group of the package h5py
     """
     hdfrepr = H5Repr()
+
+    def __delitem__(self, item):
+        if hasattr(self, item) and item in self.keys():
+            # natural naming was enabled. delete the property:
+            delattr(self, item)
+        super().__delitem__(item)
 
     def __delattr__(self, item):
         if self.__class__ in conventions.current_convention.properties:
@@ -185,7 +207,7 @@ class Group(h5py.Group, ConventionAccesor):
         """Return the root group instance."""
         if self.name == '/':
             return self
-        return get_rootparent(self.parent)
+        return self._h5grp(get_rootparent(self.parent))
 
     @property
     def basename(self) -> str:
@@ -295,6 +317,11 @@ class Group(h5py.Group, ConventionAccesor):
             raise ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
         self.hdf_filename = Path(self.file.filename)
 
+        # make datasets and group accessible as properties
+        if get_config('natural_naming'):
+            for name, obj in self.items():
+                register_as_property(self, name, obj)
+
     def __setitem__(self,
                     name: str,
                     obj: Union[xr.DataArray, List, Tuple, Dict]) -> "Dataset":
@@ -343,28 +370,23 @@ class Group(h5py.Group, ConventionAccesor):
         if self.__class__ in conventions.current_convention.properties:
             if item in conventions.current_convention.properties[self.__class__]:
                 return conventions.current_convention.properties[self.__class__][item].get(self)
+        return super().__getattribute__(item)
 
-        try:
-            return super().__getattribute__(item)
-        except (RuntimeError, AttributeError) as e:
-            if not get_config('natural_naming'):
-                # raise an error if natural naming is NOT enabled
-                raise Exception(e)
-
-        # if item in self.__dict__:
-        #     return super().__getattribute__(item)
-        try:
-            _item = item.replace('_', ' ')
-            # item is a Group name?
-            if item in [k for k, v in self.items() if isinstance(v, h5py.Group)]:
-                return self._h5grp(self[item].id)
-            # item is a Dataset name?
-            elif item in [k for k, v in self.items() if isinstance(v, h5py.Dataset)]:
-                return self._h5ds(self[item].id)
-            raise AttributeError(item)
-            # return super().__getattribute__(item)
-        except AttributeError:
-            raise AttributeError(item)
+        if False:
+            # if item in self.__dict__:
+            #     return super().__getattribute__(item)
+            try:
+                _item = item.replace('_', ' ')
+                # item is a Group name?
+                if item in [k for k, v in self.items() if isinstance(v, h5py.Group)]:
+                    return self._h5grp(self[item].id)
+                # item is a Dataset name?
+                elif item in [k for k, v in self.items() if isinstance(v, h5py.Dataset)]:
+                    return self._h5ds(self[item].id)
+                raise AttributeError(item)
+                # return super().__getattribute__(item)
+            except AttributeError:
+                raise AttributeError(item)
 
     def __setattr__(self, key, value):
         if self.__class__ in conventions.current_convention.properties:
@@ -436,6 +458,8 @@ class Group(h5py.Group, ConventionAccesor):
 
             if overwrite is True:
                 del self[name]
+                if hasattr(self, name):
+                    self.__delattr__(name)
             elif update_attrs:
                 g = self[name]
                 for ak, av in attrs.items():
@@ -459,7 +483,11 @@ class Group(h5py.Group, ConventionAccesor):
             for k, v in attrs.items():
                 subgrp.attrs[k] = v
 
-        return self._h5grp(subgrp)
+        if isinstance(name, bytes):
+            name = name.decode()
+        grp = self._h5grp(subgrp)
+        register_as_property(self, name, grp)
+        return grp
 
     def create_string_dataset(self,
                               name: str,
@@ -566,6 +594,30 @@ class Group(h5py.Group, ConventionAccesor):
         ds : h5py.Dataset
             created dataset
         """
+
+        if get_config('natural_naming'):
+            # we need to create the groups first in order to have the natural naming working
+            if name[0] == '/':
+                name = name[1:]
+            splits = name.split('/')
+            if len(splits) > 1:
+                grp = self
+                for split in splits[:-1]:
+                    if split in grp:
+                        grp = grp[split]
+                    else:
+                        grp = grp.create_group(split)
+                return grp.create_dataset(name=splits[-1],
+                                          shape=shape,
+                                          dtype=dtype,
+                                          data=data,
+                                          overwrite=overwrite,
+                                          chunks=chunks,
+                                          make_scale=make_scale,
+                                          attach_scales=attach_scales,
+                                          ancillary_datasets=ancillary_datasets,
+                                          attrs=attrs,
+                                          **kwargs)
 
         if isinstance(data, str):
             return self.create_string_dataset(name=name,
@@ -733,6 +785,8 @@ class Group(h5py.Group, ConventionAccesor):
                             else:
                                 raise ValueError(f'Cannot assign {ss} to {ds.name} because it seems not '
                                                  f'to exist!')
+
+        register_as_property(self, name, ds)
         return ds
 
     def find_one(self, flt: Union[Dict, str],
@@ -1938,6 +1992,16 @@ class File(h5py.File, Group, ConventionAccesor):
                 self.attrs[k] = v
 
         self.layout = layout
+
+        # make datasets and groups accessible as properties
+        if get_config('natural_naming'):
+            for name, obj in self.items():
+                setattr(self, name, obj)
+        # for std_attr in self.standard_attributes:
+        #     setattr(self, std_attr.name, std_attr)
+        # if self.__class__ in conventions.current_convention.properties:
+        #     if item in conventions.current_convention.properties[self.__class__]:
+        #         return conventions.current_convention.properties[self.__class__][item].get(self)
 
     def __setattr__(self, key, value):
         curr_conv = conventions.current_convention
