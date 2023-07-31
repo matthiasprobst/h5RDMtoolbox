@@ -17,6 +17,13 @@ class TestConventions(unittest.TestCase):
         with self.assertRaises(ValueError):
             h5tbx.use('invalid_convention')
 
+    def test_cv_h5tbx(self):
+        h5tbx.use('h5tbx')
+        with h5tbx.File() as h5:
+            with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                h5.create_dataset('test', data=1)
+        h5tbx.use(None)
+
     def test_from_zenodo(self):
         with self.assertRaises(ValueError):
             cv = h5tbx.conventions.from_zenodo(doi=8158764)

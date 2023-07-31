@@ -14,6 +14,7 @@ from . import orcid
 pint_xarray.unit_registry = get_ureg()
 from . import cache
 from . import conventions
+from .conventions import Convention
 from . import plotting
 from . import wrapper
 from ._logger import create_package_logger
@@ -22,6 +23,7 @@ from ._version import __version__
 from .database import filequery, FileDB, FolderDB
 from .utils import generate_temporary_filename, generate_temporary_directory, has_datasets, has_groups
 from .wrapper.core import lower, Lower, File, Group, Dataset
+from . import errors
 
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
@@ -49,8 +51,8 @@ cv_h5py = conventions.Convention('h5py',
 cv_h5py.register()
 
 cv_h5tbx = conventions.Convention('h5tbx',
-                                 contact=__author_orcid__,
-                                 use_scale_offset=True)
+                                  contact=__author_orcid__,
+                                  use_scale_offset=True)
 cv_h5tbx.register()
 
 use = conventions.use
@@ -162,4 +164,5 @@ __all__ = ('__version__', '__author__', '__author_orcid__', 'UserDir', 'use', 'c
            'generate_temporary_filename', 'generate_temporary_directory',
            'File', 'Files', 'Group', 'Dataset', 'has_datasets', 'has_groups',
            'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower',
-           'set_config', 'get_config', 'get_ureg', 'orcid')
+           'set_config', 'get_config', 'get_ureg', 'orcid',
+           'Convention')

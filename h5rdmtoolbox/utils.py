@@ -14,23 +14,6 @@ from . import _user, get_config
 from ._version import __version__
 
 
-def dummy(a, b=5):
-    """Dummy method
-
-    Parameters
-    ----------
-    a: int
-        Some number
-    b: float, optional=5
-        Another number
-
-    Returns
-    -------
-    henry: str
-        A string
-    """
-
-
 def has_internet_connection(timeout: int = 5) -> bool:
     """Figure out whether there's an internet connection"""
     try:
@@ -403,7 +386,7 @@ class DocStringParser:
 
 
 def download_zenodo_file(doi: int, name: str = None,
-                         timeout: int = 5):
+                         timeout: int = None):
     """Downloads a file from Zenodo
 
     Parameters

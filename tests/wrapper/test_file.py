@@ -54,7 +54,7 @@ class TestFile(unittest.TestCase):
                                        units='V',
                                        offset=0.1,
                                        scale=scale)
-                self.assertEqual(ds.units, 'V')
+                self.assertEqual(ds.units, h5tbx.get_ureg().Unit('V'))
                 self.assertEqual(ds.scale, pint.Quantity(0.2, 'Pa/V'))
                 self.assertEqual(ds.offset, 0.1)
                 arr = ds[()]

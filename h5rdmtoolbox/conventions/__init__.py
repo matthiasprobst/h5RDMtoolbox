@@ -10,7 +10,10 @@ in the fluid.py file but in later versions the conventions will only be provided
 import forge
 import inspect
 import pathlib
+import re
+import shutil
 import yaml
+import zenodo_search as zsearch
 from pydoc import locate
 from typing import Union, List
 
@@ -20,7 +23,7 @@ from .layout import Layout, validators
 from .layout.validators import Validator
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .._repr import make_italic, make_bold
-from ..utils import download_zenodo_file
+from .._user import UserDir
 
 __all__ = ['Layout', 'validators', 'Validator', 'Convention']
 
@@ -87,7 +90,7 @@ class Convention:
                                            description='Scale factor for the dataset values.',
                                            position={'after': 'data'},
                                            return_type='pint.Quantity',
-                                           default_value=StandardAttribute.NONE)  # will set None as default but will not write None to attribute
+                                           default_value=StandardAttribute.NONE)
             self.add(scale_attr)
             offset_attr = StandardAttribute(name=self.offset_attribute_name,
                                             validator={'$type': (int, float)},
@@ -101,17 +104,10 @@ class Convention:
                                            validator='$pintunit',
                                            target_methods='create_dataset',
                                            description='Physical unit of the dataset.',
-                                           optional=True,
+                                           default_value='$EMPTY',
                                            position={'after': 'data'},
-                                           # return_type='pint.Unit',
-                                           # return_type='str',
-                                           default_value=None)
+                                           return_type='pint.Unit')
             self.add(units_attr)
-            # self['create_dataset'].add(attr_cls=units.UnitsAttribute,
-            #                            # target_cls=Dataset,
-            #                            add_to_method=True,
-            #                            position={'after': 'data'},
-            #                            optional=True)
 
     def __repr__(self):
         header = f'Convention("{self.name}")'
@@ -316,4 +312,28 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path],
 
 def from_zenodo(doi, name=None):
     """Download a YAML file from a zenodo repository"""
-    return from_yaml(download_zenodo_file(doi, name))
+    # depending on the input, try to convert to a valid DOI:
+    if isinstance(doi, int):
+        doi = f'10.5281/zenodo.{doi}'
+    elif isinstance(doi, str):
+        if doi.startswith('https://zenodo.org/record/'):
+            doi = doi.replace('https://zenodo.org/record/', '10.5281/zenodo.')
+        elif bool(re.match(r'^\d+$', doi)):
+            # pure numbers:
+            doi = f'10.5281/zenodo.{doi}'
+    else:
+        raise TypeError(f'Invalid type for DOI: {doi}. Expected int or str')
+
+    if not bool(re.match(r'^10\.5281/zenodo\.\d+$', doi)):
+        raise ValueError(f'Invalid DOI pattern: {doi}. Expected format: 10.5281/zenodo.<number>')
+
+    filename = UserDir['cache'] / f'{doi.replace("/", "_")}/{name}'
+    if not filename.exists():
+        record = zsearch.search(doi)[0]
+        for file in record.files:
+            if file['key'] == name:
+                assert file.type == 'yaml'
+                _filename = file.download(destination=filename.parent)
+                shutil.move(_filename, filename)
+                break
+    return from_yaml(filename)

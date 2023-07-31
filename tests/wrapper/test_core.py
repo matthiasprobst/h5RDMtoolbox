@@ -306,6 +306,7 @@ class TestCore(unittest.TestCase):
     # special dataset creation methods:
     # ---------------------------------------------------------------------------
     def test_create_img_dataset(self):
+
         # Iterable class:
         class ImgReader:
             def __init__(self, imgdir):
@@ -347,7 +348,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(ds.chunks, (1, 20, 10))
 
         imgreader._index = 0
-        h5tbx.use('h5tbx')
+        h5tbx.use('h5py')
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0,
                                               attrs=dict(units='', long_name='test'))

@@ -21,3 +21,4 @@ pooch
 xmltodict
 tabulate>=0.8.10
 python-gitlab
+zenodo_search @ git+https://github.com/matthiasprobst/zenodo_search@v0.1.0a1

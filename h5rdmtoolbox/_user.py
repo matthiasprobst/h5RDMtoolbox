@@ -18,7 +18,7 @@ class DirManger:
                           'layouts': _user_root_dir / 'layouts',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
-                          }
+                          'cache': _user_root_dir / 'cache'}
 
         user_tmp_dir = self._get_dir('tmp')
         itmp = len(list(user_tmp_dir.glob("tmp*")))

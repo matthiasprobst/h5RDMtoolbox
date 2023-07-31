@@ -4,6 +4,7 @@ import pandas as pd
 import pathlib
 import pint
 import re
+import shutil
 import warnings
 import yaml
 from IPython.display import display, HTML
@@ -16,11 +17,9 @@ from .. import errors
 from ..utils import dict2xml, get_similar_names_ratio
 from ..._logger import logger
 from ...._user import UserDir
-from ....utils import generate_temporary_filename, download_zenodo_file
+from ....utils import generate_temporary_filename
 
 __this_dir__ = pathlib.Path(__file__).parent
-
-TIMEOUT = 5
 
 VERSION_PATTERN = r'^v\d+(\.\d+)?(a|b|rc|dev)?$'
 README_HEADER = """---
@@ -121,7 +120,30 @@ def update_modification_date(func):
 
 
 class StandardNameTable:
-    """Standard Name Table class
+    """Standard Name Table (SNT) class
+
+    Parameters
+    ----------
+    name: str
+        Name of the SNT
+    version: str
+        Version of the table. Must be something like v1.0
+    table: Dict
+        The table containing 'units' and 'description'
+    alias: Dict
+        Dictionary containing the aliases
+    devices: List[str]
+        List of defined devices to be used in transformations like
+        difference_of_<standard_name>_across_<Device>
+    locations: List[str]
+        List of defined locations to be used in transformations like
+        difference_of_<standard_name>_between_<location>_and_<location>
+    **meta: Dict
+        Other undefined meta information
+
+    Notes
+    -----
+    Call `StandardNameTable.transformations` to get a list of available transformations
 
     Examples
     --------
@@ -177,19 +199,23 @@ class StandardNameTable:
             self._alias = alias
 
     @property
-    def locations(self):
+    def locations(self) -> List[str]:
+        """List of valid locations"""
         return self._locations
 
     @property
-    def transformations(self):
+    def transformations(self) -> List[Callable]:
+        """List of available transformations"""
         return self._transformations
 
     @property
-    def table(self):
+    def table(self) -> Dict:
+        """Return the table containing all standard names with their units and descriptions"""
         return self._table
 
     @property
-    def devices(self):
+    def devices(self) -> List[str]:
+        """List of defined devices"""
         return self._devices
 
     @property
@@ -596,16 +622,13 @@ class StandardNameTable:
         return snt
 
     @staticmethod
-    def from_zenodo(doi: str,
-                    name: str = None) -> "StandardNameTable":
+    def from_zenodo(doi: str) -> "StandardNameTable":
         """Download standard name table from Zenodo based on URL
 
         Parameters
         ----------
         doi: str
             DOI
-        name: str
-            If multiple files exist in the Zenodo repository, you must specify the exact name
 
         Returns
         -------
@@ -615,13 +638,31 @@ class StandardNameTable:
 
         Example
         -------
-        >>> StandardNameTable.from_zenodo(doi="8158764")
+        >>> StandardNameTable.from_zenodo(doi="doi:10.5281/zenodo.8158764")
 
         Notes
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
-        yaml_filename = download_zenodo_file(doi=doi, name=name)
+        import zenodo_search as zsearch
+
+        # depending on the input, try to convert to a valid DOI:
+        if doi.startswith('https://zenodo.org/record/'):
+            doi = doi.replace('https://zenodo.org/record/', '10.5281/zenodo.')
+        elif bool(re.match(r'^\d+$', doi)):
+            # pure numbers:
+            doi = f'10.5281/zenodo.{doi}'
+
+        if not bool(re.match(r'^10\.5281/zenodo\.\d+$', doi)):
+            raise ValueError(f'Invalid DOI pattern: {doi}. Expected format: 10.5281/zenodo.<number>')
+
+        yaml_filename = UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
+        if not yaml_filename.exists():
+            record = zsearch.search(doi)[0]
+            file0 = record.files[0]
+            assert record.files[0].type == 'yaml'
+            _yaml_filename = file0.download(destination_dir=UserDir['standard_name_tables'])
+            shutil.move(_yaml_filename, yaml_filename)
         snt = StandardNameTable.from_yaml(yaml_filename)
         snt._meta.update(dict(zenodo_doi=doi))
 
@@ -644,9 +685,8 @@ class StandardNameTable:
     # End Loader: -----------------------------------------------------------
 
     # Export: ---------------------------------------------------------------
-    @update_modification_date
     def to_yaml(self, yaml_filename: Union[str, pathlib.Path]):
-        """Export a StandardNameTable to a YAML file"""
+        """Export the SNT to a YAML file"""
         snt_dict = self.to_dict()
 
         with open(yaml_filename, 'w') as f:
@@ -655,11 +695,10 @@ class StandardNameTable:
 
             yaml.safe_dump({'table': snt_dict['table']}, f)
 
-    @update_modification_date
     def to_xml(self,
                xml_filename: pathlib.Path,
                datetime_str: Union[str, None] = None) -> pathlib.Path:
-        """Save the SNT in a XML file
+        """Export the SNT in a XML file
 
         Parameters
         ----------
@@ -695,14 +734,8 @@ class StandardNameTable:
                         dictionary=self.table,
                         **meta)
 
-    def register(self, overwrite: bool = False) -> None:
-        """Register the standard name table under its versionname."""
-        trg = UserDir['standard_name_tables'] / f'{self.versionname}.yml'
-        if trg.exists() and not overwrite:
-            raise FileExistsError(f'Standard name table {self.versionname} already exists!')
-        self.to_yaml(trg)
-
-    def to_markdown(self, markdown_filename):
+    def to_markdown(self, markdown_filename) -> pathlib.Path:
+        """Export the SNT to a markdown file"""
         markdown_filename = pathlib.Path(markdown_filename)
         with open(markdown_filename, 'w') as f:
             f.write(README_HEADER)
@@ -710,8 +743,8 @@ class StandardNameTable:
                 f.write(f'| {k} | {v["units"]} | {v["description"]} |\n')
         return markdown_filename
 
-    def to_html(self, html_filename, open_webbrwoser: bool = False):
-
+    def to_html(self, html_filename, open_in_browser: bool = False) -> pathlib.Path:
+        """Export the SNT to html and optionally open it directly if `open_in_browser` is True"""
         html_filename = pathlib.Path(html_filename)
 
         markdown_filename = self.to_markdown(generate_temporary_filename(suffix='.md'))
@@ -728,7 +761,7 @@ class StandardNameTable:
                          str(template_filename),
                          '-o', str(html_filename.absolute())])
 
-        if open_webbrwoser:
+        if open_in_browser:
             import webbrowser
             webbrowser.open('file://' + str(html_filename.resolve()))
         return html_filename
@@ -757,8 +790,6 @@ class StandardNameTable:
                 f.write(LATEX_FOOTER)
         return latex_filename
 
-    # End Export ---------------------------------------------------------------
-
     def to_dict(self):
         """Export a StandardNameTable to a dictionary"""
         d = dict(name=self.name, **self.meta, devices=self.devices, table=self.table)
@@ -768,6 +799,15 @@ class StandardNameTable:
     def to_sdict(self):
         """Export a StandardNameTable to a dictionary as string"""
         return json.dumps(self.to_dict())
+
+    # End Export ---------------------------------------------------------------
+
+    def register(self, overwrite: bool = False) -> None:
+        """Register the standard name table under its versionname."""
+        trg = UserDir['standard_name_tables'] / f'{self.versionname}.yml'
+        if trg.exists() and not overwrite:
+            raise FileExistsError(f'Standard name table {self.versionname} already exists!')
+        self.to_yaml(trg)
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
@@ -844,21 +884,21 @@ class StandardNameTableValidator(StandardAttributeValidator):
         return snt.to_sdict()
 
 
-def parse_snt(standard_name_table: Union[str, dict, StandardNameTable]) -> StandardNameTable:
+def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
     """Returns a StandardNameTable object from a string, dict or StandardNameTable object"""
-    if isinstance(standard_name_table, StandardNameTable):
-        return standard_name_table
-    if isinstance(standard_name_table, dict):
-        return StandardNameTable(**standard_name_table)
-    if isinstance(standard_name_table, str):
+    if isinstance(snt, StandardNameTable):
+        return snt
+    if isinstance(snt, dict):
+        return StandardNameTable(**snt)
+    if isinstance(snt, str):
         # could be web address or local file
-        if standard_name_table.startswith('https://zenodo.org/record/'):
-            return StandardNameTable.from_zenodo(standard_name_table)
-        fname = pathlib.Path(standard_name_table)
+        if snt.startswith('https://zenodo.org/record/') or snt.startswith('10.5281/zenodo.'):
+            return StandardNameTable.from_zenodo(snt)
+        fname = pathlib.Path(snt)
         if fname.exists() and fname.suffix in ('.yaml', '.yml'):
             return StandardNameTable.from_yaml(fname)
         raise FileNotFoundError(f'File {fname} not found or not a yaml file')
-    raise TypeError(f'Invalid type for standard_name_table: {type(standard_name_table)}')
+    raise TypeError(f'Invalid type for standard_name_table: {type(snt)}')
 
 
 """Transformation for standard names"""

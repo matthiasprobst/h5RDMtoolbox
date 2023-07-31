@@ -42,12 +42,13 @@ def _standard_name_table(snt):
         raise TypeError(f'Unexpected type for the standard name table: {type(snt)}')
     if snt.startswith('{'):
         return StandardNameTable(**json.loads(snt))
-    if snt.startswith('https://zenodo.org/record/'):
+    if snt.startswith('https://zenodo.org/record/') or snt.startswith('10.5281/zenodo.'):
         return StandardNameTable.from_zenodo(doi=snt)
     if snt.startswith('https://'):
         return StandardNameTable.from_url(snt)
     if pathlib.Path(snt).exists():
         return StandardNameTable.from_yaml(snt)
+    raise RuntimeError('Could not parse standard name table.')
 
 
 def make_dict(ref):
@@ -214,19 +215,6 @@ class StandardAttribute(abc.ABC):
         if self.return_type is None:
             return WrapperAttributeManager._parse_return_value(parent._id, ret_val)
         return known_types[self.return_type](ret_val)
-
-
-# class RegexStandardAttribute(StandardAttribute):
-#
-#     def select_validator(self, validator):
-#         if isinstance(validator, dict):
-#             validator = get_validator(**validator)
-#         elif isinstance(validator, StandardAttributeValidator):
-#             pass
-#         else:
-#             raise TypeError(f'Unexpected type for the validator: {type(validator)}')
-#         assert validator is not None
-#         return validator
 
 
 known_types = {'int': int,
