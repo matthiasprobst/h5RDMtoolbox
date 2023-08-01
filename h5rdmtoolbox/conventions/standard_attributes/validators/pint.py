@@ -10,7 +10,7 @@ class PintQuantityValidator(StandardAttributeValidator):
         try:
             get_ureg().Quantity(quantity)
         except (pint.UndefinedUnitError, TypeError) as e:
-            raise ValueError(f'Quantity cannot be understood using ureg package: {scale}. Original error: {e}')
+            raise ValueError(f'Quantity cannot be understood using ureg package: {quantity}. Original error: {e}')
         return str(quantity)
 
 

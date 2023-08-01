@@ -3,14 +3,23 @@ import appdirs
 import logging
 import pathlib
 from logging.handlers import RotatingFileHandler
-from typing import Tuple
 
 DEFAULT_LOGGING_LEVEL = logging.INFO
 
 
-def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, logging.StreamHandler]:
+class ToolboxLogger(logging.Logger):
+    """Wrapper class for logging.Logger to add a setLevel method"""
+
+    def setLevel(self, level):
+        """change the log level which displays on the console"""
+        old_level = self.handlers[1].level
+        self.handlers[1].setLevel(level)
+        self.debug(f'changed logger level for {self.name} from {old_level} to {level}')
+
+
+def create_logger(name) -> ToolboxLogger:
     """Create logger based on name"""
-    _logdir = pathlib.Path(appdirs.user_log_dir(name))
+    _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
 
     if _logdir.exists():
         _logFolderMsg = f'{name} log folder available: {_logdir}'
@@ -18,17 +27,14 @@ def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, lo
         pathlib.Path.mkdir(_logdir, parents=True)
         _logFolderMsg = f'{name} log folder created at {_logdir}'
 
-    # Initialize logger, set high level to prevent ipython debugs. File level is
-    # set below
-    _logger = logging.getLogger(name)
-    _logger.setLevel(DEFAULT_LOGGING_LEVEL)
+    _logger = ToolboxLogger(logging.getLogger(name))
 
     _formatter = logging.Formatter(
         '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
         datefmt='%Y-%m-%d_%H:%M:%S')
 
     _file_handler = RotatingFileHandler(_logdir / f'{name}.log', maxBytes=int(5e6), backupCount=2)
-    _file_handler.setLevel(DEFAULT_LOGGING_LEVEL)
+    _file_handler.setLevel(logging.DEBUG)  # log everything to file!
     _file_handler.setFormatter(_formatter)
 
     _stream_handler = logging.StreamHandler()
@@ -42,3 +48,10 @@ def create_package_logger(name) -> Tuple[logging.Logger, RotatingFileHandler, lo
     _logger.debug(_logFolderMsg)
 
     return _logger
+
+# initialize loggers for all modules
+
+loggers = {'h5rdmtoolbox': create_logger('h5rdmtoolbox'),
+           'conventions': create_logger('h5rdmtoolbox.convention'),
+           'wrapper': create_logger('h5rdmtoolbox.wrapper'),
+           'database': create_logger('h5rdmtoolbox.database')}

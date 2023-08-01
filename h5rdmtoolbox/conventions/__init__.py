@@ -18,22 +18,16 @@ from pydoc import locate
 from typing import Union, List
 
 from . import errors
-from ._logger import logger
 from .layout import Layout, validators
 from .layout.validators import Validator
 from .standard_attributes import StandardAttribute, __doc_string_parser__
+from .._logger import loggers
 from .._repr import make_italic, make_bold
 from .._user import UserDir
 
 __all__ = ['Layout', 'validators', 'Validator', 'Convention']
 
-
-def set_loglevel(level):
-    """setting the logging level of sub-package wrapper"""
-    logger.setLevel(level)
-    for handler in logger.handlers:
-        handler.setLevel(level)
-
+logger = loggers['conventions']
 
 registered_conventions = {}
 
@@ -242,7 +236,21 @@ class Convention:
         registered_conventions[self.name] = self
 
 
-def use(convention_name: Union[str, Convention]) -> None:
+class use:
+    """Set the configuration parameters."""
+
+    def __init__(self, convention_name: Union[str, Convention]):
+        self._current_convention = current_convention
+        _use(convention_name)
+
+    def __enter__(self):
+        return
+
+    def __exit__(self, *args, **kwargs):
+        _use(self._current_convention)
+
+
+def _use(convention_name: Union[str, Convention]) -> None:
     """Use a convention by name"""
     if isinstance(convention_name, Convention):
         convention_name = convention_name.name
@@ -251,6 +259,7 @@ def use(convention_name: Union[str, Convention]) -> None:
         convention_name = 'h5py'
     if convention_name not in registered_conventions:
         raise ValueError(f'Convention "{convention_name}" is not registered')
+    logger.debug(f'Switching to convention "{convention_name}"')
     if current_convention is not None:
         if convention_name == current_convention.name:
             return  # nothing to do
@@ -262,7 +271,7 @@ def use(convention_name: Union[str, Convention]) -> None:
 current_convention: Union[None, Convention] = None
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['datetime_str', 'set_loglevel', 'StandardAttribute']
+__all__ = ['datetime_str', 'StandardAttribute']
 
 
 def from_yaml(yaml_filename: Union[str, pathlib.Path],

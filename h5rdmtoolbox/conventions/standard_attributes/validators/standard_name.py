@@ -15,9 +15,11 @@ from h5rdmtoolbox import get_ureg
 from . import StandardAttributeValidator
 from .. import errors
 from ..utils import dict2xml, get_similar_names_ratio
-from ..._logger import logger
+from ...._logger import loggers
 from ...._user import UserDir
 from ....utils import generate_temporary_filename
+
+logger = loggers['conventions']
 
 __this_dir__ = pathlib.Path(__file__).parent
 

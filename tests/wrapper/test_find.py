@@ -1,12 +1,10 @@
-import logging
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import use, tutorial
-from h5rdmtoolbox.wrapper import set_loglevel
+from h5rdmtoolbox import use
 
-logger = logging.getLogger('h5rdmtoolbox.wrapper')
-set_loglevel('ERROR')
+logger = h5tbx.loggers['wrapper']
+logger.setLevel('ERROR')
 
 
 class TestFind(unittest.TestCase):

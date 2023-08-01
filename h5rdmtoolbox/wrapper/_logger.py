@@ -1,4 +1,4 @@
-from .._logger import create_package_logger
+from .._logger import create_logger
 
 name = __package__
-logger = create_package_logger(__package__)
+logger = create_logger(__package__)

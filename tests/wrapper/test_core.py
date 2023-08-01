@@ -1,6 +1,5 @@
 import datetime
 import h5py
-import logging
 import numpy as np
 import pandas as pd
 import pathlib
@@ -10,11 +9,10 @@ from datetime import datetime
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import h5yaml
-from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
-logger = logging.getLogger('h5rdmtoolbox.wrapper')
-set_loglevel('ERROR')
+logger = h5tbx.logger
+logger.setLevel('ERROR')
 __this_dir__ = pathlib.Path(__file__).parent
 
 

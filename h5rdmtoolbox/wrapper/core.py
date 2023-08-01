@@ -2,7 +2,6 @@
 """
 import datetime
 import h5py
-import logging
 import numpy as np
 import os
 import pandas as pd
@@ -21,6 +20,7 @@ from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
+from ._logger import logger
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
@@ -32,8 +32,6 @@ from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
 from ..conventions.layout import Layout as LayoutFile
-
-logger = logging.getLogger(__package__)
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
@@ -78,6 +76,11 @@ def process_attributes(cls,
     kwargs, skwargs = _pop_standard_attributes(
         kwargs, cache_entry=curr_cv.methods[cls][meth_name]
     )
+    # attrs overwrite skwargs because kwargs could have the default value
+    for ak in skwargs.keys():
+        v = attrs.pop(ak, None)
+        if v:
+            skwargs[ak] = v
 
     _pop = []
     # only consider non-None standard attributes

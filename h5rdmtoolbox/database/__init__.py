@@ -3,8 +3,10 @@ import pathlib
 from typing import Union, Dict
 
 from . import lazy
-from ._logger import logger
 from .filequery import Files
+from .._logger import loggers
+
+logger = loggers['database']
 
 
 def set_loglevel(level):

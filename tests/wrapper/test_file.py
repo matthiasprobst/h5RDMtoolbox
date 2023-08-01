@@ -1,5 +1,4 @@
 import h5py
-import logging
 import numpy as np
 import pint
 import unittest
@@ -9,11 +8,10 @@ from pathlib import Path
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
-from h5rdmtoolbox.wrapper import set_loglevel
 from h5rdmtoolbox.wrapper.core import Dataset, File, Group
 
-logger = logging.getLogger('h5rdmtoolbox.wrapper')
-set_loglevel('ERROR')
+logger = h5tbx.loggers['wrapper']
+logger.setLevel('ERROR')
 
 
 class TestFile(unittest.TestCase):

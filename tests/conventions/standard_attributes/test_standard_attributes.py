@@ -68,6 +68,12 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(h5['test2'].attrs['data_source'], 'simulation')
             self.assertEqual(h5['test2'].data_source, 'simulation')
 
+        # pass as attrs instead of keyword argument
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, attrs=dict(data_source='experiment'))
+            self.assertEqual(h5['test'].attrs.raw['data_source'], 'experiment')
+
+
         # self.assertEqual(long_name.validator[0].name, '$regex')
 
     def test_alternative_standard_attribute(self):
