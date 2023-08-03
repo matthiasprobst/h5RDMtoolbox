@@ -30,11 +30,14 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           sudo apt-get install -y pandoc
-          
-      - name: Install pandoc for windows
+
+      - name: Install pandocs for windows
         if: startsWith(matrix.os, 'windows-')
         run: |
           Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+      - name: Install choco for windows
+        if: startsWith(matrix.os, 'windows-')
         run: choco install pandoc -y
 
       - name: Install dependencies
