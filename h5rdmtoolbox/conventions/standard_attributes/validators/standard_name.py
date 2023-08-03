@@ -458,7 +458,7 @@ class StandardNameTable:
             if standard_names is None:
                 standard_names = _dict.pop('table', None)
                 if standard_names is None:
-                    raise ValueError('No standard names found in the YAML file')
+                    raise ValueError('No key "standard_names" names found in the YAML file')
             else:
                 logger.warning('The "table" key is deprecated. Use "standard_names" instead')
 

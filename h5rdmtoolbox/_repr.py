@@ -249,11 +249,12 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
         _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
+        units = h5obj.attrs.get('units', '')
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
                 <label class='h5tb-varname' for="{_id2}">{name}</label>
-                <span class="h5tb-dims">{h5obj.values[()]} ({h5obj.dtype})</span>"""
+                <span class="h5tb-dims">{h5obj.values[()]} [{units}] ({h5obj.dtype})</span>"""
         return _html
 
     def __NDdataset__(self, name, h5obj: h5py.Dataset):
