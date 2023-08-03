@@ -220,7 +220,7 @@ class StandardAttribute(abc.ABC):
                 raise ValueError(f'Unknown return type: {return_type}')
         self.return_type = return_type
         for k in kwargs:
-            logger.error(f'Unexpected entry for StandardAttribute, which is ignored: "{k}"')
+            logger.error(f'Unexpected entry "{k}" for StandardAttribute, which is ignored.')
 
     def __repr__(self):
         if self.is_positional():

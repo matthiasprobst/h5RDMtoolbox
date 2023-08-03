@@ -12,7 +12,7 @@ regex>=2020.7.9
 packaging
 python-forge==18.6.0
 requests
-zenodo_search @ git+https://github.com/matthiasprobst/zenodo_search@v0.1.0a1
+zenodo_search@ git+https://github.com/matthiasprobst/zenodo_search@v0.1.0a1
 # mongodb:
 pymongo>=4.2.0
 # io
@@ -23,6 +23,6 @@ pooch
 xmltodict
 tabulate>=0.8.10
 python-gitlab
-pandoc>=2.3
+pypandoc>=1.11
 # other:
 tqdm>=4.64.0

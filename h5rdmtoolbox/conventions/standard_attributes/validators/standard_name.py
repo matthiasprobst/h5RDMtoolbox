@@ -601,8 +601,7 @@ class StandardNameTable:
                     ref_name: str,
                     file_path: Union[str, pathlib.Path],
                     private_token: str = None) -> "StandardNameTable":
-        """
-        Download a file from a gitlab repository and provide StandardNameTable based on this.
+        """Download a file from a gitlab repository and provide StandardNameTable based on this.
 
         Parameters
         ----------
@@ -800,10 +799,17 @@ class StandardNameTable:
 
         import subprocess
         # Convert Markdown to HTML using pandoc
-        subprocess.call(['pandoc', str(markdown_filename.absolute()),
-                         '--template',
-                         str(template_filename),
-                         '-o', str(html_filename.absolute())])
+        import pypandoc
+        output = pypandoc.convert_file(str(markdown_filename.absolute()), 'html', format='md',
+                                       extra_args=['--template', template_filename])
+
+        with open(html_filename, 'w') as f:
+            f.write(output)
+
+        # subprocess.call(['pandoc', str(markdown_filename.absolute()),
+        #                  '--template',
+        #                  str(template_filename),
+        #                  '-o', str(html_filename.absolute())])
 
         if open_in_browser:
             import webbrowser
