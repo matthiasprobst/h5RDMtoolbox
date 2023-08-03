@@ -30,8 +30,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           sudo apt-get install -y pandoc
-        else:
-          -
+          
       - name: Install pandoc for windows
         if: startsWith(matrix.os, 'windows-')
         run: |
