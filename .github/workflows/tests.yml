@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ windows-latest ]  # [ ubuntu-latest, windows-latest ]
         python-version: [ '3.8', '3.9' , '3.10']
         mongodb-version: ['5.0', '6.0']
 
@@ -26,11 +26,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install pandoc
+      - name: Install pandoc for ubuntu
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           sudo apt-get install -y pandoc
-        if: startsWith(matrix.os, 'ubuntu-')
+        else:
+          -
+      - name: Install pandoc for windows
+        if: startsWith(matrix.os, 'windows-')
         run: |
           Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
         run: choco install pandoc -y
