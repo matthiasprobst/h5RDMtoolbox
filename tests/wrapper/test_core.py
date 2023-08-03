@@ -441,14 +441,15 @@ class TestCore(unittest.TestCase):
             h5y.write(h5)
             self.assertIn('grp', h5)
             self.assertIn('grp/supgrp', h5)
+            self.assertIn('velocity', h5['grp/supgrp'])
             self.assertEqual('Title of the file', h5.attrs['title'])
             self.assertEqual('0000-1234-1234-1234', h5.attrs['contact'])
-            h5.dumps()
 
         with h5tbx.File() as h5:
             h5.create_from_yaml(__this_dir__ / '../data/from_yaml.yaml')
             self.assertIn('grp', h5)
             self.assertIn('grp/supgrp', h5)
+            self.assertIn('velocity', h5['grp/supgrp'])
             self.assertEqual('Title of the file', h5.attrs['title'])
             self.assertEqual('0000-1234-1234-1234', h5.attrs['contact'])
             h5.dumps()

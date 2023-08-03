@@ -20,6 +20,13 @@ def _eval_type(t):
     raise KeyError(f'Could not process {t}')
 
 
+class NoneValidator(StandardAttributeValidator):
+    """Just returns the value without any validation"""
+
+    def __call__(self, value, parent):
+        return value
+
+
 class TypeValidator(StandardAttributeValidator):
     """Validates the data type of the attribute"""
 

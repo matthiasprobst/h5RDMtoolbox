@@ -4,14 +4,14 @@ institution: my_institution
 contact: 'https://orcid.org/0000-0001-8729-0482'
 valid_characters: '[^a-zA-Z0-9_]'
 pattern: '^[0-9 ].*'
-last_modified: 2022-09-26_20:46:26
-devices:
+last_modified: 2023-08-02_09:56:05
+standard_devices:
   - fan
   - orifice
-locations:
+standard_locations:
   - fan_inlet
   - fan_outlet
-table:
+standard_names:
   time:
     canonical_units: s
     description: physical time

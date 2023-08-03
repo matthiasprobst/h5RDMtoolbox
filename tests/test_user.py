@@ -28,7 +28,7 @@ class TestUser(unittest.TestCase):
 
         shutil.rmtree(UserDir['layouts'])
         shutil.rmtree(UserDir['standard_name_tables'])
-        shutil.rmtree(UserDir['standard_name_table_translations'])
+
         try:
             shutil.rmtree(UserDir['tmp'])
         except PermissionError:

@@ -16,7 +16,7 @@ testdir = __this_dir__ / '../tests/data'
 
 def get_standard_name_table_yaml_file() -> pathlib.Path:
     """Return the path to the standard name table yaml file"""
-    return __this_dir__ / 'data/Test-v1.yml'
+    return __this_dir__ / 'data/tutorial_standard_name_table.yml'
 
 
 def get_standard_attribute_yaml_filename() -> pathlib.Path:

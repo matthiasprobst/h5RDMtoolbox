@@ -58,14 +58,9 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.pattern, '^[0-9 ].*')
         self.assertEqual(table.devices, ['fan', 'orifice'])
         self.assertEqual(table.locations, ['fan_inlet', 'fan_outlet'])
-        # table.rename('mean_particle_diameter', 'mean_particle_diameter2')
-        # self.assertFalse('mean_particle_diameter' in table)
-        # self.assertTrue('mean_particle_diameter2' in table)
-
-        # self.assertListEqual(table.names, ['synthetic_particle_image', 'mean_particle_diameter2'])
 
         with self.assertRaises(AttributeError):
-            table.table = {'synthetic_particle_image': {
+            table.standard_names = {'synthetic_particle_image': {
                 'units': 'pixel',
             },
                 'mean_particle_diameter2': {
@@ -73,7 +68,7 @@ class TestStandardAttributes(unittest.TestCase):
                     'units': 'pixel'}
             }
 
-        table._table = {'synthetic_particle_image': {
+        table._standard_names = {'synthetic_particle_image': {
             'units': 'pixel',
         },
             'mean_particle_diameter2': {
@@ -81,7 +76,7 @@ class TestStandardAttributes(unittest.TestCase):
                 'units': 'pixel'}
         }
 
-        table._table = {
+        table._standard_names = {
             'synthetic_particle_image': {
                 'units': 'pixel',
                 'description': 'Synthetic particle image velocimetry image containing image particles of a single '
@@ -147,7 +142,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.valid_characters, '')
         self.assertEqual(table.pattern, '')
         self.assertDictEqual(
-            table.table,
+            table.standard_names,
             {
                 'synthetic_particle_image': {
                     'units': 'counts',
@@ -170,11 +165,21 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_empty_SNT(self):
         snt = StandardNameTable(name='test_snt',
-                                table={},
+                                standard_names={},
                                 version='v1.0dev',
                                 institution='my_institution',
                                 contact='https://orcid.org/0000-0001-8729-0482')
-        self.assertIsInstance(snt.table, dict)
+        self.assertIsInstance(snt.standard_names, dict)
+
+    def test_to_html(self):
+        snt = StandardNameTable(name='test_snt',
+                                standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
+                                version='v1.0dev',
+                                institution='my_institution',
+                                contact='https://orcid.org/0000-0001-8729-0482')
+        fname = snt.to_html('test.html')
+        self.assertTrue(fname.exists())
+        fname.unlink(missing_ok=True)
 
     def test_from_zenodo(self):
         cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
@@ -190,6 +195,10 @@ class TestStandardAttributes(unittest.TestCase):
             with self.assertRaises(StandardAttributeError):
                 h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
             h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
+
+            with self.assertRaises(StandardAttributeError):
+                h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
+            h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
 
     def test_standard_name_convention(self):
         h5tbx.use(None)

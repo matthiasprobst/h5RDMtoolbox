@@ -73,9 +73,6 @@ class TestStandardAttributes(unittest.TestCase):
             h5.create_dataset('test', data=1, attrs=dict(data_source='experiment'))
             self.assertEqual(h5['test'].attrs.raw['data_source'], 'experiment')
 
-
-        # self.assertEqual(long_name.validator[0].name, '$regex')
-
     def test_alternative_standard_attribute(self):
         h5tbx.use(None)
         long_name = h5tbx.conventions.StandardAttribute('long_name',
@@ -83,6 +80,12 @@ class TestStandardAttributes(unittest.TestCase):
                                                         target_methods='create_dataset',
                                                         alternative_standard_attribute='comment',
                                                         description='A long name of a dataset',
+                                                        )
+        long_name_grp = h5tbx.conventions.StandardAttribute('long_name',
+                                                        validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                                        target_methods='create_group',
+                                                        description='A long name of a group',
+                                                        default_value='$None'
                                                         )
         comment_name = h5tbx.conventions.StandardAttribute('comment',
                                                            validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
@@ -96,12 +99,13 @@ class TestStandardAttributes(unittest.TestCase):
                                                             contact=__author_orcid__)
         long_name_convention.add(long_name)
         long_name_convention.add(comment_name)
+        long_name_convention.add(long_name_grp)
         long_name_convention.register()
         h5tbx.use(long_name_convention.name)
 
         self.assertEqual(long_name.name, 'long_name')
 
-        curr_convention = h5tbx.conventions.current_convention
+        curr_convention = h5tbx.conventions.get_current_convention()
         self.assertEqual(curr_convention.name, 'long_name_convention')
         with self.assertRaises(h5tbx.conventions.errors.ConventionError):
             curr_convention.add(long_name)
@@ -117,12 +121,31 @@ class TestStandardAttributes(unittest.TestCase):
 
         with h5tbx.File() as h5:
             h5.create_dataset('test', data=1, comment='A comment which is long enough')
-            # print(h5.test.attrs.keys())
+            self.assertEqual(h5['test'].attrs['comment'], 'A comment which is long enough')
+            with self.assertRaises(StandardAttributeError):
+                h5.create_group('testgrp', long_name='123test')
+            self.assertFalse('testgrp' in h5.keys())
+            h5.create_group('testgrp', long_name='valid long name')
+            self.assertTrue('testgrp' in h5.keys())
+            self.assertEqual(h5['testgrp'].attrs['long_name'], 'valid long name')
 
         with self.assertRaises(StandardAttributeError):
             with h5tbx.File() as h5:
                 h5.create_dataset('test', data=1)
-                h5.dumps()
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, attrs=dict(long_name='test'))
+            self.assertEqual(h5['test'].attrs['long_name'], 'test')
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1,  comment='A comment which is long enough', long_name=None)
+            self.assertEqual(h5['test'].attrs['comment'], 'A comment which is long enough')
+            self.assertTrue('long_name' not in h5['test'].attrs.keys())
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1,  comment='A comment which is long enough', attrs=dict(long_name=None))
+            self.assertEqual(h5['test'].attrs['comment'], 'A comment which is long enough')
+            self.assertTrue('long_name' not in h5['test'].attrs.keys())
 
     def test_references(self):
         bibtex_entry = {'article': {'journal': 'Nice Journal',

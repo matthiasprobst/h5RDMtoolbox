@@ -9,7 +9,7 @@ class SpecialDatasetRegistrationWarning(Warning):
     """Warning for special dataset registration"""
 
 
-class _CachedAccessor:
+class _CachedHDFAccessor:
     """Custom property-like object (descriptor) for caching accessors."""
 
     def __init__(self, name, accessor):
@@ -53,7 +53,7 @@ def _register_special_dataset(name, cls, special_dataset, overwrite):
         if not overwrite:
             raise RuntimeError(f'Cannot register the accessor {special_dataset!r} under name {name!r} '
                                f'because it already exists and overwrite is set to {overwrite}')
-    setattr(cls, name, _CachedAccessor(name, special_dataset))
+    setattr(cls, name, _CachedHDFAccessor(name, special_dataset))
     return special_dataset
 
 

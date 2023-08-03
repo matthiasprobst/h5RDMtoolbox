@@ -17,7 +17,6 @@ class DirManger:
         self.user_dirs = {'root': _user_root_dir,
                           'layouts': _user_root_dir / 'layouts',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
-                          'standard_name_table_translations': _user_root_dir / 'standard_name_table_translations',
                           'cache': _user_root_dir / 'cache'}
 
         user_tmp_dir = self._get_dir('tmp')
@@ -66,27 +65,18 @@ class DirManger:
                 shutil.copy2(layout_filename, self.user_dirs['layouts'] / layout_filename.name)
 
             return self.user_dirs['layouts']
-        if name == 'standard_name_table_translations':
-            if not self.user_dirs['standard_name_table_translations'].exists():
-                self.user_dirs['standard_name_table_translations'].mkdir()
-                # first copy the default data there:
-                test_to_test = _get_pkg_resource_filename('data/test-to-Test-v1.yml')
-
-                shutil.copy2(test_to_test, self.user_dirs['standard_name_table_translations'])
-            return self.user_dirs['standard_name_table_translations']
 
         if name == 'standard_name_tables':
             if not self.user_dirs['standard_name_tables'].exists():
                 # first copy the default data there:
                 fluid_v1 = _get_pkg_resource_filename('data/fluid-v1.yml')
                 piv_v1 = _get_pkg_resource_filename('data/piv-v1.yml')
-                test_v1 = _get_pkg_resource_filename('data/Test-v1.yml')
+                tutorial_standard_name_table = _get_pkg_resource_filename('data/tutorial_standard_name_table.yml')
 
                 self.user_dirs['standard_name_tables'].mkdir()
                 shutil.copy2(fluid_v1, self.user_dirs['standard_name_tables'])
                 shutil.copy2(piv_v1, self.user_dirs['standard_name_tables'])
-                shutil.copy2(test_v1, self.user_dirs['standard_name_tables'])
-                shutil.copy2(test_v1, self.user_dirs['standard_name_tables'])
+                shutil.copy2(tutorial_standard_name_table, self.user_dirs['standard_name_tables'])
             return self.user_dirs['standard_name_tables']
         if name == 'tmp':
             # tmp folder name is individual for every call of the package:

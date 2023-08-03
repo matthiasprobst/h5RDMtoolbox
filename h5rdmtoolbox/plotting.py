@@ -1,17 +1,19 @@
 """plotting module
 Matplotlib labels are manipulated to set the units representation correctly. See build_label_unit_str
 """
-
 import matplotlib.projections as proj
 import matplotlib.pyplot as plt
 import re
-# xarray does not allow to change the unit representation in axis labels. The following is a workaround:
 import warnings
+import xarray as xr
+from typing import Union
 
 from . import get_config
 
+# xarray does not allow to change the unit representation in axis labels. The following is a workaround:
+
 __XARRAY_UNITS_PATTERN__ = r"(.*?)\[([^\[\]]*?)\]$"
-__AV_UNIT_FORMATS__ = ('/', '()', '[]', '//', 'in')
+__AV_UNIT_FORMATS__ = ('/', '()', '(', '[]', '[', '//', 'in')
 
 
 def decode_label(label: str) -> (str, str):
@@ -105,22 +107,76 @@ class XarrayLabelManipulation(plt.Axes):
                 else:
                     _raw_unit = f"{units_string.replace('**', '^')}"
 
-                return f"{name} [{_raw_unit.replace('**', '^')}]"
+                return f"{name}[{_raw_unit.replace('**', '^')}]"
 
             if units_string in ('[]', '[ ]', '[dimensionless]', None):
-                return build_label_unit_str(name, '-', units_format)
+                return build_label_unit_str(name.strip(), '-', units_format)
 
-            return build_label_unit_str(name, units_string, units_format)
+            return build_label_unit_str(name.strip(), units_string, units_format)
         return label
 
-    def set_xlabel(self, xlabel, *args, **kwargs):
+    def set_xylabel(self, xlabel, ylabel):
+        """set the xlabel and ylabel"""
+        self.set_xlabel(xlabel)
+        self.set_ylabel(ylabel)
+
+    def set_xlabel(self, xlabel: Union[str, xr.DataArray], *args, **kwargs):
         """set the (adjusted) xlabel"""
+        if isinstance(xlabel, xr.DataArray):
+            for plotting_name in get_config('plotting_name_order'):
+                name = xlabel.attrs.get(plotting_name)
+                if name:
+                    xlabel = f'{name} [{xlabel.attrs.get("units", "")}]'
+                    break
         super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
 
-    def set_ylabel(self, ylabel, *args, **kwargs):
+    def set_ylabel(self, ylabel: Union[str, xr.DataArray], *args, **kwargs):
         """set the (adjusted) ylabel"""
+        if isinstance(ylabel, xr.DataArray):
+            for plotting_name in get_config('plotting_name_order'):
+                name = ylabel.attrs.get(plotting_name)
+                if name:
+                    ylabel = f'{name} [{ylabel.attrs.get("units", "")}]'
+                    break
         super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
 
 
 # register the axis class
 proj.register_projection(XarrayLabelManipulation)
+
+# altnative: inherit plot accessor:
+# inherit plot accessor:
+
+# with warnings.catch_warnings():
+#     warnings.simplefilter("ignore")
+#
+#
+#     @xr.register_dataarray_accessor("plot")
+#     class PlotWrapper(xr.DataArray.plot):
+#
+#         def _wrap_xlabel(self):
+#             # xlabel is a bit difficult because we don't know which dimension/coordinate was used.
+#             # get the xlabel first:
+#             xlabel
+#             for label_name in get_config('plotting_name_order'):
+#                 plotting_name = self._da.attrs.get(label_name)
+#                 if plotting_name:
+#                     plt.gca().set_xlabel(build_label_unit_str(plotting_name, self._da.attrs.get('units', '')))
+#                     return
+#             if self._da.name:
+#                 plt.gca().set_xlabel(build_label_unit_str(self._da.name, self._da.attrs.get('units', '')))
+#
+#         def _wrap_ylabel(self):
+#             for label_name in get_config('plotting_name_order'):
+#                 plotting_name = self._da.attrs.get(label_name)
+#                 if plotting_name:
+#                     plt.gca().set_ylabel(build_label_unit_str(plotting_name, self._da.attrs.get('units', '')))
+#                     return
+#             if self._da.name:
+#                 plt.gca().set_ylabel(build_label_unit_str(self._da.name, self._da.attrs.get('units', '')))
+#
+#         def __call__(self, *args, **kwargs):
+#             ret = super().__call__(*args, **kwargs)
+#
+#
+#             return ret

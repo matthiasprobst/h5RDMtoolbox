@@ -50,10 +50,10 @@ class H5Yaml:
                     if 'name' not in group_data:
                         group_data['name'] = k
 
-                    h5.create_group(**group_data)
+                    g = h5.create_group(**group_data)
 
                     for ds_name, ds_params in datasets.items():
-                        h5.create_dataset(name=ds_name, **ds_params)
+                        g.create_dataset(name=ds_name, **ds_params)
 
     @staticmethod
     def is_dataset(item) -> bool:

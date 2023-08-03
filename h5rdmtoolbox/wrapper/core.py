@@ -20,7 +20,6 @@ from typing import List, Dict, Union, Tuple, Callable
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
-from ._logger import logger
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
 from .h5attr import WrapperAttributeManager
@@ -28,11 +27,13 @@ from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, conventions, utils
 from .. import consts
 from .. import get_ureg
+from .._logger import loggers
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
 from ..conventions.layout import Layout as LayoutFile
 
+logger = loggers['wrapper']
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
 
@@ -66,7 +67,7 @@ def process_attributes(cls,
                        kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
 
-    curr_cv = conventions.current_convention
+    curr_cv = conventions.get_current_convention()
 
     # go through list of registered standard attributes, and check whether they are in kwargs:
     if meth_name not in curr_cv.methods[cls]:
@@ -79,7 +80,7 @@ def process_attributes(cls,
     # attrs overwrite skwargs because kwargs could have the default value
     for ak in skwargs.keys():
         v = attrs.pop(ak, None)
-        if v:
+        if v is not None:
             skwargs[ak] = v
 
     _pop = []
@@ -90,7 +91,7 @@ def process_attributes(cls,
         elif v == DefaultValue.EMPTY:
             # None may be only a placeholder, but a real value is expected
             # this is the case if the registered default value is DefaultValue.EMPTY:
-            alt_attr_name = curr_cv[k].alternative_standard_attribute
+            alt_attr_name = curr_cv.methods[cls][meth_name][k].alternative_standard_attribute
             if alt_attr_name in skwargs:
                 logger.debug(f'Standard attribute {k} is empty and alternative standard attribute given by the user')
                 if skwargs[alt_attr_name] == DefaultValue.EMPTY:
@@ -104,8 +105,9 @@ def process_attributes(cls,
                     _pop.append(k)
             else:
                 logger.debug(f'Standard attribute {k} is empty but no alternative attribute given by the user.')
-                raise conventions.standard_attributes.errors.StandardAttributeError(
-                    f'The standard attribute "{k}" is required but not provided.')
+                if not get_config('ignore_standard_attribute_errors'):
+                    raise conventions.standard_attributes.errors.StandardAttributeError(
+                        f'The standard attribute "{k}" is required but not provided.')
 
     _ = [skwargs.pop(p) for p in _pop]
 
@@ -123,37 +125,11 @@ def process_attributes(cls,
     attrs.update(skwargs)
     return attrs, skwargs, kwargs
 
-    # run through skwargs. if key is required but not available this should raise an error!
-    for k, v in conventions.current_convention.methods[cls][meth_name].items():
-        sattr = v['sattr']
-        # if v['optional']:
-        #     if k in skwargs and skwargs[k] is None:
-        #         attrs.pop(k, None)
-        # else:
-
-        # remove key from attrs that have value None and default value NONE:
-        for k in skwargs:
-            if skwargs[k] is None and sattr.default is None:
-                attrs.pop(k, None)
-
-        if k not in skwargs or skwargs[k] is None:  # missing or None
-            if sattr.alternative_standard_attribute is None:
-                raise conventions.standard_attributes.errors.StandardAttributeError(
-                    f'The standard attribute "{k}" is required but not provided.')
-            # there is an alternative attribute which should be available instead:
-            if sattr.alternative_standard_attribute not in attrs:
-                raise conventions.standard_attributes.errors.StandardAttributeError(
-                    f'The standard attribute "{k}" is required but not provided. The alternative '
-                    f'attribute "{sattr.alternative_standard_attribute}" is also not provided.')
-            attrs.pop(k, None)
-
-    return attrs, skwargs, kwargs
-
 
 class ConventionAccesor:
     @property
     def convention(self):
-        return conventions.current_convention
+        return conventions.get_current_convention()
 
     @property
     def standard_attributes(self) -> Dict:
@@ -168,8 +144,8 @@ class Group(h5py.Group, ConventionAccesor):
     hdfrepr = H5Repr()
 
     def __delattr__(self, item):
-        if self.__class__ in conventions.current_convention.properties:
-            if item in conventions.current_convention.properties[self.__class__]:
+        if self.__class__ in conventions.get_current_convention().properties:
+            if item in conventions.get_current_convention().properties[self.__class__]:
                 del self.attrs[item]
                 return
         super().__delattr__(item)
@@ -248,6 +224,7 @@ class Group(h5py.Group, ConventionAccesor):
                 from tqdm import tqdm
             except ImportError:
                 raise ImportError('tqdm is not installed. Please install it to use the progress bar.')
+
         with File() as temp_h5dest:
             if tqdm_pbar:
                 progress_bar = tqdm(total=4, desc='Progress')
@@ -343,9 +320,9 @@ class Group(h5py.Group, ConventionAccesor):
 
     def __getattr__(self, item):
 
-        if self.__class__ in conventions.current_convention.properties:
-            if item in conventions.current_convention.properties[self.__class__]:
-                return conventions.current_convention.properties[self.__class__][item].get(self)
+        if self.__class__ in conventions.get_current_convention().properties:
+            if item in conventions.get_current_convention().properties[self.__class__]:
+                return conventions.get_current_convention().properties[self.__class__][item].get(self)
 
         try:
             return super().__getattribute__(item)
@@ -370,13 +347,13 @@ class Group(h5py.Group, ConventionAccesor):
             raise AttributeError(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in conventions.current_convention.properties:
-            if key in conventions.current_convention.properties[self.__class__]:
-                return conventions.current_convention.properties[self.__class__][key](self).set(value)
+        if self.__class__ in conventions.get_current_convention().properties:
+            if key in conventions.get_current_convention().properties[self.__class__]:
+                return conventions.get_current_convention().properties[self.__class__][key](self).set(value)
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
-        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{conventions.current_convention.name}")>'
+        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{conventions.get_current_convention().name}")>'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -458,11 +435,15 @@ class Group(h5py.Group, ConventionAccesor):
         # new_subgroup = h5py.Group.create_group(self, name, track_order=track_order)
         logger.debug(f'Created group "{name}" at "{self.name}"-level.')
 
+        h5tbxgrp = self._h5grp(subgrp)
         if attrs:
             for k, v in attrs.items():
-                subgrp.attrs[k] = v
-
-        return self._h5grp(subgrp)
+                try:
+                    h5tbxgrp.attrs[k] = v
+                except conventions.standard_attributes.errors.StandardAttributeError as e:
+                    del self[name]  # undo group creation
+                    raise e
+        return h5tbxgrp
 
     def create_string_dataset(self,
                               name: str,
@@ -587,8 +568,6 @@ class Group(h5py.Group, ConventionAccesor):
             data.name = name
         attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs)
 
-        # kwargs, std_attrs = _pop_standard_attributes(self, kwargs)
-
         if isinstance(data, xr.DataArray):
             data.attrs.update(attrs)
 
@@ -690,12 +669,12 @@ class Group(h5py.Group, ConventionAccesor):
         ds = self._h5ds(_ds.id)
 
         # first set scale and offset if given:
-        scale = attrs.pop(conventions.current_convention.scale_attribute_name, None)
-        offset = attrs.pop(conventions.current_convention.offset_attribute_name, None)
+        scale = attrs.pop(conventions.get_current_convention().scale_attribute_name, None)
+        offset = attrs.pop(conventions.get_current_convention().offset_attribute_name, None)
         if scale is not None:
-            ds.attrs[conventions.current_convention.scale_attribute_name] = scale
+            ds.attrs[conventions.get_current_convention().scale_attribute_name] = scale
         if offset is not None:
-            ds.attrs[conventions.current_convention.offset_attribute_name] = offset
+            ds.attrs[conventions.get_current_convention().offset_attribute_name] = offset
 
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
@@ -802,7 +781,7 @@ class Group(h5py.Group, ConventionAccesor):
 
     def create_datasets_from_csv(self,
                                  csv_filenames: Union[str, pathlib.Path],
-                                 dim_column: Union[int, str] = 0,
+                                 dimension: Union[int, str] = 0,
                                  shape=None,
                                  overwrite=False,
                                  combine_opt='stack',
@@ -819,7 +798,7 @@ class Group(h5py.Group, ConventionAccesor):
         csv_filename : Path or list of Path
             CSV filename or list of filenames.
             If list is passed, structure must be the same for all
-        dim_column : Union[int, str], optional=0
+        dimension : Union[int, str], optional=0
             The column index or name to be used as dimension. All other
             datasets get this dimension attached as coordinate.
         shape : tuple
@@ -875,7 +854,19 @@ class Group(h5py.Group, ConventionAccesor):
 
         if n_files == 1:
             datasets = []
-            for variable_name in dfs[0].columns:
+
+            column_names = dfs[0].columns
+            dataset_names = [utils.remove_special_chars(str(variable_name)) for variable_name in column_names]
+
+            if dimension is None:
+                dimension = ''
+            else:
+                if not isinstance(dimension, (int, str)):
+                    raise TypeError(f'Invalid input for dimension: {type(dimension)}. Expected int or str')
+                if isinstance(dimension, int):
+                    dimension = column_names[dimension]
+
+            for ds_name, variable_name in zip(dataset_names, column_names):
                 ds_name = utils.remove_special_chars(str(variable_name))
                 if shape is not None:
                     data = dfs[0][str(variable_name)].values.reshape(shape)
@@ -886,7 +877,9 @@ class Group(h5py.Group, ConventionAccesor):
                                                         data=data,
                                                         attrs=attrs.get(ds_name, None),
                                                         overwrite=overwrite, compression=compression,
-                                                        compression_opts=compression_opts))
+                                                        compression_opts=compression_opts,
+                                                        make_scale=variable_name == dimension,
+                                                        chunks=chunks))
                 except RuntimeError as e:
                     logger.error(
                         f'Could not read {variable_name} from csv file due to: {e}')
@@ -911,7 +904,8 @@ class Group(h5py.Group, ConventionAccesor):
                                 attrs=attrs.get(name, None),
                                 overwrite=overwrite,
                                 compression=compression,
-                                compression_opts=compression_opts)
+                                compression_opts=compression_opts,
+                                chunks=chunks)
 
     def create_dataset_from_image(self,
                                   imgdata: Union[Callable, np.ndarray, List[np.ndarray]],
@@ -1307,9 +1301,10 @@ class Dataset(h5py.Dataset, ConventionAccesor):
     """Inherited Dataset group of the h5py package"""
 
     def __delattr__(self, item):
-        if self.__class__ in conventions.current_convention.properties:
-            if item in conventions.current_convention.properties[self.__class__]:
-                if conventions.current_convention.properties[self.__class__][item].default_value == DefaultValue.EMPTY:
+        if self.__class__ in conventions.get_current_convention().properties:
+            if item in conventions.get_current_convention().properties[self.__class__]:
+                if conventions.get_current_convention().properties[self.__class__][
+                    item].default_value == DefaultValue.EMPTY:
                     raise ValueError(f'Cannot delete {item} because it is a required standard attribute')
                 del self.attrs[item]
                 return
@@ -1554,9 +1549,9 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         return self.isel(**isel)
 
     def __getattr__(self, item):
-        if self.__class__ in conventions.current_convention.properties:
-            if item in conventions.current_convention.properties[self.__class__]:
-                return conventions.current_convention.properties[self.__class__][item].get(self)
+        if self.__class__ in conventions.get_current_convention().properties:
+            if item in conventions.get_current_convention().properties[self.__class__]:
+                return conventions.get_current_convention().properties[self.__class__][item].get(self)
         if item not in self.__dict__:
             for d in self.dims:
                 if len(d) > 0:
@@ -1566,9 +1561,9 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in conventions.current_convention.properties:
-            if key in conventions.current_convention.properties[self.__class__]:
-                return conventions.current_convention.properties[self.__class__][key].set(self, value)
+        if self.__class__ in conventions.get_current_convention().properties:
+            if key in conventions.get_current_convention().properties[self.__class__]:
+                return conventions.get_current_convention().properties[self.__class__][key].set(self, value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -1681,9 +1676,9 @@ class Dataset(h5py.Dataset, ConventionAccesor):
     def __repr__(self) -> str:
         r = super().__repr__()
         if not self:
-            return r[:-1] + f' (convention "{conventions.current_convention.name}")>'
+            return r[:-1] + f' (convention "{conventions.get_current_convention().name}")>'
         else:
-            return r[:-1] + f', convention "{conventions.current_convention.name}">'
+            return r[:-1] + f', convention "{conventions.get_current_convention().name}">'
 
     def dump(self) -> None:
         """Call sdump()"""
@@ -1906,9 +1901,9 @@ class File(h5py.File, Group, ConventionAccesor):
             attrs = {}
 
         if mode == 'r':
-            if "__init__" in conventions.current_convention.methods[self.__class__]:
+            if "__init__" in conventions.get_current_convention().methods[self.__class__]:
                 kwargs, skwargs = _pop_standard_attributes(
-                    kwargs, cache_entry=conventions.current_convention.methods[self.__class__]["__init__"]
+                    kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
                 )
                 warnings.warn(f'mode is read only. Provided standard attributes are ignored: {skwargs.keys()}')
             # ignore standard attributes during read-only
@@ -1943,7 +1938,7 @@ class File(h5py.File, Group, ConventionAccesor):
         self.layout = layout
 
     def __setattr__(self, key, value):
-        curr_conv = conventions.current_convention
+        curr_conv = conventions.get_current_convention()
         if self.__class__ in curr_conv.properties:
             if key in curr_conv.properties[self.__class__]:
                 # assign the current object to the requested standard attribute
@@ -1952,10 +1947,10 @@ class File(h5py.File, Group, ConventionAccesor):
 
     def __repr__(self) -> str:
         r = super().__repr__()
-        return r.replace('HDF5', f'HDF5 (convention: "{conventions.current_convention.name}")')
+        return r.replace('HDF5', f'HDF5 (convention: "{conventions.get_current_convention().name}")')
 
     def __str__(self) -> str:
-        return f'<class "{self.__class__.__name__}" convention: "{conventions.current_convention.name}">'
+        return f'<class "{self.__class__.__name__}" convention: "{conventions.get_current_convention().name}">'
 
     def check(self, grp: Union[str, h5py.Group] = '/') -> int:
         """Run layout check. This method may be overwritten to add conditional

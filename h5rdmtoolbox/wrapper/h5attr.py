@@ -106,54 +106,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
 
-        if get_config('expose_user_prop_to_attrs') and parent.__class__ in conventions.current_convention.properties:
-            if name in conventions.current_convention.properties[parent.__class__]:
-                return conventions.current_convention.properties[parent.__class__][name].get(parent)
+        if get_config('expose_user_prop_to_attrs') and parent.__class__ in conventions.get_current_convention().properties:
+            if name in conventions.get_current_convention().properties[parent.__class__]:
+                return conventions.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
-        # if isinstance(ret, str):
-        #     if ret == '':
-        #         return ret
-        #     if ret[0] == '{':
-        #         dictionary = json.loads(ret)
-        #         for k, v in dictionary.items():
-        #             if isinstance(v, str):
-        #                 if not v:
-        #                     dictionary[k] = ''
-        #                 else:
-        #                     if v[0] == '/':
-        #                         if isinstance(self._id, h5py.h5g.GroupID):
-        #                             rootgrp = get_rootparent(h5py.Group(self._id))
-        #                             dictionary[k] = rootgrp.get(v)
-        #                         elif isinstance(self._id, h5py.h5d.DatasetID):
-        #                             rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-        #                             dictionary[k] = rootgrp.get(v)
-        #         return dictionary
-        #     if ret[0] == '/':
-        #         # it may be group or dataset path or actually just a filepath stored by the user
-        #         if isinstance(self._id, h5py.h5g.GroupID):
-        #             # call like this, otherwise recursive call!
-        #             rootgrp = get_rootparent(h5py.Group(self._id))
-        #             if rootgrp.get(ret) is None:
-        #                 # not a dataset or group, maybe just a filename that has been stored
-        #                 return ret
-        #             return rootgrp.get(ret).name
-        #         else:
-        #             rootgrp = get_rootparent(h5py.Dataset(self._id).parent)
-        #             return rootgrp.get(ret).name
-        #     if ret[0] == '(':
-        #         if ret[-1] == ')':
-        #             # might be a tuple object
-        #             return ast.literal_eval(ret)
-        #         return ret
-        #     if ret[0] == '[':
-        #         if ret[-1] == ']':
-        #             # might be a list object
-        #             try:
-        #                 return ast.literal_eval(ret)
-        #             except (ValueError, NameError, AttributeError):
-        #                 return ret
-        #         return ret
-        #     return AttributeString(ret)
         return ret
 
     @with_phil
@@ -170,31 +126,29 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
-        curr_cv = conventions.current_convention
+        curr_cv = conventions.get_current_convention()
 
         parent = self._parent
         # obj_type = parent.__class__
         if parent.__class__ in curr_cv.properties:
-            if parent.__class__ in curr_cv.properties:
-                if name in curr_cv.properties[parent.__class__]:
-                    try:
-                        if value == 'None':
-                            value = None
-                        sattr = curr_cv._registered_standard_attributes[name]
-                        # if value is None:
-                            # if default is EMPTY, then the value is ignored:
-                        if value is consts.DefaultValue.EMPTY:
-                            # no value given, but is mandatory. check if there's an alternative
-                            if sattr.alternative_standard_attribute is None:
-                                raise ValueError(f'Parameter (standard attribute) "{name}" must be provided and '
-                                                 f'cannot be None!')
-                            return
-                        if value is consts.DefaultValue.NONE:
-                            # no value given and not mandatory. just not set it and do nothing
-                            return
-                        return curr_cv.properties[parent.__class__][name].set(parent, value)
-                    except TypeError as e:
-                        raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
+
+            sattr = curr_cv.properties[parent.__class__].get(name, None)
+            if sattr is not None:
+                try:
+                    if value == 'None':
+                        value = None
+                    if value is consts.DefaultValue.EMPTY:
+                        # no value given, but is mandatory. check if there's an alternative
+                        if sattr.alternative_standard_attribute is None:
+                            raise ValueError(f'Parameter (standard attribute) "{name}" must be provided and '
+                                             f'cannot be None!')
+                        return
+                    if value is consts.DefaultValue.NONE:
+                        # no value given and not mandatory. just not set it and do nothing
+                        return
+                    return curr_cv.properties[parent.__class__][name].set(parent, value)
+                except TypeError as e:
+                    raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)
 
     def __repr__(self):

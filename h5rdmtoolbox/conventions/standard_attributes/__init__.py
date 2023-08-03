@@ -3,23 +3,24 @@ import abc
 import json
 import numpy as np
 import pathlib
-import warnings
 from typing import Dict, List, Union, Tuple
 
 from . import errors
 from .validators import StandardAttributeValidator
-from .validators.core import TypeValidator, InValidator
+from .validators.core import TypeValidator, InValidator, NoneValidator
 from .validators.orcid import ORCIDValidator
 from .validators.pint import PintQuantityValidator, PintUnitsValidator
 from .validators.references import ReferencesValidator, BibTeXValidator, URLValidator
 from .validators.standard_name import StandardNameValidator, StandardNameTableValidator, StandardName, StandardNameTable
 from .validators.strings import RegexValidator, MinLengthValidator, MaxLengthValidator
 from ..consts import DefaultValue
-from ... import get_ureg
+from ... import get_ureg, get_config
+from ..._logger import loggers
 from ...utils import DocStringParser
 from ...wrapper.core import File, Group, Dataset
 from ...wrapper.h5attr import WrapperAttributeManager
 
+logger = loggers['conventions']
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),
                                  'create_dataset': DocStringParser(Group.create_dataset)}}
@@ -100,11 +101,48 @@ class StandardAttribute(abc.ABC):
     default_value: any, optional=DefaultValue.EMPTY
         If the attribute is positional, it has no default value, then pass DefaultValue.EMPTY (the default).
         Otherwise, pass the default value. The default value applies to all methods to which the attribute applies.
+    alternative_standard_attribute; str, optional=None
+        The name of the alternative standard attribute. If the attribute is not present, the alternative standard
+        attribute is used. If None (default), no alternative standard attribute is defined.
     position: int, optional=None
         The position of the attribute. None puts it at the end.
     return_type: str, optional=None
         The return type of the method. If None (default), the return type is the one naturally return by the
         toolbox
+    requirements: List[str] = None,
+        The requirements for the attribute. Values are other standard names used in the convention.
+        If None (default), no requirements are defined.
+
+    Attributes
+    ----------
+    name: str
+        The name of the attribute
+    validator: StandardAttributeValidator
+        The validator for the attribute
+    target_methods: str | List[str]
+        The method to which the attribute belongs. If the standard attribute is positional for all methods to
+        which it applies, pass a list of strings, e.g. target_methods=["create_group", "create_dataset"].
+        If it is positional and is only valid for one method, pass a string, e.g. target_methods="create_group".
+    description: str
+        The description of the attribute
+    default_value: any, optional=DefaultValue.EMPTY
+        If the attribute is positional, it has no default value, then pass DefaultValue.EMPTY (the default).
+        Otherwise, pass the default value. The default value applies to all methods to which the attribute applies.
+    alternative_standard_attribute; str, optional=None
+        The name of the alternative standard attribute. If the attribute is not present, the alternative standard
+        attribute is used. If None (default), no alternative standard attribute is defined.
+    position: int, optional=None
+        The position of the attribute. None puts it at the end.
+    return_type: str, optional=None
+        The return type of the method. If None (default), the return type is the one naturally return by the
+        toolbox
+    requirements: List[str] = None,
+        The requirements for the attribute. Values are other standard names used in the convention.
+        If None (default), no requirements are defined.
+    target_cls: h5py.File | h5py.Group | h5py.Dataset
+        The class to which the attribute belongs. This is set automatically.
+
+
 
     """
     EMPTY = DefaultValue.EMPTY  # quasi positional
@@ -129,7 +167,6 @@ class StandardAttribute(abc.ABC):
                  position: Union[None, Dict[str, str]] = None,
                  return_type: str = None,
                  requirements: List[str] = None,
-                 dependencies: List[str] = None,
                  **kwargs):
         if isinstance(requirements, str):
             requirements = [requirements]
@@ -176,9 +213,6 @@ class StandardAttribute(abc.ABC):
         self.target_cls = tuple([self.PROPERTY_CLS_ASSIGNMENT[tm] for tm in target_methods])
         self.description = description
         self.position = position
-        if dependencies is None:
-            dependencies = []
-        self.dependencies = dependencies
         if return_type is None:
             return_type = None
         else:
@@ -186,7 +220,7 @@ class StandardAttribute(abc.ABC):
                 raise ValueError(f'Unknown return type: {return_type}')
         self.return_type = return_type
         for k in kwargs:
-            warnings.warn(f'Ignoring parameter "{k}"', UserWarning)
+            logger.error(f'Unexpected entry for StandardAttribute, which is ignored: "{k}"')
 
     def __repr__(self):
         if self.is_positional():
@@ -201,10 +235,23 @@ class StandardAttribute(abc.ABC):
         # first call the validator on the value:
         try:
             for validator in self.validator:
-                validated_value = validator(value, parent)
+                if value is None:
+                    if validator.allow_None:
+                        validated_value = validator(value, parent)
+                    else:
+                        # None is passed. this is ignored
+                        return
+                else:
+                    validated_value = validator(value, parent)
+
         except Exception as e:
-            raise errors.StandardAttributeError(f'Setting "{value}" for standard attribute "{self.name}" failed. '
-                                                f'Original error: {e}') from e
+            if get_config('ignore_standard_attribute_errors'):
+                logger.warning(f'Setting "{value}" for standard attribute "{self.name}" failed. '
+                               f'Original error: {e}')
+                validated_value = value
+            else:
+                raise errors.StandardAttributeError(f'Setting "{value}" for standard attribute "{self.name}" failed. '
+                                                    f'Original error: {e}') from e
         super(type(parent.attrs), parent.attrs).__setitem__(self.name, validated_value)
 
     def get(self, parent):
@@ -242,4 +289,5 @@ av_validators = {'$type': TypeValidator,
                  '$standard_name_table': StandardNameTableValidator,
                  '$minlength': MinLengthValidator,
                  '$maxlength': MaxLengthValidator,
+                 'None': NoneValidator,
                  }

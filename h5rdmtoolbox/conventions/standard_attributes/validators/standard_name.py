@@ -158,20 +158,23 @@ class StandardNameTable:
     >>> table.check('derivative_of_x_velocity_wrt_to_x_coordinate')
     True
     """
-    __slots__ = ('_table', '_meta', '_alias', '_name', '_version',
+    __slots__ = ('_standard_names', '_meta', '_alias', '_name', '_version',
                  '_devices', '_locations', '_transformations')
 
     def __init__(self,
                  name: str,
                  version: str,
-                 table: Dict,
+                 standard_names: Dict = None,
                  alias: Dict = None,
                  devices: List[str] = None,
                  locations: List[str] = None,
                  **meta):
-        if table is None:
-            table = {}
-        self._table = table
+        if standard_names is None:
+            standard_names = {}
+        if 'table' in meta:
+            standard_names = meta.pop('table')
+            logger.warning('Parameter "table" is depreciated. Use "standard_names" instead.')
+        self._standard_names = standard_names
         self._name = name
         if devices is None:
             devices = []
@@ -183,7 +186,7 @@ class StandardNameTable:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
         # fix key canonical_units
-        for k, v in self.table.items():
+        for k, v in self.standard_names.items():
             if 'canonical_units' in v:
                 v['units'] = v['canonical_units']
                 del v['canonical_units']
@@ -194,7 +197,9 @@ class StandardNameTable:
                                  product_of_X_and_Y,
                                  ratio_of_X_and_Y,
                                  difference_of_X_across_device,
-                                 difference_of_X_and_y_across_device)
+                                 difference_of_X_and_Y_across_device,
+                                 difference_of_X_and_Y_between_LOC1_and_LOC2,
+                                 X_at_LOC,)
         if alias is None:
             self._alias = {}
         else:
@@ -211,9 +216,9 @@ class StandardNameTable:
         return self._transformations
 
     @property
-    def table(self) -> Dict:
+    def standard_names(self) -> Dict:
         """Return the table containing all standard names with their units and descriptions"""
-        return self._table
+        return self._standard_names
 
     @property
     def devices(self) -> List[str]:
@@ -227,12 +232,12 @@ class StandardNameTable:
     @property
     def aliases(self) -> Dict:
         """returns a dictionary of alias names and the respective standard name"""
-        return {v['alias']: k for k, v in self.table.items() if 'alias' in v}
+        return {v['alias']: k for k, v in self.standard_names.items() if 'alias' in v}
 
     @property
     def list_of_aliases(self) -> Tuple[str]:
         """Returns list of available aliases"""
-        return tuple([v['alias'] for v in self.table.values() if 'alias' in v])
+        return tuple([v['alias'] for v in self.standard_names.values() if 'alias' in v])
 
     @property
     def name(self) -> str:
@@ -260,13 +265,13 @@ class StandardNameTable:
         return f'<StandardNameTable: ({meta_str})>'
 
     def __contains__(self, standard_name):
-        return standard_name in self.table
+        return standard_name in self.standard_names
 
     def __getitem__(self, standard_name: str) -> StandardName:
         """Return table entry"""
         logger.debug(f'Checking "{standard_name}"')
-        if standard_name in self.table:
-            entry = self.table[standard_name]
+        if standard_name in self.standard_names:
+            entry = self.standard_names[standard_name]
             if 'canonical_units' in entry:
                 units = entry['canonical_units']
                 warnings.warn('canonical_units is deprecated. Use units instead.',
@@ -290,7 +295,7 @@ class StandardNameTable:
             return self[self.aliases[standard_name]]
 
         # provide a suggestion for similar standard names
-        similar_names = [k for k in [*self.table.keys(), *self.list_of_aliases] if
+        similar_names = [k for k in [*self.standard_names.keys(), *self.list_of_aliases] if
                          get_similar_names_ratio(standard_name, k) > 0.75]
         if similar_names:
             raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".'
@@ -323,7 +328,7 @@ class StandardNameTable:
     def check_name(self, standard_name: str) -> bool:
         """check the standard name against the table. If the name is not
         exactly in the table, check if it is a transformed standard name."""
-        if standard_name in self.table:
+        if standard_name in self.standard_names:
             return True
         for transformation in self.transformations:
             if transformation(standard_name, self):
@@ -417,7 +422,7 @@ class StandardNameTable:
                 _data[k] = v
             _data.update(kwargs)
             sn = StandardName(**_data)
-        self.table.update({sn.name: {'units': str(sn.units), 'description': sn.description}})
+        self.standard_names.update({sn.name: {'units': str(sn.units), 'description': sn.description}})
         return self
 
     def sort(self) -> "StandardNameTable":
@@ -432,14 +437,44 @@ class StandardNameTable:
         """Initialize a StandardNameTable from a YAML file"""
         with open(yaml_filename, 'r') as f:
             _dict = {}
+
+            REQ_KEYS = ['standard_names',
+                        'standard_devices',
+                        'standard_locations',
+                        'name',
+                        'version',
+                        'institution',
+                        'contact',
+                        'valid_characters',
+                        'pattern',
+                        'last_modified', ]
+            for k in _dict.keys():
+                if k not in REQ_KEYS:
+                    raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
+
             for d in yaml.full_load_all(f):
                 _dict.update(d)
-            table = _dict.pop('table')
+            standard_names = _dict.pop('standard_names', None)
+            if standard_names is None:
+                standard_names = _dict.pop('table', None)
+                if standard_names is None:
+                    raise ValueError('No standard names found in the YAML file')
+            else:
+                logger.warning('The "table" key is deprecated. Use "standard_names" instead')
+
+            standard_devices = _dict.pop('standard_devices', None)
+            standard_locations = _dict.pop('standard_locations', None)
+
             if 'name' not in _dict:
                 _dict['name'] = pathlib.Path(yaml_filename).stem
             version = _dict.pop('version', None)
             name = _dict.pop('name', None)
-            return StandardNameTable(name=name, version=version, table=table, **_dict)
+            return StandardNameTable(name=name,
+                                     version=version,
+                                     standard_names=standard_names,
+                                     devices=standard_devices,
+                                     locations=standard_locations,
+                                     **_dict)
 
     @staticmethod
     def from_xml(xml_filename: Union[str, pathlib.Path],
@@ -674,7 +709,9 @@ class StandardNameTable:
     def load_registered(name: str) -> 'StandardNameTable':
         """Load from user data dir"""
         # search for names:
-        candidates = list(UserDir['standard_name_tables'].glob(f'{name}.yml'))
+
+        candidates = list(UserDir['standard_name_tables'].glob(f'{name}.yml')) + list(
+            UserDir['standard_name_tables'].glob(f'{name}.yaml'))
         if len(candidates) == 1:
             return StandardNameTable.from_yaml(candidates[0])
         if len(candidates) == 0:
@@ -695,7 +732,9 @@ class StandardNameTable:
             meta_lines = '\n'.join(f'{k}: {v}' for k, v in self.meta.items())
             f.writelines(meta_lines + '\n')
 
-            yaml.safe_dump({'table': snt_dict['table']}, f)
+            yaml.safe_dump({'standard_names': snt_dict['standard_names'],
+                            'standard_locations': snt_dict['locations'],
+                            'standard_devices': snt_dict['devices']}, f)
 
     def to_xml(self,
                xml_filename: pathlib.Path,
@@ -733,7 +772,7 @@ class StandardNameTable:
 
         return dict2xml(filename=xml_filename,
                         name=self.name,
-                        dictionary=self.table,
+                        dictionary=self.standard_names,
                         **meta)
 
     def to_markdown(self, markdown_filename) -> pathlib.Path:
@@ -741,7 +780,7 @@ class StandardNameTable:
         markdown_filename = pathlib.Path(markdown_filename)
         with open(markdown_filename, 'w') as f:
             f.write(README_HEADER)
-            for k, v in self.sort().table.items():
+            for k, v in self.sort().standard_names.items():
                 f.write(f'| {k} | {v["units"]} | {v["description"]} |\n')
         return markdown_filename
 
@@ -754,7 +793,10 @@ class StandardNameTable:
         # Read the Markdown file
         markdown_filename = pathlib.Path(markdown_filename)
 
-        template_filename = __this_dir__ / 'html' / 'template.html'
+        template_filename = __this_dir__ / '../../html' / 'template.html'
+
+        if not template_filename.exists():
+            raise FileNotFoundError(f'Could not find the template file at {template_filename.absolute()}')
 
         import subprocess
         # Convert Markdown to HTML using pandoc
@@ -783,7 +825,7 @@ class StandardNameTable:
         with open(latex_filename, 'w') as f:
             if with_header_and_footer:
                 f.write(LATEX_HEADER)
-            for k, v in self.sort().table.items():
+            for k, v in self.sort().standard_names.items():
                 desc = v["description"]
                 desc[0].upper()
                 f.write(
@@ -794,8 +836,14 @@ class StandardNameTable:
 
     def to_dict(self):
         """Export a StandardNameTable to a dictionary"""
-        d = dict(name=self.name, **self.meta, devices=self.devices, table=self.table)
-        d.update(dict(last_modified=str(d['last_modified'])))
+        d = dict(name=self.name,
+                 **self.meta,
+                 devices=self.devices,
+                 locations=self.locations,
+                 standard_names=self.standard_names)
+
+        dt = d.get('last_modified', datetime.now(timezone.utc).isoformat())
+        d.update(dict(last_modified=str(dt)))
         return d
 
     def to_sdict(self):
@@ -813,7 +861,7 @@ class StandardNameTable:
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
-        df = pd.DataFrame(self.table).T
+        df = pd.DataFrame(self.standard_names).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             display(HTML(df.sort_index().to_html(**kwargs)))
         elif sort_by.lower() in ('units', 'unit', 'canonical_units'):
@@ -827,7 +875,7 @@ class StandardNameTable:
             from tabulate import tabulate
         except ImportError:
             raise ImportError('Package "tabulate" is missing.')
-        df = pd.DataFrame(self.table).T
+        df = pd.DataFrame(self.standard_names).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             sorted_df = df.sort_index()
         elif sort_by.lower() in ('units', 'unit', 'canonical_units'):
@@ -870,8 +918,17 @@ class StandardNameValidator(StandardAttributeValidator):
         if units is None:
             raise KeyError('No units defined for this variable!')
 
+        # check if scale is provided:
+        scale = parent.attrs.get('scale', None)
+        if scale is not None:
+            units = str(scale * units)
+
         if not snt.check(standard_name, units):
-            raise ValueError(f'Standard name {standard_name} with units {units} is invalid.')
+            if not snt.check_name(standard_name):
+                raise ValueError(f'Standard name {standard_name} is invalid.')
+            expected_units = snt[standard_name].units
+            raise ValueError(f'Standard name {standard_name} has incompatible units {units}. '
+                             f'Expected units: {expected_units} but got {units}.')
         return standard_name
 
 
@@ -897,6 +954,7 @@ def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
         if snt.startswith('https://zenodo.org/record/') or snt.startswith('10.5281/zenodo.'):
             return StandardNameTable.from_zenodo(snt)
         fname = pathlib.Path(snt)
+        logger.debug(f'Reading standard name table from file {snt}')
         if fname.exists() and fname.suffix in ('.yaml', '.yml'):
             return StandardNameTable.from_yaml(fname)
         raise FileNotFoundError(f'File {fname} not found or not a yaml file')
@@ -962,7 +1020,7 @@ def difference_of_X_across_device(standard_name, snt) -> Union[StandardName, boo
     return StandardName(standard_name, snt[sn].units, new_description)
 
 
-def difference_of_X_and_y_across_device(standard_name, snt) -> StandardName:
+def difference_of_X_and_Y_across_device(standard_name, snt) -> StandardName:
     """Difference of X and Y across device"""
     match = re.match(r"^difference_of_(.*)_and(.*)_across_(.*)$",
                      standard_name)
@@ -970,12 +1028,69 @@ def difference_of_X_and_y_across_device(standard_name, snt) -> StandardName:
         groups = match.groups()
         assert len(groups) == 3
         if groups[2] not in snt.devices:
-            raise KeyError(f'Device {groups[0]} not found in registry of the standard name table. '
+            raise KeyError(f'Device {groups[2]} not found in registry of the standard name table. '
                            f'Available devices are: {snt.devices}')
-        sn1 = snt.check(groups[0])
-        sn2 = snt.check(groups[1])
-        new_description = f"Difference of {sn1.name} adn {sn2.name} across the device {groups[1]}"
+        sn1 = groups[0]
+        sn2 = groups[1]
+        sn1_check = snt.check(sn1)
+        if not sn1_check:
+            raise ValueError(f'First standard name {sn1} not found in registry of the standard name table.')
+        sn2_check = snt.check(sn2)
+        if not sn2_check:
+            raise ValueError(f'Second standard name {sn2} not found in registry of the standard name table.')
+        new_description = f"Difference of {sn1} and {sn2} across the device {groups[2]}"
+        sn1 = snt[sn1]
+        sn2 = snt[sn2]
+        if sn1.units != sn2.units:
+            raise ValueError(f'Units of {sn1} and {sn2} are not compatible: {sn1.units} and {sn2.units}.')
         return StandardName(standard_name, sn1.units, new_description)
+    return False
+
+
+def difference_of_X_and_Y_between_LOC1_and_LOC2(standard_name, snt) -> StandardName:
+    """Difference of X and Y across device"""
+    match = re.match(r"^difference_of_(.*)_and_(.*)_between_(.*)_and_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 4
+        if groups[2] not in snt.locations:
+            raise KeyError(f'Location {groups[2]} not found in registry of the standard name table. '
+                           f'Available locations are: {snt.locations.keys()}')
+        if groups[3] not in snt.locations:
+            raise KeyError(f'Location {groups[3]} not found in registry of the standard name table. '
+                           f'Available locations are: {snt.locations.keys()}')
+        sn1 = groups[0]
+        sn2 = groups[1]
+        sn1_check = snt.check(sn1)
+        if not sn1_check:
+            raise ValueError(f'First standard name {sn1} not found in registry of the standard name table.')
+        sn2_check = snt.check(sn2)
+        if not sn2_check:
+            raise ValueError(f'Second standard name {sn2} not found in registry of the standard name table.')
+        new_description = f"Difference of {sn1} and {sn2} between {groups[2]} and {groups[3]}"
+        sn1 = snt[sn1]
+        return StandardName(standard_name, sn1.units, new_description)
+    return False
+
+
+def X_at_LOC(standard_name, snt) -> StandardName:
+    match = re.match(r"^(.*)_at_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 2
+        sn = groups[0]
+        loc = groups[1]
+        if loc not in snt.locations:
+            raise KeyError(f'Device {sn} not found in registry of the standard name table. '
+                           f'Available devices are: {snt.devices}')
+        sn_check = snt.check(sn)
+        if not sn_check:
+            raise ValueError(f'Standard name {sn} not found in registry of the standard name table.')
+        new_description = f"{sn} at {loc}"
+        sn = snt[sn]
+        return StandardName(standard_name, sn.units, new_description)
     return False
 
 

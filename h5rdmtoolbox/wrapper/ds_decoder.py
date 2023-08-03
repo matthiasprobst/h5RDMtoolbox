@@ -35,12 +35,12 @@ def dataset_value_decoder(func):
         if xarr.dtype.type is np.str_:
             return xarr
 
-        if not conventions.current_convention.use_scale_and_offset:
+        if not conventions.get_current_convention().use_scale_and_offset:
             return xarr
             # return H5DataArray(xarr, h5parent=ds, associated_dara_arrays=None)
 
-        scale = xarr.attrs.pop(conventions.current_convention.scale_attribute_name, None)
-        offset = xarr.attrs.pop(conventions.current_convention.offset_attribute_name, None)
+        scale = xarr.attrs.pop(conventions.get_current_convention().scale_attribute_name, None)
+        offset = xarr.attrs.pop(conventions.get_current_convention().offset_attribute_name, None)
 
         if scale and offset:
             with xr.set_options(keep_attrs=True):

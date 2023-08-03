@@ -19,7 +19,8 @@ CONFIG = {'return_xarray': True,
           'natural_naming': True,
           'hdf_compression': 'gzip',
           'hdf_compression_opts': 5,
-          'xarray_unit_repr_in_plots': '/',
+          'xarray_unit_repr_in_plots': 'in',
+          'plotting_name_order': ('plot_name', 'long_name', 'standard_name'),
           'require_unit': True,  # datasets require units
           'ureg_format': 'C~',
           'default_convention': 'h5tbx',
@@ -28,7 +29,8 @@ CONFIG = {'return_xarray': True,
           'expose_user_prop_to_attrs': True,
           'scale_attribute_name': 'scale',
           'offset_attribute_name': 'offset',
-          'add_source_info_to_xr': True}
+          'add_source_info_to_xr': True,
+          'ignore_standard_attribute_errors': False, }
 
 _VALIDATORS = {
     'return_xarray': lambda x: isinstance(x, bool),
@@ -36,7 +38,9 @@ _VALIDATORS = {
     'natural_naming': lambda x: isinstance(x, bool),
     'hdf_compression': lambda x: isinstance(x, str),
     'hdf_compression_opts': lambda x: isinstance(x, int),
-    'xarray_unit_repr_in_plots': lambda x: x in ('', '/', '(', '['),
+    'xarray_unit_repr_in_plots': lambda x: x in ('/', '()', '(', '[]', '[', '//', 'in'),
+    'plotting_name_order': lambda x: isinstance(x, (tuple, list)) and [xx in ('plot_name', 'long_name', 'standard_name')
+                                                                       for xx in x],
     'require_unit': lambda x: isinstance(x, bool),
     'ureg_format': lambda x: isinstance(x, str),
     'default_convention': lambda x: str(x) in ('h5py', 'h5tbx', 'None'),
@@ -45,7 +49,8 @@ _VALIDATORS = {
     'expose_user_prop_to_attrs': lambda x: isinstance(x, bool),
     'scale_attribute_name': lambda x: isinstance(x, str),
     'offset_attribute_name': lambda x: isinstance(x, str),
-    'add_source_info_to_xr': lambda x: isinstance(x, bool)
+    'add_source_info_to_xr': lambda x: isinstance(x, bool),
+    'ignore_standard_attribute_errors': lambda x: isinstance(x, bool),
 }
 
 

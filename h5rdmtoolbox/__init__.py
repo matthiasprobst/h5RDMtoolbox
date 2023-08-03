@@ -25,6 +25,8 @@ from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import errors
 from ._logger import loggers
 
+from .wrapper.accessory import register_special_dataset
+
 name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
 __author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
@@ -50,7 +52,7 @@ cv_h5tbx = conventions.Convention('h5tbx',
                                   use_scale_offset=True)
 cv_h5tbx.register()
 
-use = conventions.use
+use = conventions.core.use
 
 use(get_config()['default_convention'])
 
@@ -85,11 +87,6 @@ def dumps(src: Union[str, File, pathlib.Path]):
             return h5.dumps()
     with File(src) as h5:
         return h5.dumps()
-
-
-def get_current_convention():
-    """get the current convention"""
-    return conventions.current_convention
 
 
 atexit_verbose = False

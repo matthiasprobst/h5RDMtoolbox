@@ -6,6 +6,9 @@ import warnings
 
 from . import validation
 from .validators import Validator, Any, ExistIn, Equal
+from ..._logger import loggers
+
+logger = loggers['conventions']
 
 
 class Layout(validation.BaseGroupAndDatasetValidation):
@@ -131,8 +134,7 @@ class Layout(validation.BaseGroupAndDatasetValidation):
         if isinstance(name, str):
             name = ExistIn(name)
         elif isinstance(name, Equal):
-            warnings.warn('Cannot use Equal validator for group validation. Changing to '
-                          'validator "ExistIn"', UserWarning)
+            logger.info('Cannot use Equal validator for group validation. Changing to validator "ExistIn"')
             name = ExistIn(name.reference)
         elif name is None:
             name = Any()
