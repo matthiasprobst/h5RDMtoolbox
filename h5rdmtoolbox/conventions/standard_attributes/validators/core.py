@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 from . import StandardAttributeValidator
@@ -25,6 +26,14 @@ class NoneValidator(StandardAttributeValidator):
 
     def __call__(self, value, parent):
         return value
+
+
+class DateTimeValidator(StandardAttributeValidator):
+
+    def __call__(self, value, parent):
+        if not isinstance(value, datetime):
+            raise ValueError(f'The value "{value}" has wrong type: {type(value)}. Expected: {datetime}')
+        return str(value.isoformat())
 
 
 class TypeValidator(StandardAttributeValidator):

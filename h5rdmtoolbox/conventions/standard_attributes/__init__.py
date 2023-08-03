@@ -7,7 +7,7 @@ from typing import Dict, List, Union, Tuple
 
 from . import errors
 from .validators import StandardAttributeValidator
-from .validators.core import TypeValidator, InValidator, NoneValidator
+from .validators.core import TypeValidator, InValidator, NoneValidator, DateTimeValidator
 from .validators.orcid import ORCIDValidator
 from .validators.pint import PintQuantityValidator, PintUnitsValidator
 from .validators.references import ReferencesValidator, BibTeXValidator, URLValidator
@@ -19,7 +19,7 @@ from ..._logger import loggers
 from ...utils import DocStringParser
 from ...wrapper.core import File, Group, Dataset
 from ...wrapper.h5attr import WrapperAttributeManager
-
+from datetime import datetime
 logger = loggers['conventions']
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),
@@ -67,6 +67,11 @@ def make_dict(ref):
         else:
             _out.append(r)
     return _out
+
+
+def _isodatetime(dt):
+    # expecting isoformat!
+    return datetime.fromisoformat(dt)
 
 
 def get_validator(**validator: Dict) -> List[StandardNameValidator]:
@@ -274,7 +279,8 @@ known_types = {'int': int,
                'pint.Quantity': _pint_quantity,
                'pint.Unit': _pint_unit,
                'sdict': make_dict,
-               'standard_name_table': _standard_name_table}
+               'standard_name_table': _standard_name_table,
+               'isodatetime': _isodatetime}
 
 av_validators = {'$type': TypeValidator,
                  '$in': InValidator,
@@ -289,5 +295,6 @@ av_validators = {'$type': TypeValidator,
                  '$standard_name_table': StandardNameTableValidator,
                  '$minlength': MinLengthValidator,
                  '$maxlength': MaxLengthValidator,
+                 '$datetime': DateTimeValidator,
                  'None': NoneValidator,
                  }

@@ -193,6 +193,8 @@ class StandardNameTable:
         self._meta = meta
         self._transformations = (derivative_of_X_wrt_to_Y,
                                  magnitude_of,
+                                 arithmetic_mean_of,
+                                 standard_deviation_of,
                                  square_of,
                                  product_of_X_and_Y,
                                  ratio_of_X_and_Y,
@@ -797,7 +799,6 @@ class StandardNameTable:
         if not template_filename.exists():
             raise FileNotFoundError(f'Could not find the template file at {template_filename.absolute()}')
 
-        import subprocess
         # Convert Markdown to HTML using pandoc
         import pypandoc
         output = pypandoc.convert_file(str(markdown_filename.absolute()), 'html', format='md',
@@ -990,6 +991,32 @@ def magnitude_of(standard_name, snt) -> StandardName:
         sn = groups[0]
         snt.check(sn)
         new_description = f"Magnitude of {sn.name}"
+        return StandardName(standard_name, sn.units, new_description)
+    return False
+
+
+def arithmetic_mean_of(standard_name, snt) -> StandardName:
+    match = re.match(r"^arithmetic_mean_of_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 1
+        sn = groups[0]
+        snt.check(sn)
+        new_description = f"Arithmetic mean of {sn.name}"
+        return StandardName(standard_name, sn.units, new_description)
+    return False
+
+
+def standard_deviation_of(standard_name, snt) -> StandardName:
+    match = re.match(r"^standard_deviation_of_(.*)$",
+                     standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 1
+        sn = groups[0]
+        snt.check(sn)
+        new_description = f"Standard deviation of {sn.name}"
         return StandardName(standard_name, sn.units, new_description)
     return False
 

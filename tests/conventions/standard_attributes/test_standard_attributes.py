@@ -1,6 +1,7 @@
 """Testing the standard attributes"""
 import inspect
 import unittest
+from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __author_orcid__
@@ -38,6 +39,24 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(('create_dataset',), test.target_methods)
         self.assertEqual(None, test.alternative_standard_attribute)
         self.assert_standard_attribute(test)
+
+    def test_datetime(self):
+        datetime_attr = h5tbx.conventions.StandardAttribute(
+            name='datetime',
+            validator='$datetime',
+            target_methods=("__init__",),
+            description='Timestamp of data recording start',
+            default_value='$NONE',
+            return_type='isodatetime'
+        )
+        cv = Convention('test_datetime', contact=__author_orcid__)
+        cv.add(datetime_attr)
+        cv.register()
+        h5tbx.use(cv.name)
+        with h5tbx.File() as h5:
+            dt = datetime.now()
+            h5.timestamp = dt
+            self.assertEqual(h5.timestamp, datetime.fromisoformat(dt.isoformat()))
 
     def test_data_source(self):
         h5tbx.use(None)
@@ -82,11 +101,11 @@ class TestStandardAttributes(unittest.TestCase):
                                                         description='A long name of a dataset',
                                                         )
         long_name_grp = h5tbx.conventions.StandardAttribute('long_name',
-                                                        validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
-                                                        target_methods='create_group',
-                                                        description='A long name of a group',
-                                                        default_value='$None'
-                                                        )
+                                                            validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                                            target_methods='create_group',
+                                                            description='A long name of a group',
+                                                            default_value='$None'
+                                                            )
         comment_name = h5tbx.conventions.StandardAttribute('comment',
                                                            validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
                                                                       '$minlength': 10},
@@ -134,16 +153,18 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.create_dataset('test', data=1)
 
         with h5tbx.File() as h5:
-            h5.create_dataset('test', data=1, attrs=dict(long_name='test'))
+            h5.create_dataset('test', data=1, attrs=dict(long_name='test',
+                                                         another_attr=3.4))
             self.assertEqual(h5['test'].attrs['long_name'], 'test')
+            self.assertEqual(h5['test'].attrs['another_attr'], 3.4)
 
         with h5tbx.File() as h5:
-            h5.create_dataset('test', data=1,  comment='A comment which is long enough', long_name=None)
+            h5.create_dataset('test', data=1, comment='A comment which is long enough', long_name=None)
             self.assertEqual(h5['test'].attrs['comment'], 'A comment which is long enough')
             self.assertTrue('long_name' not in h5['test'].attrs.keys())
 
         with h5tbx.File() as h5:
-            h5.create_dataset('test', data=1,  comment='A comment which is long enough', attrs=dict(long_name=None))
+            h5.create_dataset('test', data=1, comment='A comment which is long enough', attrs=dict(long_name=None))
             self.assertEqual(h5['test'].attrs['comment'], 'A comment which is long enough')
             self.assertTrue('long_name' not in h5['test'].attrs.keys())
 
