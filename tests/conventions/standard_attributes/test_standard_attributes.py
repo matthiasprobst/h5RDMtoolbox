@@ -92,6 +92,33 @@ class TestStandardAttributes(unittest.TestCase):
             h5.create_dataset('test', data=1, attrs=dict(data_source='experiment'))
             self.assertEqual(h5['test'].attrs.raw['data_source'], 'experiment')
 
+    def test_add_with_requirements(self):
+        h5tbx.use(None)
+        comment_name = h5tbx.conventions.StandardAttribute('comment',
+                                                           validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
+                                                                      '$minlength': 10},
+                                                           target_methods='create_dataset',
+                                                           alternative_standard_attribute='long_name',
+                                                           description='A comment',
+                                                           requirements='long_name'
+                                                           )
+
+        long_name_convention = h5tbx.conventions.Convention('long_name_convention_with_requirements',
+                                                            contact=__author_orcid__)
+        with self.assertRaises(h5tbx.errors.ConventionError):
+            long_name_convention.add(comment_name)
+            long_name_convention.register()
+
+    def test_add_std_attr_to_non_existing_method(self):
+        h5tbx.use(None)
+        with self.assertRaises(ValueError):
+            long_name = h5tbx.conventions.StandardAttribute('long_name',
+                                                            validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                                            target_methods='invalid_method',
+                                                            alternative_standard_attribute='comment',
+                                                            description='A long name of a dataset',
+                                                            )
+
     def test_alternative_standard_attribute(self):
         h5tbx.use(None)
         long_name = h5tbx.conventions.StandardAttribute('long_name',
@@ -333,15 +360,16 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.data_base_source = 'invlaid'
 
     def test_from_yaml(self):
-        convention_filename = tutorial.get_standard_attribute_yaml_filename()
-        local_cv = h5tbx.conventions.Convention.from_yaml(convention_filename)
-        local_cv.register()
-        h5tbx.use(local_cv)
-        print(local_cv)
+        if self.connected:
+            convention_filename = tutorial.get_standard_attribute_yaml_filename()
+            local_cv = h5tbx.conventions.Convention.from_yaml(convention_filename)
+            local_cv.register()
+            h5tbx.use(local_cv)
+            print(local_cv)
 
-        with h5tbx.File(title='My file',
-                        piv_method='multi_grid',
-                        seeding_material='dehs',
-                        piv_medium='air',
-                        contact='https://orcid.org/0000-0001-8729-0482', mode='r+') as h5:
-            h5.standard_name_table = 'https://zenodo.org/record/8158764'
+            with h5tbx.File(title='My file',
+                            piv_method='multi_grid',
+                            seeding_material='dehs',
+                            piv_medium='air',
+                            contact='https://orcid.org/0000-0001-8729-0482', mode='r+') as h5:
+                h5.standard_name_table = 'https://zenodo.org/record/8211688'

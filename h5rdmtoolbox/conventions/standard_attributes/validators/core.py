@@ -31,6 +31,9 @@ class NoneValidator(StandardAttributeValidator):
 class DateTimeValidator(StandardAttributeValidator):
 
     def __call__(self, value, parent):
+        if isinstance(value, str):
+            datetime.fromisoformat(value)
+            return value
         if not isinstance(value, datetime):
             raise ValueError(f'The value "{value}" has wrong type: {type(value)}. Expected: {datetime}')
         return str(value.isoformat())

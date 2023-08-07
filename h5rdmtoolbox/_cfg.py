@@ -6,11 +6,13 @@ ureg = UnitRegistry(force_ndarray_like=True)
 
 
 def is_valid_logger_level(level: Union[str, int]):
+    """Check if the logger level is valid."""
     if not isinstance(level, (str, int)):
         # raise TypeError(f'Invalid type for the logger: {type(logger_value)}')
         return False
     if isinstance(level, str):
         return level.lower() in ('error', 'debug', 'critical', 'warning', 'info', 'fatal', 'warning', 'warn')
+    # 0: NOTSET, 10: DEBUG, 20: INFO, 30: WARNING, 40: ERROR, 50: CRITICAL
     return level in (0, 10, 20, 30, 40, 50)
 
 
@@ -44,7 +46,7 @@ _VALIDATORS = {
     'require_unit': lambda x: isinstance(x, bool),
     'ureg_format': lambda x: isinstance(x, str),
     'default_convention': lambda x: str(x) in ('h5py', 'h5tbx', 'None'),
-    'init_logger_level': lambda x: x in is_valid_logger_level(x),
+    'init_logger_level': lambda x: is_valid_logger_level(x),
     'dtime_fmt': lambda x: isinstance(x, str),
     'expose_user_prop_to_attrs': lambda x: isinstance(x, bool),
     'scale_attribute_name': lambda x: isinstance(x, str),

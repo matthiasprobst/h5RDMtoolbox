@@ -164,11 +164,11 @@ class Convention:
             add_to_method = True  # for now all standard attributes are always added to the method (signature)
             if add_to_method:
                 cls = StandardAttribute.METHOD_CLS_ASSIGNMENT[method_name]
-                if method_name not in cls.__dict__:
-                    raise AttributeError(
-                        f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
-                        'because it does not exist.'
-                    )
+                # if method_name not in cls.__dict__:
+                #     raise AttributeError(
+                #         f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
+                #         'because it does not exist.'
+                #     )
                 if method_name not in self.methods[cls]:
                     self.methods[cls][method_name] = {}
 
@@ -280,7 +280,7 @@ __all__ = ['datetime_str', 'StandardAttribute']
 
 
 def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Path]],
-              register: bool = True) -> List[StandardAttribute]:
+              register: bool = True) -> Convention:
     """Read convention from from a yaml file. A convention YAML file
     requires to have valid standard attribute entries and must contain
     the keys "__name__" and "__contact__".
@@ -327,43 +327,44 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
         cv.add(s)
 
     if len(list_of_yaml_filenames) > 1:
-        for yaml_filename in list_of_yaml_filenames[1:]:
-            with open(yaml_filename, 'r') as f:
-                attrs = yaml.safe_load(f)
-                std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if
-                             isinstance(values, dict)]
-                for s in std_attrs:
-                    cv.add(s)
+        raise NotImplementedError('Reading from multiple YAML files is not yet implemented')
+        # for yaml_filename in list_of_yaml_filenames[1:]:
+        #     with open(yaml_filename, 'r') as f:
+        #         attrs = yaml.safe_load(f)
+        #         std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if
+        #                      isinstance(values, dict)]
+        #         for s in std_attrs:
+        #             cv.add(s)
 
     if register:
         cv.register()
     return cv
 
 
-def from_zenodo(doi, name=None):
+def from_zenodo(doi, name=None, register: bool = True) -> Convention:
     """Download a YAML file from a zenodo repository"""
     # depending on the input, try to convert to a valid DOI:
-    if isinstance(doi, int):
-        doi = f'10.5281/zenodo.{doi}'
-    elif isinstance(doi, str):
-        if doi.startswith('https://zenodo.org/record/'):
-            doi = doi.replace('https://zenodo.org/record/', '10.5281/zenodo.')
-        elif bool(re.match(r'^\d+$', doi)):
-            # pure numbers:
-            doi = f'10.5281/zenodo.{doi}'
+    doi = zsearch.utils.parse_doi(doi)
+    if name is None:
+        filename = UserDir['cache'] / f'{doi.replace("/", "_")}'
     else:
-        raise TypeError(f'Invalid type for DOI: {doi}. Expected int or str')
-
-    if not bool(re.match(r'^10\.5281/zenodo\.\d+$', doi)):
-        raise ValueError(f'Invalid DOI pattern: {doi}. Expected format: 10.5281/zenodo.<number>')
-
-    filename = UserDir['cache'] / f'{doi.replace("/", "_")}/{name}'
+        filename = UserDir['cache'] / f'{doi.replace("/", "_")}/{name}'
     if not filename.exists():
-        record = zsearch.search(doi)[0]
-        for file in record.files:
-            if file['key'] == name:
-                assert file.type == 'yaml'
-                _filename = file.download(destination=filename.parent)
-                shutil.move(_filename, filename)
-                break
-    return from_yaml(filename)
+        record = zsearch.search_doi(doi)
+        if name is None:
+            matches = [file for file in record.files if file['type'] == 'yaml']
+            if len(matches) == 0:
+                raise ValueError(f'No file with suffix ".yaml" found in record {doi}')
+        else:
+            matches = [file for file in record.files if file['key'] == name]
+            if len(matches) == 0:
+                raise ValueError(f'No file with name "{name}" found in record {doi}')
+
+        file0 = zsearch.ZenodoFile(matches[0])
+        if file0['type'] != 'yaml':
+            raise ValueError(f'The file with name "{name}" is not a YAML file')
+
+        _filename = file0.download(destination_dir=filename.parent)
+        shutil.move(_filename, filename)
+
+    return from_yaml(filename, register=register)

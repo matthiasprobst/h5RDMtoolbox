@@ -65,8 +65,8 @@ standard_name_table:
   target_methods: __init__
   validator:
     $in:
-      - https://zenodo.org/record/8158764
-  default_value: https://zenodo.org/record/8158764
+      - https://zenodo.org/record/8211688
+  default_value: https://zenodo.org/record/8211688
   requirements:
     - standard_name
     - units

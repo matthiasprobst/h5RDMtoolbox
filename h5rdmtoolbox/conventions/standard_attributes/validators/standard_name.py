@@ -110,6 +110,10 @@ class StandardName:
         """Return dictionary representation of StandardName"""
         return dict(name=self.name, units=self.units, description=self.description)
 
+    def check(self, snt: "StandardNameTable"):
+        """check if is a valid standard name of the provided table"""
+        return snt.check(self.name)
+
 
 # wrapper that updates datetime in meta
 def update_modification_date(func):
@@ -338,10 +342,12 @@ class StandardNameTable:
             logger.debug(f'No transformation applied successfully on "{standard_name}"')
         return False
 
-    def check(self, standard_name: str, units: Union[pint.Unit, str] = None) -> bool:
+    def check(self, standard_name: Union[str, StandardName], units: Union[pint.Unit, str] = None) -> bool:
         """check the standard name against the table. If the name is not
         exactly in the table, check if it is a transformed standard name.
         If `units` is provided, check if the units are equal to the units"""
+        if isinstance(standard_name, StandardName):
+            standard_name = standard_name.name
         valid_sn = self.check_name(standard_name)
         if not valid_sn:
             return False
@@ -684,19 +690,11 @@ class StandardNameTable:
         """
         import zenodo_search as zsearch
 
-        # depending on the input, try to convert to a valid DOI:
-        if doi.startswith('https://zenodo.org/record/'):
-            doi = doi.replace('https://zenodo.org/record/', '10.5281/zenodo.')
-        elif bool(re.match(r'^\d+$', doi)):
-            # pure numbers:
-            doi = f'10.5281/zenodo.{doi}'
-
-        if not bool(re.match(r'^10\.5281/zenodo\.\d+$', doi)):
-            raise ValueError(f'Invalid DOI pattern: {doi}. Expected format: 10.5281/zenodo.<number>')
+        doi = zsearch.utils.parse_doi(doi)
 
         yaml_filename = UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
         if not yaml_filename.exists():
-            record = zsearch.search(doi)[0]
+            record = zsearch.search_doi(doi)
             file0 = record.files[0]
             assert record.files[0].type == 'yaml'
             _yaml_filename = file0.download(destination_dir=UserDir['standard_name_tables'])
@@ -988,21 +986,20 @@ def magnitude_of(standard_name, snt) -> StandardName:
     if match:
         groups = match.groups()
         assert len(groups) == 1
-        sn = groups[0]
-        snt.check(sn)
+        sn = snt[groups[0]]
         new_description = f"Magnitude of {sn.name}"
         return StandardName(standard_name, sn.units, new_description)
     return False
 
 
 def arithmetic_mean_of(standard_name, snt) -> StandardName:
+    """Arithmetic mean"""
     match = re.match(r"^arithmetic_mean_of_(.*)$",
                      standard_name)
     if match:
         groups = match.groups()
         assert len(groups) == 1
-        sn = groups[0]
-        snt.check(sn)
+        sn = snt[groups[0]]
         new_description = f"Arithmetic mean of {sn.name}"
         return StandardName(standard_name, sn.units, new_description)
     return False
@@ -1014,8 +1011,7 @@ def standard_deviation_of(standard_name, snt) -> StandardName:
     if match:
         groups = match.groups()
         assert len(groups) == 1
-        sn = groups[0]
-        snt.check(sn)
+        sn = snt[groups[0]]
         new_description = f"Standard deviation of {sn.name}"
         return StandardName(standard_name, sn.units, new_description)
     return False
@@ -1027,8 +1023,7 @@ def square_of(standard_name, snt) -> StandardName:
     if match:
         groups = match.groups()
         assert len(groups) == 1
-        sn = groups[0]
-        snt.check(sn)
+        sn = snt[groups[0]]
         new_description = f"Square of {sn.name}"
         new_units = (1 * sn.units * sn.units).units
         return StandardName(standard_name, new_units, new_description)
@@ -1047,15 +1042,17 @@ def difference_of_X_across_device(standard_name, snt) -> Union[StandardName, boo
     if groups[1] not in snt.devices:
         raise KeyError(f'Device {groups[1]} not found in registry of the standard name table. '
                        f'Available devices are: {snt.devices}.')
-    sn = groups[0]
-    snt.check(sn)
-    new_description = f"Difference of {sn} across the device {groups[1]}"
-    return StandardName(standard_name, snt[sn].units, new_description)
+    try:
+        sn = snt[groups[0]]
+    except errors.StandardNameError:
+        return False
+    new_description = f"Difference of {sn.name} across {groups[1]}"
+    return StandardName(standard_name, sn.units, new_description)
 
 
 def difference_of_X_and_Y_across_device(standard_name, snt) -> StandardName:
     """Difference of X and Y across device"""
-    match = re.match(r"^difference_of_(.*)_and(.*)_across_(.*)$",
+    match = re.match(r"^difference_of_(.*)_and_(.*)_across_(.*)$",
                      standard_name)
     if match:
         groups = match.groups()
@@ -1063,19 +1060,12 @@ def difference_of_X_and_Y_across_device(standard_name, snt) -> StandardName:
         if groups[2] not in snt.devices:
             raise KeyError(f'Device {groups[2]} not found in registry of the standard name table. '
                            f'Available devices are: {snt.devices}')
-        sn1 = groups[0]
-        sn2 = groups[1]
-        sn1_check = snt.check(sn1)
-        if not sn1_check:
-            raise ValueError(f'First standard name {sn1} not found in registry of the standard name table.')
-        sn2_check = snt.check(sn2)
-        if not sn2_check:
-            raise ValueError(f'Second standard name {sn2} not found in registry of the standard name table.')
-        new_description = f"Difference of {sn1} and {sn2} across the device {groups[2]}"
-        sn1 = snt[sn1]
-        sn2 = snt[sn2]
+        sn1 = snt[groups[0]]
+        sn2 = snt[groups[1]]
         if sn1.units != sn2.units:
-            raise ValueError(f'Units of {sn1} and {sn2} are not compatible: {sn1.units} and {sn2.units}.')
+            raise ValueError(f'Units of "{sn1.name}" and "{sn2.name}" are not compatible: "{sn1.units}" and '
+                             f'"{sn2.units}".')
+        new_description = f"Difference of {sn1.name} and {sn2.name} across {groups[2]}"
         return StandardName(standard_name, sn1.units, new_description)
     return False
 
@@ -1088,21 +1078,17 @@ def difference_of_X_and_Y_between_LOC1_and_LOC2(standard_name, snt) -> StandardN
         groups = match.groups()
         assert len(groups) == 4
         if groups[2] not in snt.locations:
-            raise KeyError(f'Location {groups[2]} not found in registry of the standard name table. '
-                           f'Available locations are: {snt.locations.keys()}')
+            raise KeyError(f'Location "{groups[2]}" not found in registry of the standard name table. '
+                           f'Available locations are: {snt.locations}')
         if groups[3] not in snt.locations:
-            raise KeyError(f'Location {groups[3]} not found in registry of the standard name table. '
-                           f'Available locations are: {snt.locations.keys()}')
-        sn1 = groups[0]
-        sn2 = groups[1]
-        sn1_check = snt.check(sn1)
-        if not sn1_check:
-            raise ValueError(f'First standard name {sn1} not found in registry of the standard name table.')
-        sn2_check = snt.check(sn2)
-        if not sn2_check:
-            raise ValueError(f'Second standard name {sn2} not found in registry of the standard name table.')
-        new_description = f"Difference of {sn1} and {sn2} between {groups[2]} and {groups[3]}"
-        sn1 = snt[sn1]
+            raise KeyError(f'Location "{groups[3]}" not found in registry of the standard name table. '
+                           f'Available locations are: {snt.locations}')
+        sn1 = snt[groups[0]]
+        sn2 = snt[groups[1]]
+        if sn1.units != sn2.units:
+            raise ValueError(f'Units of "{sn1.name}" and "{sn2.name}" are not compatible: "{sn1.units}" and '
+                             f'"{sn2.units}".')
+        new_description = f"Difference of {sn1.name} and {sn2.name} between {groups[2]} and {groups[3]}"
         return StandardName(standard_name, sn1.units, new_description)
     return False
 
@@ -1113,16 +1099,12 @@ def X_at_LOC(standard_name, snt) -> StandardName:
     if match:
         groups = match.groups()
         assert len(groups) == 2
-        sn = groups[0]
+        sn = snt[groups[0]]
         loc = groups[1]
         if loc not in snt.locations:
-            raise KeyError(f'Device {sn} not found in registry of the standard name table. '
+            raise KeyError(f'Location "{loc}" not found in registry of the standard name table. '
                            f'Available devices are: {snt.devices}')
-        sn_check = snt.check(sn)
-        if not sn_check:
-            raise ValueError(f'Standard name {sn} not found in registry of the standard name table.')
         new_description = f"{sn} at {loc}"
-        sn = snt[sn]
         return StandardName(standard_name, sn.units, new_description)
     return False
 

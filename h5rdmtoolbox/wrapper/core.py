@@ -126,7 +126,14 @@ def process_attributes(cls,
     return attrs, skwargs, kwargs
 
 
-class ConventionAccesor:
+class Core:
+
+    @property
+    def hdf_filename(self) -> pathlib.Path:
+        """The filename of the file, even if the HDF5 file is closed. Note, that
+        is not checked, if the file still exists!"""
+        return self._hdf_filename
+
     @property
     def convention(self):
         return conventions.get_current_convention()
@@ -138,7 +145,52 @@ class ConventionAccesor:
         return self.convention.properties[self.__class__]
 
 
-class Group(h5py.Group, ConventionAccesor):
+class SpecialAttributeWriter:
+    """Accessor class, which provides methods to write special attributes to a dataset or group."""
+
+    def write_uuid(self, uuid: str = None, name='uuid', overwrite: bool = False) -> str:
+        """Write a uuid to the attribute of the object.
+
+        Parameters
+        ----------
+        uuid : str=None
+            The uuid to write. If None, a new uuid is generated.
+        name : str='uuid'
+            The name of the attribute. Default is "uuid".
+
+        Returns
+        -------
+        str
+            The uuid as string.
+        """
+        if name in self.attrs and not overwrite:
+            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
+                             '"overwrite" is set to False')
+        if uuid is None:
+            from uuid import uuid4
+            uuid = uuid4()
+        suuid = str(uuid)
+        self.attrs[name] = suuid
+        return suuid
+
+    def write_iso_timestamp(self, name='timestamp', dt: datetime = None, overwrite: bool = False, **kwargs):
+        """Write the iso timestamp to the attribute of the object.
+
+        Parameters
+        --
+        """
+        if name in self.attrs and not overwrite:
+            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
+                             '"overwrite" is set to False')
+        if dt is None:
+            dt = datetime.now().isoformat(**kwargs)
+        else:
+            if not isinstance(dt, datetime):
+                raise TypeError(f'Invalid type for parameter "dt". Expected type datetime but got "{type(dt)}"')
+        self.attrs[name] = dt
+
+
+class Group(h5py.Group, SpecialAttributeWriter, Core):
     """Inherited Group of the package h5py
     """
     hdfrepr = H5Repr()
@@ -273,7 +325,7 @@ class Group(h5py.Group, ConventionAccesor):
             super().__init__(_id)
         else:
             raise ValueError('Could not initialize Group. A h5py.h5f.FileID object must be passed')
-        self.hdf_filename = Path(self.file.filename)
+        self._hdf_filename = Path(self.file.filename)
 
     def __setitem__(self,
                     name: str,
@@ -722,8 +774,8 @@ class Group(h5py.Group, ConventionAccesor):
                  rec: bool = True,
                  ignore_attribute_error: bool = False):
         """See find()"""
-        from ..database import filequery
-        return filequery.find(
+        from ..database import file
+        return file.find(
             self,
             flt,
             objfilter=objfilter,
@@ -737,7 +789,7 @@ class Group(h5py.Group, ConventionAccesor):
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None
                  ) -> List:
         """Find a distinct key (only one result is returned although multiple objects match the filter)"""
-        from ..database.filequery import distinct
+        from ..database.file import distinct
         return distinct(self, key, objfilter)
 
     def find(self, flt: Union[Dict, str],
@@ -766,8 +818,8 @@ class Group(h5py.Group, ConventionAccesor):
         -------
         h5obj: h5py.Dataset or h5py.Group
         """
-        from ..database import filequery
-        return filequery.find(
+        from ..database import file
+        return file.find(
             h5obj=self,
             flt=flt,
             objfilter=objfilter,
@@ -1297,7 +1349,7 @@ def only1d(obj):
     return obj
 
 
-class Dataset(h5py.Dataset, ConventionAccesor):
+class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     """Inherited Dataset group of the h5py package"""
 
     def __delattr__(self, item):
@@ -1722,7 +1774,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
                              'A h5py.h5f.FileID object must be passed')
 
         super().__init__(_id)
-        self.hdf_filename = Path(self.file.filename)
+        self._hdf_filename = Path(self.file.filename)
 
     def to_units(self, new_units: str, inplace: bool = False):
         """Changes the physical unit of the dataset using pint_xarray.
@@ -1763,7 +1815,7 @@ class Dataset(h5py.Dataset, ConventionAccesor):
         logger.debug('new primary scale: %s', self.dims[axis][0])
 
 
-class File(h5py.File, Group, ConventionAccesor):
+class File(h5py.File, Group, SpecialAttributeWriter, Core):
     """Main wrapper around h5py.File.
 
     Adds additional features and methods to h5py.File in order to streamline the work with
@@ -1826,13 +1878,13 @@ class File(h5py.File, Group, ConventionAccesor):
     @property
     def modification_time(self) -> datetime:
         """Return the modification from the file. Not stored as an attribute!"""
-        return datetime.fromtimestamp(self.hdf_filename.stat().st_mtime,
+        return datetime.fromtimestamp(self._hdf_filename.stat().st_mtime,
                                       tz=timezone.utc).astimezone()
 
     @property
     def creation_time(self) -> datetime:
         """Return the creation time from the file. Not stored as an attribute!"""
-        return datetime.fromtimestamp(self.hdf_filename.stat().st_ctime,
+        return datetime.fromtimestamp(self._hdf_filename.stat().st_ctime,
                                       tz=timezone.utc).astimezone()
 
     @property
@@ -1923,11 +1975,11 @@ class File(h5py.File, Group, ConventionAccesor):
                     raise ValueError(f'Cannot set attribute {k} in read mode')
 
         # if not isinstance(name, ObjectID):
-        #     self.hdf_filename = Path(name)
+        #     self._hdf_filename = Path(name)
         super().__init__(name=name,
                          mode=mode,
                          **kwargs)
-        self.hdf_filename = Path(self.filename)
+        self._hdf_filename = Path(self.filename)
 
         if self.mode != 'r':
             # update file toolbox version, wrapper version
@@ -1993,7 +2045,7 @@ class File(h5py.File, Group, ConventionAccesor):
         if dest_fname.exists() and not overwrite:
             raise FileExistsError(f'The target file "{dest_fname}" already exists and overwriting is set to False.'
                                   ' Not moving the file!')
-        logger.debug('Moving file %s to %s', {self.hdf_filename}, dest_fname)
+        logger.debug('Moving file %s to %s', {self._hdf_filename}, dest_fname)
 
         if not dest_fname.parent.exists():
             Path.mkdir(dest_fname.parent, parents=True)
@@ -2001,10 +2053,10 @@ class File(h5py.File, Group, ConventionAccesor):
 
         mode = self.mode
         self.close()
-        shutil.move(self.hdf_filename, dest_fname)
+        shutil.move(self._hdf_filename, dest_fname)
         super().__init__(dest_fname, mode=mode)
         new_filepath = dest_fname.absolute()
-        self.hdf_filename = new_filepath
+        self._hdf_filename = new_filepath
         return new_filepath
 
     def saveas(self, filename: Path, overwrite: bool = False) -> "File":
@@ -2038,12 +2090,12 @@ class File(h5py.File, Group, ConventionAccesor):
         self.close()  # close this instance
 
         shutil.copy2(src, _filename)
-        self.hdf_filename = _filename
+        self._hdf_filename = _filename
         return File(_filename, mode=mode)
 
     def reopen(self, mode: str = 'r+') -> None:
         """Open the closed file"""
-        self.__init__(self.hdf_filename, mode=mode)
+        self.__init__(self._hdf_filename, mode=mode)
 
     @staticmethod
     def open(filename: Union[str, pathlib.Path], mode: str = "r+") -> 'File':

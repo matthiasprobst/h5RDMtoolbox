@@ -17,9 +17,12 @@ class ToolboxLogger(logging.Logger):
         self.debug(f'changed logger level for {self.name} from {old_level} to {level}')
 
 
-def create_logger(name) -> ToolboxLogger:
+def create_tbx_logger(name, logdir=None) -> ToolboxLogger:
     """Create logger based on name"""
-    _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
+    if logdir is None:
+        _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
+    else:
+        _logdir = pathlib.Path(logdir)
 
     if _logdir.exists():
         _logFolderMsg = f'{name} log folder available: {_logdir}'
@@ -49,9 +52,10 @@ def create_logger(name) -> ToolboxLogger:
 
     return _logger
 
+
 # initialize loggers for all modules
 
-loggers = {'h5rdmtoolbox': create_logger('h5rdmtoolbox'),
-           'conventions': create_logger('h5rdmtoolbox.convention'),
-           'wrapper': create_logger('h5rdmtoolbox.wrapper'),
-           'database': create_logger('h5rdmtoolbox.database')}
+loggers = {'h5rdmtoolbox': create_tbx_logger('h5rdmtoolbox'),
+           'conventions': create_tbx_logger('h5rdmtoolbox.convention'),
+           'wrapper': create_tbx_logger('h5rdmtoolbox.wrapper'),
+           'database': create_tbx_logger('h5rdmtoolbox.database')}

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pymongo.errors import InvalidDocument
 from typing import Dict, List
 
-from .filequery import distinct
+from .file import distinct
 from ..wrapper.accessory import register_special_dataset
 from ..wrapper.core import Dataset, Group
 from ..wrapper.h5attr import H5_DIM_ATTRS

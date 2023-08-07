@@ -8,6 +8,26 @@ from h5rdmtoolbox.wrapper import core
 
 class TestConfig(unittest.TestCase):
 
+    def test_set_logger(self):
+        with h5tbx.set_config(init_logger_level='DEBUG'):
+            self.assertEqual(h5tbx.get_config()['init_logger_level'], 'DEBUG')
+        with h5tbx.set_config(init_logger_level=10):
+            self.assertEqual(h5tbx.get_config()['init_logger_level'], 10)
+        with self.assertRaises(ValueError):
+            with h5tbx.set_config(init_logger_level='invalid'):
+                pass
+        with self.assertRaises(ValueError):
+            with h5tbx.set_config(init_logger_level=100):
+                pass
+
+        with self.assertRaises(KeyError):
+            with h5tbx.set_config(invalid='invalid'):
+                pass
+
+        with self.assertRaises(ValueError):
+            with h5tbx.set_config(init_logger_level=3.4):
+                pass
+
     def test_config_type(self):
         self.assertIsInstance(h5tbx.get_config('xarray_unit_repr_in_plots'), str)
         with self.assertRaises(KeyError):

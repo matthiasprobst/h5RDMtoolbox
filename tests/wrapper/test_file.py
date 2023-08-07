@@ -1,8 +1,12 @@
 import h5py
 import numpy as np
+import pathlib
 import pint
+import time
 import unittest
+import uuid
 import yaml
+from datetime import datetime
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
@@ -43,6 +47,15 @@ class TestFile(unittest.TestCase):
                 if fname.is_file():
                     fname.unlink()
 
+    def test_filename(self):
+        with h5tbx.File() as h5:
+            with self.assertRaises(AttributeError):
+                h5.hdf_filename = 3
+        self.assertIsInstance(h5.hdf_filename, pathlib.Path)
+        self.assertTrue(h5.hdf_filename.exists())
+        h5tbx.clean_temp_data()
+        self.assertFalse(h5.hdf_filename.exists())
+
     def test_offset_scale(self):
         h5tbx.use('h5tbx')
         for scale in (0.2 * pint.Unit('Pa/V'), 0.2 * pint.Unit('Pa/V'), '0.2 Pa/V', '0.2Pa/V'):
@@ -67,6 +80,42 @@ class TestFile(unittest.TestCase):
         with File() as h5:
             ds = h5.create_dataset('u', shape=())
             self.assertEqual(ds.name, '/u')
+
+    def test_uuid4(self):
+        with File() as h5:
+            uuid4 = uuid.uuid4()
+            h5.write_uuid(uuid4)
+            self.assertEqual(h5.attrs['uuid'], str(uuid4))
+            h5.write_uuid(uuid4, name='uuid4')
+            self.assertEqual(h5.attrs['uuid4'], str(uuid4))
+            with self.assertRaises(ValueError):
+                h5.write_uuid(overwrite=False)
+            with self.assertRaises(ValueError):
+                h5.write_uuid(uuid4, name='uuid4', overwrite=False)
+            uuid4new = uuid.uuid4()
+            h5.write_uuid(uuid4new, name='uuid4', overwrite=True)
+            self.assertNotEqual(h5.attrs['uuid4'], str(uuid4))
+            self.assertEqual(h5.attrs['uuid4'], str(uuid4new))
+            h5.write_uuid(overwrite=True)
+            self.assertNotEqual(h5.attrs['uuid'], str(uuid4))
+            self.assertNotEqual(h5.attrs['uuid'], str(uuid4new))
+
+    def test_timestamp(self):
+        with File() as h5:
+            h5.write_iso_timestamp()
+            self.assertIsInstance(h5.attrs['timestamp'], str)
+            h5.write_iso_timestamp(name='timestamp2')
+            dt2 = h5.attrs['timestamp2']
+            self.assertIsInstance(dt2, str)
+            with self.assertRaises(ValueError):
+                h5.write_iso_timestamp(name='timestamp2', overwrite=False)
+            time.sleep(0.01)
+            h5.write_iso_timestamp(name='timestamp2', overwrite=True)
+            self.assertNotEqual(dt2, h5.attrs['timestamp2'])
+            dtnow = datetime.now()
+            dtnow_iso = dtnow.isoformat()
+            h5.write_iso_timestamp(name='now')
+            self.assertEqual(h5.attrs['now'], dtnow_iso)
 
     def test_attrs(self):
         with File(mode='w') as h5:

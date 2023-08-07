@@ -35,3 +35,4 @@ thereby highlight the advantages of the wrapper classes.
     SpecialIO.ipynb
     Visualization.ipynb
     Extensions.ipynb
+    Misc.ipynb

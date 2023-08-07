@@ -3,6 +3,7 @@ import pathlib
 import pkg_resources
 import shutil
 from itertools import count
+from typing import Tuple
 
 _filecounter = count()
 _dircounter = count()
@@ -15,16 +16,17 @@ class DirManger:
 
     def __init__(self):
         self.user_dirs = {'root': _user_root_dir,
+                          'tmp': _user_root_dir / 'tmp',
                           'layouts': _user_root_dir / 'layouts',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'cache': _user_root_dir / 'cache'}
 
         user_tmp_dir = self._get_dir('tmp')
-        itmp = len(list(user_tmp_dir.glob("tmp*")))
-        session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
+        i_tmp = len(list(user_tmp_dir.glob("tmp*")))
+        session_tmp_dir = user_tmp_dir / f'tmp{i_tmp}'
         while session_tmp_dir.exists():
-            itmp += 1
-            session_tmp_dir = user_tmp_dir / f'tmp{itmp}'
+            i_tmp += 1
+            session_tmp_dir = user_tmp_dir / f'tmp{i_tmp}'
 
         session_tmp_dir.mkdir(parents=True, exist_ok=True)
         self._session_tmp_dir = session_tmp_dir
@@ -32,8 +34,10 @@ class DirManger:
     def __getitem__(self, item):
         return self._get_dir(item)
 
-    def names(self):
-        return self.user_dirs.keys()
+    @property
+    def names(self) -> Tuple[str]:
+        """Get the names of the user directories."""
+        return tuple(self.user_dirs.keys())
 
     def __contains__(self, item):
         return item in self.user_dirs
@@ -51,44 +55,34 @@ class DirManger:
         pathlib.Path
             The path to the file or directory.
         """
-        if name == 'root':
-            if not self.user_dirs['root'].exists():
-                self.user_dirs['root'].mkdir(parents=True)
-            return self.user_dirs['root']
+        if name not in self.names:
+            raise ValueError(f'Unknown user directory name: "{name}"')
+
+        copy_tbx_data = name == 'standard_name_tables' and not self.user_dirs['standard_name_tables'].exists()
+
+        self.user_dirs[name].mkdir(parents=True, exist_ok=True)
 
         if name == 'layouts':
-            if not self.user_dirs['layouts'].exists():
-                self.user_dirs['layouts'].mkdir()
 
             layout_filenames = pathlib.Path(_get_pkg_resource_filename('data')).glob('*.hdf')
             for layout_filename in layout_filenames:
                 shutil.copy2(layout_filename, self.user_dirs['layouts'] / layout_filename.name)
 
-            return self.user_dirs['layouts']
+        if copy_tbx_data:
+            # first copy the default data there:
+            fluid_v1 = _get_pkg_resource_filename('data/fluid-v1.yml')
+            piv_v1 = _get_pkg_resource_filename('data/piv-v1.yml')
+            tutorial_standard_name_table = _get_pkg_resource_filename('data/tutorial_standard_name_table.yml')
 
-        if name == 'standard_name_tables':
-            if not self.user_dirs['standard_name_tables'].exists():
-                # first copy the default data there:
-                fluid_v1 = _get_pkg_resource_filename('data/fluid-v1.yml')
-                piv_v1 = _get_pkg_resource_filename('data/piv-v1.yml')
-                tutorial_standard_name_table = _get_pkg_resource_filename('data/tutorial_standard_name_table.yml')
+            shutil.copy2(fluid_v1, self.user_dirs['standard_name_tables'])
+            shutil.copy2(piv_v1, self.user_dirs['standard_name_tables'])
+            shutil.copy2(tutorial_standard_name_table, self.user_dirs['standard_name_tables'])
 
-                self.user_dirs['standard_name_tables'].mkdir()
-                shutil.copy2(fluid_v1, self.user_dirs['standard_name_tables'])
-                shutil.copy2(piv_v1, self.user_dirs['standard_name_tables'])
-                shutil.copy2(tutorial_standard_name_table, self.user_dirs['standard_name_tables'])
-            return self.user_dirs['standard_name_tables']
-        if name == 'tmp':
-            # tmp folder name is individual for every call of the package:
-            _root_tmp_dir = self._get_dir('root') / 'tmp'
-            if not _root_tmp_dir.exists():
-                _root_tmp_dir.mkdir()
-            return _root_tmp_dir
-        if name == 'session_tmp':
-            if not self._session_tmp_dir.exists():
-                self._session_tmp_dir.mkdir(parents=True)
-            return self._session_tmp_dir
-        raise ValueError(f'Unknown user directory name: "{name}"')
+        return self.user_dirs[name]
+
+    def clear_cache(self):
+        """Clear the cache directory."""
+        shutil.rmtree(self.user_dirs['cache'])
 
 
 UserDir = DirManger()

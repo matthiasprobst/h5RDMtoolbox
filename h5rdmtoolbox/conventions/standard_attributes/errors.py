@@ -12,3 +12,4 @@ class StandardNameError(Exception):
 
 class StandardNameTableError(Exception):
     """Exception class for StandardName Tables"""
+

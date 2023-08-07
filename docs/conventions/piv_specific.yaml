@@ -11,8 +11,6 @@ title:
     __init__
   default_value:
     $EMPTY
-  position:
-    $EMPTY
   description:
     The attribute 'title' describes the content of the file. It must start with a capital letter and must not end with a space.
 
@@ -67,8 +65,8 @@ standard_name_table:
   target_methods: __init__
   validator:
     $in:
-      - https://zenodo.org/record/8158764
-  default_value: https://zenodo.org/record/8158764
+      - 10.5281/zenodo.8158764
+  default_value: 10.5281/zenodo.8158764
   requirements:
     - standard_name
     - units

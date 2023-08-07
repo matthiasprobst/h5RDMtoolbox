@@ -11,15 +11,14 @@ from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 from . import orcid
 
 pint_xarray.unit_registry = get_ureg()
-from . import cache
+
 from . import conventions
 from .conventions import Convention
 from . import plotting
 from . import wrapper
-from ._logger import create_logger
 from ._user import UserDir
 from ._version import __version__
-from .database import filequery, FileDB, FolderDB
+from .database import file
 from .utils import generate_temporary_filename, generate_temporary_directory, has_datasets, has_groups
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import errors
@@ -61,8 +60,9 @@ class Files:
     """Class to access multiple files at once"""
 
     def __new__(cls, *args, **kwargs):
+        from .database import files
         kwargs['file_instance'] = File
-        return filequery.Files(*args, **kwargs)
+        return files.Files(*args, **kwargs)
 
 
 def dump(src: Union[str, File, pathlib.Path]) -> None:
@@ -108,7 +108,7 @@ def clean_temp_data(full: bool = False):
                 print(f'removing tmp folder "{UserDir["tmp"]}" failed due to "{e}".')
         return
 
-    _tmp_session_dir = UserDir["session_tmp"]
+    _tmp_session_dir = UserDir["tmp"]
     if _tmp_session_dir.exists():
         try:
             # logger not available anymore
@@ -124,7 +124,7 @@ def clean_temp_data(full: bool = False):
         except PermissionError as e:
             if atexit_verbose:
                 print(f'[!] failed deleting tmp session dir: {_tmp_session_dir}')
-            failed_dirs.append(UserDir['session_tmp'])
+            failed_dirs.append(UserDir['tmp'])
             if atexit_verbose:
                 print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
                       f'manually delete the directory.')
@@ -155,6 +155,6 @@ xr.set_options(display_expand_data=False)
 __all__ = ('__version__', '__author__', '__author_orcid__', 'UserDir', 'use', 'loggers',
            'generate_temporary_filename', 'generate_temporary_directory',
            'File', 'Files', 'Group', 'Dataset', 'has_datasets', 'has_groups',
-           'dump', 'dumps', 'get_current_convention', 'cv_h5py', 'lower', 'Lower',
+           'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg', 'orcid',
            'Convention')

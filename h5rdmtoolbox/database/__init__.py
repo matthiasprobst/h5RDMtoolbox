@@ -1,9 +1,9 @@
-import h5py
 import pathlib
 from typing import Union, Dict
 
 from . import lazy
-from .filequery import Files
+from .file import File
+from .files import Files
 from .._logger import loggers
 
 logger = loggers['database']
@@ -16,36 +16,7 @@ def set_loglevel(level):
         handler.setLevel(level)
 
 
-class FileDB:
-    """File as a database"""
-
-    def __init__(self, filename: pathlib.Path):
-        filename = pathlib.Path(filename)
-        if not filename.is_file():
-            raise ValueError(f'{filename} is not a file')
-        self.filename = filename
-
-    def find(self, flt: Union[Dict, str],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             rec: bool = True,
-             ignore_attribute_error: bool = False):
-        """Find"""
-        from .. import File
-        with File(self.filename) as h5:
-            return [lazy.lazy(r) for r in h5.find(flt, objfilter, rec, ignore_attribute_error)]
-
-    def find_one(self,
-                 flt: Union[Dict, str],
-                 objfilter=None,
-                 rec: bool = True,
-                 ignore_attribute_error: bool = False):
-        """Find one occurrence"""
-        from .. import File
-        with File(self.filename) as h5:
-            return lazy.lazy(h5.find_one(flt, objfilter, rec, ignore_attribute_error))
-
-
-class FolderDB:
+class Folder:
     """Folder with HDF5 files as a database
 
     Parameters
@@ -73,8 +44,8 @@ class FolderDB:
              objfilter=None, rec: bool = True,
              ignore_attribute_error: bool = False):
         """Find"""
-        from .. import File
-        with Files(self.filenames, file_instance=File) as h5:
+        from .. import wrapper
+        with wrapper.Files(self.filenames, file_instance=File) as h5:
             return [lazy.lazy(r) for r in h5.find(flt, objfilter, rec, ignore_attribute_error)]
 
     def find_one(self,

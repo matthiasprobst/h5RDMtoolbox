@@ -99,9 +99,9 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = Fa
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _filename = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
+    _filename = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
     while _filename.exists():
-        _filename = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
+        _filename = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
     if touch:
         with h5py.File(_filename, 'w'):
             pass
@@ -121,9 +121,9 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}"
+    _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}"
     while _dir.exists():
-        _dir = _user.UserDir['session_tmp'] / f"{prefix}{next(_user._filecounter)}"
+        _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}"
     _dir.mkdir(parents=True)
     return _dir
 

@@ -11,7 +11,11 @@ def dataset_value_decoder(func):
     """decorator during slicing of dataset"""
 
     def wrapper(*args, **kwargs):
-        """wrapper that decodes the xarray.DataArray"""
+        """wrapper that decodes the xarray.DataArray
+
+        Note, if offset is used, this is the formular:
+        xarr = (xarr - offset) * scale
+        """
         ds = args[0]
         assert isinstance(ds, h5py.Dataset)
         xarr = func(*args, **kwargs)
@@ -44,7 +48,7 @@ def dataset_value_decoder(func):
 
         if scale and offset:
             with xr.set_options(keep_attrs=True):
-                return ((xarr + offset).pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
+                return ((xarr - offset).pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
                     format=get_config()['ureg_format'])
 
         elif scale:
@@ -53,7 +57,7 @@ def dataset_value_decoder(func):
                     format=get_config()['ureg_format'])
         elif offset:
             with xr.set_options(keep_attrs=True):
-                return xarr + offset
+                return xarr - offset
 
         if get_config('add_source_info_to_xr'):
             xarr.attrs['__hdf_src_info__'] = {'filename': str(ds.hdf_filename),

@@ -5,7 +5,7 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Files
-from h5rdmtoolbox.database.filequery import H5Objects, DatasetValues
+from h5rdmtoolbox.database.files import H5Objects, DatasetValues
 from h5rdmtoolbox.wrapper.core import File
 
 
@@ -87,6 +87,19 @@ class TestFileQuery(unittest.TestCase):
 
             self.assertEqual(sorted(h5.find({'a': {'$gte': 3}})), [h5['a3'], h5['a4'], ])  # $gte
             self.assertIn(h5.find_one({'a': {'$gte': 3}}), [h5['a3'], h5['a4'], ])  # $gte
+
+    def test_lazy(self):
+        with h5tbx.File() as h5:
+            h5.create_group('g1', attrs={'a': 1, 'b': 2})
+            h5.create_group('g2', attrs={'a': 21, 'b': 2})
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(a=1))
+            h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(a=2))
+        r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 0}})
+        self.assertIsInstance(r, h5tbx.database.lazy.LDataset)
+        self.assertEqual(r.shape, (1, 2, 3))
+        self.assertEqual(r.ndim, 3)
+        r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 0}}, '$group')
+        self.assertIsInstance(r, h5tbx.database.lazy.LGroup)
 
     def test_regex(self):
         with h5tbx.File() as h5:

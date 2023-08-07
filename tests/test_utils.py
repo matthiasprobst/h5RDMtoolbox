@@ -1,5 +1,4 @@
 import datetime
-
 import pathlib
 import unittest
 
@@ -13,7 +12,7 @@ class TestUtils(unittest.TestCase):
     def test_touch_tmp_hdf5_file(self):
         now = datetime.datetime.now()
         tmp_hdf5file = h5tbx.utils.touch_tmp_hdf5_file(touch=True,
-                                                    attrs={'dtime': now})
+                                                       attrs={'dtime': now})
         self.assertTrue(h5tbx.UserDir['tmp'] in tmp_hdf5file.parents)
 
     def test_has_datasets(self):
@@ -28,8 +27,3 @@ class TestUtils(unittest.TestCase):
 
             self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
             self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
-
-
-
-
-
