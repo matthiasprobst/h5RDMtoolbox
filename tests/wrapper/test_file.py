@@ -112,9 +112,11 @@ class TestFile(unittest.TestCase):
             time.sleep(0.01)
             h5.write_iso_timestamp(name='timestamp2', overwrite=True)
             self.assertNotEqual(dt2, h5.attrs['timestamp2'])
+
             dtnow = datetime.now()
             dtnow_iso = dtnow.isoformat()
-            h5.write_iso_timestamp(name='now')
+            time.sleep(0.01)
+            h5.write_iso_timestamp(name='now', dt=dtnow)
             self.assertEqual(h5.attrs['now'], dtnow_iso)
 
     def test_attrs(self):

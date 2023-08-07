@@ -183,11 +183,11 @@ class SpecialAttributeWriter:
             raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
                              '"overwrite" is set to False')
         if dt is None:
-            dt = datetime.now().isoformat(**kwargs)
+            dt = datetime.now()
         else:
             if not isinstance(dt, datetime):
                 raise TypeError(f'Invalid type for parameter "dt". Expected type datetime but got "{type(dt)}"')
-        self.attrs[name] = dt
+        self.attrs[name] = dt.isoformat(**kwargs)
 
 
 class Group(h5py.Group, SpecialAttributeWriter, Core):
