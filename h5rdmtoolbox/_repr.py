@@ -1,3 +1,5 @@
+import numpy as np
+
 import h5py
 import os
 import pkg_resources
@@ -189,10 +191,12 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         """string representation of a 0D dataset"""
         value = h5obj.values[()]
-        if isinstance(value, float):
-            value = f'{float(value):f} '
-        elif isinstance(value, int):
-            value = f'{int(value):i} '
+        if isinstance(value, (float, np.float)):
+            value = f'{float(value):f}'
+        elif isinstance(value, (int, np.integer)):
+            value = f'{int(value):d}'
+        else:
+            raise TypeError(f'Unexpected type {type(value)}')
         return f"\033[1m{name}\033[0m {value}, dtype: {h5obj.dtype}"
 
     def __NDdataset__(self, name, h5obj: h5py.Dataset):

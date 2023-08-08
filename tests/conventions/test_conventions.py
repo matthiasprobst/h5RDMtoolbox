@@ -1,6 +1,7 @@
 import requests
 import unittest
 import warnings
+import yaml
 
 import h5rdmtoolbox as h5tbx
 
@@ -51,11 +52,16 @@ class TestConventions(unittest.TestCase):
         with open(f1, 'w') as f:
             f.writelines(['__name__: test\n', '__contact__: me'])
 
+        test_std_attr = {'title': {'validator': {'$regex': '^[A-Z].*(?<!\s)$'},
+                                   'target_methods': '__init__',
+                                   'description': 'This is a test', }
+                         }
         with open(f2, 'w') as f:
-            f.writelines(['__name__: test\n', '__contact__: me'])
+            yaml.safe_dump(test_std_attr, f)
 
-        with self.assertRaises(NotImplementedError):
-            cv = h5tbx.conventions.from_yaml([f1, f2])
+        cv = h5tbx.conventions.from_yaml([f1, f2])
+        self.assertTrue('title' in cv._registered_standard_attributes)
+        self.assertEqual('test', cv.name)
 
     def test_cv_h5tbx(self):
         h5tbx.use('h5tbx')

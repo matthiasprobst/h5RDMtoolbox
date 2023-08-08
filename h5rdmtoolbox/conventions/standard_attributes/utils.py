@@ -13,9 +13,6 @@ from ... import get_ureg
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
 
-EMAIL_REGREX = re.compile(r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\"([]!#-[^-~ \t]|(\\[\t -~]))+\")@"
-                          r"([-!#-'*+/-9=?A-Z^-~]+(\.[-!#-'*+/-9=?A-Z^-~]+)*|\[[\t -Z^-~]*])")
-
 
 def get_similar_names_ratio(a, b):
     """get the similarity of two strings. measure is between [0, 1]"""
@@ -49,15 +46,19 @@ def equal_base_units(u1: Union[str, pint.Unit, pint.Quantity],
 def is_valid_email_address(email: str) -> bool:
     """validates an email address.
     Taken from: https://stackabuse.com/python-validate-email-address-with-regular-expressions-regex/"""
-    if re.fullmatch(EMAIL_REGREX, email):
+    if re.fullmatch(r"([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+", email):
         return True
     return False
 
 
-def check_url(url, raise_error: bool = False, print_warning: bool = False, timeout: int = 2):
+def check_url(url:str, raise_error: bool = False, print_warning: bool = False, timeout: int = 2):
     """Check if URL is valid. Returns True if valid, False otherwise."""
     if print_warning and raise_error:
         raise ValueError("'print_warning' and 'raise_error' cannot both be True")
+
+    if not url.startswith('https'):
+        url = 'https://' + url
+
     try:
         response = requests.head(url, timeout=timeout)
         response.raise_for_status()

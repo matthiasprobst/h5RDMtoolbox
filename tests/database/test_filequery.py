@@ -14,6 +14,41 @@ class TestFileQuery(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
+    def test_regex(self):
+        from h5rdmtoolbox.database.file import _regex
+        self.assertFalse(_regex(None, '*'))
+        self.assertFalse(_regex('hallo', r'\d4'))
+
+    def test_Folder(self):
+        folder_dir = h5tbx.utils.generate_temporary_directory()
+        sub_folder = folder_dir / 'sub_folder'
+        sub_folder.mkdir()
+
+        with h5tbx.File(folder_dir / 'f1.hdf', 'w') as h5:
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
+            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
+
+        with h5tbx.File(folder_dir / 'f2.hdf', 'w') as h5:
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
+            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
+
+        with h5tbx.File(folder_dir / sub_folder / 'f3.hdf', 'w') as h5:
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
+            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
+
+        with self.assertRaises(ValueError):
+            h5tbx.database.Folder('here')
+        fd = h5tbx.database.Folder(folder_dir, rec=False)
+        self.assertEqual(2, len(list(fd.filenames)))
+
+        self.assertEqual(2, len(fd.find({'long_name': 'long name 1'})))
+
+        fdr = h5tbx.database.Folder(folder_dir, rec=True)
+        self.assertEqual(3, len(list(fdr.filenames)))
+
     def test_Files(self):
         fnames = []
         with File() as h51:
@@ -91,17 +126,28 @@ class TestFileQuery(unittest.TestCase):
     def test_lazy(self):
         with h5tbx.File() as h5:
             h5.create_group('g1', attrs={'a': 1, 'b': 2})
-            h5.create_group('g2', attrs={'a': 21, 'b': 2})
-            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(a=1))
+            h5.create_group('g2', attrs={'a': -12, 'b': 2})
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(a=99, b=100))
             h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(a=2))
-        r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 0}})
+        r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 80}})
         self.assertIsInstance(r, h5tbx.database.lazy.LDataset)
+        self.assertIsInstance(r.attrs, h5tbx.database.lazy.LAttributeManager)
+        self.assertEqual(r.attrs['a'], 99)
+        self.assertEqual(r.attrs.keys(), r[()].attrs.keys())
+        self.assertEqual(list(r.attrs.values()), list(r[()].attrs.values()))
         self.assertEqual(r.shape, (1, 2, 3))
         self.assertEqual(r.ndim, 3)
+
+        with r as h5:
+            self.assertIsInstance(h5, h5tbx.Dataset)
+
         r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 0}}, '$group')
         self.assertIsInstance(r, h5tbx.database.lazy.LGroup)
+        self.assertIsInstance(r.attrs, h5tbx.database.lazy.LAttributeManager)
+        self.assertEqual(r.name, '/g1')
+        self.assertEqual(r.basename, 'g1')
 
-    def test_regex(self):
+    def test_regex2(self):
         with h5tbx.File() as h5:
             h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
             h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(units='', long_name='another long name 2'))

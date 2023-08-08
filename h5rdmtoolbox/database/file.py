@@ -4,8 +4,9 @@ import pathlib
 import re
 from typing import List, Union, Dict, Callable
 
-from ..utils import process_obj_filter_input
 from . import lazy
+from ..utils import process_obj_filter_input
+
 
 # implementation similar to pymongo:
 # https://www.mongodb.com/docs/manual/reference/operator/query/
@@ -303,11 +304,10 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
     return list(set(rac.found_objects))
 
 
-
 class File:
     """File as a database"""
 
-    def __init__(self, filename: pathlib.Path):
+    def __init__(self, filename: pathlib.Path, **kwargs):
         filename = pathlib.Path(filename)
         if not filename.is_file():
             raise ValueError(f'{filename} is not a file')
@@ -331,4 +331,3 @@ class File:
         from .. import File
         with File(self.filename) as h5:
             return lazy.lazy(h5.find_one(flt, objfilter, rec, ignore_attribute_error))
-

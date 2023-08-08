@@ -1,3 +1,4 @@
+import numpy as np
 import unittest
 
 import h5rdmtoolbox as h5tbx
@@ -32,15 +33,22 @@ class TestRepr(unittest.TestCase):
             h5.create_dataset('ds', data=3, dtype='int64')
             h5.create_dataset('dsfloat', data=3.0, dtype='float64')
             h5.create_dataset('str', data='str')
+            h5.create_dataset('arr',
+                              data=np.random.random((4, 5, 3)),
+                              chunks=(4, 5, 1),
+                              maxshape=(4, 5, 3))
 
             ssr = _repr.HDF5StructureStrRepr()
-            ssr(h5)
+            ssr(h5, preamble='My preamble')
+
+            with self.assertRaises(TypeError):
+                ssr.__0Ddataset__('ds0', h5['str'])
 
             s = ssr.__dataset__('ds', h5['ds'])
             self.assertEqual(s, '\x1b[1mds\x1b[0m 3, dtype: int64')
 
             s = ssr.__dataset__('dsfloat', h5['dsfloat'])
-            self.assertEqual(s, '\x1b[1mdsfloat\x1b[0m 3.000000 , dtype: float64')
+            self.assertEqual(s, '\x1b[1mdsfloat\x1b[0m 3.000000, dtype: float64')
 
             s = ssr.__dataset__('str', h5['str'])
             self.assertEqual(s, "\x1b[1mstr\x1b[0m: b'str'")

@@ -6,8 +6,6 @@ import pathlib
 from itertools import chain
 from typing import List, Union, Dict, Tuple
 
-from .file import find
-
 
 class H5Objects:
 
@@ -148,15 +146,16 @@ class Files:
                  ignore_attribute_error: bool = False) -> Union[h5py.Group, h5py.Dataset, None]:
         """See find() in h5file.py"""
         for v in self.values():
-            found = find(v, flt, objfilter=objfilter, recursive=rec, find_one=True,
-                         ignore_attribute_error=ignore_attribute_error)
+            found = v.find_one(flt, objfilter=objfilter, rec=rec,
+                           ignore_attribute_error=ignore_attribute_error)
             if found:
                 return found
 
-    def find(self, flt: Union[Dict, str], objfilter=None, rec: bool = True, ignore_attribute_error: bool = False):
+    def find(self, flt: Union[Dict, str], objfilter=None,
+             rec: bool = True, ignore_attribute_error: bool = False):
         """See find() in h5file.py"""
-        found = [find(v, flt, objfilter=objfilter, recursive=rec, find_one=False,
-                      ignore_attribute_error=ignore_attribute_error) for
+        found = [v.find(flt, objfilter=objfilter, rec=rec,
+                        ignore_attribute_error=ignore_attribute_error) for
                  v in self.values()]
         return list(chain.from_iterable(found))
 

@@ -309,6 +309,7 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
 
     yaml_filename = list_of_yaml_filenames[0]
     yaml_filename = pathlib.Path(yaml_filename)
+
     with open(yaml_filename, 'r') as f:
         attrs = yaml.safe_load(f)
 
@@ -327,14 +328,13 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
         cv.add(s)
 
     if len(list_of_yaml_filenames) > 1:
-        raise NotImplementedError('Reading from multiple YAML files is not yet implemented')
-        # for yaml_filename in list_of_yaml_filenames[1:]:
-        #     with open(yaml_filename, 'r') as f:
-        #         attrs = yaml.safe_load(f)
-        #         std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if
-        #                      isinstance(values, dict)]
-        #         for s in std_attrs:
-        #             cv.add(s)
+        for yaml_filename in list_of_yaml_filenames[1:]:
+            with open(yaml_filename, 'r') as f:
+                attrs = yaml.safe_load(f)
+                std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if
+                             isinstance(values, dict)]
+                for s in std_attrs:
+                    cv.add(s)
 
     if register:
         cv.register()

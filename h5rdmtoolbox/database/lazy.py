@@ -3,7 +3,6 @@ import h5py
 from typing import Union
 
 
-
 class LAttributeManager:
     """Lazy Attribute Manager"""
 
@@ -26,22 +25,19 @@ class LAttributeManager:
 class LGroup:
     """Lazy Group"""
 
-    __slots__ = '__obj_attrs', 'filename', 'name', '_attrs', 'properties'
+    __slots__ = '_obj_attrs', 'filename', 'name', '_attrs', 'properties'
 
     def __init__(self, filename, name, attrs, properties):
         self.filename = filename
         self.name = name
         self._attrs = attrs
         self.properties = properties
-        self.__obj_attrs = ('file', 'name', 'attrs',
-                            'ndim', 'shape', 'dtype', 'size',
-                            'chunks', 'compression', 'compression_opts',
-                            'shuffle', 'dims')
+        self._obj_attrs = ('file', 'name', 'attrs',)
 
     def __getattr__(self, item):
         if item in self.properties:
             return self.properties[item]
-        if item in self.__obj_attrs:
+        if item in self._obj_attrs:
             with h5py.File(self.filename) as h5:
                 return h5[self.name].__getattribute__(item)
         return super().__getattribute__(item)
@@ -62,10 +58,10 @@ class LDataset(LGroup):
 
     def __init__(self, filename, name, attrs, properties):
         super().__init__(filename, name, attrs, properties)
-        self.__obj_attrs = ('file', 'name', 'attrs',
-                            'ndim', 'shape', 'dtype', 'size',
-                            'chunks', 'compression', 'compression_opts',
-                            'shuffle', 'dims')
+        self._obj_attrs = ('file', 'name', 'attrs',
+                           'ndim', 'shape', 'dtype', 'size',
+                           'chunks', 'compression', 'compression_opts',
+                           'shuffle', 'dims')
 
     def __repr__(self):
         return f'<LDataset "{self.name}">'
