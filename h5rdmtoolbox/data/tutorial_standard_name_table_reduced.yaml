@@ -4,9 +4,20 @@ institution: my_institution
 contact: 'https://orcid.org/0000-0001-8729-0482'
 valid_characters: '[^a-zA-Z0-9_]'
 pattern: '^[0-9 ].*'
-last_modified: 2023-08-02_09:56:05
+last_modified: 2023-08-16_11:05:00
 standard_devices:
-  fan: The test fan
+  fan:
+    description: The test fan
+    coordinates:
+      units: mm
+      x:
+        - -11.5
+        - 0
+        - 0
+      y:
+        - 0
+        - 100.4
+        - 0
   orifice: The orifice to measure the volume flow rate
 standard_locations:
   fan_inlet: The defined inlet into the test fan. See additional meta data or references or the exact spatial location.
@@ -59,25 +70,15 @@ standard_components: # The direction of the spatial component of a vector
 standard_names:
   time:
     canonical_units: s
-    description: physical time
-  x_coordinate:
+    description: Physical time
+  coordinate:
+    vector: true
     canonical_units: m
-    description: x indicates the component in x-axis direction
-  y_coordinate:
-    canonical_units: m
-    description: y indicates the component in y-axis direction
-  z_coordinate:
-    canonical_units: m
-    description: z indicates the component in z-axis direction
-  x_velocity:
+    description: Spatial coordinate. Coordinate is a vector quantity.
+  velocity:
+    vector: true
     canonical_units: m/s
-    description: velocity is a vector quantity. x indicates the component in y-axis
-      direction
-  y_velocity:
-    canonical_units: m/s
-    description: velocity is a vector quantity. y indicates the component in y-axis
-      direction
-  z_velocity:
-    canonical_units: m/s
-    description: velocity is a vector quantity. z indicates the component in z-axis
-      direction
+    description: Velocity is a vector quantity.
+  pressure:
+    canonical_units: Pa
+    description: Pressure is a scalar quantity.

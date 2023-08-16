@@ -8,6 +8,10 @@ from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable, StandardName
 from h5rdmtoolbox.conventions.standard_attributes.errors import StandardNameError, StandardAttributeError
 from h5rdmtoolbox.conventions.standard_attributes.utils import check_url
+from h5rdmtoolbox.conventions.standard_attributes.validators.standard_name import (StandardDevice, StandardDevices,
+                                                                                   StandardLocation, StandardLocations,
+                                                                                   StandardComponent,
+                                                                                   StandardComponents)
 
 try:
     import pooch
@@ -33,13 +37,13 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_standard_name(self):
         with self.assertRaises(StandardNameError):
-            sn_fail = StandardName(name='', units='m')
+            StandardName(name='', units='m')
 
         with self.assertRaises(StandardNameError):
             StandardName(name=' x', units='m', description='a description')
 
         with self.assertRaises(StandardNameError):
-            sn_fail = StandardName(name='x ', units='m', description='a description')
+            StandardName(name='x ', units='m', description='a description')
 
         sn1 = StandardName(name='acc',
                            description='a description',
@@ -49,17 +53,66 @@ class TestStandardAttributes(unittest.TestCase):
         with self.assertRaises(StandardNameError):
             tutorial.get_standard_name_table()['z_coord']
 
+    def test_ReducedStandardNameTableFromYaml(self):
+        table = StandardNameTable.from_yaml(tutorial.get_reduced_standard_name_table_yaml_file())
+        self.assertIsInstance(table['coordinate'], StandardName)
+        self.assertIsInstance(table['x_coordinate'], StandardName)
+        self.assertEqual('Spatial coordinate. Coordinate is a vector quantity. '
+                         'X indicates the x-axis component of the vector.',
+                         table['x_coordinate'].description)
+        self.assertIsInstance(table['velocity'], StandardName)
+        self.assertIsInstance(table['x_velocity'], StandardName)
+        with self.assertRaises(h5tbx.errors.StandardNameError):
+            table['phi_velocity']
+        self.assertIsInstance(table['derivative_of_x_coordinate_wrt_x_velocity'], StandardName)
+
     # if pooch_is_available:
     def test_StandardNameTableFromYaml(self):
         table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())
+
         self.assertEqual(table.name, 'Test')
         self.assertEqual(table.version, 'v1.0')
         self.assertEqual(table.institution, 'my_institution')
         self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(table.valid_characters, '[^a-zA-Z0-9_]')
         self.assertEqual(table.pattern, '^[0-9 ].*')
-        self.assertEqual(table.devices, ['fan', 'orifice'])
-        self.assertEqual(table.locations, ['fan_inlet', 'fan_outlet'])
+
+        self.assertIsInstance(table.devices, StandardDevices)
+        for device in table.devices:
+            self.assertIsInstance(device, StandardDevice)
+        self.assertIsInstance(table.devices['fan'], StandardDevice)
+        self.assertEqual(table.devices['fan'].name, 'fan')
+        self.assertEqual(table.devices['orifice'].name, 'orifice')
+        self.assertEqual(table.devices['fan'].description, 'The test fan')
+        self.assertEqual(table.devices['orifice'].description, 'The orifice to measure the volume flow rate')
+        self.assertEqual(table.devices.names, ['fan', 'orifice'])
+
+        self.assertIsInstance(table.components, StandardComponents)
+        for component in table.components:
+            self.assertIsInstance(component, StandardComponent)
+        self.assertIsInstance(table.components['x'], StandardComponent)
+        self.assertEqual(table.components['x'].name, 'x')
+        self.assertEqual(table.components['y'].name, 'y')
+        self.assertEqual(table.components['z'].name, 'z')
+        self.assertEqual(table.components['x'].description, 'X indicates the x-axis component of the vector.')
+        self.assertEqual(table.components['y'].description, 'Y indicates the y-axis component of the vector.')
+        self.assertEqual(table.components['z'].description, 'Z indicates the z-axis component of the vector.')
+        self.assertEqual(table.components.names, ['x', 'y', 'z'])
+
+        self.assertIsInstance(table.locations, StandardLocations)
+        for location in table.locations:
+            self.assertIsInstance(location, StandardLocation)
+        self.assertIsInstance(table.locations['fan_inlet'], StandardLocation)
+        self.assertIsInstance(table.locations['fan_outlet'], StandardLocation)
+        self.assertEqual(table.locations['fan_inlet'].name, 'fan_inlet')
+        self.assertEqual(table.locations['fan_outlet'].name, 'fan_outlet')
+        ref_desc = 'The defined inlet into the test fan.' \
+                   ' See additional meta data or references or the exact spatial location.'
+        self.assertEqual(ref_desc, table.locations['fan_inlet'].description)
+        ref_desc = 'The defined outlet of the test fan.' \
+                   ' See additional meta data or references or the exact spatial location.'
+        self.assertEqual(ref_desc, table.locations['fan_outlet'].description)
+        self.assertEqual(table.locations.names, ['fan_inlet', 'fan_outlet'])
 
         with self.assertRaises(AttributeError):
             table.standard_names = {'synthetic_particle_image': {
@@ -124,8 +177,8 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(cf.name, 'standard_name_table')
         self.assertEqual(cf.versionname, 'standard_name_table-v79')
         if self.connected:
-            self.assertTrue(check_url(cf.url))
-            self.assertFalse(check_url(cf.url + '123'))
+            self.assertTrue(check_url(cf.meta['url']))
+            self.assertFalse(check_url(cf.meta['url'] + '123'))
 
         if self.connected:
             opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
@@ -183,15 +236,20 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertTrue(fname.exists())
         fname.unlink(missing_ok=True)
 
+        with self.assertRaises(KeyError):
+            self.snt['x_velocity_in_a_frame']
+
+        self.assertTrue(snt.standard_reference_frames is None)
+
     def test_from_zenodo(self):
         import zenodo_search as zsearch
-        doi = zsearch.utils.parse_doi('8211688')
-        snt = h5tbx.conventions.standard_attributes.StandardNameTable.from_zenodo(doi=8211688)
+        doi = zsearch.utils.parse_doi('8223533')
+        snt = h5tbx.conventions.standard_attributes.StandardNameTable.from_zenodo(doi=8223533)
         self.assertIsInstance(snt, h5tbx.conventions.StandardNameTable)
         filename = h5tbx.UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
         self.assertTrue(filename.exists())
         filename.unlink(missing_ok=True)
-        snt = h5tbx.conventions.standard_attributes.StandardNameTable.from_zenodo(doi=8211688)
+        snt = h5tbx.conventions.standard_attributes.StandardNameTable.from_zenodo(doi=8223533)
         self.assertTrue(filename.exists())
 
     def test_from_yaml(self):
@@ -267,7 +325,7 @@ class TestStandardAttributes(unittest.TestCase):
             with self.assertRaises(KeyError):
                 self.snt[f'{sn}_at_fan']
         with self.assertRaises(h5tbx.errors.StandardNameError):
-            self.snt['a_coordinate_at_fan']
+            self.snt['invalid_coordinate_at_fan']
         sn = self.snt['x_coordinate_at_fan_inlet']
         self.assertEqual(sn.units, self.snt['x_coordinate'].units)
 
@@ -361,3 +419,13 @@ class TestStandardAttributes(unittest.TestCase):
                 _sn = self.snt[f'product_of_{sn1}_and_{sn2}']
                 self.assertEqual(_sn.units, self.snt[sn1].units * self.snt[sn2].units)
                 self.assertEqual(_sn.description, f"Product of {sn1} and {sn2}")
+
+    def test_in_frame(self):
+        for sn in self.snt.standard_names:
+            for frame in self.snt.standard_reference_frames.names:
+                _sn = self.snt[f'{sn}_in_{frame}']
+                self.assertEqual(_sn.units, self.snt[sn].units)
+        with self.assertRaises(KeyError):
+            self.snt[f'{sn}_in_invalid_frame']
+        with self.assertRaises(KeyError):
+            self.snt.check(f'{sn}_in_invalid_frame')

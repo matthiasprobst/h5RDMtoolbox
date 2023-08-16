@@ -372,4 +372,4 @@ class TestStandardAttributes(unittest.TestCase):
                             seeding_material='dehs',
                             piv_medium='air',
                             contact='https://orcid.org/0000-0001-8729-0482', mode='r+') as h5:
-                h5.standard_name_table = 'https://zenodo.org/record/8211688'
+                h5.standard_name_table = 'https://zenodo.org/record/8223533'

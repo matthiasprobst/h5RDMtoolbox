@@ -8,8 +8,10 @@ import shutil
 import warnings
 import yaml
 from IPython.display import display, HTML
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Callable, Dict, Union, List, Tuple
+from typing import Callable, List
+from typing import Dict, Tuple, Union
 
 from h5rdmtoolbox import get_ureg
 from . import StandardAttributeValidator
@@ -125,6 +127,157 @@ def update_modification_date(func):
     return wrapper
 
 
+@dataclass
+class StandardReferenceFrame:
+    """Standard Reference Frame"""
+    name: str
+    type: str
+    origin: Tuple[float, float, float]
+    orientation: Dict
+    principle_axis: Union[str, Tuple[float, float, float]]
+
+    def __post_init__(self):
+        if not isinstance(self.origin, (list, tuple)):
+            raise TypeError(f'Wrong type for "origin". Expecting tuple but got {type(self.origin)}')
+        self.origin = tuple(self.origin)
+        if isinstance(self.principle_axis, str):
+            self.principle_axis = self.orientation[self.principle_axis]
+
+    def to_dict(self):
+        return {self.name: dict(type=self.type,
+                                origin=self.origin,
+                                orientation=self.orientation,
+                                principle_axis=self.principle_axis)}
+
+
+class StandardReferenceFrames:
+    """Collection of Standard Reference Frames"""
+
+    def __init__(self, standard_reference_frames: List[StandardReferenceFrame]):
+        self._standard_reference_frames = {srf.name: srf for srf in standard_reference_frames}
+        self._names = list(self._standard_reference_frames.keys())
+        self._index = 0
+
+    def __len__(self):
+        return len(self._names)
+
+    def __getitem__(self, item) -> StandardReferenceFrame:
+        return self._standard_reference_frames[item]
+
+    def __contains__(self, item) -> bool:
+        return item in self._names
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._index < len(self) - 1:
+            self._index += 1
+            return self._standard_reference_frames[self._names[self._index]]
+        self._index = -1
+        raise StopIteration
+
+    @property
+    def names(self):
+        """Return the names of the reference frames"""
+        return self._names
+
+    def to_dict(self) -> Dict:
+        """Return dictionary representation of StandardReferenceFrames"""
+        frames = [srf.to_dict() for srf in self._standard_reference_frames.values]
+        srfdict = {'standard_reference_frames': {}}
+        for frame in frames:
+            for k, v in frame.items():
+                srfdict['standard_reference_frames'][k] = v
+        return srfdict
+
+
+class BaseDescribedStandardItem:
+    """StandardLocation"""
+
+    def __init__(self, name, description, **kwargs):
+        self._name = name
+        self._description = description
+        self._list_of_user_properties = list(kwargs.keys())
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @property
+    def name(self):
+        """Return the name of the standard item"""
+        return self._name
+
+    @property
+    def description(self):
+        """Return the description of the standard item"""
+        return self._description
+
+    def __repr__(self):
+        user_props = ', '.join([f'{k}="{getattr(self, k)}"' for k in self._list_of_user_properties])
+        if user_props:
+            return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}", {user_props}>'
+        return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}">'
+
+    def __str__(self):
+        return self.name
+
+
+@dataclass(frozen=True)
+class BaseDescribedStandardItems:
+    """Collection of StandardLocations"""
+    items: List[BaseDescribedStandardItem]
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __contains__(self, item):
+        return item in self.names
+
+    def __getitem__(self, item: Union[str, int]):
+        if isinstance(item, int):
+            return self.items[item]
+        for _item in self.items:
+            if _item.name == item:
+                return _item
+        raise KeyError(f"Item '{item}' not found")
+
+    @property
+    def names(self):
+        """Return the names of the locations"""
+        return [d.name for d in self.items]
+
+    def to_dict(self) -> Dict:
+        """Return dictionary representation of StandardLocations"""
+        return {item.name: item.description for item in self.items}
+
+
+class StandardLocation(BaseDescribedStandardItem):
+    pass
+
+
+@dataclass(frozen=True)
+class StandardLocations(BaseDescribedStandardItems):
+    pass
+
+
+class StandardDevice(BaseDescribedStandardItem):
+    pass
+
+
+@dataclass(frozen=True)
+class StandardDevices(BaseDescribedStandardItems):
+    pass
+
+
+class StandardComponent(BaseDescribedStandardItem):
+    pass
+
+
+@dataclass(frozen=True)
+class StandardComponents(BaseDescribedStandardItems):
+    pass
+
+
 class StandardNameTable:
     """Standard Name Table (SNT) class
 
@@ -162,8 +315,10 @@ class StandardNameTable:
     >>> table.check('derivative_of_x_velocity_wrt_to_x_coordinate')
     True
     """
-    __slots__ = ('_standard_names', '_meta', '_alias', '_name', '_version',
-                 '_devices', '_locations', '_transformations')
+
+    # __slots__ = ('_standard_names', '_meta', '_alias', '_name', '_version',
+    #              '_devices', '_locations', '_reference_frames', '_transformations',
+    #              '_standard_components')
 
     def __init__(self,
                  name: str,
@@ -172,6 +327,8 @@ class StandardNameTable:
                  alias: Dict = None,
                  devices: List[str] = None,
                  locations: List[str] = None,
+                 reference_frames=None,
+                 standard_components=None,
                  **meta):
         if standard_names is None:
             standard_names = {}
@@ -180,12 +337,51 @@ class StandardNameTable:
             logger.warning('Parameter "table" is depreciated. Use "standard_names" instead.')
         self._standard_names = standard_names
         self._name = name
+
+        def _parse_input(v):
+            if isinstance(v, str):
+                return {'description': v}
+            if isinstance(v, dict):
+                return v
+            if v is None:
+                return {'description': None}
+            raise TypeError(f'Wrong type for "v". Expecting dict or str but got {type(v)}')
+
         if devices is None:
-            devices = []
-        self._devices = devices
+            devices = {}
+        else:
+            if isinstance(devices, (tuple, list)):
+                devices = {d: None for d in devices}
+        if not isinstance(devices, dict):
+            raise TypeError(f'Wrong type for "devices". Expecting list or tuple but got {type(devices)}')
+        self._devices = StandardDevices([StandardDevice(k, **_parse_input(v)) for k, v in devices.items()])
+
         if locations is None:
-            locations = []
-        self._locations = locations
+            locations = {}
+        else:
+            if isinstance(locations, (tuple, list)):
+                locations = {d: None for d in locations}
+        assert isinstance(locations, dict), f'Wrong type for "locations". Expecting dict but got {type(locations)}'
+        self._locations = StandardLocations([StandardLocation(k, **_parse_input(v)) for k, v in locations.items()])
+
+        if standard_components is None:
+            standard_components = {}
+        else:
+            if isinstance(standard_components, (tuple, list)):
+                standard_components = {d: None for d in standard_components}
+        assert isinstance(standard_components, dict), \
+            f'Wrong type for "standard_components".' \
+            f' Expecting dict but got {type(standard_components)}'
+        self._standard_components = StandardComponents(
+            [StandardComponent(k, **_parse_input(v)) for k, v in standard_components.items()]
+        )
+
+        if reference_frames is None:
+            self._reference_frames = None
+        else:
+            self._reference_frames = StandardReferenceFrames(
+                [StandardReferenceFrame(k, **v) for k, v in reference_frames.items()]
+            )
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
@@ -205,7 +401,9 @@ class StandardNameTable:
                                  difference_of_X_across_device,
                                  difference_of_X_and_Y_across_device,
                                  difference_of_X_and_Y_between_LOC1_and_LOC2,
-                                 X_at_LOC,)
+                                 X_at_LOC,
+                                 in_reference_frame,
+                                 component_of,)
         if alias is None:
             self._alias = {}
         else:
@@ -217,6 +415,11 @@ class StandardNameTable:
         return self._locations
 
     @property
+    def components(self) -> List[str]:
+        """List of valid locations"""
+        return self._standard_components
+
+    @property
     def transformations(self) -> List[Callable]:
         """List of available transformations"""
         return self._transformations
@@ -225,6 +428,10 @@ class StandardNameTable:
     def standard_names(self) -> Dict:
         """Return the table containing all standard names with their units and descriptions"""
         return self._standard_names
+
+    @property
+    def standard_reference_frames(self):
+        return self._reference_frames
 
     @property
     def devices(self) -> List[str]:
@@ -259,6 +466,31 @@ class StandardNameTable:
     def version(self) -> str:
         """Return version number of the Standard Name Table"""
         return self._meta.get('version', None)
+
+    @property
+    def institution(self) -> str:
+        """Return institution name"""
+        return self._meta.get('institution', None)
+
+    @property
+    def contact(self) -> str:
+        """Return version_number"""
+        return self._meta.get('contact', None)
+
+    @property
+    def valid_characters(self) -> str:
+        """Return valid_characters"""
+        return self._meta.get('valid_characters', None)
+
+    @property
+    def pattern(self) -> str:
+        """Return pattern"""
+        return self._meta.get('pattern', None)
+
+    @property
+    def version_number(self) -> str:
+        """Return version_number"""
+        return self._meta.get('version_number', None)
 
     @property
     def versionname(self) -> str:
@@ -308,11 +540,6 @@ class StandardNameTable:
                                            ' Did you mean one of these: '
                                            f'{similar_names}?')
         raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".')
-
-    def __getattr__(self, item):
-        if item in self.meta:
-            return self.meta[item]
-        return self.__getattribute__(item)
 
     @staticmethod
     def validate_version(version_string: str) -> str:
@@ -447,8 +674,6 @@ class StandardNameTable:
             _dict = {}
 
             REQ_KEYS = ['standard_names',
-                        'standard_devices',
-                        'standard_locations',
                         'name',
                         'version',
                         'institution',
@@ -456,12 +681,14 @@ class StandardNameTable:
                         'valid_characters',
                         'pattern',
                         'last_modified', ]
+
             for k in _dict.keys():
                 if k not in REQ_KEYS:
                     raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
 
             for d in yaml.full_load_all(f):
                 _dict.update(d)
+
             standard_names = _dict.pop('standard_names', None)
             if standard_names is None:
                 standard_names = _dict.pop('table', None)
@@ -472,6 +699,8 @@ class StandardNameTable:
 
             standard_devices = _dict.pop('standard_devices', None)
             standard_locations = _dict.pop('standard_locations', None)
+            standard_reference_frames = _dict.pop('standard_reference_frames', None)
+            standard_components = _dict.pop('standard_components', None)
 
             if 'name' not in _dict:
                 _dict['name'] = pathlib.Path(yaml_filename).stem
@@ -481,6 +710,8 @@ class StandardNameTable:
                                      version=version,
                                      standard_names=standard_names,
                                      devices=standard_devices,
+                                     reference_frames=standard_reference_frames,
+                                     standard_components=standard_components,
                                      locations=standard_locations,
                                      **_dict)
 
@@ -843,9 +1074,15 @@ class StandardNameTable:
         """Export a StandardNameTable to a dictionary"""
         d = dict(name=self.name,
                  **self.meta,
-                 devices=self.devices,
-                 locations=self.locations,
                  standard_names=self.standard_names)
+        for name, item in zip(('locations', 'devices', 'standard_components'),
+                              (self.locations, self.devices, self.components)):
+            item_dict = item.to_dict()
+            if item:
+                d[name] = item_dict
+
+        if self.standard_reference_frames is not None:
+            d['standard_reference_frames'] = self.standard_reference_frames.to_dict()
 
         dt = d.get('last_modified', datetime.now(timezone.utc).isoformat())
         d.update(dict(last_modified=str(dt)))
@@ -1078,10 +1315,10 @@ def difference_of_X_and_Y_between_LOC1_and_LOC2(standard_name, snt) -> StandardN
         groups = match.groups()
         assert len(groups) == 4
         if groups[2] not in snt.locations:
-            raise KeyError(f'Location "{groups[2]}" not found in registry of the standard name table. '
+            raise KeyError(f'StandardLocation "{groups[2]}" not found in registry of the standard name table. '
                            f'Available locations are: {snt.locations}')
         if groups[3] not in snt.locations:
-            raise KeyError(f'Location "{groups[3]}" not found in registry of the standard name table. '
+            raise KeyError(f'StandardLocation "{groups[3]}" not found in registry of the standard name table. '
                            f'Available locations are: {snt.locations}')
         sn1 = snt[groups[0]]
         sn2 = snt[groups[1]]
@@ -1094,18 +1331,50 @@ def difference_of_X_and_Y_between_LOC1_and_LOC2(standard_name, snt) -> StandardN
 
 
 def X_at_LOC(standard_name, snt) -> StandardName:
-    match = re.match(r"^(.*)_at_(.*)$",
-                     standard_name)
+    match = re.match(r"^(.*)_at_(.*)$", standard_name)
     if match:
         groups = match.groups()
         assert len(groups) == 2
         sn = snt[groups[0]]
         loc = groups[1]
         if loc not in snt.locations:
-            raise KeyError(f'Location "{loc}" not found in registry of the standard name table. '
+            raise KeyError(f'StandardLocation "{loc}" not found in registry of the standard name table. '
                            f'Available devices are: {snt.devices}')
         new_description = f"{sn} at {loc}"
         return StandardName(standard_name, sn.units, new_description)
+    return False
+
+
+def in_reference_frame(standard_name, snt) -> StandardName:
+    """A standard name in a standard reference frame"""
+    match = re.match(r"^(.*)_in_(.*)$", standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 2
+        sn = snt[groups[0]]
+        frame = groups[1]
+        if frame not in snt.standard_reference_frames:
+            raise KeyError(f'Reference Frame "{frame}" not found in registry of the standard name table. '
+                           f'Available devices are: {snt.standard_reference_frames.names}')
+        new_description = f'{sn.description}. The quantity is relative to the reference frame "{frame}"'
+        return StandardName(standard_name, sn.units, new_description)
+    return False
+
+
+def component_of(standard_name, snt) -> StandardName:
+    """Component of a standard name, e.g. x_velocity where velocity is the
+    existing standard name and x is a registered component"""
+    match = re.match(r"^(.*)_(.*)$", standard_name)
+    if match:
+        groups = match.groups()
+        assert len(groups) == 2
+        component = groups[0]
+        if component not in snt.components:
+            return False
+        sn = snt[groups[1]]
+        new_description = f'{sn.description} {snt.components[component].description}'
+        return StandardName(standard_name, sn.units, new_description)
+
     return False
 
 
@@ -1120,7 +1389,7 @@ def derivative_of_X_wrt_to_Y(standard_name, snt) -> StandardName:
             sn1 = snt[groups[0]]
             sn2 = snt[groups[1]]
             new_units = (1 * sn1.units / 1 * sn2.units).units
-            new_description = f"Derivative of {sn1.name} wrt to {sn2.name}"
+            new_description = f"Derivative of {sn1.name} with respect to {sn2.name}"
             return StandardName(standard_name, new_units, new_description)
     return False
     # raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")

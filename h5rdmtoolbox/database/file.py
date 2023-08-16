@@ -307,11 +307,16 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
 class File:
     """File as a database"""
 
-    def __init__(self, filename: pathlib.Path, **kwargs):
+    def __init__(self, filename: pathlib.Path, source_group='/', **kwargs):
         filename = pathlib.Path(filename)
         if not filename.is_file():
             raise ValueError(f'{filename} is not a file')
         self.filename = filename
+        self.source_group = source_group
+        self._kwargs = kwargs
+
+    def __getitem__(self, item: str):
+        return File(self.filename, source_group=item, **self._kwargs)
 
     def find(self, flt: Union[Dict, str],
              objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,

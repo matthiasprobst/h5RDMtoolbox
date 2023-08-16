@@ -33,12 +33,12 @@ class TestConventions(unittest.TestCase):
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.write("""name: test""")
         with self.assertRaises(ValueError):
-            cv = h5tbx.conventions.from_yaml(f.name)
+            h5tbx.conventions.from_yaml(f.name)
 
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.write("""__name__: test""")
         with self.assertRaises(ValueError):
-            cv = h5tbx.conventions.from_yaml(f.name)
+            h5tbx.conventions.from_yaml(f.name)
 
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.writelines(['__name__: test\n', '__contact__: me'])
@@ -74,4 +74,4 @@ class TestConventions(unittest.TestCase):
         if self.connected:
             h5tbx.UserDir.clear_cache()
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
-                cv = h5tbx.conventions.from_zenodo(doi=8211688)
+                cv = h5tbx.conventions.from_zenodo(doi=8223533)
