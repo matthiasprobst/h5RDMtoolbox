@@ -2,5 +2,3 @@
 
 # noinspection PyUnresolvedReferences
 from .conventions.errors import *
-# noinspection PyUnresolvedReferences
-from .conventions.standard_attributes.errors import *

@@ -1,12 +1,12 @@
 import pathlib
 from typing import Union, Dict
 
+from h5rdmtoolbox.utils import create_tbx_logger
 from . import lazy
-from .files import Files
 from .file import File
-from .._logger import loggers
+from .files import Files
 
-logger = loggers['database']
+logger = create_tbx_logger('wrapper')
 
 
 class Folder:

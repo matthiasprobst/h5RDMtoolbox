@@ -1,6 +1,6 @@
 import re
 
-from . import StandardAttributeValidator
+from .validator import StandardAttributeValidator
 
 
 class MinLengthValidator(StandardAttributeValidator):

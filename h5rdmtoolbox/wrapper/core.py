@@ -18,6 +18,7 @@ from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
 
+from . import logger
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
@@ -27,13 +28,11 @@ from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, conventions, utils
 from .. import consts
 from .. import get_ureg
-from .._logger import loggers
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
 from ..conventions.layout import Layout as LayoutFile
 
-logger = loggers['wrapper']
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
 

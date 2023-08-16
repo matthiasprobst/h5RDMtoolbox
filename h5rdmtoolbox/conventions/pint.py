@@ -1,7 +1,7 @@
 import pint
 
-from . import StandardAttributeValidator
-from .... import get_ureg
+from .validator import StandardAttributeValidator
+from .. import get_ureg
 
 
 class PintQuantityValidator(StandardAttributeValidator):

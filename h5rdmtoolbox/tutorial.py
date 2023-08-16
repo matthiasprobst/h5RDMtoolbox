@@ -6,7 +6,7 @@ import pathlib
 import xarray as xr
 from typing import List
 
-from .conventions.standard_attributes.validators.standard_name import StandardNameTable
+from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from .utils import generate_temporary_directory
 from .wrapper.core import File
 
@@ -167,7 +167,6 @@ class Conventions:
     @staticmethod
     def fetch_cf_standard_name_table():
         """download cf-standard-name-table"""
-        from h5rdmtoolbox.conventions.standard_attributes.validators.standard_name import StandardNameTable
         url = "https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml"
         return StandardNameTable.from_web(url)
 

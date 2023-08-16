@@ -8,21 +8,19 @@ import xarray as xr
 from typing import Union
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
-from . import orcid
 
 pint_xarray.unit_registry = get_ureg()
 
 from . import conventions
-from .conventions import Convention
+from .conventions.core import Convention
 from . import plotting
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
 from .database import file
-from .utils import generate_temporary_filename, generate_temporary_directory, has_datasets, has_groups
+from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import errors
-from ._logger import loggers
 
 from .wrapper.accessory import register_special_dataset
 
@@ -30,16 +28,9 @@ name = 'h5rdmtoolbox'
 __author__ = 'Matthias Probst'
 __author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
 
-logger = loggers['h5rdmtoolbox']
+logger = utils.create_tbx_logger('h5rdmtoolbox')
 
-
-def set_loglevel(level):
-    """setting the log level of all loggers of this toolbox"""
-    for log in loggers.values():
-        log.setLevel(level)
-
-
-set_loglevel(get_config()['init_logger_level'])
+logger.setLevel(get_config()['init_logger_level'])
 
 cv_h5py = conventions.Convention('h5py',
                                  contact=__author_orcid__,
@@ -152,9 +143,8 @@ def clean_temp_data(full: bool = False):
 
 xr.set_options(display_expand_data=False)
 
-__all__ = ('__version__', '__author__', '__author_orcid__', 'UserDir', 'use', 'loggers',
-           'generate_temporary_filename', 'generate_temporary_directory',
-           'File', 'Files', 'Group', 'Dataset', 'has_datasets', 'has_groups',
+__all__ = ('__version__', '__author__', '__author_orcid__', 'UserDir', 'use',
+           'File', 'Files', 'Group', 'Dataset',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
-           'set_config', 'get_config', 'get_ureg', 'orcid',
+           'set_config', 'get_config', 'get_ureg',
            'Convention')

@@ -3,29 +3,26 @@ import abc
 import json
 import numpy as np
 import pathlib
+from datetime import datetime
 from typing import Dict, List, Union, Tuple
 
 from . import errors
-from .validators import StandardAttributeValidator
-from .validators.core import TypeValidator, InValidator, NoneValidator, DateTimeValidator
-from .validators.orcid import ORCIDValidator
-from .validators.pint import PintQuantityValidator, PintUnitsValidator
-from .validators.references import ReferencesValidator, BibTeXValidator, URLValidator
-from .validators.standard_name import StandardNameValidator, StandardNameTableValidator, StandardName, StandardNameTable
-from .validators.strings import RegexValidator, MinLengthValidator, MaxLengthValidator
-from ..consts import DefaultValue
-from ... import get_ureg, get_config
-from ..._logger import loggers
-from ...utils import DocStringParser
-from ...wrapper.core import File, Group, Dataset
-from ...wrapper.h5attr import WrapperAttributeManager
-from datetime import datetime
-logger = loggers['conventions']
+from . import logger
+from .consts import DefaultValue
+from .validator import StandardAttributeValidator
+from .validator import get_validator
+from .. import get_ureg, get_config
+from ..utils import DocStringParser
+from ..wrapper.core import File, Group, Dataset
+from ..wrapper.h5attr import WrapperAttributeManager
+
+av_validators = get_validator()
+
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),
                                  'create_dataset': DocStringParser(Group.create_dataset)}}
 
-__all__ = ['StandardName', 'StandardNameTable', 'StandardAttribute']
+__all__ = ['StandardAttribute', ]
 
 
 def _pint_quantity(q):
@@ -37,6 +34,7 @@ def _pint_unit(u):
 
 
 def _standard_name_table(snt):
+    from .standard_names.table import StandardNameTable
     if isinstance(snt, dict):
         return StandardNameTable.from_yaml(snt)
     if not isinstance(snt, str):
@@ -74,7 +72,7 @@ def _isodatetime(dt):
     return datetime.fromisoformat(dt)
 
 
-def get_validator(**validator: Dict) -> List[StandardNameValidator]:
+def get_validator(**validator: Dict) -> List[StandardAttributeValidator]:
     """return the respective StandardAttributeValidator
 
     validator_identifier: str:
@@ -281,20 +279,3 @@ known_types = {'int': int,
                'sdict': make_dict,
                'standard_name_table': _standard_name_table,
                'isodatetime': _isodatetime}
-
-av_validators = {'$type': TypeValidator,
-                 '$in': InValidator,
-                 '$regex': RegexValidator,
-                 '$pintunit': PintUnitsValidator,
-                 '$pintquantity': PintQuantityValidator,
-                 '$orcid': ORCIDValidator,
-                 '$url': URLValidator,
-                 '$ref': ReferencesValidator,
-                 '$bibtex': BibTeXValidator,
-                 '$standard_name': StandardNameValidator,
-                 '$standard_name_table': StandardNameTableValidator,
-                 '$minlength': MinLengthValidator,
-                 '$maxlength': MaxLengthValidator,
-                 '$datetime': DateTimeValidator,
-                 'None': NoneValidator,
-                 }

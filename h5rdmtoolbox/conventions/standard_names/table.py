@@ -1,27 +1,24 @@
+"""Standard name table module"""
 import h5py
 import json
 import pandas as pd
 import pathlib
 import pint
-import re
 import shutil
 import warnings
 import yaml
 from IPython.display import display, HTML
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable, List
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple
 
-from h5rdmtoolbox import get_ureg
-from . import StandardAttributeValidator
-from .. import errors
+from h5rdmtoolbox._user import UserDir
+from h5rdmtoolbox.utils import generate_temporary_filename
+from . import constructor
+from .transformation import *
+from .. import logger
 from ..utils import dict2xml, get_similar_names_ratio
-from ...._logger import loggers
-from ...._user import UserDir
-from ....utils import generate_temporary_filename
-
-logger = loggers['conventions']
+from ... import errors
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -42,253 +39,6 @@ VALID_CHARACTERS = '[^a-zA-Z0-9_]'
 PATTERN = '^[0-9 ].*'
 
 
-def _units_power_fix(_str: str):
-    """Fixes strings like 'm s-1' to 'm s^-1'"""
-    s = re.search('[a-zA-Z][+|-]', _str)
-    if s:
-        return _str[0:s.span()[0] + 1] + '^' + _str[s.span()[1] - 1:]
-    return _str
-
-
-class StandardName:
-    """Standard Name class"""
-
-    def __init__(self, name: str,
-                 units: Union[str, pint.Unit] = None,
-                 description: str = None,
-                 canonical_units: str = None,
-                 isvector: bool = False,
-                 alias: str = None):
-        StandardName.check_syntax(name)
-        self._is_vector = isvector
-        self.name = name
-        if canonical_units is not None:
-            warnings.warn('Parameter "canonical_units" is depreciated. Use "units" instead.', DeprecationWarning)
-            units = canonical_units
-        if description is None:
-            # TODO if canonical_units is removed, then default value None must be removed for description, too
-            raise ValueError('A description must be provided')
-        if isinstance(units, str):
-            self.units = get_ureg().Unit(_units_power_fix(units))
-        elif isinstance(units, pint.Unit):
-            self.units = units
-        else:
-            raise TypeError(f"units must be a str or a pint.Unit, not {type(units)}")
-        # convert units to base units:
-        q = 1 * self.units
-        self.unit = q.to_base_units().units
-        self.description = description
-        if alias is not None:
-            self.check_syntax(alias)
-        self.alias = alias
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return f'<StandardName: "{self.name}" units="{self.units}", description="{self.description}">'
-
-    def equal_unit(self, other_unit: pint):
-        """compares the base units of this standard name with another unit provided as a string
-        or pint.Unit"""
-        from ..utils import equal_base_units
-        return equal_base_units(self.units, other_unit)
-
-    @staticmethod
-    def check_syntax(standard_name: str):
-        """formal check of the syntax"""
-        if not isinstance(standard_name, str):
-            raise TypeError(f'Standard name must be type string but is {type(standard_name)}')
-        if len(standard_name) == 0:
-            raise errors.StandardNameError('Name too short!')
-        if re.sub(VALID_CHARACTERS, '', standard_name) != standard_name:
-            raise errors.StandardNameError('Invalid special characters in name '
-                                           f'"{standard_name}": Only "{VALID_CHARACTERS}" '
-                                           'is allowed.')
-
-        if PATTERN != '' and PATTERN is not None:
-            if re.match(PATTERN, standard_name):
-                raise errors.StandardNameError(f'Standard name "{standard_name}" does not match pattern "{PATTERN}"')
-
-    def to_dict(self) -> Dict:
-        """Return dictionary representation of StandardName"""
-        return dict(name=self.name, units=self.units, description=self.description)
-
-    def check(self, snt: "StandardNameTable"):
-        """check if is a valid standard name of the provided table"""
-        return snt.check(self.name)
-
-    def is_vector(self) -> bool:
-        """check if is a vector"""
-        return self._is_vector
-
-
-# wrapper that updates datetime in meta
-def update_modification_date(func):
-    def wrapper(self, *args, **kwargs):
-        self._meta['last_modified'] = datetime.now(timezone.utc).isoformat()
-        # self._meta['last_modified'] = datetime.now().isoformat()
-        return func(self, *args, **kwargs)
-
-    return wrapper
-
-
-@dataclass
-class StandardReferenceFrame:
-    """Standard Reference Frame"""
-    name: str
-    type: str
-    origin: Tuple[float, float, float]
-    orientation: Dict
-    principle_axis: Union[str, Tuple[float, float, float]]
-
-    def __post_init__(self):
-        if not isinstance(self.origin, (list, tuple)):
-            raise TypeError(f'Wrong type for "origin". Expecting tuple but got {type(self.origin)}')
-        self.origin = tuple(self.origin)
-        if isinstance(self.principle_axis, str):
-            self.principle_axis = self.orientation[self.principle_axis]
-
-    def to_dict(self):
-        return {self.name: dict(type=self.type,
-                                origin=self.origin,
-                                orientation=self.orientation,
-                                principle_axis=self.principle_axis)}
-
-
-class StandardReferenceFrames:
-    """Collection of Standard Reference Frames"""
-
-    def __init__(self, standard_reference_frames: List[StandardReferenceFrame]):
-        self._standard_reference_frames = {srf.name: srf for srf in standard_reference_frames}
-        self._names = list(self._standard_reference_frames.keys())
-        self._index = 0
-
-    def __repr__(self):
-        return f'<StandardReferenceFrames: {self._names}>'
-
-    def __len__(self):
-        return len(self._names)
-
-    def __getitem__(self, item: Union[int, str]) -> StandardReferenceFrame:
-        if isinstance(item, int):
-            return self._standard_reference_frames[self._names[item]]
-        return self._standard_reference_frames[item]
-
-    def __contains__(self, item) -> bool:
-        return item in self._names
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self._index < len(self) - 1:
-            self._index += 1
-            return self._standard_reference_frames[self._names[self._index]]
-        self._index = -1
-        raise StopIteration
-
-    @property
-    def names(self):
-        """Return the names of the reference frames"""
-        return self._names
-
-    def to_dict(self) -> Dict:
-        """Return dictionary representation of StandardReferenceFrames"""
-        frames = [srf.to_dict() for srf in self._standard_reference_frames.values]
-        srfdict = {'standard_reference_frames': {}}
-        for frame in frames:
-            for k, v in frame.items():
-                srfdict['standard_reference_frames'][k] = v
-        return srfdict
-
-
-class BaseDescribedStandardItem:
-    """StandardLocation"""
-
-    def __init__(self, name, description, **kwargs):
-        self._name = name
-        self._description = description
-        self._list_of_user_properties = list(kwargs.keys())
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-    @property
-    def name(self):
-        """Return the name of the standard item"""
-        return self._name
-
-    @property
-    def description(self):
-        """Return the description of the standard item"""
-        return self._description
-
-    def __repr__(self):
-        user_props = ', '.join([f'{k}="{getattr(self, k)}"' for k in self._list_of_user_properties])
-        if user_props:
-            return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}", {user_props}>'
-        return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}">'
-
-    def __str__(self):
-        return self.name
-
-
-@dataclass(frozen=True)
-class BaseDescribedStandardItems:
-    """Collection of StandardLocations"""
-    items: List[BaseDescribedStandardItem]
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def __contains__(self, item):
-        return item in self.names
-
-    def __getitem__(self, item: Union[str, int]):
-        if isinstance(item, int):
-            return self.items[item]
-        for _item in self.items:
-            if _item.name == item:
-                return _item
-        raise KeyError(f"Item '{item}' not found")
-
-    @property
-    def names(self):
-        """Return the names of the locations"""
-        return [d.name for d in self.items]
-
-    def to_dict(self) -> Dict:
-        """Return dictionary representation of StandardLocations"""
-        return {item.name: item.description for item in self.items}
-
-
-class StandardLocation(BaseDescribedStandardItem):
-    pass
-
-
-@dataclass(frozen=True)
-class StandardLocations(BaseDescribedStandardItems):
-    pass
-
-
-class StandardDevice(BaseDescribedStandardItem):
-    pass
-
-
-@dataclass(frozen=True)
-class StandardDevices(BaseDescribedStandardItems):
-    pass
-
-
-class StandardComponent(BaseDescribedStandardItem):
-    pass
-
-
-@dataclass(frozen=True)
-class StandardComponents(BaseDescribedStandardItems):
-    pass
-
-
 class StandardNameTable:
     """Standard Name Table (SNT) class
 
@@ -298,18 +48,21 @@ class StandardNameTable:
         Name of the SNT
     version: str
         Version of the table. Must be something like v1.0
-    table: Dict
-        The table containing 'units' and 'description'
-    alias: Dict
-        Dictionary containing the aliases
-    devices: List[str]
-        List of defined devices to be used in transformations like
-        difference_of_<standard_name>_across_<Device>
-    locations: List[str]
-        List of defined locations to be used in transformations like
-        difference_of_<standard_name>_between_<location>_and_<location>
-    **meta: Dict
-        Other undefined meta information
+    meta: Dict
+        Meta data of the table
+    standards: Dict
+        Contains all entries in the YAML file, which is not meta.
+        Currently expected:
+        - table: Dict
+            The table containing 'units' and 'description'
+        - alias: Dict
+            Dictionary containing the aliases
+        - devices: List[str]
+            List of defined devices to be used in transformations like
+            difference_of_<standard_name>_across_<Device>
+        - locations: List[str]
+            List of defined locations to be used in transformations like
+            difference_of_<standard_name>_between_<location>_and_<location>
 
     Notes
     -----
@@ -317,7 +70,7 @@ class StandardNameTable:
 
     Examples
     --------
-    >>> from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable
+    >>> from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
     >>> table = StandardNameTable.from_yaml('standard_name_table.yaml')
     >>> # check a standard name
     >>> table.check('x_velocity')
@@ -334,20 +87,20 @@ class StandardNameTable:
     def __init__(self,
                  name: str,
                  version: str,
+                 meta: Dict,
                  standard_names: Dict = None,
-                 alias: Dict = None,
-                 devices: List[str] = None,
-                 locations: List[str] = None,
-                 reference_frames=None,
-                 standard_components=None,
-                 **meta):
+                 standards: Dict = None):
+        self._name = name
         if standard_names is None:
             standard_names = {}
-        if 'table' in meta:
-            standard_names = meta.pop('table')
+        if standards is None:
+            standards = {}
+
+        if 'table' in standards:
+            self.standard_names = standards.pop('table')
             logger.warning('Parameter "table" is depreciated. Use "standard_names" instead.')
+
         self._standard_names = standard_names
-        self._name = name
 
         def _parse_input(v):
             if isinstance(v, str):
@@ -358,41 +111,25 @@ class StandardNameTable:
                 return {'description': None}
             raise TypeError(f'Wrong type for "v". Expecting dict or str but got {type(v)}')
 
-        if devices is None:
-            devices = {}
-        else:
-            if isinstance(devices, (tuple, list)):
-                devices = {d: None for d in devices}
-        if not isinstance(devices, dict):
-            raise TypeError(f'Wrong type for "devices". Expecting list or tuple but got {type(devices)}')
-        self._devices = StandardDevices([StandardDevice(k, **_parse_input(v)) for k, v in devices.items()])
-
-        if locations is None:
-            locations = {}
-        else:
-            if isinstance(locations, (tuple, list)):
-                locations = {d: None for d in locations}
-        assert isinstance(locations, dict), f'Wrong type for "locations". Expecting dict but got {type(locations)}'
-        self._locations = StandardLocations([StandardLocation(k, **_parse_input(v)) for k, v in locations.items()])
-
-        if standard_components is None:
-            standard_components = {}
-        else:
-            if isinstance(standard_components, (tuple, list)):
-                standard_components = {d: None for d in standard_components}
-        assert isinstance(standard_components, dict), \
-            f'Wrong type for "standard_components".' \
-            f' Expecting dict but got {type(standard_components)}'
-        self._standard_components = StandardComponents(
-            [StandardComponent(k, **_parse_input(v)) for k, v in standard_components.items()]
-        )
-
-        if reference_frames is None:
-            self._reference_frames = None
-        else:
+        standard_reference_frame = standards.pop('reference_frames', None)
+        if standard_reference_frame:
+            from .constructor import StandardReferenceFrames, StandardReferenceFrame
             self._reference_frames = StandardReferenceFrames(
-                [StandardReferenceFrame(k, **v) for k, v in reference_frames.items()]
+                [StandardReferenceFrame(k, **v) for k, v in standard_reference_frame.items()]
             )
+
+        self.standards = {}
+        for k, v in standards.items():
+            if v:
+                if isinstance(v, (list, tuple)):
+                    self.standards[k] = constructor.StandardConstructors(
+                        [constructor.StandardConstructor(_k, None) for _k in v]
+                    )
+                else:
+                    self.standards[k] = constructor.StandardConstructors(
+                        [constructor.StandardConstructor(_k, **_parse_input(_v)) for _k, _v in v.items()]
+                    )
+
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
@@ -415,20 +152,18 @@ class StandardNameTable:
                                  X_at_LOC,
                                  in_reference_frame,
                                  component_of,)
-        if alias is None:
-            self._alias = {}
-        else:
-            self._alias = alias
 
     @property
     def locations(self) -> List[str]:
         """List of valid locations"""
-        return self._locations
+        return self.standards.get('locations', [])
 
     @property
     def components(self) -> List[str]:
         """List of valid locations"""
-        return self._standard_components
+        return self.standards.get('standard_components', [])
+
+    standard_components = property(components)
 
     @property
     def transformations(self) -> List[Callable]:
@@ -447,11 +182,7 @@ class StandardNameTable:
     @property
     def devices(self) -> List[str]:
         """List of defined devices"""
-        return self._devices
-
-    @property
-    def alias(self):
-        return self._alias
+        return self.standards.get('devices', [])
 
     @property
     def aliases(self) -> Dict:
@@ -646,7 +377,8 @@ class StandardNameTable:
 
         Examples
         --------
-        >>> from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable, StandardName
+        >>> from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+        >>> from h5rdmtoolbox.conventions.standard_names.name import StandardName
         >>> table = StandardNameTable.from_yaml('standard_name_table.yaml')
         >>> table.set('x_velocity', 'm s-1', 'x component of velocity')
         >>> # or
@@ -694,12 +426,24 @@ class StandardNameTable:
                         'pattern',
                         'last_modified', ]
 
-            for k in _dict.keys():
-                if k not in REQ_KEYS:
-                    raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
-
             for d in yaml.full_load_all(f):
                 _dict.update(d)
+
+            if 'name' not in _dict:
+                _dict['name'] = pathlib.Path(yaml_filename).stem
+            version = _dict.pop('version', None)
+            name = _dict.pop('name', None)
+
+            meta = {}
+            for k, v in _dict.items():
+                if isinstance(v, (str, int, float)):
+                    meta[k] = v
+            for k in meta:
+                _dict.pop(k)
+
+            if k not in REQ_KEYS:
+                for k in meta.keys():
+                    raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
 
             standard_names = _dict.pop('standard_names', None)
             if standard_names is None:
@@ -713,19 +457,15 @@ class StandardNameTable:
             standard_locations = _dict.pop('standard_locations', None)
             standard_reference_frames = _dict.pop('standard_reference_frames', None)
             standard_components = _dict.pop('standard_components', None)
-
-            if 'name' not in _dict:
-                _dict['name'] = pathlib.Path(yaml_filename).stem
-            version = _dict.pop('version', None)
-            name = _dict.pop('name', None)
             return StandardNameTable(name=name,
                                      version=version,
                                      standard_names=standard_names,
-                                     devices=standard_devices,
-                                     reference_frames=standard_reference_frames,
-                                     standard_components=standard_components,
-                                     locations=standard_locations,
-                                     **_dict)
+                                     standards=dict(
+                                         devices=standard_devices,
+                                         reference_frames=standard_reference_frames,
+                                         standard_components=standard_components,
+                                         locations=standard_locations),
+                                     meta=meta)
 
     @staticmethod
     def from_xml(xml_filename: Union[str, pathlib.Path],
@@ -773,18 +513,21 @@ class StandardNameTable:
             table[entry.pop('@id')] = entry
 
         _alias = data.get('alias', {})
-        alias = {}
+        if _alias:
+            warnings.warn('aliases are not implemented yet', UserWarning)
+
         if _alias:
             for aliasentry in _alias:
                 k, v = list(aliasentry.values())
-                alias[k] = v
+                table[v]['alias'] = k
 
         if 'version' not in meta:
             meta['version'] = f"v{meta.get('version_number', None)}"
-        snt = StandardNameTable(table=table,
-                                alias=alias,
-                                **meta
-                                )
+
+        snt = StandardNameTable(name=name,
+                                version=meta.pop('version'),
+                                meta=meta,
+                                standard_names=table)
         return snt
 
     @staticmethod
@@ -976,7 +719,9 @@ class StandardNameTable:
 
             yaml.safe_dump({'standard_names': snt_dict['standard_names'],
                             'standard_locations': snt_dict['locations'],
-                            'standard_devices': snt_dict['devices']}, f)
+                            'standard_devices': snt_dict['devices'],
+                            'standard_reference_frames': snt_dict['standard_reference_frames'],
+                            'standard_components': snt_dict['standard_components']}, f)
 
     def to_xml(self,
                xml_filename: pathlib.Path,
@@ -1094,7 +839,7 @@ class StandardNameTable:
                 d[name] = item_dict
 
         if self.standard_reference_frames is not None:
-            d['standard_reference_frames'] = self.standard_reference_frames.to_dict()
+            d['standard_reference_frames'] = self.standard_reference_frames.to_dict()['standard_reference_frames']
 
         dt = d.get('last_modified', datetime.now(timezone.utc).isoformat())
         d.update(dict(last_modified=str(dt)))
@@ -1155,343 +900,3 @@ class StandardNameTable:
         """Return sorted list of standard names files"""
         for f in StandardNameTable.get_registered():
             print(f' > {f}')
-
-
-class StandardNameValidator(StandardAttributeValidator):
-    """Validator for attribute standard_name"""
-
-    def __call__(self, standard_name, parent, **kwargs):
-        snt = parent.rootparent.attrs.get('standard_name_table', None)
-
-        if snt is None:
-            raise KeyError('No standard name table defined for this file!')
-
-        snt = parse_snt(snt)
-
-        units = parent.attrs.get('units', None)
-        if units is None:
-            raise KeyError('No units defined for this variable!')
-
-        # check if scale is provided:
-        scale = parent.attrs.get('scale', None)
-        if scale is not None:
-            units = str(scale * units)
-
-        if not snt.check(standard_name, units):
-            if not snt.check_name(standard_name):
-                raise ValueError(f'Standard name {standard_name} is invalid.')
-            expected_units = snt[standard_name].units
-            raise ValueError(f'Standard name {standard_name} has incompatible units {units}. '
-                             f'Expected units: {expected_units} but got {units}.')
-        return standard_name
-
-
-class StandardNameTableValidator(StandardAttributeValidator):
-    """Validates a standard name table"""
-
-    def __call__(self, standard_name_table, *args, **kwargs):
-        # return parse_snt(standard_name_table).to_sdict()
-        snt = parse_snt(standard_name_table)
-        if 'zenodo_doi' in snt.meta:
-            return snt.meta['zenodo_doi']
-        return snt.to_sdict()
-
-
-def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
-    """Returns a StandardNameTable object from a string, dict or StandardNameTable object"""
-    if isinstance(snt, StandardNameTable):
-        return snt
-    if isinstance(snt, dict):
-        return StandardNameTable(**snt)
-    if isinstance(snt, str):
-        # could be web address or local file
-        if snt.startswith('https://zenodo.org/record/') or snt.startswith('10.5281/zenodo.'):
-            return StandardNameTable.from_zenodo(snt)
-        fname = pathlib.Path(snt)
-        logger.debug(f'Reading standard name table from file {snt}')
-        if fname.exists() and fname.suffix in ('.yaml', '.yml'):
-            return StandardNameTable.from_yaml(fname)
-        raise FileNotFoundError(f'File {fname} not found or not a yaml file')
-    raise TypeError(f'Invalid type for standard_name_table: {type(snt)}')
-
-
-"""Transformation for standard names"""
-
-
-class Transformation:
-    """Transformation for standard names"""
-
-    def __init__(self, snt, func: Callable):
-        self.snt = snt
-        self.func = func
-
-    def __call__(self, standard_name):
-        return self.func(standard_name, self.snt)
-
-
-def magnitude_of(standard_name, snt) -> StandardName:
-    match = re.match(r"^magnitude_of_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 1
-        sn = snt[groups[0]]
-        new_description = f"Magnitude of {sn.name}"
-        return StandardName(standard_name, sn.units, new_description)
-    return False
-
-
-def arithmetic_mean_of(standard_name, snt) -> StandardName:
-    """Arithmetic mean"""
-    match = re.match(r"^arithmetic_mean_of_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 1
-        sn = snt[groups[0]]
-        new_description = f"Arithmetic mean of {sn.name}"
-        return StandardName(standard_name, sn.units, new_description)
-    return False
-
-
-def standard_deviation_of(standard_name, snt) -> StandardName:
-    match = re.match(r"^standard_deviation_of_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 1
-        sn = snt[groups[0]]
-        new_description = f"Standard deviation of {sn.name}"
-        return StandardName(standard_name, sn.units, new_description)
-    return False
-
-
-def square_of(standard_name, snt) -> StandardName:
-    match = re.match(r"^square_of_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 1
-        sn = snt[groups[0]]
-        new_description = f"Square of {sn.name}"
-        new_units = (1 * sn.units * sn.units).units
-        return StandardName(standard_name, new_units, new_description)
-    return False
-
-
-def difference_of_X_across_device(standard_name, snt) -> Union[StandardName, bool]:
-    """Difference of X across device"""
-    match = re.match(r"^difference_of_(.*)_across_(.*)$",
-                     standard_name)
-
-    if not match:
-        return False
-    groups = match.groups()
-    assert len(groups) == 2
-    if groups[1] not in snt.devices:
-        raise KeyError(f'Device {groups[1]} not found in registry of the standard name table. '
-                       f'Available devices are: {snt.devices}.')
-    try:
-        sn = snt[groups[0]]
-    except errors.StandardNameError:
-        return False
-    new_description = f"Difference of {sn.name} across {groups[1]}"
-    return StandardName(standard_name, sn.units, new_description)
-
-
-def difference_of_X_and_Y_across_device(standard_name, snt) -> StandardName:
-    """Difference of X and Y across device"""
-    match = re.match(r"^difference_of_(.*)_and_(.*)_across_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 3
-        if groups[2] not in snt.devices:
-            raise KeyError(f'Device {groups[2]} not found in registry of the standard name table. '
-                           f'Available devices are: {snt.devices}')
-        sn1 = snt[groups[0]]
-        sn2 = snt[groups[1]]
-        if sn1.units != sn2.units:
-            raise ValueError(f'Units of "{sn1.name}" and "{sn2.name}" are not compatible: "{sn1.units}" and '
-                             f'"{sn2.units}".')
-        new_description = f"Difference of {sn1.name} and {sn2.name} across {groups[2]}"
-        return StandardName(standard_name, sn1.units, new_description)
-    return False
-
-
-def difference_of_X_and_Y_between_LOC1_and_LOC2(standard_name, snt) -> StandardName:
-    """Difference of X and Y across device"""
-    match = re.match(r"^difference_of_(.*)_and_(.*)_between_(.*)_and_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 4
-        if groups[2] not in snt.locations:
-            raise KeyError(f'StandardLocation "{groups[2]}" not found in registry of the standard name table. '
-                           f'Available locations are: {snt.locations}')
-        if groups[3] not in snt.locations:
-            raise KeyError(f'StandardLocation "{groups[3]}" not found in registry of the standard name table. '
-                           f'Available locations are: {snt.locations}')
-        sn1 = snt[groups[0]]
-        sn2 = snt[groups[1]]
-        if sn1.units != sn2.units:
-            raise ValueError(f'Units of "{sn1.name}" and "{sn2.name}" are not compatible: "{sn1.units}" and '
-                             f'"{sn2.units}".')
-        new_description = f"Difference of {sn1.name} and {sn2.name} between {groups[2]} and {groups[3]}"
-        return StandardName(standard_name, sn1.units, new_description)
-    return False
-
-
-def X_at_LOC(standard_name, snt) -> StandardName:
-    match = re.match(r"^(.*)_at_(.*)$", standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 2
-        sn = snt[groups[0]]
-        loc = groups[1]
-        if loc not in snt.locations:
-            raise KeyError(f'StandardLocation "{loc}" not found in registry of the standard name table. '
-                           f'Available locations are: {snt.locations}')
-        new_description = f"{sn} at {loc}"
-        return StandardName(standard_name, sn.units, new_description)
-    return False
-
-
-def in_reference_frame(standard_name, snt) -> StandardName:
-    """A standard name in a standard reference frame"""
-    match = re.match(r"^(.*)_in_(.*)$", standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 2
-        sn = snt[groups[0]]
-        frame = groups[1]
-        if frame not in snt.standard_reference_frames:
-            raise KeyError(f'Reference Frame "{frame}" not found in registry of the standard name table. '
-                           f'Available reference frames are: {snt.standard_reference_frames.names}')
-        new_description = f'{sn.description}. The quantity is relative to the reference frame "{frame}"'
-        return StandardName(standard_name, sn.units, new_description)
-    return False
-
-
-def component_of(standard_name, snt) -> StandardName:
-    """Component of a standard name, e.g. x_velocity where velocity is the
-    existing standard name and x is a registered component"""
-    match = re.match(r"^(.*)_(.*)$", standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 2
-        component = groups[0]
-        if component not in snt.components:
-            return False
-        sn = snt[groups[1]]
-        if not sn.is_vector():
-            raise errors.StandardNameError(f'"{sn.name}" is not a vector quantity.')
-        new_description = f'{sn.description} {snt.components[component].description}'
-        return StandardName(standard_name, sn.units, new_description)
-
-    return False
-
-
-def derivative_of_X_wrt_to_Y(standard_name, snt) -> StandardName:
-    """Check if a standard name is a derivative of X wrt to Y"""
-    match = re.match(r"^derivative_of_(.*)_wrt_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 2
-        if all([snt.check(n) for n in groups]):
-            sn1 = snt[groups[0]]
-            sn2 = snt[groups[1]]
-            new_units = (1 * sn1.units / 1 * sn2.units).units
-            new_description = f"Derivative of {sn1.name} with respect to {sn2.name}"
-            return StandardName(standard_name, new_units, new_description)
-    return False
-    # raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")
-
-
-def product_of_X_and_Y(standard_name, snt) -> StandardName:
-    """Check if a standard name is a derivative of X wrt to Y"""
-    match = re.match(r"^product_of_(.*)_and_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 2
-        if all([snt.check(n) for n in groups]):
-            sn1 = snt[groups[0]]
-            sn2 = snt[groups[1]]
-            new_units = (1 * sn1.units * sn2.units).units
-            new_description = f"Product of {sn1.name} and {sn2.name}"
-            return StandardName(standard_name, new_units, new_description)
-    return False
-    # raise ValueError(f"Standard name '{standard_name}' is not a derivative of X wrt to Y")
-
-
-def ratio_of_X_and_Y(standard_name, snt) -> StandardName:
-    """Check if a standard name is a derivative of X wrt to Y"""
-    match = re.match(r"^ratio_of_(.*)_and_(.*)$",
-                     standard_name)
-    if match:
-        groups = match.groups()
-        assert len(groups) == 2
-        if all([snt.check(n) for n in groups]):
-            sn1 = snt[groups[0]]
-            sn2 = snt[groups[1]]
-            new_units = (1 * sn1.units / sn2.units).units
-            new_description = f"Ratio of {sn1.name} and {sn2.name}"
-            return StandardName(standard_name, new_units, new_description)
-    return False
-
-
-"""Utils"""
-
-
-def update_datasets(group_or_filename: Union[h5py.Group, str, pathlib.Path],
-                    translation_dict: Dict,
-                    rec: bool = True) -> None:
-    """Walk through file and assign standard names to datasets with names indicated in
-    the dictionary `translation_dict`
-
-    Parameters
-    ----------
-    group_or_filename: Union[h5py.Group, str, pathlib.Path]
-        The source in which to search for datasets and assign standard names to.
-        If a string or pathlib.Path is passed, it is assumed to be an HDF5 filename.
-    translation_dict: Dict
-        Dictionary with keys being the dataset names and values the standard names
-    rec: bool
-        If True, recursively search for datasets
-
-    Returns
-    -------
-    None
-
-    Examples
-    --------
-    >>> # Assign "air_temperature" to all datasets with name "temperature":
-    >>> translation_dict = {'temperature': 'air_temperature'}
-    >>> update_datasets('myfile.hdf', translation_dict)
-    """
-    if isinstance(group_or_filename, (str, pathlib.Path)):
-        with h5py.File(group_or_filename, 'r+') as h5:
-            return update_datasets(h5['/'], translation_dict, rec=rec)
-
-    def _assign(ds, sn):
-        ds.attrs['standard_name'] = sn
-        logger.debug(f'Added standard name "{sn}" to dataset "{ds.name}"')
-
-    def sn_update(name: str, node):
-        """function called when visiting HDF objects"""
-        if isinstance(node, h5py.Dataset):
-            if name in translation_dict:
-                sn = translation_dict[name.strip('/')]
-            elif name.rsplit('/', 1)[-1] in translation_dict:
-                sn = translation_dict[name.rsplit('/', 1)[-1]]
-            else:
-                return
-            _assign(node, sn)
-
-    h5grp = group_or_filename
-    if rec:
-        return h5grp.visititems(sn_update)
-    for key, obj in h5grp.items():
-        sn_update(key, obj)

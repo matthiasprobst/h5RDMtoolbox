@@ -5,13 +5,12 @@ import warnings
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.standard_attributes import StandardNameTable, StandardName
-from h5rdmtoolbox.conventions.standard_attributes.errors import StandardNameError, StandardAttributeError
-from h5rdmtoolbox.conventions.standard_attributes.utils import check_url
-from h5rdmtoolbox.conventions.standard_attributes.validators.standard_name import (StandardDevice, StandardDevices,
-                                                                                   StandardLocation, StandardLocations,
-                                                                                   StandardComponent,
-                                                                                   StandardComponents)
+from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError
+from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
+from h5rdmtoolbox.conventions.standard_names import constructor
+from h5rdmtoolbox.conventions.standard_names.name import StandardName
+from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+from h5rdmtoolbox.conventions.utils import check_url
 
 try:
     import pooch
@@ -83,20 +82,20 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.valid_characters, '[^a-zA-Z0-9_]')
         self.assertEqual(table.pattern, '^[0-9 ].*')
 
-        self.assertIsInstance(table.devices, StandardDevices)
+        self.assertIsInstance(table.devices, constructor.StandardConstructors)
         for device in table.devices:
-            self.assertIsInstance(device, StandardDevice)
-        self.assertIsInstance(table.devices['fan'], StandardDevice)
+            self.assertIsInstance(device, constructor.StandardConstructor)
+        self.assertIsInstance(table.devices['fan'], constructor.StandardConstructor)
         self.assertEqual(table.devices['fan'].name, 'fan')
         self.assertEqual(table.devices['orifice'].name, 'orifice')
         self.assertEqual(table.devices['fan'].description, 'The test fan')
         self.assertEqual(table.devices['orifice'].description, 'The orifice to measure the volume flow rate')
         self.assertEqual(table.devices.names, ['fan', 'orifice'])
 
-        self.assertIsInstance(table.components, StandardComponents)
+        self.assertIsInstance(table.components, constructor.StandardConstructors)
         for component in table.components:
-            self.assertIsInstance(component, StandardComponent)
-        self.assertIsInstance(table.components['x'], StandardComponent)
+            self.assertIsInstance(component, constructor.StandardConstructor)
+        self.assertIsInstance(table.components['x'], constructor.StandardConstructor)
         self.assertEqual(table.components['x'].name, 'x')
         self.assertEqual(table.components['y'].name, 'y')
         self.assertEqual(table.components['z'].name, 'z')
@@ -105,11 +104,11 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.components['z'].description, 'Z indicates the z-axis component of the vector.')
         self.assertEqual(table.components.names, ['x', 'y', 'z'])
 
-        self.assertIsInstance(table.locations, StandardLocations)
+        self.assertIsInstance(table.locations, constructor.StandardConstructors)
         for location in table.locations:
-            self.assertIsInstance(location, StandardLocation)
-        self.assertIsInstance(table.locations['fan_inlet'], StandardLocation)
-        self.assertIsInstance(table.locations['fan_outlet'], StandardLocation)
+            self.assertIsInstance(location, constructor.StandardConstructor)
+        self.assertIsInstance(table.locations['fan_inlet'], constructor.StandardConstructor)
+        self.assertIsInstance(table.locations['fan_outlet'], constructor.StandardConstructor)
         self.assertEqual(table.locations['fan_inlet'].name, 'fan_inlet')
         self.assertEqual(table.locations['fan_outlet'].name, 'fan_outlet')
         ref_desc = 'The defined inlet into the test fan.' \
@@ -218,8 +217,6 @@ class TestStandardAttributes(unittest.TestCase):
                         'as the 2 sigma with of the gaussian intensity profile of the particle image.'
                 }
             })
-        self.assertDictEqual(table.alias, {'particle_image': 'synthetic_particle_image'}
-                             )
         self.assertTrue(table.check_name('synthetic_particle_image'))
         self.assertFalse(table.check_name('particle_image'))
         self.assertIsInstance(table['synthetic_particle_image'], StandardName)
@@ -228,16 +225,17 @@ class TestStandardAttributes(unittest.TestCase):
         snt = StandardNameTable(name='test_snt',
                                 standard_names={},
                                 version='v1.0dev',
-                                institution='my_institution',
-                                contact='https://orcid.org/0000-0001-8729-0482')
+                                meta=dict(institution='my_institution',
+                                          contact='https://orcid.org/0000-0001-8729-0482'))
         self.assertIsInstance(snt.standard_names, dict)
 
     def test_to_html(self):
         snt = StandardNameTable(name='test_snt',
                                 standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
                                 version='v1.0dev',
-                                institution='my_institution',
-                                contact='https://orcid.org/0000-0001-8729-0482')
+                                meta=dict(institution='my_institution',
+                                          contact='https://orcid.org/0000-0001-8729-0482')
+                                )
         fname = snt.to_html('test.html')
         self.assertTrue(fname.exists())
         fname.unlink(missing_ok=True)
@@ -250,12 +248,12 @@ class TestStandardAttributes(unittest.TestCase):
     def test_from_zenodo(self):
         import zenodo_search as zsearch
         doi = zsearch.utils.parse_doi('8223533')
-        snt = h5tbx.conventions.standard_attributes.StandardNameTable.from_zenodo(doi=8223533)
-        self.assertIsInstance(snt, h5tbx.conventions.StandardNameTable)
+        snt = StandardNameTable.from_zenodo(doi=8223533)
+        self.assertIsInstance(snt, StandardNameTable)
         filename = h5tbx.UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
         self.assertTrue(filename.exists())
         filename.unlink(missing_ok=True)
-        snt = h5tbx.conventions.standard_attributes.StandardNameTable.from_zenodo(doi=8223533)
+        snt = StandardNameTable.from_zenodo(doi=8223533)
         self.assertTrue(filename.exists())
 
     def test_from_yaml(self):
@@ -280,26 +278,26 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_standard_name_convention(self):
         h5tbx.use(None)
-        units_attr = h5tbx.conventions.StandardAttribute('units',
-                                                         validator='$pintunit',
-                                                         target_methods='create_dataset',
-                                                         description='A unit of a dataset',
-                                                         )
-        standard_name = h5tbx.conventions.StandardAttribute('standard_name',
-                                                            validator='$standard_name',
-                                                            target_methods='create_dataset',
-                                                            description='A standard name of a dataset',
-                                                            )
+        units_attr = StandardAttribute('units',
+                                       validator='$pintunit',
+                                       target_methods='create_dataset',
+                                       description='A unit of a dataset',
+                                       )
+        standard_name = StandardAttribute('standard_name',
+                                          validator='$standard_name',
+                                          target_methods='create_dataset',
+                                          description='A standard name of a dataset',
+                                          )
         snt_yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
-        snt = h5tbx.conventions.StandardAttribute('standard_name_table',
-                                                  validator='$standard_name_table',
-                                                  target_methods='__init__',
-                                                  # default_value='https://zenodo.org/record/8158764',
-                                                  default_value=snt_yaml_filename,
-                                                  description='A standard name table',
-                                                  requirements=['standard_name', 'units'],
-                                                  return_type='standard_name_table'
-                                                  )
+        snt = StandardAttribute('standard_name_table',
+                                validator='$standard_name_table',
+                                target_methods='__init__',
+                                # default_value='https://zenodo.org/record/8158764',
+                                default_value=snt_yaml_filename,
+                                description='A standard name table',
+                                requirements=['standard_name', 'units'],
+                                return_type='standard_name_table'
+                                )
 
         cv = h5tbx.conventions.Convention('test_standard_name',
                                           contact=h5tbx.__author_orcid__)
