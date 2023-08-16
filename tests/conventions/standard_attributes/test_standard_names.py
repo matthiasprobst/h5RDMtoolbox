@@ -64,6 +64,12 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(table['x_velocity'], StandardName)
         with self.assertRaises(h5tbx.errors.StandardNameError):
             table['phi_velocity']
+        self.assertIsInstance(table['pressure'], StandardName)
+        self.assertFalse(table['pressure'].is_vector())
+        self.assertFalse(table['x_velocity'].is_vector())
+        self.assertTrue(table['velocity'].is_vector())
+        with self.assertRaises(h5tbx.errors.StandardNameError):
+            table['x_pressure']
         self.assertIsInstance(table['derivative_of_x_coordinate_wrt_x_velocity'], StandardName)
 
     # if pooch_is_available:
@@ -98,6 +104,8 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.components['y'].description, 'Y indicates the y-axis component of the vector.')
         self.assertEqual(table.components['z'].description, 'Z indicates the z-axis component of the vector.')
         self.assertEqual(table.components.names, ['x', 'y', 'z'])
+
+        snt['x_pressure']
 
         self.assertIsInstance(table.locations, StandardLocations)
         for location in table.locations:

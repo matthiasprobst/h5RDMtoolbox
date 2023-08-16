@@ -57,8 +57,10 @@ class StandardName:
                  units: Union[str, pint.Unit] = None,
                  description: str = None,
                  canonical_units: str = None,
+                 isvector: bool = False,
                  alias: str = None):
         StandardName.check_syntax(name)
+        self._is_vector = isvector
         self.name = name
         if canonical_units is not None:
             warnings.warn('Parameter "canonical_units" is depreciated. Use "units" instead.', DeprecationWarning)
@@ -116,6 +118,10 @@ class StandardName:
         """check if is a valid standard name of the provided table"""
         return snt.check(self.name)
 
+    def is_vector(self) -> bool:
+        """check if is a vector"""
+        return self._is_vector
+
 
 # wrapper that updates datetime in meta
 def update_modification_date(func):
@@ -158,10 +164,15 @@ class StandardReferenceFrames:
         self._names = list(self._standard_reference_frames.keys())
         self._index = 0
 
+    def __repr__(self):
+        return f'<StandardReferenceFrames: {self._names}>'
+
     def __len__(self):
         return len(self._names)
 
-    def __getitem__(self, item) -> StandardReferenceFrame:
+    def __getitem__(self, item: Union[int, str]) -> StandardReferenceFrame:
+        if isinstance(item, int):
+            return self._standard_reference_frames[self._names[item]]
         return self._standard_reference_frames[item]
 
     def __contains__(self, item) -> bool:
@@ -519,6 +530,7 @@ class StandardNameTable:
             return StandardName(name=standard_name,
                                 units=units,
                                 description=entry['description'],
+                                isvector=entry.get('vector', False),
                                 alias=entry.get('alias', None))
 
         logger.debug(f'No exact match of standard name "{standard_name}" in table')
@@ -1339,7 +1351,7 @@ def X_at_LOC(standard_name, snt) -> StandardName:
         loc = groups[1]
         if loc not in snt.locations:
             raise KeyError(f'StandardLocation "{loc}" not found in registry of the standard name table. '
-                           f'Available devices are: {snt.devices}')
+                           f'Available locations are: {snt.locations}')
         new_description = f"{sn} at {loc}"
         return StandardName(standard_name, sn.units, new_description)
     return False
@@ -1355,7 +1367,7 @@ def in_reference_frame(standard_name, snt) -> StandardName:
         frame = groups[1]
         if frame not in snt.standard_reference_frames:
             raise KeyError(f'Reference Frame "{frame}" not found in registry of the standard name table. '
-                           f'Available devices are: {snt.standard_reference_frames.names}')
+                           f'Available reference frames are: {snt.standard_reference_frames.names}')
         new_description = f'{sn.description}. The quantity is relative to the reference frame "{frame}"'
         return StandardName(standard_name, sn.units, new_description)
     return False
@@ -1372,6 +1384,8 @@ def component_of(standard_name, snt) -> StandardName:
         if component not in snt.components:
             return False
         sn = snt[groups[1]]
+        if not sn.is_vector():
+            raise errors.StandardNameError(f'"{sn.name}" is not a vector quantity.')
         new_description = f'{sn.description} {snt.components[component].description}'
         return StandardName(standard_name, sn.units, new_description)
 
