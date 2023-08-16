@@ -105,8 +105,6 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table.components['z'].description, 'Z indicates the z-axis component of the vector.')
         self.assertEqual(table.components.names, ['x', 'y', 'z'])
 
-        snt['x_pressure']
-
         self.assertIsInstance(table.locations, StandardLocations)
         for location in table.locations:
             self.assertIsInstance(location, StandardLocation)
