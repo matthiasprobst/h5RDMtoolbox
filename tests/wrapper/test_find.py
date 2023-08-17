@@ -3,9 +3,6 @@ import unittest
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
 
-logger = h5tbx.loggers['wrapper']
-logger.setLevel('ERROR')
-
 
 class TestFind(unittest.TestCase):
 

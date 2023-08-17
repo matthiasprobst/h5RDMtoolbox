@@ -53,6 +53,9 @@ class StandardConstructors:
                 return _item
         raise KeyError(f"Item '{item}' not found")
 
+    def __bool__(self):
+        return self.items != []
+
     @property
     def names(self):
         """Return the names of the locations"""
@@ -61,6 +64,9 @@ class StandardConstructors:
     def to_dict(self) -> Dict:
         """Return dictionary representation of StandardLocations"""
         return {item.name: item.description for item in self.items}
+
+
+EMPTYSTANDARDCONSTRUCTORS = StandardConstructors([])
 
 
 @dataclass

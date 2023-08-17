@@ -136,6 +136,8 @@ def X_at_LOC(standard_name, snt) -> StandardName:
 
 def in_reference_frame(standard_name, snt) -> StandardName:
     """A standard name in a standard reference frame"""
+    if not snt.standard_reference_frames:
+        return False
     match = re.match(r"^(.*)_in_(.*)$", standard_name)
     if match:
         groups = match.groups()
@@ -153,6 +155,8 @@ def in_reference_frame(standard_name, snt) -> StandardName:
 def component_of(standard_name, snt) -> StandardName:
     """Component of a standard name, e.g. x_velocity where velocity is the
     existing standard name and x is a registered component"""
+    if not snt.components:
+        return False
     match = re.match(r"^(.*)_(.*)$", standard_name)
     if match:
         groups = match.groups()

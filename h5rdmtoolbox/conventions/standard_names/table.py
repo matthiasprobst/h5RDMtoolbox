@@ -15,28 +15,13 @@ from typing import Dict, Tuple
 from h5rdmtoolbox._user import UserDir
 from h5rdmtoolbox.utils import generate_temporary_filename
 from . import constructor
+from . import consts
 from .transformation import *
 from .. import logger
 from ..utils import dict2xml, get_similar_names_ratio
 from ... import errors
 
 __this_dir__ = pathlib.Path(__file__).parent
-
-VERSION_PATTERN = r'^v\d+(\.\d+)?(a|b|rc|dev)?$'
-README_HEADER = """---
-title: Standard Name Table for Fan simulations and measurements
----
-
-# Standard Name Table for Fan simulations and measurements
-
-| Standard Name |     units     | Description |
-|---------------|:-------------:|:------------|
-"""
-
-LATEX_UNDERSCORE = '\\_'
-
-VALID_CHARACTERS = '[^a-zA-Z0-9_]'
-PATTERN = '^[0-9 ].*'
 
 
 class StandardNameTable:
@@ -111,14 +96,15 @@ class StandardNameTable:
                 return {'description': None}
             raise TypeError(f'Wrong type for "v". Expecting dict or str but got {type(v)}')
 
+        self.standards = {}
+
         standard_reference_frame = standards.pop('reference_frames', None)
         if standard_reference_frame:
             from .constructor import StandardReferenceFrames, StandardReferenceFrame
-            self._reference_frames = StandardReferenceFrames(
+            self.standards['standard_reference_frame'] = StandardReferenceFrames(
                 [StandardReferenceFrame(k, **v) for k, v in standard_reference_frame.items()]
             )
 
-        self.standards = {}
         for k, v in standards.items():
             if v:
                 if isinstance(v, (list, tuple)):
@@ -156,14 +142,17 @@ class StandardNameTable:
     @property
     def locations(self) -> List[str]:
         """List of valid locations"""
-        return self.standards.get('locations', [])
+        return self.standards.get('locations', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
 
     @property
     def components(self) -> List[str]:
         """List of valid locations"""
-        return self.standards.get('standard_components', [])
+        return self.standards.get('standard_components', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
 
-    standard_components = property(components)
+    @property
+    def standard_components(self) -> List[str]:
+        """List of valid locations"""
+        return self.standards.get('standard_components', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
 
     @property
     def transformations(self) -> List[Callable]:
@@ -177,12 +166,13 @@ class StandardNameTable:
 
     @property
     def standard_reference_frames(self):
-        return self._reference_frames
+        """Return list of standard reference frames"""
+        return self.standards.get('standard_reference_frame', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
 
     @property
     def devices(self) -> List[str]:
         """List of defined devices"""
-        return self.standards.get('devices', [])
+        return self.standards.get('devices', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
 
     @property
     def aliases(self) -> Dict:
@@ -292,7 +282,7 @@ class StandardNameTable:
             version_string = '0.0'
             warnings.warn(f'Version number is not set. Setting version number to {version_string}.')
         version_string = str(version_string)
-        if not re.match(VERSION_PATTERN, version_string):
+        if not re.match(consts.VERSION_PATTERN, version_string):
             raise ValueError(f'Version number "{version_string}" is not valid. Expecting MAJOR.MINOR(a|b|rc|dev).')
         return version_string
 
@@ -714,14 +704,7 @@ class StandardNameTable:
         snt_dict = self.to_dict()
 
         with open(yaml_filename, 'w') as f:
-            meta_lines = '\n'.join(f'{k}: {v}' for k, v in self.meta.items())
-            f.writelines(meta_lines + '\n')
-
-            yaml.safe_dump({'standard_names': snt_dict['standard_names'],
-                            'standard_locations': snt_dict['locations'],
-                            'standard_devices': snt_dict['devices'],
-                            'standard_reference_frames': snt_dict['standard_reference_frames'],
-                            'standard_components': snt_dict['standard_components']}, f)
+            yaml.safe_dump(snt_dict, f, sort_keys=False)
 
     def to_xml(self,
                xml_filename: pathlib.Path,
@@ -766,7 +749,7 @@ class StandardNameTable:
         """Export the SNT to a markdown file"""
         markdown_filename = pathlib.Path(markdown_filename)
         with open(markdown_filename, 'w') as f:
-            f.write(README_HEADER)
+            f.write(consts.README_HEADER)
             for k, v in self.sort().standard_names.items():
                 f.write(f'| {k} | {v["units"]} | {v["description"]} |\n')
         return markdown_filename
@@ -780,7 +763,7 @@ class StandardNameTable:
         # Read the Markdown file
         markdown_filename = pathlib.Path(markdown_filename)
 
-        template_filename = __this_dir__ / '../../html' / 'template.html'
+        template_filename = __this_dir__ / '../html' / 'template.html'
 
         if not template_filename.exists():
             raise FileNotFoundError(f'Could not find the template file at {template_filename.absolute()}')
@@ -822,7 +805,9 @@ class StandardNameTable:
                 desc = v["description"]
                 desc[0].upper()
                 f.write(
-                    f'{k.replace("_", LATEX_UNDERSCORE)} & {v["units"]} & {desc.replace("_", LATEX_UNDERSCORE)} \\\\\n')
+                    f'{k.replace("_", consts.LATEX_UNDERSCORE)} & {v["units"]} & '
+                    f'{desc.replace("_", consts.LATEX_UNDERSCORE)} \\\\\n'
+                )
             if with_header_and_footer:
                 f.write(LATEX_FOOTER)
         return latex_filename
@@ -832,13 +817,14 @@ class StandardNameTable:
         d = dict(name=self.name,
                  **self.meta,
                  standard_names=self.standard_names)
-        for name, item in zip(('locations', 'devices', 'standard_components'),
-                              (self.locations, self.devices, self.components)):
-            item_dict = item.to_dict()
-            if item:
-                d[name] = item_dict
+        for k, v in self.standards.items():
+            # for name, item in zip(('locations', 'devices', 'standard_components'),
+            #                       (self.locations, self.devices, self.components)):
+            vdict = v.to_dict()
+            if vdict:
+                d[k] = vdict
 
-        if self.standard_reference_frames is not None:
+        if self.standard_reference_frames:
             d['standard_reference_frames'] = self.standard_reference_frames.to_dict()['standard_reference_frames']
 
         dt = d.get('last_modified', datetime.now(timezone.utc).isoformat())

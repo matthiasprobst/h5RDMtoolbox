@@ -14,9 +14,6 @@ from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper.core import Dataset, File, Group
 
-logger = h5tbx.loggers['wrapper']
-logger.setLevel('ERROR')
-
 
 class TestFile(unittest.TestCase):
 

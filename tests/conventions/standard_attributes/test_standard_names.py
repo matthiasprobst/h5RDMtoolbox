@@ -230,51 +230,53 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(snt.standard_names, dict)
 
     def test_to_html(self):
-        snt = StandardNameTable(name='test_snt',
-                                standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
-                                version='v1.0dev',
-                                meta=dict(institution='my_institution',
-                                          contact='https://orcid.org/0000-0001-8729-0482')
-                                )
-        fname = snt.to_html('test.html')
-        self.assertTrue(fname.exists())
-        fname.unlink(missing_ok=True)
+        if self.connected:
+            snt = StandardNameTable(name='test_snt',
+                                    standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
+                                    version='v1.0dev',
+                                    meta=dict(institution='my_institution',
+                                              contact='https://orcid.org/0000-0001-8729-0482')
+                                    )
+            fname = snt.to_html('test.html')
+            self.assertTrue(fname.exists())
+            fname.unlink(missing_ok=True)
 
-        with self.assertRaises(KeyError):
-            self.snt['x_velocity_in_a_frame']
+            with self.assertRaises(StandardNameError):
+                self.snt['x_velocity_in_a_frame']
 
-        self.assertTrue(snt.standard_reference_frames is None)
+            self.assertTrue(snt.standard_reference_frames is None)
 
     def test_from_zenodo(self):
-        import zenodo_search as zsearch
-        doi = zsearch.utils.parse_doi('8223533')
-        snt = StandardNameTable.from_zenodo(doi=8223533)
-        self.assertIsInstance(snt, StandardNameTable)
-        filename = h5tbx.UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
-        self.assertTrue(filename.exists())
-        filename.unlink(missing_ok=True)
-        snt = StandardNameTable.from_zenodo(doi=8223533)
-        self.assertTrue(filename.exists())
+        if self.connected:
+            import zenodo_search as zsearch
+            doi = zsearch.utils.parse_doi('8223533')
+            snt = StandardNameTable.from_zenodo(doi=8223533)
+            self.assertIsInstance(snt, StandardNameTable)
+            filename = h5tbx.UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
+            self.assertTrue(filename.exists())
+            filename.unlink(missing_ok=True)
+            snt = StandardNameTable.from_zenodo(doi=8223533)
+            self.assertTrue(filename.exists())
 
     def test_from_yaml(self):
+        if self.connected:
+            cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
+            cv.register()
+            h5tbx.use(cv)
+            with h5tbx.File(title='Test title',
+                            piv_method='multi_grid',
+                            piv_medium='air',
+                            seeding_material='dehs',
+                            contact='https://orcid.org/0000-0001-8729-0482') as h5:
+                h5.dump()
 
-        cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
-        cv.register()
-        h5tbx.use(cv)
-        with h5tbx.File(title='Test title',
-                        piv_method='multi_grid',
-                        piv_medium='air',
-                        seeding_material='dehs',
-                        contact='https://orcid.org/0000-0001-8729-0482') as h5:
-            h5.dump()
+                with self.assertRaises(StandardAttributeError):
+                    h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
+                h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
 
-            with self.assertRaises(StandardAttributeError):
-                h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
-            h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
-
-            with self.assertRaises(StandardAttributeError):
-                h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
-            h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
+                with self.assertRaises(StandardAttributeError):
+                    h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
+                h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
 
     def test_standard_name_convention(self):
         h5tbx.use(None)

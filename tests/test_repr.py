@@ -29,7 +29,7 @@ class TestRepr(unittest.TestCase):
 
     def test_repr(self):
         # test h5rdmtoolbox._repr.DataSetRepr
-        with File(h5tbx.generate_temporary_filename(), 'w') as h5:
+        with File(h5tbx.utils.generate_temporary_filename(), 'w') as h5:
             h5.create_dataset('ds', data=3, dtype='int64')
             h5.create_dataset('dsfloat', data=3.0, dtype='float64')
             h5.create_dataset('str', data='str')
