@@ -8,6 +8,7 @@ from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError
 from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
 from h5rdmtoolbox.conventions.standard_names import constructor
+from h5rdmtoolbox.conventions.standard_names import utils
 from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from h5rdmtoolbox.conventions.utils import check_url
@@ -33,6 +34,36 @@ class TestStandardAttributes(unittest.TestCase):
             warnings.warn('No internet connection', UserWarning)
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
+
+    def test_units_power_fix(self):
+        self.assertEqual('m s^-1', utils._units_power_fix('m s-1'))
+
+    def test_update_datasets(self):
+        with h5tbx.use(None):
+            with h5tbx.File() as h5:
+                h5.attrs['test'] = 1
+                h5.create_dataset('grp/ds', data=1, attrs={'test': 2, 'long_name': 'x velocity'})
+                h5.create_dataset('ds', data=1, attrs={'test': 2, 'long_name': 'x velocity'})
+                h5.create_dataset('ds2', data=1, attrs={'test': 2, 'long_name': 'x velocity'})
+                utils.update_datasets(group_or_filename=h5,
+                                      translation_dict={'ds': 'x_velocity'}, rec=False)
+                self.assertFalse('standard_name' in h5['grp/ds'].attrs)
+                self.assertTrue('standard_name' in h5['ds'].attrs)
+                self.assertFalse('standard_name' in h5['ds2'].attrs)
+            utils.update_datasets(group_or_filename=h5.hdf_filename,
+                                  translation_dict={'ds': 'x_velocity'}, rec=False)
+            with h5tbx.File(h5.hdf_filename) as h5:
+                self.assertFalse('standard_name' in h5['grp/ds'].attrs)
+                self.assertTrue('standard_name' in h5['ds'].attrs)
+                self.assertFalse('standard_name' in h5['ds2'].attrs)
+            utils.update_datasets(group_or_filename=h5.hdf_filename,
+                                  translation_dict={'ds': 'x_velocity'}, rec=True)
+            with h5tbx.File(h5.hdf_filename) as h5:
+                self.assertTrue('standard_name' in h5['grp/ds'].attrs)
+                self.assertTrue('standard_name' in h5['ds'].attrs)
+                self.assertFalse('standard_name' in h5['ds2'].attrs)
+                self.assertEqual('x_velocity', h5['grp/ds'].attrs['standard_name'])
+                self.assertEqual('x_velocity', h5['ds'].attrs['standard_name'])
 
     def test_standard_name(self):
         with self.assertRaises(StandardNameError):

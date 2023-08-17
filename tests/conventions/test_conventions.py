@@ -34,6 +34,8 @@ class TestConventions(unittest.TestCase):
             f.write("""name: test""")
         with self.assertRaises(ValueError):
             h5tbx.conventions.from_yaml(f.name)
+        with self.assertRaises(ValueError):
+            h5tbx.conventions.Convention.from_yaml(f.name)
 
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.write("""__name__: test""")
@@ -44,6 +46,10 @@ class TestConventions(unittest.TestCase):
             f.writelines(['__name__: test\n', '__contact__: me'])
 
         cv = h5tbx.conventions.from_yaml(f.name)
+        self.assertEqual(cv.name, 'test')
+        self.assertEqual(cv.contact, 'me')
+
+        cv = h5tbx.conventions.Convention.from_yaml(f.name)
         self.assertEqual(cv.name, 'test')
         self.assertEqual(cv.contact, 'me')
 
