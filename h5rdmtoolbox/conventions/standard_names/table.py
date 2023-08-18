@@ -115,6 +115,19 @@ class StandardNameTable:
                     raise ValueError(f'Pattern {t.pattern} already defined')
                 pattern.add(t.pattern)
 
+        self._transformations = (derivative_of_X_wrt_to_Y,
+                                 magnitude_of,
+                                 standard_deviation_of,
+                                 square_of,
+                                 product_of_X_and_Y,
+                                 ratio_of_X_and_Y,)
+
+        pattern = set()
+        for transformation in self._transformations:
+            if transformation.pattern in pattern:
+                raise ValueError(f'Pattern {transformation.pattern} already defined')
+            pattern.add(t.pattern)
+
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
@@ -124,12 +137,6 @@ class StandardNameTable:
                 v['units'] = v['canonical_units']
                 del v['canonical_units']
         self._meta = meta
-        self._transformations = (derivative_of_X_wrt_to_Y,
-                                 magnitude_of,
-                                 standard_deviation_of,
-                                 square_of,
-                                 product_of_X_and_Y,
-                                 ratio_of_X_and_Y,)
 
     @property
     def transformations(self) -> List[Transformation]:
