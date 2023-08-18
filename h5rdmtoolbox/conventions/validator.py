@@ -91,6 +91,7 @@ class InValidator(StandardAttributeValidator):
     def __init__(self, expectation: List[str]):
         if not isinstance(expectation, (tuple, list)):
             raise TypeError(f'Invalid type for parameter "expectation": {type(expectation)}')
+
         super().__init__(expectation)
 
     def __call__(self, value, parent):

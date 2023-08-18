@@ -1,9 +1,13 @@
+import pathlib
 import requests
+import shutil
 import unittest
 import warnings
 import yaml
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import tutorial
+from h5rdmtoolbox.conventions import core
 
 
 class TestConventions(unittest.TestCase):
@@ -16,6 +20,50 @@ class TestConventions(unittest.TestCase):
                 requests.Timeout) as e:
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
+
+    def test_standard_name_table_as_relative_filename(self):
+        snt_filename = h5tbx.tutorial.get_reduced_standard_name_table_yaml_file()
+
+        yaml_filename = h5tbx.utils.generate_temporary_filename(suffix='.yaml')
+        # copy to the same directory
+        shutil.copy(snt_filename, yaml_filename.parent / snt_filename.name)
+
+        sa_dict = {'__name__': 'standard_name_table',
+                   '__institution__': 'https://orcid.org/members/001G000001e5aUTIAY',
+                   '__contact__': 'https://orcid.org/0000-0001-8729-0482',
+                   '__use_scale_offset__': True,
+                   'standard_name_table':
+                       {
+                           'target_methods': '__init__',
+                           'validator': {'$in': [f'relpath({snt_filename.name})', ]},
+                           'default_value': f'relpath({snt_filename.name})',
+                           'return_type': 'standard_name_table',
+                           'description': 'A standard name table'
+                       }
+                   }
+        with open(yaml_filename, 'w') as f:
+            yaml.safe_dump(sa_dict, f)
+
+        local_cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
+        local_cv.register()
+        with h5tbx.use(local_cv.name):
+            with h5tbx.File() as h5:
+                print(h5.standard_name_table)
+
+    def test_process_paths(self):
+        __this_dir__ = pathlib.Path(__file__).parent
+        abspath = str((__this_dir__ / 'a/path/').absolute())
+
+        self.assertEqual({'a': []}, core._process_paths({'a': []}, __this_dir__))
+        self.assertEqual([], core._process_paths([], __this_dir__))
+        self.assertEqual(3.4, core._process_paths(3.4, __this_dir__))
+        self.assertEqual('a/path/', core._process_paths('a/path/', __this_dir__))
+        self.assertEqual(abspath, core._process_paths('relpath(a/path/)', __this_dir__))
+        self.assertEqual({'a': 2}, core._process_paths({'a': 2}, __this_dir__))
+        self.assertEqual({'a': 2, 'b': {'c': 'a/path/'}},
+                         core._process_paths({'a': 2, 'b': {'c': 'a/path/'}}, __this_dir__))
+        self.assertEqual({'a': 2, 'b': {'c': abspath}},
+                         core._process_paths({'a': 2, 'b': {'c': 'relpath(a/path/)'}}, __this_dir__))
 
     def test_use(self):
         h5tbx.use(h5tbx.get_config()['default_convention'])
@@ -65,9 +113,8 @@ class TestConventions(unittest.TestCase):
         with open(f2, 'w') as f:
             yaml.safe_dump(test_std_attr, f)
 
-        cv = h5tbx.conventions.from_yaml([f1, f2])
-        self.assertTrue('title' in cv._registered_standard_attributes)
-        self.assertEqual('test', cv.name)
+        with self.assertRaises(ValueError):
+            h5tbx.conventions.from_yaml([f1, f2])
 
     def test_cv_h5tbx(self):
         h5tbx.use('h5tbx')

@@ -1,6 +1,9 @@
 """Testing the standard attributes"""
+import shutil
+
 import inspect
 import unittest
+import yaml
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
@@ -359,13 +362,13 @@ class TestStandardAttributes(unittest.TestCase):
             with self.assertRaises(StandardAttributeError):
                 h5.data_base_source = 'invlaid'
 
+
     def test_from_yaml(self):
         if self.connected:
             convention_filename = tutorial.get_standard_attribute_yaml_filename()
             local_cv = h5tbx.conventions.Convention.from_yaml(convention_filename)
             local_cv.register()
             h5tbx.use(local_cv)
-            print(local_cv)
 
             with h5tbx.File(title='My file',
                             piv_method='multi_grid',

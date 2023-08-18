@@ -1,6 +1,7 @@
 import forge
 import inspect
 import pathlib
+import re
 import shutil
 import yaml
 import zenodo_search as zsearch
@@ -47,8 +48,15 @@ class Convention:
                  name: str,
                  contact: str,  # ORCID of researcher
                  institution: str = None,  # only if different than that from contact
-                 use_scale_offset: bool = False):
+                 use_scale_offset: bool = False,
+                 filename=None):
         from ..wrapper.core import File, Group, Dataset
+
+        # a convention may be stored locally:
+        if filename is not None:
+            self.filename = pathlib.Path(filename).absolute()
+        else:
+            self.filename = filename
 
         self.contact = contact
         self.institution = institution
@@ -276,6 +284,34 @@ datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
 __all__ = ['datetime_str', 'StandardAttribute']
 
 
+def _process_relpath(rel_filename, relative_to):
+    return str((relative_to / rel_filename).absolute())
+
+
+def _process_paths(data: Union[Dict, str], relative_to) -> Dict:
+    # processed_data = {}
+    if isinstance(data, str):
+        match = re.search(r'relpath\((.*?)\)', data)
+        if match:
+            return _process_relpath(match.group(1), relative_to)
+        return data
+    elif isinstance(data, list):
+        return [_process_paths(item, relative_to) for item in data]
+    elif isinstance(data, dict):
+        _data = data.copy()
+        for key, value in data.items():
+            if isinstance(value, str):
+                match = re.search(r'relpath\((.*?)\)', value)
+                if match:
+                    _data[key] = _process_relpath(match.group(1), relative_to)
+            elif isinstance(value, list):
+                _data[key] = [_process_paths(item, relative_to) for item in value]
+            elif isinstance(value, dict):
+                _data[key] = _process_paths(_data[key], relative_to)
+        return _data
+    return data
+
+
 def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Path]],
               register: bool = True) -> Convention:
     """Read convention from from a yaml file. A convention YAML file
@@ -300,38 +336,27 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
         If the YAML file does not contain "__name__" or "__contact__"
     """
     if isinstance(yaml_filename, (list, tuple)):
-        list_of_yaml_filenames = yaml_filename
-    else:
-        list_of_yaml_filenames = [yaml_filename, ]
+        raise ValueError('Only one YAML file can be specified')
 
-    yaml_filename = list_of_yaml_filenames[0]
     yaml_filename = pathlib.Path(yaml_filename)
 
     with open(yaml_filename, 'r') as f:
-        attrs = yaml.safe_load(f)
+        attrs = _process_paths(yaml.safe_load(f), relative_to=yaml_filename.parent)
 
     if '__name__' not in attrs:
         raise ValueError(f'YAML file {yaml_filename} does not contain "__name__". Is the file a valid convention?')
     if '__contact__' not in attrs:
         raise ValueError(f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
 
-    std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if isinstance(values, dict)]
+    std_attrs = [StandardAttribute(name, parent_filename=yaml_filename, **values) for name, values in attrs.items() if
+                 isinstance(values, dict)]
     meta = {name.strip('__'): value for name, value in attrs.items() if not isinstance(value, dict)}
     if 'name' not in meta:
         meta['name'] = yaml_filename.stem
     meta = {name.strip('_'): value for name, value in meta.items()}
-    cv = Convention(**meta)
+    cv = Convention(filename=yaml_filename, **meta)
     for s in std_attrs:
         cv.add(s)
-
-    if len(list_of_yaml_filenames) > 1:
-        for yaml_filename in list_of_yaml_filenames[1:]:
-            with open(yaml_filename, 'r') as f:
-                attrs = yaml.safe_load(f)
-                std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if
-                             isinstance(values, dict)]
-                for s in std_attrs:
-                    cv.add(s)
 
     if register:
         cv.register()

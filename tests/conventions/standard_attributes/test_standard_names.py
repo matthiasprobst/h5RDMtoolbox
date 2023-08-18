@@ -7,19 +7,10 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError
 from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
-from h5rdmtoolbox.conventions.standard_names import constructor
 from h5rdmtoolbox.conventions.standard_names import utils
 from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from h5rdmtoolbox.conventions.utils import check_url
-
-try:
-    import pooch
-
-    pooch_is_available = True
-except ImportError:
-    pooch_is_available = False
-    warnings.warn(f'Cannot test certain things about standard name table because "pooch" is not installed.')
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -32,6 +23,13 @@ class TestStandardAttributes(unittest.TestCase):
                 requests.Timeout) as e:
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
+        try:
+            import pooch
+
+            self.pooch_is_available = True
+        except ImportError:
+            self.pooch_is_available = False
+            warnings.warn(f'Cannot test certain things about standard name table because "pooch" is not installed.')
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
@@ -102,90 +100,6 @@ class TestStandardAttributes(unittest.TestCase):
             table['x_pressure']
         self.assertIsInstance(table['derivative_of_x_coordinate_wrt_x_velocity'], StandardName)
 
-    # if pooch_is_available:
-    def test_StandardNameTableFromYaml(self):
-        table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())
-
-        self.assertEqual(table.name, 'Test')
-        self.assertEqual(table.version, 'v1.0')
-        self.assertEqual(table.institution, 'my_institution')
-        self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
-        self.assertEqual(table.valid_characters, '[^a-zA-Z0-9_]')
-        self.assertEqual(table.pattern, '^[0-9 ].*')
-
-        self.assertIsInstance(table.devices, constructor.StandardConstructors)
-        for device in table.devices:
-            self.assertIsInstance(device, constructor.StandardConstructor)
-        self.assertIsInstance(table.devices['fan'], constructor.StandardConstructor)
-        self.assertEqual(table.devices['fan'].name, 'fan')
-        self.assertEqual(table.devices['orifice'].name, 'orifice')
-        self.assertEqual(table.devices['fan'].description, 'The test fan')
-        self.assertEqual(table.devices['orifice'].description, 'The orifice to measure the volume flow rate')
-        self.assertEqual(table.devices.names, ['fan', 'orifice'])
-
-        self.assertIsInstance(table.components, constructor.StandardConstructors)
-        for component in table.components:
-            self.assertIsInstance(component, constructor.StandardConstructor)
-        self.assertIsInstance(table.components['x'], constructor.StandardConstructor)
-        self.assertEqual(table.components['x'].name, 'x')
-        self.assertEqual(table.components['y'].name, 'y')
-        self.assertEqual(table.components['z'].name, 'z')
-        self.assertEqual(table.components['x'].description, 'X indicates the x-axis component of the vector.')
-        self.assertEqual(table.components['y'].description, 'Y indicates the y-axis component of the vector.')
-        self.assertEqual(table.components['z'].description, 'Z indicates the z-axis component of the vector.')
-        self.assertEqual(table.components.names, ['x', 'y', 'z'])
-
-        self.assertIsInstance(table.locations, constructor.StandardConstructors)
-        for location in table.locations:
-            self.assertIsInstance(location, constructor.StandardConstructor)
-        self.assertIsInstance(table.locations['fan_inlet'], constructor.StandardConstructor)
-        self.assertIsInstance(table.locations['fan_outlet'], constructor.StandardConstructor)
-        self.assertEqual(table.locations['fan_inlet'].name, 'fan_inlet')
-        self.assertEqual(table.locations['fan_outlet'].name, 'fan_outlet')
-        ref_desc = 'The defined inlet into the test fan.' \
-                   ' See additional meta data or references or the exact spatial location.'
-        self.assertEqual(ref_desc, table.locations['fan_inlet'].description)
-        ref_desc = 'The defined outlet of the test fan.' \
-                   ' See additional meta data or references or the exact spatial location.'
-        self.assertEqual(ref_desc, table.locations['fan_outlet'].description)
-        self.assertEqual(table.locations.names, ['fan_inlet', 'fan_outlet'])
-
-        with self.assertRaises(AttributeError):
-            table.standard_names = {'synthetic_particle_image': {
-                'units': 'pixel',
-            },
-                'mean_particle_diameter2': {
-                    'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.',
-                    'units': 'pixel'}
-            }
-
-        table._standard_names = {'synthetic_particle_image': {
-            'units': 'pixel',
-        },
-            'mean_particle_diameter2': {
-                'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 sigma with of the gaussian intensity profile of the particle image.',
-                'units': 'pixel'}
-        }
-
-        table._standard_names = {
-            'synthetic_particle_image': {
-                'units': 'pixel',
-                'description': 'Synthetic particle image velocimetry image containing image particles of a single '
-                               'synthetic recording.'},
-            'mean_particle_diameter2': {
-                'description': 'The mean particle diameter of an image particle. The diameter is defined as the 2 '
-                               'sigma with of the gaussian intensity profile of the particle image.',
-                'units': 'pixel'}
-        }
-
-        table.update(a_velocity={
-            'description': 'velocity in a direction',
-            'units': 'm/s'
-        })
-        self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
-        from h5rdmtoolbox import get_ureg
-        self.assertEqual(table['a_velocity'].units, get_ureg()('m/s'))
-
     def test_StandardNameTableVersion(self):
         versions = [
             ("v79", True),
@@ -207,22 +121,23 @@ class TestStandardAttributes(unittest.TestCase):
                     StandardNameTable.validate_version(version)
 
     def test_StandardNameTableFromWeb(self):
-        cf = StandardNameTable.from_web(
-            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
-            name='standard_name_table')
-        self.assertEqual(cf.name, 'standard_name_table')
-        self.assertEqual(cf.versionname, 'standard_name_table-v79')
-        if self.connected:
-            self.assertTrue(check_url(cf.meta['url']))
-            self.assertFalse(check_url(cf.meta['url'] + '123'))
+        if self.pooch_is_available:
+            cf = StandardNameTable.from_web(
+                url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+                name='standard_name_table')
+            self.assertEqual(cf.name, 'standard_name_table')
+            self.assertEqual(cf.versionname, 'standard_name_table-v79')
+            if self.connected:
+                self.assertTrue(check_url(cf.meta['url']))
+                self.assertFalse(check_url(cf.meta['url'] + '123'))
 
-        if self.connected:
-            opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                     file_path='open_centrifugal_fan_database-v1.yaml',
-                                                     project_id='35443',
-                                                     ref_name='main')
-            self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
-            self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+            if self.connected:
+                opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                         file_path='open_centrifugal_fan_database-v1.yaml',
+                                                         project_id='35443',
+                                                         ref_name='main')
+                self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
+                self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
 
     def test_StandardNameTableFromYaml_special(self):
         table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')

@@ -193,6 +193,7 @@ class StandardAttribute(abc.ABC):
         self.name = name  # the attrs key
         if isinstance(validator, str):
             validator = {validator: None}
+
         self.validator = get_validator(**validator)
         assert isinstance(self.validator, list)
         assert isinstance(self.validator[0], StandardAttributeValidator)
