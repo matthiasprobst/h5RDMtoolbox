@@ -6,9 +6,7 @@ import warnings
 
 from . import validation
 from .validators import Validator, Any, ExistIn, Equal
-from ..._logger import loggers
-
-logger = loggers['conventions']
+from .. import logger
 
 
 class Layout(validation.BaseGroupAndDatasetValidation):

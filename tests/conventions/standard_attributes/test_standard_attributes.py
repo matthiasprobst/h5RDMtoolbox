@@ -7,8 +7,9 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __author_orcid__
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import Convention
-from h5rdmtoolbox.conventions.standard_attributes import DefaultValue
-from h5rdmtoolbox.conventions.standard_attributes.errors import StandardAttributeError
+from h5rdmtoolbox.conventions.consts import DefaultValue
+from h5rdmtoolbox.conventions.errors import StandardAttributeError
+from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -24,15 +25,14 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(sa.target_methods, tuple)
         self.assertIsInstance(sa.validator, list)
         for validator in sa.validator:
-            self.assertIsInstance(validator,
-                                  h5tbx.conventions.standard_attributes.validators.StandardAttributeValidator)
+            self.assertIsInstance(validator, h5tbx.conventions.standard_attributes.StandardAttributeValidator)
 
     def test_standard_attribute_basics(self):
-        test = h5tbx.conventions.StandardAttribute('test',
-                                                   validator={'$type': 'string'},
-                                                   target_methods='create_dataset',
-                                                   description='A test',
-                                                   )
+        test = StandardAttribute('test',
+                                 validator={'$type': 'string'},
+                                 target_methods='create_dataset',
+                                 description='A test',
+                                 )
         self.assertEqual('test', test.name)
         self.assertEqual('A test', test.description)
         self.assertEqual(True, test.is_positional())
@@ -41,7 +41,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.assert_standard_attribute(test)
 
     def test_datetime(self):
-        datetime_attr = h5tbx.conventions.StandardAttribute(
+        datetime_attr = StandardAttribute(
             name='datetime',
             validator='$datetime',
             target_methods=("__init__",),
@@ -60,12 +60,12 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_data_source(self):
         h5tbx.use(None)
-        data_source = h5tbx.conventions.StandardAttribute('data_source',
-                                                          validator={'$in': ['simulation', 'experiment']},
-                                                          target_methods='create_dataset',
-                                                          description='Data source',
-                                                          default_value='simulation'
-                                                          )
+        data_source = StandardAttribute('data_source',
+                                        validator={'$in': ['simulation', 'experiment']},
+                                        target_methods='create_dataset',
+                                        description='Data source',
+                                        default_value='simulation'
+                                        )
         self.assertEqual(data_source.name, 'data_source')
         self.assertEqual(data_source.description, 'Data source')
         self.assertEqual(False, data_source.is_positional())
@@ -94,14 +94,14 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_add_with_requirements(self):
         h5tbx.use(None)
-        comment_name = h5tbx.conventions.StandardAttribute('comment',
-                                                           validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
-                                                                      '$minlength': 10},
-                                                           target_methods='create_dataset',
-                                                           alternative_standard_attribute='long_name',
-                                                           description='A comment',
-                                                           requirements='long_name'
-                                                           )
+        comment_name = StandardAttribute('comment',
+                                         validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
+                                                    '$minlength': 10},
+                                         target_methods='create_dataset',
+                                         alternative_standard_attribute='long_name',
+                                         description='A comment',
+                                         requirements='long_name'
+                                         )
 
         long_name_convention = h5tbx.conventions.Convention('long_name_convention_with_requirements',
                                                             contact=__author_orcid__)
@@ -112,34 +112,34 @@ class TestStandardAttributes(unittest.TestCase):
     def test_add_std_attr_to_non_existing_method(self):
         h5tbx.use(None)
         with self.assertRaises(ValueError):
-            long_name = h5tbx.conventions.StandardAttribute('long_name',
-                                                            validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
-                                                            target_methods='invalid_method',
-                                                            alternative_standard_attribute='comment',
-                                                            description='A long name of a dataset',
-                                                            )
+            long_name = StandardAttribute('long_name',
+                                          validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                          target_methods='invalid_method',
+                                          alternative_standard_attribute='comment',
+                                          description='A long name of a dataset',
+                                          )
 
     def test_alternative_standard_attribute(self):
         h5tbx.use(None)
-        long_name = h5tbx.conventions.StandardAttribute('long_name',
-                                                        validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
-                                                        target_methods='create_dataset',
-                                                        alternative_standard_attribute='comment',
-                                                        description='A long name of a dataset',
-                                                        )
-        long_name_grp = h5tbx.conventions.StandardAttribute('long_name',
-                                                            validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
-                                                            target_methods='create_group',
-                                                            description='A long name of a group',
-                                                            default_value='$None'
-                                                            )
-        comment_name = h5tbx.conventions.StandardAttribute('comment',
-                                                           validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
-                                                                      '$minlength': 10},
-                                                           target_methods='create_dataset',
-                                                           alternative_standard_attribute='long_name',
-                                                           description='A comment',
-                                                           )
+        long_name = StandardAttribute('long_name',
+                                      validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                      target_methods='create_dataset',
+                                      alternative_standard_attribute='comment',
+                                      description='A long name of a dataset',
+                                      )
+        long_name_grp = StandardAttribute('long_name',
+                                          validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                          target_methods='create_group',
+                                          description='A long name of a group',
+                                          default_value='$None'
+                                          )
+        comment_name = StandardAttribute('comment',
+                                         validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
+                                                    '$minlength': 10},
+                                         target_methods='create_dataset',
+                                         alternative_standard_attribute='long_name',
+                                         description='A comment',
+                                         )
 
         long_name_convention = h5tbx.conventions.Convention('long_name_convention',
                                                             contact=__author_orcid__)
@@ -211,31 +211,31 @@ class TestStandardAttributes(unittest.TestCase):
                         }
         url = 'https://h5rdmtoolbox.readthedocs.io/en/latest/'
 
-        bibtex_attr = h5tbx.conventions.StandardAttribute('bibtex',
-                                                          validator='$bibtex',
-                                                          target_methods=('create_dataset', 'create_group', '__init__'),
-                                                          description='A reference to a publication in bibtext format',
-                                                          default_value='$None'
-                                                          )
-        url_attr = h5tbx.conventions.StandardAttribute('url',
-                                                       validator='$url',
-                                                       target_methods=('create_dataset',
-                                                                       'create_group',
-                                                                       '__init__'),
-                                                       description='A reference to an URL',
-                                                       default_value='$None'
-                                                       )
+        bibtex_attr = StandardAttribute('bibtex',
+                                        validator='$bibtex',
+                                        target_methods=('create_dataset', 'create_group', '__init__'),
+                                        description='A reference to a publication in bibtext format',
+                                        default_value='$None'
+                                        )
+        url_attr = StandardAttribute('url',
+                                     validator='$url',
+                                     target_methods=('create_dataset',
+                                                     'create_group',
+                                                     '__init__'),
+                                     description='A reference to an URL',
+                                     default_value='$None'
+                                     )
 
-        reference_attr = h5tbx.conventions.StandardAttribute('references',
-                                                             validator='$ref',
-                                                             target_methods=('create_dataset',
-                                                                             'create_group',
-                                                                             '__init__'),
-                                                             description='A reference to a publication in bibtext '
-                                                                         'format or an URL',
-                                                             return_type='sdict',
-                                                             default_value='$None'
-                                                             )
+        reference_attr = StandardAttribute('references',
+                                           validator='$ref',
+                                           target_methods=('create_dataset',
+                                                           'create_group',
+                                                           '__init__'),
+                                           description='A reference to a publication in bibtext '
+                                                       'format or an URL',
+                                           return_type='sdict',
+                                           default_value='$None'
+                                           )
         cv = Convention('test_references',
                         contact=__author_orcid__)
         cv.add(bibtex_attr)
@@ -272,7 +272,7 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_comment(self):
 
-        comment = h5tbx.conventions.StandardAttribute(
+        comment = StandardAttribute(
             name='comment',
             validator={'$regex': r'^[A-Z].*$',
                        '$minlength': 10,
@@ -306,10 +306,10 @@ class TestStandardAttributes(unittest.TestCase):
         """Test title attribute"""
 
         # units is required. thus default value is EMPTY
-        units_attr = h5tbx.conventions.StandardAttribute('units',
-                                                         validator='$pintunit',
-                                                         target_methods='create_dataset',
-                                                         description='A unit of a dataset')
+        units_attr = StandardAttribute('units',
+                                       validator='$pintunit',
+                                       target_methods='create_dataset',
+                                       description='A unit of a dataset')
         self.assertEqual(units_attr.default_value, DefaultValue.EMPTY)
         cv = h5tbx.conventions.Convention('ucv',
                                           contact=__author_orcid__)
@@ -334,7 +334,7 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(ds.units, 'mm')
 
     def test_source(self):
-        source_attr = h5tbx.conventions.StandardAttribute(
+        source_attr = StandardAttribute(
             name='data_base_source',
             validator={'$in': ('experimental',
                                'numerical',

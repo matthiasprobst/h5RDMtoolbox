@@ -9,9 +9,11 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import File
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
+
 try:
     # noinspection PyUnresolvedReferences
     from h5rdmtoolbox.database import mongo
+
     mongo_installed = True
 except ImportError:
     mongo_installed = False
@@ -82,13 +84,14 @@ if mongo_installed:
                                                  long_name='ds_at_group2'))
                     h5.mongo.insert(collection=self.collection, flatten_tree=False, recursive=True)
                     self.assertDictEqual(list(self.collection.find({}))[0]['group1'], {'ds1': {'shape': [2, 10, 8],
-                                                                                           'ndim': 3,
-                                                                                           'long_name': 'ds_at_group1',
-                                                                                           'units': ''},
-                                                                                   'group2': {'ds2': {'shape': [2, 10, 8],
-                                                                                                      'ndim': 3,
-                                                                                                      'long_name': 'ds_at_group2',
-                                                                                                      'units': ''}}})
+                                                                                               'ndim': 3,
+                                                                                               'long_name': 'ds_at_group1',
+                                                                                               'units': ''},
+                                                                                       'group2': {
+                                                                                           'ds2': {'shape': [2, 10, 8],
+                                                                                                   'ndim': 3,
+                                                                                                   'long_name': 'ds_at_group2',
+                                                                                                   'units': ''}}})
 
         def test_tree_to_mongo(self):
             if self.mongodb_running:
@@ -98,7 +101,7 @@ if mongo_installed:
                 company = ('bikeCompany', 'shoeCompany', 'bikeCompany', 'shoeCompany')
                 filenames = []
                 for i, (username, company) in enumerate(zip(usernames, company)):
-                    with File(h5tbx.generate_temporary_filename(), 'w') as h5:
+                    with File(h5tbx.utils.generate_temporary_filename(), 'w') as h5:
                         filenames.append(h5.hdf_filename)
                         h5.attrs['username'] = username
                         h5.attrs['company'] = company
@@ -151,7 +154,8 @@ if mongo_installed:
                     if r['name'] == 'images':
                         self.assertEqual(r['filename'], str(hdf_filename))
                         for k in (
-                                'filename', 'path', 'shape', 'ndim', 'slice', 'index', 'index2', 'z', 'long_name', 'units'):
+                                'filename', 'path', 'shape', 'ndim', 'slice', 'index', 'index2', 'z', 'long_name',
+                                'units'):
                             self.assertIn(k, r.keys())
 
                     self.assertTrue((now - r['file_creation_time']).total_seconds() < 1)

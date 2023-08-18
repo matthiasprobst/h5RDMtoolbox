@@ -1,13 +1,13 @@
 import pathlib
 from typing import Union, Dict
 
+from h5rdmtoolbox.utils import create_tbx_logger
 from . import lazy
 from .file import File
 from .files import Files
 from ..utils import create_tbx_logger
 
 logger = create_tbx_logger('database')
-
 
 class Folder:
     """Folder with HDF5 files as a database

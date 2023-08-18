@@ -1,7 +1,7 @@
-from datetime import datetime
-from typing import List
+import abc
 
-from . import StandardAttributeValidator
+from datetime import datetime
+from typing import List, Dict
 
 _type_translation = (
     [('str', '$str'), str],
@@ -19,6 +19,18 @@ def _eval_type(t):
     else:
         return t
     raise KeyError(f'Could not process {t}')
+
+
+class StandardAttributeValidator:
+    """Abstract Validator class of Standard Name Attribute classes"""
+
+    def __init__(self, ref=None, allow_None: bool = False):
+        self.ref = ref
+        self.allow_None = allow_None
+
+    @abc.abstractmethod
+    def __call__(self, value, parent):
+        pass
 
 
 class NoneValidator(StandardAttributeValidator):
@@ -86,3 +98,30 @@ class InValidator(StandardAttributeValidator):
             raise ValueError(f'The value "{value}" is not in {self.ref}. '
                              f'Expecting one of these: {self.ref}')
         return value
+
+
+def get_validator() -> Dict:
+    """Return all validators"""
+    from .orcid import ORCIDValidator
+    from .references import URLValidator, ReferencesValidator, BibTeXValidator
+    from .standard_names import StandardNameValidator, StandardNameTableValidator
+    from .strings import RegexValidator, MaxLengthValidator, MinLengthValidator
+    from .pint import PintUnitsValidator, PintQuantityValidator
+
+    validators = {'$type': TypeValidator,
+                  '$in': InValidator,
+                  '$regex': RegexValidator,
+                  '$pintunit': PintUnitsValidator,
+                  '$pintquantity': PintQuantityValidator,
+                  '$orcid': ORCIDValidator,
+                  '$url': URLValidator,
+                  '$ref': ReferencesValidator,
+                  '$bibtex': BibTeXValidator,
+                  '$standard_name': StandardNameValidator,
+                  '$standard_name_table': StandardNameTableValidator,
+                  '$minlength': MinLengthValidator,
+                  '$maxlength': MaxLengthValidator,
+                  '$datetime': DateTimeValidator,
+                  'None': NoneValidator,
+                  }
+    return validators

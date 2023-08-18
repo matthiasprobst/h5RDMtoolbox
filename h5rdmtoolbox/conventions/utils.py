@@ -5,13 +5,24 @@ import re
 import requests
 import warnings
 import xml.etree.ElementTree as ET
+from datetime import timezone, datetime
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, Union, Tuple
 
-from ... import get_ureg
+from .. import get_ureg
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
+
+
+# wrapper that updates datetime in meta
+def update_modification_date(func):
+    def wrapper(self, *args, **kwargs):
+        self._meta['last_modified'] = datetime.now(timezone.utc).isoformat()
+        # self._meta['last_modified'] = datetime.now().isoformat()
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 def get_similar_names_ratio(a, b):
@@ -51,7 +62,7 @@ def is_valid_email_address(email: str) -> bool:
     return False
 
 
-def check_url(url:str, raise_error: bool = False, print_warning: bool = False, timeout: int = 2):
+def check_url(url: str, raise_error: bool = False, print_warning: bool = False, timeout: int = 2):
     """Check if URL is valid. Returns True if valid, False otherwise."""
     if print_warning and raise_error:
         raise ValueError("'print_warning' and 'raise_error' cannot both be True")

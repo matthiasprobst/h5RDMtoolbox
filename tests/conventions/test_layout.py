@@ -1,12 +1,12 @@
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import generate_temporary_filename
 from h5rdmtoolbox.conventions.layout import *
 from h5rdmtoolbox.conventions.layout.tbx import IsValidVersionString
 from h5rdmtoolbox.conventions.layout.tbx import is_valid_unit, IsValidUnit
 from h5rdmtoolbox.conventions.layout.validation import *
 from h5rdmtoolbox.conventions.layout.validators import *
+from h5rdmtoolbox.utils import generate_temporary_filename
 
 
 class TestLayout(unittest.TestCase):

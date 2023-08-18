@@ -11,14 +11,22 @@ Helpful functions:
  - `get_current_convention`
 """
 
-from . import core
-from . import errors
-from .core import Convention, get_current_convention, get_registered_conventions, from_zenodo, from_yaml
-from .layout import Layout, validators
-from .layout.validators import Validator
-from .standard_attributes import StandardAttribute, __doc_string_parser__
-from .standard_attributes.validators.standard_name import StandardNameTable
+from h5rdmtoolbox.utils import create_tbx_logger
 
-__all__ = ['Layout', 'validators', 'Validator', 'Convention',
-           'get_registered_conventions', 'get_current_convention',
-           'from_zenodo', 'from_yaml']
+logger = create_tbx_logger('conventions')
+
+from .core import Convention, from_yaml, get_current_convention, from_zenodo
+
+__all__ = ['Convention', 'from_yaml', 'get_current_convention', 'from_zenodo']
+
+# from . import core
+# from . import errors
+# from .core import Convention, get_current_convention, get_registered_conventions, from_zenodo, from_yaml
+# from .layout import Layout, validators
+# from .layout.validators import Validator
+# from .standard_attributes import StandardAttribute, __doc_string_parser__
+# from .standard_attributes.validators.standard_name import StandardNameTable
+#
+# __all__ = ['Layout', 'validators', 'Validator', 'Convention',
+#            'get_registered_conventions', 'get_current_convention',
+#            'from_zenodo', 'from_yaml']

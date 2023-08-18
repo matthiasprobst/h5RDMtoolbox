@@ -2,8 +2,8 @@
 
 from typing import Union, List
 
-from . import StandardAttributeValidator
-from ....orcid import ORCID
+from h5rdmtoolbox.orcid import ORCID
+from .validator import StandardAttributeValidator
 
 
 class ORCIDValidator(StandardAttributeValidator):

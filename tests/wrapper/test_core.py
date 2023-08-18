@@ -3,13 +3,11 @@ import h5py
 import numpy as np
 import pandas as pd
 import pathlib
-import shutil
 import unittest
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox._logger import create_tbx_logger, ToolboxLogger
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -24,10 +22,8 @@ class TestCore(unittest.TestCase):
         h5tbx.use(None)
 
     def test_logger(self):
-        _dir = h5tbx.utils.generate_temporary_directory()
-        shutil.rmtree(_dir)
-        tbxlogger = create_tbx_logger('test_logger', _dir)
-        self.assertIsInstance(tbxlogger, ToolboxLogger)
+        from h5rdmtoolbox.utils import ToolboxLogger
+        self.assertIsInstance(logger, ToolboxLogger)
 
     def test_lower(self):
         self.assertEqual(h5tbx.Lower('Hello'), 'hello')

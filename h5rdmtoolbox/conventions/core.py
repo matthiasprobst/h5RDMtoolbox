@@ -1,7 +1,6 @@
 import forge
 import inspect
 import pathlib
-import re
 import shutil
 import yaml
 import zenodo_search as zsearch
@@ -10,12 +9,10 @@ from typing import Union, List, Dict
 
 from . import cfg
 from . import errors
+from . import logger
 from .standard_attributes import StandardAttribute, __doc_string_parser__
-from .._logger import loggers
 from .._repr import make_italic, make_bold
 from .._user import UserDir
-
-logger = loggers['conventions']
 
 
 class Convention:
