@@ -115,9 +115,6 @@ institution:
   description: Name of institution mainly involved in the data
 
 references:
-  type:
-    - str
-    - List[str]
   validator: $url
   target_methods:
     - __init__

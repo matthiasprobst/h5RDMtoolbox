@@ -127,6 +127,18 @@ class Convention:
         out += '\n'
         return out
 
+    def __enter__(self):
+        self._curr_cv = get_current_convention()
+        self.use()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        use(self._curr_cv.name)
+
+    def use(self):
+        """use this convention"""
+        use(self.name)
+
     @staticmethod
     def from_yaml(yaml_filename, register=True) -> "Convention":
         """Create a convention from a yaml file."""
@@ -348,7 +360,7 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     if '__contact__' not in attrs:
         raise ValueError(f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
 
-    std_attrs = [StandardAttribute(name, parent_filename=yaml_filename, **values) for name, values in attrs.items() if
+    std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if
                  isinstance(values, dict)]
     meta = {name.strip('__'): value for name, value in attrs.items() if not isinstance(value, dict)}
     if 'name' not in meta:
