@@ -5,13 +5,13 @@ contact: 'https://orcid.org/0000-0001-8729-0482'
 valid_characters: '[^a-zA-Z0-9_]'
 pattern: '^[0-9 ].*'
 last_modified: 2023-08-02_09:56:05
-standard_devices:
+device:
   fan: The test fan
   orifice: The orifice to measure the volume flow rate
-standard_locations:
+location:
   fan_inlet: The defined inlet into the test fan. See additional meta data or references or the exact spatial location.
   fan_outlet: The defined outlet of the test fan. See additional meta data or references or the exact spatial location.
-standard_reference_frames:
+reference_frame:
   rotating_frame:
     orientation:
       x:
@@ -52,7 +52,7 @@ standard_reference_frames:
       - 0
     principle_axis:
     type: stationary
-standard_components: # The direction of the spatial component of a vector
+component: # The direction of the spatial component of a vector
   x: X indicates the x-axis component of the vector.
   y: Y indicates the y-axis component of the vector.
   z: Z indicates the z-axis component of the vector.

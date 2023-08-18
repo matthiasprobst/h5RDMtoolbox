@@ -9,13 +9,12 @@ import warnings
 import yaml
 from IPython.display import display, HTML
 from datetime import datetime, timezone
-from typing import Callable, List
-from typing import Dict, Tuple
+from typing import List, Union, Dict, Tuple
 
 from h5rdmtoolbox._user import UserDir
 from h5rdmtoolbox.utils import generate_temporary_filename
-from . import constructor
 from . import consts
+from .affixes import Affix
 from .transformation import *
 from .. import logger
 from ..utils import dict2xml, get_similar_names_ratio
@@ -35,7 +34,7 @@ class StandardNameTable:
         Version of the table. Must be something like v1.0
     meta: Dict
         Meta data of the table
-    standards: Dict
+    affixes: Dict
         Contains all entries in the YAML file, which is not meta.
         Currently expected:
         - table: Dict
@@ -65,29 +64,26 @@ class StandardNameTable:
     True
     """
 
-    # __slots__ = ('_standard_names', '_meta', '_alias', '_name', '_version',
-    #              '_devices', '_locations', '_reference_frames', '_transformations',
-    #              '_standard_components')
-
     def __init__(self,
                  name: str,
                  version: str,
                  meta: Dict,
                  standard_names: Dict = None,
-                 standards: Dict = None):
+                 affixes: Dict = None):
         self._name = name
         if standard_names is None:
             standard_names = {}
-        if standards is None:
-            standards = {}
+        if affixes is None:
+            affixes = {}
 
-        if 'table' in standards:
-            self.standard_names = standards.pop('table')
+        if 'table' in affixes:
+            self.standard_names = affixes.pop('table')
             logger.warning('Parameter "table" is depreciated. Use "standard_names" instead.')
 
         self._standard_names = standard_names
 
-        def _parse_input(v):
+        def _parse_input(v) -> Dict:
+            logger.debug(f'Parsing input {v}')
             if isinstance(v, str):
                 return {'description': v}
             if isinstance(v, dict):
@@ -96,25 +92,28 @@ class StandardNameTable:
                 return {'description': None}
             raise TypeError(f'Wrong type for "v". Expecting dict or str but got {type(v)}')
 
-        self.standards = {}
+        self.affixes = {}
 
-        standard_reference_frame = standards.pop('reference_frames', None)
-        if standard_reference_frame:
-            from .constructor import StandardReferenceFrames, StandardReferenceFrame
-            self.standards['standard_reference_frame'] = StandardReferenceFrames(
-                [StandardReferenceFrame(k, **v) for k, v in standard_reference_frame.items()]
-            )
+        # standard_reference_frame = affixes.pop('reference_frames', None)
+        # if standard_reference_frame:
+        #     from .affixes import StandardReferenceFrames, StandardReferenceFrame
+        #     self.affixes['standard_reference_frame'] = StandardReferenceFrames(
+        #         [StandardReferenceFrame(k, **v) for k, v in standard_reference_frame.items()]
+        #     )
 
-        for k, v in standards.items():
-            if v:
-                if isinstance(v, (list, tuple)):
-                    self.standards[k] = constructor.StandardConstructors(
-                        [constructor.StandardConstructor(_k, None) for _k in v]
-                    )
-                else:
-                    self.standards[k] = constructor.StandardConstructors(
-                        [constructor.StandardConstructor(_k, **_parse_input(_v)) for _k, _v in v.items()]
-                    )
+        for k, affix_data in affixes.items():
+            if affix_data:
+                if not isinstance(affix_data, dict):
+                    raise TypeError(f'Expecting dict for affix {k} but got {type(affix_data)}')
+                self.affixes[k] = Affix.from_dict(k, affix_data)
+
+        # no two affixes can have the same name pattern
+        pattern = set()
+        for affix in self.affixes.values():
+            for t in affix.transformation:
+                if t.pattern in pattern:
+                    raise ValueError(f'Pattern {t.pattern} already defined')
+                pattern.add(t.pattern)
 
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
@@ -127,35 +126,13 @@ class StandardNameTable:
         self._meta = meta
         self._transformations = (derivative_of_X_wrt_to_Y,
                                  magnitude_of,
-                                 arithmetic_mean_of,
                                  standard_deviation_of,
                                  square_of,
                                  product_of_X_and_Y,
-                                 ratio_of_X_and_Y,
-                                 difference_of_X_across_device,
-                                 difference_of_X_and_Y_across_device,
-                                 difference_of_X_and_Y_between_LOC1_and_LOC2,
-                                 X_at_LOC,
-                                 in_reference_frame,
-                                 component_of,)
+                                 ratio_of_X_and_Y,)
 
     @property
-    def locations(self) -> List[str]:
-        """List of valid locations"""
-        return self.standards.get('locations', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
-
-    @property
-    def components(self) -> List[str]:
-        """List of valid locations"""
-        return self.standards.get('standard_components', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
-
-    @property
-    def standard_components(self) -> List[str]:
-        """List of valid locations"""
-        return self.standards.get('standard_components', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
-
-    @property
-    def transformations(self) -> List[Callable]:
+    def transformations(self) -> List[Transformation]:
         """List of available transformations"""
         return self._transformations
 
@@ -163,16 +140,6 @@ class StandardNameTable:
     def standard_names(self) -> Dict:
         """Return the table containing all standard names with their units and descriptions"""
         return self._standard_names
-
-    @property
-    def standard_reference_frames(self):
-        """Return list of standard reference frames"""
-        return self.standards.get('standard_reference_frame', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
-
-    @property
-    def devices(self) -> List[str]:
-        """List of defined devices"""
-        return self.standards.get('devices', None)  # , constructor.EMPTYSTANDARDCONSTRUCTORS)
 
     @property
     def aliases(self) -> Dict:
@@ -256,14 +223,22 @@ class StandardNameTable:
 
         logger.debug(f'No exact match of standard name "{standard_name}" in table')
 
-        for transformation in self.transformations:
-            sn = transformation(standard_name, self)
-            if sn:
-                return sn
-        logger.debug(f'No transformation applied successfully on "{standard_name}"')
-
         if standard_name in self.list_of_aliases:
             return self[self.aliases[standard_name]]
+
+        for transformation in self.transformations:
+            match = transformation.match(standard_name)
+            if match:
+                return evaluate(transformation, match, self)
+        logger.debug(f'No general transformation could be successfully applied on "{standard_name}"')
+
+        for affix_name, affix in self.affixes.items():
+            for transformation in affix.transformation:
+                match = transformation.match(standard_name)
+                if match:
+                    logger.debug(f'Applying affix transformation "{affix_name}"')
+                    return evaluate(transformation, match, self)
+        logger.debug(f'No affix transformation could be successfully applied on "{standard_name}"')
 
         # provide a suggestion for similar standard names
         similar_names = [k for k in [*self.standard_names.keys(), *self.list_of_aliases] if
@@ -435,7 +410,9 @@ class StandardNameTable:
                 for k in meta.keys():
                     raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
 
+            affixes = _dict.pop('affixes', {})
             standard_names = _dict.pop('standard_names', None)
+
             if standard_names is None:
                 standard_names = _dict.pop('table', None)
                 if standard_names is None:
@@ -443,18 +420,19 @@ class StandardNameTable:
             else:
                 logger.warning('The "table" key is deprecated. Use "standard_names" instead')
 
-            standard_devices = _dict.pop('standard_devices', None)
-            standard_locations = _dict.pop('standard_locations', None)
-            standard_reference_frames = _dict.pop('standard_reference_frames', None)
-            standard_components = _dict.pop('standard_components', None)
+            pop_entry = []
+            for k, v in _dict.items():
+                if isinstance(v, dict):
+                    pop_entry.append(k)
+                    affixes[k] = v
+            [_dict.pop(k) for k in pop_entry]
+
+            if len(_dict) > 0:
+                raise ValueError(f'Invalid keys in YAML file: {list(_dict.keys())}')
             return StandardNameTable(name=name,
                                      version=version,
                                      standard_names=standard_names,
-                                     standards=dict(
-                                         devices=standard_devices,
-                                         reference_frames=standard_reference_frames,
-                                         standard_components=standard_components,
-                                         locations=standard_locations),
+                                     affixes=affixes,
                                      meta=meta)
 
     @staticmethod
@@ -521,7 +499,8 @@ class StandardNameTable:
         return snt
 
     @staticmethod
-    def from_web(url: str, known_hash: str = None,
+    def from_web(url: str,
+                 known_hash: str = None,
                  name: str = None,
                  **meta):
         """Create a StandardNameTable from an online resource.
@@ -817,7 +796,7 @@ class StandardNameTable:
         d = dict(name=self.name,
                  **self.meta,
                  standard_names=self.standard_names)
-        for k, v in self.standards.items():
+        for k, v in self.affixes.items():
             # for name, item in zip(('locations', 'devices', 'standard_components'),
             #                       (self.locations, self.devices, self.components)):
             vdict = v.to_dict()

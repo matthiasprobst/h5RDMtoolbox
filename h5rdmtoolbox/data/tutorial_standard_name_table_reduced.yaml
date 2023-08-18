@@ -6,6 +6,7 @@ valid_characters: '[^a-zA-Z0-9_]'
 pattern: '^[0-9 ].*'
 last_modified: 2023-08-16_11:05:00
 standard_devices:
+  description: Devices are suffixes to the standard_name, e.g. pressure_difference_across_fan
   fan:
     description: The test fan
     coordinates:
@@ -20,9 +21,11 @@ standard_devices:
         - 0
   orifice: The orifice to measure the volume flow rate
 standard_locations:
+  description: Locations are suffixes to the standard_name, e.g. velocity_at_fan_inlet
   fan_inlet: The defined inlet into the test fan. See additional meta data or references or the exact spatial location.
   fan_outlet: The defined outlet of the test fan. See additional meta data or references or the exact spatial location.
 standard_reference_frames:
+  description: Reference frames are suffixes to the standard_name, e.g. velocity_in_rotating_frame
   rotating_frame:
     orientation:
       x:
@@ -64,6 +67,7 @@ standard_reference_frames:
     principle_axis:
     type: stationary
 standard_components: # The direction of the spatial component of a vector
+  description: Components are prefixes to the standard_name, e.g. x_velocity
   x: X indicates the x-axis component of the vector.
   y: Y indicates the y-axis component of the vector.
   z: Z indicates the z-axis component of the vector.
