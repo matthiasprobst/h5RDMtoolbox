@@ -15,9 +15,9 @@ from h5rdmtoolbox.utils import create_tbx_logger
 
 logger = create_tbx_logger('conventions')
 
-from .core import Convention, from_yaml, get_current_convention
+from .core import Convention, from_yaml, get_current_convention, from_zenodo
 
-__all__ = ['Convention', 'from_yaml', 'get_current_convention']
+__all__ = ['Convention', 'from_yaml', 'get_current_convention', 'from_zenodo']
 
 # from . import core
 # from . import errors

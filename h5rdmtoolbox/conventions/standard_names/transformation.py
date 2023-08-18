@@ -145,8 +145,8 @@ def in_reference_frame(standard_name, snt) -> StandardName:
         sn = snt[groups[0]]
         frame = groups[1]
         if frame not in snt.standard_reference_frames:
-            raise KeyError(f'Reference Frame "{frame}" not found in registry of the standard name table. '
-                           f'Available reference frames are: {snt.standard_reference_frames.names}')
+            raise errors.StandardNameError(f'Reference Frame "{frame}" not found in registry of the standard name table. '
+                                    f'Available reference frames are: {snt.standard_reference_frames.names}')
         new_description = f'{sn.description}. The quantity is relative to the reference frame "{frame}"'
         return StandardName(standard_name, sn.units, new_description)
     return False

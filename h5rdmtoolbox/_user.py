@@ -82,7 +82,8 @@ class DirManger:
 
     def clear_cache(self):
         """Clear the cache directory."""
-        shutil.rmtree(self.user_dirs['cache'])
+        if self.user_dirs['cache'].exists():
+            shutil.rmtree(self.user_dirs['cache'])
 
 
 UserDir = DirManger()

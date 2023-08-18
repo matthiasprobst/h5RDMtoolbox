@@ -462,7 +462,7 @@ class TestStandardAttributes(unittest.TestCase):
             for frame in self.snt.standard_reference_frames.names:
                 _sn = self.snt[f'{sn}_in_{frame}']
                 self.assertEqual(_sn.units, self.snt[sn].units)
-        with self.assertRaises(KeyError):
+        with self.assertRaises(StandardNameError):
             self.snt[f'{sn}_in_invalid_frame']
-        with self.assertRaises(KeyError):
+        with self.assertRaises(StandardNameError):
             self.snt.check(f'{sn}_in_invalid_frame')
