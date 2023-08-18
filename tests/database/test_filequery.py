@@ -175,6 +175,8 @@ class TestFileQuery(unittest.TestCase):
             self.assertEqual(res[1], h5['ds2'])
             res = h5.find_one({'$shape': (1, 2, 3), 'long_name': 'long name 1'}, '$dataset')
             self.assertIn(res, [h5['ds'], h5['ds2']])
+        res = h5tbx.database.File(h5.hdf_filename).find_one({'$basename': 'ds', 'long_name': 'long name 1'})
+        self.assertEqual('ds', res.basename)
 
     def test_recursive_find(self):
         with h5tbx.File() as h5:
@@ -209,3 +211,45 @@ class TestFileQuery(unittest.TestCase):
         with File() as h52:
             h52.create_dataset('ds', data=(4, 5, 6), attrs=dict(units='', long_name='long name 2'))
             fnames.append(h52.filename)
+
+    def test_pfind(self):
+        folder_dir = h5tbx.utils.generate_temporary_directory()
+        sub_folder = folder_dir / 'sub_folder'
+        sub_folder.mkdir()
+
+        with h5tbx.File(folder_dir / 'f1.hdf', 'w') as h5:
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
+            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
+
+        with h5tbx.File(folder_dir / 'f2.hdf', 'w') as h5:
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
+            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
+
+        with h5tbx.File(folder_dir / sub_folder / 'f3.hdf', 'w') as h5:
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
+            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
+
+        with self.assertRaises(ValueError):
+            h5tbx.database.Folder('here')
+        fd = h5tbx.database.Folder(folder_dir, rec=False)
+
+        res = fd.find({'long_name': 'long name 1'})
+        self.assertEqual(2, len(res))
+
+        pres = fd.pfind({'long_name': 'long name 1'})
+
+        self.assertEqual(sorted([r.filename for r in res]), sorted([r.filename for r in pres]))
+        self.assertEqual(sorted([r.name for r in res]), sorted([r.name for r in pres]))
+
+        pres = fd.pfind({'long_name': 'long name 1'}, nproc=2)
+
+        self.assertEqual(sorted([r.filename for r in res]), sorted([r.filename for r in pres]))
+        self.assertEqual(sorted([r.name for r in res]), sorted([r.name for r in pres]))
+
+        pres = fd.pfind({'long_name': 'long name 1'}, nproc=1)
+
+        self.assertEqual(sorted([r.filename for r in res]), sorted([r.filename for r in pres]))
+        self.assertEqual(sorted([r.name for r in res]), sorted([r.name for r in pres]))

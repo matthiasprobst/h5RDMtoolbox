@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 import pathlib
+import warnings
 from itertools import chain
 from typing import List, Union, Dict, Tuple
 
@@ -144,12 +145,38 @@ class Files:
                  objfilter=None,
                  rec: bool = True,
                  ignore_attribute_error: bool = False) -> Union[h5py.Group, h5py.Dataset, None]:
-        """See find() in h5file.py"""
+        """See find_one() in h5file.py
+
+        per_file: bool=True
+            Applies `find_one` to each file. If False, finds the first occurrence in
+            any of the files.
+
+        TODO: This can be parallelized!
+        """
         for v in self.values():
             found = v.find_one(flt, objfilter=objfilter, rec=rec,
-                           ignore_attribute_error=ignore_attribute_error)
+                               ignore_attribute_error=ignore_attribute_error)
             if found:
                 return found
+
+    def find_one_per_file(self, flt: Union[Dict, str],
+                          objfilter=None,
+                          rec: bool = True,
+                          ignore_attribute_error: bool = False) -> Union[List[Union[h5py.Group, h5py.Dataset]], None]:
+        """Applies `find_one` to each file. If False, finds the first occurrence in
+        any of the files.
+
+        See find_one() in h5file.py
+
+        TODO: This can be parallelized!
+        """
+        founds = []
+        for v in self.values():
+            found = v.find_one(flt, objfilter=objfilter, rec=rec,
+                               ignore_attribute_error=ignore_attribute_error)
+            if found:
+                founds.append(found)
+        return founds
 
     def find(self, flt: Union[Dict, str], objfilter=None,
              rec: bool = True, ignore_attribute_error: bool = False):
@@ -158,6 +185,20 @@ class Files:
                         ignore_attribute_error=ignore_attribute_error) for
                  v in self.values()]
         return list(chain.from_iterable(found))
+
+    def pfind(self, flt: Union[Dict, str], objfilter=None,
+              rec: bool = True, ignore_attribute_error: bool = False,
+              nproc: int = None):
+        """Call find in parallel as multiple files can be searched at once"""
+        import h5rdmtoolbox as h5tbx
+        if nproc is None or nproc > 1:
+            if h5tbx.get_config('parallel_find'):
+                from . import parallel
+                return parallel.find(self._list_of_filenames, flt, objfilter, rec, ignore_attribute_error,
+                                     nproc=nproc)
+            warnings.warn('Parallel find is disabled in your session settings. To enable it, call'
+                          'set_config(parallel_find=True). Falling back to "normal" find()')
+        return self.find(flt, objfilter, rec, ignore_attribute_error)
 
     def keys(self):
         """Return all opened filename stems"""
@@ -171,3 +212,7 @@ class Files:
         """Close all opened files"""
         for h5file in self._opened_files.values():
             h5file.close()
+
+
+if __name__ == '__main__':
+    print('Cannot run this file directly.')

@@ -2,11 +2,11 @@ import pathlib
 from typing import Union, Dict
 
 from . import lazy
-from .files import Files
 from .file import File
-from .._logger import loggers
+from .files import Files
+from ..utils import create_tbx_logger
 
-logger = loggers['database']
+logger = create_tbx_logger('database')
 
 
 class Folder:
@@ -31,6 +31,16 @@ class Folder:
             self.filenames = list(self.folder.rglob(pattern))
         else:
             self.filenames = list(self.folder.glob(pattern))
+        self.rec = rec
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} (root="{self.folder}", nfiles={len(self)}, recursive={self.rec})>'
+
+    def __len__(self):
+        return len(self.filenames)
+
+    def __getitem__(self, item) -> File:
+        return File(self.filenames[item])
 
     def find(self,
              flt: Union[Dict, str],
@@ -40,6 +50,17 @@ class Folder:
         with Files(self.filenames, file_instance=File) as h5:
             return h5.find(flt, objfilter, rec, ignore_attribute_error)
 
+    def pfind(self,
+              flt: Union[Dict, str],
+              objfilter=None, rec: bool = True,
+              ignore_attribute_error: bool = False,
+              nproc=None):
+        """Find"""
+        if nproc == 1:
+            return self.find(flt, objfilter, rec, ignore_attribute_error)
+        _files = Files(self.filenames, file_instance=File)
+        return _files.pfind(flt, objfilter, rec, ignore_attribute_error, nproc)
+
     def find_one(self,
                  flt: Union[Dict, str],
                  objfilter=None,
@@ -48,6 +69,15 @@ class Folder:
         """Find one occurrence"""
         with Files(self.filenames, file_instance=File) as h5:
             return h5.find_one(flt, objfilter, rec, ignore_attribute_error)
+
+    def find_one_per_file(self,
+                          flt: Union[Dict, str],
+                          objfilter=None,
+                          rec: bool = True,
+                          ignore_attribute_error: bool = False):
+        """Find one occurrence"""
+        with Files(self.filenames, file_instance=File) as h5:
+            return h5.find_one_per_file(flt, objfilter, rec, ignore_attribute_error)
 
 
 __all__ = ['logger', 'Files']

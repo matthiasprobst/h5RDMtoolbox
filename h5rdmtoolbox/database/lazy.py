@@ -1,12 +1,12 @@
 """lazy objects. user can work with datasets and groups without having to open the file him/her-self"""
 import h5py
-from typing import Union
+from typing import Union, List, Dict
 
 
 class LAttributeManager:
     """Lazy Attribute Manager"""
 
-    def __init__(self, attrs):
+    def __init__(self, attrs: Dict):
         self.attrs = attrs
 
     def __getitem__(self, item):
@@ -25,27 +25,30 @@ class LAttributeManager:
 class LGroup:
     """Lazy Group"""
 
-    __slots__ = '_obj_attrs', 'filename', 'name', '_attrs', 'properties'
+    def __init__(self, obj: h5py.Group):
+        self.filename = obj.file.filename
+        self._attrs = dict(obj.attrs)
 
-    def __init__(self, filename, name, attrs, properties):
-        self.filename = filename
-        self.name = name
-        self._attrs = attrs
-        self.properties = properties
-        self._obj_attrs = ('file', 'name', 'attrs',)
+        for k, v in _get_dataset_properties(obj, ('file', 'name',)).items():
+            setattr(self, k, v)
 
-    def __getattr__(self, item):
-        if item in self.properties:
-            return self.properties[item]
-        if item in self._obj_attrs:
-            with h5py.File(self.filename) as h5:
-                return h5[self.name].__getattribute__(item)
-        return super().__getattribute__(item)
+    def __repr__(self):
+        return f'<LGroup "{self.name}" in "{self.filename}">'
 
     @property
     def basename(self) -> str:
-        """Return the basename of the group"""
-        return self.name.split('/')[-1]
+        """Return the basename of the object"""
+        return self.name.rsplit('/', 1)[1]
+
+    @property
+    def parentname(self) -> str:
+        """Return the parentname of the object path"""
+        return self.name.rsplit('/', 1)[0]
+
+    @property
+    def parentnames(self) -> List[str]:
+        """Return the parent names of the object path"""
+        return self.parent.split('/')[1:]  # first is '', so skip
 
     @property
     def attrs(self) -> LAttributeManager:
@@ -56,15 +59,20 @@ class LGroup:
 class LDataset(LGroup):
     """Lazy Dataset"""
 
-    def __init__(self, filename, name, attrs, properties):
-        super().__init__(filename, name, attrs, properties)
-        self._obj_attrs = ('file', 'name', 'attrs',
-                           'ndim', 'shape', 'dtype', 'size',
-                           'chunks', 'compression', 'compression_opts',
-                           'shuffle', 'dims')
+    def __init__(self, obj: h5py.Dataset):
+        super().__init__(obj)
+
+        keys = ("name", "ndim", "shape", "dtype", "size", "chunks",
+                "compression", "compression_opts",
+                "shuffle", "fletcher32", "maxshape",
+                "fillvalue", "scaleoffset", "external",
+                "file")
+        for k, v in _get_dataset_properties(obj, keys).items():
+            setattr(self, k, v)
+        self._file = None
 
     def __repr__(self):
-        return f'<LDataset "{self.name}">'
+        return f'<LDataset "{self.name}" in "{self.filename}">'
 
     def __getitem__(self, item):
         from .. import File
@@ -95,20 +103,8 @@ class LDataset(LGroup):
             return h5[self.name].sel(**coords)
 
 
-def _get_dataset_properties(h5obj):
-    return dict(ndim=h5obj.ndim,
-                shape=h5obj.shape,
-                dtype=h5obj.dtype,
-                size=h5obj.size,
-                chunks=h5obj.chunks,
-                compression=h5obj.compression,
-                compression_opts=h5obj.compression_opts,
-                shuffle=h5obj.shuffle,
-                fletcher32=h5obj.fletcher32,
-                maxshape=h5obj.maxshape,
-                fillvalue=h5obj.fillvalue,
-                scaleoffset=h5obj.scaleoffset,
-                external=h5obj.external)
+def _get_dataset_properties(h5obj, keys):
+    return {k: getattr(h5obj, k) for k in keys}
 
 
 def lazy(h5obj) -> Union[None, LDataset, LGroup]:
@@ -116,7 +112,11 @@ def lazy(h5obj) -> Union[None, LDataset, LGroup]:
     if h5obj is None:
         return None
     if isinstance(h5obj, h5py.Group):
-        return LGroup(h5obj.file.filename, h5obj.name, dict(h5obj.attrs), {})
+        return LGroup(h5obj)
     elif isinstance(h5obj, h5py.Dataset):
-        return LDataset(h5obj.file.filename, h5obj.name, dict(h5obj.attrs), _get_dataset_properties(h5obj))
+        return LDataset(h5obj)
+    elif isinstance(h5obj, (tuple, list)):
+        # expecting h5obj=(filename, obj_name)
+        with h5py.File(h5obj[0]) as h5:
+            return lazy(h5[h5obj[1]])
     raise TypeError(f'Cannot make {type(h5obj)} lazy')
