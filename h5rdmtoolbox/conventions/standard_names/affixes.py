@@ -7,18 +7,17 @@ from .transformation import Transformation, StandardName, errors
 
 
 def _difference_of_X_and_Y_between_LOC1_and_LOC2(match, snt) -> StandardName:
-    """Difference of X and Y across device"""
+    """Difference of X and Y between locations"""
     standard_name = match.string
     groups = match.groups()
     assert len(groups) == 4
-    if groups[2] not in snt.locations:
-        raise KeyError(f'StandardLocation "{groups[2]}" not found in registry of the standard name table. '
-                       f'Available locations are: {snt.locations}')
-    if groups[3] not in snt.locations:
-        raise KeyError(f'StandardLocation "{groups[3]}" not found in registry of the standard name table. '
-                       f'Available locations are: {snt.locations}')
-    sn1 = snt[groups[0]]
-    sn2 = snt[groups[1]]
+    if groups[2] not in snt.affixes['location']:
+        raise errors.AffixKeyError(f'StandardLocation "{groups[2]}" not found in registry of the standard name table. '
+                                   f'Available locations are: {snt.affixes["location"].names}')
+    if groups[3] not in snt.affixes['location']:
+        raise errors.AffixKeyError(f'StandardLocation "{groups[3]}" not found in registry of the standard name table. '
+                                   f'Available locations are: {snt.affixes["location"].names}')
+    sn1, sn2 = snt[groups[0]], snt[groups[1]]
     if sn1.units != sn2.units:
         raise ValueError(f'Units of "{sn1.name}" and "{sn2.name}" are not compatible: "{sn1.units}" and '
                          f'"{sn2.units}".')
@@ -56,12 +55,12 @@ def _component_(match, snt) -> StandardName:
     groups = match.groups()
     component = groups[0]
     if component not in snt.affixes['component'].values:
-        raise KeyError(f'"{component}" is not a registered component. '
-                       f'Available components are: {list(snt.affixes["component"].values.keys())}')
+        raise errors.AffixKeyError(f'"{component}" is not a registered component. '
+                                   f'Available components are: {list(snt.affixes["component"].names)}')
     sn = snt[groups[1]]
     if not sn.is_vector():
         raise errors.StandardNameError(f'"{sn.name}" is not a vector quantity.')
-    new_description = f'{sn.description} {snt.components[component].description}'
+    new_description = f'{sn.description} {snt.affixes["component"].values[component]}'
     return StandardName(match.string, sn.units, new_description)
 
 
@@ -91,9 +90,9 @@ def _difference_of_X_across_device(match, snt) -> Union[StandardName, bool]:
     """Difference of X across device"""
     groups = match.groups()
     assert len(groups) == 2
-    if groups[1] not in snt.devices:
-        raise KeyError(f'Device {groups[1]} not found in registry of the standard name table. '
-                       f'Available devices are: {snt.devices}.')
+    if groups[1] not in snt.affixes['device']:
+        raise errors.AffixKeyError(f'Device {groups[1]} not found in registry of the standard name table. '
+                                   f'Available devices are: {snt.affixes["device"].names}.')
     try:
         sn = snt[groups[0]]
     except errors.StandardNameError:
@@ -110,15 +109,21 @@ def _difference_of_X_and_Y_across_device(match, snt) -> StandardName:
     """Difference of X and Y across device"""
     groups = match.groups()
     assert len(groups) == 3
-    if groups[2] not in snt.devices:
-        raise KeyError(f'Device {groups[2]} not found in registry of the standard name table. '
-                       f'Available devices are: {snt.devices}')
+    device = groups[2]
+    if device not in snt.affixes['device']:
+        raise errors.AffixKeyError(f'Device {device} not found in registry of the standard name table. '
+                                   f'Available devices are: {snt.affixes["device"].names}')
     sn1 = snt[groups[0]]
     sn2 = snt[groups[1]]
     if sn1.units != sn2.units:
         raise ValueError(f'Units of "{sn1.name}" and "{sn2.name}" are not compatible: "{sn1.units}" and '
                          f'"{sn2.units}".')
-    new_description = f"Difference of {sn1.name} and {sn2.name} across {groups[2]}"
+    if sn1.name == sn2.name:
+        new_description = f"Difference of {sn1.name} and {sn2.name} across {device}. {sn1.name}: {sn1.description} " \
+                          f"{device}: {snt.affixes['device'].values[device]}"
+    else:
+        new_description = f"Difference of {sn1.name} and {sn2.name} across {device}. {sn1.name}: {sn1.description} " \
+                          f"{sn2.name}: {sn2.description} {device}: {snt.affixes['device'].values[device]}"
     return StandardName(match.string, sn1.units, new_description)
 
 
@@ -131,10 +136,10 @@ def _X_at_LOC(match, snt) -> StandardName:
     assert len(groups) == 2
     sn = snt[groups[0]]
     loc = groups[1]
-    if loc not in snt.locations:
-        raise KeyError(f'StandardLocation "{loc}" not found in registry of the standard name table. '
-                       f'Available locations are: {snt.locations}')
-    new_description = f"{sn} at {loc}"
+    if loc not in snt.affixes['location']:
+        raise errors.AffixKeyError(f'StandardLocation "{loc}" not found in registry of the standard name table. '
+                                   f'Available locations are: {snt.affixes["location"].names}')
+    new_description = f"{sn} {snt.affixes['location'][loc]}"
     return StandardName(match.string, sn.units, new_description)
 
 
@@ -148,9 +153,9 @@ def _in_reference_frame(match, snt) -> StandardName:
     sn = snt[groups[0]]
     frame = groups[1]
     if frame not in snt.affixes['reference_frame']:
-        raise errors.StandardNameError(
+        raise errors.AffixKeyError(
             f'Reference Frame "{frame}" not found in registry of the standard name table. '
-            f'Available reference frames are: {snt.standard_reference_frames.names}')
+            f'Available reference frames are: {snt.affixes["reference_frame"].names}')
     new_description = f'{sn.description}. The quantity is relative to the reference frame "{frame}"'
     return StandardName(match.string, sn.units, new_description)
 
@@ -160,7 +165,7 @@ in_reference_frame = Transformation(r"^(.*)_in_(.*)$", _in_reference_frame)
 affix_transformations = {'location': [between_LOC1_and_LOC2, X_at_LOC],
                          'component': [component_],
                          'surface': [surface_],
-                         'device': [difference_of_X_across_device, difference_of_X_and_Y_across_device],
+                         'device': [difference_of_X_and_Y_across_device, difference_of_X_across_device],
                          'reference_frame': [in_reference_frame]
                          }
 
@@ -168,7 +173,7 @@ affix_transformations = {'location': [between_LOC1_and_LOC2, X_at_LOC],
 def _get_transformation(name) -> List[Transformation]:
     t = affix_transformations.get(name, None)
     if t is None:
-        raise ValueError(f'No transformation for affix {name}. You may need to implement it first or check the '
+        raise ValueError(f'No transformation for affix "{name}". You may need to implement it first or check the '
                          f'spelling!')
     return t
 
@@ -181,10 +186,21 @@ class Affix:
         self._name = name
         self._description = description
         self._values = values
+        self._names = list(self._values.keys())
         self.transformation = transformation
+
+    def __getitem__(self, item):
+        return self._values[item]
 
     def __contains__(self, item):
         return item in self._values
+
+    def __iter__(self):
+        return iter(self._values)
+
+    def to_dict(self) -> Dict:
+        """Return the affix as a dictionary"""
+        return {'description': self._description, **self._values}
 
     @staticmethod
     def from_dict(name, data: Dict):
@@ -209,46 +225,16 @@ class Affix:
         """Return the values of the standard item"""
         return self._values
 
+    @property
+    def names(self):
+        """Return the names of the standard item"""
+        return self._names
+
     def __repr__(self):
         return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}">'
 
     def __str__(self):
         return self.name
-
-
-@dataclass(frozen=True)
-class Affixes:
-    """Collection of Affix objects"""
-    items: List[Affix]
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def __contains__(self, item):
-        return item in self.names
-
-    def __getitem__(self, item: Union[str, int]):
-        if isinstance(item, int):
-            return self.items[item]
-        for _item in self.items:
-            if _item.name == item:
-                return _item
-        raise KeyError(f"Item '{item}' not found")
-
-    def __bool__(self):
-        return self.items != []
-
-    @property
-    def names(self):
-        """Return the names of the locations"""
-        return [d.name for d in self.items]
-
-    def to_dict(self) -> Dict:
-        """Return dictionary representation of StandardLocations"""
-        return {item.name: item.description for item in self.items}
-
-
-EMPTYAFFIXES = Affixes([])
 
 
 @dataclass

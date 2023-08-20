@@ -117,6 +117,7 @@ class StandardNameTable:
 
         self._transformations = (derivative_of_X_wrt_to_Y,
                                  magnitude_of,
+                                 arithemtic_mean_of,
                                  standard_deviation_of,
                                  square_of,
                                  product_of_X_and_Y,
@@ -126,7 +127,7 @@ class StandardNameTable:
         for transformation in self._transformations:
             if transformation.pattern in pattern:
                 raise ValueError(f'Pattern {transformation.pattern} already defined')
-            pattern.add(t.pattern)
+            pattern.add(transformation.pattern)
 
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
@@ -254,7 +255,7 @@ class StandardNameTable:
             raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".'
                                            ' Did you mean one of these: '
                                            f'{similar_names}?')
-        raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".')
+        raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
 
     @staticmethod
     def validate_version(version_string: str) -> str:
@@ -279,7 +280,7 @@ class StandardNameTable:
         if standard_name in self.standard_names:
             return True
         for transformation in self.transformations:
-            if transformation(standard_name, self):
+            if transformation.match(standard_name):
                 return True
             logger.debug(f'No transformation applied successfully on "{standard_name}"')
         return False
@@ -398,6 +399,10 @@ class StandardNameTable:
                         'pattern',
                         'last_modified', ]
 
+            for k in _dict.keys():
+                if k not in REQ_KEYS:
+                    raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
+
             for d in yaml.full_load_all(f):
                 _dict.update(d)
 
@@ -408,14 +413,10 @@ class StandardNameTable:
 
             meta = {}
             for k, v in _dict.items():
-                if isinstance(v, (str, int, float)):
+                if not isinstance(v, dict):
                     meta[k] = v
             for k in meta:
                 _dict.pop(k)
-
-            if k not in REQ_KEYS:
-                for k in meta.keys():
-                    raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
 
             affixes = _dict.pop('affixes', {})
             standard_names = _dict.pop('standard_names', None)
@@ -424,8 +425,8 @@ class StandardNameTable:
                 standard_names = _dict.pop('table', None)
                 if standard_names is None:
                     raise ValueError('No key "standard_names" names found in the YAML file')
-            else:
-                logger.warning('The "table" key is deprecated. Use "standard_names" instead')
+                else:
+                    logger.warning('The "table" key is deprecated. Use "standard_names" instead')
 
             pop_entry = []
             for k, v in _dict.items():
@@ -685,12 +686,14 @@ class StandardNameTable:
     # End Loader: -----------------------------------------------------------
 
     # Export: ---------------------------------------------------------------
-    def to_yaml(self, yaml_filename: Union[str, pathlib.Path]):
+    def to_yaml(self, yaml_filename: Union[str, pathlib.Path]) -> pathlib.Path:
         """Export the SNT to a YAML file"""
         snt_dict = self.to_dict()
 
         with open(yaml_filename, 'w') as f:
             yaml.safe_dump(snt_dict, f, sort_keys=False)
+
+        return yaml_filename
 
     def to_xml(self,
                xml_filename: pathlib.Path,
@@ -802,16 +805,9 @@ class StandardNameTable:
         """Export a StandardNameTable to a dictionary"""
         d = dict(name=self.name,
                  **self.meta,
-                 standard_names=self.standard_names)
-        for k, v in self.affixes.items():
-            # for name, item in zip(('locations', 'devices', 'standard_components'),
-            #                       (self.locations, self.devices, self.components)):
-            vdict = v.to_dict()
-            if vdict:
-                d[k] = vdict
-
-        if self.standard_reference_frames:
-            d['standard_reference_frames'] = self.standard_reference_frames.to_dict()['standard_reference_frames']
+                 standard_names=self.standard_names,
+                 affixes={k: v.to_dict() for k, v in self.affixes.items()},
+                 )
 
         dt = d.get('last_modified', datetime.now(timezone.utc).isoformat())
         d.update(dict(last_modified=str(dt)))

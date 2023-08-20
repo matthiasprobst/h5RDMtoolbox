@@ -63,8 +63,23 @@ def lower(string: str) -> Lower:
 def process_attributes(cls,
                        meth_name: str,
                        attrs: Dict,
-                       kwargs: Dict) -> Tuple[Dict, Dict, Dict]:
-    """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method."""
+                       kwargs: Dict,
+                       name: str) -> Tuple[Dict, Dict, Dict]:
+    """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method.
+
+    Parameters
+    ----------
+    cls : type
+        Class of the method.
+    meth_name : str
+        Name of the method.
+    attrs : Dict
+        Attributes of the method.
+    kwargs : Dict
+        Keyword arguments of the method.
+    name : str
+        Name of the dataset or group to be created.
+    """
 
     curr_cv = conventions.get_current_convention()
 
@@ -95,7 +110,8 @@ def process_attributes(cls,
                 logger.debug(f'Standard attribute {k} is empty and alternative standard attribute given by the user')
                 if skwargs[alt_attr_name] == DefaultValue.EMPTY:
                     raise conventions.standard_attributes.errors.StandardAttributeError(
-                        f'The standard attribute "{k}" is required but not provided. The alternative '
+                        f'Error creating {cls.__name__} "{name}": The standard attribute "{k}" '
+                        f'is required but not provided. The alternative '
                         f'{alt_attr_name} '
                         f'is also not provided.')
                 else:
@@ -460,7 +476,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if attrs is None:
             attrs = {}
 
-        attrs, skwargs, kwargs = process_attributes(Group, 'create_group', attrs, kwargs)
+        attrs, skwargs, kwargs = process_attributes(Group, 'create_group', attrs, kwargs, name)
         if name in self:
             if not isinstance(self[name], h5py.Group):
                 raise RuntimeError('The name you passed is already used for a dataset!')
@@ -511,7 +527,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
-        attrs, skwargs, kwargs = process_attributes(Group, 'create_string_dataset', attrs, kwargs)
+        attrs, skwargs, kwargs = process_attributes(Group, 'create_string_dataset', attrs, kwargs, name)
 
         if isinstance(data, str):
             n_letter = len(data)
@@ -617,7 +633,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
             data.name = name
-        attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs)
+
+        attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs, name=name)
 
         if isinstance(data, xr.DataArray):
             data.attrs.update(attrs)
@@ -1960,7 +1977,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             # ignore standard attributes during read-only
             skwargs = {}
         else:
-            attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs)
+            attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name)
 
         _tmp_init = False
 

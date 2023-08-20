@@ -4,7 +4,7 @@ import warnings
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import StandardNameError
+from h5rdmtoolbox.conventions.errors import StandardNameError, AffixKeyError
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 
 
@@ -33,7 +33,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(table.affixes, dict)
         with self.assertRaises(StandardNameError):
             table['x_time']
-        with self.assertRaises(KeyError):
+        with self.assertRaises(AffixKeyError):
             table['x_x_velocity']
         table['x_velocity']
 
@@ -79,3 +79,35 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
         from h5rdmtoolbox import get_ureg
         self.assertEqual(table['a_velocity'].units, get_ureg()('m/s'))
+
+    def test_to_dict(self):
+        snt = StandardNameTable(name='test_snt',
+                                standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
+                                version='v1.0dev',
+                                affixes=dict(component={'description': 'test component',
+                                                        'x': {'description': 'x coordinate'},
+                                                        'y': {'description': 'y coordinate'},
+                                                        'z': {'description': 'z coordinate'}}),
+                                meta=dict(institution='my_institution',
+                                          contact='https://orcid.org/0000-0001-8729-0482'))
+        snt_dict = snt.to_dict()
+        self.assertIn('standard_names', snt_dict)
+        self.assertIn('affixes', snt_dict)
+
+    def test_to_from_yaml(self):
+        snt = StandardNameTable(name='test_snt',
+                                standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
+                                version='v1.0dev',
+                                affixes=dict(component={'description': 'test component',
+                                                        'x': {'description': 'x coordinate'},
+                                                        'y': {'description': 'y coordinate'},
+                                                        'z': {'description': 'z coordinate'}}),
+                                meta=dict(institution='my_institution',
+                                          contact='https://orcid.org/0000-0001-8729-0482'))
+        snt_yaml_filename = snt.to_yaml(h5tbx.utils.generate_temporary_filename())
+        self.assertTrue(snt_yaml_filename.exists())
+        snt_from_yaml = StandardNameTable.from_yaml(snt_yaml_filename)
+        self.assertEqual(snt_from_yaml.name, snt.name)
+        self.assertEqual(snt_from_yaml.version, snt.version)
+        self.assertEqual(list(snt_from_yaml.affixes.keys()), list(snt.affixes.keys()))
+        self.assertEqual(snt_from_yaml.standard_names, snt.standard_names)

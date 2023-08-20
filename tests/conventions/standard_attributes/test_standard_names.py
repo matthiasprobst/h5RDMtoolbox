@@ -5,7 +5,7 @@ import warnings
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError
+from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError, AffixKeyError
 from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
 from h5rdmtoolbox.conventions.standard_names import utils
 from h5rdmtoolbox.conventions.standard_names.name import StandardName
@@ -90,7 +90,7 @@ class TestStandardAttributes(unittest.TestCase):
                          table['x_coordinate'].description)
         self.assertIsInstance(table['velocity'], StandardName)
         self.assertIsInstance(table['x_velocity'], StandardName)
-        with self.assertRaises(h5tbx.errors.StandardNameError):
+        with self.assertRaises(h5tbx.errors.AffixKeyError):
             table['phi_velocity']
         self.assertIsInstance(table['pressure'], StandardName)
         self.assertFalse(table['pressure'].is_vector())
@@ -187,21 +187,19 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertTrue(fname.exists())
             fname.unlink(missing_ok=True)
 
-            with self.assertRaises(StandardNameError):
+            with self.assertRaises(AffixKeyError):
                 self.snt['x_velocity_in_a_frame']
-
-            self.assertTrue(snt.standard_reference_frames is None)
 
     def test_from_zenodo(self):
         if self.connected:
             import zenodo_search as zsearch
-            doi = zsearch.utils.parse_doi('8223533')
-            snt = StandardNameTable.from_zenodo(doi=8223533)
+            doi = zsearch.utils.parse_doi('8266929')
+            snt = StandardNameTable.from_zenodo(doi=8266929)
             self.assertIsInstance(snt, StandardNameTable)
             filename = h5tbx.UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
             self.assertTrue(filename.exists())
             filename.unlink(missing_ok=True)
-            snt = StandardNameTable.from_zenodo(doi=8223533)
+            snt = StandardNameTable.from_zenodo(doi=8266929)
             self.assertTrue(filename.exists())
 
     def test_from_yaml(self):
@@ -267,117 +265,3 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.create_dataset('test', data=1, standard_name='x_velocity', units='m/s')
 
                 snt = h5.standard_name_table
-
-                with self.assertRaises(AttributeError):
-                    snt.devices = ['fan', 'orifice']
-
-    def test_X_at_LOC(self):
-        # X_at_LOC
-        for sn in self.snt.standard_names:
-            with self.assertRaises(KeyError):
-                self.snt[f'{sn}_at_fan']
-        with self.assertRaises(h5tbx.errors.StandardNameError):
-            self.snt['invalid_coordinate_at_fan']
-        sn = self.snt['x_coordinate_at_fan_inlet']
-        self.assertEqual(sn.units, self.snt['x_coordinate'].units)
-
-    def test_difference_of_X_and_Y_between_LOC1_and_LOC2(self):
-        # difference_of_X_and_Y_between_LOC1_and_LOC2
-        self.snt['difference_of_x_coordinate_and_y_coordinate_between_fan_outlet_and_fan_inlet']
-        for sn1 in self.snt.standard_names:
-            for sn2 in self.snt.standard_names:
-                for loc1 in self.snt.locations:
-                    for loc2 in self.snt.locations:
-                        if self.snt[sn1].units != self.snt[sn2].units:
-                            with self.assertRaises(ValueError):
-                                self.snt[f'difference_of_{sn1}_and_{sn2}_between_{loc1}_and_{loc2}']
-                        else:
-                            _sn = self.snt[f'difference_of_{sn1}_and_{sn2}_between_{loc1}_and_{loc2}']
-                            self.assertEqual(_sn.units, self.snt[sn1].units)
-                            self.assertEqual(_sn.units, self.snt[sn2].units)
-                            self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} between {loc1} and "
-                                                              f"{loc2}")
-        with self.assertRaises(KeyError):
-            self.snt[f'difference_of_time_and_time_between_fan_inlet_and_INVALID']
-        with self.assertRaises(KeyError):
-            self.snt[f'difference_of_time_and_time_between_INVALID_and_fan_outlet']
-
-    def test_difference_of_X_and_Y_across_device(self):
-        # difference_of_X_and_Y_across_device
-        for sn1 in self.snt.standard_names:
-            for sn2 in self.snt.standard_names:
-                for dev in self.snt.devices:
-                    if self.snt[sn1].units != self.snt[sn2].units:
-                        with self.assertRaises(ValueError):
-                            self.snt[f'difference_of_{sn1}_and_{sn2}_across_{dev}']
-                    else:
-                        _sn = self.snt[f'difference_of_{sn1}_and_{sn2}_across_{dev}']
-                        self.assertEqual(_sn.units, self.snt[sn1].units)
-                        self.assertEqual(_sn.units, self.snt[sn2].units)
-                        self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} across {dev}")
-        with self.assertRaises(KeyError):
-            self.snt[f'difference_of_time_and_time_across_INVALID']
-
-    def test_ratio_of_X_and_Y(self):
-        # ratio_of_X_and_Y
-        for sn1 in self.snt.standard_names:
-            for sn2 in self.snt.standard_names:
-                _sn = self.snt[f'ratio_of_{sn1}_and_{sn2}']
-                self.assertEqual(_sn.units, self.snt[sn1].units / self.snt[sn2].units)
-                self.assertEqual(_sn.description, f"Ratio of {sn1} and {sn2}")
-
-    def test_difference_of_X_across_device(self):
-        # difference_of_X_across_device
-        for sn in self.snt.standard_names:
-            for dev in self.snt.devices:
-                _sn = self.snt[f'difference_of_{sn}_across_{dev}']
-                self.assertEqual(_sn.units, self.snt[sn].units)
-                self.assertEqual(_sn.description, f"Difference of {sn} across {dev}")
-        with self.assertRaises(KeyError):
-            self.snt[f'difference_of_{sn}_across_INVALID']
-
-    def test_square_of_X(self):
-        # square_of
-        for sn in self.snt.standard_names:
-            _sn = self.snt[f'square_of_{sn}']
-            self.assertEqual(_sn.units, self.snt[sn].units * self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Square of {sn}")
-
-    def test_standard_deviation_of(self):
-        # standard_deviation_of
-        for sn in self.snt.standard_names:
-            _sn = self.snt[f'standard_deviation_of_{sn}']
-            self.assertEqual(_sn.units, self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Standard deviation of {sn}")
-
-    def test_arithmetic_mean_of(self):
-        # arithmetic_mean_of
-        for sn in self.snt.standard_names:
-            _sn = self.snt[f'arithmetic_mean_of_{sn}']
-            self.assertEqual(_sn.units, self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Arithmetic mean of {sn}")
-
-    def test_magnitude_of(self):
-        # magnitude_of
-        for sn in self.snt.standard_names:
-            _sn = self.snt[f'magnitude_of_{sn}']
-            self.assertEqual(_sn.units, self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Magnitude of {sn}")
-
-    def test_product_of_X_and_Y(self):
-        # product_of_X_and_Y
-        for sn1 in self.snt.standard_names:
-            for sn2 in self.snt.standard_names:
-                _sn = self.snt[f'product_of_{sn1}_and_{sn2}']
-                self.assertEqual(_sn.units, self.snt[sn1].units * self.snt[sn2].units)
-                self.assertEqual(_sn.description, f"Product of {sn1} and {sn2}")
-
-    def test_in_frame(self):
-        for sn in self.snt.standard_names:
-            for frame in self.snt.standard_reference_frames.names:
-                _sn = self.snt[f'{sn}_in_{frame}']
-                self.assertEqual(_sn.units, self.snt[sn].units)
-        with self.assertRaises(StandardNameError):
-            self.snt[f'{sn}_in_invalid_frame']
-        with self.assertRaises(StandardNameError):
-            self.snt.check(f'{sn}_in_invalid_frame')

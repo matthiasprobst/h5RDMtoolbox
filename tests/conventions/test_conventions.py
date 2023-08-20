@@ -127,4 +127,4 @@ class TestConventions(unittest.TestCase):
         if self.connected:
             h5tbx.UserDir.clear_cache()
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
-                cv = h5tbx.conventions.from_zenodo(doi=8223533)
+                cv = h5tbx.conventions.from_zenodo(doi=8266929)

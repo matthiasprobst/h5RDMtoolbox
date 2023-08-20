@@ -41,7 +41,7 @@ def create_tbx_logger(name, logdir=None) -> ToolboxLogger:
         '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
         datefmt='%Y-%m-%d_%H:%M:%S')
 
-    _file_handler = RotatingFileHandler(_logdir / f'{name}.log', maxBytes=int(5e6), backupCount=2)
+    _file_handler = RotatingFileHandler(_logdir / f'{name}.log')
     _file_handler.setLevel(logging.DEBUG)  # log everything to file!
     _file_handler.setFormatter(_formatter)
 

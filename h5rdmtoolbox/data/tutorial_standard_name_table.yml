@@ -59,7 +59,7 @@ component: # The direction of the spatial component of a vector
 standard_names:
   time:
     canonical_units: s
-    description: physical time
+    description: The physical time of the data.
   x_coordinate:
     canonical_units: m
     description: x indicates the component in x-axis direction

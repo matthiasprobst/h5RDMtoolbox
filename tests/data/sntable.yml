@@ -4,7 +4,7 @@ institution: ITS
 contact: https://orcid.org/0000-0001-8729-0482
 valid_characters: ''
 pattern: ''
-table:
+standard_names:
     synthetic_particle_image:
         canonical_units: counts
         description: Synthetic particle image velocimetry image containing image particles of a single synthetic recording.

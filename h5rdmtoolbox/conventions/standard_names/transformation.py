@@ -75,13 +75,14 @@ def _derivative_of_X_wrt_to_Y(match, snt) -> StandardName:
 
     groups = match.groups()
     assert len(groups) == 2
-    if all([snt.check(n) for n in groups]):
-        sn1 = snt[groups[0]]
-        sn2 = snt[groups[1]]
-        new_units = (1 * sn1.units / 1 * sn2.units).units
-        new_description = f"Derivative of {sn1.name} with respect to {sn2.name}"
-        return StandardName(match.string, new_units, new_description)
-    raise errors.StandardNameError(f'One or multiple standard names in "{match.string}" are not valid.')
+    try:
+        sn1, sn2 = [snt[n] for n in groups]
+    except errors.StandardNameError as e:
+        raise errors.StandardNameError(f'One or multiple standard names in "{match.string}" are not valid. '
+                                       f'(orig error: {e})')
+    new_units = sn1.units / sn2.units
+    new_description = f"Derivative of {sn1.name} with respect to {sn2.name}"
+    return StandardName(match.string, new_units, new_description)
 
 
 derivative_of_X_wrt_to_Y = Transformation(r"^derivative_of_(.*)_wrt_(.*)$",
