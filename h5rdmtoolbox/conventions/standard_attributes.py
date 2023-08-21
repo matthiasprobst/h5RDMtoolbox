@@ -40,7 +40,7 @@ def _standard_name_table(snt):
     if not isinstance(snt, str):
         raise TypeError(f'Unexpected type for the standard name table: {type(snt)}')
     if snt.startswith('{'):
-        return StandardNameTable(**json.loads(snt))
+        return StandardNameTable.from_dict(json.loads(snt))
     if snt.startswith('https://zenodo.org/record/') or snt.startswith('10.5281/zenodo.'):
         return StandardNameTable.from_zenodo(doi=snt)
     if snt.startswith('https://'):

@@ -5,6 +5,7 @@ import warnings
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.errors import StandardNameError, AffixKeyError
+from h5rdmtoolbox.conventions.standard_names import cache
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 
 
@@ -27,6 +28,23 @@ class TestStandardAttributes(unittest.TestCase):
             warnings.warn(f'Cannot test certain things about standard name table because "pooch" is not installed.')
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
+
+    def test_snt_cache(self):
+        """caching of SNTs only works if they are zenodo references"""
+        cv = h5tbx.conventions.Convention('test', 'me', 'mine', False)
+        sa = h5tbx.conventions.standard_attributes.StandardAttribute(
+            name='snt',
+            validator='$standard_name_table',
+            target_methods='__init__',
+            description='Standard name table.',
+            return_type='standard_name_table',
+            default_value='10.5281/zenodo.8220739')
+        cv.add(sa)
+        cv.register()
+
+        with h5tbx.use(cv):
+            with h5tbx.File() as h5:
+                self.assertTrue(h5.snt.meta['zenodo_doi'] in cache.snt)
 
     def test_StandardNameTableFromYaml(self):
         table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())

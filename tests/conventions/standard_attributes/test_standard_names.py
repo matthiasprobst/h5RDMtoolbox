@@ -142,7 +142,7 @@ class TestStandardAttributes(unittest.TestCase):
     def test_StandardNameTableFromYaml_special(self):
         table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
         self.assertEqual(table.name, 'test')
-        self.assertEqual(table.version_number, 1)
+        self.assertEqual(table.version_number, str(1))
         self.assertEqual(table.institution, 'ITS')
         self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(table.valid_characters, '')

@@ -1,9 +1,7 @@
 """Testing the standard attributes"""
-import shutil
 
 import inspect
 import unittest
-import yaml
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
@@ -361,7 +359,6 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertEqual(h5.data_base_source, 'experimental')
             with self.assertRaises(StandardAttributeError):
                 h5.data_base_source = 'invlaid'
-
 
     def test_from_yaml(self):
         if self.connected:

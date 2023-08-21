@@ -63,9 +63,9 @@ standard_name:
 
 standard_name_table:
   target_methods: __init__
-  validator:
-    $in:
-      - https://zenodo.org/record/8266929
+  validator: $standard_name_table
+#    $in:
+#      - https://zenodo.org/record/8266929
   default_value: https://zenodo.org/record/8266929
   requirements:
     - standard_name

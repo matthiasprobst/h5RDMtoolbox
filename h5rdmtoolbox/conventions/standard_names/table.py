@@ -13,6 +13,7 @@ from typing import List, Union, Dict, Tuple
 
 from h5rdmtoolbox._user import UserDir
 from h5rdmtoolbox.utils import generate_temporary_filename
+from . import cache
 from . import consts
 from .affixes import Affix
 from .transformation import *
@@ -197,7 +198,15 @@ class StandardNameTable:
     @property
     def version_number(self) -> str:
         """Return version_number"""
-        return self._meta.get('version_number', None)
+        vn = self._meta.get('version_number', None)
+        if vn is None:
+            if self._meta.get('version', None) is None:
+                return None
+            v = self._meta['version']
+            if v.startswith('v'):
+                self._meta['version_number'] = v[1:]  # expecting it to start with a v
+                return v[1:]
+        return vn
 
     @property
     def versionname(self) -> str:
@@ -386,62 +395,75 @@ class StandardNameTable:
     # Loader: ---------------------------------------------------------------
     @staticmethod
     def from_yaml(yaml_filename):
-        """Initialize a StandardNameTable from a YAML file"""
         with open(yaml_filename, 'r') as f:
-            _dict = {}
+            snt_dict = {}
+            for d in yaml.full_load_all(f):
+                snt_dict.update(d)
 
-            REQ_KEYS = ['standard_names',
+        if 'name' not in snt_dict:
+            snt_dict['name'] = pathlib.Path(yaml_filename).stem
+
+        return StandardNameTable.from_dict(snt_dict)
+
+    @staticmethod
+    def from_dict(snt_dict: Dict):
+        """Initialize a StandardNameTable from a YAML file"""
+
+        DEFAULT_KEYS = ['standard_names',
                         'name',
                         'version',
                         'institution',
                         'contact',
-                        'valid_characters',
-                        'pattern',
-                        'last_modified', ]
+                        ('valid_characters', None),
+                        ('pattern', None),]
 
-            for k in _dict.keys():
-                if k not in REQ_KEYS:
-                    raise ValueError(f'Invalid key "{k}" in YAML file. Valid keys are: {REQ_KEYS}')
+        snt_keys = snt_dict.keys()
 
-            for d in yaml.full_load_all(f):
-                _dict.update(d)
+        # do some correction to fit some various sources
+        if 'table' in snt_keys:
+            snt_dict['standard_names'] = snt_dict.pop('table')
 
-            if 'name' not in _dict:
-                _dict['name'] = pathlib.Path(yaml_filename).stem
-            version = _dict.pop('version', None)
-            name = _dict.pop('name', None)
+        if 'version_number' in snt_keys:
+            snt_dict['version'] = f'v{snt_dict.pop("version_number")}'
 
-            meta = {}
-            for k, v in _dict.items():
-                if not isinstance(v, dict):
-                    meta[k] = v
-            for k in meta:
-                _dict.pop(k)
+        snt_keys = snt_dict.keys()
 
-            affixes = _dict.pop('affixes', {})
-            standard_names = _dict.pop('standard_names', None)
+        for dk in DEFAULT_KEYS:
+            if isinstance(dk, str):
+                if dk not in snt_keys:
+                    raise KeyError(f'Expected key "{dk}" missing!')
+            else:
+                k, v = dk
+                if k not in snt_keys:
+                    snt_dict[k] = v
 
-            if standard_names is None:
-                standard_names = _dict.pop('table', None)
-                if standard_names is None:
-                    raise ValueError('No key "standard_names" names found in the YAML file')
-                else:
-                    logger.warning('The "table" key is deprecated. Use "standard_names" instead')
+        version = snt_dict.pop('version', None)
+        name = snt_dict.pop('name', None)
 
-            pop_entry = []
-            for k, v in _dict.items():
-                if isinstance(v, dict):
-                    pop_entry.append(k)
-                    affixes[k] = v
-            [_dict.pop(k) for k in pop_entry]
+        meta = {}
+        for k, v in snt_dict.items():
+            if not isinstance(v, dict):
+                meta[k] = v
+        for k in meta:
+            snt_dict.pop(k)
 
-            if len(_dict) > 0:
-                raise ValueError(f'Invalid keys in YAML file: {list(_dict.keys())}')
-            return StandardNameTable(name=name,
-                                     version=version,
-                                     standard_names=standard_names,
-                                     affixes=affixes,
-                                     meta=meta)
+        affixes = snt_dict.pop('affixes', {})
+        standard_names = snt_dict.pop('standard_names', None)
+
+        pop_entry = []
+        for k, v in snt_dict.items():
+            if isinstance(v, dict):
+                pop_entry.append(k)
+                affixes[k] = v
+        [snt_dict.pop(k) for k in pop_entry]
+
+        if len(snt_dict) > 0:
+            raise ValueError(f'Invalid keys in YAML file: {list(snt_dict.keys())}')
+        return StandardNameTable(name=name,
+                                 version=version,
+                                 standard_names=standard_names,
+                                 affixes=affixes,
+                                 meta=meta)
 
     @staticmethod
     def from_xml(xml_filename: Union[str, pathlib.Path],
@@ -651,6 +673,8 @@ class StandardNameTable:
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
+        if doi in cache.snt:
+            return cache.snt[doi]
         import zenodo_search as zsearch
 
         doi = zsearch.utils.parse_doi(doi)
@@ -665,6 +689,7 @@ class StandardNameTable:
         snt = StandardNameTable.from_yaml(yaml_filename)
         snt._meta.update(dict(zenodo_doi=doi))
 
+        cache.snt[doi] = snt
         return snt
 
     @staticmethod
