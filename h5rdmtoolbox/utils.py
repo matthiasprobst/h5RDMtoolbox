@@ -34,7 +34,9 @@ def create_tbx_logger(name, logdir=None) -> ToolboxLogger:
         _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
     else:
         _logdir = pathlib.Path(logdir)
-    
+
+    _logdir.mkdir(parents=True, exist_ok=True)
+
     _logger = ToolboxLogger(logging.getLogger(name))
 
     _formatter = logging.Formatter(
