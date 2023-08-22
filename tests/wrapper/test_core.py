@@ -95,9 +95,10 @@ class TestCore(unittest.TestCase):
 
     def test_write_iso_timestamp(self):
         with h5tbx.File() as h5:
-            h5.write_iso_timestamp('timestamp', dt=datetime.now())
+            now = datetime.now()
+            h5.write_iso_timestamp('timestamp', dt=now)
             self.assertIsInstance(h5.attrs['timestamp'], str)
-            self.assertEqual(h5.attrs['timestamp'], str(datetime.now().isoformat()))
+            self.assertEqual(h5.attrs['timestamp'], str(now.isoformat()))
             with self.assertRaises(TypeError):
                 h5.write_iso_timestamp('timestamp', dt='now', overwrite=True)
 

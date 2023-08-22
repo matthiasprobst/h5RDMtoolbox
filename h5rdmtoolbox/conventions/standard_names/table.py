@@ -412,10 +412,9 @@ class StandardNameTable:
         DEFAULT_KEYS = ['standard_names',
                         'name',
                         'version',
-                        'institution',
                         'contact',
                         ('valid_characters', None),
-                        ('pattern', None),]
+                        ('pattern', None), ]
 
         snt_keys = snt_dict.keys()
 

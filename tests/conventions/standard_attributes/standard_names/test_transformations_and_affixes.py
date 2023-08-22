@@ -90,6 +90,28 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                 self.assertEqual(_sn.units, self.snt[sn1].units / self.snt[sn2].units)
                 self.assertEqual(_sn.description, f"Ratio of {sn1} and {sn2}")
 
+    def test_surface(self):
+        from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+        snt = StandardNameTable.from_dict(
+            {'name': 'test',
+             'version': 'v1.2',
+             'contact': h5tbx.__author_orcid__,
+             'standard_names': {
+                 'static_pressure': {'units': 'Pa',
+                                     'description': 'Static pressure.'}
+             },
+             'affixes': {'surface': {
+                 'wall': 'Wall.',
+             }
+             }
+             }
+        )
+        with self.assertRaises(AffixKeyError):
+            snt['invalid_static_pressure']
+        _sn = snt['wall_static_pressure']
+        self.assertEqual(_sn.units, snt['static_pressure'].units)
+        self.assertEqual(_sn.description, f"Static pressure. Wall.")
+
     def test_derivative_of_X_with_respect_to_Y(self):
         uref = self.snt['x_velocity'].units / self.snt['x_coordinate'].units
         u = self.snt[f'derivative_of_x_velocity_wrt_x_coordinate'].units

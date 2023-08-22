@@ -38,15 +38,14 @@ def _surface_(match, snt) -> StandardName:
     assert len(groups) == 2
     surface = groups[0]
     if surface not in snt.affixes['surface'].values:
-        return False
+        raise errors.AffixKeyError(f'Standard surface "{surface}" not found in registry of the standard name table. '
+                                   f'Available surfaces are: {snt.affixes["surface"].names}')
     sn = snt[groups[1]]
-    if not sn.is_vector():
-        raise errors.StandardNameError(f'"{sn.name}" is not a vector quantity.')
-    new_description = f'{sn.description} {snt.components[surface].description}'
+    new_description = f'{sn.description} {snt.affixes["surface"].values[surface]}'
     return StandardName(match.string, sn.units, new_description)
 
 
-surface_ = Transformation(r"^(.*)_(.*)$", _surface_)
+surface_ = Transformation(r"^(.*?)_(.*)$", _surface_)
 
 
 def _component_(match, snt) -> StandardName:
