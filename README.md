@@ -24,19 +24,25 @@ Please find a comprehensive documentation with examples [here](h5rdmtoolbox.read
 
 Use python 3.8 or higher (tested until 3.10).
 
-Install from website:
+### Install from source:
 
-    pip install git+https://github.com/matthiasprobst/h5RDMtoolbox
+Clone the repository first:
 
-For **development**, clone the repository and install it in editable mode:
+    git clone https://github.com/matthiasprobst/h5RDMtoolbox.git
 
-    git clone https://github.com/matthiasprobst/h5RDMtoolbox
-    pip install -e h5RDMtoolbox
+Then, run
 
-There are optional dependencies, that can be installed to enable additional features. They are listed in the next
-section.
+    pip install h5RDMtoolbox
 
-### Requirements/Dependencies
+Add `--user` if you do not have root access.
+
+For development installation run
+
+    `pip install -e h5RDMtoolbox
+
+### Dependencies
+
+The core functionality depends on the following packages:
 
 - `appdirs>=1.4.4`: Managing user and application directories
 - `numpy>=1.20,<1.23.0`: Scientific computing, handling of arrays
@@ -54,6 +60,8 @@ section.
 - `requests`: Used to download files from the internet
 
 #### Optional dependencies
+
+To run unit tests or to enable certain features, additional dependencies must be installed.
 
 Install optional dependencies by specifying them in square brackets after the package name, e.g.:
 

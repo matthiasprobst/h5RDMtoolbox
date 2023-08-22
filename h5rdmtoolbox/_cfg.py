@@ -33,6 +33,7 @@ CONFIG = {'return_xarray': True,
           'offset_attribute_name': 'offset',
           'add_source_info_to_xr': True,
           'ignore_standard_attribute_errors': False,
+          'allow_deleting_standard_attributes': False,
           'parallel_find': True, }
 
 _VALIDATORS = {

@@ -5,11 +5,11 @@ import pint
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
 from typing import Dict
-from ..conventions import consts
 
 from .h5utils import get_rootparent
 from .. import get_config, conventions, utils
 from .. import get_ureg
+from ..conventions import consts
 
 H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
 
@@ -106,7 +106,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
 
-        if get_config('expose_user_prop_to_attrs') and parent.__class__ in conventions.get_current_convention().properties:
+        if get_config(
+                'expose_user_prop_to_attrs') and parent.__class__ in conventions.get_current_convention().properties:
             if name in conventions.get_current_convention().properties[parent.__class__]:
                 return conventions.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
@@ -146,6 +147,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     if value is consts.DefaultValue.NONE:
                         # no value given and not mandatory. just not set it and do nothing
                         return
+                    if isinstance(value, consts.DefaultValue):
+                        value = value.value
                     return curr_cv.properties[parent.__class__][name].set(parent, value)
                 except TypeError as e:
                     raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')

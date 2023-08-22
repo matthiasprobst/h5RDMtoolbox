@@ -95,7 +95,18 @@ def process_attributes(cls,
     for ak in skwargs.keys():
         v = attrs.pop(ak, None)
         if v is not None:
-            skwargs[ak] = v
+            if ak in skwargs:
+                # potential conflict
+                # if the skwargs is not set and not required, pass attrs to skwargs
+                # same accounts if the current value in skwargs is the default (to be identified by instance check)
+                if skwargs[ak] == DefaultValue.NONE or skwargs[ak] == DefaultValue.EMPTY or isinstance(skwargs[ak],
+                                                                                                       DefaultValue):
+                    skwargs[ak] = v
+                # else raise error
+                else:
+                    raise conventions.standard_attributes.errors.StandardAttributeError(
+                        f'You passed the standard attribute "{ak}" as a standard argument and it is '
+                        f'also in the "attrs" argument. This is not allowed!')
 
     _pop = []
     # only consider non-None standard attributes
@@ -126,22 +137,35 @@ def process_attributes(cls,
 
     _ = [skwargs.pop(p) for p in _pop]
 
-    # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
-    for skey, vas in skwargs.items():
-        if skey in attrs:
-            if vas is None:
-                # pass over the attribute value to the skwargs dict:
-                skwargs[skey] = attrs[skey]
-            else:
-                raise conventions.standard_attributes.errors.StandardAttributeError(
-                    f'You passed the standard attribute "{skey}" as a standard argument and it is '
-                    f'also in the "attrs" argument. This is not allowed!')
+    # # standard attributes may be passed as arguments or in attrs. But if they are passed in both an error is raised!
+    # for skey, vas in skwargs.items():
+    #     if skey in attrs:
+    #         if vas is None:
+    #             # pass over the attribute value to the skwargs dict:
+    #             skwargs[skey] = attrs[skey]
+    #         else:
+    #             raise conventions.standard_attributes.errors.StandardAttributeError(
+    #                 f'You passed the standard attribute "{skey}" as a standard argument and it is '
+    #                 f'also in the "attrs" argument. This is not allowed!')
 
     attrs.update(skwargs)
     return attrs, skwargs, kwargs
 
 
 class Core:
+    """Class inherited by File, Dataset and Group containing common methods."""
+
+    def __delattr__(self, item):
+        if self.standard_attributes.get(item, None):
+            if get_config('allow_deleting_standard_attributes'):
+                del self.attrs[item]
+                return
+            raise ValueError('Deleting standard attributes is not allowed based on the current configuration! '
+                             'You may change this by calling set_config("allow_deleting_standard_attributes", True).')
+        if item in self and get_config('natural_naming'):
+            del self[item]
+            return
+        super().__delattr__(item)
 
     @property
     def hdf_filename(self) -> pathlib.Path:
@@ -151,13 +175,13 @@ class Core:
 
     @property
     def convention(self):
+        """Return the convention currently enabled."""
         return conventions.get_current_convention()
 
     @property
     def standard_attributes(self) -> Dict:
-        if len(self.convention.properties) == 0:
-            return {}
-        return self.convention.properties[self.__class__]
+        """Return the standard attributes of the class."""
+        return self.convention.properties.get(self.__class__, {})
 
 
 class SpecialAttributeWriter:
@@ -210,16 +234,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     """
     hdfrepr = H5Repr()
 
-    def __delattr__(self, item):
-        if self.__class__ in conventions.get_current_convention().properties:
-            if item in conventions.get_current_convention().properties[self.__class__]:
-                del self.attrs[item]
-                return
-        super().__delattr__(item)
-
-    # def __dir__(self):
-    #     return super().__dir__() + list(self.standard_attributes.keys())
-
     @property
     def attrs(self):
         """Calls the wrapper attribute manager"""
@@ -260,8 +274,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
         and then copy it back with the new properties. 'static' properties are considered properties
         that cannot be changed once the dataset has been written, such as max_shape, dtype etc."""
-        if not isinstance(dataset_properties, dict):
-            raise TypeError(f'Expecting type dict for "properties" but got {type(dataset_properties)}')
         for k in dataset_properties.keys():
             if k not in MODIFIABLE_PROPERTIES_OF_A_DATASET:
                 raise KeyError(f'Property "{k}" not in list of modifiable properties: '
@@ -1367,16 +1379,6 @@ def only1d(obj):
 
 class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     """Inherited Dataset group of the h5py package"""
-
-    def __delattr__(self, item):
-        if self.__class__ in conventions.get_current_convention().properties:
-            if item in conventions.get_current_convention().properties[self.__class__]:
-                if conventions.get_current_convention().properties[self.__class__][
-                    item].default_value == DefaultValue.EMPTY:
-                    raise ValueError(f'Cannot delete {item} because it is a required standard attribute')
-                del self.attrs[item]
-                return
-        super().__delattr__(item)
 
     @only1d
     def __lt__(self, other: Union[int, float]):

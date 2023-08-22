@@ -17,7 +17,6 @@ class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
         self.connected = h5tbx.utils.has_internet_connection()
-        # h5tbx.set_config(natural_naming=False)
 
     def assert_standard_attribute(self, sa):
         self.assertIsInstance(sa.name, str)

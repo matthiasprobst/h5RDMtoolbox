@@ -21,7 +21,9 @@ def _parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
     if isinstance(snt, StandardNameTable):
         return snt
     if isinstance(snt, dict):
-        return StandardNameTable(**snt)
+        return StandardNameTable.from_dict(snt)
+    if isinstance(snt, pathlib.Path):
+        return _parse_snt(str(snt))
     raise TypeError(f'Invalid type for standard_name_table: {type(snt)}')
 
 

@@ -68,6 +68,39 @@ class TestCore(unittest.TestCase):
             self.assertIsInstance(attr_str, AttributeString)
             grp.attrs['mystr'] = attr_str
 
+    def test_del(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                ds = h5.create_dataset('ds', data=np.arange(10), units='m/s', attrs={'comment': 'test'})
+                h5.smth = 10
+                with self.assertRaises(ValueError):
+                    del ds.units
+                self.assertEqual(10, h5.smth)
+                del h5.smth
+                with self.assertRaises(AttributeError):
+                    h5.smth
+
+                with self.assertRaises(AttributeError):
+                    with h5tbx.set_config(natural_naming=False):
+                        del ds.ds
+
+                del h5.ds
+                self.assertTrue('ds' not in h5)
+
+    def test_rootparent(self):
+        with h5tbx.File() as h5:
+            g = h5.create_group('g')
+            self.assertEqual(h5, g.rootparent)
+            self.assertEqual(h5, h5['g'].rootparent)
+
+    def test_write_iso_timestamp(self):
+        with h5tbx.File() as h5:
+            h5.write_iso_timestamp('timestamp', dt=datetime.now())
+            self.assertIsInstance(h5.attrs['timestamp'], str)
+            self.assertEqual(h5.attrs['timestamp'], str(datetime.now().isoformat()))
+            with self.assertRaises(TypeError):
+                h5.write_iso_timestamp('timestamp', dt='now', overwrite=True)
+
     def test_from_csv(self):
         df = pd.DataFrame({'x': [1, 5, 10, 0], 'y': [-3, 20, 0, 11.5]})
         csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
@@ -196,10 +229,17 @@ class TestCore(unittest.TestCase):
                                    data=np.random.rand(10, 20, 30),
                                    chunks=(1, 20, 30),
                                    dtype=int)
+
             new_ds = h5['/'].modify_dataset_properties(dataset=ds,
-                                                       dtype=float)
+                                                       dtype=float,
+                                                       tqdm_pbar=True)
             with self.assertRaises(TypeError):
                 h5['/'].modify_dataset_properties(ds, 4.3)
+            with self.assertRaises(KeyError):
+                h5['/'].modify_dataset_properties(ds, dataset_properties=4.3)
+            with self.assertRaises(KeyError):
+                h5['/'].modify_dataset_properties(ds, dataset_properties=dict(a=4.3))
+
             self.assertEqual(ds.dtype, int)
             self.assertEqual(new_ds.dtype, float)
 

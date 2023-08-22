@@ -178,15 +178,17 @@ class StandardAttribute(abc.ABC):
         if isinstance(default_value, str):
             _default_value = default_value.lower()
             if _default_value == '$none':
-                default_value = self.NONE
+                default_value = DefaultValue.NONE
             elif _default_value == '$empty':
-                default_value = self.EMPTY
+                default_value = DefaultValue.EMPTY
             elif _default_value == 'none':
                 default_value = None
+            else:
+                default_value = DefaultValue(default_value)
 
         if alternative_standard_attribute is not None and default_value is self.EMPTY:
             # an alternative standard name is given but no default value. Set default value to the alternative
-            default_value = self.EMPTY
+            default_value = DefaultValue.EMPTY
         self.default_value = default_value
 
         self.input_type = 'str'

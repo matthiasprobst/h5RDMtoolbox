@@ -31,3 +31,5 @@ exclude_lines =
     def oktext
     def sdump
     def dump
+    def _unpack_essential_info
+    def _procfind

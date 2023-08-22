@@ -4,9 +4,8 @@ Matplotlib labels are manipulated to set the units representation correctly. See
 import matplotlib.projections as proj
 import matplotlib.pyplot as plt
 import re
-import warnings
 import xarray as xr
-from typing import Union
+from typing import Union, Tuple
 
 from . import get_config
 
@@ -16,14 +15,14 @@ __XARRAY_UNITS_PATTERN__ = r"(.*?)\[([^\[\]]*?)\]$"
 __AV_UNIT_FORMATS__ = ('/', '()', '(', '[]', '[', '//', 'in')
 
 
-def decode_label(label: str) -> (str, str):
+def decode_label(label: str) -> Tuple[str, str]:
     """Decodes the label into a name and a unit string. For this,
     the last occurrence of [<unit>] is searched. No opening or
     closing square brackets are allowed in the label.
 
     ..note: This function assumes that the units are written as [<unit>] at
-        the end of the label. If this is not the case, the function will fail
-        or return wrong results.
+        the end of the label. If this is not the case, the function will return
+        '' for the units
 
     Parameters
     ----------
@@ -37,13 +36,10 @@ def decode_label(label: str) -> (str, str):
     unit_string: str
         unit string, e.g. m/s
     """
-    try:
-        match = re.search(__XARRAY_UNITS_PATTERN__, label)
+    match = re.search(__XARRAY_UNITS_PATTERN__, label)
+    if match:
         return match.group(1), match.group(2)
-    except RuntimeError as e:
-        raise RuntimeError(
-            f'Could not parse label {label} with pattern {__XARRAY_UNITS_PATTERN__}. Orig. err: {e}'
-        ) from e
+    return label, ''
 
 
 def build_label_unit_str(name: str, units: str,
@@ -76,7 +72,7 @@ def build_label_unit_str(name: str, units: str,
     if units_format in ('(', ')', '()'):
         return f'{name} (${units}$)'
     raise ValueError(f'Unexpected value for "units_format": {units_format}. Must be one of the following: '
-                     f'"in", "/", "[", "("')
+                     f'{__AV_UNIT_FORMATS__}')
 
 
 class XarrayLabelManipulation(plt.Axes):
@@ -87,30 +83,14 @@ class XarrayLabelManipulation(plt.Axes):
         if units_format is None:
             units_format = get_config('xarray_unit_repr_in_plots')
 
-        if units_format not in __AV_UNIT_FORMATS__:
-            raise ValueError(f'Unknown units format {units_format}.')
-
         if label:
             if not label[-1] == ']':
                 return label.replace('**', '^')
 
-            try:
-                name, units_string = decode_label(label)
-            except RuntimeError as e:
-                warnings.warn(f'Could not change label due to {e}. Please open an issue for this and tell '
-                              'the developers about it.', UserWarning)
-                return label
+            name, units_string = decode_label(label)
 
-            if units_format == '[':
-                if units_string in ('', ' ', None, 'dimensionless'):
-                    _raw_unit = '-'
-                else:
-                    _raw_unit = f"{units_string.replace('**', '^')}"
-
-                return f"{name}[{_raw_unit.replace('**', '^')}]"
-
-            if units_string in ('[]', '[ ]', '[dimensionless]', None):
-                return build_label_unit_str(name.strip(), '-', units_format)
+            if units_string in ('', ' ', None, 'dimensionless'):
+                return name.strip()
 
             return build_label_unit_str(name.strip(), units_string, units_format)
         return label
@@ -124,21 +104,25 @@ class XarrayLabelManipulation(plt.Axes):
         """set the (adjusted) xlabel"""
         if isinstance(xlabel, xr.DataArray):
             for plotting_name in get_config('plotting_name_order'):
-                name = xlabel.attrs.get(plotting_name)
+                name = xlabel.attrs.get(plotting_name, None)
                 if name:
                     xlabel = f'{name} [{xlabel.attrs.get("units", "")}]'
-                    break
-        super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
+                    return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
+            xlabel = f'{xlabel.name} [{xlabel.attrs.get("units", "")}]'
+            return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
+        return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
 
     def set_ylabel(self, ylabel: Union[str, xr.DataArray], *args, **kwargs):
         """set the (adjusted) ylabel"""
         if isinstance(ylabel, xr.DataArray):
             for plotting_name in get_config('plotting_name_order'):
-                name = ylabel.attrs.get(plotting_name)
+                name = ylabel.attrs.get(plotting_name, None)
                 if name:
                     ylabel = f'{name} [{ylabel.attrs.get("units", "")}]'
-                    break
-        super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
+                    return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
+            ylabel = f'{ylabel.name} [{ylabel.attrs.get("units", "")}]'
+            return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
+        return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
 
 
 # register the axis class

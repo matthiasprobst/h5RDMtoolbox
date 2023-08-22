@@ -123,6 +123,37 @@ class TestConventions(unittest.TestCase):
                 h5.create_dataset('test', data=1)
         h5tbx.use(None)
 
+    def test_skwars_kwargs(self):
+        """passing units in attrs and kwargs"""
+        h5tbx.use('h5tbx')
+        with h5tbx.File() as h5:
+            with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                ds = h5.create_dataset('test', data=1, units='m/s', attrs={'units': 'Pa'})
+            ds = h5.create_dataset('test', data=1, units='m/s')
+            self.assertEqual('m/s', str(ds.attrs['units']))
+            ds = h5.create_dataset('test2', data=1, units='m/s', attrs={'scale': 2})
+            self.assertEqual(2, ds.attrs['scale'])
+
+    def test_convention_file_props(self):
+        h5tbx.use('h5tbx')
+        with h5tbx.File() as h5:
+            self.assertEqual(h5.convention, h5tbx.conventions.get_current_convention())
+            self.assertEqual({}, h5.standard_attributes)
+            ds = h5.create_dataset('test', data=1, units='m/s')
+            self.assertEqual(sorted(['offset', 'scale', 'units']), sorted(ds.standard_attributes.keys()))
+            self.assertEqual(ds.convention, h5tbx.conventions.get_current_convention())
+
+    def test_del_standard_attribute(self):
+        h5tbx.use('h5tbx')
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=1, units='m/s', scale=3)
+            with self.assertRaises(ValueError):
+                del ds.scale
+            self.assertTrue('scale' in ds.attrs)
+            with h5tbx.set_config(allow_deleting_standard_attributes=True):
+                del ds.scale
+                self.assertTrue('scale' not in ds.attrs)
+
     def test_from_zenodo(self):
         if self.connected:
             h5tbx.UserDir.clear_cache()
