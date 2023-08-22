@@ -395,13 +395,13 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             return self._h5ds(ret.id)
         if isinstance(ret, h5py.Group):
             return self._h5grp(ret.id)
-        return ret
 
     def __getattr__(self, item):
-
-        if self.__class__ in conventions.get_current_convention().properties:
-            if item in conventions.get_current_convention().properties[self.__class__]:
-                return conventions.get_current_convention().properties[self.__class__][item].get(self)
+        props = self.convention.properties.get(self.__class__, None)
+        if props:
+            prop = props.get(item, None)
+            if prop:
+                return prop.get(self)
 
         try:
             return super().__getattribute__(item)
@@ -491,7 +491,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         attrs, skwargs, kwargs = process_attributes(Group, 'create_group', attrs, kwargs, name)
         if name in self:
             if not isinstance(self[name], h5py.Group):
-                raise RuntimeError('The name you passed is already used for a dataset!')
+                raise ValueError('The name you passed is already used for a dataset!')
 
             if overwrite is True:
                 del self[name]
@@ -1086,40 +1086,41 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             ds[:] = np.stack(imgdata, axis=axis)
         return ds
 
-    def create_dataset_from_xarray_dataarray(self,
-                                             dataarr: xr.DataArray,
-                                             name: str = None,
-                                             overwrite: bool = False,
-                                             overwrite_coords: bool = False) -> None:
-        """create hdf dataset from xarray DataArray. All attributes are written to the
-        hdf dataset. If coordinates are present, they are written as dimension scales.
-        If only dimensions are present, the dim names are written as attributes using
-        `DIMS` as key."""
-        ds_coords = {}
-        attach_scales = [None] * dataarr.ndim
-        for idim, dim in enumerate(dataarr.dims):
-            if dim not in self or overwrite_coords:
-                ds = self.create_dataset(dim,
-                                         data=dataarr.coords[dim].values,
-                                         attrs=dataarr.coords[dim].attrs,
-                                         overwrite=overwrite_coords)
-                ds.make_scale()
-                ds_coords[dim] = ds
-            if dim in self:
-                attach_scales[idim] = dim
-        if name is None:
-            name = dataarr.name
-        if len(ds_coords) == 0:
-            dim_attr = {'DIMS': dataarr.dims}
-        else:
-            dim_attr = {}
-        dataarr.attrs.update(dim_attr)
-        ds = self.create_dataset(name,
-                                 shape=dataarr.shape,
-                                 attrs=dataarr.attrs,
-                                 overwrite=overwrite,
-                                 attach_scales=attach_scales)
-        ds[()] = dataarr.values
+    # unused, but leave it for a while:
+    # def create_dataset_from_xarray_dataarray(self,
+    #                                          dataarr: xr.DataArray,
+    #                                          name: str = None,
+    #                                          overwrite: bool = False,
+    #                                          overwrite_coords: bool = False) -> None:
+    #     """create hdf dataset from xarray DataArray. All attributes are written to the
+    #     hdf dataset. If coordinates are present, they are written as dimension scales.
+    #     If only dimensions are present, the dim names are written as attributes using
+    #     `DIMS` as key."""
+    #     ds_coords = {}
+    #     attach_scales = [None] * dataarr.ndim
+    #     for idim, dim in enumerate(dataarr.dims):
+    #         if dim not in self or overwrite_coords:
+    #             ds = self.create_dataset(dim,
+    #                                      data=dataarr.coords[dim].values,
+    #                                      attrs=dataarr.coords[dim].attrs,
+    #                                      overwrite=overwrite_coords)
+    #             ds.make_scale()
+    #             ds_coords[dim] = ds
+    #         if dim in self:
+    #             attach_scales[idim] = dim
+    #     if name is None:
+    #         name = dataarr.name
+    #     if len(ds_coords) == 0:
+    #         dim_attr = {'DIMS': dataarr.dims}
+    #     else:
+    #         dim_attr = {}
+    #     dataarr.attrs.update(dim_attr)
+    #     ds = self.create_dataset(name,
+    #                              shape=dataarr.shape,
+    #                              attrs=dataarr.attrs,
+    #                              overwrite=overwrite,
+    #                              attach_scales=attach_scales)
+    #     ds[()] = dataarr.values
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
@@ -1619,9 +1620,12 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         return self.isel(**isel)
 
     def __getattr__(self, item):
-        if self.__class__ in conventions.get_current_convention().properties:
-            if item in conventions.get_current_convention().properties[self.__class__]:
-                return conventions.get_current_convention().properties[self.__class__][item].get(self)
+        props = self.convention.properties.get(self.__class__, None)
+        if props:
+            prop = props.get(item, None)
+            if prop:
+                return prop.get(self)
+
         if item not in self.__dict__:
             for d in self.dims:
                 if len(d) > 0:
@@ -1811,7 +1815,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         # hard copy:
         if 'CLASS' and 'NAME' in self.attrs:
             raise RuntimeError(
-                'Cannot rename {self.name} because it is a dimension scale!')
+                f'Cannot rename {self.name} because it is a dimension scale!')
 
         self.parent[newname] = self
         del self.parent[self.name]
@@ -2005,15 +2009,20 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             for k, v in attrs.items():
                 self.attrs[k] = v
 
-        self.layout = layout
+        self._layout = layout
 
     def __setattr__(self, key, value):
-        curr_conv = conventions.get_current_convention()
-        if self.__class__ in curr_conv.properties:
-            if key in curr_conv.properties[self.__class__]:
-                # assign the current object to the requested standard attribute
-                return curr_conv.properties[self.__class__][key].set(self, value)
-        return super().__setattr__(key, value)
+        props = self.convention.properties.get(self.__class__, None)
+        if props:
+            prop = props.get(key, None)
+            if prop:
+                return prop.set(self, value)
+        if key.startswith('_'):
+            return super().__setattr__(key, value)
+        # if key in ('layout', ):
+        #     return super().__setattr__(key, value)
+        raise KeyError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
+                       f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
 
     def __repr__(self) -> str:
         r = super().__repr__()
@@ -2037,7 +2046,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
          int
             Number of detected issues.
          """
-        return self.layout.validate(self[grp])
+        return self._layout.validate(self[grp])
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.

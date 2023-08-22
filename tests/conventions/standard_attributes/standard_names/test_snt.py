@@ -13,6 +13,7 @@ from h5rdmtoolbox.conventions.standard_names.validator import _parse_snt
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
+        h5tbx.use(None)
         try:
             requests.get('https://git.scc.kit.edu', timeout=5)
             self.connected = True
@@ -61,6 +62,51 @@ class TestStandardAttributes(unittest.TestCase):
             with h5tbx.File() as h5:
                 self.assertTrue(h5.snt.meta['zenodo_doi'] in cache.snt)
 
+    def test_StandardNmeTableRaw(self):
+        with self.assertRaises(ValueError):  # invalid version:
+            snt = StandardNameTable('test', version='1.0', meta={}, standard_names=None)
+        snt = StandardNameTable('test', version='v1.0', meta={}, standard_names=None)
+        self.assertEqual({}, snt.standard_names)
+
+        with self.assertWarns(UserWarning):
+            StandardNameTable('test', version='v1.0', meta={},
+                              standard_names={'x_velocity': {
+                                  'units': 'm/s', 'alias': 'u'},
+                                  'y_velocity': {'canonical_units': 'm/s', 'description': 'y velocity', 'alias': 'v'}
+                              })
+
+        snt = StandardNameTable('test', version='v1.0', meta={},
+                                standard_names={'x_velocity': {
+                                    'units': 'm/s', 'description': 'x velocity.', 'alias': 'u'},
+                                    'y_velocity': {'canonical_units': 'm/s', 'description': 'y velocity', 'alias': 'v'}
+                                })
+        self.assertEqual('x velocity.', snt['x_velocity'].description)
+        self.assertEqual('y velocity.', snt['y_velocity'].description)
+
+        self.assertEqual({'u': 'x_velocity', 'v': 'y_velocity'}, snt.aliases)
+        self.assertEqual('1.0', snt.version_number)
+        snt.meta['version_number'] = '2.0'
+        self.assertEqual('2.0', snt.version_number)
+        snt.meta.pop('version_number')
+        snt.meta.pop('version')
+        self.assertEqual(None, snt.version_number)
+
+        self.assertIn('x_velocity', snt)
+        self.assertEqual(snt['x_velocity'].description, snt['u'].description)
+        self.assertEqual(snt['y_velocity'].description, snt['v'].description)
+        with self.assertRaises(StandardNameError):
+            print(snt['velocity'])
+
+    def test_check(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('u', data=1, attrs={'standard_name': 'x_velocity', 'units': 'm/s'})
+            self.assertEqual(0, len(self.snt.check_hdf_group(h5)))
+        self.assertEqual(0, len(self.snt.check_hdf_file(h5.hdf_filename)))
+        with h5tbx.File() as h5:
+            h5.create_dataset('u', data=1, attrs={'standard_name': 'x_velocity', 'units': 'Pa'})
+            self.assertEqual(1, len(self.snt.check_hdf_group(h5)))
+        self.assertEqual(1, len(self.snt.check_hdf_file(h5.hdf_filename)))
+
     def test_StandardNameTableFromYaml(self):
         table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())
         self.assertIsInstance(table.affixes, dict)
@@ -68,7 +114,6 @@ class TestStandardAttributes(unittest.TestCase):
             table['x_time']
         with self.assertRaises(AffixKeyError):
             table['x_x_velocity']
-        table['x_velocity']
 
         self.assertEqual(table.name, 'Test')
         self.assertEqual(table.version, 'v1.0')
@@ -104,7 +149,14 @@ class TestStandardAttributes(unittest.TestCase):
                                'sigma with of the gaussian intensity profile of the particle image.',
                 'units': 'pixel'}
         }
-
+        with self.assertRaises(KeyError):
+            table.update(a_velocity={
+                'description': 'velocity in a direction',
+            })
+        with self.assertRaises(KeyError):
+            table.update(a_velocity={
+            'units': 'm/s'
+            })
         table.update(a_velocity={
             'description': 'velocity in a direction',
             'units': 'm/s'

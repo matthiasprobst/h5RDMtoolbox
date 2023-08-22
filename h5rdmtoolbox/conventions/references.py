@@ -101,10 +101,11 @@ def parse_dict(value):
 
 class BibTeXValidator(StandardAttributeValidator):
 
-    def __call__(self, references, *args, **kwargs) -> List[str]:
-        if not isinstance(references, (list, tuple)):
-            references = [references, ]
-        if all(validate_bibtex(r) for r in references):
-            if len(references) == 1:
-                return parse_dict(references[0])
-            return [parse_dict(r) for r in references]
+    def __call__(self, bibtex, *args, **kwargs) -> List[str]:
+        if not isinstance(bibtex, (list, tuple)):
+            bibtex = [bibtex, ]
+        if all(validate_bibtex(b) for b in bibtex):
+            if len(bibtex) == 1:
+                return parse_dict(bibtex[0])
+            return [parse_dict(b) for b in bibtex]
+        raise ValueError(f'Invalid Bibtex entry: {bibtex}')

@@ -3,6 +3,7 @@
 import inspect
 import unittest
 from datetime import datetime
+from json.decoder import JSONDecodeError
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __author_orcid__
@@ -55,8 +56,8 @@ class TestStandardAttributes(unittest.TestCase):
         h5tbx.use(cv.name)
         with h5tbx.File() as h5:
             dt = datetime.now()
-            h5.timestamp = dt
-            self.assertEqual(h5.timestamp, datetime.fromisoformat(dt.isoformat()))
+            h5.datetime = dt
+            self.assertEqual(h5.datetime, datetime.fromisoformat(dt.isoformat()))
 
     def test_data_source(self):
         h5tbx.use(None)
@@ -236,6 +237,7 @@ class TestStandardAttributes(unittest.TestCase):
                                            return_type='sdict',
                                            default_value='$None'
                                            )
+
         cv = Convention('test_references',
                         contact=__author_orcid__)
         cv.add(bibtex_attr)
@@ -255,11 +257,16 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.url = url
                 self.assertEqual(h5.url, url)
 
+                h5.bibtex = bibtex_entry
+                self.assertTrue(h5.bibtex, dict)
+
+                with self.assertRaises(StandardAttributeError):
+                    h5.bibtex = {'invalid': {}}
+
             with self.assertRaises(StandardAttributeError):
                 h5.url = 'invalid'
 
             h5.references = bibtex_entry
-            h5.references
             self.assertDictEqual(h5.references, bibtex_entry)
 
             if self.connected:
@@ -269,6 +276,32 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.references = (bibtex_entry, url)
                 self.assertEqual(h5.references[0], bibtex_entry)
                 self.assertEqual(h5.references[1], url)
+
+        from h5rdmtoolbox.conventions.references import validate_bibtex, validate_reference
+        self.assertFalse(validate_reference('invalid'))
+        with self.assertRaises(JSONDecodeError):
+            self.assertFalse(validate_bibtex('invalid'))
+
+        bibtex_entry = {'@article': {'journal': 'Nice Journal',
+                                     'comments': 'A comment',
+                                     'pages': '12--23',
+                                     'month': 'jan',
+                                     'abstract': 'This is an abstract. '
+                                                 'This line should be long enough to test\nmultilines...',
+                                     'title': 'An amazing title',
+                                     'year': '2013',
+                                     'volume': '12',
+                                     'ID': 'Cesar2013',
+                                     'author': 'Jean Cesar',
+                                     'keyword': 'keyword1, keyword2'}
+                        }
+        self.assertTrue(validate_bibtex(bibtex_entry))
+        self.assertTrue(validate_reference(bibtex_entry))
+
+        bibtex_entry = {'invalid': {}}
+        self.assertFalse(validate_bibtex(bibtex_entry))
+        bibtex_entry = {'article': {}}
+        self.assertFalse(validate_bibtex(bibtex_entry))
 
     def test_comment(self):
 

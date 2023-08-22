@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pathlib
 import unittest
+import xarray as xr
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
@@ -63,6 +64,7 @@ class TestCore(unittest.TestCase):
             h5.attrs['mystr'] = attr_str
 
             grp = h5.create_group('grp')
+
             grp.attrs['mystr'] = MyString('test')
             attr_str = grp.attrs['mystr']
             self.assertIsInstance(attr_str, AttributeString)
@@ -72,13 +74,9 @@ class TestCore(unittest.TestCase):
         with h5tbx.use('h5tbx'):
             with h5tbx.File() as h5:
                 ds = h5.create_dataset('ds', data=np.arange(10), units='m/s', attrs={'comment': 'test'})
-                h5.smth = 10
+
                 with self.assertRaises(ValueError):
                     del ds.units
-                self.assertEqual(10, h5.smth)
-                del h5.smth
-                with self.assertRaises(AttributeError):
-                    h5.smth
 
                 with self.assertRaises(AttributeError):
                     with h5tbx.set_config(natural_naming=False):
@@ -87,11 +85,24 @@ class TestCore(unittest.TestCase):
                 del h5.ds
                 self.assertTrue('ds' not in h5)
 
+    def test_setattr(self):
+        with h5tbx.File() as h5:
+            with self.assertRaises(KeyError):
+                h5.smth = 10
+            h5._smth = 10
+            self.assertEqual(10, h5._smth)
+
     def test_rootparent(self):
         with h5tbx.File() as h5:
             g = h5.create_group('g')
             self.assertEqual(h5, g.rootparent)
             self.assertEqual(h5, h5['g'].rootparent)
+            self.assertEqual(h5, h5.rootparent)
+
+            grp = h5.create_group('grp1/grp2/grp3')
+            self.assertEqual(grp.rootparent, h5['/'])
+            dset = grp.create_dataset('test', data=1)
+            self.assertEqual(dset.rootparent, h5['/'])
 
     def test_write_iso_timestamp(self):
         with h5tbx.File() as h5:
@@ -182,6 +193,12 @@ class TestCore(unittest.TestCase):
             self.assertTrue(ds[0, ...].equals(ds[0, :, :]))
             self.assertTrue(ds[..., :].equals(ds[:, :, :]))
             self.assertTrue(ds[...].equals(ds[:, :, :]))
+
+    def test_ds_grp_name_existence(self):
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('ds', shape=(10, 20, 30))
+            with self.assertRaises(ValueError):
+                h5['/'].create_group('ds')
 
     def test_coord_selection(self):
         with h5tbx.File() as h5:
@@ -304,6 +321,7 @@ class TestCore(unittest.TestCase):
             grp.create_dataset('data', data=np.random.rand(10, 20, 30))
             self.assertEqual(grp.get_datasets('data'), [grp['data'], ])
             self.assertEqual(grp.get_datasets('dat*'), [grp['data'], ])
+            self.assertEqual(sorted(grp.get_datasets('.*')), [grp['data'], ])
             self.assertEqual(grp.get_datasets('idat*'), [])
             with self.assertRaises(ValueError):
                 h5tbx.Group(4.3)
@@ -319,6 +337,14 @@ class TestCore(unittest.TestCase):
             self.assertEqual(newds.name, '/grp/New')
 
             self.assertEqual(str(h5.grp), '<HDF5 wrapper group "/grp" (members: 2, convention: "h5py")>')
+
+            h5.grp['ds_from_xr_data_array'] = xr.DataArray(np.random.rand(10, 20, 30))
+            self.assertTrue('ds_from_xr_data_array' in h5.grp)
+            self.assertEqual((10, 20, 30), h5.grp['ds_from_xr_data_array'].shape)
+
+            h5.grp['ds_from_list'] = np.array([1, 2, 3]), dict(attrs=dict(a=1))
+            self.assertTrue('ds_from_list' in h5.grp)
+            self.assertEqual((3,), h5.grp['ds_from_list'].shape)
 
             with self.assertRaises(ValueError):
                 grp = h5.create_group('grp')
@@ -344,6 +370,8 @@ class TestCore(unittest.TestCase):
             self.assertTrue(h5['str2'].name, '/str2')
             self.assertEqual(h5['str2'][()], ('a', 'b', 'c', 'dddd'))
             self.assertTrue(h5['str2'].size, 4)
+
+            self.assertEqual('/grp', h5['grp'].name)
 
     # ---------------------------------------------------------------------------
     # special dataset creation methods:

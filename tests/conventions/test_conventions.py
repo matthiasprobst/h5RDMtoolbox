@@ -21,6 +21,12 @@ class TestConventions(unittest.TestCase):
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
 
+    def test_getattr(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('test', data=1, units='m/s')
+                self.assertEqual('m/s', str(h5.test.units))
+
     def test_standard_name_table_as_relative_filename(self):
         snt_filename = h5tbx.tutorial.get_reduced_standard_name_table_yaml_file()
 

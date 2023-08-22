@@ -46,7 +46,7 @@ class TestFile(unittest.TestCase):
 
     def test_filename(self):
         with h5tbx.File() as h5:
-            with self.assertRaises(AttributeError):
+            with self.assertRaises(KeyError):
                 h5.hdf_filename = 3
         self.assertIsInstance(h5.hdf_filename, pathlib.Path)
         self.assertTrue(h5.hdf_filename.exists())
@@ -254,14 +254,6 @@ class TestFile(unittest.TestCase):
                                shape=(2, 40, 3))
             tree = h5.get_tree_structure()
 
-    def test_rootparent(self):
-        with File(mode='w') as h5:
-            grp = h5.create_group('grp1/grp2/grp3')
-            self.assertIsInstance(grp, Group)
-            dset = grp.create_dataset('test', data=1, units='', long_name='some long name')
-            self.assertIsInstance(dset, Dataset)
-            self.assertEqual(dset.rootparent, h5['/'])
-
     def test_rename(self):
         with File(mode='w') as h5:
             h5.create_dataset('testds',
@@ -340,11 +332,6 @@ class TestFile(unittest.TestCase):
 
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
-
-    def test_rootparent(self):
-        with File(mode='w') as h5:
-            grp = h5.create_group('grp1/grp2/grp3')
-            self.assertEqual(grp.rootparent, h5['/'])
 
     def test_assign_data_to_existing_dset(self):
         h5tbx.set_config(natural_naming=True)

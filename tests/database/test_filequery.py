@@ -18,6 +18,7 @@ class TestFileQuery(unittest.TestCase):
         from h5rdmtoolbox.database.file import _regex
         self.assertFalse(_regex(None, '*'))
         self.assertFalse(_regex('hallo', r'\d4'))
+        self.assertFalse(_regex('hallo', 'hello'))
 
     def test_Folder(self):
         folder_dir = h5tbx.utils.generate_temporary_directory()
@@ -201,6 +202,9 @@ class TestFileQuery(unittest.TestCase):
             g.create_dataset('pressure2', data=[1, 2, 3], attrs={'long_name': 'Pressure'})
 
             self.assertEqual(h5.distinct('long_name', '$Dataset'), ['Pressure', ])
+            self.assertEqual([(3,), (3, 5, 10, 20)], h5.distinct('$shape', '$Dataset'))
+            self.assertEqual(sorted(['/trn_datacubes', '/monitors', '/']),
+                             sorted(h5.distinct('$name', '$Group')))
 
     def test_getitem(self):
         fnames = []

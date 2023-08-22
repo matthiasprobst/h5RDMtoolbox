@@ -78,29 +78,25 @@ class StandardNameTable:
             affixes = {}
 
         if 'table' in affixes:
-            self.standard_names = affixes.pop('table')
+            standard_names = affixes.pop('table')
             logger.warning('Parameter "table" is depreciated. Use "standard_names" instead.')
 
-        self._standard_names = standard_names
+        _correct_standard_names = standard_names.copy()
+        # fix key canonical_units
+        for k, v in standard_names.items():
+            if 'canonical_units' in v:
+                _correct_standard_names[k]['units'] = v['canonical_units']
+                del _correct_standard_names[k]['canonical_units']
+            # fix description
+            if v.get('description', None):
+                if v['description'][-1] != '.':
+                    _correct_standard_names[k]['description'] = v['description'] + '.'
+            else:
+                warnings.warn(f'No description for standard name {k}', UserWarning)
 
-        def _parse_input(v) -> Dict:
-            logger.debug(f'Parsing input {v}')
-            if isinstance(v, str):
-                return {'description': v}
-            if isinstance(v, dict):
-                return v
-            if v is None:
-                return {'description': None}
-            raise TypeError(f'Wrong type for "v". Expecting dict or str but got {type(v)}')
+        self._standard_names = _correct_standard_names
 
         self.affixes = {}
-
-        # standard_reference_frame = affixes.pop('reference_frames', None)
-        # if standard_reference_frame:
-        #     from .affixes import StandardReferenceFrames, StandardReferenceFrame
-        #     self.affixes['standard_reference_frame'] = StandardReferenceFrames(
-        #         [StandardReferenceFrame(k, **v) for k, v in standard_reference_frame.items()]
-        #     )
 
         for k, affix_data in affixes.items():
             if affix_data:
@@ -133,11 +129,6 @@ class StandardNameTable:
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
-        # fix key canonical_units
-        for k, v in self.standard_names.items():
-            if 'canonical_units' in v:
-                v['units'] = v['canonical_units']
-                del v['canonical_units']
         self._meta = meta
 
     @property
@@ -226,14 +217,8 @@ class StandardNameTable:
         logger.debug(f'Checking "{standard_name}"')
         if standard_name in self.standard_names:
             entry = self.standard_names[standard_name]
-            if 'canonical_units' in entry:
-                units = entry['canonical_units']
-                warnings.warn('canonical_units is deprecated. Use units instead.',
-                              DeprecationWarning)
-            else:
-                units = entry['units']
             return StandardName(name=standard_name,
-                                units=units,
+                                units=entry['units'],
                                 description=entry['description'],
                                 isvector=entry.get('vector', False),
                                 alias=entry.get('alias', None))
@@ -281,7 +266,17 @@ class StandardNameTable:
     def update(self, **standard_names):
         """Update the table with new standard names"""
         for k, v in standard_names.items():
-            self.set(k, **v)
+            description = v.get('description', None)
+            if not description:
+                raise KeyError(f'No description provided for "{k}"')
+            units = v.get('units', None)
+            if not units:
+                raise KeyError(f'No units provided for "{k}"')
+            alias = v.get('alias', None)
+
+            self._standard_names[k] = {'description': description,
+                                       'units': units,
+                                       'alias': alias}
 
     def check_name(self, standard_name: str) -> bool:
         """check the standard name against the table. If the name is not
@@ -307,84 +302,54 @@ class StandardNameTable:
             return True
         return self[standard_name].equal_unit(units)
 
-    def check_hdf_group(self, h5grp: h5py.Group, recursive: bool = True, raise_error: bool = True):
+    def check_hdf_group(self, h5grp: h5py.Group, recursive: bool = True) -> List["Dataset"]:
         """Check group datasets. Run recursively if requested.
-        If raise_error is True, raise an error if a dataset has an invalid standard_name.
-        If raise_error is False, log a warning if a dataset has an invalid standard_name.
+        A list of datasets with invalid standard names is returned.
         """
+        issues = []
+        for ds in h5grp.find({'standard_name': {'$regex': '.*'}}, '$dataset', rec=recursive):
+            if not self[ds.attrs['standard_name']].equal_unit(ds.attrs.get('units', None)):
+                issues.append(ds)
+        return issues
 
-        def _check_ds(name, node):
-            if isinstance(node, h5py.Dataset):
-                if 'standard_name' in node.attrs:
-                    units = node.attrs.get('units', '')
-
-                    valid = self.check(node.attrs['standard_name'], units=units)
-                    if not valid:
-                        if raise_error:
-                            raise errors.StandardNameError(f'Dataset "{name}" has invalid standard_name '
-                                                           f'"{node.attrs["standard_name"]}"')
-                        logger.error(f'Dataset "{name}" has invalid standard_name '
-                                     f'"{node.attrs["standard_name"]}"')
-                    # units = node.attrs['units']
-                    # if units is None:
-                    #     logger.warning(f'Dataset %s has not attribute %s! Assuming it is dimensionless', name,
-                    #                    'units')
-                    #     units = ''
-                    # try:
-                    #     self.check_units(node.attrs['standard_name'], units=units)
-                    # except errors.StandardNameError as e:
-                    #     if raise_error:
-                    #         raise errors.StandardNameError(e)
-                    #     else:
-                    #         logger.error(' > ds: %s: %s', node.name, e)
-
-        if recursive:
-            h5grp.visititems(_check_ds)
-        else:
-            _check_ds(None, h5grp)
-
-        return True
+        # def _check_ds(name, node):
+        #     if isinstance(node, h5py.Dataset):
+        #         if 'standard_name' in node.attrs:
+        #             units = node.attrs.get('units', '')
+        #
+        #             valid = self.check(node.attrs['standard_name'], units=units)
+        #             if not valid:
+        #                 if raise_error:
+        #                     raise errors.StandardNameError(f'Dataset "{name}" has invalid standard_name '
+        #                                                    f'"{node.attrs["standard_name"]}"')
+        #                 logger.error(f'Dataset "{name}" has invalid standard_name '
+        #                              f'"{node.attrs["standard_name"]}"')
+        #             # units = node.attrs['units']
+        #             # if units is None:
+        #             #     logger.warning(f'Dataset %s has not attribute %s! Assuming it is dimensionless', name,
+        #             #                    'units')
+        #             #     units = ''
+        #             # try:
+        #             #     self.check_units(node.attrs['standard_name'], units=units)
+        #             # except errors.StandardNameError as e:
+        #             #     if raise_error:
+        #             #         raise errors.StandardNameError(e)
+        #             #     else:
+        #             #         logger.error(' > ds: %s: %s', node.name, e)
+        #
+        # if recursive:
+        #     h5grp.visititems(_check_ds)
+        # else:
+        #     _check_ds(None, h5grp)
+        #
+        # return True
 
     def check_hdf_file(self, filename,
-                       recursive: bool = True,
-                       raise_error: bool = True):
+                       recursive: bool = True) -> List["Dataset"]:
         """Check file for standard names"""
-        with h5py.File(filename) as h5:
-            self.check_hdf_group(h5['/'],
-                                 recursive=recursive,
-                                 raise_error=raise_error)
-
-    def set(self, *args, **kwargs):
-        """Set standard names in the table
-
-        Examples
-        --------
-        >>> from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
-        >>> from h5rdmtoolbox.conventions.standard_names.name import StandardName
-        >>> table = StandardNameTable.from_yaml('standard_name_table.yaml')
-        >>> table.set('x_velocity', 'm s-1', 'x component of velocity')
-        >>> # or
-        >>> sn = StandardName('velocity', 'm s-1', 'velocity')
-        >>> table.set(sn)
-        """
-        n_args = len(args)
-        n_kwargs = len(kwargs)
-
-        if n_args == 1 and n_kwargs == 0:
-            sn = args[0]
-            if not isinstance(sn, StandardName):
-                raise TypeError(f'Expected a StandardName, got {type(sn)}')
-        elif n_args + n_kwargs != 3:
-            raise ValueError('Invalid arguments. Either a StandardName object or name, units and description '
-                             'must be provided')
-        else:
-            _data = {'name': None, 'units': None, 'description': None}
-            for k, v in zip(_data.keys(), args):
-                _data[k] = v
-            _data.update(kwargs)
-            sn = StandardName(**_data)
-        self.standard_names.update({sn.name: {'units': str(sn.units), 'description': sn.description}})
-        return self
+        from h5rdmtoolbox import File
+        with File(filename) as h5:
+            return self.check_hdf_group(h5['/'], recursive=recursive)
 
     def sort(self) -> "StandardNameTable":
         """Sorts the standard name table"""
@@ -510,8 +475,6 @@ class StandardNameTable:
             table[entry.pop('@id')] = entry
 
         _alias = data.get('alias', {})
-        if _alias:
-            warnings.warn('aliases are not implemented yet', UserWarning)
 
         if _alias:
             for aliasentry in _alias:

@@ -42,8 +42,6 @@ def _regex(value, pattern) -> bool:
     match = re.search(pattern, value)
     if match is None:
         return False
-    if match.group() == '':
-        return False
     return True
 
 
