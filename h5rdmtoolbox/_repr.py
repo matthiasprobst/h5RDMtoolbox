@@ -1,6 +1,5 @@
-import numpy as np
-
 import h5py
+import numpy as np
 import os
 import pkg_resources
 import re
@@ -99,6 +98,14 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
         True if string actually contains a link
 
     """
+    if 'zenodo.' in string:
+        if re.match(r'10\.\d{4,9}/zenodo\.\d{4,9}', string):
+            zenodo_url = f'https://doi.org/{string}'
+            img_url = f'https://zenodo.org/badge/DOI/{string}.svg'
+        if string.startswith('https://zenodo.org/record/'):
+            zenodo_url = string
+            img_url = f'https://zenodo.org/badge/DOI/{string.split("/")[-1]}.svg'
+        return f'<a href="{zenodo_url}"><img src="{img_url}" alt="DOI"></a>', True
     for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
         urls = re.findall(p, string)
         if urls:
@@ -403,7 +410,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             _value = _value.replace('>', '&#62;')
 
         if isinstance(_value, ndarray):
-            _value_str = _value.__str__().replace("' '", "', '")
+            _value_str = ', '.join(_value)  # _value.__str__().replace("' '", "', '")
         # elif isinstance(_value, str):
         #     _value_str = process_string_for_link(_value)
         else:

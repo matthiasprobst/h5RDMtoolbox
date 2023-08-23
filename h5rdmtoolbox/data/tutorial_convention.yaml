@@ -3,56 +3,6 @@ __institution__: https://orcid.org/members/001G000001e5aUTIAY
 __contact__: https://orcid.org/0000-0001-8729-0482
 __use_scale_offset__: True
 
-title:
-  validator:
-    $regex:
-      ^[A-Z].*(?<!\s)$
-  target_methods:
-    __init__
-  default_value:
-    $EMPTY
-  description:
-    The attribute 'title' describes the content of the file. It must start with a capital letter and must not end with a space.
-
-
-piv_method:
-  validator:
-    $in:
-      - single_pass
-      - multi_pass
-      - multi_grid
-  description: List of expected PIV algorithms.
-  target_methods:
-    __init__
-
-piv_medium:
-  validator:
-    $in:
-      - air
-      - water
-  description:
-    The medium of the flow.
-  target_methods:
-    __init__
-
-seeding_material:
-  validator:
-    $in:
-      - dehs  # 0.5-1.5 um
-      - di_ethyl_hexyl_sebacate
-      - helium_filled_soap_bubbles   # 200-3000 um
-      - glcerine_water_mixture   # 0.5-2.0 um
-      - smoke   # < 1
-      - di_otyl_phathalate   # 1-10 um
-      - glass_micro_balloons   # 30-100 um
-      - glass_micro_spheres   # 0.2-3 um
-      - tio2   # 0.1-5 um
-      - al2o3  # 0.2-5 um
-      - polystyrene  # 0.5-10 um
-  description:
-    The material of the PIV tracing particles.
-  target_methods:
-    __init__
 
 standard_name:
   target_methods: create_dataset
@@ -64,8 +14,8 @@ standard_name:
 standard_name_table:
   target_methods: __init__
   validator: $standard_name_table
-#    $in:
-#      - https://zenodo.org/record/8266929
+  #    $in:
+  #      - https://zenodo.org/record/8266929
   default_value: https://zenodo.org/record/8266929
   requirements:
     - standard_name
@@ -80,15 +30,6 @@ long_name:
   alternative_standard_attribute: standard_name
   description: An comprehensive description of the dataset. If not set, the standard_name attribute must be given.
 
-long_name:
-  target_methods: create_group
-  validator:
-    $regex:
-      ^[a-zA-Z].*(?<!\s)$
-  description:
-    An comprehensive description of the dataset
-  default_value: $NONE
-
 comment:
   target_methods:
     - __init__
@@ -99,20 +40,18 @@ comment:
   default_value: $NONE
   description: A comment to further describe the data.
 
-
 contact:
   validator: $orcid
   description: Contact or responsible person represented by an ORCID-ID.
-  target_methods: create_dataset, create_group
+  target_methods:
+    - create_dataset
+    - create_group
   default_value: $NONE
 
-institution:
-  validator:
-    $regex:
-      $orcid
+contact-2:
+  validator: $orcid
+  description: Contact or responsible person represented by an ORCID-ID.
   target_methods: __init__
-  default_value: $NONE
-  description: Name of institution mainly involved in the data
 
 references:
   validator: $url
@@ -122,9 +61,3 @@ references:
     - create_dataset
   default_value: $NONE
   description: Web resources servering as references for the data
-
-# positional __init__ arguments
-contact:
-  validator: $orcid
-  description: Contact or responsible person represented by an ORCID-ID.
-  target_methods: __init__

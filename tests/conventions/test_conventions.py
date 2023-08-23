@@ -27,6 +27,12 @@ class TestConventions(unittest.TestCase):
                 h5.create_dataset('test', data=1, units='m/s')
                 self.assertEqual('m/s', str(h5.test.units))
 
+    def test_overload_standard_attributes(self):
+        yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
+        cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
+        self.assertIn('contact', cv.properties[h5tbx.File])
+        self.assertIn('contact', cv.properties[h5tbx.Group])
+
     def test_standard_name_table_as_relative_filename(self):
         snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
 

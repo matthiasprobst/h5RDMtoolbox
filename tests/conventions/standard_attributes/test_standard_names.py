@@ -213,11 +213,7 @@ class TestStandardAttributes(unittest.TestCase):
             cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
             cv.register()
             h5tbx.use(cv)
-            with h5tbx.File(title='Test title',
-                            piv_method='multi_grid',
-                            piv_medium='air',
-                            seeding_material='dehs',
-                            contact='https://orcid.org/0000-0001-8729-0482') as h5:
+            with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482') as h5:
                 h5.dump()
 
                 with self.assertRaises(StandardAttributeError):

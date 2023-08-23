@@ -360,7 +360,11 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     if '__contact__' not in attrs:
         raise ValueError(f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
 
-    std_attrs = [StandardAttribute(name, **values) for name, values in attrs.items() if
+    def _strip_standard_attribute_name(attr_name):
+        # two same std attr name in one yaml file/dict is not allowed.
+        # this can be dealt with by adding a suffix to the name which starts with a "-":
+        return attr_name.split('-')[0]
+    std_attrs = [StandardAttribute(_strip_standard_attribute_name(name), **values) for name, values in attrs.items() if
                  isinstance(values, dict)]
     meta = {name.strip('__'): value for name, value in attrs.items() if not isinstance(value, dict)}
     if 'name' not in meta:
