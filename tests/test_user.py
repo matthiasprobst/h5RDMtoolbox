@@ -24,7 +24,8 @@ class TestUser(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             h5tbx.UserDir._get_dir('invalid')
-        shutil.rmtree(h5tbx.UserDir.user_dirs['standard_name_tables'])
+        if h5tbx.UserDir.user_dirs['standard_name_tables'].exists():
+            shutil.rmtree(h5tbx.UserDir.user_dirs['standard_name_tables'])
         d = h5tbx.UserDir._get_dir('standard_name_tables')
         self.assertTrue(d.exists())
         self.assertTrue((d / 'fluid-v1.yml').exists())
@@ -44,7 +45,8 @@ class TestUser(unittest.TestCase):
             else:
                 shutil.copy(d, bak_dir / d.name)
 
-        shutil.rmtree(UserDir['layouts'])
+        if UserDir['layouts'].exists():
+            shutil.rmtree(UserDir['layouts'])
 
         try:
             shutil.rmtree(UserDir['tmp'])
