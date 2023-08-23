@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import List, Union, Dict, Tuple
 
 from h5rdmtoolbox._user import UserDir
-from h5rdmtoolbox.utils import generate_temporary_filename
+from h5rdmtoolbox.utils import generate_temporary_filename, download_file, is_xml_file
 from . import cache
 from . import consts
 from .affixes import Affix
@@ -512,40 +512,23 @@ class StandardNameTable:
             Hash of the file, by default None
         name : str, optional
             Name of the StandardNameTable, by default None. If None, the name of the xml file is used.
-        valid_characters : str, optional
-            Regular expression for valid characters. If None, the default value from the config file is used.
-        pattern : str, optional
-            Regular expression for valid standard names. If None, the default value from the config file is used.
 
         Returns
         -------
         snt: StandardNameTable
             The StandardNameTable object
-
-        Notes
-        -----
-        This method requires the package pooch to be installed.
-
-        .. seealso::
-
-            For more info see documentation of `pooch.retrieve()`
-
         """
-        try:
-            import pooch
-        except ImportError:
-            raise ImportError('Package "pooch" is needed to download the file cf-standard-name-table.xml')
-        file_path = pooch.retrieve(
-            url=url,
-            known_hash=known_hash,
-        )
-        file_path = pathlib.Path(file_path)
-        if file_path.suffix == '.xml':
-            snt = StandardNameTable.from_xml(file_path, name)
-        elif file_path.suffix in ('.yml', '.yaml'):
-            snt = StandardNameTable.from_yaml(file_path)
+        filename = download_file(url, known_hash)
+
+        # get name from url
+        if not name:
+            name = url.rsplit('/', 1)[-1]
+
+        if is_xml_file(filename):
+            snt = StandardNameTable.from_xml(filename, name)
         else:
-            raise ValueError(f'Unexpected file suffix: {file_path.suffix}. Expected .xml, .yml or .yaml')
+            snt = StandardNameTable.from_yaml(filename)
+
         meta['url'] = url
         snt.meta.update(meta)
         return snt

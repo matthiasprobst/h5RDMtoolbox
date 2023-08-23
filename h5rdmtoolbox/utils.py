@@ -2,12 +2,14 @@
 import appdirs
 import datetime
 import h5py
+import hashlib
 import json
 import logging
 import pathlib
 import pint
 import re
 import requests
+import warnings
 from h5py import File
 from logging.handlers import RotatingFileHandler
 from re import sub as re_sub
@@ -69,6 +71,36 @@ def has_internet_connection(timeout: int = 5) -> bool:
     except (requests.ConnectionError,
             requests.Timeout):
         return False
+
+
+def download_file(url, known_hash):
+    response = requests.get(url, stream=True)
+    if response.status_code == 200:
+        content = response.content
+
+        # Calculate the hash of the downloaded content
+        calculated_hash = hashlib.sha256(content).hexdigest()
+        if known_hash:
+            if not calculated_hash == known_hash:
+                raise ValueError('File does not match the expected has')
+        else:
+            warnings.warn('No has given!')
+
+        # Save the content to a file
+        fname = generate_temporary_filename()
+        with open(fname, "wb") as f:
+            f.write(content)
+
+        return fname
+    raise RuntimeError(f'Failed to download the file from {url}')
+
+
+def is_xml_file(filename):
+    """Check if file is an xml file"""
+    with open(filename, 'rb') as file:
+        bcontent = file.read()
+        content = bcontent.decode('utf-8')
+        return re.match(r'^\s*<\?xml', content) is not None
 
 
 def has_datasets(target: Union[h5py.Group, pathlib.Path]) -> bool:

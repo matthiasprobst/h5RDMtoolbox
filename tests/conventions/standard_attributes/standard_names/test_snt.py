@@ -21,13 +21,6 @@ class TestStandardAttributes(unittest.TestCase):
                 requests.Timeout) as e:
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
-        try:
-            import pooch
-
-            self.pooch_is_available = True
-        except ImportError:
-            self.pooch_is_available = False
-            warnings.warn(f'Cannot test certain things about standard name table because "pooch" is not installed.')
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
 

@@ -19,7 +19,6 @@ pymongo>=4.2.0
 pco_tools>=1.0.0
 opencv-python>=4.5.3.56
 # snt
-pooch
 xmltodict
 tabulate>=0.8.10
 python-gitlab

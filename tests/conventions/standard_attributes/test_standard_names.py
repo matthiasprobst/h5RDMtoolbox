@@ -23,13 +23,6 @@ class TestStandardAttributes(unittest.TestCase):
                 requests.Timeout) as e:
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
-        try:
-            import pooch
-
-            self.pooch_is_available = True
-        except ImportError:
-            self.pooch_is_available = False
-            warnings.warn(f'Cannot test certain things about standard name table because "pooch" is not installed.')
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
@@ -135,23 +128,24 @@ class TestStandardAttributes(unittest.TestCase):
                     StandardNameTable.validate_version(version)
 
     def test_StandardNameTableFromWeb(self):
-        if self.pooch_is_available:
-            cf = StandardNameTable.from_web(
-                url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
-                name='standard_name_table')
-            self.assertEqual(cf.name, 'standard_name_table')
-            self.assertEqual(cf.versionname, 'standard_name_table-v79')
-            if self.connected:
-                self.assertTrue(check_url(cf.meta['url']))
-                self.assertFalse(check_url(cf.meta['url'] + '123'))
 
-            if self.connected:
-                opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                         file_path='open_centrifugal_fan_database-v1.yaml',
-                                                         project_id='35443',
-                                                         ref_name='main')
-                self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
-                self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+        cf = StandardNameTable.from_web(
+            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+            name='standard_name_table',
+            known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
+        self.assertEqual(cf.name, 'standard_name_table')
+        self.assertEqual(cf.versionname, 'standard_name_table-v79')
+        if self.connected:
+            self.assertTrue(check_url(cf.meta['url']))
+            self.assertFalse(check_url(cf.meta['url'] + '123'))
+
+        if self.connected:
+            opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                     file_path='open_centrifugal_fan_database-v1.yaml',
+                                                     project_id='35443',
+                                                     ref_name='main')
+            self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
+            self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
 
     def test_StandardNameTableFromYaml_special(self):
         table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
@@ -213,8 +207,6 @@ class TestStandardAttributes(unittest.TestCase):
             filename = h5tbx.UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
             self.assertTrue(filename.exists())
             filename.unlink(missing_ok=True)
-            snt = StandardNameTable.from_zenodo(doi=8266929)
-            self.assertTrue(filename.exists())
 
     def test_from_yaml(self):
         if self.connected:

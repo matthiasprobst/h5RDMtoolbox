@@ -168,7 +168,8 @@ class Conventions:
     def fetch_cf_standard_name_table():
         """download cf-standard-name-table"""
         url = "https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml"
-        return StandardNameTable.from_web(url)
+        return StandardNameTable.from_web(url,
+                                          known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
 
 
 class Database:
