@@ -42,9 +42,8 @@ class TestTransformationsAndAffixes(unittest.TestCase):
 
         affix = self.snt.affixes['location']
         self.assertEqual('location', affix.name)
-        self.assertEqual(None, affix.description)
-        affix._description = 'test_description'
-        self.assertEqual('test_description', affix.description)
+        self.assertEqual('Locations are suffixes to the standard_name, e.g. velocity_at_fan_inlet',
+                         affix.description)
 
         for sn1 in self.snt.standard_names:
             for sn2 in self.snt.standard_names:

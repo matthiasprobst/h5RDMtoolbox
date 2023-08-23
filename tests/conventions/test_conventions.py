@@ -28,7 +28,7 @@ class TestConventions(unittest.TestCase):
                 self.assertEqual('m/s', str(h5.test.units))
 
     def test_standard_name_table_as_relative_filename(self):
-        snt_filename = h5tbx.tutorial.get_reduced_standard_name_table_yaml_file()
+        snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
 
         yaml_filename = h5tbx.utils.generate_temporary_filename(suffix='.yaml')
         # copy to the same directory

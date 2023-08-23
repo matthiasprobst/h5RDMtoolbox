@@ -89,7 +89,7 @@ class TestStandardAttributes(unittest.TestCase):
             tutorial.get_standard_name_table()['z_coord']
 
     def test_ReducedStandardNameTableFromYaml(self):
-        table = StandardNameTable.from_yaml(tutorial.get_reduced_standard_name_table_yaml_file())
+        table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())
         self.assertIsInstance(table['coordinate'], StandardName)
         self.assertIsInstance(table['x_coordinate'], StandardName)
         self.assertEqual('Spatial coordinate. Coordinate is a vector quantity. '
@@ -99,8 +99,8 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(table['x_velocity'], StandardName)
         with self.assertRaises(h5tbx.errors.AffixKeyError):
             table['phi_velocity']
-        self.assertIsInstance(table['pressure'], StandardName)
-        self.assertFalse(table['pressure'].is_vector())
+        self.assertIsInstance(table['static_pressure'], StandardName)
+        self.assertFalse(table['static_pressure'].is_vector())
         self.assertFalse(table['x_velocity'].is_vector())
         self.assertTrue(table['velocity'].is_vector())
         with self.assertRaises(h5tbx.errors.StandardNameError):

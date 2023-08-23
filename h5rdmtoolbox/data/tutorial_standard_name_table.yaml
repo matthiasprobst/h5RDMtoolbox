@@ -68,7 +68,7 @@ affixes:
       principle_axis:
       type: stationary
   component: # The direction of the spatial component of a vector
-    description: Components are prefixes to the standard_name, e.g. x_velocity
+    description: Components are prefixes to the standard_name, e.g. x_velocity.
     x: X indicates the x-axis component of the vector.
     y: Y indicates the y-axis component of the vector.
     z: Z indicates the z-axis component of the vector.
@@ -83,7 +83,7 @@ standard_names:
   velocity:
     vector: true
     canonical_units: m/s
-    description: Velocity is a vector quantity.
-  pressure:
+    description: Velocity refers to the change of position over time. Velocity is a vector quantity.
+  static_pressure:
     canonical_units: Pa
-    description: Pressure is a scalar quantity.
+    description: Static pressure refers to the force per unit area exerted by a fluid. Pressure is a scalar quantity.

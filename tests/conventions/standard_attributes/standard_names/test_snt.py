@@ -33,9 +33,9 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(snt, StandardNameTable)
         snt = _parse_snt(self.snt.to_dict())
         self.assertIsInstance(snt, StandardNameTable)
-        snt = _parse_snt(h5tbx.tutorial.get_reduced_standard_name_table_yaml_file())
+        snt = _parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
         self.assertIsInstance(snt, StandardNameTable)
-        snt = _parse_snt(str(h5tbx.tutorial.get_reduced_standard_name_table_yaml_file()))
+        snt = _parse_snt(str(h5tbx.tutorial.get_standard_name_table_yaml_file()))
         self.assertIsInstance(snt, StandardNameTable)
 
     def test_snt_cache(self):

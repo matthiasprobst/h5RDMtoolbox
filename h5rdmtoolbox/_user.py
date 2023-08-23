@@ -72,7 +72,7 @@ class DirManger:
             # first copy the default data there:
             fluid_v1 = _get_pkg_resource_filename('data/fluid-v1.yml')
             piv_v1 = _get_pkg_resource_filename('data/piv-v1.yml')
-            tutorial_standard_name_table = _get_pkg_resource_filename('data/tutorial_standard_name_table.yml')
+            tutorial_standard_name_table = _get_pkg_resource_filename('data/tutorial_standard_name_table.yaml')
 
             shutil.copy2(fluid_v1, self.user_dirs['standard_name_tables'])
             shutil.copy2(piv_v1, self.user_dirs['standard_name_tables'])
