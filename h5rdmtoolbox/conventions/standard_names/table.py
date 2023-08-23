@@ -204,6 +204,11 @@ class StandardNameTable:
         """Return version name which is constructed like this: <name>-<version>"""
         return f'{self.name}-{self.version}'
 
+    @property
+    def names(self):
+        """Return list of standard names"""
+        return sorted(self.standard_names.keys())
+
     def __repr__(self):
         _meta = self.meta.pop('alias', None)
         meta_str = ', '.join([f'{key}: {value}' for key, value in self.meta.items()])
@@ -612,7 +617,7 @@ class StandardNameTable:
 
         Example
         -------
-        >>> StandardNameTable.from_zenodo(doi="doi:10.5281/zenodo.8158764")
+        >>> StandardNameTable.from_zenodo(doi="doi:10.5281/zenodo.8266929")
 
         Notes
         -----

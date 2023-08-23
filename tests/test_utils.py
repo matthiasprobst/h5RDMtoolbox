@@ -34,27 +34,26 @@ class TestUtils(unittest.TestCase):
         f = h5tbx.utils.generate_temporary_filename(touch=False)
         self.assertFalse(f.exists())
 
-        n = int(f.stem[-1])
-
-        # file counter 0 is already taken
-        f1 = h5tbx._user.UserDir['tmp'] / f'test{n + 1}.txt'
-        with open(f1, 'w') as f:
+        next_n = next(h5tbx._user._filecounter)
+        f_block = h5tbx._user.UserDir['tmp'] / f'test{next_n + 1}.txt'
+        f_predict = h5tbx._user.UserDir['tmp'] / f'test{next_n + 2}.txt'
+        with open(f_block, 'w') as f:
             pass
-        f2 = h5tbx._user.UserDir['tmp'] / f'test{n + 2}.txt'
-        f3 = h5tbx.utils.generate_temporary_filename(touch=True, prefix='test', suffix='.txt')
-        self.assertTrue(f3.exists())
-        self.assertTrue(f3.is_file())
-        self.assertEqual(f2, f3)
+
+        fnew = h5tbx.utils.generate_temporary_filename(touch=True, prefix='test', suffix='.txt')
+        self.assertTrue(fnew.exists())
+        self.assertTrue(fnew.is_file())
+        self.assertEqual(f_predict, fnew)
 
     def test_generate_temporary_directory(self):
         testfolder = h5tbx.utils.generate_temporary_directory(prefix='testfolder')
         n = int(testfolder.stem[-1])
-        folder = h5tbx._user.UserDir['tmp'] / f'testfolder{n+1}'
+        folder = h5tbx._user.UserDir['tmp'] / f'testfolder{n + 1}'
         folder.mkdir()
         testfolder = h5tbx.utils.generate_temporary_directory(prefix='testfolder')
         self.assertTrue(testfolder.exists())
         self.assertTrue(testfolder.is_dir())
-        self.assertEqual(h5tbx._user.UserDir['tmp'] / f'testfolder{n+2}', testfolder)
+        self.assertEqual(h5tbx._user.UserDir['tmp'] / f'testfolder{n + 2}', testfolder)
 
     def test_create_special_attribute(self):
         with h5tbx.File() as h5:

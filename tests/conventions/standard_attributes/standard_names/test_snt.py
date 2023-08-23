@@ -148,7 +148,7 @@ class TestStandardAttributes(unittest.TestCase):
             })
         with self.assertRaises(KeyError):
             table.update(a_velocity={
-            'units': 'm/s'
+                'units': 'm/s'
             })
         table.update(a_velocity={
             'description': 'velocity in a direction',
@@ -182,6 +182,8 @@ class TestStandardAttributes(unittest.TestCase):
                                                         'z': {'description': 'z coordinate'}}),
                                 meta=dict(institution='my_institution',
                                           contact='https://orcid.org/0000-0001-8729-0482'))
+
+        self.assertEqual(["x_velocity"], snt.names)
         snt_yaml_filename = snt.to_yaml(h5tbx.utils.generate_temporary_filename())
         self.assertTrue(snt_yaml_filename.exists())
         snt_from_yaml = StandardNameTable.from_yaml(snt_yaml_filename)

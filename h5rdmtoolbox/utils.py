@@ -200,9 +200,9 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}"
+    _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._dircounter)}"
     while _dir.exists():
-        _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}"
+        _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._dircounter)}"
     _dir.mkdir(parents=True)
     return _dir
 
