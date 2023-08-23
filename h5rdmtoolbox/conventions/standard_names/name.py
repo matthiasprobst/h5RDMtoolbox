@@ -46,7 +46,7 @@ class StandardName:
         return self.name
 
     def __repr__(self):
-        return f'<StandardName: "{self.name}" units="{self.units}", description="{self.description}">'
+        return f'<StandardName: "{self.name}" [{self.units}] {self.description}>'
 
     def equal_unit(self, other_unit: pint):
         """compares the base units of this standard name with another unit provided as a string
