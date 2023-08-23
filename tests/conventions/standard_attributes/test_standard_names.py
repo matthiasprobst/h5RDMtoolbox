@@ -92,8 +92,8 @@ class TestStandardAttributes(unittest.TestCase):
         table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())
         self.assertIsInstance(table['coordinate'], StandardName)
         self.assertIsInstance(table['x_coordinate'], StandardName)
-        self.assertEqual('Spatial coordinate. Coordinate is a vector quantity. '
-                         'X indicates the x-axis component of the vector.',
+        self.assertEqual('Coordinate refers to the spatial coordinate. Coordinate is a vector '
+                         'quantity. X indicates the x-axis component of the vector.',
                          table['x_coordinate'].description)
         self.assertIsInstance(table['velocity'], StandardName)
         self.assertIsInstance(table['x_velocity'], StandardName)

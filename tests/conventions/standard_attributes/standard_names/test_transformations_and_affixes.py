@@ -93,7 +93,8 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             for sn2 in self.snt.standard_names:
                 _sn = self.snt[f'ratio_of_{sn1}_and_{sn2}']
                 self.assertEqual(_sn.units, self.snt[sn1].units / self.snt[sn2].units)
-                self.assertEqual(_sn.description, f"Ratio of {sn1} and {sn2}")
+                self.assertEqual(_sn.description, f"Ratio of {sn1} and {sn2}. {self.snt[sn1].description} "
+                                                  f"{self.snt[sn2].description}")
 
     def test_surface(self):
         from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
@@ -137,7 +138,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         for sn in self.snt.standard_names:
             _sn = self.snt[f'square_of_{sn}']
             self.assertEqual(_sn.units, self.snt[sn].units * self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Square of {sn}")
+            self.assertEqual(_sn.description, f"Square of {sn}. {self.snt[sn].description}")
 
     def test_standard_deviation_of(self):
         # standard_deviation_of
@@ -151,14 +152,14 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         for sn in self.snt.standard_names:
             _sn = self.snt[f'arithmetic_mean_of_{sn}']
             self.assertEqual(_sn.units, self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Arithmetic mean of {sn}")
+            self.assertEqual(_sn.description, f"Arithmetic mean of {sn}. {self.snt[sn].description}")
 
     def test_magnitude_of(self):
         # magnitude_of
         for sn in self.snt.standard_names:
             _sn = self.snt[f'magnitude_of_{sn}']
             self.assertEqual(_sn.units, self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Magnitude of {sn}")
+            self.assertEqual(_sn.description, f"Magnitude of {sn}. {self.snt[sn].description}")
 
     def test_product_of_X_and_Y(self):
         # product_of_X_and_Y
@@ -166,7 +167,8 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             for sn2 in self.snt.standard_names:
                 _sn = self.snt[f'product_of_{sn1}_and_{sn2}']
                 self.assertEqual(_sn.units, self.snt[sn1].units * self.snt[sn2].units)
-                self.assertEqual(_sn.description, f"Product of {sn1} and {sn2}")
+                self.assertEqual(_sn.description, f"Product of {sn1} and {sn2}. {self.snt[sn1].description} "
+                                                  f"{self.snt[sn2].description}")
 
     def test_in_frame(self):
         for sn in self.snt.standard_names:

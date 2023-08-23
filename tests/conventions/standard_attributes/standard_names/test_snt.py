@@ -109,7 +109,7 @@ class TestStandardAttributes(unittest.TestCase):
             table['x_x_velocity']
 
         self.assertEqual(table.name, 'Test')
-        self.assertEqual(table.version, 'v1.0')
+        self.assertEqual(table.version, 'v1.1')
         self.assertEqual(table.institution, 'my_institution')
         self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(table.valid_characters, '[^a-zA-Z0-9_]')

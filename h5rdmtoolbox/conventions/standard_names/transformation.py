@@ -28,7 +28,7 @@ def _magnitude_of(match, snt) -> StandardName:
     groups = match.groups()
     assert len(groups) == 1
     sn = snt[groups[0]]
-    new_description = f"Magnitude of {sn.name}"
+    new_description = f"Magnitude of {sn.name}. {sn.description}"
     return StandardName(match.string, sn.units, new_description)
 
 
@@ -40,7 +40,7 @@ def _arithmetic_mean_of(match, snt) -> StandardName:
     groups = match.groups()
     assert len(groups) == 1
     sn = snt[groups[0]]
-    new_description = f"Arithmetic mean of {sn.name}"
+    new_description = f"Arithmetic mean of {sn.name}. {sn.description}"
     return StandardName(match.string, sn.units, new_description)
 
 
@@ -62,7 +62,7 @@ def _square_of(match, snt) -> StandardName:
     groups = match.groups()
     assert len(groups) == 1
     sn = snt[groups[0]]
-    new_description = f"Square of {sn.name}"
+    new_description = f"Square of {sn}. {sn.description}"
     new_units = (1 * sn.units * sn.units).units
     return StandardName(match.string, new_units, new_description)
 
@@ -81,7 +81,7 @@ def _derivative_of_X_wrt_to_Y(match, snt) -> StandardName:
         raise errors.StandardNameError(f'One or multiple standard names in "{match.string}" are not valid. '
                                        f'(orig error: {e})')
     new_units = sn1.units / sn2.units
-    new_description = f"Derivative of {sn1.name} with respect to {sn2.name}"
+    new_description = f"Derivative of {sn1.name} with respect to {sn2.name}. {sn1.description} {sn2.description}"
     return StandardName(match.string, new_units, new_description)
 
 
@@ -97,7 +97,7 @@ def _product_of_X_and_Y(match, snt) -> StandardName:
         sn1 = snt[groups[0]]
         sn2 = snt[groups[1]]
         new_units = (1 * sn1.units * sn2.units).units
-        new_description = f"Product of {sn1.name} and {sn2.name}"
+        new_description = f"Product of {sn1.name} and {sn2.name}. {sn1.description} {sn2.description}"
         return StandardName(match.string, new_units, new_description)
     raise errors.StandardNameError(f'One or multiple standard names in "{match.string}" are not valid.')
 
@@ -114,7 +114,7 @@ def _ratio_of_X_and_Y(match, snt) -> StandardName:
         sn1 = snt[groups[0]]
         sn2 = snt[groups[1]]
         new_units = (1 * sn1.units / sn2.units).units
-        new_description = f"Ratio of {sn1.name} and {sn2.name}"
+        new_description = f"Ratio of {sn1.name} and {sn2.name}. {sn1.description} {sn2.description}"
         return StandardName(match.string, new_units, new_description)
     raise errors.StandardNameError(f'One or multiple standard names in "{match.string}" are not valid.')
 
