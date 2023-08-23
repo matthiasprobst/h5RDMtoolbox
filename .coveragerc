@@ -34,3 +34,5 @@ exclude_lines =
     def _unpack_essential_info
     def _procfind
     def display
+    def dump
+    def _repr_html_

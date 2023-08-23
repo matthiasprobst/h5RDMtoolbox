@@ -22,6 +22,13 @@ class TestUser(unittest.TestCase):
 
         self.assertTrue(h5tbx.UserDir['cache'].exists())
 
+        with self.assertRaises(ValueError):
+            h5tbx.UserDir._get_dir('invalid')
+        shutil.rmtree(h5tbx.UserDir.user_dirs['standard_name_tables'])
+        d = h5tbx.UserDir._get_dir('standard_name_tables')
+        self.assertTrue(d.exists())
+        self.assertTrue((d / 'fluid-v1.yml').exists())
+
     def test_user(self):
         self.assertTrue(UserDir['root'].is_dir())
         bak_dir = UserDir['root'].parent / 'bak'

@@ -33,6 +33,20 @@ class TestStandardAttributes(unittest.TestCase):
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
+    def test_orcid(self):
+        from h5rdmtoolbox.conventions import orcid
+        o = orcid.ORCIDValidator()
+
+        with self.assertRaises(TypeError):
+            o(3.4)
+        self.assertTrue(o(h5tbx.__author_orcid__))
+        self.assertTrue(o('0000-0001-8729-0482'))
+        self.assertTrue(o(['0000-0001-8729-0482', '0000-0001-8729-0482']))
+        with self.assertRaises(ValueError):
+            o('0000-0001-8729-048X')
+        with self.assertRaises(ValueError):
+            o('0000-0001-8729-048Y')
+
     def test_units_power_fix(self):
         self.assertEqual('m s^-1', utils._units_power_fix('m s-1'))
 

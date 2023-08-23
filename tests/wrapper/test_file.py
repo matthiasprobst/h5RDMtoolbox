@@ -12,7 +12,7 @@ from pathlib import Path
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
-from h5rdmtoolbox.wrapper.core import Dataset, File, Group
+from h5rdmtoolbox.wrapper.core import File
 
 
 class TestFile(unittest.TestCase):
@@ -230,18 +230,23 @@ class TestFile(unittest.TestCase):
             h5.create_group('grp_2', attrs=dict(a=1))
             h5.create_group('grpXYZ', attrs=dict(b=2))
             h5.create_group('mygrp_2')
+
             groups = h5.get_groups()
             self.assertEqual(len(groups), 4)
             self.assertEqual(groups, [h5['grpXYZ'], h5['grp_1'], h5['grp_2'], h5['mygrp_2']])
+
             groups = h5.get_groups('^grp_[0-9]$')
             self.assertEqual(len(groups), 2)
             self.assertEqual(sorted(groups), sorted([h5['grp_1'], h5['grp_2']]))
-            self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=True))
+            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]), sorted(h5.find({'a': 1}, rec=True)))
 
             h5.create_group('grpXYZ/grp123', attrs=dict(a=1))
-            self.assertEqual([h5['grpXYZ/grp123'], h5['grp_1'], h5['grp_2'], ],
-                             h5.get_by_attribute('a', 1, recursive=True))
-            self.assertEqual([h5['grp_1'], h5['grp_2']], h5.get_by_attribute('a', 1, recursive=False))
+            self.assertEqual(sorted([h5['grpXYZ/grp123'],
+                                     h5['grp_1'],
+                                     h5['grp_2'], ]),
+                             sorted(h5.find({'a': 1}, rec=True)))
+            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]),
+                             sorted(h5.find({'a': 1}, rec=False)))
 
     def test_tree_structur(self):
         with File() as h5:
@@ -359,13 +364,27 @@ class TestFile(unittest.TestCase):
             self.assertIn('boundary/outlet boundary/y', h5)
             self.assertTrue(h5['boundary/outlet boundary/y'].attrs['units'], 'm')
 
+    def test_dataset_value_comparison(self):
+        with File(mode='w') as h5:
+            ds1 = h5.create_dataset('ds1', data=4.4)
+            ds2 = h5.create_dataset('ds2', data=4.5)
+            self.assertEqual(0, ds1.ndim)
+            self.assertEqual(0, ds2.ndim)
+            self.assertTrue(ds1 < float(ds2[()]))
+            self.assertFalse(ds1 > float(ds2[()]))
+            self.assertFalse(ds1 == float(ds2[()]))
+
     def test_get_group_names(self):
         with File(mode='w') as h5:
             g = h5.create_group('one', 'one')
             g.create_group('two', 'two')
+
             g = g.create_group('three', 'three')
             g.create_group('four', 'four')
             self.assertEqual(h5['one'].get_group_names(), ['three', 'three/four', 'two'])
+            self.assertEqual(sorted(h5['one'].get_group_names(recursive=False)), sorted(['two', 'three']))
+            self.assertEqual(sorted(h5['/'].get_group_names(recursive=False)), sorted(['one', ]))
+            self.assertEqual(sorted(h5.get_group_names(recursive=False)), sorted(['one', ]))
 
     def test_get_dataset_names(self):
         with File(mode='w') as h5:

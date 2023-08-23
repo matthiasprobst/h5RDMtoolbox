@@ -27,6 +27,12 @@ class TestTransformationsAndAffixes(unittest.TestCase):
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
+    def test_get_transformation(self):
+        from h5rdmtoolbox.conventions.standard_names.affixes import _get_transformation, affix_transformations
+        with self.assertRaises(KeyError):
+            _get_transformation('invalid_transformation')
+        self.assertEqual(affix_transformations['component'], _get_transformation('component'))
+
     def test_X_at_LOC(self):
         # X_at_LOC
         for sn in self.snt.standard_names:
@@ -40,6 +46,13 @@ class TestTransformationsAndAffixes(unittest.TestCase):
     def test_difference_of_X_and_Y_between_LOC1_and_LOC2(self):
         # difference_of_X_and_Y_between_LOC1_and_LOC2
         self.snt['difference_of_x_coordinate_and_y_coordinate_between_fan_outlet_and_fan_inlet']
+
+        affix = self.snt.affixes['location']
+        self.assertEqual('location', affix.name)
+        self.assertEqual(None, affix.description)
+        affix._description = 'test_description'
+        self.assertEqual('test_description', affix.description)
+
         for sn1 in self.snt.standard_names:
             for sn2 in self.snt.standard_names:
                 for loc1 in self.snt.affixes['location'].values:

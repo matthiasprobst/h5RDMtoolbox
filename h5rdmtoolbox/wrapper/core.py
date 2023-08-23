@@ -537,8 +537,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if attrs is None:
             attrs = {}
 
-        if isinstance(data, xr.DataArray):
-            attrs.update(data.attrs)
         attrs, skwargs, kwargs = process_attributes(Group, 'create_string_dataset', attrs, kwargs, name)
 
         if isinstance(data, str):
@@ -553,8 +551,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 del self[name]  # delete existing dataset
             # else let h5py return the error
         ds = super().create_dataset(name, dtype=dtype, data=data)
-        if attrs is None:
-            attrs = {}
+
         for ak, av in attrs.items():
             ds.attrs[ak] = av
         # TODO: H5StingDataset
@@ -607,7 +604,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             Also note, that if data is a xr.DataArray and attach_scales is not None,
             coordinates of xr.DataArray are ignored and only attach_scales is
             considered.
-        ancillary_datasets: Union[None, str, h5py.Dataset], optional=None
+        ancillary_datasets: Union[None, Dict[h5py.Dataset]], optional=None
             If not None, attach flags to dataset. If str, it is interpreted as
             internal hdf path. If h5py.Dataset, it is interpreted as dataset to attach
             flags to. Default is None, which means no flags are attached. If a flag
@@ -645,6 +642,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if isinstance(data, xr.DataArray):
             attrs.update(data.attrs)
             data.name = name
+
+        if attach_scales is None:
+            # maybe there's a typo:
+            attach_scales = kwargs.pop('attach_scale', None)
 
         attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs, name=name)
 
@@ -685,10 +686,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if not isinstance(make_scale, (bool, str)):
             raise TypeError(f'Make scale must be a boolean or a string not {type(make_scale)}')
 
-        if attach_scales is None:
-            # maybe there's a typo:
-            attach_scales = kwargs.pop('attach_scale', None)
-
         if isinstance(shape, np.ndarray):  # need if no keyword is used
             data = shape
             shape = None
@@ -699,12 +696,15 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             _data = data
 
         if ancillary_datasets:
-            for name, ads in ancillary_datasets.items():
-                if ads.shape != _data.shape:
-                    raise ValueError(f'Associated dataset {name} has shape {ads.shape} '
+            for anc_name, anc_ds in ancillary_datasets.items():
+                if not isinstance(anc_ds, h5py.Dataset):
+                    raise TypeError(f'Expected ancillary dataset to be of type h5py.Dataset, '
+                                    f'but got {type(anc_ds)}')
+                if anc_ds.shape != _data.shape:
+                    raise ValueError(f'Associated dataset {anc_name} has shape {anc_ds.shape} '
                                      f'which does not match dataset shape {_data.shape}')
             import json
-            attrs[consts.ANCILLARY_DATASET] = json.dumps(ancillary_datasets)
+            attrs[consts.ANCILLARY_DATASET] = json.dumps({k: v.name for k, v in ancillary_datasets.items()})
 
         _maxshape = kwargs.get('maxshape', shape)
 
@@ -775,8 +775,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 ds.make_scale('')
             elif isinstance(make_scale, str):
                 ds.make_scale(make_scale)
-            else:
-                raise TypeError('Parameter "make_scale" must be a string.')
 
         # attach scales:
         if attach_scales:
@@ -788,13 +786,19 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                         _s = s
                     for ss in _s:
                         if isinstance(ss, h5py.Dataset):
-                            ds.dims[i].attach_scale(ss)
+                            ds_to_attach = ss
                         else:
-                            if ss in self:
-                                ds.dims[i].attach_scale(self[ss])
-                            else:
-                                raise ValueError(f'Cannot assign {ss} to {ds.name} because it seems not '
-                                                 f'to exist!')
+                            ds_to_attach = self[ss]
+
+                        shape_of_axis_i = ds.shape[i]
+                        if ds_to_attach.ndim != 1:
+                            raise ValueError(f'Cannot only attach 1D datasets, but got '
+                                             f'{ds_to_attach.ndim}D dataset {ds_to_attach.name}')
+                        if not shape_of_axis_i == ds_to_attach.shape[0]:
+                            del self[ds.name]
+                            raise ValueError(f'Cannot assign {ds_to_attach.name} to {name} because it has '
+                                             f'different shape {ds_to_attach.shape[0]} than {shape_of_axis_i}')
+                        ds.dims[i].attach_scale(ds_to_attach)
         return ds
 
     def find_one(self, flt: Union[Dict, str],
@@ -875,7 +879,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         Parameters
         ----------
-        csv_filename : Path or list of Path
+        csv_filenames : Path or list of Path
             CSV filename or list of filenames.
             If list is passed, structure must be the same for all
         dimension : Union[int, str], optional=0
@@ -941,6 +945,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             if dimension is None:
                 dimension = ''
             else:
+                if shape:
+                    raise ValueError('shape must be None if dimension is not None')
                 if not isinstance(dimension, (int, str)):
                     raise TypeError(f'Invalid input for dimension: {type(dimension)}. Expected int or str')
                 if isinstance(dimension, int):
@@ -963,6 +969,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 except RuntimeError as e:
                     logger.error(
                         f'Could not read {variable_name} from csv file due to: {e}')
+
+            # attach scale if dimension is set
+            if dimension:
+                for ds, variable_name in zip(datasets, column_names):
+                    if variable_name != dimension:
+                        ds.dims[0].attach_scale(self[dimension])
             return datasets
 
         data = {}
@@ -1204,86 +1216,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         from . import h5yaml
         h5yaml.H5Yaml(yaml_filename).write(self)
 
-    def get_by_attribute(self, attribute_name, attribute_value=None,
-                         h5type=None, recursive=True) -> List[Union[h5py.Dataset, h5py.Group]]:
-        """Return the object(s) (dataset or group) with a certain attribute name
-        and if specified a specific value.
-        Via h5type it can be filtered for only datasets or groups
-
-        Parameters
-        ----------
-        attribute_name: str
-            Name of the attribute
-        attribute_value: any, default=None
-            Value of the attribute. If None, the value is not checked
-        h5type: str, default=None
-            If specified, looking only for groups or datasets.
-            To look only for groups, pass 'group' or 'grp'.
-            To look only for datasets, pass 'dataset' or 'ds'.
-            Default is None, which looks in both object types.
-        recursive: bool, default=True
-            If True, scans recursively through all groups below current.
-
-        Returns
-        ------
-        names: List[h5py.Dataset|h5py.Group]
-            List of dataset and/or group objects
-        """
-        names = []
-
-        def _get_grp(_, node):
-            if isinstance(node, h5py.Group):
-                if attribute_name in node.attrs:
-                    if attribute_value is None:
-                        names.append(node)
-                    else:
-                        if node.attrs[attribute_name] == attribute_value:
-                            names.append(node)
-
-        def _get_ds(_, node):
-            if isinstance(node, h5py.Dataset):
-                if attribute_name in node.attrs:
-                    if attribute_value is None:
-                        names.append(node)
-                    else:
-                        if node.attrs[attribute_name] == attribute_value:
-                            names.append(node)
-
-        def _get_ds_grp(_, node):
-            if attribute_name in node.attrs:
-                if attribute_value is None:
-                    names.append(node)
-                else:
-                    if node.attrs[attribute_name] == attribute_value:
-                        names.append(node)
-
-        if not recursive:
-            if h5type is None:
-                for ds in self.values():
-                    if attribute_name in ds.attrs:
-                        if ds.attrs[attribute_name] == attribute_value:
-                            names.append(ds)
-            elif h5type.lower() in ('dataset', 'ds'):
-                for ds in self.values():
-                    if isinstance(ds, h5py.Dataset):
-                        if attribute_name in ds.attrs:
-                            if ds.attrs[attribute_name] == attribute_value:
-                                names.append(ds)
-            elif h5type.lower() in ('group', 'grp', 'gr'):
-                for ds in self.values():
-                    if isinstance(ds, h5py.Group):
-                        if attribute_name in ds.attrs:
-                            if ds.attrs[attribute_name] == attribute_value:
-                                names.append(ds)
-        else:
-            if h5type is None:
-                self.visititems(_get_ds_grp)
-            elif h5type.lower() in ('dataset', 'ds'):
-                self.visititems(_get_ds)
-            elif h5type.lower() in ('group', 'grp', 'gr'):
-                self.visititems(_get_grp)
-        return names
-
     def _get_obj_names(self, obj_type, recursive):
         """Return all names of specified object type
         in this group and if recursive==True also
@@ -1302,15 +1234,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     def get_group_names(self, recursive=True):
         """Return all group names in this group and if recursive==True also
         all below"""
-        if recursive is False:
-            return self.groupnames
         return self._get_obj_names(h5py.Group, recursive)
 
     def get_dataset_names(self, recursive=True):
         """Return all dataset names in this group and if recursive==True also
         all below"""
-        if recursive is False:
-            return self.datasetnames
         return self._get_obj_names(h5py.Dataset, recursive)
 
     def dump(self,
@@ -1346,15 +1274,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     dumps = sdump
 
 
-# H5Group is depreciated
-class H5Group(Group):
-    """Inherited from Group. Is depreciated. Use Group instead"""
-
-    def __init__(self, _id):
-        warnings.warn('H5Group is depreciated. Use Group instead', DeprecationWarning)
-        super(H5Group, self).__init__(self, _id)
-
-
 class DatasetValues:
     """helper class to work around xarray"""
 
@@ -1368,12 +1287,12 @@ class DatasetValues:
         return self.h5dataset.__setitem__(args, val)
 
 
-def only1d(obj):
+def only_0d_and_1d(obj):
     """Decorator to check if the dataset is 1D"""
 
     def wrapper(*args, **kwargs):
-        if args[0].ndim != 1:
-            raise ValueError('Only applicable to 1D datasets!')
+        if args[0].ndim > 1:
+            raise ValueError('Only applicable to 0D and 1D datasets!')
 
     return obj
 
@@ -1381,46 +1300,57 @@ def only1d(obj):
 class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     """Inherited Dataset group of the h5py package"""
 
-    @only1d
+    @only_0d_and_1d
     def __lt__(self, other: Union[int, float]):
         if isinstance(other, (int, float)):
-            data = self.values[:]
+            data = self.values[()]
             if data.ndim == 1:
                 return np.where(data < other)[0]
-            return np.where(data < other)
+            return data < other
+        # to sort lists of datasets:
         return self.name < other.name
 
-    @only1d
-    def __le__(self, value: Union[int, float]):
-        data = self.values[:]
+    @only_0d_and_1d
+    def __le__(self, other: Union[int, float]):
+        if not isinstance(other, (int, float)):
+            raise ValueError('Can only compare to floats and integers!')
+        data = self.values[()]
         if data.ndim == 1:
-            return np.where(data <= value)[0]
-        return np.where(data <= value)
+            return np.where(data <= other)[0]
+        return data <= other
 
-    @only1d
-    def __gt__(self, value: Union[int, float]):
-        data = self.values[:]
+    @only_0d_and_1d
+    def __gt__(self, other: Union[int, float]):
+        if not isinstance(other, (int, float)):
+            raise ValueError('Can only compare to floats and integers!')
+        data = self.values[()]
         if data.ndim == 1:
-            return np.where(data > value)[0]
-        return np.where(data > value)
+            return np.where(data > other)[0]
+        return data > other
 
-    @only1d
-    def __ge__(self, value: Union[int, float]):
-        data = self.values[:]
+    @only_0d_and_1d
+    def __ge__(self, other: Union[int, float]):
+        if not isinstance(other, (int, float)):
+            raise ValueError('Can only compare to floats and integers!')
+        data = self.values[()]
         if data.ndim == 1:
-            return np.where(data >= value)[0]
-        return np.where(data >= value)
+            return np.where(data >= other)[0]
+        return data >= other
 
-    @only1d
-    def __eq__(self, other):
-        if isinstance(other, (int, float)):
-            data = self.values[:]
-            if data.ndim == 1:
-                return np.where(data == other)[0]
-            return np.where(data == other)
+    @only_0d_and_1d
+    def __eq__(self, other: Union[int, float, str, h5py.Dataset]):
+        if isinstance(other, h5py.Dataset):
+            return self.id == other.id
         if isinstance(other, str):
             return self.name == other
-        return self.id == other.id
+
+        if isinstance(other, (int, float)):
+            data = self.values[()]
+            if data.ndim == 1:
+                return np.where(data == other)[0]
+            return data == other
+
+        raise ValueError(f'Unexpected type to compare to: "{type(other)}"')
 
     @with_phil
     def __hash__(self):
@@ -1453,27 +1383,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         Group
             Root group object.
         """
-
-        def get_root(p):
-            """get the root parent"""
-            global found
-            found = p.parent
-
-            def search(_parent):
-                """recursive search function"""
-                global found
-                parent = _parent.parent
-                if parent.name == '/':
-                    found = parent
-                else:
-                    search(parent)
-
-            search(p)
-            return found
-
-        if self.name == '/':
-            return self._h5grp(self)
-        return self._h5grp(get_root(super().parent))
+        return self.parent.rootparent
 
     @property
     def basename(self) -> str:
@@ -1557,8 +1467,9 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         a new dataset is created first!"""
         return self.parent.modify_dataset_properties(self, name=new_name)
 
-    def coords(self):
-        return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims}
+    def coords(self) -> Dict[str, "Dataset"]:
+        """Return a dictionary of the coordinates of the dataset. The dictionary"""
+        return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
     def isel(self, **coords) -> xr.DataArray:
         """Index selection by providing the coordinate name.

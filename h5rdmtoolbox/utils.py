@@ -22,6 +22,10 @@ DEFAULT_LOGGING_LEVEL = logging.INFO
 class ToolboxLogger(logging.Logger):
     """Wrapper class for logging.Logger to add a setLevel method"""
 
+    def __init__(self, name, level=logging.NOTSET, directory=None):
+        super().__init__(name, level)
+        self._directory = directory
+
     def setLevel(self, level):
         """change the log level which displays on the console"""
         old_level = self.handlers[1].level
@@ -37,7 +41,7 @@ def create_tbx_logger(name, logdir=None) -> ToolboxLogger:
 
     _logdir.mkdir(parents=True, exist_ok=True)
 
-    _logger = ToolboxLogger(logging.getLogger(name))
+    _logger = ToolboxLogger(logging.getLogger(name), directory=_logdir)
 
     _formatter = logging.Formatter(
         '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -368,15 +372,17 @@ class DocStringParser:
     @staticmethod
     def parse_docstring(docstring):
         """Parses a docstring into abstract, parameters, returns and notes"""
-        if not docstring:
-            return {}
-        lines = docstring.strip().split('\n')
-
-        current_section = None
         abstract = None
         kw = []
         rkw = []
         notes_lines = []
+
+        if not docstring:
+            return abstract, kw, rkw, notes_lines
+
+        lines = docstring.strip().split('\n')
+
+        current_section = None
         nlines = len(lines)
         for iline, line in enumerate(lines):
             line = line.strip()
@@ -426,78 +432,3 @@ class DocStringParser:
                     rkw.append(current_ret_param)
 
         return abstract, kw, rkw, notes_lines
-
-
-def download_zenodo_file(doi: int, name: str = None,
-                         timeout: int = None):
-    """Downloads a file from Zenodo
-
-    Parameters
-    ----------
-    doi: int
-        The DOI of the Zenodo record
-    name: str, optional=None
-        The name of the file to download.
-        If None, the first file in the record will be downloaded
-    timeout: int, optional=5
-        The timeout in seconds for the request
-
-    Returns
-    -------
-    filename: str
-        The path to the downloaded file
-    """
-    from . import UserDir
-    doi = str(doi)
-    if doi.startswith('https://zenodo.org/record/'):
-        doi = doi.split('/')[-1]
-
-    filename = UserDir['standard_name_tables'] / f'{doi}.yaml'
-
-    if filename.exists():
-        return filename
-
-    if not has_internet_connection():
-        raise RuntimeError('The standard name table cannot be downloaded. Please check your internet connection.')
-
-    base_url = "https://zenodo.org/api"
-    record_url = f"{base_url}/records/{doi}"
-
-    # Get the record metadata
-    response = requests.get(record_url, timeout=timeout)
-    if response.status_code != 200:
-        raise ValueError(f"Unable to retrieve record metadata. Status code: {response.status_code}")
-
-    record_data = response.json()
-
-    # Find the file link
-    if 'files' not in record_data:
-        raise ValueError("Error: No files found in the record.")
-
-    files = record_data['files']
-    if len(files) > 1 and name is None:
-        raise ValueError('More than one file found. Specify the name. '
-                         f'Must be one of these: {[f["key"] for f in files]}')
-    if name is not None:
-        for f in files:
-            if f['key'] == name:
-                file_data = f
-                break
-    else:
-        file_data = files[0]  # Assuming you want the first file
-
-    if 'links' not in file_data or 'self' not in file_data['links']:
-        raise ValueError("Unable to find download link for the file.")
-
-    download_link = file_data['links']['self']
-
-    # Download the file
-    response = requests.get(download_link, stream=True, timeout=timeout)
-    if response.status_code != 200:
-        raise ValueError(f"Unable to download the file. Status code: {response.status_code}")
-
-    with open(filename, 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
-
-    return filename

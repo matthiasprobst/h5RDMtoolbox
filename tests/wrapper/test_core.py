@@ -1,5 +1,6 @@
 import datetime
 import h5py
+import json
 import numpy as np
 import pandas as pd
 import pathlib
@@ -104,6 +105,15 @@ class TestCore(unittest.TestCase):
             dset = grp.create_dataset('test', data=1)
             self.assertEqual(dset.rootparent, h5['/'])
 
+    def test_basename(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', data=np.arange(10))
+            self.assertEqual(h5['ds'].basename, 'ds')
+            h5.create_dataset('a/b/ds', data=np.arange(10))
+            self.assertEqual(h5['a/b/ds'].basename, 'ds')
+            self.assertEqual(h5['a'].basename, 'a')
+            self.assertEqual(h5['a/b'].basename, 'b')
+
     def test_write_iso_timestamp(self):
         with h5tbx.File() as h5:
             now = datetime.now()
@@ -113,12 +123,14 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(TypeError):
                 h5.write_iso_timestamp('timestamp', dt='now', overwrite=True)
 
-    def test_from_csv(self):
+    def test_create_datasets_from_csv(self):
         df = pd.DataFrame({'x': [1, 5, 10, 0], 'y': [-3, 20, 0, 11.5]})
         csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
         df.to_csv(csv_filename1, index=None)
 
         with h5tbx.File() as h5:
+            with self.assertRaises(ValueError):
+                h5.create_datasets_from_csv(csv_filenames=csv_filename1, combine_opt='invlaid')
             h5.create_datasets_from_csv(csv_filenames=csv_filename1)
             self.assertEqual(h5['x'].shape, (4,))
             self.assertEqual(h5['y'].shape, (4,))
@@ -132,22 +144,40 @@ class TestCore(unittest.TestCase):
             np.testing.assert_equal(h5['x'][:], np.array([1, 5, 10, 0]))
             np.testing.assert_equal(h5['y'][:], np.array([-3, 20, 0, 11.5]))
 
-        csv_filename2 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
-        df.to_csv(csv_filename2, index=None)
+        with h5tbx.File() as h5:
+            x, y = h5.create_dataset_from_csv(csv_filename=csv_filename1, shape=(2, 2), dimension=None)
+            self.assertEqual(x.shape, (2, 2))
+            self.assertEqual(y.shape, (2, 2))
+            np.testing.assert_equal(x[:], df['x'].values.reshape((2, 2)))
+            np.testing.assert_equal(y[:], df['y'].values.reshape((2, 2)))
 
+        with h5tbx.File() as h5:
+            x, y = h5.create_dataset_from_csv(csv_filename=csv_filename1, dimension='x')
+            self.assertTrue(x.is_scale)
+            self.assertFalse(y.is_scale)
+            self.assertEqual(h5['x'], h5['y'].dims[0][0])
+
+        csv_filename2 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
+
+        df2 = -1 * df
+        df2.to_csv(csv_filename2, index=None)
+
+        # test concatenate
         with h5tbx.File() as h5:
             h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
                                         combine_opt='concatenate')
             self.assertEqual(h5['x'].shape, (8,))
             self.assertEqual(h5['y'].shape, (8,))
 
+        # test stack
         with h5tbx.File() as h5:
             h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
-                                        axis=0)
+                                        combine_opt='stack', axis=0)
             self.assertEqual(h5['x'].shape, (2, 4))
-            self.assertEqual(h5['y'].shape, (2, 4))
-            np.testing.assert_equal(h5['x'][:], np.array([[1, 5, 10, 0], [1, 5, 10, 0]]))
-            np.testing.assert_equal(h5['y'][:], np.array([[-3, 20, 0, 11.5], [-3, 20, 0, 11.5]]))
+            np.testing.assert_equal(df['x'].values, h5['x'].values[0, :])
+            np.testing.assert_equal(df2['x'].values, h5['x'].values[1, :])
+            np.testing.assert_equal(df['y'].values, h5['y'].values[0, :])
+            np.testing.assert_equal(df2['y'].values, h5['y'].values[1, :])
 
         with h5tbx.File() as h5:
             h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
@@ -199,6 +229,9 @@ class TestCore(unittest.TestCase):
             ds = h5.create_dataset('ds', shape=(10, 20, 30))
             with self.assertRaises(ValueError):
                 h5['/'].create_group('ds')
+
+            with self.assertRaises(ValueError):
+                h5['/'].create_group('name')
 
     def test_coord_selection(self):
         with h5tbx.File() as h5:
@@ -352,8 +385,12 @@ class TestCore(unittest.TestCase):
             grp = h5.create_group('grp', attrs={'a': 'b'}, overwrite=True)
             self.assertTrue('a' in grp.attrs)
 
-            h5.create_string_dataset('str', 'test')
+            with self.assertRaises(TypeError):
+                h5.create_string_dataset('str', np.array([1, 2, 3]))
+
+            h5.create_string_dataset('str', 'test', attrs={'a': 'b'})
             self.assertTrue('str' in h5)
+            self.assertEqual(h5['str'].attrs['a'], 'b')
             self.assertTrue(h5['str'].name, '/str')
             self.assertEqual(h5['str'][()], 'test')
 
@@ -538,3 +575,113 @@ class TestCore(unittest.TestCase):
             data = ds[:]
 
         self.assertEqual(data[0:2].flag.where(1, 0).shape, (2,))
+
+    def test_create_dataset_from_xr(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', data=xr.DataArray([1, 2, 3], dims=['time'], coords={'time': [1, 2, 3]}),
+                              compression='gzip', compression_opts=1)
+            self.assertEqual(1, h5['ds'].compression_opts)
+            h5.create_dataset('ds0', data=xr.DataArray(0),
+                              compression='gzip', compression_opts=1)  # will be ignored
+            self.assertEqual(0, h5['ds0'].ndim)
+
+            h5.create_dataset('ds_similar', data=xr.DataArray([1, 2, 3], dims=['time'], coords={'time': [1, 2, 3]}),
+                              compression='gzip', compression_opts=2)
+            self.assertEqual(2, h5['ds_similar'].compression_opts)
+
+            h5.create_dataset('ds_coordinate', data=xr.DataArray([1, 2, 3], dims=['ds0'], coords={'z': 0}))
+            self.assertEqual('z', h5['ds_coordinate'].attrs['COORDINATES'][0])
+
+            with self.assertRaises(ValueError):
+                h5.create_dataset('ds', data=xr.DataArray([1, 2, 3], dims=['time'], coords={'time': [1, 4, 3]}))
+            self.assertEqual(h5['ds'],
+                             h5.create_dataset('ds',
+                                               data=xr.DataArray([1, 2, 3], dims=['time'], coords={'time': [1, 2, 3]}),
+                                               overwrite=False))
+            h5.create_dataset('ds', data=xr.DataArray([1, 2, 30], dims=['time'], coords={'time': [1, 2, 3]}),
+                              overwrite=True)
+            self.assertEqual((3,), h5['ds'].shape)
+            self.assertEqual(np.dtype('int32'), h5['ds'].dtype)
+            self.assertEqual('time', h5['ds'][()].dims[0])
+            np.testing.assert_equal(np.array([1, 2, 3]), h5['time'][()].values)
+            np.testing.assert_equal(np.array([1, 2, 3]), h5['time'].values[()])
+            np.testing.assert_equal(np.array([1, 2, 30]), h5['ds'][()].values)
+            np.testing.assert_equal(np.array([1, 2, 30]), h5['ds'].values[()])
+
+            with self.assertRaises(ValueError):
+                h5.create_dataset('name', data=1)
+
+            h5.create_dataset('ds2', data=xr.DataArray([10, 2, 3], dims=['time'], coords={'time': [1, 2, 3]},
+                                                       attrs={'units': 'm'}))
+            self.assertEqual((3,), h5['ds2'].shape)
+            self.assertEqual(np.dtype('int32'), h5['ds2'].dtype)
+            self.assertEqual('time', h5['ds2'][()].dims[0])
+            np.testing.assert_equal(np.array([1, 2, 3]), h5['time'][()].values)
+            np.testing.assert_equal(np.array([1, 2, 3]), h5['time'].values[()])
+            np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'][()].values)
+            np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'].values[()])
+            self.assertEqual('m', h5['ds2'].attrs['units'])
+
+    def test_create_dataset_scale_issues(self):
+        with h5tbx.File() as h5:
+            with self.assertRaises(ValueError):
+                h5.create_dataset('flag', data=[1, 0, 1], dtype='int8', make_scale=True, attach_scale='time')
+
+    def test_coords(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attach_scales='time')
+            h5.create_dataset('vel_no_scale', data=[1.5, 2.5, 3.5])
+            self.assertIsInstance(h5['vel'].coords(), dict)
+            self.assertEqual('time', list(h5['vel'].coords().keys())[0])
+            self.assertEqual({'time': h5['time']}, h5['vel'].coords())
+            self.assertEqual({}, h5['vel_no_scale'].coords())
+
+    def test_isel_sel(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attach_scales='time')
+            np.testing.assert_equal(h5['vel'].values[0:2], h5['vel'].isel(time=slice(0, 2)).values)
+            self.assertEqual(3.5, float(h5['vel'].isel(time=2)))
+            with self.assertRaises(KeyError):
+                h5['vel'].isel(x=2)
+            self.assertEqual(2.5, float(h5['vel'].sel(time=2)))
+            self.assertEqual(2.5, float(h5['vel'].sel(time=2.0)))
+            with self.assertRaises(ValueError):
+                h5['vel'].sel(time=1.2)
+            with self.assertRaises(NotImplementedError):
+                h5['vel'].sel(time=1.2, method='invalid')
+            self.assertEqual(1.5, float(h5['vel'].sel(time=1.2, method='nearest')))
+
+    def test_create_dataset_with_ancillary_ds(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('flag', data=[1, 0, 1], dtype='int8')
+            self.assertEqual(h5['flag'].dtype, np.dtype('int8'))
+            h5.create_dataset('flag2', data=[0, 0], dtype='int8', make_scale='the_flag_2')
+
+            with self.assertRaises(TypeError):
+                h5.create_dataset(name='vel', data=[1.5, 2.5, 3.5], ancillary_datasets={'flag': 'flag', })
+            with self.assertRaises(ValueError):
+                h5.create_dataset(name='vel', data=[1.5, 2.5, 3.5], ancillary_datasets={'flag': h5['flag2'], })
+            h5.create_dataset(name='vel', data=[1.5, 2.5, 3.5], ancillary_datasets={'flag': h5['flag'], })
+            self.assertIsInstance(h5['vel'].ancillary_datasets, dict)
+            self.assertEqual(h5['vel'].ancillary_datasets['flag'], h5['flag'])
+            h5['vel'].attrs['ancillary_datasets'] = json.dumps({'flag2': 'flag2'})
+            self.assertIsInstance(h5['vel'].ancillary_datasets, dict)
+            self.assertEqual(h5['vel'].ancillary_datasets['flag'], h5['flag'])
+
+            h5['vel'].attach_ancillary_dataset(h5['flag'])
+            self.assertIsInstance(h5['vel'].ancillary_datasets, dict)
+            self.assertEqual(h5['vel'].ancillary_datasets['flag'], h5['flag'])
+            with self.assertRaises(ValueError):
+                h5['vel'].attach_ancillary_dataset(h5['flag2'])
+
+            with self.assertRaises(ValueError):
+                # wrong shape
+                h5.create_dataset(name='vel2', data=[1.5, 2.5, 4.5], attach_scale='flag2')
+            h5.create_dataset(name='vel2', data=[1.5, 2.5], attach_scale='flag2')
+            self.assertEqual(['the_flag_2'], list(h5['vel2'].dims[0].keys()))
+
+            h5.create_dataset(name='3D', data=np.random.rand(2, 3, 4), make_scale=True)
+            with self.assertRaises(ValueError):
+                h5.create_dataset('vel3', data=[1.5, 2.5], attach_scale='3D')

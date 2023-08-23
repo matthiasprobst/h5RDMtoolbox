@@ -69,7 +69,7 @@ def get_html_repr(orcid_id: str) -> str:
 </a>"""
 
 
-ORCID_PATTERN = r'(?:https:\/\/orcid.org\/)?\d{4}-\d{4}-\d{4}-\d{3}[0-9X]'
+ORCID_PATTERN = r'(?:https:\/\/orcid.org\/)?\d{4}-\d{4}-\d{4}-\d{3}[0-9X]{1}'
 
 
 def is_valid_orcid_pattern(orcid_str: str) -> bool:

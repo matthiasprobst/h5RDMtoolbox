@@ -13,6 +13,10 @@ class TestH5Ext(unittest.TestCase):
         with core.File() as h52:
             h52.create_external_link('ds', h51.hdf_filename, '/ds')
             self.assertIsInstance(h52['ds'], core.Dataset)
+            with self.assertRaises(ValueError):
+                h52.create_external_link('ds', h51.hdf_filename, '/ds')
+            h52.create_external_link('ds', h51.hdf_filename, '/ds', overwrite=True)
+            self.assertIsInstance(h52['ds'], core.Dataset)
 
         with h5ext.ExternalLink(h52.hdf_filename, 'ds') as ext_ds:
             self.assertIsInstance(ext_ds, core.Dataset)
