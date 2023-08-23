@@ -640,6 +640,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             ancillary_datasets = {}
 
         if isinstance(data, xr.DataArray):
+            if dtype:
+                data = data.astype(dtype)
             attrs.update(data.attrs)
             data.name = name
 
