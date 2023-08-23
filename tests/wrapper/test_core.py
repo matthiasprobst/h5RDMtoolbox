@@ -612,9 +612,10 @@ class TestCore(unittest.TestCase):
                 h5.create_dataset('name', data=1)
 
             h5.create_dataset('ds2', data=xr.DataArray([10, 2, 3], dims=['time'], coords={'time': [1, 2, 3]},
-                                                       attrs={'units': 'm'}))
+                                                       attrs={'units': 'm'}),
+                              dtype='int64')
             self.assertEqual((3,), h5['ds2'].shape)
-            self.assertEqual(np.dtype('int32'), h5['ds2'].dtype)
+            self.assertEqual('int64', h5['ds2'].dtype)
             self.assertEqual('time', h5['ds2'][()].dims[0])
             np.testing.assert_equal(np.array([1, 2, 3]), h5['time'][()].values)
             np.testing.assert_equal(np.array([1, 2, 3]), h5['time'].values[()])
