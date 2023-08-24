@@ -5,19 +5,30 @@
 ![DOCS](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/branch/dev/graph/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
 
+
+
+
 *Note, that the project is still beta!*
 
 The `h5rdmtoolbox` is a python package that provides a set of tools to **efficiently** work with HDF5 files. It
 allows **create** and **apply metadata standards** to data science projects based on HDF5 and ultimately enhance the
 **data quality**.
 
+The figure below illustrates the main features of the toolbox as it supports scientists handling research data 
+during its **lifecycle**.
+
+<img src="docs/_static/new_icon_with_text.svg" width="600">
+
 Key features are:
 
 - **Efficient** and fast processing and visualization of datasets
-- User-definable **standardization of metadata** to ensure data consistency and shareability
+- User-definable **standardization of metadata** to ensure data consistency and share-ability
 - **Database solution** for HDF5 files
 
+
+
 Please find a comprehensive documentation with examples [here](h5rdmtoolbox.readthedocs.io/en/latest/).
+
 
 
 ## Installation
