@@ -334,7 +334,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
         for k, v in h5obj.attrs.raw.items():
-            if k not in self.ignore_attrs:
+            if k not in self.ignore_attrs and not k.isupper():
                 _html_ds_attrs += self.__attrs__(k, v)
         # close attribute section
         _html_ds_attrs += """\n                </ul>"""
