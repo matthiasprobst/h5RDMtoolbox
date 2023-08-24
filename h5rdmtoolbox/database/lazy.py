@@ -3,25 +3,6 @@ import h5py
 from typing import Union, List, Dict
 
 
-class LAttributeManager:
-    """Lazy Attribute Manager"""
-
-    def __init__(self, attrs: Dict):
-        self.attrs = attrs
-
-    def __getitem__(self, item):
-        return self.attrs[item]
-
-    def __repr__(self):
-        return repr(self.attrs)
-
-    def keys(self):
-        return self.attrs.keys()
-
-    def values(self):
-        return self.attrs.values()
-
-
 class LGroup:
     """Lazy Group"""
 
@@ -51,9 +32,9 @@ class LGroup:
         return self.parent.split('/')[1:]  # first is '', so skip
 
     @property
-    def attrs(self) -> LAttributeManager:
+    def attrs(self) -> Dict:
         """Return the attributes of the group as a LAttributeManager object"""
-        return LAttributeManager(self._attrs)
+        return self._attrs
 
 
 class LDataset(LGroup):
@@ -72,7 +53,8 @@ class LDataset(LGroup):
         self._file = None
 
     def __repr__(self):
-        return f'<LDataset "{self.name}" in "{self.filename}">'
+        attrs_str = ', '.join({f'{k}={v}' for k, v in self.attrs.items() if not k.isupper()})
+        return f'<LDataset "{self.name}" in "{self.filename}" attrs={attrs_str}>'
 
     def __getitem__(self, item):
         from .. import File

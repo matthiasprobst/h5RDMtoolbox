@@ -6,7 +6,6 @@ import unittest
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Files
 from h5rdmtoolbox.database.files import H5Objects, DatasetValues
-from h5rdmtoolbox.database import Folder
 from h5rdmtoolbox.wrapper.core import File
 
 
@@ -130,7 +129,7 @@ class TestFileQuery(unittest.TestCase):
             h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(a=2))
         r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 80}})
         self.assertIsInstance(r, h5tbx.database.lazy.LDataset)
-        self.assertIsInstance(r.attrs, h5tbx.database.lazy.LAttributeManager)
+        self.assertIsInstance(r.attrs, dict)
         self.assertEqual(r.attrs['a'], 99)
         self.assertEqual(r.attrs.keys(), r[()].attrs.keys())
         self.assertEqual(list(r.attrs.values()), list(r[()].attrs.values()))
@@ -142,7 +141,7 @@ class TestFileQuery(unittest.TestCase):
 
         r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 0}}, '$group')
         self.assertIsInstance(r, h5tbx.database.lazy.LGroup)
-        self.assertIsInstance(r.attrs, h5tbx.database.lazy.LAttributeManager)
+        self.assertIsInstance(r.attrs, dict)
         self.assertEqual(r.name, '/g1')
         self.assertEqual(r.basename, 'g1')
 
