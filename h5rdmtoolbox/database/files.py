@@ -3,7 +3,6 @@ import numpy as np
 import os
 import pandas as pd
 import pathlib
-import warnings
 from itertools import chain
 from typing import List, Union, Dict, Tuple
 
@@ -61,14 +60,12 @@ class DatasetValues:
 class Files:
     """File-like interface for multiple HDF Files"""
 
-    def __init__(self, filenames: List[Union[str, pathlib.Path]], file_instance=None, **kwargs):
+    def __init__(self, filenames: List[Union[str, pathlib.Path]], file_instance=None):
         """
         Parameters
         ----------
         filenames: List[Union[str, pathlib.Path]]
             A list of hdf5 filenames or path to a directory containing hdf files.
-            If a directory is passed, the glob-str can be specified via **kwargs.
-            Default is glob='*.hdf'.
         file_instance: h5py.File
             The HDF5 file instance
         """
@@ -76,33 +73,13 @@ class Files:
             from . import File
             file_instance = File
 
-        def _check_dir(fname: pathlib.Path):
-            if not fname.is_dir():
-                raise ValueError('A single value passed for the parameter "filenames" must be '
-                                 'a directory.')
-            return True
-
-        isdir = False
         if isinstance(filenames, (str, pathlib.Path)):
-            filenames = pathlib.Path(filenames)
-            # must be a directory
-            isdir = _check_dir(filenames)
-        elif isinstance(filenames, (list, tuple)):
-            if len(filenames) == 1:
-                filenames = pathlib.Path(filenames[0])
-                # must be a directory
-                isdir = _check_dir(filenames)
+            filenames = (filenames,)
 
-        if isdir:
-            _filenames = list(pathlib.Path(filenames).glob(kwargs.pop('glob', '*.hdf')))
-            if len(_filenames) == 0:
-                raise FileNotFoundError(f'No files found in directory: {filenames}')
-            self._list_of_filenames = _filenames
-        else:
-            self._list_of_filenames = [pathlib.Path(f) for f in filenames]
-            for fname in self._list_of_filenames:
-                if fname.is_dir():
-                    raise ValueError(f'Expecting filenames not directory names but "{fname}" is.')
+        self._list_of_filenames = [pathlib.Path(f) for f in filenames]
+        for fname in self._list_of_filenames:
+            if fname.is_dir():
+                raise ValueError(f'Expecting filenames not directory names but "{fname}" is.')
 
         self._opened_files = {}
         self._file_instance = file_instance
@@ -185,20 +162,6 @@ class Files:
                         ignore_attribute_error=ignore_attribute_error) for
                  v in self.values()]
         return list(chain.from_iterable(found))
-
-    def pfind(self, flt: Union[Dict, str], objfilter=None,
-              rec: bool = True, ignore_attribute_error: bool = False,
-              nproc: int = None):
-        """Call find in parallel as multiple files can be searched at once"""
-        import h5rdmtoolbox as h5tbx
-        if nproc is None or nproc > 1:
-            if h5tbx.get_config('parallel_find'):
-                from . import parallel
-                return parallel.find(self._list_of_filenames, flt, objfilter, rec, ignore_attribute_error,
-                                     nproc=nproc)
-            warnings.warn('Parallel find is disabled in your session settings. To enable it, call'
-                          'set_config(parallel_find=True). Falling back to "normal" find()')
-        return self.find(flt, objfilter, rec, ignore_attribute_error)
 
     def keys(self):
         """Return all opened filename stems"""

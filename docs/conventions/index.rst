@@ -52,5 +52,6 @@ If you are new here, best is you start with [Introduction to Standard Attributes
 
     standard_attributes.ipynb
     conventions.ipynb
-    standard_names.ipynb
+    standard_name_convention.ipynb
+    standard_name_interface.ipynb
     layouts.ipynb

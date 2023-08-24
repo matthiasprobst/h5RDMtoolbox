@@ -6,6 +6,7 @@ import unittest
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Files
 from h5rdmtoolbox.database.files import H5Objects, DatasetValues
+from h5rdmtoolbox.database import Folder
 from h5rdmtoolbox.wrapper.core import File
 
 
@@ -80,11 +81,8 @@ class TestFileQuery(unittest.TestCase):
                     self.assertEqual(h51.ds, res)
 
                 with self.assertRaises(ValueError):
-                    with Files(fnames[0]):
-                        pass
-
-                with Files(pathlib.Path(fnames[0]).parent) as h5s:
-                    self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
+                    with Files(pathlib.Path(fnames[0]).parent) as h5s:
+                        self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
 
     def test_numerical(self):
         with h5tbx.File() as h5:
@@ -215,45 +213,3 @@ class TestFileQuery(unittest.TestCase):
         with File() as h52:
             h52.create_dataset('ds', data=(4, 5, 6), attrs=dict(units='', long_name='long name 2'))
             fnames.append(h52.filename)
-
-    def test_pfind(self):
-        folder_dir = h5tbx.utils.generate_temporary_directory()
-        sub_folder = folder_dir / 'sub_folder'
-        sub_folder.mkdir()
-
-        with h5tbx.File(folder_dir / 'f1.hdf', 'w') as h5:
-            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
-            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
-            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
-
-        with h5tbx.File(folder_dir / 'f2.hdf', 'w') as h5:
-            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
-            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
-            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
-
-        with h5tbx.File(folder_dir / sub_folder / 'f3.hdf', 'w') as h5:
-            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
-            h5.create_dataset('ds2', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
-            h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
-
-        with self.assertRaises(ValueError):
-            h5tbx.database.Folder('here')
-        fd = h5tbx.database.Folder(folder_dir, rec=False)
-
-        res = fd.find({'long_name': 'long name 1'})
-        self.assertEqual(2, len(res))
-
-        pres = fd.pfind({'long_name': 'long name 1'})
-
-        self.assertEqual(sorted([r.filename for r in res]), sorted([r.filename for r in pres]))
-        self.assertEqual(sorted([r.name for r in res]), sorted([r.name for r in pres]))
-
-        pres = fd.pfind({'long_name': 'long name 1'}, nproc=2)
-
-        self.assertEqual(sorted([r.filename for r in res]), sorted([r.filename for r in pres]))
-        self.assertEqual(sorted([r.name for r in res]), sorted([r.name for r in pres]))
-
-        pres = fd.pfind({'long_name': 'long name 1'}, nproc=1)
-
-        self.assertEqual(sorted([r.filename for r in res]), sorted([r.filename for r in pres]))
-        self.assertEqual(sorted([r.name for r in res]), sorted([r.name for r in pres]))

@@ -90,7 +90,7 @@ You may install optional dependencies:
    :caption: Documentation
 
     Getting Started <gettingstarted/index>
-    Wrapper <wrapper/index>
+    Wrapper around h5py <wrapper/index>
     Conventions <conventions/index>
     Database <database/index>
     HowTo <howto/index>

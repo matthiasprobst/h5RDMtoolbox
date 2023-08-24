@@ -86,59 +86,55 @@ atexit_verbose = False
 @atexit.register
 def clean_temp_data(full: bool = False):
     """cleaning up the tmp directory"""
-    if atexit_verbose:
-        print('cleaning up tmp directory')
+    from ._user import _user_root_dir
+
     failed_dirs = []
     failed_dirs_file = UserDir['tmp'] / 'failed.txt'
     if full:
-        if UserDir['tmp'].exists():
+        root_tmp = _user_root_dir / 'tmp'
+        if root_tmp.exists():
             try:
-                shutil.rmtree(UserDir['tmp'])
-                UserDir['tmp'].mkdir(exist_ok=True, parents=True)
+                shutil.rmtree(root_tmp)
+                root_tmp.mkdir(exist_ok=True, parents=True)
             except PermissionError as e:
-                print(f'removing tmp folder "{UserDir["tmp"]}" failed due to "{e}".')
+                print(f'removing tmp folder "{root_tmp}" failed due to "{e}".')
         return
 
-    _tmp_session_dir = UserDir["tmp"]
-    if _tmp_session_dir.exists():
-        try:
-            # logger not available anymore
-            # logger.debug(f'Attempting to delete {_tmp_session_dir}')
-            if atexit_verbose:
-                print(f'try deleting tmp in session dir: {_tmp_session_dir}')
-            # for fd in _tmp_session_dir.iterdir():
-            #     if fd.is_file():
-            #         fd.unlink(missing_ok=True)
-            #     else:
-            shutil.rmtree(_tmp_session_dir)
-            # logger.debug(f'Successfully deleted {_tmp_session_dir}')
-        except PermissionError as e:
-            if atexit_verbose:
-                print(f'[!] failed deleting tmp session dir: {_tmp_session_dir}')
-            failed_dirs.append(UserDir['tmp'])
-            if atexit_verbose:
-                print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
-                      f'manually delete the directory.')
-        finally:
-            lines = []
-            if failed_dirs_file.exists():
-                with open(failed_dirs_file, 'r') as f:
-                    lines = f.readlines()
-                    for line in lines:
-                        try:
-                            shutil.rmtree(line.strip())
-                        except Exception:
-                            if pathlib.Path(line).exists():
-                                failed_dirs.append(line)
+    for _tmp_session_dir in [UserDir['tmp'], ]:
+        if atexit_verbose:
+            print(f'cleaning up tmp directory "{_tmp_session_dir}"')
+        if _tmp_session_dir.exists():
+            try:
+                if atexit_verbose:
+                    print(f'try deleting tmp in session dir: {_tmp_session_dir}')
+                shutil.rmtree(_tmp_session_dir)
+            except PermissionError as e:
+                if atexit_verbose:
+                    print(f'[!] failed deleting tmp session dir: {_tmp_session_dir}')
+                failed_dirs.append(UserDir['tmp'])
+                if atexit_verbose:
+                    print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
+                          f'manually delete the directory.')
+            finally:
+                lines = []
+                if failed_dirs_file.exists():
+                    with open(failed_dirs_file, 'r') as f:
+                        lines = f.readlines()
+                        for line in lines:
+                            try:
+                                shutil.rmtree(line.strip())
+                            except Exception:
+                                if pathlib.Path(line).exists():
+                                    failed_dirs.append(line)
 
-            if lines or failed_dirs:
-                with open(failed_dirs_file, 'w') as f:
-                    for fd in failed_dirs:
-                        f.writelines(f'{fd}\n')
-            else:
-                failed_dirs_file.unlink(missing_ok=True)
-    else:
-        logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
+                if lines or failed_dirs:
+                    with open(failed_dirs_file, 'w') as f:
+                        for fd in failed_dirs:
+                            f.writelines(f'{fd}\n')
+                else:
+                    failed_dirs_file.unlink(missing_ok=True)
+        else:
+            logger.debug(f'No user tmp dir not found: {_tmp_session_dir}')
 
 
 xr.set_options(display_expand_data=False)

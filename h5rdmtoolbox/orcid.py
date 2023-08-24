@@ -3,9 +3,7 @@ import appdirs
 import pathlib
 import re
 import requests
-import warnings
 from IPython.display import display, HTML
-
 from typing import Union, List
 
 
@@ -108,7 +106,8 @@ class ORCID(str):
         except requests.exceptions.ConnectionError as e:
             if check_offline:
                 # no internet connection, look in registered ORCIDs
-                warnings.warn('validating the ORCID offline by comparing with registered, known ORCIDs', UserWarning)
+                from . import logger
+                logger.debug('validating the ORCID offline by comparing with registered, known ORCIDs', UserWarning)
                 return known_orcids.exists(self)
             if raise_error:
                 raise Exception(e) from e

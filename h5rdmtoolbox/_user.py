@@ -15,21 +15,25 @@ class DirManger:
     """Directory Manager class"""
 
     def __init__(self):
+        toolbox_tmp_folder = _user_root_dir / 'tmp'
+        toolbox_tmp_folder.mkdir(parents=True, exist_ok=True)
+
+        i = 0
+        tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
+        while tmp_dir.exists():
+            i += 1
+            tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
+        try:
+            tmp_dir.mkdir()
+        except Exception:
+            i += 1
+            tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
+
         self.user_dirs = {'root': _user_root_dir,
-                          'tmp': _user_root_dir / 'tmp',
+                          'tmp': tmp_dir,
                           'layouts': _user_root_dir / 'layouts',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'cache': _user_root_dir / 'cache'}
-
-        user_tmp_dir = self._get_dir('tmp')
-        i_tmp = len(list(user_tmp_dir.glob("tmp*")))
-        session_tmp_dir = user_tmp_dir / f'tmp{i_tmp}'
-        while session_tmp_dir.exists():
-            i_tmp += 1
-            session_tmp_dir = user_tmp_dir / f'tmp{i_tmp}'
-
-        session_tmp_dir.mkdir(parents=True, exist_ok=True)
-        self._session_tmp_dir = session_tmp_dir
 
     def __getitem__(self, item):
         return self._get_dir(item)
