@@ -399,5 +399,5 @@ class TestStandardAttributes(unittest.TestCase):
             local_cv.register()
             h5tbx.use(local_cv)
 
-            with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', mode='r+') as h5:
+            with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical', mode='r+') as h5:
                 h5.standard_name_table = 'https://zenodo.org/record/8266929'

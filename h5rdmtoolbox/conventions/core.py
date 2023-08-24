@@ -244,17 +244,20 @@ class use:
     """Set the configuration parameters."""
 
     def __init__(self, convention_name: Union[str, Convention]):
-        self._current_convention = get_current_convention()
-        _use(convention_name)
+        self._latest_convention = get_current_convention()
+        self._current_convention_name = _use(convention_name)
+
+    def __repr__(self):
+        return f'using("{self._current_convention_name}")'
 
     def __enter__(self):
         return
 
     def __exit__(self, *args, **kwargs):
-        _use(self._current_convention)
+        _use(self._latest_convention)
 
 
-def _use(convention_name: Union[str, Convention]) -> None:
+def _use(convention_name: Union[str, Convention]) -> str:
     """Use a convention by name"""
     if isinstance(convention_name, Convention):
         convention_name = convention_name.name
@@ -271,6 +274,8 @@ def _use(convention_name: Union[str, Convention]) -> None:
     current_convention = get_registered_conventions()[convention_name]
     current_convention._add_signature()
     set_current_convention(current_convention)
+
+    return convention_name
 
 
 def get_registered_conventions() -> Dict:

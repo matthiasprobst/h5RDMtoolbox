@@ -7,7 +7,7 @@
    viewBox="0 0 100 29.999998"
    version="1.1"
    id="svg5"
-   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
    sodipodi:docname="icon4_header.svg"
    inkscape:export-filename="C:\Users\da4323\Documents\programming\GitHub\h5RDMtoolbox\icon.png"
    inkscape:export-xdpi="100"
@@ -32,119 +32,338 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="1.4289282"
-     inkscape:cx="222.19451"
-     inkscape:cy="33.941523"
+     inkscape:cx="76.980775"
+     inkscape:cy="139.61513"
      inkscape:window-width="1920"
      inkscape:window-height="991"
      inkscape:window-x="-9"
-     inkscape:window-y="-9"
+     inkscape:window-y="1341"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
+     inkscape:current-layer="layer1"
+     inkscape:showpageshadow="0"
+     inkscape:deskcolor="#505050">
     <inkscape:grid
        type="xygrid"
        id="grid857"
        originx="-2.9076921"
-       originy="-20.432928" />
+       originy="-20.432928"
+       spacingy="1"
+       spacingx="1"
+       units="mm"
+       visible="false" />
   </sodipodi:namedview>
   <defs
      id="defs2">
-    <linearGradient
-       inkscape:collect="always"
-       id="linearGradient4646-2">
-      <stop
-         style="stop-color:#0000b5;stop-opacity:1"
-         offset="0"
-         id="stop4642" />
-      <stop
-         style="stop-color:#a00000;stop-opacity:1"
-         offset="1"
-         id="stop4644" />
-    </linearGradient>
-    <linearGradient
-       inkscape:collect="always"
-       xlink:href="#linearGradient4646-2"
-       id="linearGradient38986"
-       x1="3.9687498"
-       y1="1.3229177"
-       x2="17.197916"
-       y2="17.197918"
-       gradientUnits="userSpaceOnUse"
-       gradientTransform="matrix(1,0,0,0.85714274,0.92262323,23.210363)" />
+    <clipPath
+       id="clip1">
+      <rect
+         x="454"
+         y="271"
+         width="304"
+         height="305"
+         id="rect2" />
+    </clipPath>
+    <clipPath
+       id="clip2">
+      <rect
+         x="454"
+         y="271"
+         width="304"
+         height="305"
+         id="rect3" />
+    </clipPath>
+    <clipPath
+       id="clip3">
+      <rect
+         x="454"
+         y="271"
+         width="304"
+         height="305"
+         id="rect4" />
+    </clipPath>
+    <clipPath
+       id="clip4">
+      <rect
+         x="1052"
+         y="255"
+         width="306"
+         height="304"
+         id="rect5" />
+    </clipPath>
+    <clipPath
+       id="clip5">
+      <rect
+         x="1052"
+         y="255"
+         width="306"
+         height="304"
+         id="rect6" />
+    </clipPath>
+    <clipPath
+       id="clip6">
+      <rect
+         x="1052"
+         y="255"
+         width="306"
+         height="304"
+         id="rect7" />
+    </clipPath>
+    <clipPath
+       id="clip7">
+      <rect
+         x="159"
+         y="828"
+         width="306"
+         height="305"
+         id="rect8" />
+    </clipPath>
+    <clipPath
+       id="clip8">
+      <rect
+         x="178"
+         y="846"
+         width="275"
+         height="275"
+         id="rect9" />
+    </clipPath>
+    <clipPath
+       id="clip9">
+      <rect
+         x="178"
+         y="846"
+         width="275"
+         height="275"
+         id="rect10" />
+    </clipPath>
+    <clipPath
+       id="clip10">
+      <rect
+         x="462"
+         y="1382"
+         width="305"
+         height="307"
+         id="rect11" />
+    </clipPath>
+    <clipPath
+       id="clip11">
+      <rect
+         x="462"
+         y="1382"
+         width="305"
+         height="307"
+         id="rect12" />
+    </clipPath>
+    <clipPath
+       id="clip12">
+      <rect
+         x="462"
+         y="1382"
+         width="305"
+         height="307"
+         id="rect13" />
+    </clipPath>
+    <clipPath
+       id="clip13">
+      <rect
+         x="1359"
+         y="850"
+         width="307"
+         height="305"
+         id="rect14" />
+    </clipPath>
+    <clipPath
+       id="clip14">
+      <rect
+         x="1359"
+         y="850"
+         width="307"
+         height="305"
+         id="rect15" />
+    </clipPath>
+    <clipPath
+       id="clip15">
+      <rect
+         x="1359"
+         y="850"
+         width="307"
+         height="305"
+         id="rect16" />
+    </clipPath>
+    <clipPath
+       id="clip16">
+      <rect
+         x="1037"
+         y="1393"
+         width="303"
+         height="305"
+         id="rect17" />
+    </clipPath>
+    <clipPath
+       id="clip17">
+      <rect
+         x="1037"
+         y="1393"
+         width="303"
+         height="305"
+         id="rect18" />
+    </clipPath>
+    <clipPath
+       id="clip18">
+      <rect
+         x="1037"
+         y="1393"
+         width="303"
+         height="305"
+         id="rect19" />
+    </clipPath>
   </defs>
   <g
      inkscape:label="Ebene 1"
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(-2.9076922,-20.432932)">
-    <rect
-       style="fill:url(#linearGradient38986);fill-opacity:1;stroke:none;stroke-width:0.0601782;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0"
-       id="rect38786"
-       width="15.875"
-       height="15.874998"
-       x="3.5684566"
-       y="23.210363"
-       ry="3.4017851" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:10.5833px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="4.8441095"
-       y="36.673992"
-       id="text6744-0"><tspan
-         sodipodi:role="line"
-         id="tspan6742-3"
-         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
-         x="4.8441095"
-         y="36.673992">h</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:4.93889px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="9.6378355"
-       y="29.520578"
-       id="text6744-5-2"><tspan
-         sodipodi:role="line"
-         id="tspan6742-2-4"
-         style="font-size:4.93889px;fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
-         x="9.6378355"
-         y="29.520578">5</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:3.88056px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="11.043492"
-       y="36.639992"
-       id="text6744-5-9-4"><tspan
-         sodipodi:role="line"
-         id="tspan6742-2-0-7"
-         style="font-size:3.88056px;fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
-         x="11.043492"
-         y="36.639992">tbx</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:2.8085px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.263296"
-       x="10.941237"
-       y="33.302055"
-       id="text6744-5-9-1-8"
-       transform="scale(0.99513726,1.0048865)"><tspan
-         sodipodi:role="line"
-         id="tspan6742-2-0-9-3"
-         style="font-size:2.8085px;fill:#ffffff;fill-opacity:1;stroke-width:0.263296"
-         x="10.941237"
-         y="33.302055">RDM</tspan></text>
+    <ellipse
+       style="fill:#b3b3b3;stroke:#ffffff;stroke-width:0.227044;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1;paint-order:markers stroke fill"
+       id="path6"
+       cx="13.511798"
+       cy="31.57398"
+       rx="7.9890537"
+       ry="7.9890528" />
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.263296"
-       x="20.532312"
+       x="23.722822"
        y="29.462049"
        id="text6744-5-9-1-8-3"
        transform="scale(0.99513726,1.0048865)"><tspan
          sodipodi:role="line"
          id="tspan6742-2-0-9-3-3"
          style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444px;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#000000;fill-opacity:1;stroke-width:0.263296"
-         x="20.532312"
+         x="23.722822"
          y="29.462049">HDF5 Research</tspan><tspan
          sodipodi:role="line"
          style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444px;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#000000;fill-opacity:1;stroke-width:0.263296"
-         x="20.532312"
+         x="23.722822"
          y="36.582939"
          id="tspan3494">Data Management Toolbox</tspan></text>
+    <path
+       d="m 6.1466285,26.629779 c 1.1952857,-2.152104 3.7560454,-3.652461 6.1715175,-3.879645 l -6.6e-5,-0.44157 0.679815,1.207564 -0.679669,1.18008 -5.3e-5,-0.536421 c -2.125722,0.225177 -4.0130599,1.488628 -5.0642603,3.390215 z"
+       fill="#004a78"
+       fill-rule="evenodd"
+       id="path24-6"
+       style="fill:#001493;fill-opacity:1;stroke-width:0.00852392"
+       sodipodi:nodetypes="cccccccc"
+       inkscape:transform-center-x="3.9190621"
+       inkscape:transform-center-y="-6.6470372"
+       inkscape:tile-cx="22.096213"
+       inkscape:tile-cy="44.567012"
+       inkscape:tile-w="8.2543119"
+       inkscape:tile-h="6.314814"
+       inkscape:tile-x0="13.247424"
+       inkscape:tile-y0="33.401345" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:8.78438px;line-height:1.25;font-family:sans-serif;fill:#001493;fill-opacity:1;stroke:none;stroke-width:0.21961"
+       x="8.342454"
+       y="34.924679"
+       id="text6744-0-8"><tspan
+         sodipodi:role="line"
+         id="tspan6742-3-6"
+         style="fill:#001493;fill-opacity:1;stroke-width:0.21961"
+         x="8.342454"
+         y="34.924679">h</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.09939px;line-height:1.25;font-family:sans-serif;fill:#001493;fill-opacity:1;stroke:none;stroke-width:0.21961"
+       x="12.32135"
+       y="28.987192"
+       id="text6744-5-2-6"><tspan
+         sodipodi:role="line"
+         id="tspan6742-2-4-1"
+         style="font-size:4.09939px;fill:#001493;fill-opacity:1;stroke-width:0.21961"
+         x="12.32135"
+         y="28.987192">5</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.22095px;line-height:1.25;font-family:sans-serif;fill:#001493;fill-opacity:1;stroke:none;stroke-width:0.21961"
+       x="13.488079"
+       y="34.896461"
+       id="text6744-5-9-4-2"><tspan
+         sodipodi:role="line"
+         id="tspan6742-2-0-7-2"
+         style="font-size:3.22095px;fill:#001493;fill-opacity:1;stroke-width:0.21961"
+         x="13.488079"
+         y="34.896461">tbx</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.33112px;line-height:1.25;font-family:sans-serif;fill:#001493;fill-opacity:1;stroke:none;stroke-width:0.218542"
+       x="13.424322"
+       y="32.104095"
+       id="text6744-5-9-1-8-9"
+       transform="scale(0.99513726,1.0048865)"><tspan
+         sodipodi:role="line"
+         id="tspan6742-2-0-9-3-6"
+         style="font-size:2.33112px;fill:#001493;fill-opacity:1;stroke-width:0.218542"
+         x="13.424322"
+         y="32.104095">RDM</tspan></text>
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#path24-6"
+       xlink:href="#path24-6"
+       id="use21"
+       inkscape:transform-center-x="-9.5687411"
+       inkscape:transform-center-y="20.557221"
+       style="fill:#001493;fill-opacity:1" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#path24-6"
+       xlink:href="#path24-6"
+       transform="rotate(60,13.491318,31.57632)"
+       id="use22"
+       inkscape:transform-center-x="-17.391642"
+       inkscape:transform-center-y="20.558866"
+       style="fill:#001493;fill-opacity:1" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#path24-6"
+       xlink:href="#path24-6"
+       transform="rotate(120,13.491319,31.57632)"
+       id="use23"
+       inkscape:transform-center-x="-21.235603"
+       inkscape:transform-center-y="27.069457"
+       style="fill:#001493;fill-opacity:1" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#path24-6"
+       xlink:href="#path24-6"
+       transform="rotate(180,13.491321,31.576321)"
+       id="use24"
+       inkscape:transform-center-x="-17.406866"
+       inkscape:transform-center-y="33.851296"
+       style="fill:#001493;fill-opacity:1" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#path24-6"
+       xlink:href="#path24-6"
+       transform="rotate(-120,13.491319,31.57632)"
+       id="use25"
+       inkscape:transform-center-x="-9.5839642"
+       inkscape:transform-center-y="33.849652"
+       style="fill:#001493;fill-opacity:1" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#path24-6"
+       xlink:href="#path24-6"
+       transform="rotate(-60,13.491319,31.57632)"
+       id="use26"
+       inkscape:transform-center-x="-5.7400037"
+       inkscape:transform-center-y="27.33906"
+       style="fill:#001493;fill-opacity:1" />
   </g>
 </svg>

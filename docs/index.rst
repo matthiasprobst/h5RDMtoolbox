@@ -22,7 +22,8 @@ allows to identify data based on meta information. Above standards help to ident
 
 .. note::
 
-   This project is still beta. Usage is at your own risk. Please report any issues on the `here <https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Findex.html&body=Your%20issue%20content%20here.>`_. Thank you!
+   This project is under current development. A first beta is published under version v1.0. `Bug and issue <https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Findex.html&body=Your%20issue%20content%20here.>`_ reports
+   as well as new ideas are very welcome. Thank you!
 
 
 Overview
@@ -34,8 +35,8 @@ HDF5 files:
   - :doc:`wrapper <wrapper/index>`: User-friendly wrapper around `h5py` implementation for efficient work with HDF5 files and above conventions
   - :doc:`database <database/index>`: Querying HDF5 files (A database for HDF5 files)
 
-.. image:: _static/package_overview.svg
-  :width: 350
+.. image:: _static/new_icon_with_text.svg
+  :width: 500
   :alt: Alternative text
   :align: center
 

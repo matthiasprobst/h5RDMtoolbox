@@ -31,4 +31,4 @@ Using HDF5 in combination with xarray allows keeping track of the meta informati
 both, the file and the data object, allow attaching attributes to the data. This reduces processing errors, enhances
 interpretability and finally makes it easier to share.
 
-More information on HDF5 can be found `here <https://www.hdfgroup.org/solutions/hdf5/>`_.
+More information on HDF5 can be found `on the HDF Group website <https://www.hdfgroup.org/solutions/hdf5/>`_.

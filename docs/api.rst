@@ -17,7 +17,6 @@ Base wrapper class
    :toctree: generated/
 
    h5rdmtoolbox.wrapper.core.File
-   h5rdmtoolbox.wrapper.core.File.check
 
 Conventions
 ===========
@@ -41,11 +40,11 @@ Standard attributes
 -------------------
 
 .. autosummary::
-    :toctree: generated/
+   :toctree: generated/
 
-    h5rdmtoolbox.conventions.standard_attribute.StandardAttribute
-    h5rdmtoolbox.conventions.standard_attribute.StandardAttribute.get
-    h5rdmtoolbox.conventions.standard_attribute.StandardAttribute.set
+   h5rdmtoolbox.conventions.standard_attributes.StandardAttribute
+   h5rdmtoolbox.conventions.standard_attributes.StandardAttribute.get
+   h5rdmtoolbox.conventions.standard_attributes.StandardAttribute.set
 
 Standard names and tables
 -------------------------
@@ -53,12 +52,9 @@ Standard names and tables
 .. autosummary::
    :toctree: generated/
 
-   h5rdmtoolbox.conventions.standard_name.StandardName
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable.check_syntax
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable.check_units
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_web
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_gitlab
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_yaml
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable.from_xml
-   h5rdmtoolbox.conventions.standard_name.StandardNameTable.get_registered
+   h5rdmtoolbox.conventions.standard_names.name.StandardName
+   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable
+   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_web
+   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_yaml
+   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_xml
+   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_zenodo

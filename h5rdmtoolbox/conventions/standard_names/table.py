@@ -317,38 +317,6 @@ class StandardNameTable:
                 issues.append(ds)
         return issues
 
-        # def _check_ds(name, node):
-        #     if isinstance(node, h5py.Dataset):
-        #         if 'standard_name' in node.attrs:
-        #             units = node.attrs.get('units', '')
-        #
-        #             valid = self.check(node.attrs['standard_name'], units=units)
-        #             if not valid:
-        #                 if raise_error:
-        #                     raise errors.StandardNameError(f'Dataset "{name}" has invalid standard_name '
-        #                                                    f'"{node.attrs["standard_name"]}"')
-        #                 logger.error(f'Dataset "{name}" has invalid standard_name '
-        #                              f'"{node.attrs["standard_name"]}"')
-        #             # units = node.attrs['units']
-        #             # if units is None:
-        #             #     logger.warning(f'Dataset %s has not attribute %s! Assuming it is dimensionless', name,
-        #             #                    'units')
-        #             #     units = ''
-        #             # try:
-        #             #     self.check_units(node.attrs['standard_name'], units=units)
-        #             # except errors.StandardNameError as e:
-        #             #     if raise_error:
-        #             #         raise errors.StandardNameError(e)
-        #             #     else:
-        #             #         logger.error(' > ds: %s: %s', node.name, e)
-        #
-        # if recursive:
-        #     h5grp.visititems(_check_ds)
-        # else:
-        #     _check_ds(None, h5grp)
-        #
-        # return True
-
     def check_hdf_file(self, filename,
                        recursive: bool = True) -> List["Dataset"]:
         """Check file for standard names"""

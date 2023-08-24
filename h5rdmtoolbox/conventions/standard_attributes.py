@@ -144,9 +144,6 @@ class StandardAttribute(abc.ABC):
         If None (default), no requirements are defined.
     target_cls: h5py.File | h5py.Group | h5py.Dataset
         The class to which the attribute belongs. This is set automatically.
-
-
-
     """
     EMPTY = DefaultValue.EMPTY  # quasi positional
     NONE = DefaultValue.NONE  # keyword argument is None. None will not be written to the file
@@ -236,6 +233,10 @@ class StandardAttribute(abc.ABC):
     def is_positional(self):
         """has no default value"""
         return self.default_value == DefaultValue.EMPTY
+
+    def make_optional(self):
+        """make this standard attribute optional by setting the default value to Default.NONE"""
+        self.default_value = DefaultValue.NONE
 
     def set(self, parent, value):
         # first call the validator on the value:
