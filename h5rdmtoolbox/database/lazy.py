@@ -8,7 +8,7 @@ class LGroup:
 
     def __init__(self, obj: h5py.Group):
         self.filename = obj.file.filename
-        self._attrs = dict(obj.attrs)
+        self._attrs = dict(obj.attrs.raw)
 
         for k, v in _get_dataset_properties(obj, ('file', 'name',)).items():
             setattr(self, k, v)

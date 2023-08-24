@@ -74,16 +74,16 @@ affixes:
     z: Z indicates the z-axis component of the vector.
 standard_names:
   time:
-    canonical_units: s
+    units: s
     description: Time refers tothe relative time since start of data aquisition.
   coordinate:
     vector: true
-    canonical_units: m
+    units: m
     description: Coordinate refers to the spatial coordinate. Coordinate is a vector quantity.
   velocity:
     vector: true
-    canonical_units: m/s
+    units: m/s
     description: Velocity refers to the change of position over time. Velocity is a vector quantity.
   static_pressure:
-    canonical_units: Pa
+    units: Pa
     description: Static pressure refers to the force per unit area exerted by a fluid. Pressure is a scalar quantity.

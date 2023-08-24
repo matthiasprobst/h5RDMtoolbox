@@ -127,8 +127,6 @@ class Files:
         per_file: bool=True
             Applies `find_one` to each file. If False, finds the first occurrence in
             any of the files.
-
-        TODO: This can be parallelized!
         """
         for v in self.values():
             found = v.find_one(flt, objfilter=objfilter, rec=rec,
@@ -175,6 +173,9 @@ class Files:
         """Close all opened files"""
         for h5file in self._opened_files.values():
             h5file.close()
+
+    def __del__(self):
+        self.close()
 
 
 if __name__ == '__main__':
