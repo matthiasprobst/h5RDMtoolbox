@@ -322,6 +322,8 @@ class File:
              ignore_attribute_error: bool = False):
         """Find"""
         from .. import File
+        if flt == {}:  # just find any!
+            flt = {'$basename': {'$regex': '.*'}}
         with File(self.filename) as h5:
             return [lazy.lazy(r) for r in h5.find(flt, objfilter, rec, ignore_attribute_error)]
 

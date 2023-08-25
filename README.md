@@ -29,7 +29,57 @@ Key features are:
 
 Please find a comprehensive documentation with examples [here](h5rdmtoolbox.readthedocs.io/en/latest/).
 
+## Quickstart
+Get a first idea of how the `h5RDMtoolbox` supports the FAIR research data lifecycle of 
+`planning`, 
+`collecting`, 
+`analyzing`, 
+`sharing` and 
+`reusing` with a minimal example:
+```python
+import h5rdmtoolbox as h5tbx
 
+# 1. Planing - Metadata Convention Plan with HDF5
+# - We decided to use HDF5
+# - Design a convention and publish it on zenodo
+# Assume we did this already and it can be found here: https://zenodo.org/record/8281285
+cv = h5tbx.conventions.from_zenodo('8281285')
+
+# 2. Collecting
+# - fill an HDF5 file with the required data and mandatory metadata
+h5tbx.use(cv)
+with h5tbx.File('my_file.h5',
+                data_type='experimental',
+                contact='https://orcid.org/0000-0001-8729-0482') as h5:
+    # create a dataset
+    h5.create_dataset(name='u',
+                     data=[1, 42, 101],
+                     standard_name='x_velocity',
+                     units='m/s')
+
+# 3. Analyzing
+# - Open the file again and plot the data
+with h5tbx.File('my_file.h5') as h5:
+    h5['u'][1:2].plot()
+
+# 4. Share your data
+# - put it in a local file share
+# - or upload it to a database, e.g. into a mongoDB:
+from pymongo import MongoClient
+client = MongoClient()
+collection = client['my_database']['my_collection']
+with h5tbx.File('my_file.h5') as h5:
+    h5['u'][1:2].mongo.insert(0, collection)
+
+# 5. Reusing
+# - Find the data by searching for the metadata in the mongoDB
+arr = collection.find_one({'standard_name': {'$eq': 'x_velocity'}})
+# plot it again
+arr.plot()
+# or if the file is local, find it within a folder:
+arr = h5tbx.database.Folder('db_folder').find_one({'standard_name': {'$eq': 'x_velocity'}})
+arr[()].plot()
+```
 
 ## Installation
 

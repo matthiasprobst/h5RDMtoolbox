@@ -69,6 +69,8 @@ class Files:
         file_instance: h5py.File
             The HDF5 file instance
         """
+        self._opened_files = {}
+
         if file_instance is None:
             from . import File
             file_instance = File
@@ -81,7 +83,6 @@ class Files:
             if fname.is_dir():
                 raise ValueError(f'Expecting filenames not directory names but "{fname}" is.')
 
-        self._opened_files = {}
         self._file_instance = file_instance
 
     def __getitem__(self, item) -> Union[h5py.Group, H5Objects, List[h5py.Group]]:

@@ -5,6 +5,8 @@ import warnings
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.errors import AffixKeyError
+from h5rdmtoolbox.conventions.standard_names import StandardName
+from h5rdmtoolbox.conventions.standard_names.transformation import Transformation
 
 
 class TestTransformationsAndAffixes(unittest.TestCase):
@@ -19,6 +21,36 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             warnings.warn('No internet connection', UserWarning)
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
+
+    def test_adding_transformation(self):
+
+        snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(doi=8276716)
+
+        # check if the problem really exists:
+        try:
+            snt['maximum_of_pressure']
+        except h5tbx.errors.AffixKeyError as e:
+            print(e)
+
+        def maximum_of(match, snt):
+            # match is the result of `re.match(`^maximum_of_(.*)$, <user_input_value>)`
+            groups = match.groups()
+            assert len(groups) == 1
+            sn = snt[groups[0]]
+            new_description = f"Maximum of {sn.name}. {sn.description}"
+            return StandardName(match.string, sn.units, new_description)
+
+        max_of = Transformation(r"^maximum_of_(.*)$", maximum_of)
+
+        self.assertTrue(max_of.match('maximum_static_pressure') is None)
+        self.assertFalse(max_of.match('maximum_of_static_pressure') is None)
+        snt.add_transformation(max_of)
+        sn = snt['maximum_of_static_pressure']
+        self.assertEqual(
+            'Maximum of static_pressure. Static pressure refers to the force per unit area exerted by a fluid. Pressure is a scalar quantity.',
+            sn.description)
+        self.assertEqual(max_of, snt.transformations[-1])
+        self.assertIn(max_of, snt.transformations)
 
     def test_get_transformation(self):
         from h5rdmtoolbox.conventions.standard_names.affixes import _get_transformation, affix_transformations

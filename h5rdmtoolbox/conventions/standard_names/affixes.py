@@ -198,7 +198,7 @@ class Affix:
             return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}" ' \
                    f'transformation_pattern={self.transformation[0].pattern}, values={sorted(self.values.keys())}>'
         return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}" ' \
-               f'transformation_patterns={[t.pattern for t in self.transformation.pattern]}, values={sorted(self.values.keys())}>'
+               f'transformation_patterns={[t.pattern for t in self.transformation]}, values={sorted(self.values.keys())}>'
 
     def __str__(self):
         return self.name

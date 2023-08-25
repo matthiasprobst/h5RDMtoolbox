@@ -809,6 +809,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  ignore_attribute_error: bool = False):
         """See find()"""
         from ..database import file
+        if flt == {}:
+            return None
         return file.find(
             self,
             flt,
@@ -1473,12 +1475,12 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         """Return a dictionary of the coordinates of the dataset. The dictionary"""
         return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
-    def isel(self, **coords) -> xr.DataArray:
+    def isel(self, **indexers) -> xr.DataArray:
         """Index selection by providing the coordinate name.
 
         Parameters
         ----------
-        coords: Dict
+        indexers: Dict
             Dictionary with coordinate name as key and slice or index as value
 
         Returns
@@ -1491,16 +1493,26 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         >>> with h5tbx.File(filename) as h5:
         >>>     h5.vel.isel(time=0, z=3)
         """
-        if len(coords) == 0:
+        if len(indexers) == 0:
             return self[()]
         ds_coords = self.coords()
-        for cname in coords.keys():
-            if cname not in ds_coords:
-                raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
+        if ds_coords:
+            for cname in indexers.keys():
+                if cname not in ds_coords:
+                    raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
+            sl = {cname: slice(None) for cname in ds_coords.keys()}
+            for cname, item in indexers.items():
+                sl[cname] = item
+        else:
+            # no indexers available. User must provide dim_<i> then!
+            if not all([cname.startswith('dim_') for cname in indexers.keys()]):
+                raise KeyError(f'No coordinates available. Provide dim_<i> as key!')
+            dim_dict = {f'dim_{i}': slice(None) for i in range(len(self.shape))}
+            # indices = [int(cname.split('_')[1]) for cname in indexers.keys()]
+            sl = {cname: slice(None) for cname in dim_dict.keys()}
+            for cname, item in indexers.items():
+                sl[cname] = item
 
-        sl = {cname: slice(None) for cname in ds_coords.keys()}
-        for cname, item in coords.items():
-            sl[cname] = item
         return self[tuple([v for v in sl.values()])]
 
     def sel(self, method=None, **coords):

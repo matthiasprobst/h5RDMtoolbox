@@ -330,6 +330,13 @@ class StandardNameTable:
         self.to_yaml(_tmp_yaml_filename)
         return StandardNameTable.from_yaml(_tmp_yaml_filename)
 
+    def add_transformation(self, transformation: Transformation):
+        """Appending a transformation to the standard name table"""
+        if not isinstance(transformation, Transformation):
+            raise TypeError('Invalid type for parameter "transformation". Expecting "Transformation" but got '
+                            f'{type(transformation)}')
+        self._transformations = tuple([*self._transformations, transformation])
+
     # Loader: ---------------------------------------------------------------
     @staticmethod
     def from_yaml(yaml_filename):

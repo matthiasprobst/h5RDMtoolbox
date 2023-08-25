@@ -8,7 +8,10 @@ class LGroup:
 
     def __init__(self, obj: h5py.Group):
         self.filename = obj.file.filename
-        self._attrs = dict(obj.attrs.raw)
+        if isinstance(obj.attrs, h5py._hl.attrs.AttributeManager):
+            self._attrs = dict(obj.attrs)
+        else:
+            self._attrs = dict(obj.attrs.raw)
 
         for k, v in _get_dataset_properties(obj, ('file', 'name',)).items():
             setattr(self, k, v)
@@ -23,13 +26,13 @@ class LGroup:
 
     @property
     def parentname(self) -> str:
-        """Return the parentname of the object path"""
+        """Return the parent name of the object path"""
         return self.name.rsplit('/', 1)[0]
 
     @property
     def parentnames(self) -> List[str]:
         """Return the parent names of the object path"""
-        return self.parent.split('/')[1:]  # first is '', so skip
+        return self.parentname.split('/')[1:]  # first is '', so skip
 
     @property
     def attrs(self) -> Dict:
@@ -74,10 +77,10 @@ class LDataset(LGroup):
         with File(self.filename) as h5:
             return h5[self.name].coords()
 
-    def isel(self, **coords):
+    def isel(self, **indexers):
         from .. import File
         with File(self.filename) as h5:
-            return h5[self.name].isel(**coords)
+            return h5[self.name].isel(**indexers)
 
     def sel(self, **coords):
         from .. import File

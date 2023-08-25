@@ -122,11 +122,24 @@ class TestFileQuery(unittest.TestCase):
             self.assertIn(h5.find_one({'a': {'$gte': 3}}), [h5['a3'], h5['a4'], ])  # $gte
 
     def test_lazy(self):
+        self.assertTrue(h5tbx.database.lazy.lazy(None) is None)
+        with self.assertRaises(TypeError):
+            h5tbx.database.lazy.lazy(3.4)
+
+        with h5tbx.File() as h5:
+            h5.create_group('grp', attrs={'a': 1, 'b': 2})
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(a=99, b=100))
+        self.assertIsInstance(h5tbx.database.lazy.lazy([h5.hdf_filename, 'ds1']),
+                              h5tbx.database.lazy.LDataset)
+        self.assertIsInstance(h5tbx.database.lazy.lazy([h5.hdf_filename, 'grp']),
+                              h5tbx.database.lazy.LGroup)
+
         with h5tbx.File() as h5:
             h5.create_group('g1', attrs={'a': 1, 'b': 2})
             h5.create_group('g2', attrs={'a': -12, 'b': 2})
             h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(a=99, b=100))
             h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(a=2))
+            h5.create_group('/a/b/c/d', attrs={'is_subgroup': True})
         r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 80}})
         self.assertIsInstance(r, h5tbx.database.lazy.LDataset)
         self.assertIsInstance(r.attrs, dict)
@@ -140,7 +153,16 @@ class TestFileQuery(unittest.TestCase):
             self.assertIsInstance(h5, h5tbx.Dataset)
 
         r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 0}}, '$group')
+
         self.assertIsInstance(r, h5tbx.database.lazy.LGroup)
+        self.assertEqual('', r.parentname)
+        self.assertEqual([], r.parentnames)
+
+        r_subgrp = h5tbx.database.File(h5.hdf_filename).find_one({'is_subgroup': True}, '$group')
+        self.assertIsInstance(r_subgrp, h5tbx.database.lazy.LGroup)
+        self.assertEqual('/a/b/c', r_subgrp.parentname)
+        self.assertEqual(['a', 'b', 'c'], r_subgrp.parentnames)
+
         self.assertIsInstance(r.attrs, dict)
         self.assertEqual(r.name, '/g1')
         self.assertEqual(r.basename, 'g1')
@@ -212,3 +234,48 @@ class TestFileQuery(unittest.TestCase):
         with File() as h52:
             h52.create_dataset('ds', data=(4, 5, 6), attrs=dict(units='', long_name='long name 2'))
             fnames.append(h52.filename)
+
+    def test_isel(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds3', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 2'))
+
+        self.assertTrue(h5tbx.database.File(h5.hdf_filename).find_one({}, '$dataset') is None)
+        res = h5tbx.database.File(h5.hdf_filename).find({}, '$dataset')
+        self.assertEqual(len(res), 3)
+
+        self.assertTupleEqual((2, 3), res[0].isel(dim_0=0).shape)
+        with self.assertRaises(TypeError):
+            res[0].isel(z=0.3)
+        self.assertTupleEqual((1, 3), res[0].isel(y=0).shape)
+        self.assertTupleEqual((1, 2), res[0].isel(x=0).shape)
+        self.assertTupleEqual((1,), res[0].isel(x=0, y=1).shape)
+        self.assertEqual(1, res[0].isel(x=2, y=1).ndim)
+        self.assertEqual(0, res[0].isel(x=2, y=1, z=0).ndim)
+        with self.assertRaises(IndexError):
+            self.assertEqual(0, res[0].isel(x=2, y=1, z=2).ndim)
+        self.assertTupleEqual((1, 2, 2), res[0].isel(x=slice(0, 2, 1)).shape)
+
+        with self.assertRaises(KeyError):
+            res[0].isel(dim_0=0)
+
+    def test_sel(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('z', data=[2, 5, 10], make_scale=True)
+            h5.create_dataset('ds1', data=[1, 2, 3], attrs=dict(units='', long_name='long name 1'),
+                              attach_scales=('z',))
+
+        res = h5tbx.database.File(h5.hdf_filename).find({'$basename': {'$regex': '^ds[0-3]'}}, '$dataset')
+        self.assertEqual(len(res), 1)
+
+        with self.assertRaises(ValueError):
+            res[0].sel(z=0.2).shape
+        self.assertTupleEqual((), res[0].sel(z=0.2, method='nearest').shape)
+        self.assertTrue(res[0].sel(z=0.2, method='nearest')[()] == 1)
+        self.assertTrue(res[0].sel(z=4.8, method='nearest')[()] == 2)
+        self.assertTrue(res[0].sel(z=5.2, method='nearest')[()] == 2)
+        self.assertTrue(res[0].sel(z=8.9, method='nearest')[()] == 3)
+
+        with self.assertRaises(NotImplementedError):
+            res[0].sel(z=9, method='closest')
