@@ -1,3 +1,4 @@
+import copy
 import forge
 import inspect
 import pathlib
@@ -191,6 +192,32 @@ class Convention:
 
                 self.methods[cls][method_name][std_attr.name] = std_attr
 
+    def pop(self, *names) -> "Convention":
+        """removes the standard attribute with the given name from the convention
+
+        Parameters
+        ----------
+        name: str
+            name of the standard attribute to remove
+
+        Returns
+        -------
+        Convention
+            a new convention without the given standard attribute
+        """
+        new_conv = copy.deepcopy(self)
+        for prop in new_conv.properties.values():
+            for name in names:
+                prop.pop(name, None)
+
+        _new_methods_dict = new_conv.methods
+        for cls, meth_dict in new_conv.methods.items():
+            for meth_name, std_attr in meth_dict.items():
+                for name in names:
+                    _new_methods_dict[cls][meth_name].pop(name, None)
+        new_conv.methods = _new_methods_dict
+        return new_conv
+
     def _add_signature(self):
         for cls, methods in self.methods.items():
             for method_name, std_attrs in methods.items():
@@ -369,6 +396,7 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
         # two same std attr name in one yaml file/dict is not allowed.
         # this can be dealt with by adding a suffix to the name which starts with a "-":
         return attr_name.split('-')[0]
+
     std_attrs = [StandardAttribute(_strip_standard_attribute_name(name), **values) for name, values in attrs.items() if
                  isinstance(values, dict)]
     meta = {name.strip('__'): value for name, value in attrs.items() if not isinstance(value, dict)}

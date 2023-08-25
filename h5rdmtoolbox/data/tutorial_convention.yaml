@@ -11,7 +11,6 @@ data_type:
       - experimental
       - numerical
 
-
 standard_name:
   target_methods: create_dataset
   validator: $standard_name
@@ -22,9 +21,7 @@ standard_name:
 standard_name_table:
   target_methods: __init__
   validator: $standard_name_table
-  #    $in:
-  #      - https://zenodo.org/record/8266929
-  default_value: https://zenodo.org/record/8266929
+  default_value: https://zenodo.org/record/8276716
   requirements:
     - standard_name
     - units

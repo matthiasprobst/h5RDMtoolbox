@@ -1,6 +1,6 @@
 """module for constructors used as pre- or suffixes to standard names"""
 import warnings
-from typing import List, Union, Dict, Callable
+from typing import List, Union, Dict
 
 from .transformation import Transformation, StandardName, errors
 
@@ -177,7 +177,7 @@ class Affix:
     """Standard constructor is a prefix or suffix to a
     standard name, e.g. [x_]velocity, velocity[_in_rotating_frame]"""
 
-    def __init__(self, name, description: str, values: Dict, transformation: Callable):
+    def __init__(self, name, description: str, values: Dict, transformation: Transformation):
         self._name = name
         self._description = description
         self._values = values
@@ -192,6 +192,16 @@ class Affix:
 
     def __iter__(self):
         return iter(self._values)
+
+    def __repr__(self):
+        if len(self.transformation) == 1:
+            return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}" ' \
+                   f'transformation_pattern={self.transformation[0].pattern}, values={sorted(self.values.keys())}>'
+        return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}" ' \
+               f'transformation_patterns={[t.pattern for t in self.transformation.pattern]}, values={sorted(self.values.keys())}>'
+
+    def __str__(self):
+        return self.name
 
     def to_dict(self) -> Dict:
         """Return the affix as a dictionary"""
@@ -224,12 +234,6 @@ class Affix:
     def names(self):
         """Return the names of the standard item"""
         return self._names
-
-    def __repr__(self):
-        return f'<{self.__class__.__name__}: name="{self._name}", description="{self.description}">'
-
-    def __str__(self):
-        return self.name
 
 # currently not used but keep it:
 # @dataclass

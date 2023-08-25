@@ -10,7 +10,9 @@ from h5rdmtoolbox.conventions.standard_names import HDF5StandardNameInterface
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
-        cv = h5tbx.conventions.from_zenodo(doi=8276817)
+        cv = h5tbx.conventions.from_zenodo(doi=8281285)
+        cv.properties[h5tbx.File]['data_type'].make_optional()
+        cv.properties[h5tbx.File]['contact'].make_optional()
         h5tbx.use(cv)
 
     def tearDown(self) -> None:

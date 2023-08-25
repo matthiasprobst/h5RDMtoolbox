@@ -4,7 +4,7 @@ from typing import Union
 from .table import StandardNameTable
 from .. import errors
 from .. import logger
-from ..validator import StandardAttributeValidator
+from ..validators import StandardAttributeValidator, add_validator
 
 
 def _parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
@@ -30,6 +30,8 @@ def _parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
 class StandardNameTableValidator(StandardAttributeValidator):
     """Validates a standard name table"""
 
+    keyword = '$standard_name_table'
+
     def __call__(self, standard_name_table, *args, **kwargs):
         # return parse_snt(standard_name_table).to_sdict()
         snt = _parse_snt(standard_name_table)
@@ -40,6 +42,8 @@ class StandardNameTableValidator(StandardAttributeValidator):
 
 class StandardNameValidator(StandardAttributeValidator):
     """Validator for attribute standard_name"""
+
+    keyword = '$standard_name'
 
     def __call__(self, standard_name, parent, **kwargs):
         snt = parent.rootparent.attrs.get('standard_name_table', None)
@@ -64,3 +68,7 @@ class StandardNameValidator(StandardAttributeValidator):
                                                 f'Expected units: {sn.units} but got {units}.')
 
         return snt[standard_name].name
+
+
+add_validator(StandardNameValidator)
+add_validator(StandardNameTableValidator)

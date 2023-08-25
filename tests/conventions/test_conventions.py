@@ -171,3 +171,15 @@ class TestConventions(unittest.TestCase):
             h5tbx.UserDir.clear_cache()
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                 cv = h5tbx.conventions.from_zenodo(doi=8266929)
+
+        cv = h5tbx.conventions.from_zenodo(doi=8281285)
+        self.assertEqual(cv.name, 'h5rdmtoolbox-tuturial-convention')
+        self.assertEqual(
+            h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
+            cv.properties[h5tbx.File]['data_type'].default_value
+        )
+        cv.properties[h5tbx.File]['data_type'].make_optional()
+        self.assertEqual(
+            h5tbx.conventions.standard_attributes.DefaultValue.NONE,
+            cv.properties[h5tbx.File]['data_type'].default_value
+        )

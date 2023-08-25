@@ -11,6 +11,7 @@ from h5rdmtoolbox.conventions.standard_names import utils
 from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from h5rdmtoolbox.conventions.utils import check_url
+from h5rdmtoolbox.conventions.validators import ORCIDValidator
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -27,8 +28,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
     def test_orcid(self):
-        from h5rdmtoolbox.conventions import orcid
-        o = orcid.ORCIDValidator()
+        o = ORCIDValidator()
 
         with self.assertRaises(TypeError):
             o(3.4)

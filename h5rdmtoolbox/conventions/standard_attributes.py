@@ -9,14 +9,12 @@ from typing import Dict, List, Union, Tuple
 from . import errors
 from . import logger
 from .consts import DefaultValue
-from .validator import StandardAttributeValidator
-from .validator import get_validator
+from .validators import StandardAttributeValidator
+from .validators import get_validator
 from .. import get_ureg, get_config
 from ..utils import DocStringParser
 from ..wrapper.core import File, Group, Dataset
 from ..wrapper.h5attr import WrapperAttributeManager
-
-av_validators = get_validator()
 
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),
@@ -70,18 +68,6 @@ def make_dict(ref):
 def _isodatetime(dt):
     # expecting isoformat!
     return datetime.fromisoformat(dt)
-
-
-def get_validator(**validator: Dict) -> List[StandardAttributeValidator]:
-    """return the respective StandardAttributeValidator
-
-    validator_identifier: str:
-        E.g. $regex, $orcid, $in, $standard_name, $standard_name_unit
-    """
-    for name, value in validator.items():
-        if name not in av_validators:
-            raise ValueError(f'No validator class found for "{name}"')
-    return [av_validators[name](value) for name, value in validator.items()]
 
 
 class StandardAttribute(abc.ABC):
@@ -190,10 +176,12 @@ class StandardAttribute(abc.ABC):
 
         self.input_type = 'str'
         self.name = name  # the attrs key
+
         if isinstance(validator, str):
             validator = {validator: None}
 
-        self.validator = get_validator(**validator)
+        self.validator = [get_validator(k)(v) for k, v in validator.items()]
+
         assert isinstance(self.validator, list)
         assert isinstance(self.validator[0], StandardAttributeValidator)
 
@@ -237,6 +225,11 @@ class StandardAttribute(abc.ABC):
     def make_optional(self):
         """make this standard attribute optional by setting the default value to Default.NONE"""
         self.default_value = DefaultValue.NONE
+        # disable and enable the convention to make the change effective:
+        import h5rdmtoolbox as h5tbx
+        _cache_cv = h5tbx.conventions.get_current_convention()
+        h5tbx.use(None)
+        h5tbx.use(_cache_cv)
 
     def set(self, parent, value):
         # first call the validator on the value:

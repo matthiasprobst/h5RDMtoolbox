@@ -9,6 +9,9 @@ class UnitsError(Exception):
 class StandardAttributeError(Exception):
     """Error during standard attribute handling"""
 
+class ValidatorError(Exception):
+    """Error during validator calls"""
+
 
 class StandardNameError(Exception):
     """Exception class for error associated with standard name usage"""
