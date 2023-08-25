@@ -16,23 +16,11 @@ principles. It specifically supports the five main steps of
   :alt: Alternative text
   :align: center
 
-It supports users with
- - :doc:`data creation <wrapper/index>`
- - :doc:`processing <wrapper/index>`
- - :doc:`sharing <database/index>`
-
-In order to achieve sustainable data that can be shared within a project/collaboration or a community standards or
-`conventions <conventions/index>` within the respective environment need to be respected, The toolbox provides a tool to integrate meta-data-
-standards during the steps of creation, processing and sharing of data.
-
-HDF5 files can be used as a :doc:`database <database/index>` directly or can be integrated in a non-relational database
-(mongoDB) with the toolbox. This
-allows to identify data based on meta information. Above standards help to identify data and to make it findable.
-
 
 .. note::
 
-   This project is under current development. A first beta is published under version v1.0. `Bug and issue <https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Findex.html&body=Your%20issue%20content%20here.>`_ reports
+   This project is under current development. A first version is published under version v0.8b (beta version!).
+   `Bug and issue reports <https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Findex.html&body=Your%20issue%20content%20here.>`_
    as well as new ideas are very welcome. Thank you!
 
 
@@ -43,7 +31,7 @@ HDF5 files:
 
   - :doc:`convention <conventions/index>`: Modular construction of conventions (standardization and specification for HDF files)
   - :doc:`wrapper <wrapper/index>`: User-friendly wrapper around `h5py` implementation for efficient work with HDF5 files and above conventions
-  - :doc:`database <database/index>`: Querying HDF5 files (A database for HDF5 files)
+  - :doc:`database <database/index>`: Querying HDF5 files (A database for HDF5 files or interfacing with mongoDB)
 
 
 Please navigate through the chapters on the left to learn more about the package. They are organized in the following:
@@ -97,7 +85,7 @@ You may install optional dependencies:
    :caption: Documentation
 
     Getting Started <gettingstarted/index>
-    Wrapper around h5py <wrapper/index>
+    Working with HDF <wrapper/index>
     Conventions <conventions/index>
     Database <database/index>
     HowTo <howto/index>

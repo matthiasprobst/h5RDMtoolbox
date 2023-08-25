@@ -139,7 +139,6 @@ Install optional dependencies by specifying them in square brackets after the pa
 
 [snt]
 
-- `pooch`: Downloading of files from the internet
 - `xmltodict`: Reading of xml files
 - `tabulate>=0.8.10`: Pretty printing of tables
 - `python-gitlab`: Access to gitlab repositories
