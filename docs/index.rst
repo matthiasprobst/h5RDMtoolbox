@@ -19,10 +19,13 @@ principles. It specifically supports the five main steps of
 
 .. note::
 
-   This project is under current development. A first version is published under version v0.8b (beta version!).
+   This project is under current development. A first version is published under version v0.8rc1 (beta version!).
    `Bug and issue reports <https://github.com/matthiasprobst/h5RDMtoolbox/issues/new?title=Issue%20on%20page%20%2Findex.html&body=Your%20issue%20content%20here.>`_
    as well as new ideas are very welcome. Thank you!
 
+.. note::
+
+    The package is tested extensively for python versions `3.8`, `3.9` and `3.10`.
 
 Overview
 --------
