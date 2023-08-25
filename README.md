@@ -5,19 +5,19 @@
 ![DOCS](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/branch/dev/graph/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
 
-
-
-
 *Note, that the project is still beta!*
 
-The `h5rdmtoolbox` is a python package that provides a set of tools to **efficiently** work with HDF5 files. It
-allows **create** and **apply metadata standards** to data science projects based on HDF5 and ultimately enhance the
-**data quality**.
+The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everybody who is working with HDF5
+to achieve a sustainable data lifecycle which follows the [FAIR](https://www.nature.com/articles/sdata201618)
+principles. It specifically supports the five main steps of
 
-The figure below illustrates the main features of the toolbox as it supports scientists handling research data 
-during its **lifecycle**.
+ 1. Planning (defining or select existing a HDF5 file structure and a metadata convention)
+ 2. Collecting data (creating HDF5 files or convert to HDF5 files from other sources)
+ 3. Analyzing and processing data (Plotting, derive data, ...)
+ 4. Sharing data (publishing, archiving, ... e.g. to databases like mongoDB or repositories like Zenodo)
+ 5. Reusing data (Search data in a local database or filestructure or in Zenodo repositories).
 
-<img src="docs/_static/new_icon_with_text.svg" width="600">
+<a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
 
 Key features are:
 

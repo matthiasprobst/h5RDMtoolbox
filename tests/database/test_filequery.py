@@ -246,19 +246,18 @@ class TestFileQuery(unittest.TestCase):
         self.assertEqual(len(res), 3)
 
         self.assertTupleEqual((2, 3), res[0].isel(dim_0=0).shape)
-        with self.assertRaises(TypeError):
-            res[0].isel(z=0.3)
-        self.assertTupleEqual((1, 3), res[0].isel(y=0).shape)
-        self.assertTupleEqual((1, 2), res[0].isel(x=0).shape)
-        self.assertTupleEqual((1,), res[0].isel(x=0, y=1).shape)
-        self.assertEqual(1, res[0].isel(x=2, y=1).ndim)
-        self.assertEqual(0, res[0].isel(x=2, y=1, z=0).ndim)
-        with self.assertRaises(IndexError):
-            self.assertEqual(0, res[0].isel(x=2, y=1, z=2).ndim)
-        self.assertTupleEqual((1, 2, 2), res[0].isel(x=slice(0, 2, 1)).shape)
-
         with self.assertRaises(KeyError):
-            res[0].isel(dim_0=0)
+            res[0].isel(z=0.3)
+        self.assertTupleEqual((1, 3), res[0].isel(dim_1=0).shape)
+        self.assertTupleEqual((1, 2), res[0].isel(dim_2=0).shape)
+        self.assertTupleEqual((1,), res[0].isel(dim_1=0, dim_2=1).shape)
+        self.assertEqual(1, res[0].isel(dim_2=2, dim_1=1).ndim)
+        self.assertEqual(0, res[0].isel(dim_2=2, dim_1=1, dim_0=0).ndim)
+        with self.assertRaises(IndexError):
+            self.assertEqual(0, res[0].isel(dim_2=2, dim_1=1, dim_0=2).ndim)
+        self.assertTupleEqual((1, 2, 2), res[0].isel(dim_2=slice(0, 2, 1)).shape)
+        with self.assertRaises(ValueError):
+            res[0].isel(dim_5=2)
 
     def test_sel(self):
         with h5tbx.File() as h5:

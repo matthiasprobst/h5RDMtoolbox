@@ -14,7 +14,8 @@ if "%1" == "" goto help
 
 if "%1" == "clean" (
     echo "Removing jupyter_execute"
-    rmdir %SOURCEDIR%\jupyter_execute
+    rmdir /s /q %SOURCEDIR%\jupyter_execute
+    rmdir /s /q %SOURCEDIR%\generated
 )
 
 REM sphinx-build -b html . _build:
