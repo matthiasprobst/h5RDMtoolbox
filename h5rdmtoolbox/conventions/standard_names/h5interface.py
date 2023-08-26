@@ -92,7 +92,7 @@ class HDF5StandardNameInterface:
         self._list_of_lazy_datasets = {}
 
         with h5tbx.File(hdf_filename) as h5:
-            standard_names = {ds.attrs['standard_name']: ds.parent.name for ds in
+            standard_names = {ds.attrs.raw['standard_name']: ds.parent.name for ds in
                               h5[source_group].find({'standard_name': {'$regex': '.*'}})}
 
         standard_datasets = {k: h5tbx.database.File(self._hdf_filename).find_one({'standard_name': k}) for k in

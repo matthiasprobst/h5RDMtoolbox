@@ -92,8 +92,8 @@ class RecAttrFind:
         if self.objfilter:
             if not isinstance(obj, self.objfilter):
                 return
-        if self._attribute in obj.attrs:
-            if self._func(obj.attrs[self._attribute], self._value):
+        if self._attribute in obj.attrs.raw:
+            if self._func(obj.attrs.raw[self._attribute], self._value):
                 self.found_objects.append(obj)
 
 
@@ -131,12 +131,12 @@ class RecAttrCollect:
 
     def __call__(self, name, obj):
         if self._objfilter is None:
-            if self._attribute_name in obj.attrs:
-                self.found_objects.append(obj.attrs[self._attribute_name])
+            if self._attribute_name in obj.attrs.raw:
+                self.found_objects.append(obj.attrs.raw[self._attribute_name])
         else:
             if isinstance(obj, self._objfilter):
-                if self._attribute_name in obj.attrs:
-                    self.found_objects.append(obj.attrs[self._attribute_name])
+                if self._attribute_name in obj.attrs.raw:
+                    self.found_objects.append(obj.attrs.raw[self._attribute_name])
 
 
 AV_SPECIAL_FILTERS = ('$basename', '$name')
@@ -170,20 +170,20 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                     if not isinstance(h5obj, objfilter):
                         _skip = True
                 if not _skip:
-                    if qk in h5obj.attrs:
-                        if operator[ok](h5obj.attrs[qk], ov):
+                    if qk in h5obj.attrs.raw:
+                        if operator[ok](h5obj.attrs.raw[qk], ov):
                             found_objs.append(h5obj)
                 rf = RecAttrFind(operator[ok], qk, ov, objfilter=objfilter)
                 h5obj.visititems(rf)
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
             else:
-                if qk in h5obj.attrs:
-                    if operator[ok](h5obj.attrs[qk], ov):
+                if qk in h5obj.attrs.raw:
+                    if operator[ok](h5obj.attrs.raw[qk], ov):
                         found_objs.append(h5obj)
                 for hv in h5obj.values():
-                    if qk in hv.attrs:
-                        if operator[ok](hv.attrs[qk], ov):
+                    if qk in hv.attrs.raw:
+                        if operator[ok](hv.attrs.raw[qk], ov):
                             found_objs.append(hv)
     else:
         for ok, ov in qv.items():
@@ -286,18 +286,18 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
         return list(set(rpc.found_objects))
 
     rac = RecAttrCollect(key, objfilter)
-    for k, v in h5obj.attrs.items():
+    for k, v in h5obj.attrs.raw.items():
         if k == key:
             rac.found_objects.append(v)
     if isinstance(h5obj, h5py.Group):
         h5obj.visititems(rac)
         if objfilter:
             if isinstance(h5obj, objfilter):
-                if key in h5obj.attrs:
-                    rac.found_objects.append(h5obj.attrs[key])
+                if key in h5obj.attrs.raw:
+                    rac.found_objects.append(h5obj.attrs.raw[key])
         else:
-            if key in h5obj.attrs:
-                rac.found_objects.append(h5obj.attrs[key])
+            if key in h5obj.attrs.raw:
+                rac.found_objects.append(h5obj.attrs.raw[key])
 
     return list(set(rac.found_objects))
 

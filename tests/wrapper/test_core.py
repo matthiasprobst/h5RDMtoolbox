@@ -102,9 +102,11 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5, h5.rootparent)
 
             grp = h5.create_group('grp1/grp2/grp3')
-            self.assertEqual(grp.rootparent, h5['/'])
+            self.assertEqual(grp.rootparent, h5)
             dset = grp.create_dataset('test', data=1)
-            self.assertEqual(dset.rootparent, h5['/'])
+            self.assertEqual(dset.rootparent, h5)
+
+            self.assertEqual(dset.rootparent, h5)
 
     def test_basename(self):
         with h5tbx.File() as h5:
