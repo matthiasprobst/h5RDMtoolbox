@@ -9,7 +9,7 @@ principles. It specifically supports the five main steps of
  2. Collecting data (creating HDF5 files or convert to HDF5 files from other sources)
  3. Analyzing and processing data (Plotting, derive data, ...)
  4. Sharing data (publishing, archiving, ... e.g. to databases like mongoDB or repositories like Zenodo)
- 5. Reusing data (Search data in a local database or filestructure or in Zenodo repositories).
+ 5. Reusing data (Search data in a local database or file structure or in Zenodo repositories).
 
 .. image:: _static/new_icon_with_text.svg
   :width: 500

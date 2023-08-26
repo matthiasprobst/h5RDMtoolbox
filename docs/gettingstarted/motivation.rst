@@ -21,9 +21,9 @@ Why HDF5?
 
 HDF5 is selected as the file format around everything is built because...
 
-- it allows to store heterogeneous data
+- it allows storing heterogeneous data
 - the access is fast and efficient
-- allows to store metadata together with raw data (self-descriptiveness)
+- allows storing metadata together with raw data (self-descriptiveness)
 - has a comprehensive file-system-like structure
 - has a large community.
 

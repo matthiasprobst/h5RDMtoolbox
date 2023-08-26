@@ -18,7 +18,7 @@ thereby highlight the advantages of the wrapper classes.
 .. note::
 
    The wrapper-classes extend but don't limit the functionality of the `h5py` package. So users that are
-   familiar to the `h5py` package will find all features but will be enforced to provide e.g. certain attributes
+   familiar to the `h5py` package will find all features, but will be enforced to provide e.g. certain attributes
    to fulfill the requirements of a certain meta convention.
 
 

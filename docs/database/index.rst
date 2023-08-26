@@ -1,12 +1,12 @@
 HDF5-Database
 =============
 
-Introduction into h5database.
+Introduction into database features.
 
 Two concepts are provided in the scope of this sub-package:
 
-- ``filequery``: Allows to query inside of a single file.
-- ``h5mongo``: Using pymongo (mongodb) to mirrow meta data of hdf files into the database to be queried afterwards.
+- ``filequery``: Allows to query inside a single file.
+- ``h5mongo``: Using pymongo (mongodb) to mirror metadata of HDF files into the database to be queried afterward.
 
 
 .. toctree::
