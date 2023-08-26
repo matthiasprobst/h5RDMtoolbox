@@ -8,7 +8,7 @@ principles. It specifically supports the five main steps of
  1. Planning (defining or select existing a HDF5 file structure and a metadata convention)
  2. Collecting data (creating HDF5 files or convert to HDF5 files from other sources)
  3. Analyzing and processing data (Plotting, derive data, ...)
- 4. Sharing data (publishing, archiving, ... e.g. to databases like mongoDB or repositories like Zenodo)
+ 4. Sharing data (publishing, referencing and archiving e.g. by using mongoDB, `Zenodo <https://zenodo.org>`_ and support of `ORCIDs <https://orcid.org>`_
  5. Reusing data (Search data in a local database or file structure or in Zenodo repositories).
 
 .. image:: _static/new_icon_with_text.svg
@@ -29,7 +29,7 @@ principles. It specifically supports the five main steps of
 
 Overview
 --------
-The packages comes with three sub-packages, each covering a different aspect of efficient and sustainable work with
+The packages come with three sub-packages, each covering a different aspect of efficient and sustainable work with
 HDF5 files:
 
   - :doc:`convention <conventions/index>`: Modular construction of conventions (standardization and specification for HDF files)
