@@ -9,9 +9,10 @@ from typing import Dict
 from .h5utils import get_rootparent
 from .. import get_config, conventions, utils
 from .. import get_ureg
+from .. import protected_attributes
 from ..conventions import consts
 
-H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
+H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox
 
 
 def pop_hdf_attributes(attrs: Dict) -> Dict:
@@ -111,7 +112,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if name in conventions.get_current_convention().properties[parent.__class__]:
                 return conventions.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
-        return ret
 
     @with_phil
     def __setitem__(self, name, value):

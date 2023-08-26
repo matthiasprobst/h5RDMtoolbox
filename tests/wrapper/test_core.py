@@ -62,6 +62,7 @@ class TestCore(unittest.TestCase):
             h5.attrs['mystr'] = MyString('test')
             attr_str = h5.attrs['mystr']
             self.assertIsInstance(attr_str, AttributeString)
+
             h5.attrs['mystr'] = attr_str
 
             grp = h5.create_group('grp')

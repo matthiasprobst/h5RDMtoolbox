@@ -22,12 +22,9 @@ from . import logger
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
-from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
-from .h5attr import WrapperAttributeManager
+from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
-from .. import _repr, get_config, conventions, utils
-from .. import consts
-from .. import get_ureg
+from .. import _repr, get_config, conventions, utils, consts, get_ureg, protected_attributes
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
@@ -244,8 +241,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     def rootparent(self):
         """Return the root group instance."""
         if self.name == '/':
-            return self
-        return get_rootparent(self.parent)
+            return File(self._id)
+        return File(get_rootparent(self.parent)._id)
 
     @property
     def basename(self) -> str:
@@ -1642,7 +1639,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             used_dims = [dim_name for arg, dim_name in zip(
                 myargs, dims_names) if isinstance(arg, (slice, np.ndarray))]
 
-            COORDINATES = self.attrs.get('COORDINATES')
+            COORDINATES = self.attrs.get(protected_attributes.COORDINATES)
             if COORDINATES is not None:
                 if isinstance(COORDINATES, str):
                     COORDINATES = [COORDINATES, ]

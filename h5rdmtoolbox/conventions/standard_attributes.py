@@ -23,15 +23,15 @@ __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
 __all__ = ['StandardAttribute', ]
 
 
-def _pint_quantity(q):
+def _pint_quantity(q, parent):
     return get_ureg()(q)
 
 
-def _pint_unit(u):
+def _pint_unit(u, parent):
     return get_ureg().Unit(u)
 
 
-def _standard_name_table(snt):
+def _standard_name_table(snt, parent):
     from .standard_names.table import StandardNameTable
     if isinstance(snt, dict):
         return StandardNameTable.from_yaml(snt)
@@ -48,7 +48,12 @@ def _standard_name_table(snt):
     raise RuntimeError('Could not parse standard name table.')
 
 
-def make_dict(ref):
+def _standard_name(sn, parent):
+    snt = parent.rootparent.standard_name_table
+    return snt[sn]
+
+
+def make_dict(ref, parent):
     """If input is string repr of dict, return dict"""
     if isinstance(ref, np.ndarray):
         ref = ref.tolist()
@@ -65,9 +70,14 @@ def make_dict(ref):
     return _out
 
 
-def _isodatetime(dt):
+def _isodatetime(dt, parent):
     # expecting isoformat!
     return datetime.fromisoformat(dt)
+
+
+def _orcid(orcid_id, parent):
+    from .. import orcid
+    return orcid.ORCID(orcid_id)
 
 
 class StandardAttribute(abc.ABC):
@@ -205,13 +215,16 @@ class StandardAttribute(abc.ABC):
         self.description = description
         self.position = position
         if return_type is None:
-            return_type = None
+            if self.validator[0].keyword in known_types:
+                return_type = self.validator[0].keyword
+            else:
+                return_type = None
         else:
             if return_type not in known_types:
                 raise ValueError(f'Unknown return type: {return_type}')
         self.return_type = return_type
-        for k in kwargs:
-            logger.error(f'Unexpected entry "{k}" for StandardAttribute, which is ignored.')
+        for _k in kwargs:
+            logger.error(f'Unexpected entry "{_k}" for StandardAttribute, which is ignored.')
 
     def __repr__(self):
         if self.is_positional():
@@ -261,7 +274,7 @@ class StandardAttribute(abc.ABC):
             ret_val = self.default_value
         if self.return_type is None:
             return WrapperAttributeManager._parse_return_value(parent._id, ret_val)
-        return known_types[self.return_type](ret_val)
+        return known_types[self.return_type](ret_val, parent)
 
 
 known_types = {'int': int,
@@ -275,4 +288,11 @@ known_types = {'int': int,
                'pint.Unit': _pint_unit,
                'sdict': make_dict,
                'standard_name_table': _standard_name_table,
-               'isodatetime': _isodatetime}
+               'isodatetime': _isodatetime,
+               'orcid': _orcid,
+               'standard_name': _standard_name,
+               }
+_known_types = known_types.copy()
+for k, v in known_types.items():
+    _known_types[f'${k}'] = v
+known_types = _known_types

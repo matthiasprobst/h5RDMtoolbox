@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 import xarray as xr
-
+from .. import protected_attributes
 
 @xr.register_dataarray_accessor("hdf")
 class HDFArrayAccessor:
@@ -97,5 +97,5 @@ class HDFArrayAccessor:
                 dset.dims[i].attach_scale(h5group[s])
 
         if coordinates_0dim:
-            dset.attrs['COORDINATES'] = coordinates_0dim
+            dset.attrs[protected_attributes.COORDINATES] = coordinates_0dim
         return dset

@@ -131,6 +131,56 @@ class StandardNameTable:
         meta['version'] = StandardNameTable.validate_version(version)
         self._meta = meta
 
+    def __repr__(self):
+        _meta = self.meta.pop('alias', None)
+        meta_str = ', '.join([f'{key}: {value}' for key, value in self.meta.items()])
+        return f'<StandardNameTable: ({meta_str})>'
+
+    def __contains__(self, standard_name):
+        return standard_name in self.standard_names
+
+    def __getitem__(self, standard_name: str) -> StandardName:
+        """Return table entry"""
+        logger.debug(f'Checking "{standard_name}"')
+        if standard_name in self.standard_names:
+            entry = self.standard_names[standard_name]
+            return StandardName(name=standard_name,
+                                units=entry['units'],
+                                description=entry['description'],
+                                isvector=entry.get('vector', False),
+                                alias=entry.get('alias', None))
+
+        logger.debug(f'No exact match of standard name "{standard_name}" in table')
+
+        if standard_name in self.list_of_aliases:
+            return self[self.aliases[standard_name]]
+
+        for transformation in self.transformations:
+            match = transformation.match(standard_name)
+            if match:
+                return evaluate(transformation, match, self)
+        logger.debug(f'No general transformation could be successfully applied on "{standard_name}"')
+
+        for affix_name, affix in self.affixes.items():
+            for transformation in affix.transformation:
+                match = transformation.match(standard_name)
+                if match:
+                    logger.debug(f'Applying affix transformation "{affix_name}"')
+                    return evaluate(transformation, match, self)
+        logger.debug(f'No affix transformation could be successfully applied on "{standard_name}"')
+
+        # provide a suggestion for similar standard names
+        similar_names = [k for k in [*self.standard_names.keys(), *self.list_of_aliases] if
+                         get_similar_names_ratio(standard_name, k) > 0.75]
+        if similar_names:
+            raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".'
+                                           ' Did you mean one of these: '
+                                           f'{similar_names}?')
+        raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
+
+    def _repr_html_(self):
+        return f"""<li style="list-style-type: none; font-style: italic">{self.__repr__()[1:-1]}</li>"""
+
     @property
     def transformations(self) -> List[Transformation]:
         """List of available transformations"""
@@ -208,53 +258,6 @@ class StandardNameTable:
     def names(self):
         """Return list of standard names"""
         return sorted(self.standard_names.keys())
-
-    def __repr__(self):
-        _meta = self.meta.pop('alias', None)
-        meta_str = ', '.join([f'{key}: {value}' for key, value in self.meta.items()])
-        return f'<StandardNameTable: ({meta_str})>'
-
-    def __contains__(self, standard_name):
-        return standard_name in self.standard_names
-
-    def __getitem__(self, standard_name: str) -> StandardName:
-        """Return table entry"""
-        logger.debug(f'Checking "{standard_name}"')
-        if standard_name in self.standard_names:
-            entry = self.standard_names[standard_name]
-            return StandardName(name=standard_name,
-                                units=entry['units'],
-                                description=entry['description'],
-                                isvector=entry.get('vector', False),
-                                alias=entry.get('alias', None))
-
-        logger.debug(f'No exact match of standard name "{standard_name}" in table')
-
-        if standard_name in self.list_of_aliases:
-            return self[self.aliases[standard_name]]
-
-        for transformation in self.transformations:
-            match = transformation.match(standard_name)
-            if match:
-                return evaluate(transformation, match, self)
-        logger.debug(f'No general transformation could be successfully applied on "{standard_name}"')
-
-        for affix_name, affix in self.affixes.items():
-            for transformation in affix.transformation:
-                match = transformation.match(standard_name)
-                if match:
-                    logger.debug(f'Applying affix transformation "{affix_name}"')
-                    return evaluate(transformation, match, self)
-        logger.debug(f'No affix transformation could be successfully applied on "{standard_name}"')
-
-        # provide a suggestion for similar standard names
-        similar_names = [k for k in [*self.standard_names.keys(), *self.list_of_aliases] if
-                         get_similar_names_ratio(standard_name, k) > 0.75]
-        if similar_names:
-            raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".'
-                                           ' Did you mean one of these: '
-                                           f'{similar_names}?')
-        raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
 
     @staticmethod
     def validate_version(version_string: str) -> str:

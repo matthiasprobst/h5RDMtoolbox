@@ -10,9 +10,10 @@ from numpy import ndarray
 from time import perf_counter_ns
 
 from . import get_config
+from . import protected_attributes
 from .orcid import is_valid_orcid_pattern, get_html_repr
 
-H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', 'COORDINATES')
+H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
     CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
 except FileNotFoundError:
@@ -333,7 +334,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         # open attribute section:
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in h5obj.attrs.raw.items():
+        for k, v in h5obj.attrs.items():
             if k not in self.ignore_attrs and not k.isupper():
                 _html_ds_attrs += self.__attrs__(k, v)
         # close attribute section
@@ -366,7 +367,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html += """\n
                     <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in h5obj.attrs.raw.items():
+        for k, v in h5obj.attrs.items():
             _html += self.__attrs__(k, v)
         # close attribute section
         _html += """
@@ -385,16 +386,19 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         return _html
 
     def __attrs__(self, name, h5obj):
-        if isinstance(h5obj, ndarray):
-            _value = h5obj.copy()
-            for i, v in enumerate(h5obj):
-                if isinstance(v, str):
-                    _value[i], is_url = process_string_for_link(v)
-                    if not is_url and self.max_attr_length:
-                        if len(v) > self.max_attr_length:
-                            _value[i] = f'{v[0:self.max_attr_length]}...'
-        else:
+        # if isinstance(h5obj, ndarray):
+        #     _value = h5obj.copy()
+        #     for i, v in enumerate(h5obj):
+        #         if isinstance(v, str):
+        #             _value[i], is_url = process_string_for_link(v)
+        #             if not is_url and self.max_attr_length:
+        #                 if len(v) > self.max_attr_length:
+        #                     _value[i] = f'{v[0:self.max_attr_length]}...'
+        if isinstance(h5obj, str):
             _value_str = f'{h5obj}'
+            if _value_str[0] == '<' and _value_str[-1] == '>':
+                _value_str = _value_str[1:-1]
+
             _value, is_url = process_string_for_link(_value_str)
             if not is_url:
                 if self.max_attr_length:
@@ -409,17 +413,16 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             _value = _value.__str__().replace('<', '&#60;')
             _value = _value.replace('>', '&#62;')
 
-        if isinstance(_value, ndarray):
-            _value_str = ', '.join(_value)  # _value.__str__().replace("' '", "', '")
-        # elif isinstance(_value, str):
-        #     _value_str = process_string_for_link(_value)
+        if isinstance(h5obj, ndarray):
+            print(h5obj)
         else:
-            _value_str = _value
+            if getattr(h5obj, '_repr_html_', None):
+                _value_str = h5obj._repr_html_()
+            else:
+                _value_str = str(h5obj)
+                if _value_str[0] == '<' and _value_str[-1] == '>':
+                    _value_str = _value_str[1:-1]
 
-        if name == 'standard_name':
-            # TODO give standard name a dropdown which shows description and canonical_units
-            return f"""<li style="list-style-type: none; font-style:
-             italic">{name}: {_value_str}</li>"""
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 

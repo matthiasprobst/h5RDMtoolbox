@@ -3,8 +3,7 @@ import h5py
 import numpy as np
 import xarray as xr
 
-from .. import conventions, consts
-from .. import get_config, get_ureg
+from .. import conventions, consts, get_ureg, get_config, protected_attributes
 
 
 def dataset_value_decoder(func):
@@ -60,8 +59,8 @@ def dataset_value_decoder(func):
                 return xarr - offset
 
         if get_config('add_source_info_to_xr'):
-            xarr.attrs['__hdf_src_info__'] = {'filename': str(ds.hdf_filename),
-                                              'name': ds.name}
+            xarr.attrs[protected_attributes.HDF_SRC_FILENAME] = {'filename': str(ds.hdf_filename),
+                                                                 'name': ds.name}
         return xarr
         # return H5DataArray(xarr, h5parent=ds, h5slice=parent_slice)
 

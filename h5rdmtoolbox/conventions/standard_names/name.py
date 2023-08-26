@@ -48,6 +48,28 @@ class StandardName:
     def __repr__(self):
         return f'<StandardName: "{self.name}" [{self.units}] {self.description}>'
 
+    def _repr_html_(self, checkbox_state='checked'):
+        # collapsable html representation
+        if self.is_vector():
+            sn_name = f'{self.name} (vector quantity)'
+        else:
+            sn_name = self.name
+        from time import perf_counter_ns
+        _id = self.name + perf_counter_ns().__str__()
+        out = f"""<ul style="list-style-type: none;" class="h5grp-sections">
+    <li>
+        <input id="group-{_id}" type="checkbox" {checkbox_state}>
+        <label style="font-weight: bold" for="group-{_id}">
+        {sn_name}</label>
+        <ul class="h5tb-attr-list">
+"""
+        out += f'           <li style="list-style-type: none; font-style: italic">units : {self.units}</li>'
+        out += f'           <li style="list-style-type: none; font-style: italic">description : {self.description}</li>'
+        out += """      </il>
+    </ul>
+</ul>"""
+        return out
+
     def equal_unit(self, other_unit: pint):
         """compares the base units of this standard name with another unit provided as a string
         or pint.Unit"""

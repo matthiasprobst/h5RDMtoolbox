@@ -9,6 +9,7 @@ from pymongo.errors import InvalidDocument
 from typing import Dict, List
 
 from .file import distinct
+from .. import protected_attributes
 from ..wrapper.accessory import register_special_dataset
 from ..wrapper.core import Dataset, Group
 from ..wrapper.h5attr import H5_DIM_ATTRS
@@ -172,7 +173,7 @@ class MongoDatasetAccessor:
             for ak, av in ds.attrs.items():
                 if ak not in H5_DIM_ATTRS:
                     if ak not in ignore_attrs:
-                        # if ak == 'COORDINATES':
+                        # if ak == protected_attributes.COORDINATES:
                         #     if isinstance(av, (np.ndarray, list)):
                         #         for c in av:
                         #             doc[c] = float(ds.parent[c][()])
@@ -233,7 +234,7 @@ class MongoDatasetAccessor:
                 for ak, av in ds.attrs.items():
                     if ak not in H5_DIM_ATTRS:
                         if ak not in ignore_attrs:
-                            if ak == 'COORDINATES':
+                            if ak == protected_attributes.COORDINATES:
                                 if isinstance(av, (np.ndarray, list)):
                                     for c in av:
                                         doc[c[1:]] = float(ds.parent[c][()])

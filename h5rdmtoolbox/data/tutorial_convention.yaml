@@ -51,11 +51,13 @@ contact:
   target_methods:
     - create_dataset
     - create_group
+  return_type: orcid
   default_value: $NONE
 
 contact-2:
   validator: $orcid
   description: Contact or responsible person represented by an ORCID-ID.
+  return_type: orcid
   target_methods: __init__
 
 references:
