@@ -22,7 +22,7 @@ principles. It specifically supports the five main steps of
 
 ## Documentation
 
-Please click on the image clicke [here](h5rdmtoolbox.readthedocs.io/en/latest/) to find a comprehensive documentation
+Please click on the image click [here](h5rdmtoolbox.readthedocs.io/en/latest/) to find a comprehensive documentation
 with examples
 
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
