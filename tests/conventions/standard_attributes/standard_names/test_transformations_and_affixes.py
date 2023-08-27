@@ -89,7 +89,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                             self.assertEqual(_sn.units, self.snt[sn1].units)
                             self.assertEqual(_sn.units, self.snt[sn2].units)
                             self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} between {loc1} and "
-                                                              f"{loc2}")
+                                                              f"{loc2}.")
         with self.assertRaises(AffixKeyError):
             self.snt[f'difference_of_time_and_time_between_fan_inlet_and_INVALID']
         with self.assertRaises(AffixKeyError):
@@ -110,12 +110,12 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                         if sn1 == sn2:
                             self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} across {dev}. "
                                                               f"{sn1}: {self.snt[sn1].description} "
-                                                              f"{dev}: {self.snt.affixes['device'][dev]}")
+                                                              f"{dev}: {self.snt.affixes['device'][dev]}.")
                         else:
                             self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} across {dev}. "
                                                               f"{sn1}: {self.snt[sn1].description} "
                                                               f"{sn2}: {self.snt[sn2].description} "
-                                                              f"{dev}: {self.snt.affixes['device'][dev]}")
+                                                              f"{dev}: {self.snt.affixes['device'][dev]}.")
         with self.assertRaises(AffixKeyError):
             self.snt[f'difference_of_time_and_time_across_INVALID']
 
@@ -161,7 +161,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             for dev in self.snt.affixes['device']:
                 _sn = self.snt[f'difference_of_{sn}_across_{dev}']
                 self.assertEqual(_sn.units, self.snt[sn].units)
-                self.assertEqual(_sn.description, f"Difference of {sn} across {dev}")
+                self.assertEqual(_sn.description, f"Difference of {sn} across {dev}.")
         with self.assertRaises(AffixKeyError):
             self.snt[f'difference_of_{sn}_across_INVALID']
 
@@ -177,7 +177,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         for sn in self.snt.standard_names:
             _sn = self.snt[f'standard_deviation_of_{sn}']
             self.assertEqual(_sn.units, self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Standard deviation of {sn}")
+            self.assertEqual(_sn.description, f"Standard deviation of {sn}.")
 
     def test_arithmetic_mean_of(self):
         # arithmetic_mean_of

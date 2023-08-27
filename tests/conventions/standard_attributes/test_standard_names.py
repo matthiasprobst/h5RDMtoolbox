@@ -70,6 +70,11 @@ class TestStandardAttributes(unittest.TestCase):
                 self.assertEqual('x_velocity', h5['grp/ds'].attrs['standard_name'])
                 self.assertEqual('x_velocity', h5['ds'].attrs['standard_name'])
 
+    def test_add_transformation(self):
+        snt = h5tbx.tutorial.get_standard_name_table()
+        with self.assertRaises(TypeError):
+            snt.add_transformation(3.2)
+
     def test_standard_name(self):
         with self.assertRaises(StandardNameError):
             StandardName(name='', units='m')
@@ -173,6 +178,8 @@ class TestStandardAttributes(unittest.TestCase):
             })
         self.assertTrue(table.check_name('synthetic_particle_image'))
         self.assertFalse(table.check_name('particle_image'))
+        self.assertTrue(table.check(table['mean_particle_diameter']))
+        self.assertFalse(table.check(StandardName(name='particle_image', units='counts', description='a description')))
         self.assertIsInstance(table['synthetic_particle_image'], StandardName)
 
     def test_empty_SNT(self):
@@ -182,6 +189,25 @@ class TestStandardAttributes(unittest.TestCase):
                                 meta=dict(institution='my_institution',
                                           contact='https://orcid.org/0000-0001-8729-0482'))
         self.assertIsInstance(snt.standard_names, dict)
+
+        snt = StandardNameTable(name='test_snt',
+                                standard_names={},
+                                version=None,
+                                affixes={'table': {'x_velocity': {'units': 'm/s', 'description': 'x velocity'}}},
+                                meta=dict(institution='my_institution',
+                                          version_number=1,
+                                          contact='https://orcid.org/0000-0001-8729-0482'))
+        self.assertListEqual(['x_velocity', ], snt.names)
+        self.assertEqual('v1', snt.version)
+        self.assertEqual('v0.0', StandardNameTable.validate_version(None))
+
+        with self.assertRaises(TypeError):
+            StandardNameTable(name='test_snt',
+                              standard_names={},
+                              version='v1.0dev',
+                              affixes=4.3,
+                              meta=dict(institution='my_institution',
+                                        contact='https://orcid.org/0000-0001-8729-0482'))
 
     def test_to_html(self):
         if self.connected:
@@ -223,6 +249,10 @@ class TestStandardAttributes(unittest.TestCase):
                 with self.assertRaises(StandardAttributeError):
                     h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
                 h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
+                self.assertEqual(h5['y_velocity'].attrs['standard_name'], 'y_velocity')
+
+                with self.assertRaises(StandardAttributeError):
+                    h5.create_dataset('velocity', data=2.3, units='m/s', standard_name='velocity')
 
     def test_standard_name_convention(self):
         h5tbx.use(None)

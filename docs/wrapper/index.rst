@@ -1,7 +1,7 @@
 .. _wrapper:
 
-|h5wrappericon| Wrapper around `h5py`
-=====================================
+ Wrapper around h5py
+====================
 
 .. |h5wrappericon| image:: ../_static/icon_h5wrapper.svg
   :width: 30

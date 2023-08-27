@@ -42,13 +42,21 @@ class TestFileQuery(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             h5tbx.database.Folder('here')
+
         fd = h5tbx.database.Folder(folder_dir, rec=False)
         self.assertEqual(2, len(list(fd.filenames)))
+        self.assertEqual(2, len(fd))
+        self.assertEqual(fd.filenames[0], fd[0].filename)
+        self.assertEqual(fd.filenames[0], fd.find_one({'$basename': 'ds1'}).filename)
+        self.assertEqual(fd.filenames[0], fd.find_one({'$basename': 'ds1'}).filename)
 
         self.assertEqual(2, len(fd.find({'long_name': 'long name 1'})))
 
         fdr = h5tbx.database.Folder(folder_dir, rec=True)
         self.assertEqual(3, len(list(fdr.filenames)))
+
+        res = fd.find_one_per_file({'$basename': {'$regex': 'ds[0-9]'}})
+        self.assertEqual(2, len(res))
 
     def test_Files(self):
         fnames = []

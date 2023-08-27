@@ -5,11 +5,13 @@ The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package s
 to achieve a sustainable data lifecycle which follows the `FAIR <https://www.nature.com/articles/sdata201618>`_
 principles. It specifically supports the five main steps of
 
- 1. Planning (defining or select existing a HDF5 file structure and a metadata convention)
- 2. Collecting data (creating HDF5 files or convert to HDF5 files from other sources)
- 3. Analyzing and processing data (Plotting, derive data, ...)
- 4. Sharing data (publishing, referencing and archiving e.g. by using mongoDB, `Zenodo <https://zenodo.org>`_ and support of `ORCIDs <https://orcid.org>`_
- 5. Reusing data (Search data in a local database or file structure or in Zenodo repositories).
+ 1. Planning (defining a internal layout for HDF5 a metadata convention for attribute usage)
+ 2. Collecting data (creating HDF5 files or converting to HDF5 files from other sources)
+ 3. Analyzing and processing data (Plotting, deriving data, ...)
+ 4. Sharing data (publishing, archiving, ... e.g. to databases like [mongoDB](https://www.mongodb.com/) or repositories
+    like [Zenodo](https://zenodo.org/))
+ 5. Reusing data (Searching data in databases, local file structures or online repositories
+    like [Zenodo](https://zenodo.org)).
 
 .. image:: _static/new_icon_with_text.svg
   :width: 500

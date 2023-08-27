@@ -264,7 +264,7 @@ class StandardNameTable:
         """Validate version number. Must be MAJOR.MINOR(a|b|rc|dev). If validated, return version string, else
         raise ValueError."""
         if version_string is None:
-            version_string = '0.0'
+            version_string = 'v0.0'
             warnings.warn(f'Version number is not set. Setting version number to {version_string}.')
         version_string = str(version_string)
         if not re.match(consts.VERSION_PATTERN, version_string):
@@ -295,6 +295,11 @@ class StandardNameTable:
             if transformation.match(standard_name):
                 return True
             logger.debug(f'No transformation applied successfully on "{standard_name}"')
+
+        for affix_name, affix in self.affixes.items():
+            for transformation in affix.transformation:
+                if transformation.match(standard_name):
+                    return True
         return False
 
     def check(self, standard_name: Union[str, StandardName], units: Union[pint.Unit, str] = None) -> bool:

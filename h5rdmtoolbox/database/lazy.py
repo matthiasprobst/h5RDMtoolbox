@@ -1,5 +1,6 @@
 """lazy objects. user can work with datasets and groups without having to open the file him/her-self"""
 import h5py
+import pathlib
 from typing import Union, List, Dict
 
 
@@ -7,7 +8,7 @@ class LGroup:
     """Lazy Group"""
 
     def __init__(self, obj: h5py.Group):
-        self.filename = obj.file.filename
+        self.filename = pathlib.Path(obj.file.filename)
         if isinstance(obj.attrs, h5py._hl.attrs.AttributeManager):
             self._attrs = dict(obj.attrs)
         else:

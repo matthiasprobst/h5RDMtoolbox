@@ -63,6 +63,10 @@ class StandardNameValidator(StandardAttributeValidator):
             units = str(scale * units)
 
         sn = snt[standard_name]
+        if sn.is_vector():
+            raise errors.StandardAttributeError(f'Standard name {standard_name} is a vector and cannot be used as '
+                                                'attribute. Use a transformation e.g. with a component or magnitude '
+                                                'instead.')
         if not sn.equal_unit(units):
             raise errors.StandardAttributeError(f'Standard name {standard_name} has incompatible units {units}. '
                                                 f'Expected units: {sn.units} but got {units}.')

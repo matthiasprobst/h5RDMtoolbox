@@ -3,69 +3,102 @@
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
 ![DOCS](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/branch/dev/graph/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
+![pyvers](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)
 
 *Note, that the project is still under development!*
 
-The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everybody who is working with HDF5
-to achieve a sustainable data lifecycle which follows the [FAIR](https://www.nature.com/articles/sdata201618)
+The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everybody who is working with
+HDF5 to achieve a sustainable data lifecycle which follows
+the [FAIR (Findable, Accessible, Interoperable, Reusable)](https://www.nature.com/articles/sdata201618)
 principles. It specifically supports the five main steps of
 
- 1. Planning (defining or select existing a HDF5 file structure and a metadata convention)
- 2. Collecting data (creating HDF5 files or convert to HDF5 files from other sources)
- 3. Analyzing and processing data (Plotting, derive data, ...)
- 4. Sharing data (publishing, archiving, ... e.g. to databases like mongoDB or repositories like Zenodo)
- 5. Reusing data (Search data in a local database or filestructure or in Zenodo repositories).
+1. Planning (defining a internal layout for HDF5 a metadata convention for attribute usage)
+2. Collecting data (creating HDF5 files or converting to HDF5 files from other sources)
+3. Analyzing and processing data (Plotting, deriving data, ...)
+4. Sharing data (publishing, archiving, ... e.g. to databases like [mongoDB](https://www.mongodb.com/) or repositories
+   like [Zenodo](https://zenodo.org/))
+5. Reusing data (Searching data in databases, local file structures or online repositories
+   like [Zenodo](https://zenodo.org)).
+
+## Documentation
+
+Please click on the image clicke [here](h5rdmtoolbox.readthedocs.io/en/latest/) to find a comprehensive documentation
+with examples
 
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
 
-The package is tested extensively for python versions `3.8`, `3.9` and `3.10`.
-
-Please find a comprehensive documentation with examples [here](h5rdmtoolbox.readthedocs.io/en/latest/).
-
 ## Quickstart
-Get a first idea of how the `h5RDMtoolbox` supports the FAIR research data lifecycle of 
-`planning`, 
-`collecting`, 
-`analyzing`, 
-`sharing` and 
+
+Get a first idea of how the `h5RDMtoolbox` supports the FAIR research data lifecycle of
+`planning`,
+`collecting`,
+`analyzing`,
+`sharing` and
 `reusing` with a minimal example:
+
+### 1. Planning
+
+- Decide to use HDF5 as your core file format
+- Define important attributes and their usage in a metadata convention (e.g. a YAML file)
+- Publish your convention on a repository like [Zenodo](https://zenodo.org/)
+
 ```python
+# import the package
 import h5rdmtoolbox as h5tbx
 
-# 1. Planing - Metadata Convention Plan with HDF5
-# - We decided to use HDF5
-# - Design a convention and publish it on zenodo
-# Assume we did this already and it can be found here: https://zenodo.org/record/8281285
-cv = h5tbx.conventions.from_zenodo('8281285')
+# Assume we published a convention here: https://zenodo.org/record/8281285
+cv = h5tbx.conventions.from_zenodo(doi='8281285')
 
-# 2. Collecting
-# - fill an HDF5 file with the required data and mandatory metadata
+# enable the convention:
 h5tbx.use(cv)
+```
+
+### 2. Collecting
+
+- Fill an HDF5 file with the required data and mandatory metadata
+- Data may come various sources, e.g. from a measurement, a simulation or a database
+- HDF5 is best for multidimensional data, but can also be used for 1D data
+- When writing the HDF5 files, the convention is automatically validating the metadata input, which are the attributes
+  or the datasets and groups
+
+```python
 with h5tbx.File('my_file.h5',
                 data_type='experimental',
                 contact='https://orcid.org/0000-0001-8729-0482') as h5:
     # create a dataset
     h5.create_dataset(name='u',
-                     data=[1, 42, 101],
-                     standard_name='x_velocity',
-                     units='m/s')
+                      data=[1, 42, 101],
+                      standard_name='x_velocity',
+                      units='m/s')
+```
 
-# 3. Analyzing
-# - Open the file again and plot the data
+### 3. Analyzing
+
+ - Open the file, make computations or just plot the data
+
+```python
 with h5tbx.File('my_file.h5') as h5:
     h5['u'][1:2].plot()
+```
 
-# 4. Share your data
-# - put it in a local file share
-# - or upload it to a database, e.g. into a mongoDB:
+### 4. Sharing your data
+ - Share your data by storing it in a local directory or in a database
+ - The `h5rdmtoolbox` supports both options by providing search queries for local directories and the non-relational 
+   database [mongoDB](https://www.mongodb.com/)
+```python
 from pymongo import MongoClient
+
 client = MongoClient()
 collection = client['my_database']['my_collection']
 with h5tbx.File('my_file.h5') as h5:
     h5['u'][1:2].mongo.insert(0, collection)
+```
 
-# 5. Reusing
-# - Find the data by searching for the metadata in the mongoDB
+### 5. Reusing
+
+ - Find the data by searching for the metadata in the [mongoDB](https://www.mongodb.com/)
+
+```python
 arr = collection.find_one({'standard_name': {'$eq': 'x_velocity'}})
 # plot it again
 arr.plot()
@@ -92,7 +125,7 @@ Add `--user` if you do not have root access.
 
 For development installation run
 
-    `pip install -e h5RDMtoolbox
+    pip install -e h5RDMtoolbox
 
 ### Dependencies
 

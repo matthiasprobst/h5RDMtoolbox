@@ -6,6 +6,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.errors import StandardNameError, AffixKeyError
 from h5rdmtoolbox.conventions.standard_names import cache
+from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from h5rdmtoolbox.conventions.standard_names.validator import _parse_snt
 
@@ -23,6 +24,31 @@ class TestStandardAttributes(unittest.TestCase):
             warnings.warn('No internet connection', UserWarning)
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
+
+    def test_standard_name(self):
+        with self.assertRaises(ValueError):
+            sn = StandardName(name='x_velocty')
+        with self.assertWarns(DeprecationWarning):
+            sn = StandardName(name='x_velocty', description='Velocity in x-direction', canonical_units='m/s')
+        with self.assertRaises(TypeError):
+            sn = StandardName(name='x_velocty', description='Velocity in x-direction', units=5.4)
+
+        sn = StandardName(name='x_velocity', description='Velocity in x-direction', units='m/s')
+        sn2 = StandardName(name='x_velocity', description='Velocity in x-direction', units='m/s')
+        self.assertEqual(sn, 'x_velocity')
+        self.assertEqual(sn, sn2)
+        sn2.description = 'Velocity in x-direction (m/s)'
+        self.assertNotEqual(sn, sn2)
+
+        with self.assertRaises(TypeError):
+            StandardName.check_syntax(sn)
+        with self.assertRaises(StandardNameError):
+            StandardName.check_syntax('123')
+        self.assertDictEqual({'name': 'x_velocity', 'units': 'm/s', 'description': 'Velocity in x-direction.'},
+                             sn.to_dict())
+        self.assertFalse(sn.is_vector())
+        snt = _parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
+        self.assertTrue(sn.check(snt))
 
     def test_parse_snt(self):
         with self.assertRaises(TypeError):
@@ -154,7 +180,7 @@ class TestStandardAttributes(unittest.TestCase):
             'description': 'velocity in a direction',
             'units': 'm/s'
         })
-        self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
+        self.assertEqual(table['a_velocity'].description, 'velocity in a direction.')
         from h5rdmtoolbox import get_ureg
         self.assertEqual(table['a_velocity'].units, get_ureg()('m/s'))
 
