@@ -29,7 +29,7 @@ A quickstart notebook can be tested by clicking on the following badge:
 
 ## Documentation
 
-An comprehensive documentation with many examples [here](h5rdmtoolbox.readthedocs.io/en/latest/) or by clicking
+Please find a comprehensive documentation with many examples [here](h5rdmtoolbox.readthedocs.io/en/latest/) or by click
 on the image, which shows the research data lifecycle in the center and the respective toolbox features on the outside:
 
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
