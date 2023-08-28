@@ -1876,8 +1876,8 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 kwargs, _ = _pop_standard_attributes(
                     kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
                 )
-                logger.debug(f'mode is read only. Provided standard attributes are ignored: {skwargs.keys()}')
             super(File, self).__init__(name, mode, **kwargs)
+            self._hdf_filename = Path(self.filename)
             return
 
         # name is path or None:
