@@ -296,7 +296,7 @@ def _use(convention_name: Union[str, Convention]) -> str:
     logger.debug(f'Switching to convention "{convention_name}"')
     if current_convention is not None:
         if convention_name == current_convention.name:
-            return  # nothing to do
+            return convention_name
         current_convention._delete_signature()
     current_convention = get_registered_conventions()[convention_name]
     current_convention._add_signature()
