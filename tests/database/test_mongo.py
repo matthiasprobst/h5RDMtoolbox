@@ -50,8 +50,8 @@ if mongo_installed:
         def test_type2mongo(self):
             self.assertEqual(None, type2mongo(None))
             self.assertEqual(4.3, type2mongo(np.float(4.3)))
-            self.assertEqual(2.3, type2mongo(np.array([2.3])))
-            self.assertEqual(5, type2mongo(np.array([5])))
+            self.assertEqual([2.3], type2mongo(np.array([2.3])))
+            self.assertEqual([5, ], type2mongo(np.array([5])))
 
         def test_insert_relative_filename(self):
             if self.mongodb_running:
