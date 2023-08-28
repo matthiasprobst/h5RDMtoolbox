@@ -1905,6 +1905,12 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         if attrs is None:
             attrs = {}
 
+        _tmp_init = False
+
+        if _tmp_init:
+            mode = 'r+'
+            warnings.warn('Switched to mode "r+"')
+
         if mode == 'r':
             if "__init__" in conventions.get_current_convention().methods[self.__class__]:
                 kwargs, skwargs = _pop_standard_attributes(
@@ -1915,12 +1921,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             skwargs = {}
         else:
             attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name)
-
-        _tmp_init = False
-
-        if _tmp_init:
-            mode = 'r+'
-            warnings.warn('Switched to mode "r+"')
 
         if mode == 'r' and len(skwargs) > 0:
             for k, v in skwargs.items():
