@@ -386,21 +386,40 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         return _html
 
     def __attrs__(self, name, h5obj):
-        # if isinstance(h5obj, ndarray):
-        #     _value = h5obj.copy()
-        #     for i, v in enumerate(h5obj):
-        #         if isinstance(v, str):
-        #             _value[i], is_url = process_string_for_link(v)
-        #             if not is_url and self.max_attr_length:
-        #                 if len(v) > self.max_attr_length:
-        #                     _value[i] = f'{v[0:self.max_attr_length]}...'
+
+        if name in ('DIMENSION_LIST', 'REFERENCE_LIST'):
+            _value = h5obj.__str__().replace('<', '&#60;')
+            _value = _value.replace('>', '&#62;')
+            return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
+
+        if isinstance(h5obj, ndarray):
+            if all(isinstance(item, str) for item in h5obj):
+                _string_value_list = []
+                for item in h5obj:
+                    _value, is_url = process_string_for_link(item)
+                    if is_url:
+                        _string_value_list.append(_value)
+                    else:
+                        _string_value_list.append(item)
+                return '<li style="list-style-type: none; ' \
+                       f'font-style: italic">{name} : {", ".join(_string_value_list)}</li>'
+            else:
+                _value = h5obj.__repr__()
+                if len(_value) > self.max_attr_length:
+                    _value = f'{_value[0:self.max_attr_length]}...'
+                return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
+
         if isinstance(h5obj, str):
             _value_str = f'{h5obj}'
             if _value_str[0] == '<' and _value_str[-1] == '>':
                 _value_str = _value_str[1:-1]
 
             _value, is_url = process_string_for_link(_value_str)
-            if not is_url:
+            if is_url:
+                if 'orcid.org' in _value:
+                    from . import orcid
+                    return orcid.get_html_repr(h5obj.strip('/').rsplit('/', 1)[-1])
+            else:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
                         _value = f'{_value_str[0:self.max_attr_length]}...'
@@ -408,14 +427,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _value = h5obj
                 else:
                     _value = h5obj
+            return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
-        if name in ('DIMENSION_LIST', 'REFERENCE_LIST'):
-            _value = _value.__str__().replace('<', '&#60;')
-            _value = _value.replace('>', '&#62;')
-
-        if isinstance(h5obj, ndarray):
-            print(h5obj)
-        else:
+        if not isinstance(h5obj, ndarray):
             if getattr(h5obj, '_repr_html_', None):
                 _value_str = h5obj._repr_html_()
             else:

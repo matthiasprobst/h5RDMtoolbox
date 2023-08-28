@@ -1880,10 +1880,11 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         else:
             if isinstance(name, str):
                 fname = pathlib.Path(name)
-                if fname.exists():
-                    mode = 'r'
-                else:
-                    mode = 'w'
+                if mode is None:
+                    if fname.exists():
+                        mode = 'r'
+                    else:
+                        mode = 'w'
 
         if mode is None:
             mode = 'r'

@@ -225,6 +225,17 @@ class TestFile(unittest.TestCase):
 
     def test_open(self):
         with File(mode='w') as h5:
+            h5.attrs['one'] = 1
+        with File(h5.hdf_filename, mode='w') as h5:
+            self.assertTrue('one' not in h5.attrs)
+            h5.attrs['one'] = 1
+        with File(h5.hdf_filename, mode='r+') as h5:
+            self.assertTrue('one' in h5.attrs)
+            h5.attrs['two'] = 2
+            self.assertTrue('two' in h5.attrs)
+
+
+        with File(mode='w') as h5:
             pass
         h5.reopen('r+')
         self.assertEqual(h5.mode, 'r+')
