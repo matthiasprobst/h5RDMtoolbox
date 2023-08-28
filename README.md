@@ -34,7 +34,9 @@ Get a first idea of how the `h5RDMtoolbox` supports the FAIR research data lifec
 `collecting`,
 `analyzing`,
 `sharing` and
-`reusing` with a minimal example:
+`reusing` with a minimal example.
+
+[![Open Tutorial 1](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/main/docs/gettingstarted/quickoverview.ipynb)
 
 ### 1. Planning
 
@@ -56,7 +58,7 @@ h5tbx.use(cv)
 ### 2. Collecting
 
 - Fill an HDF5 file with the required data and mandatory metadata
-- Data may come various sources, e.g. from a measurement, a simulation or a database
+- Data may come in various sources, e.g. from a measurement, a simulation or a database
 - HDF5 is best for multidimensional data, but can also be used for 1D data
 - When writing the HDF5 files, the convention is automatically validating the metadata input, which are the attributes
   or the datasets and groups

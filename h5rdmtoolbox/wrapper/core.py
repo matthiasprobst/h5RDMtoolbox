@@ -1877,6 +1877,14 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 mode = 'r+'
             else:
                 mode = mode
+        else:
+            if isinstance(name, str):
+                fname = pathlib.Path(name)
+                if fname.exists():
+                    mode = 'r'
+                else:
+                    mode = 'w'
+
         if mode is None:
             mode = 'r'
         elif isinstance(name, ObjectID):

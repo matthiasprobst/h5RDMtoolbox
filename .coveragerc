@@ -28,6 +28,8 @@ exclude_lines =
     def make_bold
     def warningtext
     def failtext
+    def failprint
+    def okprint
     def oktext
     def sdump
     def dump

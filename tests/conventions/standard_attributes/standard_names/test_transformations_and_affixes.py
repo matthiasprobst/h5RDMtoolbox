@@ -9,6 +9,24 @@ from h5rdmtoolbox.conventions.standard_names import StandardName
 from h5rdmtoolbox.conventions.standard_names.transformation import Transformation
 
 
+def maximum_of(match, snt):
+    # match is the result of `re.match(`^maximum_of_(.*)$, <user_input_value>)`
+    groups = match.groups()
+    assert len(groups) == 1
+    sn = snt[groups[0]]
+    new_description = f"Maximum of {sn.name}. {sn.description}"
+    return StandardName(match.string, sn.units, new_description)
+
+
+def maximum_of_duplicate(match, snt):
+    # match is the result of `re.match(`^maximum_of_(.*)$, <user_input_value>)`
+    groups = match.groups()
+    assert len(groups) == 1
+    sn = snt[groups[0]]
+    new_description = f"Maximum of {sn.name}. {sn.description}"
+    return StandardName(match.string, sn.units, new_description)
+
+
 class TestTransformationsAndAffixes(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -32,14 +50,6 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         except h5tbx.errors.AffixKeyError as e:
             print(e)
 
-        def maximum_of(match, snt):
-            # match is the result of `re.match(`^maximum_of_(.*)$, <user_input_value>)`
-            groups = match.groups()
-            assert len(groups) == 1
-            sn = snt[groups[0]]
-            new_description = f"Maximum of {sn.name}. {sn.description}"
-            return StandardName(match.string, sn.units, new_description)
-
         max_of = Transformation(r"^maximum_of_(.*)$", maximum_of)
 
         self.assertTrue(max_of.match('maximum_static_pressure') is None)
@@ -51,6 +61,27 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             sn.description)
         self.assertEqual(max_of, snt.transformations[-1])
         self.assertIn(max_of, snt.transformations)
+        with self.assertRaises(AffixKeyError):
+            snt['max_of_velocity']
+
+        sn = snt['maximum_of_velocity']
+        self.assertEqual(sn.name, 'maximum_of_velocity')
+
+        # add transformation with same pattern:
+        max_of_duplicate = Transformation(r"^maximum_of_(.*)$", maximum_of_duplicate)
+        with self.assertRaises(ValueError):
+            snt.add_transformation(max_of_duplicate)
+        with self.assertRaises(TypeError):
+            snt.add_transformation(None)
+
+        duplicate_affix = snt.affixes['device']
+        with self.assertRaises(ValueError):
+            # name already exists
+            snt.add_affix(duplicate_affix)
+
+        duplicate_affix._name = 'device2'
+        with self.assertRaises(ValueError):
+            snt.add_affix(duplicate_affix)
 
     def test_get_transformation(self):
         from h5rdmtoolbox.conventions.standard_names.affixes import _get_transformation, affix_transformations

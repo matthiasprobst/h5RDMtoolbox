@@ -97,34 +97,21 @@ class StandardNameTable:
         self._standard_names = _correct_standard_names
 
         self.affixes = {}
-
         for k, affix_data in affixes.items():
             if affix_data:
                 if not isinstance(affix_data, dict):
                     raise TypeError(f'Expecting dict for affix {k} but got {type(affix_data)}')
-                self.affixes[k] = Affix.from_dict(k, affix_data)
+                self.add_affix(Affix.from_dict(k, affix_data))
 
-        # no two affixes can have the same name pattern
-        pattern = set()
-        for affix in self.affixes.values():
-            for t in affix.transformation:
-                if t.pattern in pattern:
-                    raise ValueError(f'Pattern {t.pattern} already defined')
-                pattern.add(t.pattern)
-
-        self._transformations = (derivative_of_X_wrt_to_Y,
-                                 magnitude_of,
-                                 arithemtic_mean_of,
-                                 standard_deviation_of,
-                                 square_of,
-                                 product_of_X_and_Y,
-                                 ratio_of_X_and_Y,)
-
-        pattern = set()
-        for transformation in self._transformations:
-            if transformation.pattern in pattern:
-                raise ValueError(f'Pattern {transformation.pattern} already defined')
-            pattern.add(transformation.pattern)
+        self._transformations = ()
+        for transformation in (derivative_of_X_wrt_to_Y,
+                               magnitude_of,
+                               arithemtic_mean_of,
+                               standard_deviation_of,
+                               square_of,
+                               product_of_X_and_Y,
+                               ratio_of_X_and_Y,):
+            self.add_transformation(transformation)
 
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
@@ -338,11 +325,34 @@ class StandardNameTable:
         self.to_yaml(_tmp_yaml_filename)
         return StandardNameTable.from_yaml(_tmp_yaml_filename)
 
+    def add_affix(self, affix: Affix):
+        """Add an affix to the standard name table"""
+        # no two affixes can have the same name pattern
+        if affix.name in self.affixes:
+            raise ValueError(f'Affix with name "{affix.name}" already exists')
+        pattern = {t.pattern for a in self.affixes.values() for t in a.transformation}
+
+        for t in affix.transformation:
+            if t.pattern in pattern:
+                raise ValueError(f'Pattern "{t.pattern}" of affix "{affix.name}" already defined. No two affixes '
+                                 'can have the same pattern.')
+            else:
+                pattern.add(t.pattern)
+
+        self.affixes[affix.name] = affix
+
     def add_transformation(self, transformation: Transformation):
         """Appending a transformation to the standard name table"""
         if not isinstance(transformation, Transformation):
             raise TypeError('Invalid type for parameter "transformation". Expecting "Transformation" but got '
                             f'{type(transformation)}')
+
+        pattern = {t.pattern for t in self._transformations}
+
+        if transformation.pattern in pattern:
+            raise ValueError(f'Pattern "{transformation.pattern}" already defined. No two transformations '
+                             'can have the same pattern.')
+        
         self._transformations = tuple([*self._transformations, transformation])
 
     # Loader: ---------------------------------------------------------------

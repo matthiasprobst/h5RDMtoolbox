@@ -24,11 +24,11 @@ def make_dict_mongo_compatible(dictionary: Dict):
     """Make the values of a dictionary compatible with mongo DB"""
     for ak, av in dictionary.items():
         if isinstance(av, (int, float, str, list, tuple, datetime)):
-            pass
+            continue
         elif isinstance(av, dict):
             dictionary[ak] = make_dict_mongo_compatible(av)
         elif av is None:
-            dictionary[ak] = None
+            continue
         else:
             try:
                 if np.issubdtype(av, np.floating):
@@ -43,7 +43,7 @@ def make_dict_mongo_compatible(dictionary: Dict):
 
 
 def type2mongo(value: any) -> any:
-    """Convert numpy dtypes to int/float/list/..."""
+    """Convert numpy dtypes to int/float/list/... At least try to convert to str()"""
     if isinstance(value, (int, float, str, dict, list, tuple, datetime)):
         return value
     if value is None:
@@ -57,7 +57,7 @@ def type2mongo(value: any) -> any:
     except Exception as e:
         warnings.warn(f'Could not determine/convert {value}. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')
-    return value
+    return str(value)
 
 
 @register_special_dataset('mongo', Group)
@@ -270,6 +270,7 @@ class MongoDatasetAccessor:
         if update:
             for doc in docs:
                 _doc = {k: type2mongo(v) for k, v in doc.items()}
+                print(_doc)
                 collection.update_one(_doc, {'$set': _doc}, upsert=True)
         else:
             collection.insert_many(docs, ordered=ordered)

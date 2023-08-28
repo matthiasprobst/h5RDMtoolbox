@@ -116,6 +116,18 @@ class TestStandardAttributes(unittest.TestCase):
         with self.assertRaises(StandardNameError):
             print(snt['velocity'])
 
+        with self.assertRaises(TypeError):
+            StandardNameTable('test', version='v1.0', meta={},
+                              standard_names={},
+                              affixes=5.4)
+
+        with self.assertRaises(TypeError):
+            StandardNameTable('test', version='v1.0', meta={},
+                              standard_names={},
+                              affixes={'component': 5.4})
+
+        # with self.assertRaises(ValueError):
+
     def test_check(self):
         with h5tbx.File() as h5:
             h5.create_dataset('u', data=1, attrs={'standard_name': 'x_velocity', 'units': 'm/s'})
