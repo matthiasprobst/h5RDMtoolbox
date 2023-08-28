@@ -37,6 +37,15 @@ class TestRepr(unittest.TestCase):
         self.assertTrue(has_url)
         self.assertEqual(processed_string, string_with_href)
 
+    def test_dump_orcid(self):
+        # with File() as h5:
+        #     h5.attrs['orcid'] = h5tbx.__author_orcid__
+        #     h5.dump()
+        with File() as h5:
+            h5.attrs['orcid'] = [h5tbx.__author_orcid__, h5tbx.__author_orcid__, ]
+            h5.dump()
+
+
     def test_repr(self):
         # test h5rdmtoolbox._repr.DataSetRepr
         with File(h5tbx.utils.generate_temporary_filename(), 'w') as h5:

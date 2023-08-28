@@ -1869,6 +1869,18 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                  layout: Union[Path, str, LayoutFile, None] = None,
                  attrs: Dict = None,
                  **kwargs):
+        # path is file object:
+        if isinstance(name, ObjectID):
+            # filter out standard attributes from kwargs:
+            if "__init__" in conventions.get_current_convention().methods[self.__class__]:
+                kwargs, _ = _pop_standard_attributes(
+                    kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
+                )
+            super(File, self).__init__(name, mode, **kwargs)
+            self._hdf_filename = Path(self.filename)
+            return
+
+        # name is path or None:
         if name is None:
             _tmp_init = True
             logger.debug("An empty File class is initialized")
@@ -1877,29 +1889,35 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 mode = 'r+'
             else:
                 mode = mode
-        else:
-            if isinstance(name, str):
-                fname = pathlib.Path(name)
+        elif isinstance(name, (str, pathlib.Path)):
+            fname = pathlib.Path(name)
+            # a filename is given.
+
+            if mode is None:  # mode not given:
+                # file does exist and mode not given --> read only!
                 if fname.exists():
                     mode = 'r'
-                else:
+
+                # file does not exist and mode is not given--> write!
+                elif not fname.exists():
                     mode = 'w'
+            # else mode is given, so just continue... may be correct, may be not...
 
         if mode is None:
+            logger.debug('Mode not set. Set it to "r" by default')
             mode = 'r'
-        elif isinstance(name, ObjectID):
-            pass
         elif not isinstance(name, (str, Path)):
             raise ValueError(
-                f'It seems that no proper file name is passed: type of {name} is {type(name)}')
+                f'It seems that no proper file name is passed: type of "{name}" is {type(name)}')
         else:
             if mode == 'r+':
                 if not Path(name).exists():
                     _tmp_init = True
+                    mode = 'r+'
                     # "touch" the file, so it exists
                     with h5py.File(name, mode='w', **kwargs) as _h5:
                         pass  # just touching the file
-                    logger.debug(f"An empty File class is initialized for {name}")
+                    logger.debug(f'An empty File class is initialized for "{name}".Mode is set to "r+"')
 
         if attrs is None:
             attrs = {}

@@ -59,11 +59,9 @@ known_orcids = KnownOrcids()
 
 
 def get_html_repr(orcid_id: str) -> str:
+    """Return HTML representation of ORCID with ORCID image as requested by orcid.org"""
     oid = ORCID(orcid_id)
-    return f"""<a href="{oid}">
-<img alt="ORCID logo" src="https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png" width="16" height="16" />
-{oid}
-</a>"""
+    return f'<a href="{oid}"><img alt="ORCID logo" src="https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png" width="16" height="16" />{oid}</a>'
 
 
 ORCID_PATTERN = r'(?:https:\/\/orcid.org\/)?\d{4}-\d{4}-\d{4}-\d{3}[0-9X]{1}'

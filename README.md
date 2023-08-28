@@ -20,10 +20,17 @@ principles. It specifically supports the five main steps of
 5. Reusing data (Searching data in databases, local file structures or online repositories
    like [Zenodo](https://zenodo.org)).
 
+
+## Quickstart
+
+A quickstart notebook can be tested by clicking on the following badge:
+
+[![Open Quickstart Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/main/docs/colab/quickstart.ipynb)
+
 ## Documentation
 
-Please click on the image click [here](h5rdmtoolbox.readthedocs.io/en/latest/) to find a comprehensive documentation
-with examples
+An comprehensive documentation with many examples [here](h5rdmtoolbox.readthedocs.io/en/latest/) or by clicking
+on the image, which shows the research data lifecycle in the center and the respective toolbox features on the outside:
 
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
 
@@ -36,78 +43,7 @@ Get a first idea of how the `h5RDMtoolbox` supports the FAIR research data lifec
 `sharing` and
 `reusing` with a minimal example.
 
-[![Open Tutorial 1](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/main/docs/gettingstarted/quickoverview.ipynb)
 
-### 1. Planning
-
-- Decide to use HDF5 as your core file format
-- Define important attributes and their usage in a metadata convention (e.g. a YAML file)
-- Publish your convention on a repository like [Zenodo](https://zenodo.org/)
-
-```python
-# import the package
-import h5rdmtoolbox as h5tbx
-
-# Assume we published a convention here: https://zenodo.org/record/8281285
-cv = h5tbx.conventions.from_zenodo(doi='8281285')
-
-# enable the convention:
-h5tbx.use(cv)
-```
-
-### 2. Collecting
-
-- Fill an HDF5 file with the required data and mandatory metadata
-- Data may come in various sources, e.g. from a measurement, a simulation or a database
-- HDF5 is best for multidimensional data, but can also be used for 1D data
-- When writing the HDF5 files, the convention is automatically validating the metadata input, which are the attributes
-  or the datasets and groups
-
-```python
-with h5tbx.File('my_file.h5',
-                data_type='experimental',
-                contact='https://orcid.org/0000-0001-8729-0482') as h5:
-    # create a dataset
-    h5.create_dataset(name='u',
-                      data=[1, 42, 101],
-                      standard_name='x_velocity',
-                      units='m/s')
-```
-
-### 3. Analyzing
-
- - Open the file, make computations or just plot the data
-
-```python
-with h5tbx.File('my_file.h5') as h5:
-    h5['u'][1:2].plot()
-```
-
-### 4. Sharing your data
- - Share your data by storing it in a local directory or in a database
- - The `h5rdmtoolbox` supports both options by providing search queries for local directories and the non-relational 
-   database [mongoDB](https://www.mongodb.com/)
-```python
-from pymongo import MongoClient
-
-client = MongoClient()
-collection = client['my_database']['my_collection']
-with h5tbx.File('my_file.h5') as h5:
-    h5['u'][1:2].mongo.insert(0, collection)
-```
-
-### 5. Reusing
-
- - Find the data by searching for the metadata in the [mongoDB](https://www.mongodb.com/)
-
-```python
-arr = collection.find_one({'standard_name': {'$eq': 'x_velocity'}})
-# plot it again
-arr.plot()
-# or if the file is local, find it within a folder:
-arr = h5tbx.database.Folder('db_folder').find_one({'standard_name': {'$eq': 'x_velocity'}})
-arr[()].plot()
-```
 
 ## Installation
 

@@ -270,7 +270,6 @@ class MongoDatasetAccessor:
         if update:
             for doc in docs:
                 _doc = {k: type2mongo(v) for k, v in doc.items()}
-                print(_doc)
                 collection.update_one(_doc, {'$set': _doc}, upsert=True)
         else:
             collection.insert_many(docs, ordered=ordered)
