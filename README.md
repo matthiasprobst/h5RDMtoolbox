@@ -34,17 +34,6 @@ on the image, which shows the research data lifecycle in the center and the resp
 
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
 
-## Quickstart
-
-Get a first idea of how the `h5RDMtoolbox` supports the FAIR research data lifecycle of
-`planning`,
-`collecting`,
-`analyzing`,
-`sharing` and
-`reusing` with a minimal example.
-
-
-
 ## Installation
 
 Use python 3.8 or higher (tested until 3.10).
