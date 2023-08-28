@@ -1905,21 +1905,17 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             attrs = {}
 
         if mode == 'r':
+            # check for required standard attributes
             if "__init__" in conventions.get_current_convention().methods[self.__class__]:
                 kwargs, skwargs = _pop_standard_attributes(
                     kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
                 )
-                logger.debug(f'mode is read only. Provided standard attributes are ignored: {skwargs.keys()}')
+                logger.debug('The file mode is read only ("r"). Provided standard attributes are ignored: '
+                             f'{skwargs.keys()}')
             # ignore standard attributes during read-only
             skwargs = {}
         else:
             attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name)
-
-        _tmp_init = False
-
-        if _tmp_init:
-            mode = 'r+'
-            warnings.warn('Switched to mode "r+"')
 
         if mode == 'r' and len(skwargs) > 0:
             for k, v in skwargs.items():
@@ -1928,6 +1924,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
         # if not isinstance(name, ObjectID):
         #     self._hdf_filename = Path(name)
+        logger.debug(f'Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}')
         super().__init__(name=name,
                          mode=mode,
                          **kwargs)
