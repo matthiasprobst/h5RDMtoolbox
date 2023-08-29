@@ -747,19 +747,13 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         ds = self._h5ds(_ds.id)
 
-        # first set scale and offset if given:
-        scale = attrs.pop(conventions.get_current_convention().scale_attribute_name, None)
-        offset = attrs.pop(conventions.get_current_convention().offset_attribute_name, None)
-        if scale is not None:
-            ds.attrs[conventions.get_current_convention().scale_attribute_name] = scale
-        if offset is not None:
-            ds.attrs[conventions.get_current_convention().offset_attribute_name] = offset
-
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
             try:
                 for k, v in attrs.items():
-                    ds.attrs[k] = v
+                    # call __setitem__ because then we can pass attrs which is needed by the potential validators of
+                    # standard attributes
+                    ds.attrs.__setitem__(k, v, attrs)
             except Exception as e:
                 logger.error(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}"')
                 del self[name]

@@ -1,10 +1,10 @@
 import pathlib
-from typing import Union
+from typing import Union, Dict
 
 from .table import StandardNameTable
-from .. import errors
-from .. import logger
+from .. import errors, logger
 from ..validators import StandardAttributeValidator, add_validator
+from ... import get_ureg
 
 
 def _parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
@@ -32,12 +32,15 @@ class StandardNameTableValidator(StandardAttributeValidator):
 
     keyword = '$standard_name_table'
 
-    def __call__(self, standard_name_table, *args, **kwargs):
+    def __call__(self, standard_name_table, parent=None, attrs=None, **kwargs):
         # return parse_snt(standard_name_table).to_sdict()
         snt = _parse_snt(standard_name_table)
         if 'zenodo_doi' in snt.meta:
             return snt.meta['zenodo_doi']
         return snt.to_sdict()
+
+    def get(self, value, parent):
+        return _parse_snt(value)
 
 
 class StandardNameValidator(StandardAttributeValidator):
@@ -45,7 +48,9 @@ class StandardNameValidator(StandardAttributeValidator):
 
     keyword = '$standard_name'
 
-    def __call__(self, standard_name, parent, **kwargs):
+    def __call__(self, standard_name, parent, attrs: Dict = None):
+        if attrs is None:
+            attrs = {}
         snt = parent.rootparent.attrs.get('standard_name_table', None)
 
         if snt is None:
@@ -58,9 +63,11 @@ class StandardNameValidator(StandardAttributeValidator):
             raise KeyError('No units defined for this variable!')
 
         # check if scale is provided:
-        scale = parent.attrs.get('scale', None)
+        scale = attrs.get('scale',
+                          parent.attrs.get('scale', None))
         if scale is not None:
-            units = str(scale * units)
+            ureg = get_ureg()
+            units = str((ureg(scale) * ureg(units)).units)
 
         sn = snt[standard_name]
         if sn.is_vector():

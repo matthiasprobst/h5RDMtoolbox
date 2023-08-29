@@ -3,7 +3,35 @@ import h5py
 import numpy as np
 import xarray as xr
 
-from .. import conventions, consts, get_ureg, get_config, protected_attributes
+from .. import consts, get_ureg, get_config, protected_attributes
+
+
+def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArray:
+    """Assumes that scale and offset are available as attributes. The return value is a new xarray.DataArray,
+    which data has been transformed according to ret = (xarr - offset) * scale
+    """
+    scale = xarr.attrs.pop('scale', None)
+    offset = xarr.attrs.pop('offset', None)
+
+    if scale and offset:
+        with xr.set_options(keep_attrs=True):
+            return ((xarr - offset).pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
+                format=get_config()['ureg_format'])
+
+    elif scale:
+        with xr.set_options(keep_attrs=True):
+            return (xarr.pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
+                format=get_config()['ureg_format'])
+    elif offset:
+        with xr.set_options(keep_attrs=True):
+            return xarr - offset
+
+    return xarr
+
+
+# dataset_decoders = {'scale_and_offset': scale_and_offset_decoder}
+registered_dataset_decoders = {'scale_and_offset': scale_and_offset_decoder}
+decoder_names = ()
 
 
 def dataset_value_decoder(func):
@@ -35,33 +63,19 @@ def dataset_value_decoder(func):
             xarr.attrs[consts.ANCILLARY_DATASET] = [name for name in anc_ds.keys()]
             # print(xarr.attrs.pop(consts.ANCILLARY_DATASET))
 
-        if xarr.dtype.type is np.str_:
-            return xarr
-
-        if not conventions.get_current_convention().use_scale_and_offset:
-            return xarr
-            # return H5DataArray(xarr, h5parent=ds, associated_dara_arrays=None)
-
-        scale = xarr.attrs.pop(conventions.get_current_convention().scale_attribute_name, None)
-        offset = xarr.attrs.pop(conventions.get_current_convention().offset_attribute_name, None)
-
-        if scale and offset:
-            with xr.set_options(keep_attrs=True):
-                return ((xarr - offset).pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
-                    format=get_config()['ureg_format'])
-
-        elif scale:
-            with xr.set_options(keep_attrs=True):
-                return (xarr.pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
-                    format=get_config()['ureg_format'])
-        elif offset:
-            with xr.set_options(keep_attrs=True):
-                return xarr - offset
-
         if get_config('add_source_info_to_xr'):
             xarr.attrs[protected_attributes.HDF_SRC_FILENAME] = {'filename': str(ds.hdf_filename),
                                                                  'name': ds.name}
+
+        if xarr.dtype.type is np.str_:
+            return xarr
+
+        for decoder_name in decoder_names:
+            try:
+                xarr = registered_dataset_decoders[decoder_name](xarr, ds)
+            except Exception as e:
+                raise Exception(
+                    f'Error during decoding of dataset "{ds.name}" with decoder "{decoder_name}": {e}') from e
         return xarr
-        # return H5DataArray(xarr, h5parent=ds, h5slice=parent_slice)
 
     return wrapper

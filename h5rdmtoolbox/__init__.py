@@ -5,7 +5,7 @@ import pathlib
 import pint_xarray
 import shutil
 import xarray as xr
-from typing import Union
+from typing import Union, Callable
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
@@ -25,6 +25,7 @@ from . import errors
 from .wrapper.accessory import register_special_dataset
 
 name = 'h5rdmtoolbox'
+__this_dir__ = pathlib.Path(__file__).parent
 __author__ = 'Matthias Probst'
 __author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
 
@@ -33,14 +34,10 @@ logger = utils.create_tbx_logger('h5rdmtoolbox')
 logger.setLevel(get_config()['init_logger_level'])
 
 cv_h5py = conventions.Convention('h5py',
-                                 contact=__author_orcid__,
-                                 use_scale_offset=False)
+                                 contact=__author_orcid__)
 cv_h5py.register()
 
-cv_h5tbx = conventions.Convention('h5tbx',
-                                  contact=__author_orcid__,
-                                  use_scale_offset=True)
-cv_h5tbx.register()
+cv_h5tbx = conventions.Convention.from_yaml(__this_dir__ / 'data/h5tbx_convention.yaml')
 
 use = conventions.core.use
 
@@ -78,6 +75,22 @@ def dumps(src: Union[str, File, pathlib.Path]):
             return h5.dumps()
     with File(src) as h5:
         return h5.dumps()
+
+
+def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):
+    """A decoder function takes a xarray.DataArray and a dataset as input and returns a xarray.DataArray
+    It is called after the dataset is loaded into memory and before being returned to the user. Be careful:
+    Multiple decoders can be registered and they are called in the order of registration. Hence, your decoder
+    may behave unexpectedly!
+    """
+    from .wrapper import ds_decoder
+    if decoder_name is None:
+        decoder_name = decoder.__name__
+    registered_decorators = ds_decoder.registered_dataset_decoders
+    if decoder_name in registered_decorators or decoder in registered_decorators.values():
+        if not overwrite:
+            raise ValueError(f'decoder "{decoder_name}" already registered')
+    ds_decoder.registered_dataset_decoders[decoder_name] = decoder
 
 
 atexit_verbose = False

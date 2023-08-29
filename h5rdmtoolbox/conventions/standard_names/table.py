@@ -153,8 +153,12 @@ class StandardNameTable:
                 match = transformation.match(standard_name)
                 if match:
                     logger.debug(f'Applying affix transformation "{affix_name}"')
-                    return evaluate(transformation, match, self)
-        logger.debug(f'No affix transformation could be successfully applied on "{standard_name}"')
+                    try:
+                        return evaluate(transformation, match, self)
+                    except errors.AffixKeyError as e:
+                        # dont raise an error yet. Let StandardNameError handle it (see below)!
+                        logger.debug(f'Affix transformation "{affix_name}" failed: {e}')
+        logger.debug(f'No transformation of affix could be successfully applied on "{standard_name}"')
 
         # provide a suggestion for similar standard names
         similar_names = [k for k in [*self.standard_names.keys(), *self.list_of_aliases] if
@@ -352,7 +356,7 @@ class StandardNameTable:
         if transformation.pattern in pattern:
             raise ValueError(f'Pattern "{transformation.pattern}" already defined. No two transformations '
                              'can have the same pattern.')
-        
+
         self._transformations = tuple([*self._transformations, transformation])
 
     # Loader: ---------------------------------------------------------------

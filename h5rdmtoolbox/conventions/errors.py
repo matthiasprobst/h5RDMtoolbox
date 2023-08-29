@@ -10,8 +10,12 @@ class StandardAttributeError(Exception):
     """Error during standard attribute handling"""
 
 
-class ValidatorError(Exception):
+class StandardAttributeValidationError(Exception):
     """Error during validator calls"""
+
+
+class StandardAttributeValidationReadError(Exception):
+    """Error during reading of HDF5 attribute by a validator"""
 
 
 class TransformationFunctionError(Exception):

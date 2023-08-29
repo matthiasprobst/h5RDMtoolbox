@@ -114,12 +114,19 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return WrapperAttributeManager._parse_return_value(self._id, ret)
 
     @with_phil
-    def __setitem__(self, name, value):
+    def __setitem__(self, name, value, attrs=None):
         """ Set a new attribute, overwriting any existing attribute.
 
         The type and shape of the attribute are determined from the data.  To
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute.
+        value : any
+            Attribute value.
         """
 
         if name == '_parent':
@@ -149,7 +156,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                         return
                     if isinstance(value, consts.DefaultValue):
                         value = value.value
-                    return curr_cv.properties[parent.__class__][name].set(parent, value)
+                    return curr_cv.properties[parent.__class__][name].set(parent, value, attrs)
                 except TypeError as e:
                     raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)

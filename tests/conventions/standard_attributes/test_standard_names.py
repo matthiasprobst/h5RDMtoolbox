@@ -102,7 +102,7 @@ class TestStandardAttributes(unittest.TestCase):
                          table['x_coordinate'].description)
         self.assertIsInstance(table['velocity'], StandardName)
         self.assertIsInstance(table['x_velocity'], StandardName)
-        with self.assertRaises(h5tbx.errors.AffixKeyError):
+        with self.assertRaises(h5tbx.errors.StandardNameError):
             table['phi_velocity']
         self.assertIsInstance(table['static_pressure'], StandardName)
         self.assertFalse(table['static_pressure'].is_vector())
@@ -111,6 +111,8 @@ class TestStandardAttributes(unittest.TestCase):
         with self.assertRaises(h5tbx.errors.StandardNameError):
             table['x_pressure']
         self.assertIsInstance(table['derivative_of_x_coordinate_wrt_x_velocity'], StandardName)
+
+        table['x_velocity_in_stationary_frame']
 
     def test_StandardNameTableVersion(self):
         versions = [
@@ -221,7 +223,7 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertTrue(fname.exists())
             fname.unlink(missing_ok=True)
 
-            with self.assertRaises(AffixKeyError):
+            with self.assertRaises(StandardNameError):
                 self.snt['x_velocity_in_a_frame']
 
     def test_from_zenodo(self):
@@ -235,24 +237,31 @@ class TestStandardAttributes(unittest.TestCase):
             filename.unlink(missing_ok=True)
 
     def test_from_yaml(self):
-        if self.connected:
-            cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
-            cv.register()
-            h5tbx.use(cv)
-            with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
-                h5.dump()
+        cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
+        cv.decoders = ('scale_and_offset',)
+        cv.add(StandardAttribute(name='scale',
+                                 validator='$pintquantity',
+                                 target_method='create_dataset',
+                                 description='Scale factor for the dataset values.',
+                                 position={'after': 'data'},
+                                 return_type='pint.Quantity',
+                                 default_value=StandardAttribute.NONE))
+        cv.register()
+        h5tbx.use(cv)
+        with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
+            h5.dump()
 
-                with self.assertRaises(StandardAttributeError):
-                    h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
-                h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
+            with self.assertRaises(StandardAttributeError):
+                h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
+            h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
 
-                with self.assertRaises(StandardAttributeError):
-                    h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
-                h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
-                self.assertEqual(h5['y_velocity'].attrs['standard_name'], 'y_velocity')
+            with self.assertRaises(StandardAttributeError):
+                h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
+            h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
+            self.assertEqual(h5['y_velocity'].attrs['standard_name'], 'y_velocity')
 
-                with self.assertRaises(StandardAttributeError):
-                    h5.create_dataset('velocity', data=2.3, units='m/s', standard_name='velocity')
+            with self.assertRaises(StandardAttributeError):
+                h5.create_dataset('velocity', data=2.3, units='m/s', standard_name='velocity')
 
     def test_standard_name_convention(self):
         h5tbx.use(None)

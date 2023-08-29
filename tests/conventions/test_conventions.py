@@ -30,8 +30,8 @@ class TestConventions(unittest.TestCase):
     def test_overload_standard_attributes(self):
         yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
-        self.assertIn('contact', cv.properties[h5tbx.File])
-        self.assertIn('contact', cv.properties[h5tbx.Group])
+        self.assertIn('comment', cv.properties[h5tbx.File])
+        self.assertIn('comment', cv.properties[h5tbx.Group])
 
     def test_standard_name_table_as_relative_filename(self):
         snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
@@ -134,10 +134,20 @@ class TestConventions(unittest.TestCase):
             h5tbx.conventions.from_yaml([f1, f2])
 
     def test_cv_h5tbx(self):
+        h5tbx.use(None)
+        self.assertTupleEqual((), h5tbx.wrapper.ds_decoder.decoder_names)
         h5tbx.use('h5tbx')
+        self.assertTupleEqual(('scale_and_offset',), h5tbx.wrapper.ds_decoder.decoder_names)
+        h5tbx.use(None)
+        self.assertTupleEqual((), h5tbx.wrapper.ds_decoder.decoder_names)
+        h5tbx.use('h5tbx')
+        self.assertTupleEqual(('scale_and_offset',), h5tbx.wrapper.ds_decoder.decoder_names)
+
         with h5tbx.File() as h5:
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 h5.create_dataset('test', data=1)
+            h5.create_dataset('test', data=1, units='m/s')
+            self.assertEqual('m/s', str(h5['test'].attrs['units']))
         h5tbx.use(None)
 
     def test_skwars_kwargs(self):
@@ -162,6 +172,25 @@ class TestConventions(unittest.TestCase):
 
     def test_del_standard_attribute(self):
         h5tbx.use('h5tbx')
+
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=1, units='m/s', scale=3)
+            self.assertEqual(1, int(ds.values[()]))
+            self.assertEqual(3, int(ds[()]))
+
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=1, units='m/s', scale='3')
+            self.assertEqual(1, int(ds.values[()]))
+            self.assertEqual(3, int(ds[()]))
+
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=1, units='m/s', scale='3 1/s')
+            self.assertEqual(1, int(ds.values[()]))
+            self.assertEqual(3, int(ds[()]))
+            self.assertEqual('m/s', ds.units)
+            self.assertEqual('m/s**2', ds[()].attrs['units'])
+
+
         with h5tbx.File() as h5:
             ds = h5.create_dataset('test', data=1, units='m/s', scale=3)
             with self.assertRaises(ValueError):
@@ -177,8 +206,8 @@ class TestConventions(unittest.TestCase):
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                 cv = h5tbx.conventions.from_zenodo(doi=8266929)
 
-        cv = h5tbx.conventions.from_zenodo(doi=8281285)
-        self.assertEqual(cv.name, 'h5rdmtoolbox-tuturial-convention')
+        cv = h5tbx.conventions.from_zenodo(doi=8296801)
+        self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
         self.assertEqual(
             h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
             cv.properties[h5tbx.File]['data_type'].default_value

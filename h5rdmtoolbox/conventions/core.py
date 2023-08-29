@@ -4,6 +4,7 @@ import inspect
 import pathlib
 import re
 import shutil
+import warnings
 import yaml
 import zenodo_search as zsearch
 from pydoc import locate
@@ -28,19 +29,9 @@ class Convention:
         ORCID of the researcher
     institution : str, optional
         Institution of the researcher (if different from that of contact)
-    use_scale_offset: bool=False
-        Whether to enable the scale-offset feature or not. Default is False
-
-    .. note::
-
-        Concept of offset and scale:
-        If a dataset has the attribute 'offset' and/or 'scale' (the attribute names can be
-        changed by the user using `offset_attribute_name` and `scale_attribute_name`), the
-        return value is processed as follows:
-        .. math::
-            x_{new} = (x \cdot f_{scale}) + f_{offset}
-        This behaviour can be disabled by passing `None` to `offset_attribute_name` and/or
-        `scale_attribute_name`.
+    decoders: List[str], optional=None
+        List of decoders to be used for decoding datasets. If None, no decoder is used.
+        Decoders can be written by the user and registered with `h5tbx.register_dataset_decoder(<decoder_func>)`.
     """
     scale_attribute_name = 'scale'
     offset_attribute_name = 'offset'
@@ -49,9 +40,20 @@ class Convention:
                  name: str,
                  contact: str,  # ORCID of researcher
                  institution: str = None,  # only if different than that from contact
-                 use_scale_offset: bool = False,
-                 filename=None):
+                 decoders: Union[str, List[str]] = None,
+                 filename=None,
+                 use_scale_offset=None):
         from ..wrapper.core import File, Group, Dataset
+
+        if decoders is None:
+            self.decoders = tuple()
+        else:
+            if isinstance(decoders, str):
+                self.decoders = (decoders,)
+            else:
+                self.decoders = tuple(decoders)
+
+        assert isinstance(self.decoders, tuple)
 
         # a convention may be stored locally:
         if filename is not None:
@@ -64,36 +66,12 @@ class Convention:
 
         self._registered_standard_attributes = {}
         self.name = name
-        self.use_scale_and_offset = use_scale_offset
+        if use_scale_offset:
+            warnings.warn('The scale-offset feature is implemented as user-defined dataset decoders. '
+                          'The parameter `use_scale_offset` is ignored here!.')
 
         self.properties = {}
         self.methods = {File: {}, Group: {}, Dataset: {}}
-
-        if self.use_scale_and_offset:
-            scale_attr = StandardAttribute(name=self.scale_attribute_name,
-                                           validator='$pintquantity',
-                                           target_methods='create_dataset',
-                                           description='Scale factor for the dataset values.',
-                                           position={'after': 'data'},
-                                           return_type='pint.Quantity',
-                                           default_value=StandardAttribute.NONE)
-            self.add(scale_attr)
-            offset_attr = StandardAttribute(name=self.offset_attribute_name,
-                                            validator={'$type': (int, float)},
-                                            target_methods='create_dataset',
-                                            description='Scale factor for the dataset values.',
-                                            position={'after': 'data'},
-                                            default_value=StandardAttribute.NONE)
-            self.add(offset_attr)
-
-            units_attr = StandardAttribute(name='units',
-                                           validator='$pintunit',
-                                           target_methods='create_dataset',
-                                           description='Physical unit of the dataset.',
-                                           default_value='$EMPTY',
-                                           position={'after': 'data'},
-                                           return_type='pint.Unit')
-            self.add(units_attr)
 
     def __repr__(self):
         header = f'Convention("{self.name}")'
@@ -136,6 +114,11 @@ class Convention:
     def __exit__(self, exc_type, exc_val, exc_tb):
         use(self._curr_cv.name)
 
+    @property
+    def registered_standard_attributes(self):
+        """Return the registered standard attributes."""
+        return self._registered_standard_attributes
+
     def use(self):
         """use this convention"""
         use(self.name)
@@ -148,13 +131,14 @@ class Convention:
     def add(self, std_attr: StandardAttribute):
         """Add a standard attribute to the convention."""
         _registered_names = list(self._registered_standard_attributes.keys())
+
         # check if the name is already registered:
-        for _cls in std_attr.target_cls:
-            prop = self.properties.get(_cls, None)
-            if prop is not None:
-                if std_attr.name in self.properties[_cls]:
-                    raise errors.ConventionError(f'A standard attribute with the name "{std_attr.name}" '
-                                                 f'is already registered for {std_attr.target_cls}.')
+        _cls = std_attr.target_cls
+        prop = self.properties.get(_cls, None)
+        if prop is not None:
+            if std_attr.name in self.properties[_cls]:
+                raise errors.ConventionError(f'A standard attribute with the name "{std_attr.name}" '
+                                             f'is already registered for "{std_attr.target_cls}".')
         if std_attr.requirements is not None:
             if not all(r in _registered_names for r in std_attr.requirements):
                 # collect the missing ones:
@@ -167,30 +151,23 @@ class Convention:
 
         self._registered_standard_attributes[std_attr.name] = std_attr
 
-        assert isinstance(std_attr.target_methods, tuple)
-        assert isinstance(std_attr.target_cls, tuple)
+        method_name = std_attr.target_method
+        target_cls = std_attr.target_cls
 
-        for method_name, target_cls in zip(std_attr.target_methods, std_attr.target_cls):
+        if target_cls not in self.properties:
+            self.properties[target_cls] = {}
+        self.properties[target_cls][std_attr.name] = std_attr
 
-            if target_cls not in self.properties:
-                self.properties[target_cls] = {}
-            self.properties[target_cls][std_attr.name] = std_attr
+        if target_cls not in self.methods:
+            self.methods[target_cls] = {}
 
-            if target_cls not in self.methods:
-                self.methods[target_cls] = {}
+        add_to_method = True  # for now all standard attributes are always added to the method (signature)
+        if add_to_method:
+            cls = StandardAttribute.METHOD_CLS_ASSIGNMENT[method_name]
+            if method_name not in self.methods[cls]:
+                self.methods[cls][method_name] = {}
 
-            add_to_method = True  # for now all standard attributes are always added to the method (signature)
-            if add_to_method:
-                cls = StandardAttribute.METHOD_CLS_ASSIGNMENT[method_name]
-                # if method_name not in cls.__dict__:
-                #     raise AttributeError(
-                #         f'Cannot add standard attribute {std_attr.name} to method {method_name} of {target_cls} '
-                #         'because it does not exist.'
-                #     )
-                if method_name not in self.methods[cls]:
-                    self.methods[cls][method_name] = {}
-
-                self.methods[cls][method_name][std_attr.name] = std_attr
+            self.methods[cls][method_name][std_attr.name] = std_attr
 
     def pop(self, *names) -> "Convention":
         """removes the standard attribute with the given name from the convention
@@ -284,22 +261,39 @@ class use:
         _use(self._latest_convention)
 
 
+from h5rdmtoolbox.wrapper import ds_decoder
+
+
 def _use(convention_name: Union[str, Convention]) -> str:
     """Use a convention by name"""
     if isinstance(convention_name, Convention):
         convention_name = convention_name.name
     current_convention = get_current_convention()
+
     if convention_name is None:
+        # reset to default convention
         convention_name = 'h5py'
+
     if convention_name not in get_registered_conventions():
         raise ValueError(f'Convention "{convention_name}" is not registered')
+
     logger.debug(f'Switching to convention "{convention_name}"')
+
     if current_convention is not None:
         if convention_name == current_convention.name:
             return convention_name
+
+        # reset signature and dataset decoders:
         current_convention._delete_signature()
+    ds_decoder.decoder_names = ()
+
+    # update signature:
     current_convention = get_registered_conventions()[convention_name]
     current_convention._add_signature()
+
+    # update dataset decoders:
+    ds_decoder.decoder_names = current_convention.decoders
+
     set_current_convention(current_convention)
 
     return convention_name
@@ -317,6 +311,7 @@ def add_convention(convention, name=None):
 
 
 def get_current_convention():
+    """Return the current convention"""
     return cfg._current_convention
 
 
@@ -392,20 +387,32 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     if '__contact__' not in attrs:
         raise ValueError(f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
 
-    def _strip_standard_attribute_name(attr_name):
-        # two same std attr name in one yaml file/dict is not allowed.
-        # this can be dealt with by adding a suffix to the name which starts with a "-":
-        return attr_name.split('-')[0]
+    decoders = attrs.pop('__decoders__', None)
 
-    std_attrs = [StandardAttribute(_strip_standard_attribute_name(name), **values) for name, values in attrs.items() if
-                 isinstance(values, dict)]
+    std_attrs = []
+
+    standard_attributes = {k: v for k, v in attrs.items() if isinstance(v, dict)}
+
+    for name, values in standard_attributes.items():
+        target_methods = values.get('target_methods', None)
+        if isinstance(target_methods, (tuple, list)):
+            warnings.warn(f'Convention "{name}" contains a list of target methods. This is not supported anymore. '
+                          f'Please use a single target method instead.')
+            for target_methods in target_methods:
+                _values = values.copy()
+                _values.pop('target_methods')
+                _values['target_method'] = target_methods
+                new_sattr = StandardAttribute(name, **_values)
+                std_attrs.append(new_sattr)
+        else:
+            std_attrs.append(StandardAttribute(name, **values))
     meta = {name.strip('__'): value for name, value in attrs.items() if not isinstance(value, dict)}
     if 'name' not in meta:
         meta['name'] = yaml_filename.stem
     meta = {name.strip('_'): value for name, value in meta.items()}
-    cv = Convention(filename=yaml_filename, **meta)
-    for s in std_attrs:
-        cv.add(s)
+    cv = Convention(filename=yaml_filename, decoders=decoders, **meta)
+    for std_attr in std_attrs:
+        cv.add(std_attr)
 
     if register:
         cv.register()
