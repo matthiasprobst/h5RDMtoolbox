@@ -67,7 +67,7 @@ class StandardNameValidator(StandardAttributeValidator):
                           parent.attrs.get('scale', None))
         if scale is not None:
             ureg = get_ureg()
-            units = str((ureg(scale) * ureg(units)).units)
+            units = str((ureg(scale) * ureg.Unit(units)).units)
 
         sn = snt[standard_name]
         if sn.is_vector():

@@ -3,8 +3,8 @@ import unittest
 import warnings
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import errors
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import AffixKeyError
 from h5rdmtoolbox.conventions.standard_names import StandardName
 from h5rdmtoolbox.conventions.standard_names.transformation import Transformation
 
@@ -45,10 +45,8 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(doi=8276716)
 
         # check if the problem really exists:
-        try:
+        with self.assertRaises(errors.StandardNameError):
             snt['maximum_of_pressure']
-        except h5tbx.errors.AffixKeyError as e:
-            print(e)
 
         max_of = Transformation(r"^maximum_of_(.*)$", maximum_of)
 
@@ -61,7 +59,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             sn.description)
         self.assertEqual(max_of, snt.transformations[-1])
         self.assertIn(max_of, snt.transformations)
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             snt['max_of_velocity']
 
         sn = snt['maximum_of_velocity']
@@ -92,9 +90,9 @@ class TestTransformationsAndAffixes(unittest.TestCase):
     def test_X_at_LOC(self):
         # X_at_LOC
         for sn in self.snt.standard_names:
-            with self.assertRaises(AffixKeyError):
+            with self.assertRaises(errors.StandardNameError):
                 self.snt[f'{sn}_at_fan']
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt['invalid_coordinate_at_fan']
         sn = self.snt['x_coordinate_at_fan_inlet']
         self.assertEqual(sn.units, self.snt['x_coordinate'].units)
@@ -121,9 +119,9 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                             self.assertEqual(_sn.units, self.snt[sn2].units)
                             self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} between {loc1} and "
                                                               f"{loc2}.")
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_time_and_time_between_fan_inlet_and_INVALID']
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_time_and_time_between_INVALID_and_fan_outlet']
 
     def test_difference_of_X_and_Y_across_device(self):
@@ -147,7 +145,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                                                               f"{sn1}: {self.snt[sn1].description} "
                                                               f"{sn2}: {self.snt[sn2].description} "
                                                               f"{dev}: {self.snt.affixes['device'][dev]}.")
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_time_and_time_across_INVALID']
 
     def test_ratio_of_X_and_Y(self):
@@ -175,7 +173,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
              }
              }
         )
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             snt['invalid_static_pressure']
         _sn = snt['wall_static_pressure']
         self.assertEqual(_sn.units, snt['static_pressure'].units)
@@ -193,7 +191,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                 _sn = self.snt[f'difference_of_{sn}_across_{dev}']
                 self.assertEqual(_sn.units, self.snt[sn].units)
                 self.assertEqual(_sn.description, f"Difference of {sn} across {dev}.")
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_{sn}_across_INVALID']
 
     def test_square_of_X(self):
@@ -238,7 +236,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             for frame in self.snt.affixes['reference_frame'].names:
                 _sn = self.snt[f'{sn}_in_{frame}']
                 self.assertEqual(_sn.units, self.snt[sn].units)
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'{sn}_in_invalid_frame']
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'{sn}_in_invalid_frame']

@@ -152,8 +152,9 @@ class TestFileQuery(unittest.TestCase):
         self.assertIsInstance(r, h5tbx.database.lazy.LDataset)
         self.assertIsInstance(r.attrs, dict)
         self.assertEqual(r.attrs['a'], 99)
-        self.assertEqual(r.attrs.keys(), r[()].attrs.keys())
-        self.assertEqual(list(r.attrs.values()), list(r[()].attrs.values()))
+        with h5tbx.set_config(add_source_info_to_xr=False):
+            self.assertEqual(r.attrs.keys(), r[()].attrs.keys())
+            self.assertEqual(list(r.attrs.values()), list(r[()].attrs.values()))
         self.assertEqual(r.shape, (1, 2, 3))
         self.assertEqual(r.ndim, 3)
 

@@ -187,9 +187,8 @@ class TestConventions(unittest.TestCase):
             ds = h5.create_dataset('test', data=1, units='m/s', scale='3 1/s')
             self.assertEqual(1, int(ds.values[()]))
             self.assertEqual(3, int(ds[()]))
-            self.assertEqual('m/s', ds.units)
-            self.assertEqual('m/s**2', ds[()].attrs['units'])
-
+            self.assertEqual('m/s', str(ds.units))
+            self.assertEqual('m/s**2', str(ds[()].attrs['units']))
 
         with h5tbx.File() as h5:
             ds = h5.create_dataset('test', data=1, units='m/s', scale=3)

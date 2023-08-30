@@ -1,9 +1,11 @@
 """Testing the standard attributes"""
 import inspect
+import pint
 import re
 import unittest
 from datetime import datetime
 from json.decoder import JSONDecodeError
+from typing import Union
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __author_orcid__
@@ -15,6 +17,10 @@ from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
 
 
 class TestStandardAttributes(unittest.TestCase):
+
+    def assertPintUnitEqual(self, unit1: [str, pint.Unit], unit2: Union[str, pint.Unit]):
+        """Assert that two units are equal by converting them to pint.Unit"""
+        assert pint.Unit(unit1) == pint.Unit(unit2)
 
     def setUp(self) -> None:
         self.connected = h5tbx.utils.has_internet_connection()
@@ -55,6 +61,14 @@ class TestStandardAttributes(unittest.TestCase):
             dt = datetime.now()
             h5.datetime = dt
             self.assertEqual(h5.datetime, datetime.fromisoformat(dt.isoformat()))
+
+        import h5py
+        fname = h5tbx.utils.generate_temporary_filename()
+        with h5py.File(fname, 'w') as h5:
+            h5.attrs['datetime'] = '20230830'
+
+        with h5tbx.File(fname) as h5:
+            self.assertEqual('20230830', h5.datetime)
 
     def test_data_source(self):
         h5tbx.use(None)
@@ -391,13 +405,13 @@ class TestStandardAttributes(unittest.TestCase):
                 ds.units = 'test'
             with self.assertRaises(StandardAttributeError):
                 ds.units = ('test',)
-            self.assertEqual(ds.units, 'm')
+            self.assertPintUnitEqual(ds.units, 'm')
             # creat pint unit object:
             ds.units = h5tbx.get_ureg().mm
-            self.assertEqual(ds.units, 'mm')
+            self.assertPintUnitEqual(ds.units, 'mm')
             with self.assertRaises(ValueError):
                 del ds.units
-            self.assertEqual(ds.units, 'mm')
+            self.assertPintUnitEqual(ds.units, 'mm')
 
     def test_source(self):
         source_attrs = [StandardAttribute(

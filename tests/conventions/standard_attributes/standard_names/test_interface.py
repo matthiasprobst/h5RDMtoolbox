@@ -45,7 +45,7 @@ class TestStandardAttributes(unittest.TestCase):
                              h5sni.standard_names)
         mag = h5sni.velocity.magnitude()
         self.assertIsInstance(mag, xr.DataArray)
-        self.assertEqual(mag.units, 'm/s')
+        self.assertEqual(str(mag.units), 'm/s')
 
         plt.figure()
         h5sni.velocity.get('x', 'y').plot()
@@ -109,7 +109,7 @@ class TestStandardAttributes(unittest.TestCase):
                              h5sni.standard_names)
         mag = h5sni.velocity.magnitude()
         self.assertIsInstance(mag, xr.DataArray)
-        self.assertEqual(mag.units, 'm/s')
+        self.assertEqual(str(mag.units), 'm/s')
 
         plt.figure()
         h5sni.velocity.get('x', 'y').plot()

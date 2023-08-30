@@ -169,7 +169,7 @@ class PintQuantityValidator(StandardAttributeValidator):
             raise ValueError(f'Quantity cannot be understood using ureg package: {quantity}. Original error: {e}')
         return str(quantity)  # convert to string, otherwise error!
 
-    def get(self, value, parent):
+    def get(self, value, parent) -> pint.Quantity:
         return get_ureg().Quantity(value)
 
 
@@ -183,6 +183,9 @@ class PintUnitsValidator(StandardAttributeValidator):
         except (pint.UndefinedUnitError, TypeError) as e:
             raise ValueError(f'Units cannot be understood using ureg package: {value}. Original error: {e}')
         return str(value)
+
+    def get(self, value, parent) -> pint.Unit:
+        return get_ureg().Unit(value)
 
 
 def _loads_if_neede(value):

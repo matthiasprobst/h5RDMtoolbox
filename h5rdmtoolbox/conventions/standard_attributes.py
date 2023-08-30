@@ -1,20 +1,13 @@
 """standard attribute module"""
 import abc
-import enum
-import json
-import numpy as np
-import pathlib
 import warnings
-from datetime import datetime
 from typing import Dict, List, Union
 
-from . import errors
-from . import logger
+from . import errors, logger
 from . import warnings as convention_warnings
 from .consts import DefaultValue
-from .validators import StandardAttributeValidator
-from .validators import get_validator
-from .. import get_ureg, get_config
+from .validators import StandardAttributeValidator, get_validator
+from .. import get_config
 from ..utils import DocStringParser
 from ..wrapper.core import File, Group, Dataset
 
@@ -23,71 +16,6 @@ __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                                  'create_dataset': DocStringParser(Group.create_dataset)}}
 
 __all__ = ['StandardAttribute', ]
-
-
-class TargetMethod(enum.Enum):
-    """Available Target methods for Standard Attributes"""
-    create_file = 1
-    init = 1
-    create_group = 2
-    create_dataset = 3
-
-
-def _pint_quantity(q, parent):
-    return get_ureg()(q)
-
-
-def _pint_unit(u, parent):
-    return get_ureg().Unit(u)
-
-
-def _standard_name_table(snt, parent):
-    from .standard_names.table import StandardNameTable
-    if isinstance(snt, dict):
-        return StandardNameTable.from_yaml(snt)
-    if not isinstance(snt, str):
-        raise TypeError(f'Unexpected type for the standard name table: {type(snt)}')
-    if snt.startswith('{'):
-        return StandardNameTable.from_dict(json.loads(snt))
-    if snt.startswith('https://zenodo.org/record/') or snt.startswith('10.5281/zenodo.'):
-        return StandardNameTable.from_zenodo(doi=snt)
-    if snt.startswith('https://'):
-        return StandardNameTable.from_url(snt)
-    if pathlib.Path(snt).exists():
-        return StandardNameTable.from_yaml(snt)
-    raise RuntimeError('Could not parse standard name table.')
-
-
-def _standard_name(sn, parent):
-    snt = parent.rootparent.standard_name_table
-    return snt[sn]
-
-
-def make_dict(ref, parent):
-    """If input is string repr of dict, return dict"""
-    if isinstance(ref, np.ndarray):
-        ref = ref.tolist()
-    elif isinstance(ref, str):
-        if ref[0] == '{':
-            return json.loads(ref)
-        return ref
-    _out = []
-    for r in ref:
-        if isinstance(r, str) and r[0] == '{':
-            _out.append(json.loads(r))
-        else:
-            _out.append(r)
-    return _out
-
-
-def _isodatetime(dt, parent):
-    # expecting isoformat!
-    return datetime.fromisoformat(dt)
-
-
-def _orcid(orcid_id, parent):
-    from .. import orcid
-    return orcid.ORCID(orcid_id)
 
 
 class StandardAttribute(abc.ABC):
@@ -252,15 +180,8 @@ class StandardAttribute(abc.ABC):
         self.description = description
 
         self.position = position
-        if return_type is None:
-            if self.validator.keyword in known_types:
-                return_type = self.validator.keyword
-            else:
-                return_type = None
-        else:
-            if return_type not in known_types:
-                raise ValueError(f'Unknown return type: {return_type}')
-        self.return_type = return_type
+        if return_type:
+            warnings.warn('return_type is deprecated. Use target_cls instead.', DeprecationWarning)
         for _k in kwargs:
             logger.error(f'Unexpected entry "{_k}" for StandardAttribute, which is ignored.')
 
@@ -353,24 +274,3 @@ class StandardAttribute(abc.ABC):
             warnings.warn(f'The attribute "{self.name}" could not be validated due to: {e}',
                           convention_warnings.StandardAttributeValidationWarning)
             return ret_val
-
-
-known_types = {'int': int,
-               'float': float,
-               'str': str,
-               'bool': bool,
-               'list': list,
-               'tuple': tuple,
-               'dict': dict,
-               'pint.Quantity': _pint_quantity,
-               'pint.Unit': _pint_unit,
-               'sdict': make_dict,
-               'standard_name_table': _standard_name_table,
-               'isodatetime': _isodatetime,
-               'orcid': _orcid,
-               'standard_name': _standard_name,
-               }
-_known_types = known_types.copy()
-for k, v in known_types.items():
-    _known_types[f'${k}'] = v
-known_types = _known_types
