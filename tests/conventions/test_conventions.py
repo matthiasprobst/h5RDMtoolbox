@@ -207,7 +207,7 @@ class TestConventions(unittest.TestCase):
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                 cv = h5tbx.conventions.from_zenodo(doi=8266929)
 
-        cv = h5tbx.conventions.from_zenodo(doi=8301512)
+        cv = h5tbx.conventions.from_zenodo(doi=8301535)
         self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
         self.assertEqual(
             h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
