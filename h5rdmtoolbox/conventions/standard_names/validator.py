@@ -1,3 +1,4 @@
+import json
 import pathlib
 from typing import Union, Dict
 
@@ -11,6 +12,8 @@ def _parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
     """Returns a StandardNameTable object from a string, dict or StandardNameTable object"""
     if isinstance(snt, str):
         # could be web address or local file
+        if snt[0] == '{':
+            return StandardNameTable.from_dict(json.loads(snt))
         if snt.startswith('https://zenodo.org/record/') or snt.startswith('10.5281/zenodo.'):
             return StandardNameTable.from_zenodo(snt)
         fname = pathlib.Path(snt)
@@ -31,9 +34,9 @@ class StandardNameTableValidator(StandardAttributeValidator):
     """Validates a standard name table"""
 
     keyword = '$standard_name_table'
+    deprecated_keywords = ('standard_name_table', '$snt', 'snt')
 
     def __call__(self, standard_name_table, parent=None, attrs=None, **kwargs):
-        # return parse_snt(standard_name_table).to_sdict()
         snt = _parse_snt(standard_name_table)
         if 'zenodo_doi' in snt.meta:
             return snt.meta['zenodo_doi']

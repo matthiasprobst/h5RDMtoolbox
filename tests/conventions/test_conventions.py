@@ -8,6 +8,7 @@ import yaml
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import core
+from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 
 
 class TestConventions(unittest.TestCase):
@@ -46,10 +47,10 @@ class TestConventions(unittest.TestCase):
                    '__use_scale_offset__': True,
                    'standard_name_table':
                        {
-                           'target_methods': '__init__',
-                           'validator': {'$in': [f'relpath({snt_filename.name})', ]},
+                           'target_method': '__init__',
+                           'validator': {'$standard_name_table': f'relpath({snt_filename.name})'},
                            'default_value': f'relpath({snt_filename.name})',
-                           'return_type': 'standard_name_table',
+                           'type_hint': 'StandardNameTable',
                            'description': 'A standard name table'
                        }
                    }
@@ -60,7 +61,7 @@ class TestConventions(unittest.TestCase):
         local_cv.register()
         with h5tbx.use(local_cv.name):
             with h5tbx.File() as h5:
-                print(h5.standard_name_table)
+                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
 
     def test_process_paths(self):
         __this_dir__ = pathlib.Path(__file__).parent

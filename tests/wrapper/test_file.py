@@ -46,7 +46,7 @@ class TestFile(unittest.TestCase):
 
     def test_filename(self):
         with h5tbx.File() as h5:
-            with self.assertRaises(KeyError):
+            with self.assertRaises(AttributeError):
                 h5.hdf_filename = 3
         self.assertIsInstance(h5.hdf_filename, pathlib.Path)
         self.assertTrue(h5.hdf_filename.exists())

@@ -3,10 +3,6 @@
  Wrapper around h5py
 ====================
 
-.. |h5wrappericon| image:: ../_static/icon_h5wrapper.svg
-  :width: 30
-  :alt:
-
 Motivated by the need for sustainable research data management, the wrapper sub-package aims to simplify data
 generation, processing, and analysis using HDF5 files.
 It achieves this by providing a class that inherits from the core interface classes of the popular package `h5py`.

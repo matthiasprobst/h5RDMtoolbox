@@ -202,7 +202,7 @@ class Convention:
 
                     __doc_string_parser__[cls][method_name].add_additional_parameters(
                         {std_attr_name: {'default': std_attr.default_value,
-                                         'type': std_attr.input_type,
+                                         'type': std_attr.type_hint,
                                          'description': std_attr.description}}
                     )
 
@@ -222,11 +222,11 @@ class Convention:
                                           param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
                             position = {'after': params[-1].name}
 
-                    input_type = locate(std_attr.input_type)
+                    type_hint = locate(std_attr.type_hint)
 
                     setattr(cls, method_name, forge.insert(forge.arg(f'{std_attr_name}',
                                                                      default=std_attr.default_value,
-                                                                     type=input_type),
+                                                                     type=type_hint),
                                                            **position)(cls.__dict__[method_name]))
         for cls, methods in self.methods.items():
             for name, props in methods.items():

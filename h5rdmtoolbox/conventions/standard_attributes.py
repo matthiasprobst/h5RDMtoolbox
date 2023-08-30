@@ -29,12 +29,11 @@ class StandardAttribute(abc.ABC):
         The validator for the attribute. If the validator takes a parameter, pass it as dict.
         Examples for no-parameter validator: "$pintunits", "$standard_name", "$orcid", "$url"
         Examples for validator with parameter: {"$regex": "^[a-z0-9_]*$"}, {"$in": ["a", "b", "c"]}
-    target_methods: str | List[str]
-        The method to which the attribute belongs. If the standard attribute is positional for all methods to
-        which it applies, pass a list of strings, e.g. target_methods=["create_group", "create_dataset"].
-        If it is positional and is only valid for one method, pass a string, e.g. target_methods="create_group".
     description: str
         The description of the attribute
+    target_method: str
+        The method to which the attribute belongs, e.g. "create_group". Valid values are
+        "create_group", "create_dataset", "__init__".
     default_value: any, optional=DefaultValue.EMPTY
         If the attribute is positional, it has no default value, then pass DefaultValue.EMPTY (the default).
         Otherwise, pass the default value. The default value applies to all methods to which the attribute applies.
@@ -43,41 +42,9 @@ class StandardAttribute(abc.ABC):
         attribute is used. If None (default), no alternative standard attribute is defined.
     position: int, optional=None
         The position of the attribute. None puts it at the end.
-    return_type: str, optional=None
-        The return type of the method. If None (default), the return type is the one naturally return by the
-        toolbox
     requirements: List[str] = None,
         The requirements for the attribute. Values are other standard names used in the convention.
         If None (default), no requirements are defined.
-
-    Attributes
-    ----------
-    name: str
-        The name of the attribute
-    validator: StandardAttributeValidator
-        The validator for the attribute
-    target_methods: str | List[str]
-        The method to which the attribute belongs. If the standard attribute is positional for all methods to
-        which it applies, pass a list of strings, e.g. target_methods=["create_group", "create_dataset"].
-        If it is positional and is only valid for one method, pass a string, e.g. target_methods="create_group".
-    description: str
-        The description of the attribute
-    default_value: any, optional=DefaultValue.EMPTY
-        If the attribute is positional, it has no default value, then pass DefaultValue.EMPTY (the default).
-        Otherwise, pass the default value. The default value applies to all methods to which the attribute applies.
-    alternative_standard_attribute; str, optional=None
-        The name of the alternative standard attribute. If the attribute is not present, the alternative standard
-        attribute is used. If None (default), no alternative standard attribute is defined.
-    position: int, optional=None
-        The position of the attribute. None puts it at the end.
-    return_type: str, optional=None
-        The return type of the method. If None (default), the return type is the one naturally return by the
-        toolbox
-    requirements: List[str] = None,
-        The requirements for the attribute. Values are other standard names used in the convention.
-        If None (default), no requirements are defined.
-    target_cls: h5py.File | h5py.Group | h5py.Dataset
-        The class to which the attribute belongs. This is set automatically.
     """
     EMPTY = DefaultValue.EMPTY  # quasi positional
     NONE = DefaultValue.NONE  # keyword argument is None. None will not be written to the file
@@ -94,15 +61,15 @@ class StandardAttribute(abc.ABC):
 
     def __init__(self,
                  name,
-                 validator,
+                 *,  # force keyword arguments
                  description,
-                 default_value=DefaultValue.EMPTY,
+                 validator,
                  target_method: str = None,
-                 target_methods=None,
+                 default_value=DefaultValue.EMPTY,
                  alternative_standard_attribute: str = None,
                  position: Union[None, Dict[str, str]] = None,
-                 return_type: str = None,
                  requirements: List[str] = None,
+                 type_hint: str = None,
                  **kwargs):
         """
 
@@ -121,18 +88,39 @@ class StandardAttribute(abc.ABC):
             Note: In earlier versions multiple methods could be specified. This is not supported anymore because (a)
             it facilitates the code and makes it better to read and (b) the description of the attribute should be
             different depending on the method.
-        target_methods: str
-            Deprecated. Use target_method instead.
         alternative_standard_attribute
         position
         return_type
         requirements
         kwargs
         """
-        if isinstance(requirements, str):
-            requirements = [requirements]
-        self.requirements = requirements
-        self.alternative_standard_attribute = alternative_standard_attribute
+        # name of attribute:
+        self.name = name.split('-', 1)[0]  # the attrs key
+
+        # validator to be called when writing the attribute and reading the attribute:
+        if isinstance(validator, str):
+            validator = {validator: None}
+
+        if len(validator) > 1:
+            raise ValueError(f'Only one validator can be specified. Got {validator} instead.')
+
+        self.validator = [get_validator(k)(v) for k, v in validator.items()][0]
+        assert isinstance(self.validator, StandardAttributeValidator)
+
+        # the human readable description of the attribute:
+        if description[-1] != '.':
+            description += '.'
+        self.description = description
+
+        # the attribute is associated with a method:
+        if not isinstance(target_method, str):
+            raise TypeError(f'target_method must be a string. Got {type(target_method)} instead.')
+        if target_method not in self.VALID_TARGET_METHODS:
+            raise ValueError(f'Invalid target method: "{target_method}".from '
+                             f'Valid target methods are: {self.VALID_TARGET_METHODS}.')
+        self.target_method = target_method
+
+        # The default value
         if isinstance(default_value, str):
             _default_value = default_value.lower()
             if _default_value == '$none':
@@ -149,46 +137,34 @@ class StandardAttribute(abc.ABC):
             default_value = DefaultValue.EMPTY
         self.default_value = default_value
 
-        self.input_type = 'str'
-        self.name = name.split('-', 1)[0]  # the attrs key
+        # an alternative attribute can be set, which means, that if this attribute is not present, the alternative
+        # attribute is required instead:
+        self.alternative_standard_attribute = alternative_standard_attribute
 
-        if isinstance(validator, str):
-            validator = {validator: None}
-
-        if len(validator) > 1:
-            raise ValueError(f'Only one validator can be specified. Got {validator} instead.')
-
-        self.validator = [get_validator(k)(v) for k, v in validator.items()][0]
-
-        assert isinstance(self.validator, StandardAttributeValidator)
-
-        if target_method is None and target_methods is not None:
-            warnings.warn('target_method is deprecated. Use target_methods instead.', DeprecationWarning)
-            target_method = target_methods
-
-        if not isinstance(target_method, str):
-            raise TypeError(f'target_method must be a string. Got {type(target_method)} instead.')
-        if target_method not in self.VALID_TARGET_METHODS:
-            raise ValueError(f'Invalid target method: "{target_methods}".from '
-                             f'Valid target methods are: {self.VALID_TARGET_METHODS}.')
-
-        self.target_method = target_method
-
-        self.target_cls = self.PROPERTY_CLS_ASSIGNMENT[target_method]
-        if description[-1] != '.':
-            description += '.'
-        self.description = description
-
+        # the position of the attribute within the method signature:
         self.position = position
-        if return_type:
-            warnings.warn('return_type is deprecated. Use target_cls instead.', DeprecationWarning)
+
+        # The attribute may require other attributes to be present:
+        if isinstance(requirements, str):
+            requirements = [requirements]
+        self.requirements = requirements
+
+        # the type hint of the attribute shown in the method signature:
+        if type_hint is None:
+            type_hint = 'str'
+        self.type_hint = type_hint
+
+        # --- process the input:
+        self.target_cls = self.PROPERTY_CLS_ASSIGNMENT[target_method]
+
+        # check for unexpected entries:
         for _k in kwargs:
             logger.error(f'Unexpected entry "{_k}" for StandardAttribute, which is ignored.')
 
     def __repr__(self):
         if self.is_positional():
-            return f'<PositionalStdAttr("{self.name}"): "{self.description}">'
-        return f'<KeywordStdAttr("{self.name}"): default_value="{self.default_value}" | "{self.description}">'
+            return f'<{self.__class__.__name__}[positional]("{self.name}"): "{self.description}">'
+        return f'<{self.__class__.__name__} [keyword]("{self.name}"): default_value="{self.default_value}" | "{self.description}">'
 
     @property
     def target_methods(self):

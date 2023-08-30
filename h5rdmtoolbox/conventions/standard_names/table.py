@@ -362,6 +362,15 @@ class StandardNameTable:
     # Loader: ---------------------------------------------------------------
     @staticmethod
     def from_yaml(yaml_filename):
+        invalid = False
+        with open(yaml_filename, 'r') as f:
+            if '503 Service Unavailable' in f.readline():
+                invalid = True
+        if invalid:
+            pathlib.Path(yaml_filename).unlink()
+            raise ConnectionError('The requested file was not properly downloaded: 503 Service Unavailable. '
+                                  f'The file {yaml_filename} is deleted. Try downloading it again')
+
         with open(yaml_filename, 'r') as f:
             snt_dict = {}
             for d in yaml.full_load_all(f):

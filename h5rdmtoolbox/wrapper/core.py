@@ -394,11 +394,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             return self._h5grp(ret.id)
 
     def __getattr__(self, item):
-        props = self.convention.properties.get(self.__class__, None)
-        if props:
-            prop = props.get(item, None)
-            if prop:
-                return prop.get(self)
+        standard_attributes = self.standard_attributes
+        if standard_attributes:  # are there standard attributes registered?
+            standard_attribute = standard_attributes.get(item, None)
+            if standard_attribute:  # is there an attribute requested with name=item available?
+                return standard_attribute.get(self)
 
         try:
             return super().__getattribute__(item)
@@ -1536,11 +1536,11 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         return self.isel(**isel)
 
     def __getattr__(self, item):
-        props = self.convention.properties.get(self.__class__, None)
-        if props:
-            prop = props.get(item, None)
-            if prop:
-                return prop.get(self)
+        standard_attributes = self.standard_attributes
+        if standard_attributes:
+            standard_attribute = standard_attributes.get(item, None)
+            if standard_attribute:
+                return standard_attribute.get(self)
 
         if item not in self.__dict__:
             for d in self.dims:
@@ -1954,13 +1954,13 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         props = self.convention.properties.get(self.__class__, None)
         if props:
             prop = props.get(key, None)
-            if prop:
+            if prop:  # does the object have a standard attribute with name stored in key?
                 return prop.set(self, value)
         if key.startswith('_'):
             return super().__setattr__(key, value)
         # if key in ('layout', ):
         #     return super().__setattr__(key, value)
-        raise KeyError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
+        raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
                        f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
 
     def __repr__(self) -> str:

@@ -244,7 +244,6 @@ class TestStandardAttributes(unittest.TestCase):
                                  target_method='create_dataset',
                                  description='Scale factor for the dataset values.',
                                  position={'after': 'data'},
-                                 return_type='pint.Quantity',
                                  default_value=StandardAttribute.NONE))
         cv.register()
         h5tbx.use(cv)
@@ -265,24 +264,22 @@ class TestStandardAttributes(unittest.TestCase):
         h5tbx.use(None)
         units_attr = StandardAttribute('units',
                                        validator='$pintunit',
-                                       target_methods='create_dataset',
+                                       target_method='create_dataset',
                                        description='A unit of a dataset',
                                        )
         standard_name = StandardAttribute('standard_name',
                                           validator='$standard_name',
-                                          target_methods='create_dataset',
+                                          target_method='create_dataset',
                                           description='A standard name of a dataset',
                                           )
         snt_yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
         snt = StandardAttribute('standard_name_table',
                                 validator='$standard_name_table',
-                                target_methods='__init__',
+                                target_method='__init__',
                                 # default_value='https://zenodo.org/record/8158764',
                                 default_value=snt_yaml_filename,
                                 description='A standard name table',
-                                requirements=['standard_name', 'units'],
-                                return_type='standard_name_table'
-                                )
+                                requirements=['standard_name', 'units'])
 
         cv = h5tbx.conventions.Convention('test_standard_name',
                                           contact=h5tbx.__author_orcid__)

@@ -70,9 +70,8 @@ class TestStandardAttributes(unittest.TestCase):
         sa = h5tbx.conventions.standard_attributes.StandardAttribute(
             name='snt',
             validator='$standard_name_table',
-            target_methods='__init__',
+            target_method='__init__',
             description='Standard name table.',
-            return_type='standard_name_table',
             default_value='10.5281/zenodo.8220739'
         )
         cv.add(sa)
@@ -140,6 +139,13 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(1, len(self.snt.check_hdf_file(h5.hdf_filename)))
 
     def test_StandardNameTableFromYaml(self):
+        tmp_filename = h5tbx.utils.generate_temporary_filename('.yaml')
+        with open(tmp_filename, 'w') as f:
+            f.write(f'<html><h1>503 Service Unavailable</h1></html>')
+        self.assertTrue(tmp_filename.exists())
+        with self.assertRaises(ConnectionError):
+            StandardNameTable.from_yaml(tmp_filename)
+        self.assertFalse(tmp_filename.exists())
         table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())
         self.assertIsInstance(table.affixes, dict)
         with self.assertRaises(StandardNameError):

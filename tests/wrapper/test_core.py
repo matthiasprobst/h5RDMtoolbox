@@ -89,7 +89,7 @@ class TestCore(unittest.TestCase):
 
     def test_setattr(self):
         with h5tbx.File() as h5:
-            with self.assertRaises(KeyError):
+            with self.assertRaises(AttributeError):
                 h5.smth = 10
             h5._smth = 10
             self.assertEqual(10, h5._smth)
