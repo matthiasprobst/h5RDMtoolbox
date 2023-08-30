@@ -1,6 +1,6 @@
 .. _wrapper:
 
- Wrapper around h5py
+Wrapper around h5py
 ====================
 
 Motivated by the need for sustainable research data management, the wrapper sub-package aims to simplify data

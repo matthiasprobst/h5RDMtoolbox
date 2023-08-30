@@ -1,7 +1,7 @@
 __name__: h5rdmtoolbox-tutorial-convention
 __institution__: https://orcid.org/members/001G000001e5aUTIAY
 __contact__: https://orcid.org/0000-0001-8729-0482
-__use_scale_offset__: True
+__decoders__: scale_and_offset
 
 data_type:
   description: Type of data in file. Can be numerical, analytical or experimental.
@@ -32,7 +32,6 @@ standard_name_table:
   requirements:
     - standard_name
     - units
-  return_type: standard_name_table
   description: The standard name table of the convention.
 
 long_name:
@@ -66,7 +65,6 @@ comment-dataset:
 contact-file:
   validator: $orcid
   description: Contact or responsible person for the full file. Contact is represented by an ORCID.
-  return_type: orcid
   target_method: __init__
 
 references-file:

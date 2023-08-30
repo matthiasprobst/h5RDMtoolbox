@@ -31,6 +31,7 @@ class TestConventions(unittest.TestCase):
     def test_overload_standard_attributes(self):
         yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
+        self.assertTupleEqual(('scale_and_offset',), cv.decoders)
         self.assertIn('comment', cv.properties[h5tbx.File])
         self.assertIn('comment', cv.properties[h5tbx.Group])
 
@@ -206,7 +207,7 @@ class TestConventions(unittest.TestCase):
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                 cv = h5tbx.conventions.from_zenodo(doi=8266929)
 
-        cv = h5tbx.conventions.from_zenodo(doi=8296801)
+        cv = h5tbx.conventions.from_zenodo(doi=8301512)
         self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
         self.assertEqual(
             h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,

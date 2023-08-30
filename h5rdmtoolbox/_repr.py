@@ -411,8 +411,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         if isinstance(h5obj, str):
             _value_str = f'{h5obj}'
-            if _value_str[0] == '<' and _value_str[-1] == '>':
-                _value_str = _value_str[1:-1]
+            if len(_value_str) > 1:
+                if _value_str[0] == '<' and _value_str[-1] == '>':
+                    _value_str = _value_str[1:-1]
 
             _value, is_url = process_string_for_link(_value_str)
             if is_url:
