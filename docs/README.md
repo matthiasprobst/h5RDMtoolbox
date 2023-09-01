@@ -28,10 +28,6 @@ and after that run the make file in the source folder to build the actual pdf.
 
 View `_build/index.html` with your browser.
 
-## Generating docs for github:
-
-    make.bat github
-
 ## Troubleshooting
 
 * error message: ```no theme named 'sphinx_rtd_theme' found (missing theme.conf?)```

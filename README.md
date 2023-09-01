@@ -102,6 +102,13 @@ Install optional dependencies by specifying them in square brackets after the pa
 Feel free to contribute. Make sure to write `docstrings` to your methods and classes and please write tests and use PEP
 8 (https://peps.python.org/pep-0008/)
 
+Please write tests for your code and put them into the `test/` folder. Visit the [README file](./tests/README.md) in the
+test-folder for more information.
+
+Pleas also add a jupyter notebook in the `docs/` folder in order to document your code. 
+Please visit the [README file](./docs/README.md) in the docs-folder for more information on 
+how to compile the documentation.
+
 Please use the **numpy style for the docstrings**:
 https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
 
