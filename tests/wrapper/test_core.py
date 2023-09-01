@@ -41,14 +41,14 @@ class TestCore(unittest.TestCase):
             f1 = h5.hdf_filename
         with h5tbx.File() as h5:
             f2 = h5.hdf_filename
-        with h5tbx.Files([f1, ]) as h5:
+        with h5tbx.FileDB([f1, ]) as h5:
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertEqual(str(h5), "<Files (1 files)>")
-        with h5tbx.Files([f1, f2]) as h5:
+        with h5tbx.FileDB([f1, f2]) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertIsInstance(h5[1], h5tbx.File)
-        with h5tbx.Files([f1, f2], file_instance=h5tbx.File) as h5:
+        with h5tbx.FileDB([f1, f2], file_instance=h5tbx.File) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertIsInstance(h5[1], h5tbx.File)

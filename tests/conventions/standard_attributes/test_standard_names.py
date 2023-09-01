@@ -238,7 +238,6 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_yaml(self):
         cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
-        cv.decoders = ('scale_and_offset',)
         cv.add(StandardAttribute(name='scale',
                                  validator='$pintquantity',
                                  target_method='create_dataset',
