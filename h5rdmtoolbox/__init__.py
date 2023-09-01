@@ -17,7 +17,7 @@ from . import plotting
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
-from .database import file
+from . import database
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import errors
@@ -48,19 +48,33 @@ class Files:
     """Class to access multiple files at once"""
 
     def __new__(cls, *args, **kwargs):
-        from .database import files
         kwargs['file_instance'] = File
-        return files.Files(*args, **kwargs)
+        return database.files.Files(*args, **kwargs)
 
 
 class FileDB:
     """User-friendly interface to database.Folder, database.File or database.Files"""
 
-    def __init__(self):
-        pass
+    def __new__(cls, path, rec=False):
+        if isinstance(path, (list, tuple)):
+            filenames = []
+            for p in [pathlib.Path(_p) for _p in path]:
+                if p.is_file():
+                    filenames.append(p)
+                elif p.is_dir():
+                    if rec:
+                        for f in p.rglob('*.hdf'):
+                            filenames.append(f)
+                    else:
+                        for f in p.glob('*.hdf'):
+                            filenames.append(f)
+            return database.Files(filenames)
 
-    def __new__(cls, *args, **kwargs):
-        print('juhu')
+        path = pathlib.Path(path)
+        if path.is_dir():
+            return database.Folder(path, rec=rec)
+        return database.File(path)
+
 
 def dump(src: Union[str, File, pathlib.Path]) -> None:
     """Call h5.dump() on the provided HDF5 file

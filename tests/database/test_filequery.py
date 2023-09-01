@@ -44,6 +44,16 @@ class TestFileQuery(unittest.TestCase):
             h5tbx.database.Folder('here')
 
         fd = h5tbx.database.Folder(folder_dir, rec=False)
+        self.assertFalse(fd.rec)
+
+        fdauto = h5tbx.FileDB(folder_dir, rec=False)
+        self.assertIsInstance(fdauto, h5tbx.database.Folder)
+        self.assertFalse(fdauto.rec)
+
+        fdauto = h5tbx.FileDB(folder_dir, rec=True)
+        self.assertIsInstance(fdauto, h5tbx.database.Folder)
+        self.assertTrue(fdauto.rec)
+
         self.assertEqual(2, len(list(fd.filenames)))
         self.assertEqual(2, len(fd))
         self.assertEqual(fd.filenames[0], fd[0].filename)
@@ -172,12 +182,25 @@ class TestFileQuery(unittest.TestCase):
                 res = h5.find({'$eq': [1.2, 3.4, 4.0]}, rec=False)
                 self.assertEqual(0, len(res))
 
-    def test_compare_to_dataset_values_3(self):
+    def test_compare_to_dataset_values_mean(self):
         with h5tbx.use('h5tbx'):
             with h5tbx.File() as h5:
                 h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
                 h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
                 res = h5.find({'$eq': {'$mean': np.mean([1.2, 3.4, 4.5])}}, rec=False)
+                self.assertEqual(1, len(res))
+                self.assertEqual(res[0].basename, h5['u'].basename)
+
+    def test_compare_to_dataset_values_mean_combined(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('z', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='z_velocity'))
+                h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find({'standard_name': 'x_velocity',
+                               '$eq': {'$mean': np.mean([1.2, 3.4, 4.5])}}, rec=False)
+
                 self.assertEqual(1, len(res))
                 self.assertEqual(res[0].basename, h5['u'].basename)
 

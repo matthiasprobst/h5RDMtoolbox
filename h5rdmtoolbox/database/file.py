@@ -175,6 +175,8 @@ def _pass(obj, comparison_value):
 
 
 def _mean(obj, _):
+    if obj.dtype.char == 'S':
+        return None
     return np.mean(obj[()])
 
 
@@ -185,7 +187,7 @@ def get_ndim(value) -> int:
     return np.ndim(value)
 
 
-transformer = {'$eq': _pass,
+math_operator = {'$eq': _pass,
                '$mean': _mean}
 
 
@@ -218,9 +220,9 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
         if len(qv) != 1:
             raise ValueError(f'Cannot use operator "{qk}" for dict with more than one key')
 
-        for transformer_name, comparison_value in qv.items():
+        for math_operator_name, comparison_value in qv.items():
             if recursive:
-                rf = RecValueFind(transformer[transformer_name], value_operator[qk], comparison_value)
+                rf = RecValueFind(math_operator[math_operator_name], value_operator[qk], comparison_value)
                 h5obj.visititems(rf)  # will not visit the root group
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
@@ -228,7 +230,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                 # iterator over all datasets in group
                 for target_obj in h5obj.values():
                     if isinstance(target_obj, h5py.Dataset):
-                        transformed_value = transformer[transformer_name](target_obj, comparison_value)
+                        transformed_value = math_operator[math_operator_name](target_obj, comparison_value)
                         if transformed_value is not None:
                             if value_operator[qk](transformed_value, comparison_value):
                                 found_objs.append(target_obj)
