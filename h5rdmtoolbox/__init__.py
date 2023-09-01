@@ -53,6 +53,15 @@ class Files:
         return files.Files(*args, **kwargs)
 
 
+class FileDB:
+    """User-friendly interface to database.Folder, database.File or database.Files"""
+
+    def __init__(self):
+        pass
+
+    def __new__(cls, *args, **kwargs):
+        print('juhu')
+
 def dump(src: Union[str, File, pathlib.Path]) -> None:
     """Call h5.dump() on the provided HDF5 file
 

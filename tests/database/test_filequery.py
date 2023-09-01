@@ -91,7 +91,110 @@ class TestFileQuery(unittest.TestCase):
                     with Files(pathlib.Path(fnames[0]).parent) as h5s:
                         self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
 
-    def test_numerical(self):
+    def test_find_shortcuts(self):
+        """find method shortcuts tests"""
+        with h5tbx.File() as h5:
+            h5.write_iso_timestamp(name='timestamp',
+                                   dt=None)  # writes the current date time in iso format to the attribute
+            h5.attrs['project'] = 'tutorial'
+            h5.create_dataset('velocity', data=[1, 2, -1], attrs=dict(units='m/s', standard_name='x_velocity'))
+            g = h5.create_group('group1')
+            g.create_dataset('velocity', data=[4, 0, -3, 12, 3], attrs=dict(units='m/s', standard_name='x_velocity'))
+            g = h5.create_group('group2')
+            g.create_dataset('velocity', data=[12, 11.3, 4.6, 7.3, 8.1],
+                             attrs=dict(units='m/s', standard_name='x_velocity'))
+            h5.dump()
+            filename = h5.hdf_filename
+
+        res_v1 = h5tbx.database.File(filename).find({'standard_name': {'$regex': '.*'}}, '$dataset')
+        res_v2 = h5tbx.database.File(filename).find('standard_name', '$dataset')
+        for r1, r2 in zip(sorted(res_v1), sorted(res_v2)):
+            self.assertEqual(r1, r2)
+
+        res_v1 = h5tbx.database.File(filename).find({'standard_name': {'$regex': '.*'},
+                                                     'units': {'$regex': '.*'}}, '$dataset')
+        res_v2 = h5tbx.database.File(filename).find(['standard_name', 'units'], '$dataset')
+        for r1, r2 in zip(sorted(res_v1), sorted(res_v2)):
+            self.assertEqual(r1, r2)
+
+        with self.assertRaises(TypeError):
+            h5tbx.database.File(filename).find(2, '$dataset')
+
+        with self.assertRaises(TypeError):
+            h5tbx.database.File(filename).find([2, 2], '$dataset')
+
+    def test_compare_to_dataset_values(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=4.5, attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=13.5, attrs=dict(units='m/s', standard_name='y_velocity'))
+                g = h5.create_group('group1')
+                g.create_dataset('u', data=4.5, attrs=dict(units='m/s', standard_name='x_velocity'))
+                g.create_dataset('v', data=13.5, attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find({'$eq': 4.5}, '$dataset', rec=False)
+                self.assertEqual(res, [h5['u']])
+
+                res = h5.find({'$eq': 4.5}, rec=False)
+                self.assertEqual(res, [h5['u']])
+
+                res = h5.find({'$eq': 13.5}, '$dataset', rec=False)
+                self.assertEqual(res, [h5['v']])
+
+                res = h5.find({'$gt': 12.5}, rec=False)
+                self.assertEqual(res, [h5['v']])
+
+                res = h5.find({'$gt': 0.5}, rec=False)
+                self.assertEqual(sorted(res), sorted([h5['v'], h5['u']]))
+
+                res = h5.find({'$lt': 20.5}, rec=False)
+                self.assertEqual(sorted(res), sorted([h5['v'], h5['u']]))
+
+                res = h5.find({'$lte': 13.5}, rec=False)
+                self.assertEqual(sorted(res), sorted([h5['v'], h5['u']]))
+
+                res = h5.find({'$eq': 4.5}, rec=True)
+                self.assertEqual(sorted(res), sorted([h5['u'], h5['/group1/u']]))
+
+                res = h5.find_one({'$eq': 4.5}, rec=True)
+                self.assertEqual(res.basename, h5['u'].basename)
+
+    def test_compare_to_dataset_values_2(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find_one({'$eq': [1.2, 3.4, 4.5]}, rec=False)
+                self.assertEqual(res.basename, h5['u'].basename)
+                res = h5.find({'$eq': [1.2, 3.4, 4.5]}, rec=False)
+                self.assertEqual(res[0].basename, h5['u'].basename)
+                res = h5.find({'$eq': [1.2, 3.4, 4.0]}, rec=False)
+                self.assertEqual(0, len(res))
+
+    def test_compare_to_dataset_values_3(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
+                res = h5.find({'$eq': {'$mean': np.mean([1.2, 3.4, 4.5])}}, rec=False)
+                self.assertEqual(1, len(res))
+                self.assertEqual(res[0].basename, h5['u'].basename)
+
+    def test_compare_to_dataset_values_range(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=4.5, attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=13.5, attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find({'$gt': 10.0, '$lt': 12.7}, rec=False)
+                self.assertEqual(0, len(res))
+
+                res = h5.find({'$gt': 10.0, '$lt': 13.7}, rec=False)
+                self.assertEqual(1, len(res))
+                self.assertEqual('v', res[0].basename)
+
+    def test_numerical_attrs(self):
         with h5tbx.File() as h5:
             h5.create_dataset('a1', shape=(1, 2, 3), attrs=dict(a=1))
             h5.create_dataset('a2', shape=(1, 2, 3), attrs=dict(a=2))

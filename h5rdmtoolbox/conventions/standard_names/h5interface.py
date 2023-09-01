@@ -92,6 +92,7 @@ class HDF5StandardNameInterface:
         self._list_of_lazy_datasets = {}
 
         with h5tbx.File(hdf_filename) as h5:
+            # TODO: standard names can exist twice! e.g. time! first check for multiples, then create group interfaces
             standard_names = {ds.attrs.raw['standard_name']: ds.parent.name for ds in
                               h5[source_group].find({'standard_name': {'$regex': '.*'}})}
 
@@ -111,20 +112,20 @@ class HDF5StandardNameInterface:
 
         # identify tensors based on components:
         components = ('x', 'y', 'z')
-        tensors_condidates = {}
+        tensors_candidates = {}
         import re
         for k, v in standard_names.items():
             for c in components:
                 if re.match(f'^{c}_.*$', k):
                     _, base_quantity = k.split('_', 1)
-                    if base_quantity not in tensors_condidates:
-                        tensors_condidates[base_quantity] = [k, ]
+                    if base_quantity not in tensors_candidates:
+                        tensors_candidates[base_quantity] = [k, ]
                     else:
-                        tensors_condidates[base_quantity].append(k)
+                        tensors_candidates[base_quantity].append(k)
 
         self.tensors = []
         self.coords = []
-        for k, v in tensors_condidates.items():
+        for k, v in tensors_candidates.items():
             if len(v) > 1:
                 if all(standard_datasets[c].shape == standard_datasets[v[0]].shape for c in v[1:]):
                     vec = StandardTensor(k, v, self)

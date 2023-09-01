@@ -111,7 +111,7 @@ class Files:
         self.close()
 
     def __len__(self):
-        return len(self.keys())
+        return len(self._list_of_filenames)
 
     def __repr__(self):
         return f'<{self.__class__.__name__} ({self.__len__()} files)>'
@@ -157,9 +157,16 @@ class Files:
     def find(self, flt: Union[Dict, str], objfilter=None,
              rec: bool = True, ignore_attribute_error: bool = False):
         """See find() in h5file.py"""
-        found = [v.find(flt, objfilter=objfilter, rec=rec,
-                        ignore_attribute_error=ignore_attribute_error) for
-                 v in self.values()]
+        found = []
+        for filename in self._list_of_filenames:
+            opened_file = self._opened_files.get(str(filename), None)
+            if opened_file:
+                found.append(opened_file.find(flt, objfilter=objfilter, rec=rec,
+                                                               ignore_attribute_error=ignore_attribute_error))
+            else:
+                from .file import File
+                found.append(File(filename, mode='r').find(flt, objfilter=objfilter, rec=rec,
+                                                           ignore_attribute_error=ignore_attribute_error))
         return list(chain.from_iterable(found))
 
     def keys(self):

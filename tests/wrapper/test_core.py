@@ -14,7 +14,7 @@ from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = h5tbx.logger
-#logger.setLevel('ERROR')
+# logger.setLevel('ERROR')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -625,6 +625,11 @@ class TestCore(unittest.TestCase):
             np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'][()].values)
             np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'].values[()])
             self.assertEqual('m', h5['ds2'].attrs['units'])
+
+            h5.create_dataset('ds3', data=xr.DataArray([1, 2, 3]),
+                              compression='gzip', compression_opts=1, attach_scale='time')
+            self.assertEqual(1, len(h5['ds3'].dims[0].keys()))
+            self.assertEqual('/time', h5['ds3'].dims[0][0].name)
 
     def test_create_dataset_scale_issues(self):
         with h5tbx.File() as h5:
