@@ -1,11 +1,7 @@
 import numpy as np
-import pandas as pd
-import pathlib
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import Files
-from h5rdmtoolbox.database.files import H5Objects, DatasetValues
 from h5rdmtoolbox.wrapper.core import File
 
 
@@ -19,6 +15,31 @@ class TestFileQuery(unittest.TestCase):
         self.assertFalse(_regex(None, '*'))
         self.assertFalse(_regex('hallo', r'\d4'))
         self.assertFalse(_regex('hallo', 'hello'))
+
+    def test_FileDB(self):
+        fname1 = h5tbx.utils.generate_temporary_filename('.hdf', touch=True)
+        fname2 = h5tbx.utils.generate_temporary_filename('.hdf', touch=True)
+        tmp_dir = h5tbx.utils.generate_temporary_directory()
+        fname3 = tmp_dir / 'tmpX.hdf'
+        with h5tbx.File(fname3, 'w') as h5:
+            pass
+        fd = h5tbx.FileDB([fname1, fname2])
+        self.assertEqual(fd.filenames, [fname1, fname2])
+        fd = h5tbx.FileDB([fname1, fname2, tmp_dir])
+        self.assertEqual(fd.filenames, [fname1, fname2, fname3])
+        fd = h5tbx.FileDB([tmp_dir, ])
+        self.assertEqual(fd.filenames, [fname3])
+        f = h5tbx.FileDB(fname1)
+        self.assertIsInstance(f, h5tbx.database.File)
+
+        fname4 = tmp_dir / 'sub_grp/tmpX.hdf'
+        fname4.parent.mkdir()
+        with h5tbx.File(fname4, 'w') as h5:
+            pass
+        fd = h5tbx.FileDB(tmp_dir, rec=True)
+        self.assertEqual(fd.filenames, [fname3, fname4])
+        fd = h5tbx.FileDB([tmp_dir], rec=True)
+        self.assertEqual(fd.filenames, [fname3, fname4])
 
     def test_Folder(self):
         folder_dir = h5tbx.utils.generate_temporary_directory()
@@ -44,6 +65,16 @@ class TestFileQuery(unittest.TestCase):
             h5tbx.database.Folder('here')
 
         fd = h5tbx.database.Folder(folder_dir, rec=False)
+        self.assertFalse(fd.rec)
+
+        fdauto = h5tbx.FileDB(folder_dir, rec=False)
+        self.assertIsInstance(fdauto, h5tbx.database.Folder)
+        self.assertFalse(fdauto.rec)
+
+        fdauto = h5tbx.FileDB(folder_dir, rec=True)
+        self.assertIsInstance(fdauto, h5tbx.database.Folder)
+        self.assertTrue(fdauto.rec)
+
         self.assertEqual(2, len(list(fd.filenames)))
         self.assertEqual(2, len(fd))
         self.assertEqual(fd.filenames[0], fd[0].filename)
@@ -62,36 +93,143 @@ class TestFileQuery(unittest.TestCase):
         fnames = []
         with File() as h51:
             h51.create_dataset('ds', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
-            fnames.append(h51.filename)
+            fnames.append(h51.hdf_filename)
 
             with File() as h52:
                 h52.create_dataset('ds', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 2'))
-                fnames.append(h52.filename)
+                fnames.append(h52.hdf_filename)
 
-                with Files(fnames) as h5s:
-                    self.assertIsInstance(h5s['ds'], H5Objects)
-                    self.assertEqual(h5s['ds'].basenames, ['ds', 'ds'])
-                    self.assertEqual(h5s['ds'].shapes, ((1, 2, 3), (4, 2, 3)))
-                    self.assertEqual(h5s['ds'].ndims, (3, 3))
-                    self.assertIsInstance(h5s['ds'][:], DatasetValues)
-                    self.assertIsInstance(h5s['ds'][0, :, 0].to_dataframe(), pd.DataFrame)
-                    self.assertTrue(len(h5s._list_of_filenames) == 2)
+                with h5tbx.FileDB(fnames) as h5s:
+                    self.assertIsInstance(h5s, h5tbx.database.Files)
+                    self.assertEqual(2, len(h5s['ds']))
+                    self.assertIsInstance(h5s['ds'][0], h5tbx.Dataset)
+                    self.assertTrue(len(h5s.filenames) == 2)
                     with self.assertRaises(TypeError):
                         h5s.find(2)
                     res = h5s.find({'$basename': 'ds'})
-                    self.assertEqual([h51.ds, h52.ds], res)
+                    self.assertEqual(sorted([h51.ds, h52.ds]), sorted(res))
                     res = h5s.find({'$basename': 'none'})
                     self.assertEqual(res, [])
-                    # self.assertEqual(res[0].long_name[-1], '1')
-                    # self.assertEqual(res[1].long_name[-1], '2')
                     res = h5s.find_one({'$basename': 'ds'})
                     self.assertEqual(h51.ds, res)
 
-                with self.assertRaises(ValueError):
-                    with Files(pathlib.Path(fnames[0]).parent) as h5s:
-                        self.assertEqual(h5s._list_of_filenames, list(pathlib.Path(fnames[0]).parent.glob('*.hdf')))
+    def test_find_shortcuts(self):
+        """find method shortcuts tests"""
+        with h5tbx.File() as h5:
+            h5.write_iso_timestamp(name='timestamp',
+                                   dt=None)  # writes the current date time in iso format to the attribute
+            h5.attrs['project'] = 'tutorial'
+            h5.create_dataset('velocity', data=[1, 2, -1], attrs=dict(units='m/s', standard_name='x_velocity'))
+            g = h5.create_group('group1')
+            g.create_dataset('velocity', data=[4, 0, -3, 12, 3], attrs=dict(units='m/s', standard_name='x_velocity'))
+            g = h5.create_group('group2')
+            g.create_dataset('velocity', data=[12, 11.3, 4.6, 7.3, 8.1],
+                             attrs=dict(units='m/s', standard_name='x_velocity'))
+            h5.dump()
+            filename = h5.hdf_filename
 
-    def test_numerical(self):
+        res_v1 = h5tbx.database.File(filename).find({'standard_name': {'$regex': '.*'}}, '$dataset')
+        res_v2 = h5tbx.database.File(filename).find('standard_name', '$dataset')
+        for r1, r2 in zip(sorted(res_v1), sorted(res_v2)):
+            self.assertEqual(r1, r2)
+
+        res_v1 = h5tbx.database.File(filename).find({'standard_name': {'$regex': '.*'},
+                                                     'units': {'$regex': '.*'}}, '$dataset')
+        res_v2 = h5tbx.database.File(filename).find(['standard_name', 'units'], '$dataset')
+        for r1, r2 in zip(sorted(res_v1), sorted(res_v2)):
+            self.assertEqual(r1, r2)
+
+        with self.assertRaises(TypeError):
+            h5tbx.database.File(filename).find(2, '$dataset')
+
+        with self.assertRaises(TypeError):
+            h5tbx.database.File(filename).find([2, 2], '$dataset')
+
+    def test_compare_to_dataset_values(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=4.5, attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=13.5, attrs=dict(units='m/s', standard_name='y_velocity'))
+                g = h5.create_group('group1')
+                g.create_dataset('u', data=4.5, attrs=dict(units='m/s', standard_name='x_velocity'))
+                g.create_dataset('v', data=13.5, attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find({'$eq': 4.5}, '$dataset', rec=False)
+                self.assertEqual(res, [h5['u']])
+
+                res = h5.find({'$eq': 4.5}, rec=False)
+                self.assertEqual(res, [h5['u']])
+
+                res = h5.find({'$eq': 13.5}, '$dataset', rec=False)
+                self.assertEqual(res, [h5['v']])
+
+                res = h5.find({'$gt': 12.5}, rec=False)
+                self.assertEqual(res, [h5['v']])
+
+                res = h5.find({'$gt': 0.5}, rec=False)
+                self.assertEqual(sorted(res), sorted([h5['v'], h5['u']]))
+
+                res = h5.find({'$lt': 20.5}, rec=False)
+                self.assertEqual(sorted(res), sorted([h5['v'], h5['u']]))
+
+                res = h5.find({'$lte': 13.5}, rec=False)
+                self.assertEqual(sorted(res), sorted([h5['v'], h5['u']]))
+
+                res = h5.find({'$eq': 4.5}, rec=True)
+                self.assertEqual(sorted(res), sorted([h5['u'], h5['/group1/u']]))
+
+                res = h5.find_one({'$eq': 4.5}, rec=True)
+                self.assertEqual(res.basename, h5['u'].basename)
+
+    def test_compare_to_dataset_values_2(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find_one({'$eq': [1.2, 3.4, 4.5]}, rec=False)
+                self.assertEqual(res.basename, h5['u'].basename)
+                res = h5.find({'$eq': [1.2, 3.4, 4.5]}, rec=False)
+                self.assertEqual(res[0].basename, h5['u'].basename)
+                res = h5.find({'$eq': [1.2, 3.4, 4.0]}, rec=False)
+                self.assertEqual(0, len(res))
+
+    def test_compare_to_dataset_values_mean(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
+                res = h5.find({'$eq': {'$mean': np.mean([1.2, 3.4, 4.5])}}, rec=False)
+                self.assertEqual(1, len(res))
+                self.assertEqual(res[0].basename, h5['u'].basename)
+
+    def test_compare_to_dataset_values_mean_combined(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('z', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='z_velocity'))
+                h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find({'standard_name': 'x_velocity',
+                               '$eq': {'$mean': np.mean([1.2, 3.4, 4.5])}}, rec=False)
+
+                self.assertEqual(1, len(res))
+                self.assertEqual(res[0].basename, h5['u'].basename)
+
+    def test_compare_to_dataset_values_range(self):
+        with h5tbx.use('h5tbx'):
+            with h5tbx.File() as h5:
+                h5.create_dataset('u', data=4.5, attrs=dict(units='m/s', standard_name='x_velocity'))
+                h5.create_dataset('v', data=13.5, attrs=dict(units='m/s', standard_name='y_velocity'))
+
+                res = h5.find({'$gt': 10.0, '$lt': 12.7}, rec=False)
+                self.assertEqual(0, len(res))
+
+                res = h5.find({'$gt': 10.0, '$lt': 13.7}, rec=False)
+                self.assertEqual(1, len(res))
+                self.assertEqual('v', res[0].basename)
+
+    def test_numerical_attrs(self):
         with h5tbx.File() as h5:
             h5.create_dataset('a1', shape=(1, 2, 3), attrs=dict(a=1))
             h5.create_dataset('a2', shape=(1, 2, 3), attrs=dict(a=2))

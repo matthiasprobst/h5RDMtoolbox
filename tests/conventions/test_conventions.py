@@ -35,6 +35,56 @@ class TestConventions(unittest.TestCase):
         self.assertIn('comment', cv.properties[h5tbx.File])
         self.assertIn('comment', cv.properties[h5tbx.Group])
 
+    def test_add_decoder(self):
+        h5tbx.use('h5tbx')
+        cv = h5tbx.conventions.get_current_convention()
+
+        def multiply_by_2_decoder(xarr, _):
+            return xarr * 2
+
+        h5tbx.register_dataset_decoder(multiply_by_2_decoder)
+        with self.assertRaises(TypeError):
+            cv.add_decoder(2)
+        with self.assertRaises(KeyError):
+            cv.add_decoder('multiply_by_2')
+        cv.add_decoder('multiply_by_2_decoder')
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, units='m/s')
+            arr = h5['test'][()]
+            self.assertEqual(1, arr)
+
+        # reload convention:
+        h5tbx.use(None)
+        h5tbx.use(cv)
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, units='m/s')
+            arr = h5['test'][()]
+            self.assertEqual(2, arr)
+
+        def multiply_by_2_decoder_v2(xarr, _):
+            return xarr * 2
+
+        with self.assertRaises(ValueError):
+            h5tbx.register_dataset_decoder(multiply_by_2_decoder, decoder_name='multiply_by_2_decoder_v2')
+        h5tbx.register_dataset_decoder(multiply_by_2_decoder_v2, decoder_name='multiply_by_2_decoder_v2')
+        h5tbx.register_dataset_decoder(multiply_by_2_decoder_v2, decoder_name='multiply_by_2_decoder_v2',
+                                       overwrite=True)
+        cv.add_decoder('multiply_by_2_decoder_v2')
+
+        h5tbx.use(None)
+        h5tbx.use(cv)
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, units='m/s')
+            arr = h5['test'][()]
+            self.assertEqual(4, arr)
+
+        # remove decoders
+        self.assertTrue('multiply_by_2_decoder' not in cv.remove_decoder('multiply_by_2_decoder'))
+        self.assertTrue('multiply_by_2_decoder_v2' not in cv.remove_decoder('multiply_by_2_decoder_v2'))
+
     def test_standard_name_table_as_relative_filename(self):
         snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
 

@@ -646,6 +646,13 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             # maybe there's a typo:
             attach_scales = kwargs.pop('attach_scale', None)
 
+        if attach_scales is not None:
+            if not isinstance(attach_scales, (list, tuple)):
+                attach_scales = (attach_scales,)
+            if any([True for a in attach_scales if a]) and make_scale:
+                raise ValueError(
+                    'Cannot make scale and attach scale at the same time!')
+
         attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs, name=name)
 
         if isinstance(data, xr.DataArray):
@@ -675,6 +682,17 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                                  f'while natural naming is enabled')
 
         if isinstance(data, xr.DataArray):
+            if attach_scales:
+                for dim, scale in zip(data.dims, attach_scales):
+                    if isinstance(scale, str):
+                        scale_name = scale
+                        scale_data = self[scale].values[()]
+                    elif isinstance(scale, h5py.Dataset):
+                        scale_name = scale.name
+                        scale_data = scale[()]
+                    else:
+                        raise TypeError(f'Expecting type string or a h5py.Dataset for scale, not {type(scale)}')
+                    data = data.rename({dim: scale_name}).assign_coords({scale_name: scale_data})
             attrs.update(data.attrs)
             return data.hdf.to_group(self._h5grp(self), name=name,
                                      overwrite=overwrite,
@@ -706,13 +724,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             attrs[consts.ANCILLARY_DATASET] = json.dumps({k: v.name for k, v in ancillary_datasets.items()})
 
         _maxshape = kwargs.get('maxshape', shape)
-
-        if attach_scales:
-            if not isinstance(attach_scales, (list, tuple)):
-                attach_scales = (attach_scales,)
-            if any([True for a in attach_scales if a]) and make_scale:
-                raise ValueError(
-                    'Cannot make scale and attach scale at the same time!')
 
         logger.debug(
             f'Creating dataset "{name}" in "{self.name}" with maxshape {_maxshape} " '
@@ -1752,6 +1763,40 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             self.dims[axis].attach_scale(backup_scales[i][1])
         logger.debug('new primary scale: %s', self.dims[axis][0])
 
+    def find(self, flt: Union[Dict, str],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             ignore_attribute_error: bool = False) -> List:
+        """
+        Examples for filter parameters:
+        filter = {'long_name': 'any objects long name'} --> searches in attributes only
+        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
+        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
+
+        Parameters
+        ----------
+        flt: Dict
+            Filter request
+        objfilter: str | h5py.Dataset | h5py.Group | None
+            Filter. Default is None. Otherwise, only dataset or group types are returned.
+        rec: bool, optional
+            Recursive search. Default is True
+        ignore_attribute_error: bool, optional=False
+            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
+            Otherwise, the KeyError is raised.
+
+        Returns
+        -------
+        h5obj: h5py.Dataset or h5py.Group
+        """
+        from ..database import file
+        return file.find(
+            h5obj=self,
+            flt=flt,
+            objfilter=objfilter,
+            recursive=False,
+            find_one=False,
+            ignore_attribute_error=ignore_attribute_error)
+
 
 class File(h5py.File, Group, SpecialAttributeWriter, Core):
     """Main wrapper around h5py.File.
@@ -1961,7 +2006,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         # if key in ('layout', ):
         #     return super().__setattr__(key, value)
         raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
-                       f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
+                             f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
 
     def __repr__(self) -> str:
         r = super().__repr__()

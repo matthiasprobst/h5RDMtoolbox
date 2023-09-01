@@ -8,7 +8,7 @@ import warnings
 import yaml
 import zenodo_search as zsearch
 from pydoc import locate
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Callable
 
 from . import cfg
 from . import errors
@@ -46,14 +46,14 @@ class Convention:
         from ..wrapper.core import File, Group, Dataset
 
         if decoders is None:
-            self.decoders = tuple()
+            self._decoders = tuple()
         else:
             if isinstance(decoders, str):
-                self.decoders = (decoders,)
+                self._decoders = (decoders,)
             else:
-                self.decoders = tuple(decoders)
+                self._decoders = tuple(decoders)
 
-        assert isinstance(self.decoders, tuple)
+        assert isinstance(self._decoders, tuple)
 
         # a convention may be stored locally:
         if filename is not None:
@@ -118,6 +118,25 @@ class Convention:
     def registered_standard_attributes(self):
         """Return the registered standard attributes."""
         return self._registered_standard_attributes
+
+    @property
+    def decoders(self):
+        return self._decoders
+
+    def add_decoder(self, decoder: str):
+        """Add a decoder to the convention."""
+        if not isinstance(decoder, str):
+            raise TypeError(f'Expected a string, got {type(decoder)}')
+        from ..wrapper import ds_decoder
+        if decoder not in ds_decoder.registered_dataset_decoders:
+            raise KeyError(f'The decoder "{decoder}" is not registered.')
+        self._decoders += (decoder,)
+
+    def remove_decoder(self, decoder: str):
+        decoders = list(self._decoders)
+        decoders.remove(decoder)
+        self._decoders = tuple(decoders)
+        return self._decoders
 
     def use(self):
         """use this convention"""

@@ -20,6 +20,12 @@ class LGroup:
     def __repr__(self):
         return f'<LGroup "{self.name}" in "{self.filename}">'
 
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __eq__(self, other):
+        return self.name == other.name and self.filename == other.filename and self.attrs == other.attrs
+
     @property
     def basename(self) -> str:
         """Return the basename of the object"""
@@ -39,6 +45,11 @@ class LGroup:
     def attrs(self) -> Dict:
         """Return the attributes of the group as a LAttributeManager object"""
         return self._attrs
+
+    def find(self, flt, objfilter, find_one, recursive):
+        from .file import find as _find
+        with self as obj:
+            return _find(obj, flt, objfilter, find_one=find_one, recursive=recursive)
 
 
 class LDataset(LGroup):

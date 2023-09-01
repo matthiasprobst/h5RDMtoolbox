@@ -1,5 +1,6 @@
 """filequery module"""
 import h5py
+import numpy as np
 import pathlib
 import re
 from typing import List, Union, Dict, Callable
@@ -14,6 +15,11 @@ from ..utils import process_obj_filter_input
 def _eq(a, b):
     """Check if a == b"""
     return a == b
+
+
+def _arreq(a, b):
+    """Check if a == b"""
+    return np.array_equal(a, b)
 
 
 def _gt(a, b):
@@ -46,6 +52,7 @@ def _regex(value, pattern) -> bool:
 
 
 operator = {'$regex': _regex, '$eq': _eq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
+value_operator = {'$eq': _arreq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
 
 
 class RecFind:
@@ -76,6 +83,25 @@ class RecFind:
                                      'If you dont want this error to be raised and ignored instead, '
                                      'pass "ignore_attribute_error=True" '
                                      f'Original h5py error: {e}') from e
+
+
+class RecValueFind:
+    def __init__(self, transformer_func: Callable, comparison_func: Callable, comparison_value):
+        self._tfunc = transformer_func
+        self._cfunc = comparison_func
+        self._value = comparison_value
+        self._ndim = get_ndim(comparison_value)
+        self.objfilter = h5py.Dataset
+        self.found_objects = []
+
+    def __call__(self, name, obj):
+        if self.objfilter:
+            if not isinstance(obj, self.objfilter):
+                return
+        transformed_value = self._tfunc(obj, self._value)
+        if transformed_value is not None:
+            if self._cfunc(transformed_value, self._value):
+                self.found_objects.append(obj)
 
 
 class RecAttrFind:
@@ -142,6 +168,29 @@ class RecAttrCollect:
 AV_SPECIAL_FILTERS = ('$basename', '$name')
 
 
+def _pass(obj, comparison_value):
+    if get_ndim(comparison_value) == obj.ndim:
+        return obj[()]
+    return None
+
+
+def _mean(obj, _):
+    if obj.dtype.char == 'S':
+        return None
+    return np.mean(obj[()])
+
+
+def get_ndim(value) -> int:
+    """Return the dimension of the input value. Scalars have dimension 0, other inputs are parsed with np.ndim()"""
+    if isinstance(value, (int, float)):
+        return 0
+    return np.ndim(value)
+
+
+math_operator = {'$eq': _pass,
+               '$mean': _mean}
+
+
 def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter, ignore_attribute_error: bool = False):
     """
 
@@ -155,6 +204,64 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
 
     """
     found_objs = []
+
+    if qk in value_operator:
+        # user wants to compare qv to the value of the object
+        # this is only possible for datasets!
+        if isinstance(h5obj, h5py.Dataset):
+            return found_objs
+
+        # h5obj is a group:
+        assert isinstance(h5obj, h5py.Group)
+
+        if not isinstance(qv, Dict):
+            qv = {'$eq': qv}
+
+        if len(qv) != 1:
+            raise ValueError(f'Cannot use operator "{qk}" for dict with more than one key')
+
+        for math_operator_name, comparison_value in qv.items():
+            if recursive:
+                rf = RecValueFind(math_operator[math_operator_name], value_operator[qk], comparison_value)
+                h5obj.visititems(rf)  # will not visit the root group
+                for found_obj in rf.found_objects:
+                    found_objs.append(found_obj)
+            else:
+                # iterator over all datasets in group
+                for target_obj in h5obj.values():
+                    if isinstance(target_obj, h5py.Dataset):
+                        transformed_value = math_operator[math_operator_name](target_obj, comparison_value)
+                        if transformed_value is not None:
+                            if value_operator[qk](transformed_value, comparison_value):
+                                found_objs.append(target_obj)
+            return found_objs
+
+        if isinstance(qv, (float, int)):
+            qv_ndim = 0
+        elif isinstance(qv, Dict):
+            if len(qv) != 1:
+                raise ValueError(f'Cannot use operator "{qk}" for dict with more than one key')
+
+        else:
+            qv_ndim = np.ndim(qv)
+
+        if qv_ndim > 0 and qk != '$eq':
+            raise ValueError(f'Cannot use operator "{qk}" for non-scalar value "{qv}"')
+        if qk == '$eq':
+            qk = '$arreq'
+
+        if recursive:
+            rf = RecValueFind(operator[qk], qv, qv_ndim)
+            h5obj.visititems(rf)
+            for found_obj in rf.found_objects:
+                found_objs.append(found_obj)
+        else:
+            for ds in h5obj.values():
+                if isinstance(ds, h5py.Dataset):
+                    if ds.ndim == qv_ndim:
+                        if value_operator[qk](ds[()], qv):
+                            found_objs.append(ds)
+        return found_objs
 
     is_hdf_attrs_search = qk[0] != '$'
 
@@ -195,7 +302,11 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
             else:
-                for hk, hv in h5obj.items():
+                if isinstance(h5obj, h5py.Dataset):
+                    iterator = [(h5obj.basename, h5obj), ]
+                else:
+                    iterator = h5obj.items()
+                for hk, hv in iterator:
                     if objfilter:
                         if not isinstance(hv, objfilter):
                             continue
@@ -220,13 +331,36 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
 
 
 def find(h5obj: Union[h5py.Group, h5py.Dataset],
-         flt: Dict,
+         flt: [Dict, str, List[str]],
          objfilter: Union[h5py.Group, h5py.Dataset, None],
          recursive: bool,
          find_one: bool,
          ignore_attribute_error):
-    """find objects in `h5obj` based on the filter request (-dictionary) `flt`"""
+    """find objects in `h5obj` based on the filter request (-dictionary) `flt`
+
+    A string instead of a dictionary for the parameter `flt` is also allowed. In this case, the string is used as
+    a regular expression to find objects with an attribute matching the regular expression '.*', so any object.
+
+
+    Examples
+    --------
+    >>> h5tbx.database.File(filename).find_one({'standard_name': {'$regex': '.*'}} '$dataset')
+    >>> # is equivalent to:
+    >>> h5tbx.database.File(filename).find_one('standard_name', '$dataset')
+
+    >>> h5tbx.database.File(filename).find_one({'standard_name': {'$regex': '.*'},
+    >>>                                         'units': {'$regex': '.*'}} '$dataset')
+    >>> # is equivalent to:
+    >>> h5tbx.database.File(filename).find_one(['standard_name', 'units'], '$dataset')
+    """
     # start with some input checks:
+    if isinstance(flt, str):  # just find the attribute and don't filter for the value:
+        flt = {flt: {'$regex': '.*'}}
+    if isinstance(flt, List):
+        if all(isinstance(f, str) for f in flt):
+            flt = {f: {'$regex': '.*'} for f in flt}
+        else:
+            raise TypeError(f'Filter must be a dictionary, a string or a list of strings not {type(flt)}')
     if not isinstance(flt, Dict):
         raise TypeError(f'Filter must be a dictionary not {type(flt)}')
     objfilter = process_obj_filter_input(objfilter)

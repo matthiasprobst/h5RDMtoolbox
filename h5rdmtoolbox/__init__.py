@@ -17,7 +17,7 @@ from . import plotting
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
-from .database import file
+from . import database
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import errors
@@ -44,13 +44,28 @@ use = conventions.core.use
 use(get_config()['default_convention'])
 
 
-class Files:
-    """Class to access multiple files at once"""
+class FileDB:
+    """User-friendly interface to database.Folder, database.File or database.Files"""
 
-    def __new__(cls, *args, **kwargs):
-        from .database import files
-        kwargs['file_instance'] = File
-        return files.Files(*args, **kwargs)
+    def __new__(cls, path, rec=False, **kwargs):
+        if isinstance(path, (list, tuple)):
+            filenames = []
+            for p in [pathlib.Path(_p) for _p in path]:
+                if p.is_file():
+                    filenames.append(p)
+                elif p.is_dir():
+                    if rec:
+                        for f in p.rglob('*.hdf'):
+                            filenames.append(f)
+                    else:
+                        for f in p.glob('*.hdf'):
+                            filenames.append(f)
+            return database.Files(filenames, **kwargs)
+
+        path = pathlib.Path(path)
+        if path.is_dir():
+            return database.Folder(path, rec=rec, **kwargs)
+        return database.File(path, **kwargs)
 
 
 def dump(src: Union[str, File, pathlib.Path]) -> None:
@@ -89,7 +104,7 @@ def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwr
     registered_decorators = ds_decoder.registered_dataset_decoders
     if decoder_name in registered_decorators or decoder in registered_decorators.values():
         if not overwrite:
-            raise ValueError(f'decoder "{decoder_name}" already registered')
+            raise ValueError(f'decoder "{decoder_name}" already registered. Name and function must be unique.')
     ds_decoder.registered_dataset_decoders[decoder_name] = decoder
 
 
@@ -153,7 +168,7 @@ def clean_temp_data(full: bool = False):
 xr.set_options(display_expand_data=False)
 
 __all__ = ('__version__', '__author__', '__author_orcid__', 'UserDir', 'use',
-           'File', 'Files', 'Group', 'Dataset',
+           'File', 'Group', 'Dataset',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
            'Convention')

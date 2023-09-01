@@ -14,7 +14,7 @@ from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = h5tbx.logger
-#logger.setLevel('ERROR')
+# logger.setLevel('ERROR')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -41,14 +41,14 @@ class TestCore(unittest.TestCase):
             f1 = h5.hdf_filename
         with h5tbx.File() as h5:
             f2 = h5.hdf_filename
-        with h5tbx.Files([f1, ]) as h5:
+        with h5tbx.FileDB([f1, ]) as h5:
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertEqual(str(h5), "<Files (1 files)>")
-        with h5tbx.Files([f1, f2]) as h5:
+        with h5tbx.FileDB([f1, f2]) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertIsInstance(h5[1], h5tbx.File)
-        with h5tbx.Files([f1, f2], file_instance=h5tbx.File) as h5:
+        with h5tbx.FileDB([f1, f2], file_instance=h5tbx.File) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertIsInstance(h5[1], h5tbx.File)
@@ -625,6 +625,11 @@ class TestCore(unittest.TestCase):
             np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'][()].values)
             np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'].values[()])
             self.assertEqual('m', h5['ds2'].attrs['units'])
+
+            h5.create_dataset('ds3', data=xr.DataArray([1, 2, 3]),
+                              compression='gzip', compression_opts=1, attach_scale='time')
+            self.assertEqual(1, len(h5['ds3'].dims[0].keys()))
+            self.assertEqual('/time', h5['ds3'].dims[0][0].name)
 
     def test_create_dataset_scale_issues(self):
         with h5tbx.File() as h5:
