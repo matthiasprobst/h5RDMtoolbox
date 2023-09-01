@@ -4,7 +4,6 @@ import datetime
 import h5py
 import numpy as np
 import os
-import pandas as pd
 import pathlib
 # noinspection PyUnresolvedReferences
 import pint
@@ -916,7 +915,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         None
 
         """
-        from pandas import read_csv as pd_read_csv
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError('pandas is required for this function')
+
         if combine_opt not in ['concatenate', 'stack']:
             raise ValueError(f'Invalid input for combine_opt: {combine_opt}')
 
@@ -928,10 +931,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         if isinstance(csv_filenames, (list, tuple)):
             n_files = len(csv_filenames)
-            dfs = [pd_read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames]
+            dfs = [pd.read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames]
         elif isinstance(csv_filenames, (str, Path)):
             n_files = 1
-            dfs = [pd_read_csv(csv_filenames, **pandas_kwargs), ]
+            dfs = [pd.read_csv(csv_filenames, **pandas_kwargs), ]
         else:
             raise ValueError(
                 f'Wrong input for "csv_filenames: {type(csv_filenames)}')

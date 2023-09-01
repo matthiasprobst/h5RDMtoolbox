@@ -20,7 +20,6 @@ principles. It specifically supports the five main steps of
 5. Reusing data (Searching data in databases, local file structures or online repositories
    like [Zenodo](https://zenodo.org)).
 
-
 ## Quickstart
 
 A quickstart notebook can be tested by clicking on the following badge:
@@ -56,22 +55,29 @@ For development installation run
 
 ### Dependencies
 
-The core functionality depends on the following packages:
+The core functionality depends on the following packages.
+Some of them are for general management others are very
+specific to the features of the package:
 
-- `appdirs>=1.4.4`: Managing user and application directories
+**General dependencies are ...**
+
 - `numpy>=1.20,<1.23.0`: Scientific computing, handling of arrays
-- `h5py>=3.7.0`: HDF5 file interface
 - `matplotlib>=3.5.2`: Plotting
-- `pandas>=1.4.3`: Mainly used for reading csv and pretty printing
-- `IPython>=8.4.0`: Pretty display of data in notebooks
-- `pyyaml`: Reading and writing of yaml files
-- `xarray>=2022.3.0`: Working with scientific arrays in combination with attributes
-- `pint>=0.19.2`: Working with units
-- `pint_xarray>=0.2.1`: Working with units in xarray
-- `regex>=2020.7.9`: Regular expressions
+- `appdirs>=1.4.4`: Managing user and application directories
 - `packaging`: Version handling
-- `python-forge==18.6.0`: Used to update function signatures when using the h5rdmtoolbox conventions
-- `requests`: Used to download files from the internet
+- `IPython>=8.4.0`: Pretty display of data in notebooks
+- `regex>=2020.7.9`: Working with egular expressions
+
+**Specific to the package are ...**
+
+- `h5py>=3.7.0`: HDF5 file interface
+- `xarray>=2022.3.0`: Working with scientific arrays in combination with attributes. Allows carrying metadata from HDF5
+  to user
+- `pint>=0.19.2`: Allows working with units
+- `pint_xarray>=0.2.1`: Working with units for usage with xarray
+- `python-forge==18.6.0`: Used to update function signatures when using the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+- `pyyaml`: Reading and writing of yaml files, e.g. metadata definitions (conventions)
+- `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
 
 #### Optional dependencies
 
@@ -89,6 +95,7 @@ Install optional dependencies by specifying them in square brackets after the pa
 
 - `pco_tools>=1.0.0`: Reading of pco image files
 - `opencv-python>=4.5.3.56`: Reading of image files (other than pco)
+- `pandas>=1.4.3`: Mainly used for reading csv and pretty printing
 
 [snt]
 
@@ -105,9 +112,8 @@ Feel free to contribute. Make sure to write `docstrings` to your methods and cla
 Please write tests for your code and put them into the `test/` folder. Visit the [README file](./tests/README.md) in the
 test-folder for more information.
 
-Pleas also add a jupyter notebook in the `docs/` folder in order to document your code. 
-Please visit the [README file](./docs/README.md) in the docs-folder for more information on 
-how to compile the documentation.
+Pleas also add a jupyter notebook in the `docs/` folder in order to document your code. Please visit
+the [README file](./docs/README.md) in the docs-folder for more information on how to compile the documentation.
 
 Please use the **numpy style for the docstrings**:
 https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy

@@ -1,7 +1,6 @@
 """Standard name table module"""
 import h5py
 import json
-import pandas as pd
 import pathlib
 import pint
 import shutil
@@ -809,6 +808,10 @@ class StandardNameTable:
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError('Package "pandas" is required for this function.')
         df = pd.DataFrame(self.standard_names).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             display(HTML(df.sort_index().to_html(**kwargs)))
@@ -822,7 +825,13 @@ class StandardNameTable:
         try:
             from tabulate import tabulate
         except ImportError:
-            raise ImportError('Package "tabulate" is missing.')
+            raise ImportError('Package "tabulate" is required for this function.')
+
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError('Package "pandas" is required for this function.')
+
         df = pd.DataFrame(self.standard_names).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             sorted_df = df.sort_index()
