@@ -17,7 +17,7 @@ try:
     mongo_installed = True
 except ImportError:
     mongo_installed = False
-from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
+from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible, type2mongo
 
 if mongo_installed:
     class TestH5Mongo(unittest.TestCase):
@@ -39,6 +39,19 @@ if mongo_installed:
                 self.collection = collection
             else:
                 self.mongodb_running = False
+
+        def test_make_dict_mongo_compatible(self):
+            self.assertDictEqual({'a': 4.3}, make_dict_mongo_compatible({'a': 4.3}))
+            self.assertDictEqual({'a': 4}, make_dict_mongo_compatible({'a': 4}))
+            self.assertDictEqual({'a': None}, make_dict_mongo_compatible({'a': None}))
+            self.assertDictEqual({'a': {'b': 5.3}}, make_dict_mongo_compatible({'a': {'b': 5.3}}))
+            self.assertDictEqual({'a': {'b': 6.3}}, make_dict_mongo_compatible({'a': {'b': np.float(6.3)}}))
+
+        def test_type2mongo(self):
+            self.assertEqual(None, type2mongo(None))
+            self.assertEqual(4.3, type2mongo(np.float(4.3)))
+            self.assertEqual([2.3], type2mongo(np.array([2.3])))
+            self.assertEqual([5, ], type2mongo(np.array([5])))
 
         def test_insert_relative_filename(self):
             if self.mongodb_running:

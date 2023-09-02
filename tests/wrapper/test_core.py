@@ -14,7 +14,7 @@ from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
 logger = h5tbx.logger
-logger.setLevel('ERROR')
+# logger.setLevel('ERROR')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -41,14 +41,14 @@ class TestCore(unittest.TestCase):
             f1 = h5.hdf_filename
         with h5tbx.File() as h5:
             f2 = h5.hdf_filename
-        with h5tbx.Files([f1, ]) as h5:
+        with h5tbx.FileDB([f1, ]) as h5:
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertEqual(str(h5), "<Files (1 files)>")
-        with h5tbx.Files([f1, f2]) as h5:
+        with h5tbx.FileDB([f1, f2]) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertIsInstance(h5[1], h5tbx.File)
-        with h5tbx.Files([f1, f2], file_instance=h5tbx.File) as h5:
+        with h5tbx.FileDB([f1, f2], file_instance=h5tbx.File) as h5:
             self.assertEqual(str(h5), "<Files (2 files)>")
             self.assertIsInstance(h5[0], h5tbx.File)
             self.assertIsInstance(h5[1], h5tbx.File)
@@ -62,6 +62,7 @@ class TestCore(unittest.TestCase):
             h5.attrs['mystr'] = MyString('test')
             attr_str = h5.attrs['mystr']
             self.assertIsInstance(attr_str, AttributeString)
+
             h5.attrs['mystr'] = attr_str
 
             grp = h5.create_group('grp')
@@ -88,7 +89,7 @@ class TestCore(unittest.TestCase):
 
     def test_setattr(self):
         with h5tbx.File() as h5:
-            with self.assertRaises(KeyError):
+            with self.assertRaises(AttributeError):
                 h5.smth = 10
             h5._smth = 10
             self.assertEqual(10, h5._smth)
@@ -101,9 +102,11 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5, h5.rootparent)
 
             grp = h5.create_group('grp1/grp2/grp3')
-            self.assertEqual(grp.rootparent, h5['/'])
+            self.assertEqual(grp.rootparent, h5)
             dset = grp.create_dataset('test', data=1)
-            self.assertEqual(dset.rootparent, h5['/'])
+            self.assertEqual(dset.rootparent, h5)
+
+            self.assertEqual(dset.rootparent, h5)
 
     def test_basename(self):
         with h5tbx.File() as h5:
@@ -283,7 +286,7 @@ class TestCore(unittest.TestCase):
 
             new_ds = h5['/'].modify_dataset_properties(dataset=ds,
                                                        dtype=float,
-                                                       tqdm_pbar=True)
+                                                       tqdm_pbar=False)
             with self.assertRaises(TypeError):
                 h5['/'].modify_dataset_properties(ds, 4.3)
             with self.assertRaises(KeyError):
@@ -622,6 +625,11 @@ class TestCore(unittest.TestCase):
             np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'][()].values)
             np.testing.assert_equal(np.array([10, 2, 3]), h5['ds2'].values[()])
             self.assertEqual('m', h5['ds2'].attrs['units'])
+
+            h5.create_dataset('ds3', data=xr.DataArray([1, 2, 3]),
+                              compression='gzip', compression_opts=1, attach_scale='time')
+            self.assertEqual(1, len(h5['ds3'].dims[0].keys()))
+            self.assertEqual('/time', h5['ds3'].dims[0][0].name)
 
     def test_create_dataset_scale_issues(self):
         with h5tbx.File() as h5:

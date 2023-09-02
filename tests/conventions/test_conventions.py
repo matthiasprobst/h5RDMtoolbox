@@ -8,6 +8,7 @@ import yaml
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import core
+from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 
 
 class TestConventions(unittest.TestCase):
@@ -30,8 +31,59 @@ class TestConventions(unittest.TestCase):
     def test_overload_standard_attributes(self):
         yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
-        self.assertIn('contact', cv.properties[h5tbx.File])
-        self.assertIn('contact', cv.properties[h5tbx.Group])
+        self.assertTupleEqual(('scale_and_offset',), cv.decoders)
+        self.assertIn('comment', cv.properties[h5tbx.File])
+        self.assertIn('comment', cv.properties[h5tbx.Group])
+
+    def test_add_decoder(self):
+        h5tbx.use('h5tbx')
+        cv = h5tbx.conventions.get_current_convention()
+
+        def multiply_by_2_decoder(xarr, _):
+            return xarr * 2
+
+        h5tbx.register_dataset_decoder(multiply_by_2_decoder)
+        with self.assertRaises(TypeError):
+            cv.add_decoder(2)
+        with self.assertRaises(KeyError):
+            cv.add_decoder('multiply_by_2')
+        cv.add_decoder('multiply_by_2_decoder')
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, units='m/s')
+            arr = h5['test'][()]
+            self.assertEqual(1, arr)
+
+        # reload convention:
+        h5tbx.use(None)
+        h5tbx.use(cv)
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, units='m/s')
+            arr = h5['test'][()]
+            self.assertEqual(2, arr)
+
+        def multiply_by_2_decoder_v2(xarr, _):
+            return xarr * 2
+
+        with self.assertRaises(ValueError):
+            h5tbx.register_dataset_decoder(multiply_by_2_decoder, decoder_name='multiply_by_2_decoder_v2')
+        h5tbx.register_dataset_decoder(multiply_by_2_decoder_v2, decoder_name='multiply_by_2_decoder_v2')
+        h5tbx.register_dataset_decoder(multiply_by_2_decoder_v2, decoder_name='multiply_by_2_decoder_v2',
+                                       overwrite=True)
+        cv.add_decoder('multiply_by_2_decoder_v2')
+
+        h5tbx.use(None)
+        h5tbx.use(cv)
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, units='m/s')
+            arr = h5['test'][()]
+            self.assertEqual(4, arr)
+
+        # remove decoders
+        self.assertTrue('multiply_by_2_decoder' not in cv.remove_decoder('multiply_by_2_decoder'))
+        self.assertTrue('multiply_by_2_decoder_v2' not in cv.remove_decoder('multiply_by_2_decoder_v2'))
 
     def test_standard_name_table_as_relative_filename(self):
         snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
@@ -46,10 +98,10 @@ class TestConventions(unittest.TestCase):
                    '__use_scale_offset__': True,
                    'standard_name_table':
                        {
-                           'target_methods': '__init__',
-                           'validator': {'$in': [f'relpath({snt_filename.name})', ]},
+                           'target_method': '__init__',
+                           'validator': {'$standard_name_table': f'relpath({snt_filename.name})'},
                            'default_value': f'relpath({snt_filename.name})',
-                           'return_type': 'standard_name_table',
+                           'type_hint': 'StandardNameTable',
                            'description': 'A standard name table'
                        }
                    }
@@ -60,7 +112,7 @@ class TestConventions(unittest.TestCase):
         local_cv.register()
         with h5tbx.use(local_cv.name):
             with h5tbx.File() as h5:
-                print(h5.standard_name_table)
+                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
 
     def test_process_paths(self):
         __this_dir__ = pathlib.Path(__file__).parent
@@ -82,9 +134,14 @@ class TestConventions(unittest.TestCase):
         self.assertEqual(h5tbx.conventions.get_current_convention().name, h5tbx.get_config()['default_convention'])
         h5tbx.use(None)
         self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5py')
-        h5tbx.use('h5py')
+        self.assertEqual('using("h5py")', h5tbx.use('h5py').__repr__())
+        self.assertEqual('using("h5py")', h5tbx.use('h5py').__repr__())
+        self.assertEqual('using("h5py")', h5tbx.use(None).__repr__())
+        self.assertEqual('using("h5py")', h5tbx.use('h5py').__repr__())
         self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5py')
         h5tbx.use('h5tbx')
+        self.assertEqual('using("h5tbx")', h5tbx.use('h5tbx').__repr__())
+        self.assertEqual('using("h5tbx")', h5tbx.use('h5tbx').__repr__())
         self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5tbx')
         with self.assertRaises(ValueError):
             h5tbx.use('invalid_convention')
@@ -129,10 +186,20 @@ class TestConventions(unittest.TestCase):
             h5tbx.conventions.from_yaml([f1, f2])
 
     def test_cv_h5tbx(self):
+        h5tbx.use(None)
+        self.assertTupleEqual((), h5tbx.wrapper.ds_decoder.decoder_names)
         h5tbx.use('h5tbx')
+        self.assertTupleEqual(('scale_and_offset',), h5tbx.wrapper.ds_decoder.decoder_names)
+        h5tbx.use(None)
+        self.assertTupleEqual((), h5tbx.wrapper.ds_decoder.decoder_names)
+        h5tbx.use('h5tbx')
+        self.assertTupleEqual(('scale_and_offset',), h5tbx.wrapper.ds_decoder.decoder_names)
+
         with h5tbx.File() as h5:
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 h5.create_dataset('test', data=1)
+            h5.create_dataset('test', data=1, units='m/s')
+            self.assertEqual('m/s', str(h5['test'].attrs['units']))
         h5tbx.use(None)
 
     def test_skwars_kwargs(self):
@@ -157,6 +224,24 @@ class TestConventions(unittest.TestCase):
 
     def test_del_standard_attribute(self):
         h5tbx.use('h5tbx')
+
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=1, units='m/s', scale=3)
+            self.assertEqual(1, int(ds.values[()]))
+            self.assertEqual(3, int(ds[()]))
+
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=1, units='m/s', scale='3')
+            self.assertEqual(1, int(ds.values[()]))
+            self.assertEqual(3, int(ds[()]))
+
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('test', data=1, units='m/s', scale='3 1/s')
+            self.assertEqual(1, int(ds.values[()]))
+            self.assertEqual(3, int(ds[()]))
+            self.assertEqual('m/s', str(ds.units))
+            self.assertEqual('m/s**2', str(ds[()].attrs['units']))
+
         with h5tbx.File() as h5:
             ds = h5.create_dataset('test', data=1, units='m/s', scale=3)
             with self.assertRaises(ValueError):
@@ -171,3 +256,15 @@ class TestConventions(unittest.TestCase):
             h5tbx.UserDir.clear_cache()
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                 cv = h5tbx.conventions.from_zenodo(doi=8266929)
+
+        cv = h5tbx.conventions.from_zenodo(doi=8301535)
+        self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
+        self.assertEqual(
+            h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
+            cv.properties[h5tbx.File]['data_type'].default_value
+        )
+        cv.properties[h5tbx.File]['data_type'].make_optional()
+        self.assertEqual(
+            h5tbx.conventions.standard_attributes.DefaultValue.NONE,
+            cv.properties[h5tbx.File]['data_type'].default_value
+        )

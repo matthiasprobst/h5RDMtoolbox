@@ -17,6 +17,11 @@ logger = create_tbx_logger('conventions')
 
 from .core import Convention, from_yaml, from_zenodo, get_current_convention, from_zenodo, get_registered_conventions
 from .standard_attributes import StandardAttribute
+from . import standard_names
+
+from . import validators
+
+from .validators import get_validator
 
 __all__ = ['Convention', 'from_yaml', 'from_zenodo',
            'get_current_convention', 'get_registered_conventions',

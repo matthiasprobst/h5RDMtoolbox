@@ -1,7 +1,6 @@
 """Standard name table module"""
 import h5py
 import json
-import pandas as pd
 import pathlib
 import pint
 import shutil
@@ -97,39 +96,80 @@ class StandardNameTable:
         self._standard_names = _correct_standard_names
 
         self.affixes = {}
-
         for k, affix_data in affixes.items():
             if affix_data:
                 if not isinstance(affix_data, dict):
                     raise TypeError(f'Expecting dict for affix {k} but got {type(affix_data)}')
-                self.affixes[k] = Affix.from_dict(k, affix_data)
+                self.add_affix(Affix.from_dict(k, affix_data))
 
-        # no two affixes can have the same name pattern
-        pattern = set()
-        for affix in self.affixes.values():
-            for t in affix.transformation:
-                if t.pattern in pattern:
-                    raise ValueError(f'Pattern {t.pattern} already defined')
-                pattern.add(t.pattern)
-
-        self._transformations = (derivative_of_X_wrt_to_Y,
-                                 magnitude_of,
-                                 arithemtic_mean_of,
-                                 standard_deviation_of,
-                                 square_of,
-                                 product_of_X_and_Y,
-                                 ratio_of_X_and_Y,)
-
-        pattern = set()
-        for transformation in self._transformations:
-            if transformation.pattern in pattern:
-                raise ValueError(f'Pattern {transformation.pattern} already defined')
-            pattern.add(transformation.pattern)
+        self._transformations = ()
+        for transformation in (derivative_of_X_wrt_to_Y,
+                               magnitude_of,
+                               arithemtic_mean_of,
+                               standard_deviation_of,
+                               square_of,
+                               product_of_X_and_Y,
+                               ratio_of_X_and_Y,):
+            self.add_transformation(transformation)
 
         if version is None and meta.get('version_number', None) is not None:
             version = f'v{meta["version_number"]}'
         meta['version'] = StandardNameTable.validate_version(version)
         self._meta = meta
+
+    def __repr__(self):
+        _meta = self.meta.pop('alias', None)
+        meta_str = ', '.join([f'{key}: {value}' for key, value in self.meta.items()])
+        return f'<StandardNameTable: ({meta_str})>'
+
+    def __contains__(self, standard_name):
+        return standard_name in self.standard_names
+
+    def __getitem__(self, standard_name: str) -> StandardName:
+        """Return table entry"""
+        logger.debug(f'Checking "{standard_name}"')
+        if standard_name in self.standard_names:
+            entry = self.standard_names[standard_name]
+            return StandardName(name=standard_name,
+                                units=entry['units'],
+                                description=entry['description'],
+                                isvector=entry.get('vector', False),
+                                alias=entry.get('alias', None))
+
+        logger.debug(f'No exact match of standard name "{standard_name}" in table')
+
+        if standard_name in self.list_of_aliases:
+            return self[self.aliases[standard_name]]
+
+        for transformation in self.transformations:
+            match = transformation.match(standard_name)
+            if match:
+                return evaluate(transformation, match, self)
+        logger.debug(f'No general transformation could be successfully applied on "{standard_name}"')
+
+        for affix_name, affix in self.affixes.items():
+            for transformation in affix.transformation:
+                match = transformation.match(standard_name)
+                if match:
+                    logger.debug(f'Applying affix transformation "{affix_name}"')
+                    try:
+                        return evaluate(transformation, match, self)
+                    except errors.AffixKeyError as e:
+                        # dont raise an error yet. Let StandardNameError handle it (see below)!
+                        logger.debug(f'Affix transformation "{affix_name}" failed: {e}')
+        logger.debug(f'No transformation of affix could be successfully applied on "{standard_name}"')
+
+        # provide a suggestion for similar standard names
+        similar_names = [k for k in [*self.standard_names.keys(), *self.list_of_aliases] if
+                         get_similar_names_ratio(standard_name, k) > 0.75]
+        if similar_names:
+            raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".'
+                                           ' Did you mean one of these: '
+                                           f'{similar_names}?')
+        raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
+
+    def _repr_html_(self):
+        return f"""<li style="list-style-type: none; font-style: italic">{self.__repr__()[1:-1]}</li>"""
 
     @property
     def transformations(self) -> List[Transformation]:
@@ -209,59 +249,12 @@ class StandardNameTable:
         """Return list of standard names"""
         return sorted(self.standard_names.keys())
 
-    def __repr__(self):
-        _meta = self.meta.pop('alias', None)
-        meta_str = ', '.join([f'{key}: {value}' for key, value in self.meta.items()])
-        return f'<StandardNameTable: ({meta_str})>'
-
-    def __contains__(self, standard_name):
-        return standard_name in self.standard_names
-
-    def __getitem__(self, standard_name: str) -> StandardName:
-        """Return table entry"""
-        logger.debug(f'Checking "{standard_name}"')
-        if standard_name in self.standard_names:
-            entry = self.standard_names[standard_name]
-            return StandardName(name=standard_name,
-                                units=entry['units'],
-                                description=entry['description'],
-                                isvector=entry.get('vector', False),
-                                alias=entry.get('alias', None))
-
-        logger.debug(f'No exact match of standard name "{standard_name}" in table')
-
-        if standard_name in self.list_of_aliases:
-            return self[self.aliases[standard_name]]
-
-        for transformation in self.transformations:
-            match = transformation.match(standard_name)
-            if match:
-                return evaluate(transformation, match, self)
-        logger.debug(f'No general transformation could be successfully applied on "{standard_name}"')
-
-        for affix_name, affix in self.affixes.items():
-            for transformation in affix.transformation:
-                match = transformation.match(standard_name)
-                if match:
-                    logger.debug(f'Applying affix transformation "{affix_name}"')
-                    return evaluate(transformation, match, self)
-        logger.debug(f'No affix transformation could be successfully applied on "{standard_name}"')
-
-        # provide a suggestion for similar standard names
-        similar_names = [k for k in [*self.standard_names.keys(), *self.list_of_aliases] if
-                         get_similar_names_ratio(standard_name, k) > 0.75]
-        if similar_names:
-            raise errors.StandardNameError(f'{standard_name} not found in Standard Name Table "{self.name}".'
-                                           ' Did you mean one of these: '
-                                           f'{similar_names}?')
-        raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
-
     @staticmethod
     def validate_version(version_string: str) -> str:
         """Validate version number. Must be MAJOR.MINOR(a|b|rc|dev). If validated, return version string, else
         raise ValueError."""
         if version_string is None:
-            version_string = '0.0'
+            version_string = 'v0.0'
             warnings.warn(f'Version number is not set. Setting version number to {version_string}.')
         version_string = str(version_string)
         if not re.match(consts.VERSION_PATTERN, version_string):
@@ -292,6 +285,11 @@ class StandardNameTable:
             if transformation.match(standard_name):
                 return True
             logger.debug(f'No transformation applied successfully on "{standard_name}"')
+
+        for affix_name, affix in self.affixes.items():
+            for transformation in affix.transformation:
+                if transformation.match(standard_name):
+                    return True
         return False
 
     def check(self, standard_name: Union[str, StandardName], units: Union[pint.Unit, str] = None) -> bool:
@@ -317,38 +315,6 @@ class StandardNameTable:
                 issues.append(ds)
         return issues
 
-        # def _check_ds(name, node):
-        #     if isinstance(node, h5py.Dataset):
-        #         if 'standard_name' in node.attrs:
-        #             units = node.attrs.get('units', '')
-        #
-        #             valid = self.check(node.attrs['standard_name'], units=units)
-        #             if not valid:
-        #                 if raise_error:
-        #                     raise errors.StandardNameError(f'Dataset "{name}" has invalid standard_name '
-        #                                                    f'"{node.attrs["standard_name"]}"')
-        #                 logger.error(f'Dataset "{name}" has invalid standard_name '
-        #                              f'"{node.attrs["standard_name"]}"')
-        #             # units = node.attrs['units']
-        #             # if units is None:
-        #             #     logger.warning(f'Dataset %s has not attribute %s! Assuming it is dimensionless', name,
-        #             #                    'units')
-        #             #     units = ''
-        #             # try:
-        #             #     self.check_units(node.attrs['standard_name'], units=units)
-        #             # except errors.StandardNameError as e:
-        #             #     if raise_error:
-        #             #         raise errors.StandardNameError(e)
-        #             #     else:
-        #             #         logger.error(' > ds: %s: %s', node.name, e)
-        #
-        # if recursive:
-        #     h5grp.visititems(_check_ds)
-        # else:
-        #     _check_ds(None, h5grp)
-        #
-        # return True
-
     def check_hdf_file(self, filename,
                        recursive: bool = True) -> List["Dataset"]:
         """Check file for standard names"""
@@ -362,9 +328,48 @@ class StandardNameTable:
         self.to_yaml(_tmp_yaml_filename)
         return StandardNameTable.from_yaml(_tmp_yaml_filename)
 
+    def add_affix(self, affix: Affix):
+        """Add an affix to the standard name table"""
+        # no two affixes can have the same name pattern
+        if affix.name in self.affixes:
+            raise ValueError(f'Affix with name "{affix.name}" already exists')
+        pattern = {t.pattern for a in self.affixes.values() for t in a.transformation}
+
+        for t in affix.transformation:
+            if t.pattern in pattern:
+                raise ValueError(f'Pattern "{t.pattern}" of affix "{affix.name}" already defined. No two affixes '
+                                 'can have the same pattern.')
+            else:
+                pattern.add(t.pattern)
+
+        self.affixes[affix.name] = affix
+
+    def add_transformation(self, transformation: Transformation):
+        """Appending a transformation to the standard name table"""
+        if not isinstance(transformation, Transformation):
+            raise TypeError('Invalid type for parameter "transformation". Expecting "Transformation" but got '
+                            f'{type(transformation)}')
+
+        pattern = {t.pattern for t in self._transformations}
+
+        if transformation.pattern in pattern:
+            raise ValueError(f'Pattern "{transformation.pattern}" already defined. No two transformations '
+                             'can have the same pattern.')
+
+        self._transformations = tuple([*self._transformations, transformation])
+
     # Loader: ---------------------------------------------------------------
     @staticmethod
     def from_yaml(yaml_filename):
+        invalid = False
+        with open(yaml_filename, 'r') as f:
+            if '503 Service Unavailable' in f.readline():
+                invalid = True
+        if invalid:
+            pathlib.Path(yaml_filename).unlink()
+            raise ConnectionError('The requested file was not properly downloaded: 503 Service Unavailable. '
+                                  f'The file {yaml_filename} is deleted. Try downloading it again')
+
         with open(yaml_filename, 'r') as f:
             snt_dict = {}
             for d in yaml.full_load_all(f):
@@ -803,6 +808,10 @@ class StandardNameTable:
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError('Package "pandas" is required for this function.')
         df = pd.DataFrame(self.standard_names).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             display(HTML(df.sort_index().to_html(**kwargs)))
@@ -816,7 +825,13 @@ class StandardNameTable:
         try:
             from tabulate import tabulate
         except ImportError:
-            raise ImportError('Package "tabulate" is missing.')
+            raise ImportError('Package "tabulate" is required for this function.')
+
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError('Package "pandas" is required for this function.')
+
         df = pd.DataFrame(self.standard_names).T
         if sort_by.lower() in ('name', 'names', 'standard_name', 'standard_names'):
             sorted_df = df.sort_index()

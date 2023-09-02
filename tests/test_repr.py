@@ -20,12 +20,31 @@ class TestRepr(unittest.TestCase):
         self.assertFalse(has_url)
         self.assertEqual(processed_string, string_without_url)
 
+        zenodo_url = 'https://zenodo.org/record/8301535'
+        img_url = f'https://zenodo.org/badge/DOI/10.5281/zenodo.8301535.svg'
+        self.assertEqual(f'<a href="{zenodo_url}"><img src="{img_url}" alt="DOI"></a>',
+                         process_string_for_link(zenodo_url)[0])
+
+        zenodo_url = 'https://doi.org/10.5281/zenodo.8301535'
+        img_url = f'https://zenodo.org/badge/DOI/10.5281/zenodo.8301535.svg'
+        self.assertEqual(f'<a href="{zenodo_url}"><img src="{img_url}" alt="DOI"></a>',
+                         process_string_for_link('10.5281/zenodo.8301535')[0])
+
         string_with_url = "This is a string with a web URL: https://www.example.com which goes on and on and on"
         string_with_href = 'This is a string with a web URL: ' \
                            '<a href="https://www.example.com">https://www.example.com</a> which goes on and on and on'
         processed_string, has_url = process_string_for_link(string_with_url)
         self.assertTrue(has_url)
         self.assertEqual(processed_string, string_with_href)
+
+    def test_dump_orcid(self):
+        # with File() as h5:
+        #     h5.attrs['orcid'] = h5tbx.__author_orcid__
+        #     h5.dump()
+        with File() as h5:
+            h5.attrs['orcid'] = [h5tbx.__author_orcid__, h5tbx.__author_orcid__, ]
+            h5.dump()
+
 
     def test_repr(self):
         # test h5rdmtoolbox._repr.DataSetRepr

@@ -9,6 +9,7 @@ from pymongo.errors import InvalidDocument
 from typing import Dict, List
 
 from .file import distinct
+from .. import protected_attributes
 from ..wrapper.accessory import register_special_dataset
 from ..wrapper.core import Dataset, Group
 from ..wrapper.h5attr import H5_DIM_ATTRS
@@ -23,11 +24,11 @@ def make_dict_mongo_compatible(dictionary: Dict):
     """Make the values of a dictionary compatible with mongo DB"""
     for ak, av in dictionary.items():
         if isinstance(av, (int, float, str, list, tuple, datetime)):
-            pass
+            continue
         elif isinstance(av, dict):
             dictionary[ak] = make_dict_mongo_compatible(av)
         elif av is None:
-            dictionary[ak] = None
+            continue
         else:
             try:
                 if np.issubdtype(av, np.floating):
@@ -42,7 +43,7 @@ def make_dict_mongo_compatible(dictionary: Dict):
 
 
 def type2mongo(value: any) -> any:
-    """Convert numpy dtypes to int/float/list/..."""
+    """Convert numpy dtypes to int/float/list/... At least try to convert to str()"""
     if isinstance(value, (int, float, str, dict, list, tuple, datetime)):
         return value
     if value is None:
@@ -56,7 +57,7 @@ def type2mongo(value: any) -> any:
     except Exception as e:
         warnings.warn(f'Could not determine/convert {value}. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')
-    return value
+    return str(value)
 
 
 @register_special_dataset('mongo', Group)
@@ -172,7 +173,7 @@ class MongoDatasetAccessor:
             for ak, av in ds.attrs.items():
                 if ak not in H5_DIM_ATTRS:
                     if ak not in ignore_attrs:
-                        # if ak == 'COORDINATES':
+                        # if ak == protected_attributes.COORDINATES:
                         #     if isinstance(av, (np.ndarray, list)):
                         #         for c in av:
                         #             doc[c] = float(ds.parent[c][()])
@@ -233,7 +234,7 @@ class MongoDatasetAccessor:
                 for ak, av in ds.attrs.items():
                     if ak not in H5_DIM_ATTRS:
                         if ak not in ignore_attrs:
-                            if ak == 'COORDINATES':
+                            if ak == protected_attributes.COORDINATES:
                                 if isinstance(av, (np.ndarray, list)):
                                     for c in av:
                                         doc[c[1:]] = float(ds.parent[c][()])

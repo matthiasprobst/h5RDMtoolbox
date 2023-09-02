@@ -1,7 +1,7 @@
 Command Line Interfaces
 =======================
 
-By installing the package some console calls become available. For all command line interfaces
+By installing the package, some console calls become available. For all command line interfaces
 a help exists. Just pass the argument `-h`:
 
 .. code-block:: bash

@@ -1,9 +1,11 @@
 """Testing the standard attributes"""
-
 import inspect
+import pint
+import re
 import unittest
 from datetime import datetime
 from json.decoder import JSONDecodeError
+from typing import Union
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __author_orcid__
@@ -16,6 +18,11 @@ from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
 
 class TestStandardAttributes(unittest.TestCase):
 
+    @staticmethod
+    def assertPintUnitEqual(unit1: [str, pint.Unit], unit2: Union[str, pint.Unit]):
+        """Assert that two units are equal by converting them to pint.Unit"""
+        assert pint.Unit(unit1) == pint.Unit(unit2)
+
     def setUp(self) -> None:
         self.connected = h5tbx.utils.has_internet_connection()
 
@@ -23,21 +30,19 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(sa.name, str)
         self.assertIsInstance(sa.description, str)
         self.assertIsInstance(sa.is_positional(), bool)
-        self.assertIsInstance(sa.target_methods, tuple)
-        self.assertIsInstance(sa.validator, list)
-        for validator in sa.validator:
-            self.assertIsInstance(validator, h5tbx.conventions.standard_attributes.StandardAttributeValidator)
+        self.assertIsInstance(sa.target_method, str)
+        self.assertIsInstance(sa.validator, h5tbx.conventions.standard_attributes.StandardAttributeValidator)
 
     def test_standard_attribute_basics(self):
         test = StandardAttribute('test',
                                  validator={'$type': 'string'},
-                                 target_methods='create_dataset',
+                                 target_method='create_dataset',
                                  description='A test',
                                  )
         self.assertEqual('test', test.name)
-        self.assertEqual('A test', test.description)
+        self.assertEqual('A test.', test.description)
         self.assertEqual(True, test.is_positional())
-        self.assertEqual(('create_dataset',), test.target_methods)
+        self.assertEqual('create_dataset', test.target_method)
         self.assertEqual(None, test.alternative_standard_attribute)
         self.assert_standard_attribute(test)
 
@@ -45,10 +50,9 @@ class TestStandardAttributes(unittest.TestCase):
         datetime_attr = StandardAttribute(
             name='datetime',
             validator='$datetime',
-            target_methods=("__init__",),
+            target_method="__init__",
             description='Timestamp of data recording start',
             default_value='$NONE',
-            return_type='isodatetime'
         )
         cv = Convention('test_datetime', contact=__author_orcid__)
         cv.add(datetime_attr)
@@ -59,18 +63,26 @@ class TestStandardAttributes(unittest.TestCase):
             h5.datetime = dt
             self.assertEqual(h5.datetime, datetime.fromisoformat(dt.isoformat()))
 
+        import h5py
+        fname = h5tbx.utils.generate_temporary_filename()
+        with h5py.File(fname, 'w') as h5:
+            h5.attrs['datetime'] = '20230830'
+
+        with h5tbx.File(fname) as h5:
+            self.assertEqual('20230830', h5.datetime)
+
     def test_data_source(self):
         h5tbx.use(None)
         data_source = StandardAttribute('data_source',
                                         validator={'$in': ['simulation', 'experiment']},
-                                        target_methods='create_dataset',
+                                        target_method='create_dataset',
                                         description='Data source',
                                         default_value='simulation'
                                         )
         self.assertEqual(data_source.name, 'data_source')
-        self.assertEqual(data_source.description, 'Data source')
+        self.assertEqual(data_source.description, 'Data source.')
         self.assertEqual(False, data_source.is_positional())
-        self.assertEqual(data_source.target_methods, ('create_dataset',))
+        self.assertEqual(data_source.target_method, 'create_dataset')
         self.assertEqual(data_source.default_value, 'simulation')
         self.assert_standard_attribute(data_source)
 
@@ -96,9 +108,8 @@ class TestStandardAttributes(unittest.TestCase):
     def test_add_with_requirements(self):
         h5tbx.use(None)
         comment_name = StandardAttribute('comment',
-                                         validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
-                                                    '$minlength': 10},
-                                         target_methods='create_dataset',
+                                         validator={'$minlength': 10},
+                                         target_method='create_dataset',
                                          alternative_standard_attribute='long_name',
                                          description='A comment',
                                          requirements='long_name'
@@ -110,34 +121,59 @@ class TestStandardAttributes(unittest.TestCase):
             long_name_convention.add(comment_name)
             long_name_convention.register()
 
-    def test_add_std_attr_to_non_existing_method(self):
+    def test_initialization_of_StandardAttribute(self):
         h5tbx.use(None)
         with self.assertRaises(ValueError):
-            long_name = StandardAttribute('long_name',
-                                          validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
-                                          target_methods='invalid_method',
-                                          alternative_standard_attribute='comment',
-                                          description='A long name of a dataset',
-                                          )
+            # providing an invalid method
+            StandardAttribute('long_name',
+                              validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                              target_method='invalid_method',
+                              alternative_standard_attribute='comment',
+                              description='A long name of a dataset',
+                              )
+
+        with self.assertRaises(ValueError):
+            StandardAttribute('long_name',
+                              validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
+                                         '$regex2': r'^[a-zA-Z].*(?<!\s)$'},
+                              target_method='__init__',
+                              description='A long name of a file',
+                              default_value='None'
+                              )
+
+        with self.assertRaises(TypeError):
+            StandardAttribute('long_name',
+                              validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                              target_method=3.4,
+                              description='A long name of a file',
+                              default_value='None'
+                              )
+
+        long_name = StandardAttribute('long_name',
+                                      validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
+                                      target_method='__init__',
+                                      description='A long name of a file',
+                                      default_value='None'
+                                      )
+        self.assertEqual(None, long_name.default_value)
 
     def test_alternative_standard_attribute(self):
         h5tbx.use(None)
         long_name = StandardAttribute('long_name',
                                       validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
-                                      target_methods='create_dataset',
+                                      target_method='create_dataset',
                                       alternative_standard_attribute='comment',
                                       description='A long name of a dataset',
                                       )
         long_name_grp = StandardAttribute('long_name',
                                           validator={'$regex': r'^[a-zA-Z].*(?<!\s)$'},
-                                          target_methods='create_group',
+                                          target_method='create_group',
                                           description='A long name of a group',
                                           default_value='$None'
                                           )
         comment_name = StandardAttribute('comment',
-                                         validator={'$regex': r'^[a-zA-Z].*(?<!\s)$',
-                                                    '$minlength': 10},
-                                         target_methods='create_dataset',
+                                         validator={'$minlength': 10},
+                                         target_method='create_dataset',
                                          alternative_standard_attribute='long_name',
                                          description='A comment',
                                          )
@@ -212,37 +248,36 @@ class TestStandardAttributes(unittest.TestCase):
                         }
         url = 'https://h5rdmtoolbox.readthedocs.io/en/latest/'
 
-        bibtex_attr = StandardAttribute('bibtex',
-                                        validator='$bibtex',
-                                        target_methods=('create_dataset', 'create_group', '__init__'),
-                                        description='A reference to a publication in bibtext format',
-                                        default_value='$None'
-                                        )
-        url_attr = StandardAttribute('url',
-                                     validator='$url',
-                                     target_methods=('create_dataset',
-                                                     'create_group',
-                                                     '__init__'),
-                                     description='A reference to an URL',
-                                     default_value='$None'
-                                     )
+        bibtex_attrs = [StandardAttribute('bibtex',
+                                          validator='$bibtex',
+                                          target_method=tm,
+                                          description='A reference to a publication in bibtext format',
+                                          default_value='$None'
+                                          ) for tm in ('create_dataset', 'create_group', '__init__')]
 
-        reference_attr = StandardAttribute('references',
-                                           validator='$ref',
-                                           target_methods=('create_dataset',
-                                                           'create_group',
-                                                           '__init__'),
-                                           description='A reference to a publication in bibtext '
-                                                       'format or an URL',
-                                           return_type='sdict',
-                                           default_value='$None'
-                                           )
+        url_attrs = [StandardAttribute('url',
+                                       validator='$url',
+                                       target_method=tm,
+                                       description='A reference to an URL',
+                                       default_value='$None'
+                                       ) for tm in ('create_dataset', 'create_group', '__init__')]
+
+        reference_attrs = [StandardAttribute('references',
+                                             validator='$ref',
+                                             target_method=tm,
+                                             description='A reference to a publication in bibtext '
+                                                         'format or an URL',
+                                             default_value='$None'
+                                             ) for tm in ('create_dataset', 'create_group', '__init__')]
 
         cv = Convention('test_references',
                         contact=__author_orcid__)
-        cv.add(bibtex_attr)
-        cv.add(url_attr)
-        cv.add(reference_attr)
+        for sattr in bibtex_attrs:
+            cv.add(sattr)
+        for sattr in url_attrs:
+            cv.add(sattr)
+        for sattr in reference_attrs:
+            cv.add(sattr)
 
         cv.register()
         h5tbx.use(cv.name)
@@ -305,18 +340,56 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_comment(self):
 
-        comment = StandardAttribute(
-            name='comment',
-            validator={'$regex': r'^[A-Z].*$',
-                       '$minlength': 10,
-                       '$maxlength': 101},
-            target_methods=("__init__", "create_dataset", "create_group"),
+        class CommentValidator(h5tbx.conventions.standard_attributes.StandardAttributeValidator):
+
+            keyword = 'comment'
+            deprecated_keywords = ('$comment',)
+
+            def __init__(self, ref=None, allow_None: bool = False):
+                super().__init__(ref, allow_None)
+                assert isinstance(ref[0], int) and ref[0] > 0
+                assert isinstance(ref[1], int) and ref[1] > 0
+                assert isinstance(ref[2], str)
+
+            def __call__(self, value, parent=None, attrs=None):
+                if len(value) < self.ref[0]:
+                    raise ValueError('Comment is too short')
+                if len(value) > self.ref[1]:
+                    raise ValueError('Comment is too long')
+                if not re.match(self.ref[2], value):
+                    raise ValueError('Comment should start with a capital letter')
+                return value
+
+        n_validators = len(h5tbx.conventions.validators.get_validator())
+        h5tbx.conventions.validators.register(CommentValidator)
+        self.assertEqual(n_validators + 1, len(h5tbx.conventions.get_validator()))
+
+        comment_file = StandardAttribute(
+            name='comment-file',  # will strip "-file"
+            validator={'$comment': (10, 101, r'^[A-Z].*$')},
+            target_method="__init__",
             description='Additional information about the file'
         )
-        self.assertEqual(len(comment.validator), 3)
 
+        comment_group = StandardAttribute(
+            name='comment-group',
+            validator={'$comment': (10, 101, r'^[A-Z].*$')},
+            target_method="create_group",
+            description='Additional information about the group'
+        )
+
+        comment_dataset = StandardAttribute(
+            name='comment-dataset',
+            validator={'$comment': (10, 101, r'^[A-Z].*$')},
+            target_method="create_dataset",
+            description='Additional information about the dataset'
+        )
         cv = Convention('test_comment', contact=__author_orcid__)
-        cv.add(comment)
+
+        for sattr in (comment_file, comment_group, comment_dataset):
+            self.assertTrue('-' not in sattr.name)
+            cv.add(sattr)
+
         cv.register()
 
         h5tbx.use(cv.name)
@@ -341,7 +414,7 @@ class TestStandardAttributes(unittest.TestCase):
         # units is required. thus default value is EMPTY
         units_attr = StandardAttribute('units',
                                        validator='$pintunit',
-                                       target_methods='create_dataset',
+                                       target_method='create_dataset',
                                        description='A unit of a dataset')
         self.assertEqual(units_attr.default_value, DefaultValue.EMPTY)
         cv = h5tbx.conventions.Convention('ucv',
@@ -358,39 +431,44 @@ class TestStandardAttributes(unittest.TestCase):
                 ds.units = 'test'
             with self.assertRaises(StandardAttributeError):
                 ds.units = ('test',)
-            self.assertEqual(ds.units, 'm')
+            self.assertPintUnitEqual(ds.units, 'm')
             # creat pint unit object:
             ds.units = h5tbx.get_ureg().mm
-            self.assertEqual(ds.units, 'mm')
+            self.assertPintUnitEqual(ds.units, 'mm')
             with self.assertRaises(ValueError):
                 del ds.units
-            self.assertEqual(ds.units, 'mm')
+            self.assertPintUnitEqual(ds.units, 'mm')
 
     def test_source(self):
-        source_attr = StandardAttribute(
+        source_attrs = [StandardAttribute(
             name='data_base_source',
             validator={'$in': ('experimental',
                                'numerical',
                                'analytical',
                                'synthetically')},
-            target_methods=('__init__',
-                            'create_dataset',
-                            'create_group'),
+            target_method=tm,
             description='Base source of data: experimental, numerical, '
                         'analytical or synthetically'
-        )
+        ) for tm in ('__init__', 'create_dataset', 'create_group')]
 
         cv = Convention('source_convention',
                         contact=__author_orcid__)
-        cv.add(source_attr)
+        for sattr in source_attrs:
+            cv.add(sattr)
         cv.register()
 
         h5tbx.use(cv.name)
 
         with h5tbx.File(data_base_source='experimental') as h5:
+            with self.assertRaises(AttributeError):
+                h5.base_source = 'numerical'
+            with self.assertRaises(AttributeError):
+                h5.base_source
             self.assertEqual(h5.data_base_source, 'experimental')
+            h5.data_base_source = 'numerical'
+            self.assertEqual(h5.data_base_source, 'numerical')
             with self.assertRaises(StandardAttributeError):
-                h5.data_base_source = 'invlaid'
+                h5.data_base_source = 'invalid'
 
     def test_from_yaml(self):
         if self.connected:
@@ -399,5 +477,5 @@ class TestStandardAttributes(unittest.TestCase):
             local_cv.register()
             h5tbx.use(local_cv)
 
-            with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', mode='r+') as h5:
+            with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical', mode='r+') as h5:
                 h5.standard_name_table = 'https://zenodo.org/record/8266929'

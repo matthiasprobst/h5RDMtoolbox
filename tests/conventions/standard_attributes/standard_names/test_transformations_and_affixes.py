@@ -3,8 +3,28 @@ import unittest
 import warnings
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import errors
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import AffixKeyError
+from h5rdmtoolbox.conventions.standard_names import StandardName
+from h5rdmtoolbox.conventions.standard_names.transformation import Transformation
+
+
+def maximum_of(match, snt):
+    # match is the result of `re.match(`^maximum_of_(.*)$, <user_input_value>)`
+    groups = match.groups()
+    assert len(groups) == 1
+    sn = snt[groups[0]]
+    new_description = f"Maximum of {sn.name}. {sn.description}"
+    return StandardName(match.string, sn.units, new_description)
+
+
+def maximum_of_duplicate(match, snt):
+    # match is the result of `re.match(`^maximum_of_(.*)$, <user_input_value>)`
+    groups = match.groups()
+    assert len(groups) == 1
+    sn = snt[groups[0]]
+    new_description = f"Maximum of {sn.name}. {sn.description}"
+    return StandardName(match.string, sn.units, new_description)
 
 
 class TestTransformationsAndAffixes(unittest.TestCase):
@@ -20,6 +40,47 @@ class TestTransformationsAndAffixes(unittest.TestCase):
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
+    def test_adding_transformation(self):
+
+        snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(doi=8276716)
+
+        # check if the problem really exists:
+        with self.assertRaises(errors.StandardNameError):
+            snt['maximum_of_pressure']
+
+        max_of = Transformation(r"^maximum_of_(.*)$", maximum_of)
+
+        self.assertTrue(max_of.match('maximum_static_pressure') is None)
+        self.assertFalse(max_of.match('maximum_of_static_pressure') is None)
+        snt.add_transformation(max_of)
+        sn = snt['maximum_of_static_pressure']
+        self.assertEqual(
+            'Maximum of static_pressure. Static pressure refers to the force per unit area exerted by a fluid. Pressure is a scalar quantity.',
+            sn.description)
+        self.assertEqual(max_of, snt.transformations[-1])
+        self.assertIn(max_of, snt.transformations)
+        with self.assertRaises(errors.StandardNameError):
+            snt['max_of_velocity']
+
+        sn = snt['maximum_of_velocity']
+        self.assertEqual(sn.name, 'maximum_of_velocity')
+
+        # add transformation with same pattern:
+        max_of_duplicate = Transformation(r"^maximum_of_(.*)$", maximum_of_duplicate)
+        with self.assertRaises(ValueError):
+            snt.add_transformation(max_of_duplicate)
+        with self.assertRaises(TypeError):
+            snt.add_transformation(None)
+
+        duplicate_affix = snt.affixes['device']
+        with self.assertRaises(ValueError):
+            # name already exists
+            snt.add_affix(duplicate_affix)
+
+        duplicate_affix._name = 'device2'
+        with self.assertRaises(ValueError):
+            snt.add_affix(duplicate_affix)
+
     def test_get_transformation(self):
         from h5rdmtoolbox.conventions.standard_names.affixes import _get_transformation, affix_transformations
         with self.assertRaises(KeyError):
@@ -29,9 +90,9 @@ class TestTransformationsAndAffixes(unittest.TestCase):
     def test_X_at_LOC(self):
         # X_at_LOC
         for sn in self.snt.standard_names:
-            with self.assertRaises(AffixKeyError):
+            with self.assertRaises(errors.StandardNameError):
                 self.snt[f'{sn}_at_fan']
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt['invalid_coordinate_at_fan']
         sn = self.snt['x_coordinate_at_fan_inlet']
         self.assertEqual(sn.units, self.snt['x_coordinate'].units)
@@ -57,10 +118,10 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                             self.assertEqual(_sn.units, self.snt[sn1].units)
                             self.assertEqual(_sn.units, self.snt[sn2].units)
                             self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} between {loc1} and "
-                                                              f"{loc2}")
-        with self.assertRaises(AffixKeyError):
+                                                              f"{loc2}.")
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_time_and_time_between_fan_inlet_and_INVALID']
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_time_and_time_between_INVALID_and_fan_outlet']
 
     def test_difference_of_X_and_Y_across_device(self):
@@ -78,13 +139,13 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                         if sn1 == sn2:
                             self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} across {dev}. "
                                                               f"{sn1}: {self.snt[sn1].description} "
-                                                              f"{dev}: {self.snt.affixes['device'][dev]}")
+                                                              f"{dev}: {self.snt.affixes['device'][dev]}.")
                         else:
                             self.assertEqual(_sn.description, f"Difference of {sn1} and {sn2} across {dev}. "
                                                               f"{sn1}: {self.snt[sn1].description} "
                                                               f"{sn2}: {self.snt[sn2].description} "
-                                                              f"{dev}: {self.snt.affixes['device'][dev]}")
-        with self.assertRaises(AffixKeyError):
+                                                              f"{dev}: {self.snt.affixes['device'][dev]}.")
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_time_and_time_across_INVALID']
 
     def test_ratio_of_X_and_Y(self):
@@ -112,7 +173,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
              }
              }
         )
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             snt['invalid_static_pressure']
         _sn = snt['wall_static_pressure']
         self.assertEqual(_sn.units, snt['static_pressure'].units)
@@ -129,8 +190,8 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             for dev in self.snt.affixes['device']:
                 _sn = self.snt[f'difference_of_{sn}_across_{dev}']
                 self.assertEqual(_sn.units, self.snt[sn].units)
-                self.assertEqual(_sn.description, f"Difference of {sn} across {dev}")
-        with self.assertRaises(AffixKeyError):
+                self.assertEqual(_sn.description, f"Difference of {sn} across {dev}.")
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'difference_of_{sn}_across_INVALID']
 
     def test_square_of_X(self):
@@ -145,7 +206,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         for sn in self.snt.standard_names:
             _sn = self.snt[f'standard_deviation_of_{sn}']
             self.assertEqual(_sn.units, self.snt[sn].units)
-            self.assertEqual(_sn.description, f"Standard deviation of {sn}")
+            self.assertEqual(_sn.description, f"Standard deviation of {sn}.")
 
     def test_arithmetic_mean_of(self):
         # arithmetic_mean_of
@@ -175,7 +236,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             for frame in self.snt.affixes['reference_frame'].names:
                 _sn = self.snt[f'{sn}_in_{frame}']
                 self.assertEqual(_sn.units, self.snt[sn].units)
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'{sn}_in_invalid_frame']
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(errors.StandardNameError):
             self.snt[f'{sn}_in_invalid_frame']

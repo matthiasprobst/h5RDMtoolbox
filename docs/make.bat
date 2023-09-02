@@ -12,6 +12,12 @@ set BUILDDIR=_build
 
 if "%1" == "" goto help
 
+if "%1" == "clean" (
+    echo "Removing jupyter_execute"
+    rmdir /s /q %SOURCEDIR%\jupyter_execute
+    rmdir /s /q %SOURCEDIR%\generated
+)
+
 REM sphinx-build -b html . _build:
 if "%1" == "html" (
     %SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% %SPHINXOPTS%

@@ -4,8 +4,9 @@ import warnings
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import StandardNameError, AffixKeyError
+from h5rdmtoolbox.conventions.errors import StandardNameError
 from h5rdmtoolbox.conventions.standard_names import cache
+from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from h5rdmtoolbox.conventions.standard_names.validator import _parse_snt
 
@@ -24,6 +25,31 @@ class TestStandardAttributes(unittest.TestCase):
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
+    def test_standard_name(self):
+        with self.assertRaises(ValueError):
+            sn = StandardName(name='x_velocty')
+        with self.assertWarns(DeprecationWarning):
+            sn = StandardName(name='x_velocty', description='Velocity in x-direction', canonical_units='m/s')
+        with self.assertRaises(TypeError):
+            sn = StandardName(name='x_velocty', description='Velocity in x-direction', units=5.4)
+
+        sn = StandardName(name='x_velocity', description='Velocity in x-direction', units='m/s')
+        sn2 = StandardName(name='x_velocity', description='Velocity in x-direction', units='m/s')
+        self.assertEqual(sn, 'x_velocity')
+        self.assertEqual(sn, sn2)
+        sn2.description = 'Velocity in x-direction (m/s)'
+        self.assertNotEqual(sn, sn2)
+
+        with self.assertRaises(TypeError):
+            StandardName.check_syntax(sn)
+        with self.assertRaises(StandardNameError):
+            StandardName.check_syntax('123')
+        self.assertDictEqual({'name': 'x_velocity', 'units': 'm/s', 'description': 'Velocity in x-direction.'},
+                             sn.to_dict())
+        self.assertFalse(sn.is_vector())
+        snt = _parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
+        self.assertTrue(sn.check(snt))
+
     def test_parse_snt(self):
         with self.assertRaises(TypeError):
             _parse_snt(None)
@@ -40,14 +66,14 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_snt_cache(self):
         """caching of SNTs only works if they are zenodo references"""
-        cv = h5tbx.conventions.Convention('test', 'me', 'mine', False)
+        cv = h5tbx.conventions.Convention(name='test', contact='me', institution='mine', decoders=())
         sa = h5tbx.conventions.standard_attributes.StandardAttribute(
             name='snt',
             validator='$standard_name_table',
-            target_methods='__init__',
+            target_method='__init__',
             description='Standard name table.',
-            return_type='standard_name_table',
-            default_value='10.5281/zenodo.8220739')
+            default_value='10.5281/zenodo.8220739'
+        )
         cv.add(sa)
         cv.register()
 
@@ -90,6 +116,18 @@ class TestStandardAttributes(unittest.TestCase):
         with self.assertRaises(StandardNameError):
             print(snt['velocity'])
 
+        with self.assertRaises(TypeError):
+            StandardNameTable('test', version='v1.0', meta={},
+                              standard_names={},
+                              affixes=5.4)
+
+        with self.assertRaises(TypeError):
+            StandardNameTable('test', version='v1.0', meta={},
+                              standard_names={},
+                              affixes={'component': 5.4})
+
+        # with self.assertRaises(ValueError):
+
     def test_check(self):
         with h5tbx.File() as h5:
             h5.create_dataset('u', data=1, attrs={'standard_name': 'x_velocity', 'units': 'm/s'})
@@ -101,11 +139,18 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual(1, len(self.snt.check_hdf_file(h5.hdf_filename)))
 
     def test_StandardNameTableFromYaml(self):
+        tmp_filename = h5tbx.utils.generate_temporary_filename('.yaml')
+        with open(tmp_filename, 'w') as f:
+            f.write(f'<html><h1>503 Service Unavailable</h1></html>')
+        self.assertTrue(tmp_filename.exists())
+        with self.assertRaises(ConnectionError):
+            StandardNameTable.from_yaml(tmp_filename)
+        self.assertFalse(tmp_filename.exists())
         table = StandardNameTable.from_yaml(tutorial.get_standard_name_table_yaml_file())
         self.assertIsInstance(table.affixes, dict)
         with self.assertRaises(StandardNameError):
             table['x_time']
-        with self.assertRaises(AffixKeyError):
+        with self.assertRaises(StandardNameError):
             table['x_x_velocity']
 
         self.assertEqual(table.name, 'Test')
@@ -154,7 +199,7 @@ class TestStandardAttributes(unittest.TestCase):
             'description': 'velocity in a direction',
             'units': 'm/s'
         })
-        self.assertEqual(table['a_velocity'].description, 'velocity in a direction')
+        self.assertEqual(table['a_velocity'].description, 'velocity in a direction.')
         from h5rdmtoolbox import get_ureg
         self.assertEqual(table['a_velocity'].units, get_ureg()('m/s'))
 

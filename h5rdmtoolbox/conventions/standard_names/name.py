@@ -37,6 +37,8 @@ class StandardName:
         # convert units to base units:
         q = 1 * self.units
         self.unit = q.to_base_units().units
+        if description[-1] != '.':
+            description += '.'  # add a dot at the end of the description
         self.description = description
         if alias is not None:
             self.check_syntax(alias)
@@ -47,6 +49,35 @@ class StandardName:
 
     def __repr__(self):
         return f'<StandardName: "{self.name}" [{self.units}] {self.description}>'
+
+    def __eq__(self, other):
+        if isinstance(other, StandardName):
+            return self.name == other.name and self.units == other.units and self.description == other.description
+        elif isinstance(other, str):
+            return self.name == other
+        raise TypeError(f'Cannot compare StandardName with {type(other)}')
+
+    def _repr_html_(self, checkbox_state='checked'):
+        # collapsable html representation
+        if self.is_vector():
+            sn_name = f'{self.name} (vector quantity)'
+        else:
+            sn_name = self.name
+        from time import perf_counter_ns
+        _id = self.name + perf_counter_ns().__str__()
+        out = f"""<ul style="list-style-type: none;" class="h5grp-sections">
+    <li>
+        <input id="group-{_id}" type="checkbox" {checkbox_state}>
+        <label style="font-weight: bold" for="group-{_id}">
+        {sn_name}</label>
+        <ul class="h5tb-attr-list">
+"""
+        out += f'           <li style="list-style-type: none; font-style: italic">units : {self.units}</li>'
+        out += f'           <li style="list-style-type: none; font-style: italic">description : {self.description}</li>'
+        out += """      </il>
+    </ul>
+</ul>"""
+        return out
 
     def equal_unit(self, other_unit: pint):
         """compares the base units of this standard name with another unit provided as a string
@@ -72,7 +103,7 @@ class StandardName:
 
     def to_dict(self) -> Dict:
         """Return dictionary representation of StandardName"""
-        return dict(name=self.name, units=self.units, description=self.description)
+        return dict(name=self.name, units=str(self.units), description=self.description)
 
     def check(self, snt: "StandardNameTable"):
         """check if is a valid standard name of the provided table"""

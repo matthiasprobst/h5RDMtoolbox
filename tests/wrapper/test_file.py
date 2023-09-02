@@ -46,12 +46,20 @@ class TestFile(unittest.TestCase):
 
     def test_filename(self):
         with h5tbx.File() as h5:
-            with self.assertRaises(KeyError):
+            with self.assertRaises(AttributeError):
                 h5.hdf_filename = 3
         self.assertIsInstance(h5.hdf_filename, pathlib.Path)
         self.assertTrue(h5.hdf_filename.exists())
         h5tbx.clean_temp_data()
         self.assertFalse(h5.hdf_filename.exists())
+        if pathlib.Path('test.hdf').exists():
+            # just in case ...
+            pathlib.Path('test.hdf').unlink()
+        with h5tbx.File('test.hdf') as h5:
+            self.assertEqual('r+', h5.mode)
+            self.assertEqual('test.hdf', h5.hdf_filename.name)
+        if h5.hdf_filename.exists():
+            h5.hdf_filename.unlink()
 
     def test_offset_scale(self):
         h5tbx.use('h5tbx')
@@ -216,6 +224,17 @@ class TestFile(unittest.TestCase):
                              sorted(h5.find({'$ndim': 1}, '$dataset')))
 
     def test_open(self):
+        with File(mode='w') as h5:
+            h5.attrs['one'] = 1
+        with File(h5.hdf_filename, mode='w') as h5:
+            self.assertTrue('one' not in h5.attrs)
+            h5.attrs['one'] = 1
+        with File(h5.hdf_filename, mode='r+') as h5:
+            self.assertTrue('one' in h5.attrs)
+            h5.attrs['two'] = 2
+            self.assertTrue('two' in h5.attrs)
+
+
         with File(mode='w') as h5:
             pass
         h5.reopen('r+')

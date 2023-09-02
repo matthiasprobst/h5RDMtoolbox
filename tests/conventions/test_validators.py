@@ -1,25 +1,25 @@
 import unittest
 from datetime import datetime
 
-from h5rdmtoolbox.conventions import validator
+from h5rdmtoolbox.conventions import validators
 
 
 class TestValidators(unittest.TestCase):
 
     def test_eval_type(self):
-        self.assertEqual(validator._eval_type('int'), int)
-        self.assertEqual(validator._eval_type('$int'), int)
-        self.assertEqual(validator._eval_type('float'), float)
-        self.assertEqual(validator._eval_type('$float'), float)
-        self.assertEqual(validator._eval_type('$list'), list)
+        self.assertEqual(validators._eval_type('int'), int)
+        self.assertEqual(validators._eval_type('$int'), int)
+        self.assertEqual(validators._eval_type('float'), float)
+        self.assertEqual(validators._eval_type('$float'), float)
+        self.assertEqual(validators._eval_type('$list'), list)
         with self.assertRaises(KeyError):
-            validator._eval_type('bla')
+            validators._eval_type('bla')
 
     def test_eval_validators(self):
-        n = validator.NoneValidator()
+        n = validators.NoneValidator()
         self.assertEqual(n(13.4, None), 13.4)
 
-        dt = validator.DateTimeValidator()
+        dt = validators.DateTimeValidator()
         now = datetime.now().isoformat()
         self.assertEqual(dt(now, None), now)
         self.assertEqual('2020-01-01T12:00:00', dt('2020-01-01T12:00:00', None))

@@ -1,9 +1,15 @@
 import json
 import requests
 import warnings
-from typing import Union, List
+from typing import Union
 
-from .validator import StandardAttributeValidator
+BIBTEX_ENTRY_TYPES = ('article',
+                      'book',
+                      'booklet',
+                      'conference',
+                      'inbook',
+                      'incollection',
+                      'inproceedings',)
 
 
 def validate_url(url: str) -> bool:
@@ -26,15 +32,6 @@ def validate_url(url: str) -> bool:
     if response.status_code == 200:
         return True
     return False
-
-
-BIBTEX_ENTRY_TYPES = ('article',
-                      'book',
-                      'booklet',
-                      'conference',
-                      'inbook',
-                      'incollection',
-                      'inproceedings',)
 
 
 def validate_bibtex(bibtex: Union[str, dict]) -> bool:
@@ -67,45 +64,3 @@ def validate_reference(reference: str) -> bool:
     if isinstance(reference, str) and reference[0] == '{':
         return validate_bibtex(json.loads(reference))
     return validate_url(reference)
-
-
-class ReferencesValidator(StandardAttributeValidator):
-
-    def __call__(self, references, *args, **kwargs):
-        if not isinstance(references, (list, tuple)):
-            references = [references, ]
-        if all(validate_reference(r) for r in references):
-            if len(references) == 1:
-                return parse_dict(references[0])
-            return [parse_dict(r) for r in references]
-
-
-class URLValidator(StandardAttributeValidator):
-
-    def __call__(self, references, *args, **kwargs):
-        if not isinstance(references, (list, tuple)):
-            references = [references, ]
-        if all(validate_url(r) for r in references):
-            if len(references) == 1:
-                return references[0]
-            return references
-        raise ValueError(f'Invalid URL: {references}')
-
-
-def parse_dict(value):
-    """Returns a string representation of a dict if value is a dict else passes value through"""
-    if isinstance(value, dict):
-        return json.dumps(value)
-    return value
-
-
-class BibTeXValidator(StandardAttributeValidator):
-
-    def __call__(self, bibtex, *args, **kwargs) -> List[str]:
-        if not isinstance(bibtex, (list, tuple)):
-            bibtex = [bibtex, ]
-        if all(validate_bibtex(b) for b in bibtex):
-            if len(bibtex) == 1:
-                return parse_dict(bibtex[0])
-            return [parse_dict(b) for b in bibtex]
-        raise ValueError(f'Invalid Bibtex entry: {bibtex}')

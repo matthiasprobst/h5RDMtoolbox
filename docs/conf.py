@@ -57,7 +57,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', '**.ipynb_checkpoints']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', '**.ipynb_checkpoints', 'colab']
 
 autodoc_member_order = 'bysource'
 
@@ -70,14 +70,14 @@ autodoc_typehints = "none"
 # a list of builtin themes.
 #
 html_theme = 'sphinx_book_theme'  # 'sphinx_rtd_theme'
-html_logo = "_static/icon4.svg"
+html_logo = "_static/new_icon.svg"
 html_title = "H5RDMtoolbox Documentation"
 
 html_context = {
     "github_user": "matthiasprobst",
     "github_repo": "h5RDMtoolbox",
     "github_version": "main",
-    "doc_path": "doc",
+    "doc_path": "docs",
     "default_mode": "light",
 }
 
@@ -87,7 +87,7 @@ html_context = {
 html_theme_options = dict(
     repository_url="https://github.com/matthiasprobst/h5RDMtoolbox",
     repository_branch="main",
-    path_to_docs="doc",
+    path_to_docs="docs",
     use_edit_page_button=False,
     use_repository_button=True,
     use_download_button=True,

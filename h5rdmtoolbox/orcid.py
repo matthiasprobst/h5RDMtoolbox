@@ -1,5 +1,6 @@
 """ORCID module handling researcher IDs"""
 import appdirs
+import numpy as np
 import pathlib
 import re
 import requests
@@ -58,13 +59,9 @@ known_orcids = KnownOrcids()
 
 
 def get_html_repr(orcid_id: str) -> str:
-    """get html representation of orcid_id.
-    See https://info.orcid.org/documentation/integration-guide/user-experience-display-guidelines/"""
+    """Return HTML representation of ORCID with ORCID image as requested by orcid.org"""
     oid = ORCID(orcid_id)
-    return f"""<a href="{oid}">
-<img alt="ORCID logo" src="https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png" width="16" height="16" />
-{oid}
-</a>"""
+    return f'<a href="{oid}"><img alt="ORCID logo" src="https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png" width="16" height="16" />{oid}</a>'
 
 
 ORCID_PATTERN = r'(?:https:\/\/orcid.org\/)?\d{4}-\d{4}-\d{4}-\d{3}[0-9X]{1}'
@@ -89,6 +86,12 @@ class ORCID(str):
     def __new__(cls, orcid):
         """Only pattern is checked!
         If existence is to be checked, use exists() method."""
+        if isinstance(orcid, (np.ndarray, list, tuple)):
+            if len(orcid) == 1:
+                orcid = orcid[0]
+            else:
+                return ORCIDS([ORCID(o) for o in orcid])
+
         if not orcid.startswith('https://orcid.org/'):
             orcid = f'https://orcid.org/{orcid}'
         if is_valid_orcid_pattern(orcid):
@@ -106,8 +109,6 @@ class ORCID(str):
         except requests.exceptions.ConnectionError as e:
             if check_offline:
                 # no internet connection, look in registered ORCIDs
-                from . import logger
-                logger.debug('validating the ORCID offline by comparing with registered, known ORCIDs', UserWarning)
                 return known_orcids.exists(self)
             if raise_error:
                 raise Exception(e) from e
@@ -119,4 +120,20 @@ class ORCID(str):
 
     def display(self):
         """Display ORCID as HTML. Only works in Jupyter notebooks."""
-        display(HTML(get_html_repr(self)))
+        display(HTML(self._repr_html_()))
+
+
+class ORCIDS:
+    """Multiple ORCIDS"""
+
+    def __init__(self, orcids: ORCID):
+        self._orcids = orcids
+
+    def __getitem__(self, item):
+        return self._orcids[0]
+
+    def __iter__(self):
+        return iter(self._orcids)
+
+    def _repr_html_(self):
+        return ', '.join([o._repr_html_() for o in self._orcids])

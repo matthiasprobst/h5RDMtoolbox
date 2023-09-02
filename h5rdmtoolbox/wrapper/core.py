@@ -4,7 +4,6 @@ import datetime
 import h5py
 import numpy as np
 import os
-import pandas as pd
 import pathlib
 # noinspection PyUnresolvedReferences
 import pint
@@ -22,12 +21,9 @@ from . import logger
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
-from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes
-from .h5attr import WrapperAttributeManager
+from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
-from .. import _repr, get_config, conventions, utils
-from .. import consts
-from .. import get_ureg
+from .. import _repr, get_config, conventions, utils, consts, get_ureg, protected_attributes
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
@@ -244,8 +240,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     def rootparent(self):
         """Return the root group instance."""
         if self.name == '/':
-            return self
-        return get_rootparent(self.parent)
+            return File(self._id)
+        return File(get_rootparent(self.parent)._id)
 
     @property
     def basename(self) -> str:
@@ -397,11 +393,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             return self._h5grp(ret.id)
 
     def __getattr__(self, item):
-        props = self.convention.properties.get(self.__class__, None)
-        if props:
-            prop = props.get(item, None)
-            if prop:
-                return prop.get(self)
+        standard_attributes = self.standard_attributes
+        if standard_attributes:  # are there standard attributes registered?
+            standard_attribute = standard_attributes.get(item, None)
+            if standard_attribute:  # is there an attribute requested with name=item available?
+                return standard_attribute.get(self)
 
         try:
             return super().__getattribute__(item)
@@ -649,6 +645,13 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             # maybe there's a typo:
             attach_scales = kwargs.pop('attach_scale', None)
 
+        if attach_scales is not None:
+            if not isinstance(attach_scales, (list, tuple)):
+                attach_scales = (attach_scales,)
+            if any([True for a in attach_scales if a]) and make_scale:
+                raise ValueError(
+                    'Cannot make scale and attach scale at the same time!')
+
         attrs, skwargs, kwargs = process_attributes(Group, 'create_dataset', attrs, kwargs, name=name)
 
         if isinstance(data, xr.DataArray):
@@ -678,6 +681,17 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                                  f'while natural naming is enabled')
 
         if isinstance(data, xr.DataArray):
+            if attach_scales:
+                for dim, scale in zip(data.dims, attach_scales):
+                    if isinstance(scale, str):
+                        scale_name = scale
+                        scale_data = self[scale].values[()]
+                    elif isinstance(scale, h5py.Dataset):
+                        scale_name = scale.name
+                        scale_data = scale[()]
+                    else:
+                        raise TypeError(f'Expecting type string or a h5py.Dataset for scale, not {type(scale)}')
+                    data = data.rename({dim: scale_name}).assign_coords({scale_name: scale_data})
             attrs.update(data.attrs)
             return data.hdf.to_group(self._h5grp(self), name=name,
                                      overwrite=overwrite,
@@ -709,13 +723,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             attrs[consts.ANCILLARY_DATASET] = json.dumps({k: v.name for k, v in ancillary_datasets.items()})
 
         _maxshape = kwargs.get('maxshape', shape)
-
-        if attach_scales:
-            if not isinstance(attach_scales, (list, tuple)):
-                attach_scales = (attach_scales,)
-            if any([True for a in attach_scales if a]) and make_scale:
-                raise ValueError(
-                    'Cannot make scale and attach scale at the same time!')
 
         logger.debug(
             f'Creating dataset "{name}" in "{self.name}" with maxshape {_maxshape} " '
@@ -750,19 +757,13 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         ds = self._h5ds(_ds.id)
 
-        # first set scale and offset if given:
-        scale = attrs.pop(conventions.get_current_convention().scale_attribute_name, None)
-        offset = attrs.pop(conventions.get_current_convention().offset_attribute_name, None)
-        if scale is not None:
-            ds.attrs[conventions.get_current_convention().scale_attribute_name] = scale
-        if offset is not None:
-            ds.attrs[conventions.get_current_convention().offset_attribute_name] = offset
-
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
             try:
                 for k, v in attrs.items():
-                    ds.attrs[k] = v
+                    # call __setitem__ because then we can pass attrs which is needed by the potential validators of
+                    # standard attributes
+                    ds.attrs.__setitem__(k, v, attrs)
             except Exception as e:
                 logger.error(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}"')
                 del self[name]
@@ -809,6 +810,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  ignore_attribute_error: bool = False):
         """See find()"""
         from ..database import file
+        if flt == {}:
+            return None
         return file.find(
             self,
             flt,
@@ -912,7 +915,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         None
 
         """
-        from pandas import read_csv as pd_read_csv
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError('pandas is required for this function')
+
         if combine_opt not in ['concatenate', 'stack']:
             raise ValueError(f'Invalid input for combine_opt: {combine_opt}')
 
@@ -924,10 +931,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         if isinstance(csv_filenames, (list, tuple)):
             n_files = len(csv_filenames)
-            dfs = [pd_read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames]
+            dfs = [pd.read_csv(csv_fname, **pandas_kwargs) for csv_fname in csv_filenames]
         elif isinstance(csv_filenames, (str, Path)):
             n_files = 1
-            dfs = [pd_read_csv(csv_filenames, **pandas_kwargs), ]
+            dfs = [pd.read_csv(csv_filenames, **pandas_kwargs), ]
         else:
             raise ValueError(
                 f'Wrong input for "csv_filenames: {type(csv_filenames)}')
@@ -1457,28 +1464,28 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     #     """Check if the dataset has a flag dataset attached."""
     #     return ANCILLARY_DATASET in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
 
-    def modify(self, **properties) -> "Dataset":
+    def modify(self, tqdm_pbar=False, **properties) -> "Dataset":
         """modify property of dataset such as `chunks` or `dtpye`. This is
         not possible with the original implementation in `h5py`. Note, that
         this may be a time-consuming task for large datasets! Better to set
         the properties correct already during dataset creation!"""
-        return self.parent.modify_dataset_properties(self, **properties)
+        return self.parent.modify_dataset_properties(self, tqdm_pbar=tqdm_pbar, **properties)
 
-    def rename(self, new_name):
+    def rename(self, new_name, tqdm_pbar=False, ):
         """Rename the dataset. This may be time and data intensive as
         a new dataset is created first!"""
-        return self.parent.modify_dataset_properties(self, name=new_name)
+        return self.parent.modify_dataset_properties(self, tqdm_pbar=tqdm_pbar, name=new_name)
 
     def coords(self) -> Dict[str, "Dataset"]:
         """Return a dictionary of the coordinates of the dataset. The dictionary"""
         return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
-    def isel(self, **coords) -> xr.DataArray:
+    def isel(self, **indexers) -> xr.DataArray:
         """Index selection by providing the coordinate name.
 
         Parameters
         ----------
-        coords: Dict
+        indexers: Dict
             Dictionary with coordinate name as key and slice or index as value
 
         Returns
@@ -1491,16 +1498,26 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         >>> with h5tbx.File(filename) as h5:
         >>>     h5.vel.isel(time=0, z=3)
         """
-        if len(coords) == 0:
+        if len(indexers) == 0:
             return self[()]
         ds_coords = self.coords()
-        for cname in coords.keys():
-            if cname not in ds_coords:
-                raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
+        if ds_coords:
+            for cname in indexers.keys():
+                if cname not in ds_coords:
+                    raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
+            sl = {cname: slice(None) for cname in ds_coords.keys()}
+            for cname, item in indexers.items():
+                sl[cname] = item
+        else:
+            # no indexers available. User must provide dim_<i> then!
+            if not all([cname.startswith('dim_') for cname in indexers.keys()]):
+                raise KeyError(f'No coordinates available. Provide dim_<i> as key!')
+            dim_dict = {f'dim_{i}': slice(None) for i in range(len(self.shape))}
+            # indices = [int(cname.split('_')[1]) for cname in indexers.keys()]
+            sl = {cname: slice(None) for cname in dim_dict.keys()}
+            for cname, item in indexers.items():
+                sl[cname] = item
 
-        sl = {cname: slice(None) for cname in ds_coords.keys()}
-        for cname, item in coords.items():
-            sl[cname] = item
         return self[tuple([v for v in sl.values()])]
 
     def sel(self, method=None, **coords):
@@ -1533,11 +1550,11 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         return self.isel(**isel)
 
     def __getattr__(self, item):
-        props = self.convention.properties.get(self.__class__, None)
-        if props:
-            prop = props.get(item, None)
-            if prop:
-                return prop.get(self)
+        standard_attributes = self.standard_attributes
+        if standard_attributes:
+            standard_attribute = standard_attributes.get(item, None)
+            if standard_attribute:
+                return standard_attribute.get(self)
 
         if item not in self.__dict__:
             for d in self.dims:
@@ -1630,7 +1647,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             used_dims = [dim_name for arg, dim_name in zip(
                 myargs, dims_names) if isinstance(arg, (slice, np.ndarray))]
 
-            COORDINATES = self.attrs.get('COORDINATES')
+            COORDINATES = self.attrs.get(protected_attributes.COORDINATES)
             if COORDINATES is not None:
                 if isinstance(COORDINATES, str):
                     COORDINATES = [COORDINATES, ]
@@ -1749,6 +1766,40 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             self.dims[axis].attach_scale(backup_scales[i][1])
         logger.debug('new primary scale: %s', self.dims[axis][0])
 
+    def find(self, flt: Union[Dict, str],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             ignore_attribute_error: bool = False) -> List:
+        """
+        Examples for filter parameters:
+        filter = {'long_name': 'any objects long name'} --> searches in attributes only
+        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
+        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
+
+        Parameters
+        ----------
+        flt: Dict
+            Filter request
+        objfilter: str | h5py.Dataset | h5py.Group | None
+            Filter. Default is None. Otherwise, only dataset or group types are returned.
+        rec: bool, optional
+            Recursive search. Default is True
+        ignore_attribute_error: bool, optional=False
+            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
+            Otherwise, the KeyError is raised.
+
+        Returns
+        -------
+        h5obj: h5py.Dataset or h5py.Group
+        """
+        from ..database import file
+        return file.find(
+            h5obj=self,
+            flt=flt,
+            objfilter=objfilter,
+            recursive=False,
+            find_one=False,
+            ignore_attribute_error=ignore_attribute_error)
+
 
 class File(h5py.File, Group, SpecialAttributeWriter, Core):
     """Main wrapper around h5py.File.
@@ -1860,6 +1911,18 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                  layout: Union[Path, str, LayoutFile, None] = None,
                  attrs: Dict = None,
                  **kwargs):
+        # path is file object:
+        if isinstance(name, ObjectID):
+            # filter out standard attributes from kwargs:
+            if "__init__" in conventions.get_current_convention().methods[self.__class__]:
+                kwargs, _ = _pop_standard_attributes(
+                    kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
+                )
+            super(File, self).__init__(name, mode, **kwargs)
+            self._hdf_filename = Path(self.filename)
+            return
+
+        # name is path or None:
         if name is None:
             _tmp_init = True
             logger.debug("An empty File class is initialized")
@@ -1868,41 +1931,51 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 mode = 'r+'
             else:
                 mode = mode
+        elif isinstance(name, (str, pathlib.Path)):
+            fname = pathlib.Path(name)
+            # a filename is given.
+
+            if mode is None:  # mode not given:
+                # file does exist and mode not given --> read only!
+                if fname.exists():
+                    mode = 'r'
+
+                # file does not exist and mode is not given--> write!
+                elif not fname.exists():
+                    mode = 'w'
+            # else mode is given, so just continue... may be correct, may be not...
+
         if mode is None:
+            logger.debug('Mode not set. Set it to "r" by default')
             mode = 'r'
-        elif isinstance(name, ObjectID):
-            pass
         elif not isinstance(name, (str, Path)):
             raise ValueError(
-                f'It seems that no proper file name is passed: type of {name} is {type(name)}')
+                f'It seems that no proper file name is passed: type of "{name}" is {type(name)}')
         else:
             if mode == 'r+':
                 if not Path(name).exists():
                     _tmp_init = True
+                    mode = 'r+'
                     # "touch" the file, so it exists
                     with h5py.File(name, mode='w', **kwargs) as _h5:
                         pass  # just touching the file
-                    logger.debug(f"An empty File class is initialized for {name}")
+                    logger.debug(f'An empty File class is initialized for "{name}".Mode is set to "r+"')
 
         if attrs is None:
             attrs = {}
 
         if mode == 'r':
+            # check for required standard attributes
             if "__init__" in conventions.get_current_convention().methods[self.__class__]:
                 kwargs, skwargs = _pop_standard_attributes(
                     kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
                 )
-                logger.debug(f'mode is read only. Provided standard attributes are ignored: {skwargs.keys()}')
+                logger.debug('The file mode is read only ("r"). Provided standard attributes are ignored: '
+                             f'{skwargs.keys()}')
             # ignore standard attributes during read-only
             skwargs = {}
         else:
             attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name)
-
-        _tmp_init = False
-
-        if _tmp_init:
-            mode = 'r+'
-            warnings.warn('Switched to mode "r+"')
 
         if mode == 'r' and len(skwargs) > 0:
             for k, v in skwargs.items():
@@ -1911,6 +1984,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
         # if not isinstance(name, ObjectID):
         #     self._hdf_filename = Path(name)
+        logger.debug(f'Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}')
         super().__init__(name=name,
                          mode=mode,
                          **kwargs)
@@ -1928,14 +2002,14 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         props = self.convention.properties.get(self.__class__, None)
         if props:
             prop = props.get(key, None)
-            if prop:
+            if prop:  # does the object have a standard attribute with name stored in key?
                 return prop.set(self, value)
         if key.startswith('_'):
             return super().__setattr__(key, value)
         # if key in ('layout', ):
         #     return super().__setattr__(key, value)
-        raise KeyError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
-                       f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
+        raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
+                             f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
 
     def __repr__(self) -> str:
         r = super().__repr__()

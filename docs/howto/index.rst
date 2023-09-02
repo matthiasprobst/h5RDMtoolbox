@@ -10,3 +10,5 @@ Here you find a collection of frequently asked questions in a "How to...?"-style
     ht001
     ht002
     ht003
+    ht004
+    ht005

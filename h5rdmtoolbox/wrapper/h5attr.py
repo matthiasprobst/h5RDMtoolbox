@@ -9,9 +9,10 @@ from typing import Dict
 from .h5utils import get_rootparent
 from .. import get_config, conventions, utils
 from .. import get_ureg
+from .. import protected_attributes
 from ..conventions import consts
 
-H5_DIM_ATTRS = ('CLASS', 'NAME', 'DIMENSION_LIST', 'REFERENCE_LIST', 'COORDINATES')
+H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox
 
 
 def pop_hdf_attributes(attrs: Dict) -> Dict:
@@ -111,15 +112,21 @@ class WrapperAttributeManager(h5py.AttributeManager):
             if name in conventions.get_current_convention().properties[parent.__class__]:
                 return conventions.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
-        return ret
 
     @with_phil
-    def __setitem__(self, name, value):
+    def __setitem__(self, name, value, attrs=None):
         """ Set a new attribute, overwriting any existing attribute.
 
         The type and shape of the attribute are determined from the data.  To
         use a specific type or shape, or to preserve the type of attribute,
         use the methods create() and modify().
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute.
+        value : any
+            Attribute value.
         """
 
         if name == '_parent':
@@ -149,7 +156,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                         return
                     if isinstance(value, consts.DefaultValue):
                         value = value.value
-                    return curr_cv.properties[parent.__class__][name].set(parent, value)
+                    return curr_cv.properties[parent.__class__][name].set(parent, value, attrs)
                 except TypeError as e:
                     raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)

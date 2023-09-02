@@ -50,3 +50,4 @@ docs/jupyter_execute
 .coverage
 htmlcov
 coverage.svg
+docs/colab/my_file.hdf

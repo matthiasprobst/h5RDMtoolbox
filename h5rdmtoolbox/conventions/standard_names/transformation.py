@@ -1,4 +1,5 @@
 """Transformation module"""
+import inspect
 import re
 
 from .name import StandardName
@@ -6,10 +7,20 @@ from .. import errors
 
 
 class Transformation:
+    """Transformation class used to transform standard names to new valid standard names"""
 
     def __init__(self, pattern, func):
         self.pattern = pattern
+        if not self._verify_func(func):
+            raise errors.TransformationFunctionError(f"Invalid function {func.__name__}: "
+                                                     "Must have parameters 'match' and 'snt'")
         self.func = func
+
+    @staticmethod
+    def _verify_func(func) -> bool:
+        """expecting it to have parameters 'match' and 'snt'"""
+        signature = inspect.signature(func)
+        return list(signature.parameters.keys()) == ['match', 'snt']
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.pattern}, {self.func.__name__})"
