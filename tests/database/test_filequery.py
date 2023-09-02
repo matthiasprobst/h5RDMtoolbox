@@ -89,6 +89,53 @@ class TestFileQuery(unittest.TestCase):
         res = fd.find_one_per_file({'$basename': {'$regex': 'ds[0-9]'}})
         self.assertEqual(2, len(res))
 
+    def test_chained_find(self):
+        with h5tbx.File() as h5:
+            g = h5.create_group('grp1')
+            g.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+
+            r = h5.find_one({'$basename': 'grp1'}).find_one({'$basename': 'ds1'})
+            self.assertEqual(r.name, '/grp1/ds1')
+
+            r = h5.find({'$basename': 'grp1'})
+
+            r = r.find_one({'$basename': 'ds1'})
+            self.assertEqual(r.name, '/grp1/ds1')
+
+        lazy_results = h5tbx.FileDB(h5.hdf_filename).find({'$basename': 'grp1'})
+        r = h5tbx.database.file.ResultList(lazy_results).find_one({'$basename': 'ds1'})
+        self.assertEqual(r.name, '/grp1/ds1')
+
+        lazy_results = h5tbx.FileDB(h5.hdf_filename).find({'$basename': 'grp1'})
+        r = h5tbx.database.file.ResultList(lazy_results).find({'$basename': 'ds1'})
+        self.assertEqual(r[0].name, '/grp1/ds1')
+
+        r = lazy_results.find_one({'$basename': 'non-existent'})
+        self.assertTrue(r is None)
+
+    def test_math_operators(self):
+        from h5rdmtoolbox.database.file import _pass, _mean
+        self.assertEqual(None, _pass(np.array([1, 2, 3]), 1))
+        self.assertEqual(None, _mean(np.array(['hello', 'world'], dtype='S'), 1))
+
+    def test_chained_find2(self):
+        with h5tbx.File() as h5:
+            h5.write_iso_timestamp(name='timestamp',
+                                   dt=None)  # writes the current date time in iso format to the attribute
+            h5.attrs['project'] = 'tutorial'
+            h5.create_dataset('velocity', data=[1, 2, -1], attrs=dict(units='m/s', standard_name='x_velocity'))
+            g = h5.create_group('group1')
+            g.create_dataset('velocity', data=[4, 0, -3, 12, 3], attrs=dict(units='m/s', standard_name='x_velocity'))
+            g = h5.create_group('group2')
+            g.create_dataset('velocity', data=[12, 11.3, 4.6, 7.3, 8.1],
+                             attrs=dict(units='m/s', standard_name='x_velocity'))
+            g.create_dataset('z', data=5.4, attrs=dict(units='m', standard_name='z_coordinate'))
+            h5.dump()
+            filename = h5.hdf_filename
+        # find the dataset "z". It is 0D with data=5.4
+        results = h5tbx.FileDB(filename).find({'standard_name': 'z_coordinate'}).find({'$eq': 5.4})
+        self.assertEqual(1, len(results))
+
     def test_Files(self):
         fnames = []
         with File() as h51:

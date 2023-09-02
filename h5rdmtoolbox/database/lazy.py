@@ -26,6 +26,14 @@ class LGroup:
     def __eq__(self, other):
         return self.name == other.name and self.filename == other.filename and self.attrs == other.attrs
 
+    def __enter__(self):
+        from .. import File
+        self._file = File(self.filename)
+        return self._file[self.name]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._file.close()
+
     @property
     def basename(self) -> str:
         """Return the basename of the object"""
@@ -46,10 +54,29 @@ class LGroup:
         """Return the attributes of the group as a LAttributeManager object"""
         return self._attrs
 
-    def find(self, flt, objfilter, find_one, recursive):
+    def find(self, flt: Union[Dict, str],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             rec: bool = True,
+             ignore_attribute_error: bool = False):
+        """Find"""
         from .file import find as _find
         with self as obj:
-            return _find(obj, flt, objfilter, find_one=find_one, recursive=recursive)
+            if isinstance(obj, h5py.Dataset):
+                return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=False,
+                                               ignore_attribute_error=ignore_attribute_error)]
+            return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=rec,
+                      ignore_attribute_error=ignore_attribute_error)]
+
+    def find_one(self,
+                 flt: Union[Dict, str],
+                 objfilter=None,
+                 rec: bool = True,
+                 ignore_attribute_error: bool = False):
+        """Find one occurrence"""
+        from .file import find as _find
+        with self as obj:
+            return lazy(_find(obj, flt, objfilter, find_one=True, recursive=rec,
+                              ignore_attribute_error=ignore_attribute_error))
 
 
 class LDataset(LGroup):
@@ -69,20 +96,12 @@ class LDataset(LGroup):
 
     def __repr__(self):
         attrs_str = ', '.join({f'{k}={v}' for k, v in self.attrs.items() if not k.isupper()})
-        return f'<LDataset "{self.name}" in "{self.filename}" attrs={attrs_str}>'
+        return f'<LDataset "{self.name}" in "{self.filename}" attrs=({attrs_str})>'
 
     def __getitem__(self, item):
         from .. import File
         with File(self.filename, mode='r') as h5:
             return h5[self.name][item]
-
-    def __enter__(self):
-        from .. import File
-        self._file = File(self.filename)
-        return self._file[self.name]
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._file.close()
 
     def coords(self):
         from .. import File
@@ -98,6 +117,19 @@ class LDataset(LGroup):
         from .. import File
         with File(self.filename) as h5:
             return h5[self.name].sel(**coords)
+
+    def find(self, flt: Union[Dict, str],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             ignore_attribute_error: bool = False):
+        """Find"""
+        return super().find(flt, objfilter, rec=False, ignore_attribute_error=ignore_attribute_error)
+
+    def find_one(self,
+                 flt: Union[Dict, str],
+                 objfilter=None,
+                 ignore_attribute_error: bool = False):
+        """Find one occurrence"""
+        return super().find_one(flt, objfilter, rec=False, ignore_attribute_error=ignore_attribute_error)
 
 
 def _get_dataset_properties(h5obj, keys):

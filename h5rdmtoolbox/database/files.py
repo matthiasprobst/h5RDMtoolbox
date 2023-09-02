@@ -92,7 +92,7 @@ class Files:
             Applies `find_one` to each file. If False, finds the first occurrence in
             any of the files.
         """
-        for v in self.values():
+        for v in self._opened_files.values():
             found = v.find_one(flt, objfilter=objfilter, rec=rec,
                                ignore_attribute_error=ignore_attribute_error)
             if found:
@@ -110,7 +110,7 @@ class Files:
         TODO: This can be parallelized!
         """
         founds = []
-        for v in self.values():
+        for v in self._opened_files.values():
             found = v.find_one(flt, objfilter=objfilter, rec=rec,
                                ignore_attribute_error=ignore_attribute_error)
             if found:
@@ -132,14 +132,6 @@ class Files:
                                                            ignore_attribute_error=ignore_attribute_error))
         return list(chain.from_iterable(found))
 
-    def keys(self):
-        """Return all opened filename stems"""
-        return self._opened_files.keys()
-
-    def values(self):
-        """Return all group instances in the file stems"""
-        return self._opened_files.values()
-
     def close(self):
         """Close all opened files"""
         for h5file in self._opened_files.values():
@@ -148,6 +140,3 @@ class Files:
     def __del__(self):
         self.close()
 
-
-if __name__ == '__main__':
-    print('Cannot run this file directly.')

@@ -1464,17 +1464,17 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     #     """Check if the dataset has a flag dataset attached."""
     #     return ANCILLARY_DATASET in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
 
-    def modify(self, **properties) -> "Dataset":
+    def modify(self, tqdm_pbar=False, **properties) -> "Dataset":
         """modify property of dataset such as `chunks` or `dtpye`. This is
         not possible with the original implementation in `h5py`. Note, that
         this may be a time-consuming task for large datasets! Better to set
         the properties correct already during dataset creation!"""
-        return self.parent.modify_dataset_properties(self, **properties)
+        return self.parent.modify_dataset_properties(self, tqdm_pbar=tqdm_pbar, **properties)
 
-    def rename(self, new_name):
+    def rename(self, new_name, tqdm_pbar=False, ):
         """Rename the dataset. This may be time and data intensive as
         a new dataset is created first!"""
-        return self.parent.modify_dataset_properties(self, name=new_name)
+        return self.parent.modify_dataset_properties(self, tqdm_pbar=tqdm_pbar, name=new_name)
 
     def coords(self) -> Dict[str, "Dataset"]:
         """Return a dictionary of the coordinates of the dataset. The dictionary"""

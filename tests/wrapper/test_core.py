@@ -286,7 +286,7 @@ class TestCore(unittest.TestCase):
 
             new_ds = h5['/'].modify_dataset_properties(dataset=ds,
                                                        dtype=float,
-                                                       tqdm_pbar=True)
+                                                       tqdm_pbar=False)
             with self.assertRaises(TypeError):
                 h5['/'].modify_dataset_properties(ds, 4.3)
             with self.assertRaises(KeyError):

@@ -12,6 +12,25 @@ from ..utils import process_obj_filter_input
 # implementation similar to pymongo:
 # https://www.mongodb.com/docs/manual/reference/operator/query/
 
+
+class ResultList(list):
+
+    def find(self, *args, **kwargs):
+        """call find() on all entries"""
+        results = []
+        for r in self:
+            results.append(r.find_one(*args, **kwargs))
+        return ResultList(results)
+
+    def find_one(self, *args, **kwargs):
+        """call find_one() on all entries and return the first non-None result"""
+        for r in self:
+            result = r.find_one(*args, **kwargs)
+            if result:
+                return result
+        return None
+
+
 def _eq(a, b):
     """Check if a == b"""
     return a == b
@@ -188,7 +207,7 @@ def get_ndim(value) -> int:
 
 
 math_operator = {'$eq': _pass,
-               '$mean': _mean}
+                 '$mean': _mean}
 
 
 def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter, ignore_attribute_error: bool = False):
@@ -207,12 +226,6 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
 
     if qk in value_operator:
         # user wants to compare qv to the value of the object
-        # this is only possible for datasets!
-        if isinstance(h5obj, h5py.Dataset):
-            return found_objs
-
-        # h5obj is a group:
-        assert isinstance(h5obj, h5py.Group)
 
         if not isinstance(qv, Dict):
             qv = {'$eq': qv}
@@ -220,7 +233,14 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
         if len(qv) != 1:
             raise ValueError(f'Cannot use operator "{qk}" for dict with more than one key')
 
+        if isinstance(h5obj, h5py.Dataset):
+            recursive = False
+
+        # h5obj is a group:
+        # assert isinstance(h5obj, h5py.Group)
+
         for math_operator_name, comparison_value in qv.items():
+
             if recursive:
                 rf = RecValueFind(math_operator[math_operator_name], value_operator[qk], comparison_value)
                 h5obj.visititems(rf)  # will not visit the root group
@@ -228,7 +248,11 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                     found_objs.append(found_obj)
             else:
                 # iterator over all datasets in group
-                for target_obj in h5obj.values():
+                if isinstance(h5obj, h5py.Group):
+                    iterator = h5obj.values()
+                else:
+                    iterator = [h5obj]
+                for target_obj in iterator:
                     if isinstance(target_obj, h5py.Dataset):
                         transformed_value = math_operator[math_operator_name](target_obj, comparison_value)
                         if transformed_value is not None:
@@ -288,10 +312,11 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                 if qk in h5obj.attrs.raw:
                     if operator[ok](h5obj.attrs.raw[qk], ov):
                         found_objs.append(h5obj)
-                for hv in h5obj.values():
-                    if qk in hv.attrs.raw:
-                        if operator[ok](hv.attrs.raw[qk], ov):
-                            found_objs.append(hv)
+                if isinstance(h5obj, h5py.Group):
+                    for hv in h5obj.values():
+                        if qk in hv.attrs.raw:
+                            if operator[ok](hv.attrs.raw[qk], ov):
+                                found_objs.append(hv)
     else:
         for ok, ov in qv.items():
             if recursive:
@@ -335,7 +360,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
          objfilter: Union[h5py.Group, h5py.Dataset, None],
          recursive: bool,
          find_one: bool,
-         ignore_attribute_error):
+         ignore_attribute_error) -> ResultList:
     """find objects in `h5obj` based on the filter request (-dictionary) `flt`
 
     A string instead of a dictionary for the parameter `flt` is also allowed. In this case, the string is used as
@@ -354,6 +379,8 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
     >>> h5tbx.database.File(filename).find_one(['standard_name', 'units'], '$dataset')
     """
     # start with some input checks:
+    if flt == {}:  # just find any!
+        flt = {'$basename': {'$regex': '.*'}}
     if isinstance(flt, str):  # just find the attribute and don't filter for the value:
         flt = {flt: {'$regex': '.*'}}
     if isinstance(flt, List):
@@ -385,7 +412,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
         if len(common_results):
             return common_results[0]
         return  # Nothing found
-    return common_results
+    return ResultList(common_results)
 
     # if objfilter:
     #     return [r for r in common_results if isinstance(r, objfilter)]
@@ -456,10 +483,8 @@ class File:
              ignore_attribute_error: bool = False):
         """Find"""
         from .. import File
-        if flt == {}:  # just find any!
-            flt = {'$basename': {'$regex': '.*'}}
         with File(self.filename) as h5:
-            return [lazy.lazy(r) for r in h5.find(flt, objfilter, rec, ignore_attribute_error)]
+            return ResultList([lazy.lazy(r) for r in h5.find(flt, objfilter, rec, ignore_attribute_error)])
 
     def find_one(self,
                  flt: Union[Dict, str],
