@@ -71,16 +71,16 @@ references-file:
   validator: $url
   target_method: __init__
   default_value: $NONE
-  description: Web resources servering as references for the full file.
+  description: Web resources serving as references for the full file.
 
 references-group:
   validator: $url
   target_method: create_group
   default_value: $NONE
-  description: Web resources servering as references for the group.
+  description: Web resources serving as references for the group.
 
-referencesdataset:
+references-dataset:
   validator: $url
   target_method: create_dataset
   default_value: $NONE
-  description: Web resources servering as references for the dataset.
+  description: Web resources serving as references for the dataset.

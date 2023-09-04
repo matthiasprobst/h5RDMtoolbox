@@ -75,7 +75,7 @@ affixes:
 standard_names:
   time:
     units: s
-    description: Time refers tothe relative time since start of data aquisition.
+    description: Time refers to the relative time since start of data aquisition.
   coordinate:
     vector: true
     units: m

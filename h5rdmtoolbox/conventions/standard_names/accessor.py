@@ -3,7 +3,11 @@ from collections import OrderedDict
 import xarray as xr
 from xarray.core.rolling import DataArrayRolling
 
+import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.protected_attributes import PROVENANCE
+
 STANDARD_NAME_TRANSFORMATION_ATTR = 'STANDARD_NAME_TRANSFORMATION'
+
 
 class SNTArrayRolling(DataArrayRolling):
 
@@ -30,10 +34,38 @@ class PropertyDict:
             setattr(self, k, v)
 
 
+class MFuncCaller:
+
+    def __init__(self, da, snt, mfunc):
+        self._mfunc = mfunc
+        self._snt = snt
+        self._da = da
+
+    def __call__(self, **kwargs):
+        return self._mfunc(self._da, self._snt, **kwargs)
+
+
 @xr.register_dataarray_accessor("snt")
 class StandardNameTableAccessor:
     def __init__(self, da):
         self._da = da
+
+        # get snt:
+        self._snt = None
+
+        filename = da.attrs.get('PROVENANCE', None).get('HDF', None).get('filename', None)
+        if filename:
+            with h5tbx.File(filename, mode='r') as h5:
+                self._snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(
+                    h5.attrs.raw['standard_name_table'])
+
+        if self._snt:
+            for t in self._snt.transformations:
+                if t.mfunc:
+                    setattr(self, t.name, MFuncCaller(self._da, self._snt, t.mfunc))
+
+    def __call__(self):
+        return self._snt
 
     def max(self):
         new_obj = self._da.max(keep_attrs=True)
@@ -59,4 +91,14 @@ class StandardNameTableAccessor:
         STANDARD_NAME_TRANSFORMATION = self._da.attrs.get(STANDARD_NAME_TRANSFORMATION_ATTR, None)
         if not STANDARD_NAME_TRANSFORMATION:
             return None
-        return PropertyDict({k: [xr.DataArray.from_dict(vv) for vv in v] for k, v in STANDARD_NAME_TRANSFORMATION.items()})
+        return PropertyDict(
+            {k: [xr.DataArray.from_dict(vv) for vv in v] for k, v in STANDARD_NAME_TRANSFORMATION.items()})
+
+    def get_provenance(self):
+        prov = self._da.attrs.get(PROVENANCE, None)
+        if prov:
+            for k, v in prov.get('SNT', {}).items():
+                print(k, v)
+                coord_from = xr.DataArray.from_dict(v['arithmetic_mean_of'][0])
+                coord_to = xr.DataArray.from_dict(v['arithmetic_mean_of'][1])
+        return coord_from, coord_to

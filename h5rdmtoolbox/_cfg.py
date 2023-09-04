@@ -31,7 +31,7 @@ CONFIG = {'return_xarray': True,
           'expose_user_prop_to_attrs': True,
           'scale_attribute_name': 'scale',
           'offset_attribute_name': 'offset',
-          'add_source_info_to_xr': True,
+          'add_provenance': True,
           'ignore_standard_attribute_errors': False,
           'allow_deleting_standard_attributes': False,
           'parallel_find': True, }
@@ -53,7 +53,7 @@ _VALIDATORS = {
     'expose_user_prop_to_attrs': lambda x: isinstance(x, bool),
     'scale_attribute_name': lambda x: isinstance(x, str),
     'offset_attribute_name': lambda x: isinstance(x, str),
-    'add_source_info_to_xr': lambda x: isinstance(x, bool),
+    'add_provenance': lambda x: isinstance(x, bool),
     'ignore_standard_attribute_errors': lambda x: isinstance(x, bool),
     'parallel_find': lambda x: isinstance(x, bool),
 }

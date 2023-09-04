@@ -23,6 +23,41 @@ from ... import errors
 __this_dir__ = pathlib.Path(__file__).parent
 
 
+class Transformations:
+    """Container for transformations"""
+
+    def __init__(self):
+        self._items = []
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.names})'
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return self._items[item]
+        return getattr(self, item)
+
+    def __contains__(self, item: Union[str, Transformation]):
+        if isinstance(item, Transformation):
+            return item in self._items
+        # assume item is a string
+        return item in self.names
+
+    @property
+    def names(self) -> List[str]:
+        """Return a list of transformation names"""
+        return [t.name for t in self._items]
+
+    def add(self, item: Transformation, snt: 'StandardNameTable'):
+        """add a transformation"""
+        item._snt = snt
+        self._items.append(item)
+        setattr(self, item.name, item)
+
+
 class StandardNameTable:
     """Standard Name Table (SNT) class
 
@@ -102,10 +137,10 @@ class StandardNameTable:
                     raise TypeError(f'Expecting dict for affix {k} but got {type(affix_data)}')
                 self.add_affix(Affix.from_dict(k, affix_data))
 
-        self._transformations = ()
+        self._transformations = Transformations()
         for transformation in (derivative_of_X_wrt_to_Y,
                                magnitude_of,
-                               arithemtic_mean_of,
+                               arithmetic_mean_of,
                                standard_deviation_of,
                                square_of,
                                product_of_X_and_Y,
@@ -121,6 +156,12 @@ class StandardNameTable:
         _meta = self.meta.pop('alias', None)
         meta_str = ', '.join([f'{key}: {value}' for key, value in self.meta.items()])
         return f'<StandardNameTable: ({meta_str})>'
+
+    def __str__(self):
+        zenodo_doi = self._meta.get('zenodo_doi', None)
+        if zenodo_doi:
+            return zenodo_doi
+        return self.to_dict()
 
     def __contains__(self, standard_name):
         return standard_name in self.standard_names
@@ -144,7 +185,7 @@ class StandardNameTable:
         for transformation in self.transformations:
             match = transformation.match(standard_name)
             if match:
-                return evaluate(transformation, match, self)
+                return transformation.build_name(match, self)
         logger.debug(f'No general transformation could be successfully applied on "{standard_name}"')
 
         for affix_name, affix in self.affixes.items():
@@ -153,7 +194,7 @@ class StandardNameTable:
                 if match:
                     logger.debug(f'Applying affix transformation "{affix_name}"')
                     try:
-                        return evaluate(transformation, match, self)
+                        return transformation.build_name(match, self)
                     except errors.AffixKeyError as e:
                         # dont raise an error yet. Let StandardNameError handle it (see below)!
                         logger.debug(f'Affix transformation "{affix_name}" failed: {e}')
@@ -172,7 +213,7 @@ class StandardNameTable:
         return f"""<li style="list-style-type: none; font-style: italic">{self.__repr__()[1:-1]}</li>"""
 
     @property
-    def transformations(self) -> List[Transformation]:
+    def transformations(self) -> Transformations:
         """List of available transformations"""
         return self._transformations
 
@@ -356,11 +397,12 @@ class StandardNameTable:
             raise ValueError(f'Pattern "{transformation.pattern}" already defined. No two transformations '
                              'can have the same pattern.')
 
-        self._transformations = tuple([*self._transformations, transformation])
+        self._transformations.add(transformation, self)
 
     # Loader: ---------------------------------------------------------------
     @staticmethod
     def from_yaml(yaml_filename):
+        """Initialize a StandardNameTable from a YAML file"""
         invalid = False
         with open(yaml_filename, 'r') as f:
             if '503 Service Unavailable' in f.readline():
@@ -797,14 +839,9 @@ class StandardNameTable:
         """Export a StandardNameTable to a dictionary as string"""
         return json.dumps(self.to_dict())
 
-    # End Export ---------------------------------------------------------------
+    to_json = to_sdict
 
-    def register(self, overwrite: bool = False) -> None:
-        """Register the standard name table under its versionname."""
-        trg = UserDir['standard_name_tables'] / f'{self.versionname}.yml'
-        if trg.exists() and not overwrite:
-            raise FileExistsError(f'Standard name table {self.versionname} already exists!')
-        self.to_yaml(trg)
+    # End Export ---------------------------------------------------------------
 
     def dump(self, sort_by: str = 'name', **kwargs):
         """pretty representation of the table for jupyter notebooks"""
@@ -858,3 +895,12 @@ class StandardNameTable:
         """Return sorted list of standard names files"""
         for f in StandardNameTable.get_registered():
             print(f' > {f}')
+
+    # ----
+
+    def register(self, overwrite: bool = False) -> None:
+        """Register the standard name table under its versionname."""
+        trg = UserDir['standard_name_tables'] / f'{self.versionname}.yml'
+        if trg.exists() and not overwrite:
+            raise FileExistsError(f'Standard name table {self.versionname} already exists!')
+        self.to_yaml(trg)

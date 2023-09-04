@@ -210,6 +210,17 @@ class TestTransformationsAndAffixes(unittest.TestCase):
 
     def test_arithmetic_mean_of(self):
         # arithmetic_mean_of
+        # with self.assertRaises(errors.StandardNameError):
+        #     self.snt['arithmetic_mean_of_']
+        # with self.assertRaises(errors.StandardNameError):
+        #     self.snt['arithmetic_mean_of__invalid']
+
+        print(self.snt['arithmetic_mean_of_time'].description)
+        print(self.snt['arithmetic_mean_of_time_wrt_velocity'].description)
+        print(self.snt['arithmetic_mean_of_time_wrt_velocity_and_time'].description)
+
+        # self.snt['arithmetic_mean_of_time_and_velocity']
+
         for sn in self.snt.standard_names:
             _sn = self.snt[f'arithmetic_mean_of_{sn}']
             self.assertEqual(_sn.units, self.snt[sn].units)

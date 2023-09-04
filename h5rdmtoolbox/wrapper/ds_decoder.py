@@ -63,9 +63,19 @@ def dataset_value_decoder(func):
             xarr.attrs[consts.ANCILLARY_DATASET] = [name for name in anc_ds.keys()]
             # print(xarr.attrs.pop(consts.ANCILLARY_DATASET))
 
-        if get_config('add_source_info_to_xr'):
-            xarr.attrs[protected_attributes.HDF_SRC_FILENAME] = {'filename': str(ds.hdf_filename),
-                                                                 'name': ds.name}
+        if get_config('add_provenance'):
+            prov_data = {
+                'HDF': {
+                    'root': dict(ds.rootparent.attrs.raw),
+                    'group': dict(ds.parent.attrs.raw)
+                }
+            }
+            prov_data['HDF']['filename'] = str(ds.hdf_filename.absolute())
+
+            if protected_attributes.PROVENANCE not in xarr.attrs:
+                xarr.attrs[protected_attributes.PROVENANCE] = prov_data
+            else:
+                xarr.attrs[protected_attributes.PROVENANCE].update(prov_data)
 
         if xarr.dtype.type is np.str_:
             return xarr
