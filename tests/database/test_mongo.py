@@ -45,11 +45,11 @@ if mongo_installed:
             self.assertDictEqual({'a': 4}, make_dict_mongo_compatible({'a': 4}))
             self.assertDictEqual({'a': None}, make_dict_mongo_compatible({'a': None}))
             self.assertDictEqual({'a': {'b': 5.3}}, make_dict_mongo_compatible({'a': {'b': 5.3}}))
-            self.assertDictEqual({'a': {'b': 6.3}}, make_dict_mongo_compatible({'a': {'b': np.float(6.3)}}))
+            self.assertDictEqual({'a': {'b': 6.3}}, make_dict_mongo_compatible({'a': {'b': float(6.3)}}))
 
         def test_type2mongo(self):
             self.assertEqual(None, type2mongo(None))
-            self.assertEqual(4.3, type2mongo(np.float(4.3)))
+            self.assertEqual(4.3, type2mongo(float(4.3)))
             self.assertEqual([2.3], type2mongo(np.array([2.3])))
             self.assertEqual([5, ], type2mongo(np.array([5])))
 

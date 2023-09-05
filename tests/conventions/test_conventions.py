@@ -276,3 +276,10 @@ class TestConventions(unittest.TestCase):
             h5tbx.conventions.standard_attributes.DefaultValue.NONE,
             cv.properties[h5tbx.File]['data_type'].default_value
         )
+
+    def test_default_value(self):
+        from h5rdmtoolbox.conventions.consts import DefaultValue
+        d = DefaultValue('$none')
+        self.assertEqual(d.value, DefaultValue.NONE)
+        d = DefaultValue('$empty')
+        self.assertEqual(d.value, DefaultValue.EMPTY)
