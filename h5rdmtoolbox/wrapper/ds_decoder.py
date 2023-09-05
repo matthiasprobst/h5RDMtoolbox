@@ -4,19 +4,32 @@ import numpy as np
 import xarray as xr
 
 from .. import consts, get_ureg, get_config, protected_attributes
+from ..conventions.utils import equal_base_units
 
 
 def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArray:
     """Assumes that scale and offset are available as attributes. The return value is a new xarray.DataArray,
-    which data has been transformed according to ret = (xarr - offset) * scale
+    which data has been transformed according to ret = (xarr + offset) * scale or ret = xarr * scale + offset
+    depending on the units of xarr and offset.
     """
+
+    def _quanitfy(obj):
+        return obj.pint.quantify(unit_registry=get_ureg())
+
+    def _dequantify(obj):
+        return obj.pint.dequantify(format=get_config()['ureg_format'])
+
     scale = xarr.attrs.pop('scale', None)
     offset = xarr.attrs.pop('offset', None)
 
     if scale and offset:
         with xr.set_options(keep_attrs=True):
-            return ((xarr - offset).pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
-                format=get_config()['ureg_format'])
+            if equal_base_units(xarr.units, offset.units):
+                # f(x) = m*(x - b/m) where offset = b/m
+                return _dequantify((_quanitfy(xarr) + offset) * scale)
+            else:
+                # f(x) = m*x + b
+                return _dequantify(_quanitfy(xarr) * scale + offset)
 
     elif scale:
         with xr.set_options(keep_attrs=True):
@@ -24,8 +37,9 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
                 format=get_config()['ureg_format'])
     elif offset:
         with xr.set_options(keep_attrs=True):
-            return xarr - offset
-
+            if equal_base_units(xarr.units, offset.units):
+                return xarr - offset
+            raise ValueError(f'Units of dataset "{ds.name}" and offset do not match')
     return xarr
 
 

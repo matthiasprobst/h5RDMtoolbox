@@ -438,15 +438,32 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     return cv
 
 
-def from_zenodo(doi, name=None, register: bool = True) -> Convention:
-    """Download a YAML file from a zenodo repository"""
+def from_zenodo(doi, name=None, register: bool = True, force_download:bool=False) -> Convention:
+    """Download a YAML file from a zenodo repository
+
+    Parameters
+    ----------
+    doi: str
+        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8301535 or
+        10.5281/zenodo.8301535 or https://doi.org/10.5281/zenodo.8301535)
+    register: bool
+        Whether to register the convention for direct use. Default is True
+    force_download: bool
+        Whether to force download the file even if it is already cached. Default is False
+
+    Returns
+    -------
+    cv: Convention
+        The convention object
+    """
     # depending on the input, try to convert to a valid DOI:
     doi = zsearch.utils.parse_doi(doi)
     if name is None:
         filename = UserDir['cache'] / f'{doi.replace("/", "_")}'
     else:
         filename = UserDir['cache'] / f'{doi.replace("/", "_")}/{name}'
-    if not filename.exists():
+
+    if not filename.exists() or force_download:
         record = zsearch.search_doi(doi)
         if name is None:
             matches = [file for file in record.files if file['type'] == 'yaml']

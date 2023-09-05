@@ -13,6 +13,18 @@ data_type:
       - analytical
   default_value: $EMPTY
 
+scale:
+  target_method: create_dataset
+  validator: $quantity
+  description: Scale factor for the dataset values.
+  default_value: $NONE
+
+offset:
+  target_method: create_dataset
+  validator: $offset
+  description: The offset of the dataset.
+  default_value: $NONE
+
 units:
   target_method: create_dataset
   validator: $units

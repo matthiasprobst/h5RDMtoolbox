@@ -95,6 +95,7 @@ You may install optional dependencies:
     Conventions <conventions/index>
     Database <database/index>
     HowTo <howto/index>
+    FAQ <faq/index>
     API Reference <api>
     Glossary <glossary/index>
     References <references>

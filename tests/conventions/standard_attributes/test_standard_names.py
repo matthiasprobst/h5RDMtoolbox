@@ -238,12 +238,6 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_yaml(self):
         cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), register=True)
-        cv.add(StandardAttribute(name='scale',
-                                 validator='$pintquantity',
-                                 target_method='create_dataset',
-                                 description='Scale factor for the dataset values.',
-                                 position={'after': 'data'},
-                                 default_value=StandardAttribute.NONE))
         cv.register()
         h5tbx.use(cv)
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
