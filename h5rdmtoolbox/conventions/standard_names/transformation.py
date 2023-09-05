@@ -196,11 +196,11 @@ def _rolling_std_of(match, snt) -> StandardName:
     groups = match.groups()
     assert len(groups) == 1
     sn = snt[groups[0]]
-    new_description = f"Rolling standard_deviation of {sn}. {sn.description}"
+    new_description = f"Rolling standard deviation of {sn}. {sn.description}"
     return StandardName(match.string, sn.units, new_description)
 
 
-rolling_std_of = Transformation(r"^rolling_standard_deviation_of_(.*)$", _rolling_mean_of)
+rolling_std_of = Transformation(r"^rolling_standard_deviation_of_(.*)$", _rolling_std_of)
 
 
 def _rolling_max_of(match, snt) -> StandardName:
