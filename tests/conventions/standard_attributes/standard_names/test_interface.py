@@ -18,6 +18,9 @@ class TestStandardAttributes(unittest.TestCase):
     def tearDown(self) -> None:
         h5tbx.use(None)
 
+    def assertUnitEqual(self, unit1, unit2):
+        return h5tbx.get_ureg().Unit(unit1), h5tbx.get_ureg().Unit(unit2)
+
     def test_interface_without_coords(self):
         with h5tbx.File(contact=h5tbx.__author_orcid__) as h5:
             h5.create_dataset('x', data=[-4, 1, 3, 5, 10],
@@ -45,7 +48,7 @@ class TestStandardAttributes(unittest.TestCase):
                              h5sni.standard_names)
         mag = h5sni.velocity.magnitude()
         self.assertIsInstance(mag, xr.DataArray)
-        self.assertEqual(str(mag.units), 'm/s')
+        self.assertUnitEqual(mag.units, 'm/s')
 
         plt.figure()
         h5sni.velocity.get('x', 'y').plot()
@@ -109,7 +112,7 @@ class TestStandardAttributes(unittest.TestCase):
                              h5sni.standard_names)
         mag = h5sni.velocity.magnitude()
         self.assertIsInstance(mag, xr.DataArray)
-        self.assertEqual(str(mag.units), 'm/s')
+        self.assertUnitEqual(mag.units, 'm/s')
 
         plt.figure()
         h5sni.velocity.get('x', 'y').plot()

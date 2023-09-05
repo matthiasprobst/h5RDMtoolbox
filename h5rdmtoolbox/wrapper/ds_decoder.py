@@ -1,4 +1,6 @@
 """dataset decoders"""
+import json
+
 import h5py
 import numpy as np
 import xarray as xr
@@ -23,6 +25,8 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
     offset = xarr.attrs.pop('offset', None)
 
     if scale and offset:
+        offset = get_ureg().Quantity(offset)
+        scale = get_ureg().Quantity(scale)
         with xr.set_options(keep_attrs=True):
             if equal_base_units(xarr.units, offset.units):
                 # f(x) = m*(x - b/m) where offset = b/m
@@ -32,10 +36,12 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
                 return _dequantify(_quanitfy(xarr) * scale + offset)
 
     elif scale:
+        scale = get_ureg().Quantity(scale)
         with xr.set_options(keep_attrs=True):
             return (xarr.pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
                 format=get_config()['ureg_format'])
     elif offset:
+        offset = get_ureg().Quantity(offset)
         with xr.set_options(keep_attrs=True):
             if equal_base_units(xarr.units, offset.units):
                 return xarr - offset
@@ -88,8 +94,6 @@ def dataset_value_decoder(func):
 
             if protected_attributes.PROVENANCE not in xarr.attrs:
                 xarr.attrs[protected_attributes.PROVENANCE] = prov_data
-            else:
-                xarr.attrs[protected_attributes.PROVENANCE].update(prov_data)
 
         if xarr.dtype.type is np.str_:
             return xarr

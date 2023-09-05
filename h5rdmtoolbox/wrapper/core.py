@@ -1601,9 +1601,11 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             args = tuple(args)
 
         arr = super().__getitem__(args, new_dtype=new_dtype)
-        attrs = pop_hdf_attributes(self.attrs)
 
-        if 'DIMENSION_LIST' in self.attrs:
+        ds_attrs = self.attrs
+        attrs = pop_hdf_attributes(ds_attrs)
+
+        if 'DIMENSION_LIST' in ds_attrs:
             # there are coordinates to attach...
 
             myargs = [slice(None) for _ in range(self.ndim)]
@@ -1624,30 +1626,31 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                         dim_ds_data = dim_ds[()]
                     else:
                         dim_ds_data = dim_ds[arg]
+                    dim_ds_attrs = pop_hdf_attributes(dim_ds.attrs)
                     if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
                             coords[coord_name] = xr.DataArray(name=coord_name,
                                                               dims=(
                                                               ), data=dim_ds_data,
-                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+                                                              attrs=dim_ds_attrs)
                         else:
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
                                                               data=[dim_ds[()], ],
-                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+                                                              attrs=dim_ds_attrs)
                     else:
                         if isinstance(dim_ds_data, np.ndarray):
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=dim_name,
                                                               data=dim_ds_data,
-                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+                                                              attrs=dim_ds_attrs)
                         else:
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=(),
                                                               data=dim_ds_data,
-                                                              attrs=pop_hdf_attributes(dim_ds.attrs))
+                                                              attrs=dim_ds_attrs)
 
             used_dims = [dim_name for arg, dim_name in zip(
                 myargs, dims_names) if isinstance(arg, (slice, np.ndarray))]
 
-            COORDINATES = self.attrs.get(protected_attributes.COORDINATES)
+            COORDINATES = ds_attrs.get(protected_attributes.COORDINATES)
             if COORDINATES is not None:
                 if isinstance(COORDINATES, str):
                     COORDINATES = [COORDINATES, ]
@@ -1666,7 +1669,8 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             return xr.DataArray(name=Path(self.name).stem,
                                 data=arr,
                                 dims=used_dims,
-                                coords=coords, attrs=attrs)
+                                coords=coords,
+                                attrs=attrs)
         # check if arr is string
         if arr.dtype.kind == 'S':
             # decode string array

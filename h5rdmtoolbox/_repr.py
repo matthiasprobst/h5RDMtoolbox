@@ -199,8 +199,8 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         """string representation of a 0D dataset"""
         value = h5obj.values[()]
-        if isinstance(value, (float, np.float)):
-            value = f'{float(value):f}'
+        if isinstance(value, float):
+            value = f'{value:f}'
         elif isinstance(value, (int, np.integer)):
             value = f'{int(value):d}'
         else:

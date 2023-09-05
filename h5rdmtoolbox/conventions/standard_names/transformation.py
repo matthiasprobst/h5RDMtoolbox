@@ -105,6 +105,8 @@ def describe_xarray(da):
     coord_bounds = {c: [da[c][0].to_dict(), da[c][-1].to_dict()] for c in da.coords}
     attrs = da.attrs.copy()
     attrs.pop('PROVENANCE')
+    if 'units' in attrs:
+        attrs['units'] = str(attrs['units'])
     return dict(dims_shape=dims_shape, coord_bounds=coord_bounds, attrs=attrs)
 
 
@@ -123,7 +125,7 @@ def _mfunc_arithmetic_mean_of(da, snt, dim=None):
         # tracking provenance:
         prov = new_da.attrs.get(PROVENANCE, {}).copy()
 
-        transformation_history = prov.get('SNT_TRANSFORMATION_HISTORY', [])
+        transformation_history = prov.get('processing_history', [])
 
         if dim is None:
             dims = da.dims
@@ -145,7 +147,7 @@ def _mfunc_arithmetic_mean_of(da, snt, dim=None):
         # snt_transformation['history'] = transformation_history
 
         # update the SNT:
-        prov['SNT_TRANSFORMATION_HISTORY'] = transformation_history
+        prov['processing_history'] = transformation_history
         new_da.attrs[PROVENANCE] = prov
 
     assert da.attrs != new_da.attrs

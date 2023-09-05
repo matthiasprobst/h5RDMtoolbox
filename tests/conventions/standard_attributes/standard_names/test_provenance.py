@@ -1,79 +1,38 @@
+import numpy as np
 import unittest
-import xarray as xr
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.protected_attributes import PROVENANCE
-
-
-class MFuncCaller:
-
-    def __init__(self, da, snt, mfunc):
-        self._mfunc = mfunc
-        self._snt = snt
-        self._da = da
-
-    def __call__(self, *args, **kwargs):
-        return self._mfunc(self._da, self._snt)
-
-
-@xr.register_dataarray_accessor("snt")
-class StandardNameTableAccessor:
-
-    def __init__(self, da):
-        self._da = da
-
-        # get snt:
-        self._snt = None
-
-        prov = da.attrs.get(PROVENANCE, None)
-        if prov:
-            try:
-                filename = prov['HDF']['filename']
-            except KeyError:
-                filename = None
-            if filename:
-                with h5tbx.File(filename) as h5:
-                    self._snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(
-                        h5.attrs.raw['standard_name_table'])
-
-        if self._snt:
-            for t in self._snt.transformations:
-                if t.mfunc:
-                    setattr(self, t.name, MFuncCaller(self._da, self._snt, t.mfunc))
-
-    def __call__(self):
-        return self._snt
-
-    def get_provenance(self):
-        attrs = self._da.attrs
-        if PROVENANCE not in attrs:
-            raise KeyError(f'key "{PROVENANCE}" not in attributes.')
-        coord_from = xr.DataArray.from_dict(attrs[PROVENANCE]['arithmetic_mean_of'][0])
-        coord_to = xr.DataArray.from_dict(attrs[PROVENANCE]['arithmetic_mean_of'][1])
-        return coord_from, coord_to
+# noinspection PyUnresolvedReferences
+from h5rdmtoolbox.conventions.standard_names import accessor
 
 
 class TestProvenance(unittest.TestCase):
 
     def test_provenance(self):
-        zenodo_cv = h5tbx.conventions.from_zenodo('https://zenodo.org/record/8301535')
-        sn_cv = zenodo_cv.pop('contact', 'comment', 'references', 'data_type')
-        sn_cv.name = 'standard name convention'
-        sn_cv.register()
+        cv = h5tbx.conventions.from_zenodo('https://zenodo.org/record/8301535')
 
-        h5tbx.use(sn_cv)
+        h5tbx.use(cv)
 
-        with h5tbx.File() as h5:
-            h5.create_dataset('u', data=[1, 2, 3, 4], standard_name='x_velocity', units='m/s')
+        with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+            h5.create_dataset('time', data=np.linspace(0, 5, 5), standard_name='time', units='s', make_scale=True)
+            h5.create_dataset('y', data=np.linspace(0, 10, 10), standard_name='y_coordinate', units='m',
+                              make_scale=True)
+            h5.create_dataset('x', data=np.linspace(0, 7, 7), standard_name='x_coordinate', units='m', make_scale=True)
+            h5.create_dataset('u', data=np.random.rand(5, 10, 7), standard_name='x_velocity', units='m/s',
+                              attach_scale=('time', 'y', 'x'))
             u = h5.u[:]
 
-        u_mean = u.snt.arithmetic_mean_of()
-        self.assertTrue('PROVENANCE' in u_mean.attrs)
-        self.assertIn('arithmetic_mean_of', u_mean.attrs['PROVENANCE']['SNT_TRANSFORMATION_HISTORY'])
+        u_mean = u.snt[0:2, ...].snt.arithmetic_mean_of(dim='time')
 
-        with h5tbx.File() as h5:
+        # u_mean = u.snt.arithmetic_mean_of()
+        self.assertTrue('PROVENANCE' in u_mean.attrs)
+        self.assertIn('__getitem__', u_mean.attrs['PROVENANCE']['processing_history'][0]['name'])
+        self.assertIn('arithmetic_mean_of', u_mean.attrs['PROVENANCE']['processing_history'][1]['name'])
+
+        with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
             h5.create_dataset('u_mean', data=u_mean)
             um = h5['u_mean'][()]
 
         self.assertTrue('PROVENANCE' in um.attrs)
-        self.assertIn('arithmetic_mean_of', um.attrs['PROVENANCE']['SNT_TRANSFORMATION_HISTORY'])
+        self.assertIn('__getitem__', u_mean.attrs['PROVENANCE']['processing_history'][0]['name'])
+        self.assertIn('arithmetic_mean_of', um.attrs['PROVENANCE']['processing_history'][1]['name'])

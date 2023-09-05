@@ -5,6 +5,7 @@ import h5py
 import hashlib
 import json
 import logging
+import numpy as np
 import pathlib
 import pint
 import re
@@ -232,6 +233,19 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     return hdf_filepath
 
 
+def try_making_serializable(d: Dict):
+    """Tries to make a dictionary serializable by converting numpy arrays to lists"""
+    if isinstance(d, dict):
+        for key, value in d.items():
+            d[key] = try_making_serializable(value)
+    elif isinstance(d, list):
+        for i in range(len(d)):
+            d[i] = try_making_serializable(d[i])
+    elif isinstance(d, np.ndarray):
+        d = d.tolist()
+    return d
+
+
 def create_special_attribute(h5obj: h5py.AttributeManager,
                              name: str,
                              value):
@@ -241,11 +255,11 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         for k, v in value.items():
             if isinstance(v, (h5py.Dataset, h5py.Group)):
                 value[k] = v.name
-        _value = json.dumps(value)
+        _value = json.dumps(try_making_serializable(value))
     elif isinstance(value, (h5py.Dataset, h5py.Group)):
         _value = value.name
     elif isinstance(value, str):
-        _value = str(value)
+        _value = value
     elif isinstance(value, pint.Quantity):
         _value = str(value)
     elif isinstance(value, pathlib.Path):
