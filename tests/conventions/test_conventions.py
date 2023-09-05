@@ -253,9 +253,17 @@ class TestConventions(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
+            # we can download from zenodo by passing the short or full DOI or the URL:
+
+            dois = ('8301535', '10.5281/zenodo.8301535', 'https://zenodo.org/record/8301535',
+                    'https://doi.org/10.5281/zenodo.8301535')
             h5tbx.UserDir.clear_cache()
             with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                 cv = h5tbx.conventions.from_zenodo(doi=8266929)
+
+            for doi in dois:
+                cv = h5tbx.conventions.from_zenodo(doi=doi)
+                self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
 
         cv = h5tbx.conventions.from_zenodo(doi=8301535)
         self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')

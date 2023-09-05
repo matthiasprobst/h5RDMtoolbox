@@ -16,9 +16,6 @@ scale:
 
 offset:
   target_method: create_dataset
-  validator:
-    $type:
-      - int
-      - float
+  validator: $offset
   description: The offset of the dataset.
   default_value: $NONE

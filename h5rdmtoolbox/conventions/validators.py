@@ -173,6 +173,45 @@ class PintQuantityValidator(StandardAttributeValidator):
         return get_ureg().Quantity(value)
 
 
+class OffsetValidator(PintQuantityValidator):
+    keyword = '$offset'
+    deprecated_keywords = ()
+
+    def __call__(self, offset: str, parent=None, attrs=None) -> str:
+        qoffset = get_ureg().Quantity(super().__call__(offset, parent, attrs))
+
+        if attrs:
+            scale = attrs.get('scale', parent.attrs.get('scale', None))
+            ds_units = attrs.get('units', parent.attrs.get('units', None))
+        else:
+            scale = parent.attrs.get('scale', None)
+            ds_units = parent.attrs.get('units', None)
+
+        if scale is not None:
+            scale = get_ureg().Quantity(scale)
+
+        if ds_units is None:
+            if scale is None:
+                # dataset has no units and no scale given, thus offset must be dimensionless
+                if qoffset.dimensionality != pint.dimensionless.dimensionality:
+                    raise ValueError(f'Offset must be dimensionless if no units are given. '
+                                     f'Got: {qoffset.dimensionality}')
+            else:
+                # scale is given but dataset is dimensionless, scale and offset must have same units
+                if qoffset.dimensionality != scale.dimensionality:
+                    raise ValueError(f'Offset and scale must have same units if dataset is dimensionless. '
+                                     f'Got: {qoffset.dimensionality} and {scale.dimensionality}')
+        else:
+            ds_units = get_ureg().Unit(ds_units)
+            # dataset has units, offset must either have units of dataset or product of scale and dataset
+            from .utils import equal_base_units
+            resulting_units = get_ureg().Unit(f'{ds_units} {scale.units}')
+            if not equal_base_units(qoffset.units, ds_units) and not equal_base_units(qoffset.units, resulting_units):
+                raise ValueError(f'Offset must have same units as dataset or product of scale and dataset. '
+                                 f'Got: {qoffset.units} and {ds_units}')
+        return str(qoffset)
+
+
 class PintUnitsValidator(StandardAttributeValidator):
     keyword = '$units'
     deprecated_keywords = ('$pintunits', '$pintunit', '$unit',)

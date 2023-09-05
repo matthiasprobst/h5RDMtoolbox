@@ -76,7 +76,7 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertIsInstance(c, h5tbx.database.lazy.LDataset)
         self.assertEqual(h5sni.coordinate.x, h5sni.coordinate[0])
         self.assertEqual(h5sni.coordinate.y, h5sni.coordinate[1])
-        self.assertEqual((5, 3), h5sni.coordinate.shape)
+        self.assertDictEqual({'x': 5, 'y': 3}, h5sni.coordinate.shape)
         self.assertEqual(2, h5sni.velocity.ndim)
         self.assertEqual(h5.hdf_filename, h5sni.filename)
 

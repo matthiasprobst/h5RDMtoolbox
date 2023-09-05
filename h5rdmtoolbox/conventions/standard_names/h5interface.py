@@ -1,7 +1,7 @@
 import numpy as np
 import pathlib
 import xarray as xr
-from typing import Tuple
+from typing import Tuple, Dict
 
 import h5rdmtoolbox as h5tbx
 
@@ -35,9 +35,9 @@ class StandardCoordinate:
         return f'<{self.__class__.__name__} "{self.name}" n={len(self.components)} components: {comps}>'
 
     @property
-    def shape(self) -> Tuple:
+    def shape(self) -> Dict:
         """Return the shape of the coordinate"""
-        return tuple([c.shape[0] for c in self])
+        return {c.basename: c.shape[0] for c in self}
 
 
 class StandardTensor(StandardCoordinate):
