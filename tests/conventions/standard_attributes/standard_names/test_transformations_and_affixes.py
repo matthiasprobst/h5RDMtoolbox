@@ -251,3 +251,18 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             self.snt[f'{sn}_in_invalid_frame']
         with self.assertRaises(errors.StandardNameError):
             self.snt[f'{sn}_in_invalid_frame']
+
+    def test_rolling_maximum_of(self):
+        for sn in self.snt.standard_names:
+            self.assertEqual(f'Rolling maximum of {sn}. {self.snt[sn].description}',
+                             self.snt[f"rolling_maximum_of_{sn}"].description)
+
+    def test_rolling_mean_of(self):
+        for sn in self.snt.standard_names:
+            self.assertEqual(f'Rolling mean of {sn}. {self.snt[sn].description}',
+                             self.snt[f"rolling_mean_of_{sn}"].description)
+
+    def test_rolling_std_of(self):
+        for sn in self.snt.standard_names:
+            self.assertEqual(f'Rolling standard deviation of {sn}. {self.snt[sn].description}',
+                             self.snt[f"rolling_standard_deviation_of_{sn}"].description)

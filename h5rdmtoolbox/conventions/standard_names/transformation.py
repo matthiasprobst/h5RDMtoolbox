@@ -181,6 +181,39 @@ def _square_of(match, snt) -> StandardName:
 square_of = Transformation(r"^square_of_(.*)$", _square_of)
 
 
+def _rolling_mean_of(match, snt) -> StandardName:
+    groups = match.groups()
+    assert len(groups) == 1
+    sn = snt[groups[0]]
+    new_description = f"Rolling mean of {sn}. {sn.description}"
+    return StandardName(match.string, sn.units, new_description)
+
+
+rolling_mean_of = Transformation(r"^rolling_mean_of_(.*)$", _rolling_mean_of)
+
+
+def _rolling_std_of(match, snt) -> StandardName:
+    groups = match.groups()
+    assert len(groups) == 1
+    sn = snt[groups[0]]
+    new_description = f"Rolling standard_deviation of {sn}. {sn.description}"
+    return StandardName(match.string, sn.units, new_description)
+
+
+rolling_std_of = Transformation(r"^rolling_standard_deviation_of_(.*)$", _rolling_mean_of)
+
+
+def _rolling_max_of(match, snt) -> StandardName:
+    groups = match.groups()
+    assert len(groups) == 1
+    sn = snt[groups[0]]
+    new_description = f"Rolling maximum of {sn}. {sn.description}"
+    return StandardName(match.string, sn.units, new_description)
+
+
+rolling_max_of = Transformation(r"^rolling_maximum_of_(.*)$", _rolling_max_of)
+
+
 def _derivative_of_X_wrt_to_Y(match, snt) -> StandardName:
     """Check if a standard name is a derivative of X wrt to Y"""
 

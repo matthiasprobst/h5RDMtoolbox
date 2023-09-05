@@ -143,6 +143,9 @@ class StandardNameTable:
                                arithmetic_mean_of,
                                standard_deviation_of,
                                square_of,
+                               rolling_mean_of,
+                               rolling_max_of,
+                               rolling_std_of,
                                product_of_X_and_Y,
                                ratio_of_X_and_Y,):
             self.add_transformation(transformation)

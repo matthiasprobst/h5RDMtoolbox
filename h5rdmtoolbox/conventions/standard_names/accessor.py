@@ -1,6 +1,5 @@
-from collections import OrderedDict
-
 import xarray as xr
+from typing import Dict
 from xarray.core.rolling import DataArrayRolling
 
 import h5rdmtoolbox as h5tbx
@@ -10,28 +9,64 @@ STANDARD_NAME_TRANSFORMATION_ATTR = 'STANDARD_NAME_TRANSFORMATION'
 
 
 class SNTArrayRolling(DataArrayRolling):
+    """subclass of xarray.core.rolling.DataArrayRolling that adds provenance information"""
+
+    def _add_processing_history(self, obj, proc_hist: Dict):
+        """helper function that updates the attributes with important provenance information"""
+        prov = obj.attrs.get(PROVENANCE, {}).copy()
+        pchist = prov.get('processing_history', None)
+        if pchist is None:
+            pchist = []
+
+        pchist.append(proc_hist)
+        prov['processing_history'] = pchist
+        obj.attrs[PROVENANCE] = prov
+        return obj
 
     def mean(self, keep_attrs=True, **kwargs):
+        parent_info = describe_xarray(self.obj)
+
         new_obj = super().mean(keep_attrs=keep_attrs, **kwargs)
         new_obj.attrs['standard_name'] = f'rolling_mean_of_{new_obj.attrs["standard_name"]}'
-        sm = OrderedDict(new_obj.attrs.get(STANDARD_NAME_TRANSFORMATION_ATTR, {}))
-        sm['rolling_mean'] = {'dim': self.dim, 'window': self.window,
-                              'center': self.center}
-        sm.move_to_end('rolling_mean', False)
-        new_obj.attrs[STANDARD_NAME_TRANSFORMATION_ATTR] = sm
-        return new_obj
+
+        this_pc = {'parent': parent_info,
+                   'name': 'rolling_mean_of',
+                   'window': self.window,
+                   'center': self.center}
+
+        return self._add_processing_history(new_obj, this_pc)
+
+    def std(self, keep_attrs=True, **kwargs):
+        parent_info = describe_xarray(self.obj)
+
+        new_obj = super().mean(keep_attrs=keep_attrs, **kwargs)
+        new_obj.attrs['standard_name'] = f'rolling_standard_deviation_of_{new_obj.attrs["standard_name"]}'
+
+        this_pc = {'parent': parent_info,
+                   'name': 'rolling_std_of',
+                   'window': self.window,
+                   'center': self.center}
+
+        return self._add_processing_history(new_obj, this_pc)
 
     def max(self):
+        parent_info = describe_xarray(self.obj)
+
         new_obj = super().max()
-        new_obj.attrs['standard_name'] = f'maximum_of_{new_obj.attrs["standard_name"]}'
-        return new_obj
+        new_obj.attrs['standard_name'] = f'rolling_maximum_of_{new_obj.attrs["standard_name"]}'
+
+        this_pc = {'parent': parent_info,
+                   'name': 'rolling_max_of',
+                   'window': self.window,
+                   'center': self.center}
+        return self._add_processing_history(new_obj, this_pc)
 
 
-class PropertyDict:
-
-    def __init__(self, d):
-        for k, v in d.items():
-            setattr(self, k, v)
+# class PropertyDict:
+#
+#     def __init__(self, d):
+#         for k, v in d.items():
+#             setattr(self, k, v)
 
 
 class MFuncCaller:
@@ -88,39 +123,8 @@ class StandardNameTableAccessor:
         new_da.attrs[PROVENANCE]['processing_history'] = history
         return new_da
 
-    def max(self):
-        new_obj = self._da.max(keep_attrs=True)
-        new_obj.attrs['standard_name'] = f'maximum_of_{new_obj.attrs["standard_name"]}'
-        return new_obj
-
-    # def mean(self):
-    #     with xr.set_options(keep_attrs=True):
-    #         new_obj = self._da.mean()
-    #     new_obj.attrs['standard_name'] = f'arithmetic_mean_of_{new_obj.attrs["standard_name"]}'
-    #     coord_data = self._da.coords[self._da.dims[0]]
-    #     sm = OrderedDict(new_obj.attrs.get(STANDARD_NAME_TRANSFORMATION_ATTR, {}))
-    #     sm['arithmetic_mean_of'] = [coord_data[0].to_dict(), coord_data[-1].to_dict()]
-    #     sm.move_to_end('arithmetic_mean_of', False)
-    #     new_obj.attrs[STANDARD_NAME_TRANSFORMATION_ATTR] = sm
-    #     return new_obj
-
-    def rolling(self, *args, **kwargs):
-        return SNTArrayRolling(self._da, *args, **kwargs)
-
-    @property
-    def method(self):
-        STANDARD_NAME_TRANSFORMATION = self._da.attrs.get(STANDARD_NAME_TRANSFORMATION_ATTR, None)
-        if not STANDARD_NAME_TRANSFORMATION:
-            return None
-        return PropertyDict(
-            {k: [xr.DataArray.from_dict(vv) for vv in v] for k, v in STANDARD_NAME_TRANSFORMATION.items()})
-
-    def get_provenance(self):
-        return self._da.attrs.get(PROVENANCE, None)
-        prov = self._da.attrs.get(PROVENANCE, None)
-        if prov:
-            for k, v in prov.get('SNT', {}).items():
-                print(k, v)
-                coord_from = xr.DataArray.from_dict(v['arithmetic_mean_of'][0])
-                coord_to = xr.DataArray.from_dict(v['arithmetic_mean_of'][1])
-        return coord_from, coord_to
+    def rolling(self, dim=None, min_periods=None, center: bool = False, **window_kwargs):
+        """see xarray.core.dataarray.DataArray.rolling"""
+        from xarray.core.utils import either_dict_or_kwargs
+        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
+        return SNTArrayRolling(self._da, dim, min_periods=min_periods, center=center)
