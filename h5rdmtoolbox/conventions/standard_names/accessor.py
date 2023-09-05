@@ -72,16 +72,16 @@ class StandardNameTableAccessor:
         new_obj.attrs['standard_name'] = f'maximum_of_{new_obj.attrs["standard_name"]}'
         return new_obj
 
-    def mean(self):
-        with xr.set_options(keep_attrs=True):
-            new_obj = self._da.mean()
-        new_obj.attrs['standard_name'] = f'arithmetic_mean_of_{new_obj.attrs["standard_name"]}'
-        coord_data = self._da.coords[self._da.dims[0]]
-        sm = OrderedDict(new_obj.attrs.get(STANDARD_NAME_TRANSFORMATION_ATTR, {}))
-        sm['arithmetic_mean_of'] = [coord_data[0].to_dict(), coord_data[-1].to_dict()]
-        sm.move_to_end('arithmetic_mean_of', False)
-        new_obj.attrs[STANDARD_NAME_TRANSFORMATION_ATTR] = sm
-        return new_obj
+    # def mean(self):
+    #     with xr.set_options(keep_attrs=True):
+    #         new_obj = self._da.mean()
+    #     new_obj.attrs['standard_name'] = f'arithmetic_mean_of_{new_obj.attrs["standard_name"]}'
+    #     coord_data = self._da.coords[self._da.dims[0]]
+    #     sm = OrderedDict(new_obj.attrs.get(STANDARD_NAME_TRANSFORMATION_ATTR, {}))
+    #     sm['arithmetic_mean_of'] = [coord_data[0].to_dict(), coord_data[-1].to_dict()]
+    #     sm.move_to_end('arithmetic_mean_of', False)
+    #     new_obj.attrs[STANDARD_NAME_TRANSFORMATION_ATTR] = sm
+    #     return new_obj
 
     def rolling(self, *args, **kwargs):
         return SNTArrayRolling(self._da, *args, **kwargs)
@@ -95,6 +95,7 @@ class StandardNameTableAccessor:
             {k: [xr.DataArray.from_dict(vv) for vv in v] for k, v in STANDARD_NAME_TRANSFORMATION.items()})
 
     def get_provenance(self):
+        return self._da.attrs.get(PROVENANCE, None)
         prov = self._da.attrs.get(PROVENANCE, None)
         if prov:
             for k, v in prov.get('SNT', {}).items():

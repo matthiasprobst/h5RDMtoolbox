@@ -1,8 +1,6 @@
 """Transformation module"""
-from collections import OrderedDict
 
 import inspect
-import numpy as np
 import re
 import xarray as xr
 from typing import Callable
@@ -102,9 +100,20 @@ def _arithmetic_mean_of(match, snt) -> StandardName:
     return StandardName(match.string, sn.units, new_description)
 
 
+def describe_xarray(da):
+    dims_shape = {d: len(da[d]) for d in da.dims}
+    coord_bounds = {c: [da[c][0].to_dict(), da[c][-1].to_dict()] for c in da.coords}
+    attrs = da.attrs.copy()
+    attrs.pop('PROVENANCE')
+    return dict(dims_shape=dims_shape, coord_bounds=coord_bounds, attrs=attrs)
+
+
 def _mfunc_arithmetic_mean_of(da, snt, dim=None):
     with xr.set_options(keep_attrs=True):
+        parent_info = describe_xarray(da)
+
         new_da = da.mean(dim=dim)
+
         new_sn_name = f'arithmetic_mean_of_{da.standard_name}'
         # check if it exists by getting the SN from the SNT:
         new_sn = snt[new_sn_name]
@@ -112,14 +121,10 @@ def _mfunc_arithmetic_mean_of(da, snt, dim=None):
         new_da.attrs['standard_name'] = new_sn_name
 
         # tracking provenance:
-        coord_data = da.coords[da.dims[0]]
-        prov = new_da.attrs.get(PROVENANCE, {})
+        prov = new_da.attrs.get(PROVENANCE, {}).copy()
 
-        method_prov = OrderedDict(prov.get('SNT', {}))
-        # if 'arithmetic_mean_of' in method_prov:
-        #     # TODO: the following error might not be true for ND-arrays. e.g. first call mean over x, then over y...
-        #     # leave it for now...
-        #     raise KeyError('There is provenance data about "arithmetic_mean_of". This function cannot be called again.')
+        transformation_history = prov.get('SNT_TRANSFORMATION_HISTORY', [])
+
         if dim is None:
             dims = da.dims
         else:
@@ -127,18 +132,24 @@ def _mfunc_arithmetic_mean_of(da, snt, dim=None):
                 dims = [dim]
             else:
                 dims = dim
-        proc = {}
+        transformation_info = {'parent': parent_info, 'name': 'arithmetic_mean_of', 'bounds': {}, 'len': {}}
         for d in dims:
-            print(d)
             coord = da.coords.get(d, None)
             if coord is not None:
-                proc[d] = [coord[0].to_dict(), coord[-1].to_dict()]
-        method_prov['arithmetic_mean_of'] = proc
-        method_prov.move_to_end('arithmetic_mean_of', False)
-        prov['SNT'] = dict(method_prov)
+                transformation_info['bounds'][d] = [coord[0].to_dict(), coord[-1].to_dict()]
+                transformation_info['len'][d] = len(coord)
+
+        transformation_history.append(transformation_info)
+
+        # # update the SNT_TRANSFORMATION:
+        # snt_transformation['history'] = transformation_history
+
+        # update the SNT:
+        prov['SNT_TRANSFORMATION_HISTORY'] = transformation_history
         new_da.attrs[PROVENANCE] = prov
 
-        return new_da
+    assert da.attrs != new_da.attrs
+    return new_da
 
 
 arithmetic_mean_of = Transformation(r"arithmetic_mean_of_(.*)?",

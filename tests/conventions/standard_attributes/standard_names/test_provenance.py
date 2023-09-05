@@ -69,11 +69,11 @@ class TestProvenance(unittest.TestCase):
 
         u_mean = u.snt.arithmetic_mean_of()
         self.assertTrue('PROVENANCE' in u_mean.attrs)
-        self.assertIn('arithmetic_mean_of', u_mean.attrs['PROVENANCE']['SNT'])
+        self.assertIn('arithmetic_mean_of', u_mean.attrs['PROVENANCE']['SNT_TRANSFORMATION_HISTORY'])
 
         with h5tbx.File() as h5:
             h5.create_dataset('u_mean', data=u_mean)
             um = h5['u_mean'][()]
 
         self.assertTrue('PROVENANCE' in um.attrs)
-        self.assertIn('arithmetic_mean_of', um.attrs['PROVENANCE']['SNT'])
+        self.assertIn('arithmetic_mean_of', um.attrs['PROVENANCE']['SNT_TRANSFORMATION_HISTORY'])
