@@ -44,7 +44,7 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
         offset = get_ureg().Quantity(offset)
         with xr.set_options(keep_attrs=True):
             if equal_base_units(xarr.units, offset.units):
-                return xarr - offset
+                return _dequantify(_quanitfy(xarr) - offset)
             raise ValueError(f'Units of dataset "{ds.name}" and offset do not match')
     return xarr
 

@@ -125,7 +125,7 @@ class _HDF5StructureRepr:
 
     def __init__(self, ignore_attrs=None):
         self.base_intent = '  '
-        self.max_attr_length = None
+        self.max_attr_length = 100
         self.collapsed = True
         self._obj_cfg = {}
         if ignore_attrs is None:
@@ -423,11 +423,14 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             else:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
-                        _value = f'{_value_str[0:self.max_attr_length]}...'
+                        _value_str = f'{_value_str[0:self.max_attr_length-3]}...'
                     else:
-                        _value = h5obj
+                        _value_str = h5obj
                 else:
-                    _value = h5obj
+                    _value_str = h5obj
+            #
+            # if len(_value_str) > self.max_attr_length:
+            #     _value_str = f'{_value_str[0:self.max_attr_length-1]}...'
             return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
         if not isinstance(h5obj, ndarray):
@@ -437,6 +440,13 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 _value_str = str(h5obj)
                 if _value_str[0] == '<' and _value_str[-1] == '>':
                     _value_str = _value_str[1:-1]
+                if self.max_attr_length:
+                    if len(_value_str) > self.max_attr_length:
+                        _value_str = f'{_value_str[0:self.max_attr_length-3]}...'
+                    else:
+                        _value_str = h5obj
+                else:
+                    _value_str = h5obj
 
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 

@@ -103,11 +103,26 @@ class TestFile(unittest.TestCase):
                                    scale='0.2 Pa/V',
                                    long_name='pressure')
 
+            arr = ds[()]
+            self.assertEqual(arr.units, 'Pa')
+            self.assertEqual(arr.values, (4.3+0.1)*0.2)
+
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 ds.offset = 0.2
 
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 ds.attrs['offset'] = 0.2
+
+            ds = h5.create_dataset('pressure2',
+                                   data=4.3,
+                                   units='V',
+                                   offset='0.1 Pa',
+                                   scale='0.2 Pa/V',
+                                   long_name='pressure')
+
+            arr = ds[()]
+            self.assertEqual(arr.units, 'Pa')
+            self.assertEqual(arr.values, 4.3*0.2+0.1)
 
     def test_dumps(self):
         with h5tbx.File() as h5:

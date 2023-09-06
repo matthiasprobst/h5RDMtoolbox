@@ -205,7 +205,10 @@ class OffsetValidator(PintQuantityValidator):
             ds_units = get_ureg().Unit(ds_units)
             # dataset has units, offset must either have units of dataset or product of scale and dataset
             from .utils import equal_base_units
-            resulting_units = get_ureg().Unit(f'{ds_units} {scale.units}')
+            if scale is None:
+                resulting_units = ds_units
+            else:
+                resulting_units = get_ureg().Unit(f'{ds_units} {scale.units}')
             if not equal_base_units(qoffset.units, ds_units) and not equal_base_units(qoffset.units, resulting_units):
                 raise ValueError(f'Offset must have same units as dataset or product of scale and dataset. '
                                  f'Got: {qoffset.units} and {ds_units}')
