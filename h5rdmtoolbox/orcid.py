@@ -90,7 +90,7 @@ class ORCID(str):
             if len(orcid) == 1:
                 orcid = orcid[0]
             else:
-                return ORCIDS([ORCID(o) for o in orcid])
+                return ORCIDS(orcid)
 
         if not orcid.startswith('https://orcid.org/'):
             orcid = f'https://orcid.org/{orcid}'
@@ -126,8 +126,8 @@ class ORCID(str):
 class ORCIDS:
     """Multiple ORCIDS"""
 
-    def __init__(self, orcids: ORCID):
-        self._orcids = orcids
+    def __init__(self, orcids: List[ORCID]):
+        self._orcids = [ORCID(o) for o in orcids]
 
     def __getitem__(self, item):
         return self._orcids[0]

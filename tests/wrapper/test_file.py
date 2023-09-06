@@ -80,7 +80,7 @@ class TestFile(unittest.TestCase):
                 self.assertEqual(ds.offset, pint.Quantity(0.1, 'V'))
                 arr = ds[()]
                 self.assertEqual(arr.units, 'Pa')
-                self.assertEqual(arr.values, (4.3+0.1)*0.2)
+                self.assertEqual(arr.values, (4.3 + 0.1) * 0.2)
 
     def test_offset(self):
         from h5rdmtoolbox import tutorial
@@ -105,7 +105,7 @@ class TestFile(unittest.TestCase):
 
             arr = ds[()]
             self.assertEqual(arr.units, 'Pa')
-            self.assertEqual(arr.values, (4.3+0.1)*0.2)
+            self.assertEqual(arr.values, (4.3 + 0.1) * 0.2)
 
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 ds.offset = 0.2
@@ -122,7 +122,23 @@ class TestFile(unittest.TestCase):
 
             arr = ds[()]
             self.assertEqual(arr.units, 'Pa')
-            self.assertEqual(arr.values, 4.3*0.2+0.1)
+            self.assertEqual(arr.values, 4.3 * 0.2 + 0.1)
+
+            with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                h5.create_dataset('pressure3',
+                                  data=4.3,
+                                  units='V',
+                                  offset='0.1 Pa',
+                                  long_name='pressure')
+            ds = h5.create_dataset('pressure3',
+                                   data=4.3,
+                                   units='Pa',
+                                   offset='0.1 Pa',
+                                   long_name='pressure')
+
+            arr = ds[()]
+            self.assertEqual(arr.units, 'Pa')
+            self.assertEqual(arr.values, 4.3 + 0.1)
 
     def test_dumps(self):
         with h5tbx.File() as h5:
@@ -281,7 +297,6 @@ class TestFile(unittest.TestCase):
             self.assertTrue('one' in h5.attrs)
             h5.attrs['two'] = 2
             self.assertTrue('two' in h5.attrs)
-
 
         with File(mode='w') as h5:
             pass

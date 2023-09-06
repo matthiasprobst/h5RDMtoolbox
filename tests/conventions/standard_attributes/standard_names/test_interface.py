@@ -40,12 +40,12 @@ class TestStandardAttributes(unittest.TestCase):
                               units='1/s')
 
         h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
-        self.assertDictEqual({'x_velocity': '/',
-                              'y_velocity': '/',
-                              'x_coordinate': '/',
-                              'y_coordinate': '/',
-                              'derivative_of_x_velocity_wrt_x_coordinate': '/'},
-                             h5sni.standard_names)
+        self.assertListEqual(sorted(['x_velocity',
+                                     'y_velocity',
+                                     'x_coordinate',
+                                     'y_coordinate',
+                                     'derivative_of_x_velocity_wrt_x_coordinate']),
+                             sorted(h5sni.standard_names))
         mag = h5sni.velocity.magnitude()
         self.assertIsInstance(mag, xr.DataArray)
         self.assertUnitEqual(mag.units, 'm/s')
@@ -71,6 +71,10 @@ class TestStandardAttributes(unittest.TestCase):
                               units='m/s',
                               attach_scales=('y', 'x'))
             h5.create_dataset('v', data=np.random.rand(3, 5),
+                              standard_name='y_velocity',
+                              units='m/s',
+                              attach_scales=('y', 'x'))
+            h5.create_dataset('grp/v', data=np.random.rand(3, 5),
                               standard_name='y_velocity',
                               units='m/s',
                               attach_scales=('y', 'x'))
@@ -103,12 +107,12 @@ class TestStandardAttributes(unittest.TestCase):
                               units='1/s')
 
         h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
-        self.assertDictEqual({'x_velocity': '/',
-                              'y_velocity': '/',
-                              'x_coordinate': '/',
-                              'y_coordinate': '/',
-                              'derivative_of_x_velocity_wrt_x_coordinate': '/'},
-                             h5sni.standard_names)
+        self.assertListEqual(sorted(['x_velocity',
+                                     'y_velocity',
+                                     'x_coordinate',
+                                     'y_coordinate',
+                                     'derivative_of_x_velocity_wrt_x_coordinate']),
+                             sorted(h5sni.standard_names))
         mag = h5sni.velocity.magnitude()
         self.assertIsInstance(mag, xr.DataArray)
         self.assertUnitEqual(mag.units, 'm/s')

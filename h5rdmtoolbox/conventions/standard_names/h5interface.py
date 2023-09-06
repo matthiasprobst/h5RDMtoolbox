@@ -97,32 +97,32 @@ class HDF5StandardNameInterface:
 
         for k, ds in standard_dict.items():
             if ds.ndim == 0:
-                setattr(self, k.strip('/'), ds[()])
+                setattr(self, k, ds[()])
             else:
-                setattr(self, k.strip('/'), ds)
+                setattr(self, k, ds)
 
-        standard_names = {n:g for g, n in [k.rsplit('/') for k in standard_names]}
-        for k, v in standard_names.items():
-            if v == '':
-                standard_names[k] = '/'
+        # standard_names = {n: g for g, n in [k.rsplit('/', 1) for k in standard_names]}
+        # for k, v in standard_names.items():
+        #     if v == '':
+        #         standard_names[k] = '/'
 
-        unique_groups = set(standard_names.values())
-        groups = {g: [] for g in unique_groups}
-        for k, v in standard_names.items():
-            groups[v].append(k)
+        # unique_groups = set(standard_names)
+        # groups = {g: [] for g in unique_groups}
+        # for k, v in standard_names.items():
+        #     groups[v].append(k)
 
         # identify tensors based on components:
         components = ('x', 'y', 'z')
         tensors_candidates = {}
         import re
-        for k, v in standard_names.items():
+        for k, v in standard_dict.items():
             for c in components:
                 if re.match(f'^{c}_.*$', k):
                     _, base_quantity = k.split('_', 1)
                     if base_quantity not in tensors_candidates:
-                        tensors_candidates[base_quantity] = [v+k, ]
+                        tensors_candidates[base_quantity] = [k]
                     else:
-                        tensors_candidates[base_quantity].append(v+k)
+                        tensors_candidates[base_quantity].append(k)
 
         self.tensors = []
         self.coords = []
@@ -139,16 +139,23 @@ class HDF5StandardNameInterface:
         self.standard_names = standard_names
         self.standard_dict = standard_dict
 
-    @staticmethod
-    def from_hdf(hdf_filename, source_group='/'):
+    @classmethod
+    def from_hdf(cls, hdf_filename, group='/'):
+        """search withing a group. Note, that duplicate standard names are not considered"""
+        from ...database.lazy import lazy
         hdf_filename = pathlib.Path(hdf_filename)
+        standard_datasets = {}
         with h5tbx.File(hdf_filename) as h5:
-            # TODO: standard names can exist twice! e.g. time! first check for multiples, then create group interfaces
-            standard_names = {ds.attrs.raw['standard_name']: ds.parent.name for ds in
-                              h5[source_group].find({'standard_name': {'$regex': '.*'}})}
-        standard_datasets = {v + k: h5tbx.database.File(hdf_filename).find_one({'standard_name': k}) for k, v in
-                             standard_names.items()}
-        return HDF5StandardNameInterface(standard_datasets)
+            std_ds = h5[group].find({'standard_name': {'$regex': '.*'}}, rec=False, objfilter='$dataset')
+            for ds in std_ds:
+                if ds.attrs['standard_name'] not in standard_datasets:
+                    standard_datasets[ds.attrs['standard_name']] = lazy(ds)
+
+        #     standard_names = [ds.attrs.raw['standard_name']: ds.parent.name for ds in
+        #                       h5[group].find({'standard_name': {'$regex': '.*'}}, rec=False)]
+        # standard_datasets = {v + k: h5tbx.database.File(hdf_filename).find_one({'standard_name': k}) for k, v in
+        #                      standard_names.items()}
+        return cls(standard_datasets)
 
     def __repr__(self):
         vec_names = '\n  - '.join(v.name for v in self.tensors)
