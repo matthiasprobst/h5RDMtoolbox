@@ -101,16 +101,6 @@ class HDF5StandardNameInterface:
             else:
                 setattr(self, k, ds)
 
-        # standard_names = {n: g for g, n in [k.rsplit('/', 1) for k in standard_names]}
-        # for k, v in standard_names.items():
-        #     if v == '':
-        #         standard_names[k] = '/'
-
-        # unique_groups = set(standard_names)
-        # groups = {g: [] for g in unique_groups}
-        # for k, v in standard_names.items():
-        #     groups[v].append(k)
-
         # identify tensors based on components:
         components = ('x', 'y', 'z')
         tensors_candidates = {}
@@ -140,7 +130,7 @@ class HDF5StandardNameInterface:
         self.standard_dict = standard_dict
 
     @classmethod
-    def from_hdf(cls, hdf_filename, group='/', rec:bool=False):
+    def from_hdf(cls, hdf_filename, group='/', rec: bool = False):
         """search withing a group. Note, that duplicate standard names are not considered"""
         from ...database.lazy import lazy
         hdf_filename = pathlib.Path(hdf_filename)
@@ -150,11 +140,6 @@ class HDF5StandardNameInterface:
             for ds in std_ds:
                 if ds.attrs['standard_name'] not in standard_datasets:
                     standard_datasets[ds.attrs['standard_name']] = lazy(ds)
-
-        #     standard_names = [ds.attrs.raw['standard_name']: ds.parent.name for ds in
-        #                       h5[group].find({'standard_name': {'$regex': '.*'}}, rec=False)]
-        # standard_datasets = {v + k: h5tbx.database.File(hdf_filename).find_one({'standard_name': k}) for k, v in
-        #                      standard_names.items()}
         return cls(standard_datasets)
 
     def __repr__(self):
