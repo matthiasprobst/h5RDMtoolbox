@@ -93,10 +93,8 @@ class StandardNameTable:
     >>> table = StandardNameTable.from_yaml('standard_name_table.yaml')
     >>> # check a standard name
     >>> table.check('x_velocity')
-    True
     >>> # check a transformed standard name
     >>> table.check('derivative_of_x_velocity_wrt_to_x_coordinate')
-    True
     """
 
     def __init__(self,

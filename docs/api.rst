@@ -14,7 +14,7 @@ Base wrapper class
 ==================
 
 .. autosummary::
-   :toctree: _build/generated/
+   :toctree: generated/
 
    h5rdmtoolbox.wrapper.core.File
 
@@ -40,17 +40,17 @@ Standard attributes
 -------------------
 
 .. autosummary::
-   :toctree: _build/generated/
+   :toctree: generated/
 
-   h5rdmtoolbox.conventions.standard_attributes.StandardAttribute
-   h5rdmtoolbox.conventions.standard_attributes.StandardAttribute.get
-   h5rdmtoolbox.conventions.standard_attributes.StandardAttribute.set
+   h5rdmtoolbox.conventions.StandardAttribute
+   h5rdmtoolbox.conventions.StandardAttribute.get
+   h5rdmtoolbox.conventions.StandardAttribute.set
 
 Standard names and tables
 -------------------------
 
 .. autosummary::
-   :toctree: _build/generated/
+   :toctree: generated/
 
    h5rdmtoolbox.conventions.standard_names.name.StandardName
    h5rdmtoolbox.conventions.standard_names.table.StandardNameTable
