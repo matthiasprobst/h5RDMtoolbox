@@ -39,7 +39,7 @@ class TestStandardAttributes(unittest.TestCase):
                               standard_name='derivative_of_x_velocity_wrt_x_coordinate',
                               units='1/s')
 
-        h5sni = HDF5StandardNameInterface(h5.hdf_filename)
+        h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
         self.assertDictEqual({'x_velocity': '/',
                               'y_velocity': '/',
                               'x_coordinate': '/',
@@ -74,14 +74,13 @@ class TestStandardAttributes(unittest.TestCase):
                               standard_name='y_velocity',
                               units='m/s',
                               attach_scales=('y', 'x'))
-        h5sni = HDF5StandardNameInterface(h5.hdf_filename)
+        h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
         for c in h5sni.coordinate:
             self.assertIsInstance(c, h5tbx.database.lazy.LDataset)
         self.assertEqual(h5sni.coordinate.x, h5sni.coordinate[0])
         self.assertEqual(h5sni.coordinate.y, h5sni.coordinate[1])
         self.assertDictEqual({'x': 5, 'y': 3}, h5sni.coordinate.shape)
         self.assertEqual(2, h5sni.velocity.ndim)
-        self.assertEqual(h5.hdf_filename, h5sni.filename)
 
     def test_interface_with_coords(self):
         with h5tbx.File(contact=h5tbx.__author_orcid__) as h5:
@@ -103,7 +102,7 @@ class TestStandardAttributes(unittest.TestCase):
                               standard_name='derivative_of_x_velocity_wrt_x_coordinate',
                               units='1/s')
 
-        h5sni = HDF5StandardNameInterface(h5.hdf_filename)
+        h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
         self.assertDictEqual({'x_velocity': '/',
                               'y_velocity': '/',
                               'x_coordinate': '/',

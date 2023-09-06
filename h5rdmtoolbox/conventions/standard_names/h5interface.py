@@ -1,7 +1,7 @@
 import numpy as np
 import pathlib
 import xarray as xr
-from typing import Tuple, Dict
+from typing import Dict
 
 import h5rdmtoolbox as h5tbx
 
@@ -17,7 +17,7 @@ class StandardCoordinate:
         self.component_names = sorted(list(self.components.keys()))
         for component in component_names:
             c, _ = component.split('_', 1)
-            setattr(self, c, self.components[component])
+            setattr(self, c.strip('/'), self.components[component])
 
     def __iter__(self):
         return iter(self.components.values())
@@ -85,25 +85,26 @@ class HDF5StandardNameInterface:
     """High level interface to HDF5 files following conventions which use
     the standard_name attribute"""
 
-    def __init__(self,
-                 hdf_filename,
-                 source_group: str = '/'):
-        self._hdf_filename = pathlib.Path(hdf_filename)
-        self._list_of_lazy_datasets = {}
+    def __init__(self, standard_dict):
 
-        with h5tbx.File(hdf_filename) as h5:
-            # TODO: standard names can exist twice! e.g. time! first check for multiples, then create group interfaces
-            standard_names = {ds.attrs.raw['standard_name']: ds.parent.name for ds in
-                              h5[source_group].find({'standard_name': {'$regex': '.*'}})}
-
-        standard_datasets = {k: h5tbx.database.File(self._hdf_filename).find_one({'standard_name': k}) for k in
-                             standard_names}
-
-        for k, ds in standard_datasets.items():
+        for k, ds in standard_dict.items():
             if ds.ndim == 0:
                 setattr(self, k, ds[()])
             else:
                 setattr(self, k, ds)
+
+        standard_names = list(standard_dict.keys())
+
+        for k, ds in standard_dict.items():
+            if ds.ndim == 0:
+                setattr(self, k.strip('/'), ds[()])
+            else:
+                setattr(self, k.strip('/'), ds)
+
+        standard_names = {n:g for g, n in [k.rsplit('/') for k in standard_names]}
+        for k, v in standard_names.items():
+            if v == '':
+                standard_names[k] = '/'
 
         unique_groups = set(standard_names.values())
         groups = {g: [] for g in unique_groups}
@@ -119,15 +120,15 @@ class HDF5StandardNameInterface:
                 if re.match(f'^{c}_.*$', k):
                     _, base_quantity = k.split('_', 1)
                     if base_quantity not in tensors_candidates:
-                        tensors_candidates[base_quantity] = [k, ]
+                        tensors_candidates[base_quantity] = [v+k, ]
                     else:
-                        tensors_candidates[base_quantity].append(k)
+                        tensors_candidates[base_quantity].append(v+k)
 
         self.tensors = []
         self.coords = []
         for k, v in tensors_candidates.items():
             if len(v) > 1:
-                if all(standard_datasets[c].shape == standard_datasets[v[0]].shape for c in v[1:]):
+                if all(standard_dict[c].shape == standard_dict[v[0]].shape for c in v[1:]):
                     vec = StandardTensor(k, v, self)
                     self.tensors.append(vec)
                     setattr(self, k, vec)
@@ -136,12 +137,18 @@ class HDF5StandardNameInterface:
                     self.coords.append(coord)
                     setattr(self, k, coord)
         self.standard_names = standard_names
-        self.standard_datasets = standard_datasets
+        self.standard_dict = standard_dict
 
-    @property
-    def filename(self):
-        """HDF Filename"""
-        return self._hdf_filename
+    @staticmethod
+    def from_hdf(hdf_filename, source_group='/'):
+        hdf_filename = pathlib.Path(hdf_filename)
+        with h5tbx.File(hdf_filename) as h5:
+            # TODO: standard names can exist twice! e.g. time! first check for multiples, then create group interfaces
+            standard_names = {ds.attrs.raw['standard_name']: ds.parent.name for ds in
+                              h5[source_group].find({'standard_name': {'$regex': '.*'}})}
+        standard_datasets = {v + k: h5tbx.database.File(hdf_filename).find_one({'standard_name': k}) for k, v in
+                             standard_names.items()}
+        return HDF5StandardNameInterface(standard_datasets)
 
     def __repr__(self):
         vec_names = '\n  - '.join(v.name for v in self.tensors)
