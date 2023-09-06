@@ -23,7 +23,7 @@ class TestOrcid(unittest.TestCase):
         self.assertIsInstance(o, h5tbx.orcid.ORCID)
 
         o = h5tbx.orcid.ORCID([h5tbx.__author_orcid__, h5tbx.__author_orcid__])
-        self.assertIsInstance(o, h5tbx.orcid.ORCID)
+        self.assertIsInstance(o, h5tbx.orcid.ORCIDS)
         orcids = h5tbx.orcid.ORCIDS([h5tbx.__author_orcid__])
         for o in orcids:
             self.assertIsInstance(o, h5tbx.orcid.ORCID)
