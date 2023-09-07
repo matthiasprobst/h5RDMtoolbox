@@ -69,7 +69,7 @@ specific to the features of the package:
 - `appdirs>=1.4.4`: Managing user and application directories
 - `packaging`: Version handling
 - `IPython>=8.4.0`: Pretty display of data in notebooks
-- `regex>=2020.7.9`: Working with egular expressions
+- `regex>=2020.7.9`: Working with regular expressions
 
 **Specific to the package are ...**
 
