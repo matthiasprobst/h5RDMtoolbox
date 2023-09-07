@@ -75,6 +75,7 @@ def has_internet_connection(timeout: int = 5) -> bool:
 
 
 def download_file(url, known_hash):
+    """Download a file from a URL and check its hash"""
     response = requests.get(url, stream=True)
     if response.status_code == 200:
         content = response.content

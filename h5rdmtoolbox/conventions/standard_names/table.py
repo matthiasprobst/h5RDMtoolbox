@@ -570,6 +570,11 @@ class StandardNameTable:
         -------
         snt: StandardNameTable
             The StandardNameTable object
+
+        Examples
+        --------
+        >>> cf = StandardNameTable.from_web("https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml",
+        >>>                                known_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         """
         filename = download_file(url, known_hash)
 
@@ -650,12 +655,16 @@ class StandardNameTable:
 
     @staticmethod
     def from_zenodo(doi: str) -> "StandardNameTable":
-        """Download standard name table from Zenodo based on URL
+        """Download a standard name table from Zenodo based on its DOI.
+
 
         Parameters
         ----------
         doi: str
-            DOI
+            The DOI. It can hav the following formats:
+            - 10.5281/zenodo.8266929
+            - https://doi.org/10.5281/zenodo.8266929
+            - https://zenodo.org/record/8266929
 
         Returns
         -------
@@ -665,7 +674,7 @@ class StandardNameTable:
 
         Example
         -------
-        >>> StandardNameTable.from_zenodo(doi="doi:10.5281/zenodo.8266929")
+        >>> snt = StandardNameTable.from_zenodo(doi="doi:10.5281/zenodo.8266929")
 
         Notes
         -----
