@@ -35,10 +35,13 @@ on the image, which shows the research data lifecycle in the center and the resp
 
 ## Installation
 
-Use python 3.8 or higher (tested until 3.10).
+Use python 3.8 or higher (tested until 3.10). If you are a regular user, you can install the package via pip:
+
+    pip install h5RDMtoolbox
 
 ### Install from source:
 
+Developers may clone the repository and install the package from source.
 Clone the repository first:
 
     git clone https://github.com/matthiasprobst/h5RDMtoolbox.git
@@ -51,7 +54,7 @@ Add `--user` if you do not have root access.
 
 For development installation run
 
-    pip install -e h5RDMtoolbox
+    pip install -e h5RDMtoolbox/
 
 ### Dependencies
 
