@@ -48,7 +48,7 @@ Clone the repository first:
 
 Then, run
 
-    pip install h5RDMtoolbox
+    pip install h5RDMtoolbox/
 
 Add `--user` if you do not have root access.
 
