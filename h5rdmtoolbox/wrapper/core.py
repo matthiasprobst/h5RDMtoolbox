@@ -31,6 +31,11 @@ from ..conventions.layout import Layout as LayoutFile
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
+H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
+                              'rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0', 'track_order',
+                              'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
+                              'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
+                              'alignment_threshold', 'alignment_interval', 'meta_block_size')
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -1970,12 +1975,9 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                     mode = 'r+'
                     # "touch" the file, so it exists
                     _h5pykwargs = kwargs.copy()
-                    for k in ('driver', 'libver', 'userblock_size', 'swmr',
-                              'rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0', 'track_order',
-                              'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
-                              'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
-                              'alignment_threshold', 'alignment_interval', 'meta_block_size'):
-                        _h5pykwargs.pop(k, None)
+                    for k in list(kwargs.keys()):
+                        if k not in H5KWARGS:
+                            _h5pykwargs.pop(k, None)
                     with h5py.File(name, mode='w', **_h5pykwargs) as _h5:
                         pass  # just touching the file
                     logger.debug(f'An empty File class is initialized for "{name}".Mode is set to "r+"')
