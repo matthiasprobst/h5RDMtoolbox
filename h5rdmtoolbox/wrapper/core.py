@@ -1961,7 +1961,14 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                     _tmp_init = True
                     mode = 'r+'
                     # "touch" the file, so it exists
-                    with h5py.File(name, mode='w', **kwargs) as _h5:
+                    _h5pykwargs = kwargs.copy()
+                    for k in ('driver', 'libver', 'userblock_size', 'swmr',
+                              'rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0', 'track_order',
+                              'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
+                              'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
+                              'alignment_threshold', 'alignment_interval', 'meta_block_size'):
+                        _h5pykwargs.pop(k, None)
+                    with h5py.File(name, mode='w', **_h5pykwargs) as _h5:
                         pass  # just touching the file
                     logger.debug(f'An empty File class is initialized for "{name}".Mode is set to "r+"')
 
