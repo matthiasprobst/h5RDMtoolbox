@@ -60,7 +60,8 @@ def process_attributes(cls,
                        meth_name: str,
                        attrs: Dict,
                        kwargs: Dict,
-                       name: str) -> Tuple[Dict, Dict, Dict]:
+                       name: str,
+                       existing_attrs: Tuple = None) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method.
 
     Parameters
@@ -76,6 +77,8 @@ def process_attributes(cls,
     name : str
         Name of the dataset or group to be created.
     """
+    if existing_attrs is None:
+        existing_attrs = list()
 
     curr_cv = conventions.get_current_convention()
 
@@ -87,6 +90,11 @@ def process_attributes(cls,
     kwargs, skwargs = _pop_standard_attributes(
         kwargs, cache_entry=curr_cv.methods[cls][meth_name]
     )
+
+    # pop standard attributes if the file already have such a attribute. Note, that no validation is performed then!
+    for n in existing_attrs:
+        skwargs.pop(n, None)
+
     # attrs overwrite skwargs because kwargs could have the default value
     for ak in skwargs.keys():
         v = attrs.pop(ak, None)
@@ -1986,7 +1994,15 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             # ignore standard attributes during read-only
             skwargs = {}
         else:
-            attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name)
+            # note, that in r+ mode, some attributes may already exist which are mandatory!
+            # get existing first:
+            if pathlib.Path(name).exists():
+                with h5py.File(pathlib.Path(name), mode='r') as _h5:
+                    existing_attrs = tuple(_h5.attrs.keys())
+            else:
+                existing_attrs = None
+            attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name,
+                                                        existing_attrs=existing_attrs)
 
         if mode == 'r' and len(skwargs) > 0:
             for k, v in skwargs.items():

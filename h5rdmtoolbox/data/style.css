@@ -171,29 +171,14 @@ input.h5tb-varname-in:checked + label:before {
     white-space: nowrap;
 }
 
-
-.h5tb-unit {
-    width: 96px;
-    white-space: nowrap;
-    padding-right: 2px;
-    text-align: right;
-    color: #555;
-    font-style: italic;
-}
-
 .h5tb-attr-list {
     list-style: none;
-    background-color: #fff;
+    background-color: rgba(0,0,0,.0);
     padding-bottom: 6px;
-    color: #555;
+    color: #6a6c73;
 }
 
 .h5tb-attr-list li,
 .h5tb-attr-list li:hover {
-    background-color: #fff;
-}
-
-.h5tb-dim-highlight {
-    background-color: rgba(3, 169, 244, .2);
-    cursor: pointer;
+    background-color: rgba(0,0,0,.0);
 }

@@ -55,34 +55,25 @@ Installation
 ------------
 The repository requires python 3.8. or higher (tested for 3.8, 3.9, 3.10).
 
-Install from source from github:
-
 .. code:: sh
 
-   python -m pip install https://github.com/matthiasprobst/h5RDMtoolbox
+   pip install h5RDMtoolbox
 
-Clone and install from source:
-
-.. code:: sh
-
-   git clone https://github.com/matthiasprobst/h5RDMtoolbox
-   python3.8 -m pip install h5RDMtoolbox/
-
-You may install optional dependencies:
+You may want install optional dependencies:
 
 .. code:: sh
 
    # install dependencies to use the database mongoDB
-   python3.8 -m pip install "h5RDMtoolbox[mongodb]"
+   pip install h5RDMtoolbox[mongodb]
 
    # install dependencies for testing
-   python3.8 -m pip install "h5RDMtoolbox[test]"
+   pip install h5RDMtoolbox[test]
 
    # install dependencies needed to build this documentation
-   python3.8 -m pip install "h5RDMtoolbox[docs]"
+   pip install h5RDMtoolbox[docs]
 
    # install all above dependencies
-   python3.8 -m pip install "h5RDMtoolbox[complete]"
+   pip install h5RDMtoolbox[complete]
 
 
 .. toctree::
