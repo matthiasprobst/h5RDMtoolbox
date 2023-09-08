@@ -1,6 +1,6 @@
 appdirs>=1.4.4
 numpy>=1.20,<1.23.0
-h5py>=3.7.0
+h5py=3.7.0
 matplotlib>=3.5.2
 pandas>=1.4.3
 IPython>=8.4.0

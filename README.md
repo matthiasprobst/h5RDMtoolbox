@@ -73,7 +73,7 @@ specific to the features of the package:
 
 **Specific to the package are ...**
 
-- `h5py>=3.7.0`: HDF5 file interface
+- `h5py=3.7.0`: HDF5 file interface
 - `xarray>=2022.3.0`: Working with scientific arrays in combination with attributes. Allows carrying metadata from HDF5
   to user
 - `pint>=0.19.2`: Allows working with units
