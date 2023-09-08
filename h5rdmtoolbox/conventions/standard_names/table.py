@@ -72,6 +72,7 @@ class StandardNameTable:
     affixes: Dict
         Contains all entries in the YAML file, which is not meta.
         Currently expected:
+
         - table: Dict
             The table containing 'units' and 'description'
         - alias: Dict

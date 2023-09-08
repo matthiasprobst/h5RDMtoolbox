@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper.core import File
@@ -61,8 +62,24 @@ class TestFile(unittest.TestCase):
         if h5.hdf_filename.exists():
             h5.hdf_filename.unlink()
 
+    def test_reopen_file(self):
+        cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
+        cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
+        cv.use()
+        with h5tbx.File(data_type='experimental',
+                        contact=h5tbx.__author_orcid__) as h5:
+            pass
+        # reopen file with read-only mode works fine
+        with h5tbx.File(h5.hdf_filename, 'r') as h5:
+            self.assertTrue('data_type' in h5.attrs.raw)
+            self.assertTrue('contact' in h5.attrs.raw)
+
+        # reopen file with read-write mode must also. the mandatory root attributes are set earlier...
+        with h5tbx.File(h5.hdf_filename, 'r+') as h5:
+            self.assertTrue('data_type' in h5.attrs.raw)
+            self.assertTrue('contact' in h5.attrs.raw)
+
     def test_scale(self):
-        from h5rdmtoolbox import tutorial
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
         cv.use()
