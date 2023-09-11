@@ -23,7 +23,8 @@ class TestConventions(unittest.TestCase):
             warnings.warn('No internet connection', UserWarning)
 
     def test_getattr(self):
-        with h5tbx.use('h5tbx'):
+        with h5tbx.use('h5tbx') as cv:
+            isinstance(cv, h5tbx.conventions.Convention)
             with h5tbx.File() as h5:
                 h5.create_dataset('test', data=1, units='m/s')
                 self.assertEqual('m/s', str(h5.test.units))

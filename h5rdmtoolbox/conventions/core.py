@@ -268,13 +268,13 @@ class use:
 
     def __init__(self, convention_name: Union[str, Convention]):
         self._latest_convention = get_current_convention()
-        self._current_convention_name = _use(convention_name)
+        self._current_convention = _use(convention_name)
 
     def __repr__(self):
-        return f'using("{self._current_convention_name}")'
+        return f'using("{self._current_convention.name}")'
 
     def __enter__(self):
-        return
+        return self._current_convention
 
     def __exit__(self, *args, **kwargs):
         _use(self._latest_convention)
@@ -283,7 +283,7 @@ class use:
 from h5rdmtoolbox.wrapper import ds_decoder
 
 
-def _use(convention_name: Union[str, Convention]) -> str:
+def _use(convention_name: Union[str, Convention]) -> Convention:
     """Use a convention by name"""
     if isinstance(convention_name, Convention):
         convention_name = convention_name.name
@@ -300,7 +300,7 @@ def _use(convention_name: Union[str, Convention]) -> str:
 
     if current_convention is not None:
         if convention_name == current_convention.name:
-            return convention_name
+            return current_convention
 
         # reset signature and dataset decoders:
         current_convention._delete_signature()
@@ -315,7 +315,7 @@ def _use(convention_name: Union[str, Convention]) -> str:
 
     set_current_convention(current_convention)
 
-    return convention_name
+    return current_convention
 
 
 def get_registered_conventions() -> Dict:

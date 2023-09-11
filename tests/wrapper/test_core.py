@@ -36,6 +36,14 @@ class TestCore(unittest.TestCase):
         with h5tbx.File() as h5:
             self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
 
+    def test_dump(self):
+        # all following should not raise an error...
+        with h5tbx.File() as h5:
+            pass
+        h5tbx.dump(h5.hdf_filename)
+        h5tbx.dump(h5)
+        h5tbx.dump(str(h5.hdf_filename))
+
     def test_Files(self):
         with h5tbx.File() as h5:
             f1 = h5.hdf_filename

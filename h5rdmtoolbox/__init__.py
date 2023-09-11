@@ -79,6 +79,12 @@ def dump(src: Union[str, File, pathlib.Path]) -> None:
     if isinstance(src, File):
         with File(src.hdf_filename) as h5:
             return h5.dump()
+    if isinstance(src, (str, pathlib.Path)):
+        pass
+    else:
+        if hasattr(src, 'hdf_filename'):
+            src = src.hdf_filename
+
     with File(src) as h5:
         return h5.dump()
 
