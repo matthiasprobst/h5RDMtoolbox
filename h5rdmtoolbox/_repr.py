@@ -419,7 +419,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             if is_url:
                 if 'orcid.org' in _value:
                     from . import orcid
-                    return orcid.get_html_repr(h5obj.strip('/').rsplit('/', 1)[-1])
+                    orcid_html = orcid.get_html_repr(h5obj.strip('/').rsplit('/', 1)[-1])
+                    return f'<li style="list-style-type: none; font-style: italic">{name} : {orcid_html}</li>'
             else:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
