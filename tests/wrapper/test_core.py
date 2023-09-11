@@ -44,6 +44,10 @@ class TestCore(unittest.TestCase):
         h5tbx.dump(h5)
         h5tbx.dump(str(h5.hdf_filename))
 
+        h5tbx.dumps(h5.hdf_filename)
+        h5tbx.dumps(h5)
+        h5tbx.dumps(str(h5.hdf_filename))
+
     def test_Files(self):
         with h5tbx.File() as h5:
             f1 = h5.hdf_filename

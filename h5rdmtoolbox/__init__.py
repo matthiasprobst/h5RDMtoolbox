@@ -74,11 +74,12 @@ def dump(src: Union[str, File, pathlib.Path]) -> None:
     Parameters
     ----------
     src : str, File, pathlib.Path
-        the HDF5 file or filename to dump
+        the HDF5 file or filename to dump. An object which has a hdf_filename attribute can also be provided.
     """
     if isinstance(src, File):
         with File(src.hdf_filename) as h5:
             return h5.dump()
+
     if isinstance(src, (str, pathlib.Path)):
         pass
     else:
@@ -90,10 +91,23 @@ def dump(src: Union[str, File, pathlib.Path]) -> None:
 
 
 def dumps(src: Union[str, File, pathlib.Path]):
-    """Call h5.dumps() on the provided HDF5 file"""
+    """Call h5.dumps() on the provided HDF5 file
+
+    Parameters
+    ----------
+    src : str, File, pathlib.Path
+        the HDF5 file or filename to dump. An object which has a hdf_filename attribute can also be provided.
+    """
     if isinstance(src, File):
         with File(src.hdf_filename) as h5:
             return h5.dumps()
+
+    if isinstance(src, (str, pathlib.Path)):
+        pass
+    else:
+        if hasattr(src, 'hdf_filename'):
+            src = src.hdf_filename
+
     with File(src) as h5:
         return h5.dumps()
 
