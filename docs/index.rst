@@ -1,14 +1,14 @@
 HDF Research Data Management Toolbox
 ====================================
 
-The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everybody who is working
+The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everyone who is working
 with HDF5 to achieve a sustainable data lifecycle which follows the
 `FAIR <https://www.nature.com/articles/sdata201618>`_ (Findable, Accessible, Interoperable, Reusable) principles.
 It specifically supports the five main steps of
 
  1. Planning (defining domain- or problem-specific metadata convention(s) and an internal layout(s) for HDF5 files)
  2. Collecting data (creating HDF5 files from scratch or converting to HDF5 files from other sources)
- 3. Analyzing and processing data (Plotting, processing data while keeping the HDF5 attributes by using
+ 3. :doc:`Analyzing and processing data <wrapper/index>` (Plotting, processing data while keeping the HDF5 attributes by using
     `xarray <https://xarray.pydata.org/>`_)
  4. Sharing data (publishing, archiving, ... e.g. to databases like `mongoDB <https://www.mongodb.com/>`_ or repositories
     like `Zenodo <https://zenodo.org>`_
