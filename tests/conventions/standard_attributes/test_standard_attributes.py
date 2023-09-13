@@ -343,10 +343,10 @@ class TestStandardAttributes(unittest.TestCase):
         class CommentValidator(h5tbx.conventions.standard_attributes.StandardAttributeValidator):
 
             keyword = 'comment'
-            deprecated_keywords = ('$comment',)
+            alternative_keywords = ('$comment',)
 
-            def __init__(self, ref=None, allow_None: bool = False):
-                super().__init__(ref, allow_None)
+            def __init__(self, ref=None):
+                super().__init__(ref)
                 assert isinstance(ref[0], int) and ref[0] > 0
                 assert isinstance(ref[1], int) and ref[1] > 0
                 assert isinstance(ref[2], str)

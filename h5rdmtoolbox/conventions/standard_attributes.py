@@ -199,11 +199,12 @@ class StandardAttribute(abc.ABC):
         # first call the validator on the value:
         try:
             if value is None:
-                if self.validator.allow_None:
-                    validated_value = self.validator(value, parent, attrs)
-                else:
-                    # None is passed. this is ignored
-                    return
+                return
+                # if self.validator.allow_None:
+                #     validated_value = self.validator(value, parent, attrs)
+                # else:
+                #     # None is passed. this is ignored
+                #     return
             else:
                 validated_value = self.validator(value, parent, attrs)
         except Exception as e:

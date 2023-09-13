@@ -1,3 +1,5 @@
+from abc import ABC
+
 import abc
 import json
 import pint
@@ -34,11 +36,10 @@ class StandardAttributeValidator:
     """Abstract Validator class of Standard Name Attribute classes"""
 
     keyword = None
-    deprecated_keywords = []
+    alternative_keywords = []
 
-    def __init__(self, ref=None, allow_None: bool = False):
+    def __init__(self, ref=None):
         self.ref = ref
-        self.allow_None = allow_None
         if self.keyword is None:
             raise ValueError('The keyword attribute must be set')
 
@@ -159,7 +160,7 @@ class ORCIDValidator(StandardAttributeValidator):
 
 class PintQuantityValidator(StandardAttributeValidator):
     keyword = '$quantity'
-    deprecated_keywords = ('$pintquantity',)
+    alternative_keywords = ('$pintquantity',)
 
     def __call__(self, quantity, parent=None, attrs=None) -> str:
         """write to attribute"""
@@ -175,7 +176,7 @@ class PintQuantityValidator(StandardAttributeValidator):
 
 class OffsetValidator(PintQuantityValidator):
     keyword = '$offset'
-    deprecated_keywords = ()
+    alternative_keywords = ()
 
     def __call__(self, offset: str, parent=None, attrs=None) -> str:
         qoffset = get_ureg().Quantity(super().__call__(offset, parent, attrs))
@@ -217,7 +218,7 @@ class OffsetValidator(PintQuantityValidator):
 
 class PintUnitsValidator(StandardAttributeValidator):
     keyword = '$units'
-    deprecated_keywords = ('$pintunits', '$pintunit', '$unit',)
+    alternative_keywords = ('$pintunits', '$pintunit', '$unit',)
 
     def __call__(self, value, parent=None, attrs: Dict = None) -> str:
         try:
@@ -328,14 +329,27 @@ class RegexValidator(StandardAttributeValidator):
         return value
 
 
+class SymbolValidator(StandardAttributeValidator):
+    """Validates the symbol of a variable, which is a string.
+    No further checks are performed."""
+
+    keyword = '$str'
+
+    def __call__(self, value, parent, attrs=None):
+        """just pass the value"""
+        if not isinstance(value, str):
+            raise ValueError(f'Expected a string, got {type(value)}')
+        return value
+
+
 def register(validator: StandardAttributeValidator):
     if not hasattr(validator, 'keyword'):
         raise TypeError(f'Validator {validator} seems to be incorrect class. Expecting the attribute "keyword"')
     if validator.keyword == None:
         raise ValueError(f'Validator {validator} has no keyword')
     validator_management._validators[validator.keyword] = validator
-    for dk in validator.deprecated_keywords:
-        validator_management.DEPR_VALIDATORS[dk] = validator
+    for dk in validator.alternative_keywords:
+        validator_management.ALT_VALIDATORS[dk] = validator
 
 
 _default_validators = [v for k, v in locals().items() if
@@ -350,13 +364,13 @@ for v in _default_validators:
 
 
 for _validator in validator_management._validators.values():
-    if _validator.deprecated_keywords:
-        if isinstance(_validator.deprecated_keywords, str):
-            _deprecated_keywords = (_validator.deprecated_keywords,)
+    if _validator.alternative_keywords:
+        if isinstance(_validator.alternative_keywords, str):
+            _alternative_keywords = (_validator.alternative_keywords,)
         else:
-            _deprecated_keywords = _validator.deprecated_keywords
-        for dk in _deprecated_keywords:
-            validator_management.DEPR_VALIDATORS[dk] = _validator
+            _alternative_keywords = _validator.alternative_keywords
+        for dk in _alternative_keywords:
+            validator_management.ALT_VALIDATORS[dk] = _validator
 
 
 def get_validator(validator_keyword=None) -> Union[dict, StandardAttributeValidator]:
@@ -366,14 +380,14 @@ def get_validator(validator_keyword=None) -> Union[dict, StandardAttributeValida
     validator = validator_management._validators.get(validator_keyword, None)
     if validator is not None:
         return validator
-    depr_validator = validator_management.DEPR_VALIDATORS.get(validator_keyword, None)
-    if depr_validator is None:
+    alt_validator = validator_management.ALT_VALIDATORS.get(validator_keyword, None)
+    if alt_validator is None:
         raise ValueError(f'Validator "{validator_keyword}" does not exist.')
     warnings.warn(
         f'Validator "{validator_keyword}" is deprecated. Select the correct one from this list instead: '
         f'{validator_management._validators.keys()}',
         DeprecationWarning)
-    return depr_validator
+    return alt_validator
 
 
 def add_validator(validator: StandardAttributeValidator):

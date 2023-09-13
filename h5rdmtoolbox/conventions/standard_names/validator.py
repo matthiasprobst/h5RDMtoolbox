@@ -34,7 +34,7 @@ class StandardNameTableValidator(StandardAttributeValidator):
     """Validates a standard name table"""
 
     keyword = '$standard_name_table'
-    deprecated_keywords = ('standard_name_table', '$snt', 'snt')
+    alternative_keywords = ('standard_name_table', '$snt', 'snt')
 
     def __call__(self, standard_name_table, parent=None, attrs=None, **kwargs):
         snt = _parse_snt(standard_name_table)

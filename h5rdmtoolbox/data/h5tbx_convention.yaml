@@ -19,3 +19,9 @@ offset:
   validator: $offset
   description: The offset of the dataset.
   default_value: $NONE
+
+symbol:
+  target_method: create_dataset
+  validator: $str
+  description: The mathematical symbol of the dataset.
+  default_value: $NONE

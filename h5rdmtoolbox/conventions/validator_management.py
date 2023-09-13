@@ -1,2 +1,2 @@
 _validators = {}
-DEPR_VALIDATORS = {}
+ALT_VALIDATORS = {}

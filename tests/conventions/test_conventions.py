@@ -220,7 +220,7 @@ class TestConventions(unittest.TestCase):
             self.assertEqual(h5.convention, h5tbx.conventions.get_current_convention())
             self.assertEqual({}, h5.standard_attributes)
             ds = h5.create_dataset('test', data=1, units='m/s')
-            self.assertEqual(sorted(['offset', 'scale', 'units']), sorted(ds.standard_attributes.keys()))
+            self.assertEqual(sorted(['offset', 'scale', 'units', 'symbol']), sorted(ds.standard_attributes.keys()))
             self.assertEqual(ds.convention, h5tbx.conventions.get_current_convention())
 
     def test_del_standard_attribute(self):

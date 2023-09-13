@@ -25,3 +25,9 @@ class TestValidators(unittest.TestCase):
         self.assertEqual('2020-01-01T12:00:00', dt('2020-01-01T12:00:00', None))
         with self.assertRaises(ValueError):
             dt(3.4, None)
+
+    def test_symbol_validator(self):
+        s = validators.SymbolValidator()
+        self.assertEqual(s('bla', None), 'bla')
+        with self.assertRaises(ValueError):
+            s(3.4, None)
