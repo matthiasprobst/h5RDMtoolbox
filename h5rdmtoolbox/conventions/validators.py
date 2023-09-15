@@ -1,5 +1,3 @@
-from abc import ABC
-
 import abc
 import json
 import pint

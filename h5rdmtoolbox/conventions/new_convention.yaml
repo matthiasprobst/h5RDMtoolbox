@@ -1,0 +1,34 @@
+# YAML content:
+
+
+#type definitions (not all types can be defined here, standard name table must be defined as python code)
+#types are indicated by a $-sign as first character
+
+# contact, which is a dict {name[str]: John, id[orcid]: 000-000...., sex[sex]: male}
+$contact:
+  name: $str
+  id: $orcid  # orcid is defined as a python validator, because it is a complex type
+  sex: $sex
+
+
+#EnumDefinition:
+$sex:
+  - male
+  - female
+
+$long_name:
+  $regex: ^[a-zA-Z].*(?<!\s)$
+
+# Standard attribute definitions:
+
+# a standard attribute:
+long_name:
+  validator: $long_name
+  target_method: create_dataset
+  description: A long name for a dataset
+
+# a standard attribute:
+person:
+  validator: $contact
+  target_method: create_dataset
+  description: The contact information
