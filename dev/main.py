@@ -72,7 +72,27 @@ for k, v in convention_dict.items():
                 type_definitions[k] = v
 
         else:
-            standard_attributes[k] = v
+            if 'regex' in v['validator']:
+                import re
+
+                regex_validator = 'regex_00'  # TODO use proper id
+                match = re.search(r'regex\((.*?)\)', v['validator'])
+                re_pattern = match.group(1)
+                standard_attributes[k] = regex_validator
+                _v = v.copy()
+                _v['validator'] = regex_validator
+                standard_attributes[k] = _v
+                with open(convention_dir / f'convention.py', 'a') as f:
+                    f.writelines(f"""import re\n\ndef {regex_validator}_validator(value, parent=None, attrs=None):
+    pattern = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}(\d|X)$")
+    if not pattern.match(value):
+        raise ValueError('Invalid format for pattern')
+    return value
+
+
+{regex_validator} = Annotated[int, WrapValidator({regex_validator}_regex_validator)]""")
+            else:
+                standard_attributes[k] = v
 
 # get validator and write them to convention-python file:
 with open(convention_dir / f'convention.py', 'a') as f:
