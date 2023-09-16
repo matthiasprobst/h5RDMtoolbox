@@ -9,7 +9,7 @@ validation_yaml_filename = pathlib.Path(f'{convention_name}.yaml')
 convention_dir = pathlib.Path(convention_name)
 convention_dir.mkdir(parents=True, exist_ok=True)
 
-vfunc_filename = convention_dir / 'special_type_funcs.py'
+vfunc_filename = convention_dir / 'convention.py'
 shutil.copy(f'{convention_name}_vfuncs.py', vfunc_filename)
 
 # special validator functions are defined in the test_convention_vfuncs.py file
@@ -33,6 +33,24 @@ shutil.copy(f'{convention_name}_vfuncs.py', vfunc_filename)
 # MyValidator(name='hallo', units='km')
 
 import yaml
+from utils import get_specialtype_function_info
+
+special_type_info = get_specialtype_function_info(vfunc_filename)
+with open(convention_dir / f'convention.py', 'a') as f:
+    f.writelines("""
+    
+from pydantic import BaseModel
+from pydantic.functional_validators import WrapValidator
+from typing_extensions import Annotated
+
+""")
+with open(convention_dir / f'convention.py', 'a') as f:
+    # write type definitions from YAML file:
+    f.writelines('\n# ---- generated code: ----\n')
+    for k, v in special_type_info.items():
+        # lines = f"""\n\n{k} | {v} | unit = Annotated[str, WrapValidator(validate_units)]\n\n"""
+        lines = f"""{k.strip('validate_')} = Annotated[str, WrapValidator({k})]\n"""
+        f.writelines(lines)
 
 # read the yaml file:
 with open(validation_yaml_filename, 'r') as f:
@@ -57,37 +75,11 @@ for k, v in convention_dict.items():
             standard_attributes[k] = v
 
 # get validator and write them to convention-python file:
-with open(convention_dir / f'convention.py', 'w') as f:
-    lines = """import inspect
-from pydantic import BaseModel
-from pydantic.functional_validators import WrapValidator
-from typing_extensions import Annotated
-
-import special_type_funcs
-
-members = inspect.getmembers(special_type_funcs)
-
-special_type_funcs_dict = {_func[0].strip('validate_'): Annotated[str, WrapValidator(_func[1])] for _func in
-                           [m for m in members if inspect.isfunction(m[1]) if m[0].startswith('validate_')]}
-special_type_funcs_dict['str'] = str
-special_type_funcs_dict['int'] = int
-special_type_funcs_dict['float'] = float
-
-
-def get_special_type(name):
-    _type = special_type_funcs_dict.get(name, None)
-    if _type is None:
-        raise ValueError(f'No type found for {name}')
-    return _type
-"""
-
-    # write imports to file:
-    f.writelines(lines)
-
+with open(convention_dir / f'convention.py', 'a') as f:
     # write type definitions from YAML file:
     for k, v in type_definitions.items():
         lines = f"""
-        
+
 class {k.strip('$').capitalize()}Validator(BaseModel):
     """ + '\n    '.join([f'{k}: {v}' for k, v in v.items()])
         # write imports to file:
@@ -98,10 +90,8 @@ class {k.strip('$').capitalize()}Validator(BaseModel):
         _type = stda["validator"]
         if _type in type_definitions:
             continue
-        if _type.strip("$") in ('str', 'int', 'float'):
-            _type_str = _type.strip("$")
-        else:
-            _type_str = f'get_special_type("{_type.strip("$")}")'
+
+        _type_str = _type.strip("$")
         lines = [
             # testing:
             # f'\nprint(special_type_funcs.units("123", None, None))'

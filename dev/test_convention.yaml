@@ -5,7 +5,7 @@ __decoders__: 'scale_and_offset'
 
 $person:
   name: str
-  age: int
+  age: int = 3  # we can set a default value here
 
 contactPerson:
   target_method: create_dataset
@@ -21,4 +21,10 @@ symbol:
   target_method: create_dataset
   validator: $str
   description: The mathematical symbol of the dataset.
+  default_value: $NONE
+
+long_name:
+  target_method: create_dataset
+  validator: $regex(^[a-zA-Z].*(?<!\s)$)
+  description: A very long name.
   default_value: $NONE

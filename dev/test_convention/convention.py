@@ -1,34 +1,34 @@
-import inspect
+import pint
+
+from h5rdmtoolbox import get_ureg
+
+
+def validate_units(value, handler, info):
+    """validate units using pint package"""
+    try:
+        get_ureg().Unit(value)
+    except (pint.UndefinedUnitError, TypeError) as e:
+        raise ValueError(f'Units cannot be understood using ureg package: {value}. Original error: {e}')
+    return str(value)
+
+    
 from pydantic import BaseModel
 from pydantic.functional_validators import WrapValidator
 from typing_extensions import Annotated
 
-import special_type_funcs
 
-members = inspect.getmembers(special_type_funcs)
-
-special_type_funcs_dict = {_func[0].strip('validate_'): Annotated[str, WrapValidator(_func[1])] for _func in
-                           [m for m in members if inspect.isfunction(m[1]) if m[0].startswith('validate_')]}
-special_type_funcs_dict['str'] = str
-special_type_funcs_dict['int'] = int
-special_type_funcs_dict['float'] = float
+# ---- generated code: ----
+units = Annotated[str, WrapValidator(validate_units)]
 
 
-def get_special_type(name):
-    _type = special_type_funcs_dict.get(name, None)
-    if _type is None:
-        raise ValueError(f'No type found for {name}')
-    return _type
-
-        
 class PersonValidator(BaseModel):
     name: str
-    age: int
+    age: int = 3
 
 
 class UnitsValidator(BaseModel):
     """The physical unit of the dataset. If dimensionless, the unit is ''."""
-    value: get_special_type("units")
+    value: units
 
 
 class SymbolValidator(BaseModel):
@@ -36,4 +36,9 @@ class SymbolValidator(BaseModel):
     value: str
 
 
-UnitsValidator(value="8.4m")
+class Long_nameValidator(BaseModel):
+    """A very long name."""
+    value: regex(^[a-zA-Z].*(?<!\s)$)
+
+
+UnitsValidator(value="1")
