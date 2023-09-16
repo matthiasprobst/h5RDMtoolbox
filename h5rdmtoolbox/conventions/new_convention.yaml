@@ -16,6 +16,13 @@ $sex:
   - male
   - female
 
+$PersonOrOrganization:
+  name: $str
+  given_name: $str
+  family_name: $str
+  address: $str
+  email: $str
+
 $long_name:
   $regex: ^[a-zA-Z].*(?<!\s)$
 
@@ -29,6 +36,6 @@ long_name:
 
 # a standard attribute:
 person:
-  validator: $contact
+  validator: $contact=$None
   target_method: create_dataset
   description: The contact information

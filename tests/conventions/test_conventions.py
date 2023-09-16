@@ -22,6 +22,10 @@ class TestConventions(unittest.TestCase):
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
 
+
+    def test_new_convention(self):
+        pass
+
     def test_getattr(self):
         with h5tbx.use('h5tbx') as cv:
             isinstance(cv, h5tbx.conventions.Convention)
