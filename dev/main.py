@@ -84,13 +84,13 @@ for k, v in convention_dict.items():
                 standard_attributes[k] = _v
                 with open(convention_dir / f'convention.py', 'a') as f:
                     f.writelines(f"""import re\n\ndef {regex_validator}_validator(value, parent=None, attrs=None):
-    pattern = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}(\d|X)$")
+    pattern = re.compile(r'{re_pattern}')
     if not pattern.match(value):
         raise ValueError('Invalid format for pattern')
     return value
 
 
-{regex_validator} = Annotated[int, WrapValidator({regex_validator}_regex_validator)]""")
+{regex_validator} = Annotated[int, WrapValidator({regex_validator}_validator)]""")
             else:
                 standard_attributes[k] = v
 
