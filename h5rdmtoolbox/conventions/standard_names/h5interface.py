@@ -138,8 +138,8 @@ class HDF5StandardNameInterface:
         with h5tbx.File(hdf_filename) as h5:
             std_ds = h5[group].find({'standard_name': {'$regex': '.*'}}, rec=rec, objfilter='$dataset')
             for ds in std_ds:
-                if ds.attrs['standard_name'] not in standard_datasets:
-                    standard_datasets[ds.attrs['standard_name']] = lazy(ds)
+                if ds.attrs.raw['standard_name'] not in standard_datasets:
+                    standard_datasets[ds.attrs.raw['standard_name']] = lazy(ds)
         return cls(standard_datasets)
 
     def __repr__(self):

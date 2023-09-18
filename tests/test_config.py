@@ -54,8 +54,6 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(f'{q}', '1 mm')
 
     def test_set_parameter(self):
-        h5tbx.set_config(default_convention=None)
-        self.assertEqual(h5tbx.get_config('default_convention'), None)
         h5tbx.use(None)
 
         with File(mode='w') as h5:
@@ -65,12 +63,8 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(h5.__class__, core.File)
         h5.close()
 
-        h5tbx.set_config(default_convention='h5tbx')
-        self.assertEqual(h5tbx.get_config('default_convention'), 'h5tbx')
-        self.assertEqual(h5tbx.get_config('default_convention'), 'h5tbx')
         h5tbx.use('h5tbx')
 
-        self.assertEqual(h5tbx.get_config('default_convention'), 'h5tbx')
         with File() as h5:
             self.assertEqual(h5.__class__, h5tbx.File)
 

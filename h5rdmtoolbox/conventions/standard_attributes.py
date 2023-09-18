@@ -99,10 +99,11 @@ class StandardAttribute(abc.ABC):
         # name of attribute:
         self.name = name.split('-', 1)[0]  # the attrs key
 
-        # validator to be called when writing the attribute and reading the attribute:
-        if isinstance(validator, str):
-            validator = {validator: None}
-
+        try:
+            validator.model_validate
+        except AttributeError:
+            raise TypeError(f'validator must be a pydantic.BaseModel and therefore have a "model_validate" method. '
+                            f'Got {type(validator)} instead.')
         self.validator = validator
         # assert isinstance(self.validator, StandardAttributeValidator)
 
@@ -269,7 +270,8 @@ class StandardAttribute(abc.ABC):
                 ret_val = json.loads(ret_val)
                 try:
                     if 'typing.Dict' in str(self.validator.model_fields['value'].annotation):
-                        return self.validator.model_validate(dict(value=ret_val), context=dict(attrs=None, parent=parent)).value
+                        return self.validator.model_validate(dict(value=ret_val),
+                                                             context=dict(attrs=None, parent=parent)).value
                     else:
                         return self.validator.model_validate(ret_val, context=dict(attrs=None, parent=parent))
                 except pydantic.ValidationError as err:

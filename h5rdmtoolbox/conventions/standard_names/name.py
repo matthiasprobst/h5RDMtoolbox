@@ -44,6 +44,9 @@ class StandardName:
             self.check_syntax(alias)
         self.alias = alias
 
+    def __to_h5attr__(self) -> str:
+        return self.name
+
     def __str__(self):
         return self.name
 

@@ -1,17 +1,14 @@
-import inspect
 import requests
 import unittest
 import warnings
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError, AffixKeyError
-from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
+from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError
 from h5rdmtoolbox.conventions.standard_names import utils
 from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from h5rdmtoolbox.conventions.utils import check_url
-from h5rdmtoolbox.conventions.validators import ORCIDValidator
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -26,19 +23,6 @@ class TestStandardAttributes(unittest.TestCase):
             warnings.warn('No internet connection', UserWarning)
 
         self.snt = h5tbx.tutorial.get_standard_name_table()
-
-    def test_orcid(self):
-        o = ORCIDValidator()
-
-        with self.assertRaises(TypeError):
-            o(3.4)
-        self.assertTrue(o(h5tbx.__author_orcid__))
-        self.assertTrue(o('0000-0001-8729-0482'))
-        self.assertTrue(o(['0000-0001-8729-0482', '0000-0001-8729-0482']))
-        with self.assertRaises(ValueError):
-            o('0000-0001-8729-048X')
-        with self.assertRaises(ValueError):
-            o('0000-0001-8729-048Y')
 
     def test_units_power_fix(self):
         self.assertEqual('m s^-1', utils._units_power_fix('m s-1'))
@@ -238,59 +222,21 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_yaml(self):
         cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename())
-        cv.register()
         h5tbx.use(cv)
+        print('debuuuuuuuuuuuuug ', cv.name, ' ', tutorial.get_standard_attribute_yaml_filename())
+        self.assertTrue('scale' in cv.properties[h5tbx.Dataset])
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
             with self.assertRaises(StandardAttributeError):
+                # difference_of_x_velocity not found!
                 h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
             h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
 
             with self.assertRaises(StandardAttributeError):
+                # wrong units!
                 h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
+            print('scale in sa:', 'scale' in h5['x_velocity'].standard_attributes)
             h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
             self.assertEqual(h5['y_velocity'].attrs['standard_name'], 'y_velocity')
 
             with self.assertRaises(StandardAttributeError):
                 h5.create_dataset('velocity', data=2.3, units='m/s', standard_name='velocity')
-
-    def test_standard_name_convention(self):
-        h5tbx.use(None)
-        units_attr = StandardAttribute('units',
-                                       validator='$pintunit',
-                                       target_method='create_dataset',
-                                       description='A unit of a dataset',
-                                       )
-        standard_name = StandardAttribute('standard_name',
-                                          validator='$standard_name',
-                                          target_method='create_dataset',
-                                          description='A standard name of a dataset',
-                                          )
-        snt_yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
-        snt = StandardAttribute('standard_name_table',
-                                validator='$standard_name_table',
-                                target_method='__init__',
-                                # default_value='https://zenodo.org/record/8158764',
-                                default_value=snt_yaml_filename,
-                                description='A standard name table',
-                                requirements=['standard_name', 'units'])
-
-        cv = h5tbx.conventions.Convention('test_standard_name',
-                                          contact=h5tbx.__author_orcid__)
-        cv.add(units_attr)
-        cv.add(standard_name)
-        cv.add(snt)
-
-        cv.register()
-        h5tbx.use(cv.name)
-
-        self.assertIn('standard_name', inspect.signature(h5tbx.Group.create_dataset).parameters.keys())
-        self.assertIn('units', inspect.signature(h5tbx.Group.create_dataset).parameters.keys())
-        self.assertIn('standard_name_table', inspect.signature(h5tbx.File.__init__).parameters.keys())
-
-        if self.connected:
-            with h5tbx.File(standard_name_table='https://zenodo.org/record/8220739') as h5:
-                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
-
-                h5.create_dataset('test', data=1, standard_name='x_velocity', units='m/s')
-
-                snt = h5.standard_name_table

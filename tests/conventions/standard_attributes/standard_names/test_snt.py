@@ -6,9 +6,9 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.errors import StandardNameError
 from h5rdmtoolbox.conventions.standard_names import cache
+from h5rdmtoolbox.conventions.standard_names import parse_snt
 from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
-from h5rdmtoolbox.conventions.standard_names.validator import _parse_snt
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -47,29 +47,35 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertDictEqual({'name': 'x_velocity', 'units': 'm/s', 'description': 'Velocity in x-direction.'},
                              sn.to_dict())
         self.assertFalse(sn.is_vector())
-        snt = _parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
+        snt = parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
         self.assertTrue(sn.check(snt))
 
     def test_parse_snt(self):
         with self.assertRaises(TypeError):
-            _parse_snt(None)
+            parse_snt(None)
         with self.assertRaises(TypeError):
-            _parse_snt(3.4)
-        snt = _parse_snt(self.snt)
+            parse_snt(3.4)
+        snt = parse_snt(self.snt)
         self.assertIsInstance(snt, StandardNameTable)
-        snt = _parse_snt(self.snt.to_dict())
+        snt = parse_snt(self.snt.to_dict())
         self.assertIsInstance(snt, StandardNameTable)
-        snt = _parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
+        snt = parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
         self.assertIsInstance(snt, StandardNameTable)
-        snt = _parse_snt(str(h5tbx.tutorial.get_standard_name_table_yaml_file()))
+        snt = parse_snt(str(h5tbx.tutorial.get_standard_name_table_yaml_file()))
         self.assertIsInstance(snt, StandardNameTable)
 
     def test_snt_cache(self):
         """caching of SNTs only works if they are zenodo references"""
         cv = h5tbx.conventions.Convention(name='test', contact='me', institution='mine', decoders=())
+        from h5rdmtoolbox.conventions.toolbox_validators import standard_name_table as snt_validator
+        from pydantic import BaseModel
+        class standard_name_table_validator(BaseModel):
+            """The standard name table of the convention."""
+            value: snt_validator
+
         sa = h5tbx.conventions.standard_attributes.StandardAttribute(
             name='snt',
-            validator='$standard_name_table',
+            validator=standard_name_table_validator,
             target_method='__init__',
             description='Standard name table.',
             default_value='10.5281/zenodo.8220739'

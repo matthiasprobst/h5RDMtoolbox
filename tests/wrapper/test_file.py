@@ -65,7 +65,7 @@ class TestFile(unittest.TestCase):
     def test_reopen_file(self):
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
-        cv.use()
+        h5tbx.use(cv)
         with h5tbx.File(data_type='experimental',
                         contact=h5tbx.__author_orcid__) as h5:
             pass
@@ -80,9 +80,13 @@ class TestFile(unittest.TestCase):
             self.assertTrue('contact' in h5.attrs.raw)
 
     def test_scale(self):
+        h5tbx.use(None)
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
-        cv.use()
+        h5tbx.use(cv)
+
+        self.assertTrue('scale' in cv.properties[h5tbx.Dataset])
+
         for scale in (0.2 * pint.Unit('Pa/V'), 0.2 * pint.Unit('Pa/V'), '0.2 Pa/V', '0.2Pa/V'):
             with h5tbx.File(data_type='experimental',
                             contact=h5tbx.__author_orcid__) as h5:
@@ -103,7 +107,7 @@ class TestFile(unittest.TestCase):
         from h5rdmtoolbox import tutorial
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
-        cv.use()
+        h5tbx.use(cv)
         with h5tbx.File(data_type='experimental',
                         contact=h5tbx.__author_orcid__) as h5:
             with self.assertRaises(h5tbx.errors.StandardAttributeError):

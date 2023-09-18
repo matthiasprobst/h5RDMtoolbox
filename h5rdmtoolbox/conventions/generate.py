@@ -40,7 +40,8 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             pass
 
     # for reference, also copy the yaml file there:
-    shutil.copy(yaml_filename, convention_dir / f'{convention_name}.yaml')
+    print(f'DEBUG DEBUG copying yaml file to convention directory: {yaml_filename} -> {convention_dir}')
+    shutil.copy2(yaml_filename, convention_dir / f'{convention_name}.yaml')
 
     validator_dict = {}
 
@@ -88,7 +89,9 @@ from typing_extensions import Annotated
                     regex_validator = get_regex_name()  # TODO use proper id
                     match = re.search(r'regex\((.*?)\)', v['validator'])
                     re_pattern = match.group(1)
-                    standard_attributes[k] = regex_validator
+                    if re_pattern.startswith("r'") and re_pattern.endswith("'"):
+                        re_pattern = re_pattern[2:-1]
+                        standard_attributes[k] = regex_validator
                     _v = v.copy()
                     _v['validator'] = f'{regex_validator}'
                     standard_attributes[k] = _v

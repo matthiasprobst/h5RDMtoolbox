@@ -8,7 +8,7 @@ from pydantic.functional_validators import WrapValidator
 from typing import Union, Dict
 from typing_extensions import Annotated
 
-from h5rdmtoolbox import get_ureg
+from h5rdmtoolbox import get_ureg, errors
 
 
 def __validate_orcid(value, handler, info):
@@ -29,8 +29,37 @@ def __validate_standard_name(value, handler, info) -> "StandardNameTable":
     if not isinstance(value, (str, standard_names.StandardName)):
         raise TypeError(f'Expected a string or StandardName object, got {type(value)}')
     if info.context:
+        parent = info.context.get('parent', None)
+        if parent is None:
+            raise KeyError('No parent dataset found, which is needed to get the standard name table information!')
+
+        attrs = info.context.get('attrs', None)
+        if attrs is None:
+            attrs = {}
+
         snt = info.context['parent'].rootparent.standard_name_table
-        return snt[value]
+
+        units = parent.attrs.get('units', None)
+        if units is None:
+            raise KeyError('No units defined for this variable!')
+
+        # check if scale is provided:
+        scale = attrs.get('scale',
+                          parent.attrs.get('scale', None))
+        if scale is not None:
+            ureg = get_ureg()
+            units = str((ureg.Quantity(scale) * ureg.Unit(units)).units)
+
+        sn = snt[value]
+        if sn.is_vector():
+            raise errors.StandardAttributeError(f'Standard name {value} is a vector and cannot be used as '
+                                                'attribute. Use a transformation e.g. with a component or magnitude '
+                                                'instead.')
+        if not sn.equal_unit(units):
+            raise errors.StandardAttributeError(f'Standard name {value} has incompatible units {units}. '
+                                                f'Expected units: {sn.units} but got {units}.')
+
+        return sn
     raise ValueError(f'A standard name must be provided to check the validity of the name: {value}')
 
 
@@ -46,6 +75,8 @@ def __validate_url(value, handler, info) -> "StandardNameTable":
 
 
 def __validate_quantity(value, handler, info):
+    if isinstance(value, pint.Quantity):
+        return value
     try:
         return get_ureg().Quantity(value)
     except (pint.UndefinedUnitError, TypeError) as e:

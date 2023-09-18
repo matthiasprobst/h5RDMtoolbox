@@ -8,6 +8,18 @@ $datatypes:
   - numerical
   - analytical
 
+scale:
+  target_method: create_dataset
+  validator: $quantity
+  description: Scale factor for the dataset values.
+  default_value: $NONE
+
+offset:
+  target_method: create_dataset
+  validator: $offset
+  description: The offset of the dataset.
+  default_value: $NONE
+
 data_type:
   description: Type of data in file. Can be numerical, analytical or experimental.
   target_method: __init__
@@ -37,7 +49,7 @@ standard_name_table:
 
 long_name:
   target_method: create_dataset
-  validator: $regex(^[a-zA-Z].*(?<!\s)$)
+  validator: $regex(^[a-zA-Z].*$)
   alternative_standard_attribute: standard_name
   description: An comprehensive description of the dataset. If not set, the standard_name attribute must be given.
 

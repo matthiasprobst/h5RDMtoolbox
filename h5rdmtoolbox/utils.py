@@ -234,17 +234,29 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     return hdf_filepath
 
 
-def try_making_serializable(d: Dict):
+def try_making_serializable(d: Dict) -> Dict:
     """Tries to make a dictionary serializable by converting numpy arrays to lists"""
-    if isinstance(d, dict):
-        for key, value in d.items():
-            d[key] = try_making_serializable(value)
-    elif isinstance(d, list):
-        for i in range(len(d)):
-            d[i] = try_making_serializable(d[i])
-    elif isinstance(d, np.ndarray):
-        d = d.tolist()
-    return d
+    result_dict = {}
+    if not isinstance(d, dict):
+        return d
+    for key, value in d.items():
+        if isinstance(value, dict):
+            result_dict[key] = try_making_serializable(value)
+        elif isinstance(value, np.ndarray):
+            result_dict[key] = value.tolist()
+        elif isinstance(value, (int, str, float, bool)):
+            result_dict[key] = value
+        elif isinstance(value, tuple):
+            result_dict[key] = tuple([try_making_serializable(v) for v in value])
+        elif isinstance(value, list):
+            result_dict[key] = [try_making_serializable(v) for v in value]
+        else:
+            try:
+                result_dict[key] = value.__to_h5attr__()
+            except AttributeError:
+                warnings.warn(f"Type {type(value)} of value {value} not supported. Maybe json can handle it?")
+                result_dict[key] = value
+    return result_dict
 
 
 def create_special_attribute(h5obj: h5py.AttributeManager,

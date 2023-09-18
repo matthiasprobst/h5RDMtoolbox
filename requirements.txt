@@ -23,5 +23,6 @@ xmltodict
 tabulate>=0.8.10
 python-gitlab
 pypandoc>=1.11
+pydantic >= 2.3.0
 # other:
 tqdm>=4.64.0

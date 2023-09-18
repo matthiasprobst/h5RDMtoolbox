@@ -1,16 +1,6 @@
 import abc
 import json
-import pint
-import re
-import warnings
-from datetime import datetime
-from typing import List, Union, Dict
-
-from h5rdmtoolbox.orcid import ORCID
-from . import errors
-from . import validator_management
-from .references import validate_reference, validate_bibtex, validate_url
-from .. import get_ureg
+from typing import Dict
 
 _type_translation = (
     [('str', '$str', 'string'), str],
@@ -20,14 +10,14 @@ _type_translation = (
 )
 
 
-def _eval_type(t):
-    if isinstance(t, str):
-        for _stype, _type in _type_translation:
-            if t in _stype:
-                return _type
-    else:
-        return t
-    raise KeyError(f'Could not process {t}')
+# def _eval_type(t):
+#     if isinstance(t, str):
+#         for _stype, _type in _type_translation:
+#             if t in _stype:
+#                 return _type
+#     else:
+#         return t
+#     raise KeyError(f'Could not process {t}')
 
 
 class StandardAttributeValidator:
@@ -240,154 +230,3 @@ def _parse_dict(value):
     if isinstance(value, dict):
         return json.dumps(value)
     return value
-
-
-class _BaseReferenceValidator(StandardAttributeValidator, abc.ABC):
-
-    def get(self, value, parent):
-        if isinstance(value, str):
-            if value[0] == '{':
-                return json.loads(value)
-            return value
-        return tuple([_loads_if_needed(v) for v in value])
-
-
-# class ReferencesValidator(_BaseReferenceValidator):
-#     keyword = '$ref'
-#
-#     def __call__(self, references, parent=None, attrs=None):
-#         if not isinstance(references, (list, tuple)):
-#             references = [references, ]
-#         if all(validate_reference(r) for r in references):
-#             if len(references) == 1:
-#                 return _parse_dict(references[0])
-#             return [_parse_dict(r) for r in references]
-#
-#
-# class URLValidator(StandardAttributeValidator):
-#     keyword = '$url'
-#
-#     def __call__(self, references, parent=None, attrs=None):
-#         if not isinstance(references, (list, tuple)):
-#             references = [references, ]
-#         if all(validate_url(r) for r in references):
-#             if len(references) == 1:
-#                 return references[0]
-#             return references
-#         raise ValueError(f'Invalid URL: {references}')
-#
-#
-# class BibTeXValidator(_BaseReferenceValidator):
-#     keyword = '$bibtex'
-#
-#     def __call__(self, bibtex, parent=None, attrs=None) -> List[str]:
-#         if not isinstance(bibtex, (list, tuple)):
-#             bibtex = [bibtex, ]
-#         if all(validate_bibtex(b) for b in bibtex):
-#             if len(bibtex) == 1:
-#                 return _parse_dict(bibtex[0])
-#             return [_parse_dict(b) for b in bibtex]
-#         raise ValueError(f'Invalid Bibtex entry: {bibtex}')
-#
-#
-# class MinLengthValidator(StandardAttributeValidator):
-#     keyword = '$minlength'
-#
-#     def __call__(self, value, parent=None, attrs=None):
-#         if len(value) < self.ref:
-#             raise ValueError(f'The value "{value}" is shorter than the minimum length {self.ref}')
-#         return value
-#
-#
-# class MaxLengthValidator(StandardAttributeValidator):
-#     keyword = '$maxlength'
-#
-#     def __call__(self, value, parent=None, attrs=None):
-#         if len(value) > self.ref:
-#             raise ValueError(f'The value "{value}" is shorter than the minimum length {self.ref}')
-#         return value
-#
-#
-# class RegexValidator(StandardAttributeValidator):
-#     """The RegexValidator matches the input against a regular expression.
-#
-#     Examples
-#     --------
-#     >>> from h5rdmtoolbox.conventions.validators import RegexValidator
-#     >>> validator = RegexValidator('^[a-z]+$', '^[a-z]+$')
-#     >>> validator('abc', None)
-#     """
-#
-#     keyword = '$regex'
-#
-#     def __call__(self, value, parent=None, attrs=None):
-#         if re.match(self.ref, value) is None:
-#             raise errors.StandardAttributeValidationError(
-#                 f'The value "{value}" does not match the pattern "{self.ref}"')
-#         return value
-#
-#
-# class SymbolValidator(StandardAttributeValidator):
-#     """Validates the symbol of a variable, which is a string.
-#     No further checks are performed."""
-#
-#     keyword = '$str'
-#
-#     def __call__(self, value, parent, attrs=None):
-#         """just pass the value"""
-#         if not isinstance(value, str):
-#             raise ValueError(f'Expected a string, got {type(value)}')
-#         return value
-
-
-def register(validator: StandardAttributeValidator):
-    if not hasattr(validator, 'keyword'):
-        raise TypeError(f'Validator {validator} seems to be incorrect class. Expecting the attribute "keyword"')
-    if validator.keyword == None:
-        raise ValueError(f'Validator {validator} has no keyword')
-    validator_management._validators[validator.keyword] = validator
-    for dk in validator.alternative_keywords:
-        validator_management.ALT_VALIDATORS[dk] = validator
-
-
-_default_validators = [v for k, v in locals().items() if
-                       k.endswith('Validator') and k != 'StandardAttributeValidator' and not k.startswith('_')]
-
-for v in _default_validators:
-    register(v)
-
-# # list of all validator classes:
-# VALIDATORS = {v.keyword: v for k, v in locals().items() if
-#               k.endswith('Validator') and k != 'StandardAttributeValidator' and not k.startswith('_')}
-
-
-for _validator in validator_management._validators.values():
-    if _validator.alternative_keywords:
-        if isinstance(_validator.alternative_keywords, str):
-            _alternative_keywords = (_validator.alternative_keywords,)
-        else:
-            _alternative_keywords = _validator.alternative_keywords
-        for dk in _alternative_keywords:
-            validator_management.ALT_VALIDATORS[dk] = _validator
-
-
-def get_validator(validator_keyword=None) -> Union[dict, StandardAttributeValidator]:
-    """Returns a validator class or a dictionary of all validator classes."""
-    if validator_keyword is None:
-        return validator_management._validators
-    validator = validator_management._validators.get(validator_keyword, None)
-    if validator is not None:
-        return validator
-    alt_validator = validator_management.ALT_VALIDATORS.get(validator_keyword, None)
-    if alt_validator is None:
-        raise ValueError(f'Validator "{validator_keyword}" does not exist.')
-    warnings.warn(
-        f'Validator "{validator_keyword}" is deprecated. Select the correct one from this list instead: '
-        f'{validator_management._validators.keys()}',
-        DeprecationWarning)
-    return alt_validator
-
-
-def add_validator(validator: StandardAttributeValidator):
-    """Adds a validator to the list of available validators."""
-    validator_management._validators[validator.keyword] = validator

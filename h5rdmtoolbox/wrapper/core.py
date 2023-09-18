@@ -109,7 +109,8 @@ def process_attributes(cls,
                 # if the skwargs is not set and not required, pass attrs to skwargs
                 # same accounts if the current value in skwargs is the default (to be identified by instance check)
                 if skwargs[ak] == DefaultValue.NONE or skwargs[ak] == DefaultValue.EMPTY or isinstance(skwargs[ak],
-                                                                                                       DefaultValue):
+                                                                                                       DefaultValue)\
+                        or skwargs[ak] is None:
                     skwargs[ak] = v
                 # else raise error
                 else:

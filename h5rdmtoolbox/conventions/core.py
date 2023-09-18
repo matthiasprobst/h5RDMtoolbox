@@ -183,10 +183,6 @@ class Convention:
         self._decoders = tuple(decoders)
         return self._decoders
 
-    def use(self):
-        """use this convention"""
-        use(self.name)
-
     @staticmethod
     def from_yaml(yaml_filename) -> "Convention":
         """Create a convention from a yaml file."""
@@ -492,8 +488,8 @@ def from_zenodo(doi, name=None, register: bool = True, force_download: bool = Fa
     Parameters
     ----------
     doi: str
-        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8318040 or
-        10.5281/zenodo.8318040 or https://doi.org/10.5281/zenodo.8318040)
+        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8357399 or
+        10.5281/zenodo.8357399 or https://doi.org/10.5281/zenodo.8357399)
     register: bool
         Whether to register the convention for direct use. Default is True
     force_download: bool
