@@ -37,11 +37,12 @@ cv_h5py = conventions.Convention('h5py',
                                  contact=__author_orcid__)
 cv_h5py.register()
 
-cv_h5tbx = conventions.Convention.from_yaml(__this_dir__ / 'data/h5tbx_convention.yaml')
+# cv_h5tbx = conventions.Convention.from_yaml(__this_dir__ / 'data/h5tbx_convention.yaml')
 
 use = conventions.core.use
-
-use(get_config()['default_convention'])
+use(None)
+#
+# use(get_config()['default_convention'])
 
 
 class FileDB:

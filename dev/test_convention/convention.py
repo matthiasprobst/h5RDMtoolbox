@@ -1,26 +1,23 @@
-import pint
 
-from h5rdmtoolbox import get_ureg
-
-
-def validate_units(value, handler, info):
-    """validate units using pint package"""
-    try:
-        get_ureg().Unit(value)
-    except (pint.UndefinedUnitError, TypeError) as e:
-        raise ValueError(f'Units cannot be understood using ureg package: {value}. Original error: {e}')
-    return str(value)
+# ---- generated code: ----
+from h5rdmtoolbox.conventions.toolbox_validators import *
 
     
 from pydantic import BaseModel
-from pydantic.functional_validators import WrapValidator
-from typing_extensions import Annotated
+# from pydantic.functional_validators import WrapValidator
+# from typing_extensions import Annotated
+
+import re
+
+def regex_00_validator(value, parent=None, attrs=None):
+    pattern = re.compile(r'^[a-zA-Z].{5,}$')
+    if not pattern.match(value):
+        raise ValueError('Invalid format for pattern')
+    return value
 
 
-# ---- generated code: ----
-units = Annotated[str, WrapValidator(validate_units)]
-
-
+regex_00 = Annotated[int, WrapValidator(regex_00_validator)]
+    
 class PersonValidator(BaseModel):
     name: str
     age: int = 3
@@ -38,7 +35,7 @@ class SymbolValidator(BaseModel):
 
 class Long_nameValidator(BaseModel):
     """A very long name."""
-    value: regex(^[a-zA-Z].*(?<!\s)$)
+    value: regex_00
 
 
 UnitsValidator(value="1")

@@ -1,12 +1,13 @@
 """standard attribute module"""
 import abc
+import json
+import pydantic
 import warnings
 from typing import Dict, List, Union
 
 from . import errors, logger
 from . import warnings as convention_warnings
 from .consts import DefaultValue
-from .validators import StandardAttributeValidator, get_validator
 from .. import get_config
 from ..utils import DocStringParser
 from ..wrapper.core import File, Group, Dataset
@@ -101,11 +102,8 @@ class StandardAttribute(abc.ABC):
         if isinstance(validator, str):
             validator = {validator: None}
 
-        if len(validator) > 1:
-            raise ValueError(f'Only one validator can be specified. Got {validator} instead.')
-
-        self.validator = [get_validator(k)(v) for k, v in validator.items()][0]
-        assert isinstance(self.validator, StandardAttributeValidator)
+        self.validator = validator
+        # assert isinstance(self.validator, StandardAttributeValidator)
 
         # the human readable description of the attribute:
         if description[-1] != '.':
@@ -206,7 +204,18 @@ class StandardAttribute(abc.ABC):
                 #     # None is passed. this is ignored
                 #     return
             else:
-                validated_value = self.validator(value, parent, attrs)
+                if isinstance(value, dict):
+                    try:
+                        _value = self.validator.model_validate(value, context={'parent': parent, 'attrs': attrs})
+                    except pydantic.ValidationError as err:
+                        raise errors.StandardAttributeError(
+                            f'Validation of "{value}" for standard attribute "{self.name}" failed.\n'
+                            f'Expected fields: {self.validator.model_fields}\nPydantic error: {err}')
+                    validated_value = json.dumps(value)
+                else:
+                    _value = self.validator.model_validate(dict(value=value),
+                                                           context={'parent': parent, 'attrs': attrs})
+                    validated_value = str(_value.value)  # self.validator(value, parent, attrs)
         except Exception as e:
             if get_config('ignore_standard_attribute_errors'):
                 logger.warning(f'Setting "{value}" for standard attribute "{self.name}" failed. '
@@ -245,9 +254,20 @@ class StandardAttribute(abc.ABC):
         except KeyError:
             ret_val = self.default_value
         # is there a return value associated with the validator?
+
+        if ret_val.startswith('{') and ret_val.endswith('}'):
+            ret_val = json.loads(ret_val)
+            try:
+                # here we could let the user also return the "native" type... TODO. ds.raw.units --> 'm/s', ds.units --> pint.Units('m/s')
+                return self.validator.model_validate(ret_val, context=dict(attrs=None, parent=parent))
+            except pydantic.ValidationError as err:
+                warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
+                              convention_warnings.StandardAttributeValidationWarning)
+                return ret_val
+
         try:
-            return self.validator.get(ret_val, parent)
-        except Exception as e:
-            warnings.warn(f'The attribute "{self.name}" could not be validated due to: {e}',
+            return self.validator.model_validate(dict(value=ret_val), context=dict(attrs=None, parent=parent)).value
+        except pydantic.ValidationError as err:
+            warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                           convention_warnings.StandardAttributeValidationWarning)
-            return ret_val
+        return ret_val

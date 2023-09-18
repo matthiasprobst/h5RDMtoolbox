@@ -3,7 +3,7 @@ import pint
 from h5rdmtoolbox import get_ureg
 
 
-def validate_units(value, handler, info):
+def validate_units2(value, handler, info):
     """validate units using pint package"""
     try:
         get_ureg().Unit(value)

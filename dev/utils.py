@@ -52,4 +52,4 @@ def get_specialtype_function_info(file_path, validate=True):
 
 
 if __name__ == "__main__":
-    validate_specialtype_functions(get_specialtype_function_info("test_convention_vfuncs.py"))
+    validate_specialtype_functions(get_specialtype_function_info("_test_convention_vfuncs.py"))

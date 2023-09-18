@@ -31,6 +31,7 @@ class DirManger:
 
         self.user_dirs = {'root': _user_root_dir,
                           'tmp': tmp_dir,
+                          'conventions': _user_root_dir / 'conventions',
                           'layouts': _user_root_dir / 'layouts',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'cache': _user_root_dir / 'cache'}

@@ -8,7 +8,7 @@ import warnings
 import yaml
 import zenodo_search as zsearch
 from pydoc import locate
-from typing import Union, List, Dict, Callable
+from typing import Union, List, Dict
 
 from . import cfg
 from . import errors
@@ -33,16 +33,14 @@ class Convention:
         List of decoders to be used for decoding datasets. If None, no decoder is used.
         Decoders can be written by the user and registered with `h5tbx.register_dataset_decoder(<decoder_func>)`.
     """
-    scale_attribute_name = 'scale'
-    offset_attribute_name = 'offset'
 
     def __init__(self,
                  name: str,
                  contact: str,  # ORCID of researcher
                  institution: str = None,  # only if different than that from contact
+                 standard_attributes: dict = None,
                  decoders: Union[str, List[str]] = None,
-                 filename=None,
-                 use_scale_offset=None):
+                 filename=None):
         from ..wrapper.core import File, Group, Dataset
 
         if decoders is None:
@@ -52,8 +50,6 @@ class Convention:
                 self._decoders = (decoders,)
             else:
                 self._decoders = tuple(decoders)
-
-        assert isinstance(self._decoders, tuple)
 
         # a convention may be stored locally:
         if filename is not None:
@@ -66,12 +62,56 @@ class Convention:
 
         self._registered_standard_attributes = {}
         self.name = name
-        if use_scale_offset:
-            warnings.warn('The scale-offset feature is implemented as user-defined dataset decoders. '
-                          'The parameter `use_scale_offset` is ignored here!.')
 
         self.properties = {}
         self.methods = {File: {}, Group: {}, Dataset: {}}
+
+        if standard_attributes is None:
+            standard_attributes = {}
+        for std_name, std in standard_attributes.items():
+            self.add(std)
+
+    def add(self, std_attr: StandardAttribute):
+        _registered_names = list(self._registered_standard_attributes.keys())
+
+        # check if the name is already registered:
+        _cls = std_attr.target_cls
+
+        prop = self.properties.get(_cls, None)
+        if prop is not None:
+            if std_attr.name in self.properties[_cls]:
+                raise errors.ConventionError(f'A standard attribute with the name "{std_attr.name}" '
+                                             f'is already registered for "{std_attr.target_cls}".')
+        if std_attr.requirements is not None:
+            if not all(r in _registered_names for r in std_attr.requirements):
+                # collect the missing ones:
+                _missing_requirements = []
+                for r in std_attr.requirements:
+                    if r not in _registered_names:
+                        _missing_requirements.append(r)
+                raise errors.ConventionError(f'Not all requirements for "{std_attr.name}" are registered. '
+                                             f'Please add them to the convention first: {_missing_requirements}')
+
+        self._registered_standard_attributes[std_attr.name] = std_attr
+
+        method_name = std_attr.target_method
+
+        target_cls = std_attr.target_cls
+
+        if target_cls not in self.properties:
+            self.properties[target_cls] = {}
+        self.properties[target_cls][std_attr.name] = std_attr
+
+        if target_cls not in self.methods:
+            self.methods[target_cls] = {}
+
+        add_to_method = True  # for now all standard attributes are always added to the method (signature)
+        if add_to_method:
+            cls = StandardAttribute.METHOD_CLS_ASSIGNMENT[method_name]
+            if method_name not in self.methods[cls]:
+                self.methods[cls][method_name] = {}
+
+            self.methods[cls][method_name][std_attr.name] = std_attr
 
     def __repr__(self):
         header = f'Convention("{self.name}")'
@@ -146,47 +186,6 @@ class Convention:
     def from_yaml(yaml_filename, register=True) -> "Convention":
         """Create a convention from a yaml file."""
         return from_yaml(yaml_filename, register=register)
-
-    def add(self, std_attr: StandardAttribute):
-        """Add a standard attribute to the convention."""
-        _registered_names = list(self._registered_standard_attributes.keys())
-
-        # check if the name is already registered:
-        _cls = std_attr.target_cls
-        prop = self.properties.get(_cls, None)
-        if prop is not None:
-            if std_attr.name in self.properties[_cls]:
-                raise errors.ConventionError(f'A standard attribute with the name "{std_attr.name}" '
-                                             f'is already registered for "{std_attr.target_cls}".')
-        if std_attr.requirements is not None:
-            if not all(r in _registered_names for r in std_attr.requirements):
-                # collect the missing ones:
-                _missing_requirements = []
-                for r in std_attr.requirements:
-                    if r not in _registered_names:
-                        _missing_requirements.append(r)
-                raise errors.ConventionError(f'Not all requirements for "{std_attr.name}" are registered. '
-                                             f'Please add them to the convention first: {_missing_requirements}')
-
-        self._registered_standard_attributes[std_attr.name] = std_attr
-
-        method_name = std_attr.target_method
-        target_cls = std_attr.target_cls
-
-        if target_cls not in self.properties:
-            self.properties[target_cls] = {}
-        self.properties[target_cls][std_attr.name] = std_attr
-
-        if target_cls not in self.methods:
-            self.methods[target_cls] = {}
-
-        add_to_method = True  # for now all standard attributes are always added to the method (signature)
-        if add_to_method:
-            cls = StandardAttribute.METHOD_CLS_ASSIGNMENT[method_name]
-            if method_name not in self.methods[cls]:
-                self.methods[cls][method_name] = {}
-
-            self.methods[cls][method_name][std_attr.name] = std_attr
 
     def pop(self, *names) -> "Convention":
         """removes the standard attribute with the given name from the convention
@@ -398,6 +397,9 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
 
     yaml_filename = pathlib.Path(yaml_filename)
 
+    from . import generate
+    generate.write_convention_module_from_yaml(yaml_filename)
+
     with open(yaml_filename, 'r') as f:
         attrs = _process_paths(yaml.safe_load(f), relative_to=yaml_filename.parent)
 
@@ -438,7 +440,7 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     return cv
 
 
-def from_zenodo(doi, name=None, register: bool = True, force_download:bool=False) -> Convention:
+def from_zenodo(doi, name=None, register: bool = True, force_download: bool = False) -> Convention:
     """Download a YAML file from a zenodo repository
 
     Parameters

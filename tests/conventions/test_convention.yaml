@@ -8,13 +8,14 @@ $person:
   age: int = 3  # we can set a default value here
 
 contactPerson:
-  target_method: create_dataset
+  target_method: __init__
   validator: $person
   description: A contact person.
 
 units:
   target_method: create_dataset
   validator: $units
+  return_type: $pint.Unit
   description: The physical unit of the dataset. If dimensionless, the unit is ''.
 
 symbol:

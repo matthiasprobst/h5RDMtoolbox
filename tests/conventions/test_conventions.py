@@ -1,4 +1,5 @@
 import pathlib
+import pint
 import requests
 import shutil
 import unittest
@@ -22,9 +23,36 @@ class TestConventions(unittest.TestCase):
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
 
-
     def test_new_convention(self):
-        pass
+        import sys
+        from h5rdmtoolbox.conventions.generate import write_convention_module_from_yaml
+        write_convention_module_from_yaml('test_convention.yaml')
+        sys.path.insert(0, r'C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\conventions\test_convention')
+        # noinspection PyUnresolvedReferences
+        import convention
+
+        from h5rdmtoolbox.conventions import get_current_convention
+
+        h5tbx.use('h5tbx')
+
+        self.assertEqual('h5tbx', get_current_convention().name)
+
+        with h5tbx.File(contactPerson=dict(name='Peter')) as h5:
+            print(h5.contactPerson)
+            ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='v', long_name='A long name')
+            self.assertIsInstance(ds.units, pint.Unit)
+            self.assertIsInstance(ds.symbol, str)
+            with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                ds.symbol = 1.4
+            self.assertEqual(ds.symbol, 'v')
+            ds.symbol = 'P'
+            self.assertEqual(ds.symbol, 'P')
+            self.assertEqual(str(ds.units), 'm/s')
+            ds.units = h5tbx.get_ureg().Unit('N m')
+            self.assertEqual(str(ds.units), 'N*m')
+
+        h5tbx.use(None)
+        self.assertEqual('h5py', get_current_convention().name)
 
     def test_getattr(self):
         with h5tbx.use('h5tbx') as cv:
