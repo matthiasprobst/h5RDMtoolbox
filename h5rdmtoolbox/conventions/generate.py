@@ -91,8 +91,13 @@ from typing_extensions import Annotated
 {regex_validator} = Annotated[int, WrapValidator({regex_validator}_validator)]""")
                 else:
                     standard_attributes[k] = v
-        else:
+        elif isinstance(v, str):
             meta[k.strip('_')] = v
+        elif isinstance(v, list):
+            # is an enum
+            type_definitions[k] = v
+        else:
+            raise KeyError(f'Unknown type for key {k}: {type(v)}')
 
     # get validator and write them to convention-python file:
     with open(convention_dir / f'convention.py', 'a') as f:
@@ -101,48 +106,69 @@ from typing_extensions import Annotated
         for k, v in type_definitions.items():
             validator_name = k.strip('$').capitalize()
             validator_dict[k] = f'{validator_name}Validator'
-            lines = f"""
+            if isinstance(v, list):
+                # create_enum_class(k, v, f)
+                lines = f"""
+from enum import Enum
+
+class {validator_name}(str, Enum):
+"""
+                for enum_val in v:
+                    enum_split = enum_val.split(':', 1)
+                    if len(enum_split) == 1:
+                        enum_name, enum_value = enum_val, enum_val
+                    else:
+                        enum_name, enum_value = enum_split
+                    lines += f'    {enum_name} = "{enum_value}"\n'
+                lines += f"""
+
+class {validator_name}Validator(BaseModel):
+    value: {validator_name}
+
+"""
+            else:
+                lines = f"""
 
 class {validator_name}Validator(BaseModel):
     """ + '\n    '.join([f'{k}: {v}' for k, v in v.items()])
-            # write imports to file:
-        if lines:
-            f.writelines(lines)
+                # write imports to file:
+            if lines:
+                f.writelines(lines)
 
-        for stda_name, stda in standard_attributes.items():
-            validator_class_name = stda_name.capitalize() + 'Validator'
-            _type = stda["validator"]
-            if _type in type_definitions:
-                continue
+            for stda_name, stda in standard_attributes.items():
+                validator_class_name = stda_name.capitalize() + 'Validator'
+                _type = stda["validator"]
+                if _type in type_definitions:
+                    continue
 
-            _type_str = _type.strip("$")
-            validator_dict[_type] = validator_class_name
-            lines = [
-                # testing:
-                # f'\nprint(special_type_funcs.units("123", None, None))'
-                f'\n\n\nclass {validator_class_name}(BaseModel):',
-                f'\n    """{stda["description"]}"""',
-                f'\n    value: {_type_str}',
-                # f'\n\n{validator_class_name}(value="hallo")'
+                _type_str = _type.strip("$")
+                validator_dict[_type] = validator_class_name
+                lines = [
+                    # testing:
+                    # f'\nprint(special_type_funcs.units("123", None, None))'
+                    f'\n\n\nclass {validator_class_name}(BaseModel):',
+                    f'\n    """{stda["description"]}"""',
+                    f'\n    value: {_type_str}',
+                    # f'\n\n{validator_class_name}(value="hallo")'
 
-            ]
-            f.writelines(lines)
-        f.writelines('\n\n\n')
-        f.writelines('UnitsValidator(value="1")\n')
-        f.writelines('validator_dict = {\n    ')
-        f.writelines('\n    '.join(f"'{k}': {v}," for k, v in validator_dict.items()))
-        f.writelines("\n    '$int': IntValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-        f.writelines("\n    '$str': StringValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-        f.writelines("\n    '$float': FloatValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-        f.writelines("\n}\n")
-        # f.writelines(f'standard_attributes_dict = {standard_attributes}\n')
+                ]
+                f.writelines(lines)
+            f.writelines('\n\n\n')
+            f.writelines('UnitsValidator(value="1")\n')
+            f.writelines('validator_dict = {\n    ')
+            f.writelines('\n    '.join(f"'{k}': {v}," for k, v in validator_dict.items()))
+            f.writelines("\n    '$int': IntValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
+            f.writelines("\n    '$str': StringValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
+            f.writelines("\n    '$float': FloatValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
+            f.writelines("\n}\n")
+            # f.writelines(f'standard_attributes_dict = {standard_attributes}\n')
 
-        f.writelines('\n')
-        f.writelines(f'from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute\n\n')
-        f.writelines(f'from h5rdmtoolbox.conventions import Convention\n\n')
-        f.writelines('standard_attributes = {\n    ')
-        for k, v in standard_attributes.items():
-            f.writelines(f"""    "{k}": StandardAttribute(
+            f.writelines('\n')
+            f.writelines(f'from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute\n\n')
+            f.writelines(f'from h5rdmtoolbox.conventions import Convention\n\n')
+            f.writelines('standard_attributes = {\n    ')
+            for k, v in standard_attributes.items():
+                f.writelines(f"""    "{k}": StandardAttribute(
             name='{k}',
             description='{v.get('description', None)}',
             validator=validator_dict.get('{v.get('validator', None)}'),
@@ -150,9 +176,9 @@ class {validator_name}Validator(BaseModel):
             default_value="{v.get('default_value', None)}",
     ),
 """)
-        f.writelines('}\n')
-        f.writelines(f"""cv = Convention(
-    name="{meta.get('name', None)}",        
+            f.writelines('}\n')
+            f.writelines(f"""cv = Convention(
+    name="{meta.get('name', None)}",
     contact="{meta.get('contact', None)}",
     institution="{meta.get('institution', None)}",
     decoders="{meta.get('decoders', None)}",
@@ -160,15 +186,6 @@ class {validator_name}Validator(BaseModel):
 )
 cv.register()
 """)
-
-        # _standard_attributes = standard_attributes.copy()
-        # for k, v in standard_attributes.items():
-        #     _standard_attributes[k]['validator'] = validator_dict.get(v['validator'], None)
-        #     if _standard_attributes[k]['validator'] is None:
-        #         print(f'could not find validator for {k}: {v["validator"]}')
-        # f.writelines(f'standard_attributes_dict = {_standard_attributes}\n')
-        # f.writelines(
-        #     f'standard_attributes = {{StandardAttributes(k, **v) for k, v in standard_attributes_dict.items()}}\n')
 
 
 # UTILITIES:

@@ -1,5 +1,6 @@
 """standard attribute module"""
 import abc
+import enum
 import json
 import pydantic
 import warnings
@@ -215,7 +216,10 @@ class StandardAttribute(abc.ABC):
                 else:
                     _value = self.validator.model_validate(dict(value=value),
                                                            context={'parent': parent, 'attrs': attrs})
-                    validated_value = str(_value.value)  # self.validator(value, parent, attrs)
+                    if isinstance(_value.value, enum.Enum):
+                        validated_value = _value.value.value
+                    else:
+                        validated_value = str(_value.value)  # self.validator(value, parent, attrs)
         except Exception as e:
             if get_config('ignore_standard_attribute_errors'):
                 logger.warning(f'Setting "{value}" for standard attribute "{self.name}" failed. '
@@ -268,7 +272,10 @@ class StandardAttribute(abc.ABC):
                     return ret_val
 
         try:
-            return self.validator.model_validate(dict(value=ret_val), context=dict(attrs=None, parent=parent)).value
+            _value = self.validator.model_validate(dict(value=ret_val), context=dict(attrs=None, parent=parent)).value
+            if isinstance(_value, enum.Enum):
+                return _value.value
+            return _value
         except pydantic.ValidationError as err:
             warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                           convention_warnings.StandardAttributeValidationWarning)

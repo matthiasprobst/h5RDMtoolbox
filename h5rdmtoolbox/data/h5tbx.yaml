@@ -25,3 +25,14 @@ symbol:
   validator: $str
   description: The mathematical symbol of the dataset.
   default_value: $NONE
+
+$creationModes:
+  - experimental
+  - numerical
+  - analytical
+
+creation_mode:
+  description: Creation mode of the data. Specific for engineering.
+  target_method: __init__
+  validator: $creationModes
+  default_value: $EMPTY

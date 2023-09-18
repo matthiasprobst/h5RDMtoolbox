@@ -25,11 +25,17 @@ class TestConventions(unittest.TestCase):
 
     def test_new_convention(self):
 
+        f = pathlib.Path(r'C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\conventions\h5tbx') / 'convention.py'
+        f.unlink(missing_ok=True)
+        from h5rdmtoolbox.conventions._h5tbx import build_convention
+        build_convention()
+
         h5tbx.use('h5tbx')
 
         self.assertEqual('h5tbx', h5tbx.conventions.get_current_convention().name)
 
-        with h5tbx.File() as h5:
+        with h5tbx.File(creation_mode='experimental') as h5:
+            print(h5.creation_mode, type(h5.creation_mode))
             ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='v')
             print(ds.scale)
             self.assertIsInstance(ds.units, pint.Unit)
@@ -278,6 +284,19 @@ class TestConventions(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
+
+            cv = h5tbx.conventions.from_zenodo(doi=8301535)
+            self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
+            self.assertEqual(
+                h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
+                cv.properties[h5tbx.File]['data_type'].default_value
+            )
+            cv.properties[h5tbx.File]['data_type'].make_optional()
+            self.assertEqual(
+                h5tbx.conventions.standard_attributes.DefaultValue.NONE,
+                cv.properties[h5tbx.File]['data_type'].default_value
+            )
+
             # we can download from zenodo by passing the short or full DOI or the URL:
 
             dois = ('8301535', '10.5281/zenodo.8301535', 'https://zenodo.org/record/8301535',
@@ -289,18 +308,6 @@ class TestConventions(unittest.TestCase):
             for doi in dois:
                 cv = h5tbx.conventions.from_zenodo(doi=doi)
                 self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
-
-        cv = h5tbx.conventions.from_zenodo(doi=8301535)
-        self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
-        self.assertEqual(
-            h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
-            cv.properties[h5tbx.File]['data_type'].default_value
-        )
-        cv.properties[h5tbx.File]['data_type'].make_optional()
-        self.assertEqual(
-            h5tbx.conventions.standard_attributes.DefaultValue.NONE,
-            cv.properties[h5tbx.File]['data_type'].default_value
-        )
 
     def test_default_value(self):
         from h5rdmtoolbox.conventions.consts import DefaultValue
