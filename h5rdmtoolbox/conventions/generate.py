@@ -40,7 +40,6 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             pass
 
     # for reference, also copy the yaml file there:
-    print(f'DEBUG DEBUG copying yaml file to convention directory: {yaml_filename} -> {convention_dir}')
     shutil.copy2(yaml_filename, convention_dir / f'{convention_name}.yaml')
 
     validator_dict = {}
@@ -169,14 +168,14 @@ class {validator_name}_validator(BaseModel):
             lines = [
                 # testing:
                 # f'\nprint(special_type_funcs.units("123", None, None))'
-                f'\n\n\nclass {validator_class_name}(BaseModel):',
+                f'\nclass {validator_class_name}(BaseModel):',
                 f'\n    """{stda["description"]}"""',
                 f'\n    value: {_type_str}',
                 # f'\n\n{validator_class_name}(value="hallo")'
 
             ]
             f.writelines(lines)
-            f.writelines('\n\n\n')
+            f.writelines('\n')
 
         f.writelines('validator_dict = {\n    ')
         f.writelines('\n    '.join(f"'{k}': {v}," for k, v in validator_dict.items()))
