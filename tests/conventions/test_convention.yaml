@@ -3,19 +3,21 @@ __institution__: https://orcid.org/members/001G000001e5aUTIAY
 __contact__: https://orcid.org/0000-0001-8729-0482
 __decoders__: 'scale_and_offset'
 
-$person:
-  name: str
-  age: int = 3  # we can set a default value here
+scale:
+  target_method: create_dataset
+  validator: $quantity
+  description: Scale factor for the dataset values.
+  default_value: $NONE
 
-contactPerson:
-  target_method: __init__
-  validator: $person
-  description: A contact person.
+offset:
+  target_method: create_dataset
+  validator: $offset
+  description: The offset of the dataset.
+  default_value: $NONE
 
 units:
   target_method: create_dataset
   validator: $units
-  return_type: $pint.Unit
   description: The physical unit of the dataset. If dimensionless, the unit is ''.
 
 symbol:

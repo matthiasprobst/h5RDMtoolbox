@@ -253,17 +253,19 @@ class StandardAttribute(abc.ABC):
             ret_val = super(type(parent.attrs), parent.attrs).__getitem__(self.name)
         except KeyError:
             ret_val = self.default_value
+            if ret_val is self.NONE:
+                return None
         # is there a return value associated with the validator?
 
-        if ret_val.startswith('{') and ret_val.endswith('}'):
-            ret_val = json.loads(ret_val)
-            try:
-                # here we could let the user also return the "native" type... TODO. ds.raw.units --> 'm/s', ds.units --> pint.Units('m/s')
-                return self.validator.model_validate(ret_val, context=dict(attrs=None, parent=parent))
-            except pydantic.ValidationError as err:
-                warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
-                              convention_warnings.StandardAttributeValidationWarning)
-                return ret_val
+        if ret_val:
+            if ret_val.startswith('{') and ret_val.endswith('}'):
+                ret_val = json.loads(ret_val)
+                try:
+                    return self.validator.model_validate(ret_val, context=dict(attrs=None, parent=parent))
+                except pydantic.ValidationError as err:
+                    warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
+                                  convention_warnings.StandardAttributeValidationWarning)
+                    return ret_val
 
         try:
             return self.validator.model_validate(dict(value=ret_val), context=dict(attrs=None, parent=parent)).value

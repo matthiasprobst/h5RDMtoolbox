@@ -10,12 +10,61 @@ from typing_extensions import Annotated
 from h5rdmtoolbox import get_ureg
 
 
+def __validate_qauantity(value, handler, info):
+    try:
+        return get_ureg().Quantity(value)
+    except (pint.UndefinedUnitError, TypeError) as e:
+        raise ValueError(f'Quantity cannot be understood using ureg package: {quantity}. Original error: {e}')
+
+
 def __validate_units(value, handler, info):
     """validate units using pint package"""
     try:
         return get_ureg().Unit(value)
     except (pint.UndefinedUnitError, TypeError) as e:
         raise ValueError(f'Units cannot be understood using ureg package: {value}. Original error: {e}')
+
+
+def __validate_offset(value, handler, info):
+    if info.context:
+        parent = info.context.get('parent', None)
+        attrs = info.context.get('attrs', None)
+
+    qoffset = get_ureg().Quantity(value)
+
+    if attrs:
+        scale = attrs.get('scale', parent.attrs.get('scale', None))
+        ds_units = attrs.get('units', parent.attrs.get('units', None))
+    else:
+        scale = parent.attrs.get('scale', None)
+        ds_units = parent.attrs.get('units', None)
+
+    if scale is not None:
+        scale = get_ureg().Quantity(scale)
+
+    if ds_units is None:
+        if scale is None:
+            # dataset has no units and no scale given, thus offset must be dimensionless
+            if qoffset.dimensionality != pint.dimensionless.dimensionality:
+                raise ValueError(f'Offset must be dimensionless if no units are given. '
+                                 f'Got: {qoffset.dimensionality}')
+        else:
+            # scale is given but dataset is dimensionless, scale and offset must have same units
+            if qoffset.dimensionality != scale.dimensionality:
+                raise ValueError(f'Offset and scale must have same units if dataset is dimensionless. '
+                                 f'Got: {qoffset.dimensionality} and {scale.dimensionality}')
+    else:
+        ds_units = get_ureg().Unit(ds_units)
+        # dataset has units, offset must either have units of dataset or product of scale and dataset
+        from .utils import equal_base_units
+        if scale is None:
+            resulting_units = ds_units
+        else:
+            resulting_units = get_ureg().Unit(f'{ds_units} {scale.units}')
+        if not equal_base_units(qoffset.units, ds_units) and not equal_base_units(qoffset.units, resulting_units):
+            raise ValueError(f'Offset must have same units as dataset or product of scale and dataset. '
+                             f'Got: {qoffset.units} and {ds_units}')
+    return qoffset
 
 
 def _get_validate_type(_type):
@@ -40,3 +89,5 @@ class IntValidator(BaseModel):
 
 
 units = Annotated[str, WrapValidator(__validate_units)]
+quantity = Annotated[str, WrapValidator(__validate_qauantity)]
+offset = Annotated[str, WrapValidator(__validate_offset)]

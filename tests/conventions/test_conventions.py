@@ -37,9 +37,9 @@ class TestConventions(unittest.TestCase):
 
         self.assertEqual('h5tbx', get_current_convention().name)
 
-        with h5tbx.File(contactPerson=dict(name='Peter')) as h5:
-            print(h5.contactPerson)
-            ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='v', long_name='A long name')
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='v')
+            print(ds.scale)
             self.assertIsInstance(ds.units, pint.Unit)
             self.assertIsInstance(ds.symbol, str)
             with self.assertRaises(h5tbx.errors.StandardAttributeError):

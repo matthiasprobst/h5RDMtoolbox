@@ -97,6 +97,7 @@ from typing_extensions import Annotated
     # get validator and write them to convention-python file:
     with open(convention_dir / f'convention.py', 'a') as f:
         # write type definitions from YAML file:
+        lines = None
         for k, v in type_definitions.items():
             validator_name = k.strip('$').capitalize()
             validator_dict[k] = f'{validator_name}Validator'
@@ -105,7 +106,8 @@ from typing_extensions import Annotated
 class {validator_name}Validator(BaseModel):
     """ + '\n    '.join([f'{k}: {v}' for k, v in v.items()])
             # write imports to file:
-        f.writelines(lines)
+        if lines:
+            f.writelines(lines)
 
         for stda_name, stda in standard_attributes.items():
             validator_class_name = stda_name.capitalize() + 'Validator'
@@ -145,6 +147,7 @@ class {validator_name}Validator(BaseModel):
             description='{v.get('description', None)}',
             validator=validator_dict.get('{v.get('validator', None)}'),
             target_method='{v.get('target_method', None)}',
+            default_value="{v.get('default_value', None)}",
     ),
 """)
         f.writelines('}\n')
