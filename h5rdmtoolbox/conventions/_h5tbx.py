@@ -15,7 +15,7 @@ def build_convention():
     generate.write_convention_module_from_yaml(h5tbx_convention_yaml)
 
 
-if not (convention_user_dir / f'{convention_name}.yaml').exists():
+if not (convention_user_dir / 'convention.py').exists():
     build_convention()
 
 sys.path.insert(0, str(UserDir['conventions'] / convention_name))
