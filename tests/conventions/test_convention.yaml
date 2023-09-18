@@ -66,20 +66,20 @@ contact:
   default_value: $EMPTY
   target_method: __init__
 
-#references-file:
-#  validator: $url
-#  target_method: __init__
-#  default_value: $NONE
-#  description: Web resources serving as references for the full file.
-#
-#references-group:
-#  validator: $url
-#  target_method: create_group
-#  default_value: $NONE
-#  description: Web resources serving as references for the group.
-#
-#references-dataset:
-#  validator: $url
-#  target_method: create_dataset
-#  default_value: $NONE
-#  description: Web resources serving as references for the dataset.
+references-file:
+  validator: $url
+  target_method: __init__
+  default_value: $NONE
+  description: Web resources serving as references for the full file.
+
+references-group:
+  validator: $url
+  target_method: create_group
+  default_value: $NONE
+  description: Web resources serving as references for the group.
+
+references-dataset:
+  validator: $url
+  target_method: create_dataset
+  default_value: $NONE
+  description: Web resources serving as references for the dataset.

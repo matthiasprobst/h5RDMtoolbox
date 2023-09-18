@@ -33,6 +33,16 @@ def __validate_standard_name(value, handler, info) -> "StandardNameTable":
     raise ValueError(f'A standard name must be provided to check the validity of the name: {value}')
 
 
+def __validate_url(value, handler, info) -> "StandardNameTable":
+    from h5rdmtoolbox.conventions.references import validate_url
+    if not isinstance(value, (list, tuple)):
+        references = [value, ]
+    if all(validate_url(r) for r in references):
+        if len(references) == 1:
+            return references[0]
+        return references
+    raise ValueError(f'Invalid URL: {references}')
+
 def __validate_quantity(value, handler, info):
     try:
         return get_ureg().Quantity(value)
@@ -117,3 +127,4 @@ offset = Annotated[str, WrapValidator(__validate_offset)]
 orcid = Annotated[str, WrapValidator(__validate_orcid)]
 standard_name_table = Annotated[str, WrapValidator(__validate_standard_name_table)]
 standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
+url = Annotated[str, WrapValidator(__validate_url)]
