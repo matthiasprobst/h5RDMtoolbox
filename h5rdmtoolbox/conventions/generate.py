@@ -19,10 +19,13 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
 
     print('creating directory for the convention')
     # create the convention directory where to build the validators
+
+    convention_name = convention_name.lower().replace("-", "_")
+
     convention_dir = UserDir.user_dirs['conventions'] / convention_name
     convention_dir.mkdir(parents=True, exist_ok=True)
 
-    py_filename = convention_dir / f'{convention_name.lower().replace("-", "_")}.py'
+    py_filename = convention_dir / f'{convention_name}.py'
 
     special_validator_filename = yaml_filename.parent / f'{convention_name}_vfuncs.py'
     if special_validator_filename.exists():

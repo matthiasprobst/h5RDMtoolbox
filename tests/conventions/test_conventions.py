@@ -288,11 +288,6 @@ class TestConventions(unittest.TestCase):
 
             # cv = h5tbx.conventions.from_zenodo(doi=8301535)
             h5tbx.conventions.from_yaml('test_convention.yaml')
-            import sys
-            from h5rdmtoolbox._user import UserDir
-            sys.path.insert(0, str(UserDir['conventions'] / 'h5rdmtoolbox-tutorial-convention'))
-            # noinspection PyUnresolvedReferences
-            import h5rdmtoolbox_tutorial_convention
 
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
             cv = h5tbx.conventions.get_current_convention()

@@ -4,7 +4,7 @@ import inspect
 import pathlib
 import re
 import shutil
-import warnings
+import sys
 import yaml
 import zenodo_search as zsearch
 from pydoc import locate
@@ -16,6 +16,8 @@ from . import logger
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .._repr import make_italic, make_bold
 from .._user import UserDir
+
+CV_DIR = UserDir['conventions']
 
 
 class Convention:
@@ -265,11 +267,34 @@ class Convention:
         add_convention(self)
 
 
+class ConventionNotFound(Exception):
+    """Raised when a convention is not found."""
+
+
+def _import_convention(convention_name) -> "module":
+    import importlib
+    try:
+        return importlib.import_module(f'{convention_name}')
+    except ImportError:
+        print(f"Failed to import module {convention_name}")
+
+
 class use:
     """Set the configuration parameters."""
 
     def __init__(self, convention_name: Union[str, Convention]):
         self._latest_convention = get_current_convention()
+        registered_conventions = get_registered_conventions()
+        if convention_name is not None:
+            _convention_name = convention_name.lower().replace('-', '_')
+            assert '-' not in _convention_name
+            if _convention_name not in registered_conventions:
+                _convention_py_filename = CV_DIR / f'{_convention_name}' / f'{_convention_name}.py'
+                if not _convention_py_filename.exists():
+                    raise ConventionNotFound(f'Convention "{convention_name}" not found.')
+                sys.path.insert(0, str(_convention_py_filename.parent))
+                # import:
+                _import_convention(_convention_name)
         self._current_convention = _use(convention_name)
 
     def __repr__(self):
@@ -323,6 +348,13 @@ def _use(convention_name: Union[str, Convention]) -> Convention:
 def get_registered_conventions() -> Dict:
     """Return dictionary of registered conventions"""
     return cfg._registered_conventions
+
+
+def register_convention(new_convention: Convention) -> None:
+    """Return dictionary of registered conventions"""
+    if new_convention in cfg._registered_conventions:
+        raise ValueError(f'Convention "{new_convention}" is already registered')
+    cfg._registered_conventions[new_convention.name] = new_convention
 
 
 def add_convention(convention, name=None):

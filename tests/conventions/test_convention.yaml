@@ -3,7 +3,6 @@ __institution__: https://orcid.org/members/001G000001e5aUTIAY
 __contact__: https://orcid.org/0000-0001-8729-0482
 __decoders__: scale_and_offset
 
-
 $datatypes:
   - experimental
   - numerical
