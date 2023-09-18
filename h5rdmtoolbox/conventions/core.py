@@ -77,10 +77,13 @@ class Convention:
         # check if the name is already registered:
         _cls = std_attr.target_cls
 
+        std_attr_name = std_attr.name.split('-')[0]
+        std_attr.name = std_attr_name
+
         prop = self.properties.get(_cls, None)
         if prop is not None:
-            if std_attr.name in self.properties[_cls]:
-                raise errors.ConventionError(f'A standard attribute with the name "{std_attr.name}" '
+            if std_attr_name in self.properties[_cls]:
+                raise errors.ConventionError(f'A standard attribute with the name "{std_attr_name}" '
                                              f'is already registered for "{std_attr.target_cls}".')
         if std_attr.requirements is not None:
             if not all(r in _registered_names for r in std_attr.requirements):
@@ -89,10 +92,10 @@ class Convention:
                 for r in std_attr.requirements:
                     if r not in _registered_names:
                         _missing_requirements.append(r)
-                raise errors.ConventionError(f'Not all requirements for "{std_attr.name}" are registered. '
+                raise errors.ConventionError(f'Not all requirements for "{std_attr_name}" are registered. '
                                              f'Please add them to the convention first: {_missing_requirements}')
 
-        self._registered_standard_attributes[std_attr.name] = std_attr
+        self._registered_standard_attributes[std_attr_name] = std_attr
 
         method_name = std_attr.target_method
 
@@ -100,7 +103,7 @@ class Convention:
 
         if target_cls not in self.properties:
             self.properties[target_cls] = {}
-        self.properties[target_cls][std_attr.name] = std_attr
+        self.properties[target_cls][std_attr_name] = std_attr
 
         if target_cls not in self.methods:
             self.methods[target_cls] = {}
@@ -111,7 +114,7 @@ class Convention:
             if method_name not in self.methods[cls]:
                 self.methods[cls][method_name] = {}
 
-            self.methods[cls][method_name][std_attr.name] = std_attr
+            self.methods[cls][method_name][std_attr_name] = std_attr
 
     def __repr__(self):
         header = f'Convention("{self.name}")'

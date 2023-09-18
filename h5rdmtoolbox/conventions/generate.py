@@ -2,6 +2,7 @@
 import pathlib
 import shutil
 import yaml
+from typing import List, Callable
 
 from h5rdmtoolbox._user import UserDir
 
@@ -81,7 +82,7 @@ from typing_extensions import Annotated
                 if 'regex' in v['validator']:
                     import re
 
-                    regex_validator = 'regex_00'  # TODO use proper id
+                    regex_validator = get_regex_name()  # TODO use proper id
                     match = re.search(r'regex\((.*?)\)', v['validator'])
                     re_pattern = match.group(1)
                     standard_attributes[k] = regex_validator
@@ -116,10 +117,9 @@ def {regex_validator}_validator(value, parent=None, attrs=None):
     # get validator and write them to convention-python file:
     with open(py_filename, 'a') as f:
         # write type definitions from YAML file:
-        lines = None
         for k, v in type_definitions.items():
-            validator_name = k.strip('$').capitalize()
-            validator_dict[k] = f'{validator_name}Validator'
+            validator_name = k.strip('$').replace('-', '_')
+            validator_dict[k] = f'{validator_name}_validator'
             if isinstance(v, list):
                 # create_enum_class(k, v, f)
                 lines = f"""
@@ -136,21 +136,21 @@ class {validator_name}(str, Enum):
                     lines += f'    {enum_name} = "{enum_value}"\n'
                 lines += f"""
 
-class {validator_name}Validator(BaseModel):
+class {validator_name}_validator(BaseModel):
     value: {validator_name}
 
 """
             else:
                 lines = f"""
 
-class {validator_name}Validator(BaseModel):
+class {validator_name}_validator(BaseModel):
     """ + '\n    '.join([f'{k}: {v}' for k, v in v.items()])
                 # write imports to file:
             if lines:
                 f.writelines(lines)
 
             for stda_name, stda in standard_attributes.items():
-                validator_class_name = stda_name.capitalize() + 'Validator'
+                validator_class_name = stda_name.replace('-', '_') + '_validator'
                 _type = stda["validator"]
                 if _type in type_definitions:
                     continue
@@ -168,7 +168,7 @@ class {validator_name}Validator(BaseModel):
                 ]
                 f.writelines(lines)
             f.writelines('\n\n\n')
-            f.writelines('UnitsValidator(value="1")\n')
+
             f.writelines('validator_dict = {\n    ')
             f.writelines('\n    '.join(f"'{k}': {v}," for k, v in validator_dict.items()))
             f.writelines("\n    '$int': IntValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
@@ -178,11 +178,10 @@ class {validator_name}Validator(BaseModel):
             # f.writelines(f'standard_attributes_dict = {standard_attributes}\n')
 
             f.writelines('\n')
-            f.writelines(f'from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute\n\n')
-            f.writelines(f'from h5rdmtoolbox.conventions import Convention\n\n')
+            f.writelines(f'from h5rdmtoolbox.conventions import Convention, standard_attributes\n\n')
             f.writelines('standard_attributes = {\n    ')
             for kk, vv in standard_attributes.items():
-                f.writelines(f"""    "{kk}": StandardAttribute(
+                f.writelines(f"""    "{kk}": standard_attributes.StandardAttribute(
             name='{kk}',
             description={_str_getter(vv, 'description', None)},
             validator=validator_dict.get({_str_getter(vv, 'validator', None)}),
@@ -206,6 +205,13 @@ cv.register()
 # UTILITIES:
 import ast
 import warnings
+from itertools import count
+
+regex_counter = count()
+
+
+def get_regex_name():
+    return f'regex_{next(regex_counter)}'
 
 
 def _str_getter(_dict, key, default=None) -> str:
@@ -216,9 +222,11 @@ def _str_getter(_dict, key, default=None) -> str:
         return f'"{val}"'
     return f'{val}'
 
-def extract_function_info(node):
+
+def extract_function_info(func: Callable) -> List:
+    """Extract function name and arguments from a function."""
     function_info = []
-    for item in node.body:
+    for item in func.body:
         if isinstance(item, ast.FunctionDef):
             function_name = item.name
             arguments = [arg.arg for arg in item.args.args]

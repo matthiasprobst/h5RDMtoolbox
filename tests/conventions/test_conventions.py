@@ -303,6 +303,10 @@ class TestConventions(unittest.TestCase):
                 h5.contact  # takes a bit because validated online!
                 snt = h5.standard_name_table
                 self.assertIsInstance(snt, h5tbx.conventions.standard_names.StandardNameTable)
+                for sa in h5.standard_attributes:
+                    self.assertFalse('-' in sa)
+                self.assertNotEqual(h5.standard_attributes['comment'].description,
+                                    h5['test'].standard_attributes['comment'].description)
             if False:
                 self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
                 self.assertEqual(
