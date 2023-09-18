@@ -10,7 +10,7 @@ units:
 
 scale:
   target_method: create_dataset
-  validator: $pintquantity
+  validator: $quantity
   description: Scale factor for the dataset values.
   default_value: $NONE
 
