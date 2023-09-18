@@ -15,12 +15,13 @@ def build_convention():
     generate.write_convention_module_from_yaml(h5tbx_convention_yaml)
 
 
-if not (convention_user_dir / 'convention.py').exists():
+if not (convention_user_dir / f'{convention_user_dir.name}.py').exists():
     build_convention()
 
 sys.path.insert(0, str(UserDir['conventions'] / convention_name))
 
 import importlib
+
 try:
     imported_module = importlib.import_module(convention_name)
     # Now, you can use the imported module as needed

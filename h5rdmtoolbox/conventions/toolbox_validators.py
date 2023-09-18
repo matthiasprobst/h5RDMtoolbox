@@ -5,6 +5,7 @@ must be provided during initialization of a Convention"""
 import pint
 from pydantic import BaseModel
 from pydantic.functional_validators import WrapValidator
+from typing import Union, Dict
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg
@@ -42,6 +43,7 @@ def __validate_url(value, handler, info) -> "StandardNameTable":
             return references[0]
         return references
     raise ValueError(f'Invalid URL: {references}')
+
 
 def __validate_quantity(value, handler, info):
     try:
@@ -125,6 +127,7 @@ units = Annotated[str, WrapValidator(__validate_units)]
 quantity = Annotated[str, WrapValidator(__validate_quantity)]
 offset = Annotated[str, WrapValidator(__validate_offset)]
 orcid = Annotated[str, WrapValidator(__validate_orcid)]
-standard_name_table = Annotated[str, WrapValidator(__validate_standard_name_table)]
+standard_name_table = Annotated[
+    Union[str, Dict], WrapValidator(__validate_standard_name_table)]
 standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
 url = Annotated[str, WrapValidator(__validate_url)]

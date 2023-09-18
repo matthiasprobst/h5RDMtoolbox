@@ -2,6 +2,8 @@ class ConventionError(Exception):
     """Error associated with the convention"""
 
 
+class ConventionNotFound(Exception):
+    """Raised when a convention is not found."""
 class UnitsError(Exception):
     """Units Error"""
 

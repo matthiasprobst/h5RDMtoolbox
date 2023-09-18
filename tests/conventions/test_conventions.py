@@ -6,6 +6,7 @@ import unittest
 import warnings
 import yaml
 
+import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import core
@@ -23,9 +24,12 @@ class TestConventions(unittest.TestCase):
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
 
-    def test_new_convention(self):
+        # setting logger to debug:
+        from h5rdmtoolbox.conventions import logger
+        logger.setLevel('DEBUG')
 
-        f = pathlib.Path(r'C:\Users\da4323\AppData\Local\h5rdmtoolbox\h5rdmtoolbox\conventions\h5tbx') / 'convention.py'
+    def test_new_convention(self):
+        f = h5tbx.UserDir['conventions'] / 'h5tbx' / 'h5tbx.py'
         f.unlink(missing_ok=True)
         from h5rdmtoolbox.conventions._h5tbx import build_convention
         build_convention()
@@ -54,15 +58,19 @@ class TestConventions(unittest.TestCase):
         self.assertEqual('h5py', h5tbx.conventions.get_current_convention().name)
 
     def test_getattr(self):
+        h5tbx.use(None)
+        self.assertEqual('h5py', h5tbx.conventions.get_current_convention().name)
         with h5tbx.use('h5tbx') as cv:
             isinstance(cv, h5tbx.conventions.Convention)
-            with h5tbx.File() as h5:
+            with h5tbx.File(creation_mode='experimental') as h5:
                 h5.create_dataset('test', data=1, units='m/s')
                 self.assertEqual('m/s', str(h5.test.units))
+        self.assertEqual('h5py', h5tbx.conventions.get_current_convention().name)
 
     def test_overload_standard_attributes(self):
         yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
         cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
+        self.assertIsInstance(cv, h5tbx.conventions.Convention)
         self.assertTupleEqual(('scale_and_offset',), cv.decoders)
         self.assertIn('comment', cv.properties[h5tbx.File])
         self.assertIn('comment', cv.properties[h5tbx.Group])
@@ -127,11 +135,10 @@ class TestConventions(unittest.TestCase):
         sa_dict = {'__name__': 'standard_name_table',
                    '__institution__': 'https://orcid.org/members/001G000001e5aUTIAY',
                    '__contact__': 'https://orcid.org/0000-0001-8729-0482',
-                   '__use_scale_offset__': True,
                    'standard_name_table':
                        {
                            'target_method': '__init__',
-                           'validator': {'$standard_name_table': f'relpath({snt_filename.name})'},
+                           'validator': '$standard_name_table',
                            'default_value': f'relpath({snt_filename.name})',
                            'type_hint': 'StandardNameTable',
                            'description': 'A standard name table'
@@ -162,8 +169,6 @@ class TestConventions(unittest.TestCase):
                          core._process_paths({'a': 2, 'b': {'c': 'relpath(a/path/)'}}, __this_dir__))
 
     def test_use(self):
-        h5tbx.use(h5tbx.get_config()['default_convention'])
-        self.assertEqual(h5tbx.conventions.get_current_convention().name, h5tbx.get_config()['default_convention'])
         h5tbx.use(None)
         self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5py')
         self.assertEqual('using("h5py")', h5tbx.use('h5py').__repr__())
@@ -175,7 +180,7 @@ class TestConventions(unittest.TestCase):
         self.assertEqual('using("h5tbx")', h5tbx.use('h5tbx').__repr__())
         self.assertEqual('using("h5tbx")', h5tbx.use('h5tbx').__repr__())
         self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5tbx')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(h5rdmtoolbox.errors.ConventionNotFound):
             h5tbx.use('invalid_convention')
 
     def test_from_yaml(self):
@@ -227,7 +232,7 @@ class TestConventions(unittest.TestCase):
         h5tbx.use('h5tbx')
         self.assertTupleEqual(('scale_and_offset',), h5tbx.wrapper.ds_decoder.decoder_names)
 
-        with h5tbx.File() as h5:
+        with h5tbx.File(creation_mode='experimental') as h5:
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 h5.create_dataset('test', data=1)
             h5.create_dataset('test', data=1, units='m/s')
@@ -249,7 +254,7 @@ class TestConventions(unittest.TestCase):
         h5tbx.use('h5tbx')
         with h5tbx.File() as h5:
             self.assertEqual(h5.convention, h5tbx.conventions.get_current_convention())
-            self.assertEqual({}, h5.standard_attributes)
+            self.assertEqual(sorted(['creation_mode', ]), sorted(list(h5.standard_attributes)))
             ds = h5.create_dataset('test', data=1, units='m/s')
             self.assertEqual(sorted(['offset', 'scale', 'units', 'symbol']), sorted(ds.standard_attributes.keys()))
             self.assertEqual(ds.convention, h5tbx.conventions.get_current_convention())
@@ -286,10 +291,14 @@ class TestConventions(unittest.TestCase):
     def test_from_zenodo(self):
         if self.connected:
 
-            # cv = h5tbx.conventions.from_zenodo(doi=8301535)
-            h5tbx.conventions.from_yaml('test_convention.yaml')
-
+            # delete an existing convention like this first:
+            _ddir = h5tbx.UserDir['conventions'] / 'h5rdmtoolbox_tutorial_convention'
+            if _ddir.exists():
+                shutil.rmtree(_ddir)
+            h5tbx.conventions.from_zenodo(doi=8318040)
+            # h5tbx.conventions.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
+
             cv = h5tbx.conventions.get_current_convention()
             with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
                 h5.create_dataset('test', data=4.3, standard_name='x_velocity', units='m/s')
@@ -316,8 +325,8 @@ class TestConventions(unittest.TestCase):
 
                 # we can download from zenodo by passing the short or full DOI or the URL:
 
-                dois = ('8301535', '10.5281/zenodo.8301535', 'https://zenodo.org/record/8301535',
-                        'https://doi.org/10.5281/zenodo.8301535')
+                dois = ('8318040', '10.5281/zenodo.8318040', 'https://zenodo.org/record/8318040',
+                        'https://doi.org/10.5281/zenodo.8318040')
                 h5tbx.UserDir.clear_cache()
                 with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                     cv = h5tbx.conventions.from_zenodo(doi=8266929)

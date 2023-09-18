@@ -41,8 +41,6 @@ cv_h5py.register()
 
 use = conventions.core.use
 use(None)
-#
-# use(get_config()['default_convention'])
 
 
 class FileDB:

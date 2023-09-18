@@ -6,6 +6,7 @@ __decoders__: 'scale_and_offset'
 units:
   target_method: create_dataset
   validator: $units
+  default_value: $EMPTY
   description: The physical unit of the dataset. If dimensionless, the unit is ''.
 
 scale:
@@ -35,4 +36,4 @@ creation_mode:
   description: Creation mode of the data. Specific for engineering.
   target_method: __init__
   validator: $creationModes
-  default_value: $EMPTY
+  default_value: $NONE

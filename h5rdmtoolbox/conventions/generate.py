@@ -1,8 +1,10 @@
 """main"""
 import pathlib
+import re
 import shutil
 import yaml
 from typing import List, Callable
+from typing import Union, Dict
 
 from h5rdmtoolbox._user import UserDir
 
@@ -83,8 +85,6 @@ from typing_extensions import Annotated
 
             else:
                 if 'regex' in v['validator']:
-                    import re
-
                     regex_validator = get_regex_name()  # TODO use proper id
                     match = re.search(r'regex\((.*?)\)', v['validator'])
                     re_pattern = match.group(1)
@@ -152,55 +152,67 @@ class {validator_name}_validator(BaseModel):
             if lines:
                 f.writelines(lines)
 
-            for stda_name, stda in standard_attributes.items():
-                validator_class_name = stda_name.replace('-', '_') + '_validator'
-                _type = stda["validator"]
-                if _type in type_definitions:
-                    continue
+        for stda_name, stda in standard_attributes.items():
+            validator_class_name = stda_name.replace('-', '_') + '_validator'
+            _type = stda["validator"]
+            if isinstance(_type, dict):
+                raise TypeError('A validator cannot be a dict but need to specify a validator type, like "$str". '
+                                'If you want to provide a default value, do it using the entry "default_value".')
+            if _type in type_definitions:
+                continue
 
-                _type_str = _type.strip("$")
-                validator_dict[_type] = validator_class_name
-                lines = [
-                    # testing:
-                    # f'\nprint(special_type_funcs.units("123", None, None))'
-                    f'\n\n\nclass {validator_class_name}(BaseModel):',
-                    f'\n    """{stda["description"]}"""',
-                    f'\n    value: {_type_str}',
-                    # f'\n\n{validator_class_name}(value="hallo")'
+            _type_str = _type.strip("$")
+            validator_dict[_type] = validator_class_name
+            lines = [
+                # testing:
+                # f'\nprint(special_type_funcs.units("123", None, None))'
+                f'\n\n\nclass {validator_class_name}(BaseModel):',
+                f'\n    """{stda["description"]}"""',
+                f'\n    value: {_type_str}',
+                # f'\n\n{validator_class_name}(value="hallo")'
 
-                ]
-                f.writelines(lines)
+            ]
+            f.writelines(lines)
             f.writelines('\n\n\n')
 
-            f.writelines('validator_dict = {\n    ')
-            f.writelines('\n    '.join(f"'{k}': {v}," for k, v in validator_dict.items()))
-            f.writelines("\n    '$int': IntValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-            f.writelines("\n    '$str': StringValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-            f.writelines("\n    '$float': FloatValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-            f.writelines("\n}\n")
-            # f.writelines(f'standard_attributes_dict = {standard_attributes}\n')
+        f.writelines('validator_dict = {\n    ')
+        f.writelines('\n    '.join(f"'{k}': {v}," for k, v in validator_dict.items()))
+        f.writelines("\n    '$int': IntValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
+        f.writelines("\n    '$str': StringValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
+        f.writelines("\n    '$float': FloatValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
+        f.writelines("\n}\n")
+        # f.writelines(f'standard_attributes_dict = {standard_attributes}\n')
 
-            f.writelines('\n')
-            f.writelines(f'from h5rdmtoolbox.conventions import Convention, standard_attributes\n\n')
-            f.writelines('standard_attributes = {\n    ')
-            for kk, vv in standard_attributes.items():
-                f.writelines(f"""    "{kk}": standard_attributes.StandardAttribute(
-            name='{kk}',
-            description={_str_getter(vv, 'description', None)},
-            validator=validator_dict.get({_str_getter(vv, 'validator', None)}),
-            target_method={_str_getter(vv, 'target_method', None)},
-            default_value={_str_getter(vv, 'default_value', None)},
-            requirements={_str_getter(vv, 'requirements', None)},
-    ),
+        f.writelines('\n')
+        f.writelines(f'from h5rdmtoolbox.conventions import Convention, standard_attributes, logger\n\n')
+        f.writelines('standard_attributes = {\n    ')
+        for kk, vv in standard_attributes.items():
+            _default_value = _process_paths(vv.get('default_value', None), relative_to=yaml_filename.parent)
+            if _default_value is None:
+                _default_value_str = 'None'
+            elif isinstance(_default_value, str):
+                if _default_value.startswith('r"'):
+                    _default_value_str = f"{_default_value}"
+                else:
+                    _default_value_str = f"'{_default_value}'"
+            f.writelines(f"""    "{kk}": standard_attributes.StandardAttribute(
+        name='{kk}',
+        description={_str_getter(vv, 'description', None)},
+        validator=validator_dict.get({_str_getter(vv, 'validator', None)}),
+        target_method={_str_getter(vv, 'target_method', None)},
+        default_value={_default_value_str},
+        requirements={_str_getter(vv, 'requirements', None)},
+),
 """)
-            f.writelines('}\n')
-            f.writelines(f"""cv = Convention(
+        f.writelines('}\n')
+        f.writelines(f"""cv = Convention(
     name={_str_getter(meta, 'name', None)},
     contact={_str_getter(meta, 'contact', None)},
     institution={_str_getter(meta, 'institution', None)},
     decoders={_str_getter(meta, 'decoders', None)},
     standard_attributes=standard_attributes
 )
+logger.debug(f'Registering convention {{cv.name}}')
 cv.register()
 """)
 
@@ -274,6 +286,36 @@ def get_specialtype_function_info(file_path, validate=True):
     if validate:
         validate_specialtype_functions(function_info_dict)
     return function_info_dict
+
+
+def _process_relpath(rel_filename, relative_to) -> str:
+    return f'r"{pathlib.Path((relative_to / rel_filename).absolute())}"'
+
+
+def _process_paths(data: Union[Dict, str], relative_to) -> Union[str, List[str], Dict[str, str]]:
+    # processed_data = {}
+    if data is None:
+        return data
+    if isinstance(data, str):
+        match = re.search(r'relpath\((.*?)\)', data)
+        if match:
+            return _process_relpath(match.group(1), relative_to)
+        return data
+    elif isinstance(data, list):
+        return [_process_paths(item, relative_to) for item in data]
+    elif isinstance(data, dict):
+        _data = data.copy()
+        for key, value in data.items():
+            if isinstance(value, str):
+                match = re.search(r'relpath\((.*?)\)', value)
+                if match:
+                    _data[key] = _process_relpath(match.group(1), relative_to)
+            elif isinstance(value, list):
+                _data[key] = [_process_paths(item, relative_to) for item in value]
+            elif isinstance(value, dict):
+                _data[key] = _process_paths(_data[key], relative_to)
+        return _data
+    return data
 
 
 if __name__ == '__main__':

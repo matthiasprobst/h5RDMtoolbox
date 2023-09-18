@@ -188,9 +188,9 @@ class Convention:
         use(self.name)
 
     @staticmethod
-    def from_yaml(yaml_filename, register=True) -> "Convention":
+    def from_yaml(yaml_filename) -> "Convention":
         """Create a convention from a yaml file."""
-        return from_yaml(yaml_filename, register=register)
+        return from_yaml(yaml_filename)
 
     def pop(self, *names) -> "Convention":
         """removes the standard attribute with the given name from the convention
@@ -267,8 +267,7 @@ class Convention:
         add_convention(self)
 
 
-class ConventionNotFound(Exception):
-    """Raised when a convention is not found."""
+from .errors import ConventionNotFound
 
 
 def _import_convention(convention_name) -> "module":
@@ -279,6 +278,21 @@ def _import_convention(convention_name) -> "module":
         print(f"Failed to import module {convention_name}")
 
 
+def _get_convention_from_dir(convention_name: str) -> "Convention":
+    _convention_name = convention_name.lower().replace('-', '_')
+    assert '-' not in _convention_name
+    if _convention_name in get_registered_conventions():
+        return get_registered_conventions()[convention_name]
+    _convention_py_filename = CV_DIR / f'{_convention_name}' / f'{_convention_name}.py'
+    if not _convention_py_filename.exists():
+        raise ConventionNotFound(f'Convention "{convention_name}" not found.')
+    sys.path.insert(0, str(_convention_py_filename.parent))
+    # import:
+    _import_convention(_convention_name)
+    # now it is registered and can be returned:
+    return get_registered_conventions()[convention_name]
+
+
 class use:
     """Set the configuration parameters."""
 
@@ -286,15 +300,13 @@ class use:
         self._latest_convention = get_current_convention()
         registered_conventions = get_registered_conventions()
         if convention_name is not None:
+            if isinstance(convention_name, Convention):
+                convention_name = convention_name.name
             _convention_name = convention_name.lower().replace('-', '_')
             assert '-' not in _convention_name
             if _convention_name not in registered_conventions:
-                _convention_py_filename = CV_DIR / f'{_convention_name}' / f'{_convention_name}.py'
-                if not _convention_py_filename.exists():
-                    raise ConventionNotFound(f'Convention "{convention_name}" not found.')
-                sys.path.insert(0, str(_convention_py_filename.parent))
-                # import:
-                _import_convention(_convention_name)
+                cv = _get_convention_from_dir(convention_name)
+                convention_name = cv.name
         self._current_convention = _use(convention_name)
 
     def __repr__(self):
@@ -404,8 +416,7 @@ def _process_paths(data: Union[Dict, str], relative_to) -> Dict:
     return data
 
 
-def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Path]],
-              register: bool = True) -> Convention:
+def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Path]]) -> Convention:
     """Read convention from from a yaml file. A convention YAML file
     requires to have valid standard attribute entries and must contain
     the keys "__name__" and "__contact__".
@@ -414,8 +425,6 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     ----------
     yaml_filename: Union[str, pathlib.Path]
         Path to yaml file
-    register:
-        Whether to register the convention for direct use. Default is True
 
     Returns
     -------
@@ -442,6 +451,8 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
 
     from . import generate
     generate.write_convention_module_from_yaml(yaml_filename, name=attrs['__name__'])
+
+    return _get_convention_from_dir(attrs['__name__'])
 
     # decoders = attrs.pop('__decoders__', None)
     #
@@ -481,8 +492,8 @@ def from_zenodo(doi, name=None, register: bool = True, force_download: bool = Fa
     Parameters
     ----------
     doi: str
-        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8301535 or
-        10.5281/zenodo.8301535 or https://doi.org/10.5281/zenodo.8301535)
+        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8318040 or
+        10.5281/zenodo.8318040 or https://doi.org/10.5281/zenodo.8318040)
     register: bool
         Whether to register the convention for direct use. Default is True
     force_download: bool
@@ -518,4 +529,4 @@ def from_zenodo(doi, name=None, register: bool = True, force_download: bool = Fa
         _filename = file0.download(destination_dir=filename.parent)
         shutil.move(_filename, filename)
 
-    return from_yaml(filename, register=register)
+    return from_yaml(filename)

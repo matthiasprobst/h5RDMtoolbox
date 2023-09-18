@@ -219,7 +219,10 @@ class StandardAttribute(abc.ABC):
                     if isinstance(_value.value, enum.Enum):
                         validated_value = _value.value.value
                     else:
-                        validated_value = str(_value.value)  # self.validator(value, parent, attrs)
+                        if hasattr(_value.value, '__to_h5attrs__'):
+                            validated_value = _value.value.__to_h5attrs__()
+                        else:
+                            validated_value = str(_value.value)  # self.validator(value, parent, attrs)
         except Exception as e:
             if get_config('ignore_standard_attribute_errors'):
                 logger.warning(f'Setting "{value}" for standard attribute "{self.name}" failed. '
@@ -265,7 +268,10 @@ class StandardAttribute(abc.ABC):
             if ret_val.startswith('{') and ret_val.endswith('}'):
                 ret_val = json.loads(ret_val)
                 try:
-                    return self.validator.model_validate(ret_val, context=dict(attrs=None, parent=parent))
+                    if 'typing.Dict' in str(self.validator.model_fields['value'].annotation):
+                        return self.validator.model_validate(dict(value=ret_val), context=dict(attrs=None, parent=parent)).value
+                    else:
+                        return self.validator.model_validate(ret_val, context=dict(attrs=None, parent=parent))
                 except pydantic.ValidationError as err:
                     warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                                   convention_warnings.StandardAttributeValidationWarning)

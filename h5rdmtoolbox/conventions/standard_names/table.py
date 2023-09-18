@@ -211,6 +211,12 @@ class StandardNameTable:
                                            f'{similar_names}?')
         raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
 
+    def __to_h5attrs__(self) -> str:
+        """Write standard name table to HDF5 attributes"""
+        if 'zenodo_doi' in self.meta:
+            return self.meta['zenodo_doi']
+        return self.to_sdict()
+
     def _repr_html_(self):
         return f"""<li style="list-style-type: none; font-style: italic">{self.__repr__()[1:-1]}</li>"""
 
