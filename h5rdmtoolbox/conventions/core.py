@@ -397,9 +397,6 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
 
     yaml_filename = pathlib.Path(yaml_filename)
 
-    from . import generate
-    generate.write_convention_module_from_yaml(yaml_filename)
-
     with open(yaml_filename, 'r') as f:
         attrs = _process_paths(yaml.safe_load(f), relative_to=yaml_filename.parent)
 
@@ -408,36 +405,39 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     if '__contact__' not in attrs:
         raise ValueError(f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
 
-    decoders = attrs.pop('__decoders__', None)
+    from . import generate
+    generate.write_convention_module_from_yaml(yaml_filename, name=attrs['__name__'])
 
-    std_attrs = []
-
-    standard_attributes = {k: v for k, v in attrs.items() if isinstance(v, dict)}
-
-    for name, values in standard_attributes.items():
-        target_methods = values.get('target_methods', None)
-        if isinstance(target_methods, (tuple, list)):
-            warnings.warn(f'Convention "{name}" contains a list of target methods. This is not supported anymore. '
-                          f'Please use a single target method instead.')
-            for target_methods in target_methods:
-                _values = values.copy()
-                _values.pop('target_methods')
-                _values['target_method'] = target_methods
-                new_sattr = StandardAttribute(name, **_values)
-                std_attrs.append(new_sattr)
-        else:
-            std_attrs.append(StandardAttribute(name, **values))
-    meta = {name.strip('__'): value for name, value in attrs.items() if not isinstance(value, dict)}
-    if 'name' not in meta:
-        meta['name'] = yaml_filename.stem
-    meta = {name.strip('_'): value for name, value in meta.items()}
-    cv = Convention(filename=yaml_filename, decoders=decoders, **meta)
-    for std_attr in std_attrs:
-        cv.add(std_attr)
-
-    if register:
-        cv.register()
-    return cv
+    # decoders = attrs.pop('__decoders__', None)
+    #
+    # std_attrs = []
+    #
+    # standard_attributes = {k: v for k, v in attrs.items() if isinstance(v, dict)}
+    #
+    # for name, values in standard_attributes.items():
+    #     target_methods = values.get('target_methods', None)
+    #     if isinstance(target_methods, (tuple, list)):
+    #         warnings.warn(f'Convention "{name}" contains a list of target methods. This is not supported anymore. '
+    #                       f'Please use a single target method instead.')
+    #         for target_methods in target_methods:
+    #             _values = values.copy()
+    #             _values.pop('target_methods')
+    #             _values['target_method'] = target_methods
+    #             new_sattr = StandardAttribute(name, **_values)
+    #             std_attrs.append(new_sattr)
+    #     else:
+    #         std_attrs.append(StandardAttribute(name, **values))
+    # meta = {name.strip('__'): value for name, value in attrs.items() if isinstance(value, str)}
+    # if 'name' not in meta:
+    #     meta['name'] = yaml_filename.stem
+    # meta = {name.strip('_'): value for name, value in meta.items()}
+    # cv = Convention(filename=yaml_filename, decoders=decoders, **meta)
+    # for std_attr in std_attrs:
+    #     cv.add(std_attr)
+    #
+    # if register:
+    #     cv.register()
+    # return cv
 
 
 def from_zenodo(doi, name=None, register: bool = True, force_download: bool = False) -> Convention:

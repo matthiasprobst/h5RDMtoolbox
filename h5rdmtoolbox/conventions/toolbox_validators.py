@@ -10,7 +10,30 @@ from typing_extensions import Annotated
 from h5rdmtoolbox import get_ureg
 
 
-def __validate_qauantity(value, handler, info):
+def __validate_orcid(value, handler, info):
+    from h5rdmtoolbox import orcid
+    oid = orcid.ORCID(value)
+    if not oid.exists():
+        raise ValueError(f'Not an ORCID ID: {oid}')
+    return oid
+
+
+def __validate_standard_name_table(value, handler, info) -> "StandardNameTable":
+    from h5rdmtoolbox.conventions import standard_names
+    return standard_names.parse_snt(value)
+
+
+def __validate_standard_name(value, handler, info) -> "StandardNameTable":
+    from h5rdmtoolbox.conventions import standard_names
+    if not isinstance(value, (str, standard_names.StandardName)):
+        raise TypeError(f'Expected a string or StandardName object, got {type(value)}')
+    if info.context:
+        snt = info.context['parent'].rootparent.standard_name_table
+        return snt[value]
+    raise ValueError(f'A standard name must be provided to check the validity of the name: {value}')
+
+
+def __validate_quantity(value, handler, info):
     try:
         return get_ureg().Quantity(value)
     except (pint.UndefinedUnitError, TypeError) as e:
@@ -89,5 +112,8 @@ class IntValidator(BaseModel):
 
 
 units = Annotated[str, WrapValidator(__validate_units)]
-quantity = Annotated[str, WrapValidator(__validate_qauantity)]
+quantity = Annotated[str, WrapValidator(__validate_quantity)]
 offset = Annotated[str, WrapValidator(__validate_offset)]
+orcid = Annotated[str, WrapValidator(__validate_orcid)]
+standard_name_table = Annotated[str, WrapValidator(__validate_standard_name_table)]
+standard_name = Annotated[str, WrapValidator(__validate_standard_name)]

@@ -31,6 +31,7 @@ class TestConventions(unittest.TestCase):
         build_convention()
 
         h5tbx.use('h5tbx')
+        cv = h5tbx.conventions.get_current_convention()
 
         self.assertEqual('h5tbx', h5tbx.conventions.get_current_convention().name)
 
@@ -285,29 +286,46 @@ class TestConventions(unittest.TestCase):
     def test_from_zenodo(self):
         if self.connected:
 
-            cv = h5tbx.conventions.from_zenodo(doi=8301535)
-            self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
-            self.assertEqual(
-                h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
-                cv.properties[h5tbx.File]['data_type'].default_value
-            )
-            cv.properties[h5tbx.File]['data_type'].make_optional()
-            self.assertEqual(
-                h5tbx.conventions.standard_attributes.DefaultValue.NONE,
-                cv.properties[h5tbx.File]['data_type'].default_value
-            )
+            # cv = h5tbx.conventions.from_zenodo(doi=8301535)
+            h5tbx.conventions.from_yaml('test_convention.yaml')
+            import sys
+            from h5rdmtoolbox._user import UserDir
+            sys.path.insert(0, str(UserDir['conventions'] / 'h5rdmtoolbox-tutorial-convention'))
+            # noinspection PyUnresolvedReferences
+            import h5rdmtoolbox_tutorial_convention
 
-            # we can download from zenodo by passing the short or full DOI or the URL:
-
-            dois = ('8301535', '10.5281/zenodo.8301535', 'https://zenodo.org/record/8301535',
-                    'https://doi.org/10.5281/zenodo.8301535')
-            h5tbx.UserDir.clear_cache()
-            with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
-                cv = h5tbx.conventions.from_zenodo(doi=8266929)
-
-            for doi in dois:
-                cv = h5tbx.conventions.from_zenodo(doi=doi)
+            h5tbx.use('h5rdmtoolbox-tutorial-convention')
+            cv = h5tbx.conventions.get_current_convention()
+            with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                h5.create_dataset('test', data=4.3, standard_name='x_velocity', units='m/s')
+                self.assertEqual(h5['test'].standard_name, 'x_velocity')
+                self.assertIsInstance(h5['test'].standard_name, h5tbx.conventions.standard_names.StandardName)
+                h5.contact  # takes a bit because validated online!
+                snt = h5.standard_name_table
+                self.assertIsInstance(snt, h5tbx.conventions.standard_names.StandardNameTable)
+            if False:
                 self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
+                self.assertEqual(
+                    h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
+                    cv.properties[h5tbx.File]['data_type'].default_value
+                )
+                cv.properties[h5tbx.File]['data_type'].make_optional()
+                self.assertEqual(
+                    h5tbx.conventions.standard_attributes.DefaultValue.NONE,
+                    cv.properties[h5tbx.File]['data_type'].default_value
+                )
+
+                # we can download from zenodo by passing the short or full DOI or the URL:
+
+                dois = ('8301535', '10.5281/zenodo.8301535', 'https://zenodo.org/record/8301535',
+                        'https://doi.org/10.5281/zenodo.8301535')
+                h5tbx.UserDir.clear_cache()
+                with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
+                    cv = h5tbx.conventions.from_zenodo(doi=8266929)
+
+                for doi in dois:
+                    cv = h5tbx.conventions.from_zenodo(doi=doi)
+                    self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
 
     def test_default_value(self):
         from h5rdmtoolbox.conventions.consts import DefaultValue

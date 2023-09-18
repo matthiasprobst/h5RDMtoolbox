@@ -6,9 +6,13 @@ import yaml
 from h5rdmtoolbox._user import UserDir
 
 
-def write_convention_module_from_yaml(yaml_filename: pathlib.Path):
+def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
+    """Generate the convention.py in the user directory from a YAML file"""
     yaml_filename = pathlib.Path(yaml_filename)
-    convention_name = yaml_filename.stem
+    if name is None:
+        convention_name = yaml_filename.stem
+    else:
+        convention_name = name
 
     print(f'Convention "{convention_name}" filename: {yaml_filename}')
 
@@ -17,25 +21,28 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path):
     convention_dir = UserDir.user_dirs['conventions'] / convention_name
     convention_dir.mkdir(parents=True, exist_ok=True)
 
-    target_convention_filename = convention_dir / 'convention.py'
+    py_filename = convention_dir / f'{convention_name.lower().replace("-", "_")}.py'
 
     special_validator_filename = yaml_filename.parent / f'{convention_name}_vfuncs.py'
     if special_validator_filename.exists():
         print(f'Found special functions file: {special_validator_filename}')
-        shutil.copy(special_validator_filename, target_convention_filename)
+        shutil.copy(special_validator_filename, py_filename)
     else:
         print('No special functions defined')
         # touch file:
-        with open(convention_dir / f'convention.py', 'w'):
+        with open(py_filename, 'w'):
             pass
+
+    # for reference, also copy the yaml file there:
+    shutil.copy(yaml_filename, convention_dir / f'{convention_name}.yaml')
 
     validator_dict = {}
 
     # special validator functions are defined in the test_convention_vfuncs.py file
     # read it and create the validator classes:
 
-    special_type_info = get_specialtype_function_info(target_convention_filename)
-    with open(convention_dir / f'convention.py', 'a') as f:
+    special_type_info = get_specialtype_function_info(py_filename)
+    with open(py_filename, 'a') as f:
         f.writelines('\n# ---- generated code: ----\nfrom h5rdmtoolbox.conventions.toolbox_validators import *\n')
         f.writelines("""
 
@@ -44,7 +51,7 @@ from pydantic.functional_validators import WrapValidator
 from typing_extensions import Annotated
 
 """)
-    with open(convention_dir / f'convention.py', 'a') as f:
+    with open(py_filename, 'a') as f:
         # write type definitions from YAML file:
         for k, v in special_type_info.items():
             lines = f"""{k.strip('validate_')} = Annotated[str, WrapValidator({k})]\n"""
@@ -57,6 +64,7 @@ from typing_extensions import Annotated
     standard_attributes = {}
     type_definitions = {}
     meta = {}
+    imports = []
     for k, v in convention_dict.items():
         if isinstance(v, dict):
             # can be a type definition or a validator
@@ -80,8 +88,14 @@ from typing_extensions import Annotated
                     _v = v.copy()
                     _v['validator'] = f'{regex_validator}'
                     standard_attributes[k] = _v
-                    with open(convention_dir / f'convention.py', 'a') as f:
-                        f.writelines(f"""import re\n\ndef {regex_validator}_validator(value, parent=None, attrs=None):
+
+                    with open(py_filename, 'a') as f:
+                        if 're' not in imports:
+                            f.writelines('import re\n')
+                            imports.append('re')
+                        f.writelines(f"""
+
+def {regex_validator}_validator(value, parent=None, attrs=None):
     pattern = re.compile(r'{re_pattern}')
     if not pattern.match(value):
         raise ValueError('Invalid format for pattern')
@@ -100,7 +114,7 @@ from typing_extensions import Annotated
             raise KeyError(f'Unknown type for key {k}: {type(v)}')
 
     # get validator and write them to convention-python file:
-    with open(convention_dir / f'convention.py', 'a') as f:
+    with open(py_filename, 'a') as f:
         # write type definitions from YAML file:
         lines = None
         for k, v in type_definitions.items():
@@ -167,21 +181,22 @@ class {validator_name}Validator(BaseModel):
             f.writelines(f'from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute\n\n')
             f.writelines(f'from h5rdmtoolbox.conventions import Convention\n\n')
             f.writelines('standard_attributes = {\n    ')
-            for k, v in standard_attributes.items():
-                f.writelines(f"""    "{k}": StandardAttribute(
-            name='{k}',
-            description='{v.get('description', None)}',
-            validator=validator_dict.get('{v.get('validator', None)}'),
-            target_method='{v.get('target_method', None)}',
-            default_value="{v.get('default_value', None)}",
+            for kk, vv in standard_attributes.items():
+                f.writelines(f"""    "{kk}": StandardAttribute(
+            name='{kk}',
+            description={_str_getter(vv, 'description', None)},
+            validator=validator_dict.get({_str_getter(vv, 'validator', None)}),
+            target_method={_str_getter(vv, 'target_method', None)},
+            default_value={_str_getter(vv, 'default_value', None)},
+            requirements={_str_getter(vv, 'requirements', None)},
     ),
 """)
             f.writelines('}\n')
             f.writelines(f"""cv = Convention(
-    name="{meta.get('name', None)}",
-    contact="{meta.get('contact', None)}",
-    institution="{meta.get('institution', None)}",
-    decoders="{meta.get('decoders', None)}",
+    name={_str_getter(meta, 'name', None)},
+    contact={_str_getter(meta, 'contact', None)},
+    institution={_str_getter(meta, 'institution', None)},
+    decoders={_str_getter(meta, 'decoders', None)},
     standard_attributes=standard_attributes
 )
 cv.register()
@@ -192,6 +207,14 @@ cv.register()
 import ast
 import warnings
 
+
+def _str_getter(_dict, key, default=None) -> str:
+    val = _dict.get(key, default)
+    if val is None:
+        return 'None'
+    if isinstance(val, str):
+        return f'"{val}"'
+    return f'{val}'
 
 def extract_function_info(node):
     function_info = []

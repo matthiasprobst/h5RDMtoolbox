@@ -19,5 +19,12 @@ if not (convention_user_dir / 'convention.py').exists():
     build_convention()
 
 sys.path.insert(0, str(UserDir['conventions'] / convention_name))
-# noinspection PyUnresolvedReferences
-import convention
+
+import importlib
+try:
+    imported_module = importlib.import_module(convention_name)
+    # Now, you can use the imported module as needed
+    # For example:
+    imported_module.cv
+except ImportError:
+    print(f"Failed to import module {convention_name}")
