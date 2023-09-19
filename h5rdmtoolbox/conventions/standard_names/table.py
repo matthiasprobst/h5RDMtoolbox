@@ -166,11 +166,14 @@ class StandardNameTable:
         return self.to_dict()
 
     def __contains__(self, standard_name):
+        if isinstance(standard_name, StandardName):
+            standard_name = standard_name.name
         return standard_name in self.standard_names
 
     def __getitem__(self, standard_name: str) -> StandardName:
         """Return table entry"""
         logger.debug(f'Checking "{standard_name}"')
+        standard_name = str(standard_name)
         if standard_name in self.standard_names:
             entry = self.standard_names[standard_name]
             return StandardName(name=standard_name,

@@ -264,27 +264,29 @@ class StandardAttribute(abc.ABC):
             if ret_val is self.NONE:
                 return None
         # is there a return value associated with the validator?
+        return self.validate(ret_val, parent=parent)
 
-        if ret_val:
-            if ret_val.startswith('{') and ret_val.endswith('}'):
-                ret_val = json.loads(ret_val)
+    def validate(self, value, parent=None):
+        if value:
+            if value.startswith('{') and value.endswith('}'):
+                value = json.loads(value)
                 try:
                     if 'typing.Dict' in str(self.validator.model_fields['value'].annotation):
-                        return self.validator.model_validate(dict(value=ret_val),
+                        return self.validator.model_validate(dict(value=value),
                                                              context=dict(attrs=None, parent=parent)).value
                     else:
-                        return self.validator.model_validate(ret_val, context=dict(attrs=None, parent=parent))
+                        return self.validator.model_validate(value, context=dict(attrs=None, parent=parent))
                 except pydantic.ValidationError as err:
                     warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                                   convention_warnings.StandardAttributeValidationWarning)
-                    return ret_val
+                    return value
 
         try:
-            _value = self.validator.model_validate(dict(value=ret_val), context=dict(attrs=None, parent=parent)).value
+            _value = self.validator.model_validate(dict(value=value), context=dict(attrs=None, parent=parent)).value
             if isinstance(_value, enum.Enum):
                 return _value.value
             return _value
         except pydantic.ValidationError as err:
             warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                           convention_warnings.StandardAttributeValidationWarning)
-        return ret_val
+        return self.validator.model_validate(dict(value=self.default_value), context=dict(attrs=None, parent=None))
