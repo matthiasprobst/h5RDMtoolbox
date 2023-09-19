@@ -19,10 +19,6 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         convention_name = yaml_filename.stem
     else:
         convention_name = name
-
-    print(f'Convention "{convention_name}" filename: {yaml_filename}')
-
-    print('creating directory for the convention')
     # create the convention directory where to build the validators
 
     convention_name = convention_name.lower().replace("-", "_")
@@ -34,10 +30,8 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
 
     special_validator_filename = yaml_filename.parent / f'{convention_name}_vfuncs.py'
     if special_validator_filename.exists():
-        print(f'Found special functions file: {special_validator_filename}')
         shutil.copy(special_validator_filename, py_filename)
     else:
-        print('No special functions defined')
         # touch file:
         with open(py_filename, 'w'):
             pass
@@ -170,11 +164,9 @@ class {validator_name}_validator(BaseModel):
             validator_dict[_type] = validator_class_name
             lines = [
                 # testing:
-                # f'\nprint(special_type_funcs.units("123", None, None))'
                 f'\nclass {validator_class_name}(BaseModel):',
                 f'\n    """{stda["description"]}"""',
                 f'\n    value: {_type_str}',
-                # f'\n\n{validator_class_name}(value="hallo")'
 
             ]
             f.writelines(lines)
@@ -260,7 +252,6 @@ def scan_python_file(file_path):
         function_info = extract_function_info(tree)
         return function_info
     except SyntaxError as e:
-        print(f"Error parsing {file_path}: {e}")
         return []
 
 
@@ -278,13 +269,11 @@ def get_specialtype_function_info(file_path, validate=True):
     function_info_dict = {}
 
     if function_info:
-        print("Function info found:")
         for name, arguments in function_info:
             if name.startswith("validate_"):
                 function_info_dict[name] = arguments
             else:
                 warnings.warn(f'Skipping function "{name}" in {file_path} because it does not start with "validate_"')
-    print(f'Found {len(function_info_dict)} function(s) in {file_path}')
     if validate:
         validate_specialtype_functions(function_info_dict)
     return function_info_dict
