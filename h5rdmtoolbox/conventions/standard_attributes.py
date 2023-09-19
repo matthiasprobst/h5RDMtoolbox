@@ -268,7 +268,7 @@ class StandardAttribute(abc.ABC):
 
     def validate(self, value, parent=None):
         if value:
-            if value.startswith('{') and value.endswith('}'):
+            if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
                 value = json.loads(value)
                 try:
                     if 'typing.Dict' in str(self.validator.model_fields['value'].annotation):

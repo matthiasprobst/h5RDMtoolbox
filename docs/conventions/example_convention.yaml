@@ -2,10 +2,16 @@ __name__: h5rdmtoolbox-tuturial-convention
 __institution__: https://orcid.org/members/001G000001e5aUTIAY
 __contact__: https://orcid.org/0000-0001-8729-0482
 
+contact_id:
+  description: ID of a person to contact for questions.
+  target_method: __init__
+  validator: $str
+
+$dataSourceTypes:
+  - numerical
+  - experimental
+
 data_type:
   description: 'Type of data in file. Can be numerical or experimental'
   target_method: __init__
-  validator:
-    $in:
-    - experimental
-    - numerical
+  validator: $dataSourceTypes
