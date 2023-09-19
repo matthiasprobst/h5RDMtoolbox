@@ -223,7 +223,6 @@ class TestStandardAttributes(unittest.TestCase):
     def test_from_yaml(self):
         cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename())
         h5tbx.use(cv)
-        print('debuuuuuuuuuuuuug ', cv.name, ' ', tutorial.get_standard_attribute_yaml_filename())
         self.assertTrue('scale' in cv.properties[h5tbx.Dataset])
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
             with self.assertRaises(StandardAttributeError):

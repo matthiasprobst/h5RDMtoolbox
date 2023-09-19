@@ -153,7 +153,7 @@ class Convention:
 
     def __enter__(self):
         self._curr_cv = get_current_convention()
-        self.use()
+        use(self)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
