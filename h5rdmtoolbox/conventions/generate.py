@@ -1,9 +1,12 @@
 """main"""
+import ast
 import pathlib
 import re
 import shutil
+import warnings
 import yaml
-from typing import List, Callable
+from itertools import count
+from typing import List
 from typing import Union, Dict
 
 from h5rdmtoolbox._user import UserDir
@@ -220,9 +223,6 @@ cv.register()
 
 
 # UTILITIES:
-import ast
-import warnings
-from itertools import count
 
 regex_counter = count()
 
@@ -240,10 +240,10 @@ def _str_getter(_dict, key, default=None) -> str:
     return f'{val}'
 
 
-def extract_function_info(func: Callable) -> List:
+def extract_function_info(node) -> List:
     """Extract function name and arguments from a function."""
     function_info = []
-    for item in func.body:
+    for item in node.body:
         if isinstance(item, ast.FunctionDef):
             function_name = item.name
             arguments = [arg.arg for arg in item.args.args]
@@ -294,31 +294,26 @@ def _process_relpath(rel_filename, relative_to) -> str:
     return f'r"{pathlib.Path((relative_to / rel_filename).absolute())}"'
 
 
-def _process_paths(data: Union[Dict, str], relative_to) -> Union[str, List[str], Dict[str, str]]:
-    # processed_data = {}
-    if data is None:
-        return data
-    if isinstance(data, str):
-        match = re.search(r'relpath\((.*?)\)', data)
+def _process_paths(paths: Union[Dict, str], relative_to) -> Union[str, List[str], Dict[str, str]]:
+    if paths is None:
+        return paths
+    if isinstance(paths, str):
+        match = re.search(r'relpath\((.*?)\)', paths)
         if match:
             return _process_relpath(match.group(1), relative_to)
-        return data
-    elif isinstance(data, list):
-        return [_process_paths(item, relative_to) for item in data]
-    elif isinstance(data, dict):
-        _data = data.copy()
-        for key, value in data.items():
+        return paths
+    elif isinstance(paths, list):
+        return [_process_paths(item, relative_to) for item in paths]
+    elif isinstance(paths, dict):
+        _paths = paths.copy()
+        for key, value in paths.items():
             if isinstance(value, str):
                 match = re.search(r'relpath\((.*?)\)', value)
                 if match:
-                    _data[key] = _process_relpath(match.group(1), relative_to)
+                    _paths[key] = _process_relpath(match.group(1), relative_to)
             elif isinstance(value, list):
-                _data[key] = [_process_paths(item, relative_to) for item in value]
+                _paths[key] = [_process_paths(item, relative_to) for item in value]
             elif isinstance(value, dict):
-                _data[key] = _process_paths(_data[key], relative_to)
-        return _data
-    return data
-
-
-if __name__ == '__main__':
-    write_convention_module_from_yaml('test_convention.yaml')
+                _paths[key] = _process_paths(_paths[key], relative_to)
+        return _paths
+    return paths

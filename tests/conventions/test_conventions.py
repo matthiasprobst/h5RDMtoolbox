@@ -28,6 +28,32 @@ class TestConventions(unittest.TestCase):
         from h5rdmtoolbox.conventions import logger
         logger.setLevel('DEBUG')
 
+    def test_extract_function_info(self):
+        from h5rdmtoolbox.conventions.generate import extract_function_info, validate_specialtype_functions
+        import ast
+        tree = ast.parse(" ")
+        self.assertEqual(extract_function_info(tree), [])
+
+        lines = """
+def f1(a, b, c=3):
+    pass
+"""
+        tree = ast.parse(lines)
+        r = extract_function_info(tree)
+        self.assertTrue(r[0][0] == 'f1')
+        self.assertTrue(r[0][1] == ['a', 'b', 'c'])
+        with self.assertRaises(ValueError):
+            validate_specialtype_functions({r[0][0]: r[0][1]})
+
+        lines = """
+def validate_f1(a, b, c=3, d=2):
+    pass"""
+        tree = ast.parse(lines)
+        r = extract_function_info(tree)
+        with self.assertRaises(ValueError):
+            validate_specialtype_functions({r[0][0]: r[0][1]})
+
+
     def test_new_convention(self):
         f = h5tbx.UserDir['conventions'] / 'h5tbx' / 'h5tbx.py'
         f.unlink(missing_ok=True)
@@ -159,6 +185,7 @@ class TestConventions(unittest.TestCase):
 
         self.assertEqual({'a': []}, core._process_paths({'a': []}, __this_dir__))
         self.assertEqual([], core._process_paths([], __this_dir__))
+        self.assertEqual([abspath, abspath], core._process_paths(['relpath(a/path/)', 'relpath(a/path/)'], __this_dir__))
         self.assertEqual(3.4, core._process_paths(3.4, __this_dir__))
         self.assertEqual('a/path/', core._process_paths('a/path/', __this_dir__))
         self.assertEqual(abspath, core._process_paths('relpath(a/path/)', __this_dir__))
@@ -301,6 +328,15 @@ class TestConventions(unittest.TestCase):
 
             cv = h5tbx.conventions.get_current_convention()
             with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                h5.comment = 'This is a comment'
+                self.assertEqual(h5.comment, 'This is a comment')
+
+                with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                    h5.comment = '1.2 comment'
+
+                h5.create_group('grp', comment='Group comment')
+                self.assertEqual(h5['grp'].comment, 'Group comment')
+
                 h5.create_dataset('test', data=4.3, standard_name='x_velocity', units='m/s')
                 self.assertEqual(h5['test'].standard_name, 'x_velocity')
                 self.assertIsInstance(h5['test'].standard_name, h5tbx.conventions.standard_names.StandardName)
