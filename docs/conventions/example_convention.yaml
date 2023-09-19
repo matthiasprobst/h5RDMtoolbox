@@ -6,6 +6,13 @@ contact_id:
   description: ID of a person to contact for questions.
   target_method: __init__
   validator: $str
+  default_value: $EMPTY
+
+comment:
+  description: Comment to a dataset
+  target_method: create_dataset
+  validator: $regex(^[A-Z].*)
+  default_value: $NONE
 
 $dataSourceTypes:
   - numerical
