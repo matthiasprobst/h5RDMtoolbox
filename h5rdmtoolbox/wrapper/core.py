@@ -1556,8 +1556,15 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             elif method == 'nearest':
                 # idx = (sel_coord_data - coord_values).argmin()[()]
                 # print(idx)
-                _absmin = np.abs(sel_coord_data - coord_values)
-                idx = int(np.argmin(_absmin))
+                if not isinstance(coord_values, (int, float)):
+                    _coord_values = np.array(coord_values)
+                    if _coord_values.ndim != 1:
+                        raise NotImplementedError('Cuurently .sel() only allows 0D or 1D data for coord_values')
+                    _absmins = [np.abs(sel_coord_data - cv) for cv in coord_values]
+                    idx = [int(np.argmin(_absmin)) for _absmin in _absmins]
+                else:
+                    _absmin = np.abs(sel_coord_data - coord_values)
+                    idx = int(np.argmin(_absmin))
             else:
                 raise NotImplementedError('Only exact and nearest match method implemented')
             isel[coord_name] = idx
@@ -1662,7 +1669,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                                                               attrs=dim_ds_attrs)
 
             used_dims = [dim_name for arg, dim_name in zip(
-                myargs, dims_names) if isinstance(arg, (slice, np.ndarray))]
+                myargs, dims_names) if isinstance(arg, (slice, np.ndarray, list))]
 
             COORDINATES = ds_attrs.get(protected_attributes.COORDINATES)
             if COORDINATES is not None:

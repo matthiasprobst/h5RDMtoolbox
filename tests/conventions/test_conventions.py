@@ -53,7 +53,6 @@ def validate_f1(a, b, c=3, d=2):
         with self.assertRaises(ValueError):
             validate_specialtype_functions({r[0][0]: r[0][1]})
 
-
     def test_new_convention(self):
         f = h5tbx.UserDir['conventions'] / 'h5tbx' / 'h5tbx.py'
         f.unlink(missing_ok=True)
@@ -185,7 +184,8 @@ def validate_f1(a, b, c=3, d=2):
 
         self.assertEqual({'a': []}, core._process_paths({'a': []}, __this_dir__))
         self.assertEqual([], core._process_paths([], __this_dir__))
-        self.assertEqual([abspath, abspath], core._process_paths(['relpath(a/path/)', 'relpath(a/path/)'], __this_dir__))
+        self.assertEqual([abspath, abspath],
+                         core._process_paths(['relpath(a/path/)', 'relpath(a/path/)'], __this_dir__))
         self.assertEqual(3.4, core._process_paths(3.4, __this_dir__))
         self.assertEqual('a/path/', core._process_paths('a/path/', __this_dir__))
         self.assertEqual(abspath, core._process_paths('relpath(a/path/)', __this_dir__))

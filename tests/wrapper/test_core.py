@@ -7,6 +7,7 @@ import pathlib
 import unittest
 import xarray as xr
 from datetime import datetime
+from numpy import linspace as ls
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
@@ -673,6 +674,27 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 h5['vel'].sel(time=1.2, method='invalid')
             self.assertEqual(1.5, float(h5['vel'].sel(time=1.2, method='nearest')))
+
+    def test_multi_isel_and_sel(self):
+        with h5tbx.File() as h5:
+            time = h5.create_dataset('time', data=ls(0, 1, 10), make_scale=True)
+            y = h5.create_dataset('y', data=ls(0, 1, 5), make_scale=True)
+            x = h5.create_dataset('x', data=ls(0, 10, 7), make_scale=True)
+            h5.create_dataset('data',
+                              shape=(10, 5, 7), attach_scales=('time', 'y', 'x'))
+            np.testing.assert_equal(h5['data'][0, 0, [0, 2]],
+                                    h5['data'].values[0, 0, [0, 2]])
+            np.testing.assert_equal(h5['data'].isel(time=0, y=0, x=[0, 2]),
+                                    h5['data'].values[0, 0, [0, 2]])
+            h5.dump()
+
+        filename = h5.hdf_filename
+
+        with h5tbx.File(filename) as h5:
+            d = h5['data'].sel(
+                x=[4.3, 10.9],
+                time=0.2,
+                method='nearest')
 
     def test_create_dataset_with_ancillary_ds(self):
         with h5tbx.File() as h5:
