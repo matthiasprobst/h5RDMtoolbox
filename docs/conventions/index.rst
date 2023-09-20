@@ -11,7 +11,7 @@ In order to interpret data, it must come with comprehensible auxiliary data (met
 shared with all users involved data creation or analysis. Thus, rules on how metadata is used needs to
 be specified.
 
-All above documents should be shared via online repositories. Currently, the toolbox favors [Zenodo](https://zenodo.org).
+All above documents should be shared via online repositories. Currently, the toolbox favors `Zenodo <https://zenodo.org>`_.
 
 The following chapters will explain the usage of conventions (standard attributes and layouts) in more detail.
 
