@@ -119,37 +119,22 @@ def {regex_validator}_validator(value, parent=None, attrs=None):
     # get validator and write them to convention-python file:
     with open(py_filename, 'a') as f:
         # write type definitions from YAML file:
+        from .generate_utils import get_enum_lines, get_validator_lines
         for k, v in type_definitions.items():
+            enum_lines = get_enum_lines(k, values=v)
+            f.writelines(enum_lines)
             validator_name = k.strip('$').replace('-', '_')
             validator_dict[k] = f'{validator_name}_validator'
             if isinstance(v, list):
-                # create_enum_class(k, v, f)
-                lines = f"""
-from enum import Enum
-
-class {validator_name}(str, Enum):
-"""
-                for enum_val in v:
-                    enum_split = enum_val.split(':', 1)
-                    if len(enum_split) == 1:
-                        enum_name, enum_value = enum_val, enum_val
-                    else:
-                        enum_name, enum_value = enum_split
-                    lines += f'    {enum_name} = "{enum_value}"\n'
-                lines += f"""
-
-class {validator_name}_validator(BaseModel):
-    value: {validator_name}
-
-"""
+                lines = get_enum_lines(k, v)
+            elif isinstance(v, dict):
+                lines = get_validator_lines(k, v)
             else:
-                lines = f"""
-
-class {validator_name}_validator(BaseModel):
-    """ + '\n    '.join([f'{k}: {v}' for k, v in v.items()])
-                # write imports to file:
+                raise TypeError(f'Unknown type for type definition {k}: {type(v)}')
             if lines:
                 f.writelines(lines)
+            else:
+                raise RuntimeError(f'Could not generate validator for {k}')
 
         for stda_name, stda in standard_attributes.items():
             validator_class_name = stda_name.replace('-', '_') + '_validator'
