@@ -1,4 +1,52 @@
+import re
+from itertools import count
 from typing import List, Dict
+
+regex_counter = count()
+
+
+def get_regex_name():
+    return f'regex_{next(regex_counter)}'
+
+
+class RegexProcessor:
+    def __init__(self, standard_attribute: Dict):
+        regex_validator = get_regex_name()
+        validator = standard_attribute['validator']
+        self.name = regex_validator
+        match = re.search(r'regex\((.*?)\)', validator)
+        re_pattern = match.group(1)
+
+        self.standard_attribute = standard_attribute.copy()
+        if re_pattern.startswith("r'") and re_pattern.endswith("'"):
+            re_pattern = re_pattern[2:-1]
+        self.standard_attribute['validator'] = f'{regex_validator}'
+        self.re_pattern = re_pattern
+
+    def get_dict(self):
+        return self.standard_attribute
+
+    def write_lines(self, file):
+        """Write validator lines to file"""
+        file.writelines(f'\n\nimport re\n\n')
+        file.writelines(f'\ndef {self.name}_validator(value, parent=None, attrs=None):')
+        file.writelines(f"\n    pattern = re.compile(r'{self.re_pattern}')")
+        file.writelines("\n    if not pattern.match(value):")
+        file.writelines("\n        raise ValueError('Invalid format for pattern')")
+        file.writelines("\n    return value")
+        file.writelines(f"\n{self.name} = Annotated[int, WrapValidator({self.name}_validator)]\n")
+
+
+def get_standard_attribute_class_lines(name, *, validator, description: str = None, **kwargs):
+    validator_class_name = name.replace('-', '_') + '_validator'
+    validator = validator.strip('$')
+    lines = [
+        f'\nclass {validator_class_name}(BaseModel):',
+        f'\n    """{description}"""',
+        f'\n    value: {validator}\n',
+
+    ]
+    return lines
 
 
 def get_validator_lines(name, values: Dict, description: str = None):

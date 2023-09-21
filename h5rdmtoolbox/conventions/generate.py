@@ -10,6 +10,7 @@ from typing import List
 from typing import Union, Dict
 
 from h5rdmtoolbox._user import UserDir
+from . import generate_utils
 
 
 def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
@@ -47,18 +48,16 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     special_type_info = get_specialtype_function_info(py_filename)
     with open(py_filename, 'a') as f:
         f.writelines('\n# ---- generated code: ----\nfrom h5rdmtoolbox.conventions.toolbox_validators import *\n')
-        f.writelines("""
+        f.writelines('\nfrom pydantic import BaseModel\n')
+        f.writelines('from pydantic.functional_validators import WrapValidator\n')
+        f.writelines('from typing_extensions import Annotated\n\n')
 
-from pydantic import BaseModel
-from pydantic.functional_validators import WrapValidator
-from typing_extensions import Annotated
-
-""")
-    with open(py_filename, 'a') as f:
-        # write type definitions from YAML file:
-        for k, v in special_type_info.items():
-            lines = f"""{k.strip('validate_')} = Annotated[str, WrapValidator({k})]\n"""
-            f.writelines(lines)
+    if special_type_info:
+        with open(py_filename, 'a') as f:
+            # write type definitions from YAML file:
+            for k, v in special_type_info.items():
+                lines = f"""{k.strip('validate_')} = Annotated[str, WrapValidator({k})]\n"""
+                f.writelines(lines)
 
     # read the yaml file:
     with open(yaml_filename, 'r') as f:
@@ -82,30 +81,10 @@ from typing_extensions import Annotated
 
             else:
                 if 'regex' in v['validator']:
-                    regex_validator = get_regex_name()  # TODO use proper id
-                    match = re.search(r'regex\((.*?)\)', v['validator'])
-                    re_pattern = match.group(1)
-                    if re_pattern.startswith("r'") and re_pattern.endswith("'"):
-                        re_pattern = re_pattern[2:-1]
-                        standard_attributes[k] = regex_validator
-                    _v = v.copy()
-                    _v['validator'] = f'{regex_validator}'
-                    standard_attributes[k] = _v
-
+                    _regex_proc = generate_utils.RegexProcessor(v)
+                    standard_attributes[k] = _regex_proc.get_dict()
                     with open(py_filename, 'a') as f:
-                        if 're' not in imports:
-                            f.writelines('import re\n')
-                            imports.append('re')
-                        f.writelines(f"""
-
-def {regex_validator}_validator(value, parent=None, attrs=None):
-    pattern = re.compile(r'{re_pattern}')
-    if not pattern.match(value):
-        raise ValueError('Invalid format for pattern')
-    return value
-
-
-{regex_validator} = Annotated[int, WrapValidator({regex_validator}_validator)]""")
+                        _regex_proc.write_lines(f)
                 else:
                     standard_attributes[k] = v
         elif isinstance(v, str):
@@ -119,16 +98,15 @@ def {regex_validator}_validator(value, parent=None, attrs=None):
     # get validator and write them to convention-python file:
     with open(py_filename, 'a') as f:
         # write type definitions from YAML file:
-        from .generate_utils import get_enum_lines, get_validator_lines
         for k, v in type_definitions.items():
-            enum_lines = get_enum_lines(k, values=v)
+            enum_lines = generate_utils.get_enum_lines(k, values=v)
             f.writelines(enum_lines)
             validator_name = k.strip('$').replace('-', '_')
             validator_dict[k] = f'{validator_name}_validator'
             if isinstance(v, list):
-                lines = get_enum_lines(k, v)
+                lines = generate_utils.get_enum_lines(k, v)
             elif isinstance(v, dict):
-                lines = get_validator_lines(k, v)
+                lines = generate_utils.get_validator_lines(k, v)
             else:
                 raise TypeError(f'Unknown type for type definition {k}: {type(v)}')
             if lines:
@@ -136,8 +114,8 @@ def {regex_validator}_validator(value, parent=None, attrs=None):
             else:
                 raise RuntimeError(f'Could not generate validator for {k}')
 
+        # write standard attribute classes:
         for stda_name, stda in standard_attributes.items():
-            validator_class_name = stda_name.replace('-', '_') + '_validator'
             _type = stda["validator"]
             if isinstance(_type, dict):
                 raise TypeError('A validator cannot be a dict but need to specify a validator type, like "$str". '
@@ -145,15 +123,9 @@ def {regex_validator}_validator(value, parent=None, attrs=None):
             if _type in type_definitions:
                 continue
 
-            _type_str = _type.strip("$")
+            lines = generate_utils.get_standard_attribute_class_lines(stda_name, **stda)
+            validator_class_name = stda_name.replace('-', '_') + '_validator'
             validator_dict[_type] = validator_class_name
-            lines = [
-                # testing:
-                f'\nclass {validator_class_name}(BaseModel):',
-                f'\n    """{stda["description"]}"""',
-                f'\n    value: {_type_str}',
-
-            ]
             f.writelines(lines)
             f.writelines('\n')
 
@@ -200,12 +172,6 @@ cv.register()
 
 
 # UTILITIES:
-
-regex_counter = count()
-
-
-def get_regex_name():
-    return f'regex_{next(regex_counter)}'
 
 
 def _str_getter(_dict, key, default=None) -> str:
