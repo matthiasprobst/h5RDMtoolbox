@@ -133,6 +133,21 @@ def __validate_offset(value, handler, info):
     return qoffset
 
 
+def __validate_date_format(value, handler, info):
+    """value: str, e.g. '1991-01-19T13:45:05TZD'"""
+    import dateutil.parser
+    import warnings
+    # will raise an error if not a valid datetime
+    try:
+        warnings.filterwarnings("error")
+        dt = dateutil.parser.parse(value)
+    except RuntimeWarning as e:
+        raise ValueError(f'Invalid datetime: {value}. Original error: {e}')
+    finally:
+        warnings.filterwarnings("ignore")
+    return dt
+
+
 def _get_validate_type(_type):
     def __validate_type(value, handler, info):
         if not isinstance(value, _type):
@@ -155,10 +170,10 @@ class IntValidator(BaseModel):
 
 
 units = Annotated[str, WrapValidator(__validate_units)]
+dateFormat = Annotated[str, WrapValidator(__validate_date_format)]
 quantity = Annotated[str, WrapValidator(__validate_quantity)]
 offset = Annotated[str, WrapValidator(__validate_offset)]
 orcid = Annotated[str, WrapValidator(__validate_orcid)]
-standard_name_table = Annotated[
-    Union[str, Dict], WrapValidator(__validate_standard_name_table)]
+standard_name_table = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]
 standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
 url = Annotated[str, WrapValidator(__validate_url)]
