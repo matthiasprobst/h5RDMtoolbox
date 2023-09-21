@@ -6,7 +6,7 @@ import pymongo.collection
 import warnings
 from datetime import datetime, timezone
 from pymongo.errors import InvalidDocument
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from .file import distinct
 from .. import protected_attributes
@@ -42,7 +42,7 @@ def make_dict_mongo_compatible(dictionary: Dict):
     return dictionary
 
 
-def type2mongo(value: any) -> any:
+def type2mongo(value: Any) -> Any:
     """Convert numpy dtypes to int/float/list/... At least try to convert to str()"""
     if isinstance(value, (int, float, str, dict, list, tuple, datetime)):
         return value
@@ -51,9 +51,9 @@ def type2mongo(value: any) -> any:
     if isinstance(value, np.ndarray):
         return value.tolist()
     try:
-        if np.issubdtype(value, np.floating):
-            return float(value)
-        return int(value)
+        if isinstance(value, np.integer):
+            return int(value)
+        return float(value)
     except Exception as e:
         warnings.warn(f'Could not determine/convert {value}. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')
@@ -180,7 +180,7 @@ class MongoDatasetAccessor:
                         #     else:
                         #         doc[av] = float(ds.parent[av][()])
                         # else:
-                        doc[ak] = av
+                        doc[ak] = type2mongo(av)
             return [doc, ]
 
         if axis == 0:
@@ -241,7 +241,7 @@ class MongoDatasetAccessor:
                                 else:
                                     doc[av[1:]] = float(ds.parent[av][()])
                             else:
-                                doc[ak] = av
+                                doc[ak] = type2mongo(av)
                 docs.append(doc)
             return docs
         raise NotImplementedError('This method is under heavy construction. Currently, '
@@ -272,6 +272,7 @@ class MongoDatasetAccessor:
                 _doc = {k: type2mongo(v) for k, v in doc.items()}
                 collection.update_one(_doc, {'$set': _doc}, upsert=True)
         else:
+            # print([(k, type(v)) for k, v in docs[0].items()])
             collection.insert_many(docs, ordered=ordered)
         return collection
 

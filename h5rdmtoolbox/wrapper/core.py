@@ -32,10 +32,10 @@ from ..conventions.layout import Layout as LayoutFile
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
 H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
-                              'rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0', 'track_order',
-                              'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
-                              'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
-                              'alignment_threshold', 'alignment_interval', 'meta_block_size')
+            'rdcc_nslots', 'rdcc_nbytes', 'rdcc_w0', 'track_order',
+            'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
+            'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
+            'alignment_threshold', 'alignment_interval', 'meta_block_size')
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -109,7 +109,7 @@ def process_attributes(cls,
                 # if the skwargs is not set and not required, pass attrs to skwargs
                 # same accounts if the current value in skwargs is the default (to be identified by instance check)
                 if skwargs[ak] == DefaultValue.NONE or skwargs[ak] == DefaultValue.EMPTY or isinstance(skwargs[ak],
-                                                                                                       DefaultValue)\
+                                                                                                       DefaultValue) \
                         or skwargs[ak] is None:
                     skwargs[ak] = v
                 # else raise error

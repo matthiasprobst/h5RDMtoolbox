@@ -137,7 +137,21 @@ class RecAttrFind:
         if self.objfilter:
             if not isinstance(obj, self.objfilter):
                 return
-        if self._attribute in obj.attrs.raw:
+        if '.' in self._attribute:
+            # dict comparison:
+            attr_name, dict_path = self._attribute.split('.', 1)
+            if attr_name in obj.attrs.raw:
+                _attr_dict = dict(obj.attrs[attr_name])
+                for _item in dict_path.split('.'):
+                    try:
+                        _attr_value = _attr_dict[_item]
+                    except KeyError:
+                        _attr_value = None
+                        break
+                if _attr_value:
+                    if self._func(_attr_value, self._value):
+                        self.found_objects.append(obj)
+        elif self._attribute in obj.attrs.raw:
             if self._func(obj.attrs.raw[self._attribute], self._value):
                 self.found_objects.append(obj)
 
@@ -301,7 +315,21 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                     if not isinstance(h5obj, objfilter):
                         _skip = True
                 if not _skip:
-                    if qk in h5obj.attrs.raw:
+                    if '.' in qk:
+                        # dict comparison:
+                        attr_name, dict_path = qk.split('.', 1)
+                        if attr_name in h5obj.attrs.raw:
+                            _attr_dict = dict(h5obj.attrs[attr_name])
+                            for _item in dict_path.split('.'):
+                                try:
+                                    _attr_value = _attr_dict[_item]
+                                except KeyError:
+                                    _attr_value = None
+                                    break
+                            if _attr_value:
+                                if operator[ok](_attr_value, ov):
+                                    found_objs.append(h5obj)
+                    elif qk in h5obj.attrs.raw:
                         if operator[ok](h5obj.attrs.raw[qk], ov):
                             found_objs.append(h5obj)
                 rf = RecAttrFind(operator[ok], qk, ov, objfilter=objfilter)

@@ -10,6 +10,25 @@ class TestFileQuery(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
+    def test_find_dict_entry(self):
+        with h5tbx.File() as h5:
+            h5.attrs['contact'] = {'name': 'John Doe',
+                                   'surname': 'Doe',
+                                   'firstName': 'John'}
+            h5.create_dataset('grp/ds1', shape=(1, 2, 3),
+                              attrs=dict(units='', long_name='long name 1',
+                                         contact={'name': 'Jane Doe',
+                                                  'surname': 'Doe',
+                                                  'firstName': 'Simon'}))
+            h5.create_group('grp/sub_grp', attrs=dict(contact={'name': 'John Doe',
+                                                               'surname': 'Doe',
+                                                               'firstName': 'John'}))
+        self.assertEqual(0, len(h5tbx.FileDB(h5.hdf_filename).find({'contact.name': 'Doe'})))
+        self.assertEqual(3, len(h5tbx.FileDB(h5.hdf_filename).find({'contact.surname': 'Doe'})))
+        self.assertEqual(2, len(h5tbx.FileDB(h5.hdf_filename).find({'contact.firstName': 'John'})))
+        self.assertEqual(0, len(h5tbx.FileDB(h5.hdf_filename).find({'contact.lastName': 'Doe'})))
+        self.assertEqual(0, len(h5tbx.FileDB(h5.hdf_filename).find({'noContact.lastName': 'Doe'})))
+
     def test_regex(self):
         from h5rdmtoolbox.database.file import _regex
         self.assertFalse(_regex(None, '*'))
