@@ -5,7 +5,6 @@ import re
 import shutil
 import warnings
 import yaml
-from itertools import count
 from typing import List
 from typing import Union, Dict
 
@@ -96,23 +95,30 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             raise KeyError(f'Unknown type for key {k}: {type(v)}')
 
     # get validator and write them to convention-python file:
+    enum_validator_lines = []
+    standard_validator_lines = []
     with open(py_filename, 'a') as f:
         # write type definitions from YAML file:
         for k, v in type_definitions.items():
-            enum_lines = generate_utils.get_enum_lines(k, values=v)
-            f.writelines(enum_lines)
             validator_name = k.strip('$').replace('-', '_')
-            validator_dict[k] = f'{validator_name}_validator'
+            validator_dict[k] = f'{validator_name}'#_validator'
             if isinstance(v, list):
-                lines = generate_utils.get_enum_lines(k, v)
+                enum_validator_lines.append(generate_utils.get_enum_lines(k, v))
             elif isinstance(v, dict):
-                lines = generate_utils.get_validator_lines(k, v)
+                standard_validator_lines.append(generate_utils.get_validator_lines(k, v))
             else:
                 raise TypeError(f'Unknown type for type definition {k}: {type(v)}')
-            if lines:
-                f.writelines(lines)
-            else:
-                raise RuntimeError(f'Could not generate validator for {k}')
+
+        # first write enums:
+        if enum_validator_lines:
+            f.writelines('\n\nfrom enum import Enum\n\n')
+        for lines in enum_validator_lines:
+            f.writelines(lines)
+            f.writelines('\n')
+        # then write standard attribute classes:
+        for lines in standard_validator_lines:
+            f.writelines(lines)
+            f.writelines('\n')
 
         # write standard attribute classes:
         for stda_name, stda in standard_attributes.items():
@@ -124,7 +130,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
                 continue
 
             lines = generate_utils.get_standard_attribute_class_lines(stda_name, **stda)
-            validator_class_name = stda_name.replace('-', '_') + '_validator'
+            validator_class_name = stda_name.replace('-', '_')# + '_validator'
             validator_dict[_type] = validator_class_name
             f.writelines(lines)
             f.writelines('\n')

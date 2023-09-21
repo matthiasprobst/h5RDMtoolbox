@@ -11,6 +11,15 @@ from typing_extensions import Annotated
 from h5rdmtoolbox import get_ureg, errors
 
 
+def __validate_list_of_str(value, handler, info):
+    if not isinstance(value, list):
+        raise TypeError(f'Expected a list, got {type(value)}')
+    for v in value:
+        if not isinstance(v, str):
+            raise TypeError(f'Expected a list of strings, got a list with {type(v)}')
+    return value
+
+
 def __validate_orcid(value, handler, info):
     from h5rdmtoolbox import orcid
     oid = orcid.ORCID(value)
@@ -174,6 +183,7 @@ dateFormat = Annotated[str, WrapValidator(__validate_date_format)]
 quantity = Annotated[str, WrapValidator(__validate_quantity)]
 offset = Annotated[str, WrapValidator(__validate_offset)]
 orcid = Annotated[str, WrapValidator(__validate_orcid)]
+list_of_str = Annotated[str, WrapValidator(__validate_list_of_str)]
 standard_name_table = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]
 standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
 url = Annotated[str, WrapValidator(__validate_url)]

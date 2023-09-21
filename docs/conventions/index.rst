@@ -21,7 +21,5 @@ The following chapters will explain the usage of conventions (standard attribute
     :hidden:
 
     standard_attributes_and_conventions.ipynb
-    standard_name_convention.ipynb
-    standard_name_interface.ipynb
-    Provenance.ipynb
     layouts.ipynb
+    Examples <examples/index>

@@ -1,0 +1,222 @@
+__name__: EngMeta
+__institution__: https://orcid.org/members/001G000001e5aUTIAY
+__contact__: https://orcid.org/0000-0001-8729-0482
+
+
+$pidTypes:
+  - doi
+  - urn
+  - epic
+  - handle
+  - orcid
+  - gnd
+  - other
+
+$pid:
+  id: str  # should be "uri" not properly checked! consider using https://gist.github.com/mnot/138549
+  type: pidTypes
+  scheme: str = None  # should be "uri" not properly checked! consider using https://gist.github.com/mnot/138549
+  
+$contributorType:
+  - ContactPerson
+  - DataCollector
+  - DataCurator
+  - DataManager
+  - Distributor
+  - Editor
+  - HostingInstitution
+  - Other
+  - Producer
+  - ProjectLeader
+  - ProjectManager
+  - ProjectMember
+  - RegistrationAgency
+  - RegistrationAuthority
+  - RelatedPerson
+  - ResearchGroup
+  - RightsHolder
+  - Researcher
+  - Sponsor
+  - Supervisor
+  - WorkPackageLeader
+
+$personOrOrganization:
+  name: str
+  givenName: str=None
+  familyName: str=None
+  address: str=None
+  affiliation: str=None
+  email: str=None
+  id: str=None
+  role: contributorType=None
+
+contact:
+  description: Name and contact information of a person or organization that can handle requiries about the data over a long time period.
+  target_method: __init__
+  validator: $personOrOrganization
+  default_value: $EMPTY  # mandatory
+
+creator:
+  description: Name and affiliation of the author(s) of the data. These are the persons who created the data.
+  target_method: __init__
+  validator: $personOrOrganization
+  default_value: $EMPTY  # mandatory
+
+contributor:
+  description: Name and affiliation of all persons who contributed to the data.
+  target_method: __init__
+  validator: $personOrOrganization
+  default_value: $NONE  # mandatory
+
+pid:
+  description: Persistent identifier as URI, can ge further specified through a type and a scheme.
+  target_method: __init__
+  validator: $pid
+  default_value: $EMPTY # mandatory
+
+title:
+  description: A name or title by which a resource is known.
+  target_method: __init__
+  validator: $str
+  default_value: $NONE
+
+description:
+  description: All additional information that does not fit in any of the other categories. May be used for technical information. It is a best practice to supply a description.
+  target_method: __init__
+  validator: $str
+  default_value: $NONE
+
+keywords:
+  description: List of describing keywords.
+  target_method: __init__
+  validator: $list_of_str
+  default_value: $NONE
+
+$subject:
+  subjectScheme: str = None # should be subjectScheme
+  schemeURI: str = None # should be "uri"
+  valueURI: str = None # should be "uri"
+  xml: str = None # should be "uri"
+
+dates:
+  description: Dates according to the data.
+  target_method: __init__
+  validator: $date
+  default_value: $NONE
+
+$date:
+  date: dateFormat
+  dateType: dateType
+
+# Title of the subject. Can be free text or can belong to a controlled vocabulary. In this case, the vocabulary is specified by the attributes subjectScheme and/or schemeURI. The term itself can be identified through the attribute valueURI. Language can be specified through the xml:lang-attribute according to BCP47 (http://www.rfc-editor.org/rfc/bcp/bcp47.txt)
+subject:
+  description: List of subjects the data belongs to.
+  target_method: __init__
+  validator: $subject
+  default_value: $NONE
+
+$processingType:
+  - generation
+  - postprocessing
+  - analysis
+  - other
+
+$method:
+  description: str=None
+  parameter: str=None
+  methodScheme: str=None
+  schemeURI: str=None
+  valueURI: str=None
+  xml: str=None
+
+$fileOrResource:
+ id: pid
+ link: str
+ checksum: int
+
+$software:
+  name: str
+  contributor: personOrOrganization
+  softwareVersion: str
+  programmingLanguage: str
+  operatingSystem: str
+  URL: str
+  SoftwareSourceCode: fileOrResource
+  SoftwareApplication: fileOrResource
+  codeRepository: str
+  licence: str
+  citation: str
+  referencePublication: str
+
+$instrumentType:
+  name: str
+  description: str
+  type: str
+  partnum: str=None
+  serialnum: str=None
+  software: str=None
+  location: str=None
+  history: str=None
+  date: str=None
+  tagset: str=None
+  related: str=None
+  content: str=None
+
+#Computation environment of the data. Important for numerical simulations or other software code. Is specified by a name, the number of nodes and the number of processors per node (ppn). An unbounded number of compilers can be specified by name and flags
+$environment:
+  name: str=None
+  compiler: str=None
+  nodes: int=None
+  ppn: int=None
+  cpi: int=None
+  
+$processingStep:
+  type: processingType
+  actor: personOrOrganization
+  date: date
+  method: method
+  errorMethod: method
+  input: fileOrResource
+  tool: software
+  executionCommand: str
+  instrument: instrumentType
+  environment: environment
+  system: str
+  output: fileOrResource
+
+provenance:
+  description: 'Information about the data provenance for replication: Who did what with which method with the data.'
+  target_method: __init__
+  validator: $processingStep
+  default_value: $NONE
+
+$rightsStatement:
+  rightsStatementIdentifier: str
+  rightsBasis: str
+  copyrightInformation: str
+  licenseInformation: str
+  statuteInformation: str
+  otherRightsInformation: str
+  rightsGranted: str
+  linkingObjectIdentifier: str
+  linkingAgentIdentifier: str
+  
+rightsStatement:
+  description: rights information about the data, e.g. license, copyright, ...
+  target_method: __init__
+  validator: $rightsStatement
+  default_value: $NONE
+  
+# comment for built-in $dateFormat:
+# YYYY,YYYY-MM-DD, YYYY-MM-DDThh:mm:ssTZD or any other format or level of granularity described in W3CDTF.
+# Use RKMS-ISO8601 standard for depicting date ranges.
+$dateType:
+  - Accepted
+  - Available
+  - Collected
+  - Copyright
+  - Created
+  - Issued
+  - Submitted
+  - Updated
+  - Valid

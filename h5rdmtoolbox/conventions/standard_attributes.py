@@ -208,6 +208,10 @@ class StandardAttribute(abc.ABC):
             else:
                 if isinstance(value, dict):
                     try:
+                        # if a dict, we must fix some entries if there are nested standard validators:
+                        for k in value.keys():
+                            if hasattr(self.validator.model_fields[k].annotation, 'model_fields'):
+                                value[k] = {'value': value[k]}
                         _value = self.validator.model_validate(value, context={'parent': parent, 'attrs': attrs})
                     except pydantic.ValidationError as err:
                         raise errors.StandardAttributeError(
@@ -271,7 +275,8 @@ class StandardAttribute(abc.ABC):
             if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
                 value = json.loads(value)
                 try:
-                    if 'typing.Dict' in str(self.validator.model_fields['value'].annotation):
+                    model_fields = self.validator.model_fields
+                    if 'value' in model_fields and 'typing.Dict' in str(model_fields['value'].annotation):
                         return self.validator.model_validate(dict(value=value),
                                                              context=dict(attrs=None, parent=parent)).value
                     else:
