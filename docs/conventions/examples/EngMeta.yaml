@@ -78,7 +78,7 @@ title:
   description: A name or title by which a resource is known.
   target_method: __init__
   validator: $str
-  default_value: $NONE
+  default_value: $EMPTY
 
 description:
   description: All additional information that does not fit in any of the other categories. May be used for technical information. It is a best practice to supply a description.
