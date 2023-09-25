@@ -53,7 +53,7 @@ def validate_f1(a, b, c=3, d=2):
         with self.assertRaises(ValueError):
             validate_specialtype_functions({r[0][0]: r[0][1]})
 
-    def test_new_convention(self):
+    def test_h5tbx(self):
         f = h5tbx.UserDir['conventions'] / 'h5tbx' / 'h5tbx.py'
         f.unlink(missing_ok=True)
         from h5rdmtoolbox.conventions._h5tbx import build_convention
@@ -65,9 +65,15 @@ def validate_f1(a, b, c=3, d=2):
         self.assertEqual('h5tbx', h5tbx.conventions.get_current_convention().name)
 
         with h5tbx.File(creation_mode='experimental') as h5:
-            print(h5.creation_mode, type(h5.creation_mode))
+            self.assertIsInstance(h5.creation_mode, type(h5.creation_mode))
             ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='v')
-            print(ds.scale)
+
+            with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                _ = h5.create_dataset(name='ds2', data=3.4, units='3.4', symbol='v')
+
+            with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                _ = h5.create_dataset(name='ds2', data=3.4, units='V', scale='scale', symbol='v')
+
             self.assertIsInstance(ds.units, pint.Unit)
             self.assertIsInstance(ds.symbol, str)
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
