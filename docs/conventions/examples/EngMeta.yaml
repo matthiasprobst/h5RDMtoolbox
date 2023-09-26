@@ -89,7 +89,7 @@ description:
 keywords:
   description: List of describing keywords.
   target_method: __init__
-  validator: $list_of_str
+  validator: List[str]
   default_value: $NONE
 
 $subject:

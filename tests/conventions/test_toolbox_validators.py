@@ -4,6 +4,8 @@ import pathlib
 import pint
 import unittest
 from pydantic import BaseModel
+from pydantic import ValidationError
+from typing import List, Union
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions import toolbox_validators
@@ -15,14 +17,16 @@ class TestTbxValidators(unittest.TestCase):
 
     def test_validate_list_of_str(self):
         class MyStr(BaseModel):
-            los: toolbox_validators.list_of_str
+            los: Union[str, List[str]]
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValidationError):
             MyStr(los=3.4)
-        with self.assertRaises(TypeError):
-            MyStr(los='3.4')
+
+        MyStr(los='3.4')
+
         MyStr(los=['3.4', 'str'])
-        with self.assertRaises(TypeError):
+
+        with self.assertRaises(ValidationError):
             MyStr(los=['3.4', 3.4])
 
         cv = h5tbx.conventions.from_yaml(__this_dir__ / 'ListOfStr.yaml', overwrite=True)

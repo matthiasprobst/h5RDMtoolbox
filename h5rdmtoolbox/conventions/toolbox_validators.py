@@ -11,15 +11,6 @@ from typing_extensions import Annotated
 from h5rdmtoolbox import get_ureg, errors
 
 
-def __validate_list_of_str(value, handler, info):
-    if not isinstance(value, list):
-        raise TypeError(f'Expected a list but got {type(value)}')
-    for v in value:
-        if not isinstance(v, str):
-            raise TypeError(f'Value {v} is not a string: {type(v)}')
-    return value
-
-
 def __validate_orcid(value, handler, info):
     from h5rdmtoolbox import orcid
     if not isinstance(value, str):
@@ -190,7 +181,6 @@ class IntValidator(BaseModel):
     value: Annotated[str, WrapValidator(_get_validate_type(int))]
 
 
-list_of_str = Annotated[str, WrapValidator(__validate_list_of_str)]
 units = Annotated[str, WrapValidator(__validate_units)]
 dateFormat = Annotated[str, WrapValidator(__validate_date_format)]
 quantity = Annotated[str, WrapValidator(__validate_quantity)]
