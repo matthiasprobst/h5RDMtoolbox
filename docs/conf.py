@@ -71,7 +71,7 @@ autodoc_typehints = "none"
 #
 html_theme = 'sphinx_book_theme'  # 'sphinx_rtd_theme'
 html_logo = "_static/new_icon.svg"
-html_title = "H5RDMtoolbox Documentation"
+html_title = "Documentation"
 
 html_context = {
     "github_user": "matthiasprobst",
