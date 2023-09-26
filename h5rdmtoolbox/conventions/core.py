@@ -431,6 +431,9 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     ----------
     yaml_filename: Union[str, pathlib.Path]
         Path to yaml file
+    overwrite: bool=False
+        Overwrite existing convention. If False and convention already exists,
+        the existing convention is returned.
 
     Returns
     -------
@@ -459,7 +462,8 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     convention_name = attrs['__name__'].lower().replace('-', '_')
     if convention_name in [d.name for d in CV_DIR.glob('*')]:
         if not overwrite:
-            raise FileExistsError('Convention already exists with this name: {convention_name}')
+            return _get_convention_from_dir(attrs['__name__'])
+        # overwriting existing convention
         delete(convention_name)
 
     from . import generate

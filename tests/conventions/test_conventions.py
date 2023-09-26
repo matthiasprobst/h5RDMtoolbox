@@ -232,10 +232,8 @@ def validate_f1(a, b, c=3, d=2):
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.writelines(['__name__: test\n', '__contact__: me'])
 
-        _ = h5tbx.conventions.from_yaml(f.name, overwrite=True)
+        cv = h5tbx.conventions.from_yaml(f.name, overwrite=False)
         cv = h5tbx.conventions.from_yaml(f.name, overwrite=True)
-        with self.assertRaises(FileExistsError):
-            _ = h5tbx.conventions.from_yaml(f.name, overwrite=False)
         self.assertEqual(cv.name, 'test')
         self.assertEqual(cv.contact, 'me')
 
