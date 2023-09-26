@@ -10,6 +10,7 @@ convention_user_dir = UserDir['conventions'] / convention_name
 
 
 def build_convention():
+    """Build the toobox convention from the yaml file"""
     h5tbx_convention_yaml = __this_dir__.parent / f'../data/{convention_name}.yaml'
     convention_user_dir.mkdir(parents=True, exist_ok=True)
     generate.write_convention_module_from_yaml(h5tbx_convention_yaml)

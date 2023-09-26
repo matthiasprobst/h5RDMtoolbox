@@ -118,6 +118,10 @@ class Convention:
 
             self.methods[cls][method_name][std_attr_name] = std_attr
 
+    def delete(self):
+        """Delete the convention from the user directory."""
+        delete(self.name.lower().replace('-', '_'))
+
     def __repr__(self):
         header = f'Convention("{self.name}")'
         out = f'{make_bold(header)}'
@@ -184,9 +188,9 @@ class Convention:
         return self._decoders
 
     @staticmethod
-    def from_yaml(yaml_filename) -> "Convention":
+    def from_yaml(yaml_filename, overwrite: bool = False) -> "Convention":
         """Create a convention from a yaml file."""
-        return from_yaml(yaml_filename)
+        return from_yaml(yaml_filename, overwrite=overwrite)
 
     def pop(self, *names) -> "Convention":
         """removes the standard attribute with the given name from the convention
@@ -412,7 +416,13 @@ def _process_paths(data: Union[Dict, str], relative_to) -> Dict:
     return data
 
 
-def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Path]]) -> Convention:
+def delete(convention_name: str):
+    """Delete convention from directory"""
+    shutil.rmtree(CV_DIR / convention_name)
+
+
+def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Path]],
+              overwrite: bool = False) -> Convention:
     """Read convention from from a yaml file. A convention YAML file
     requires to have valid standard attribute entries and must contain
     the keys "__name__" and "__contact__".
@@ -444,6 +454,13 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
         raise ValueError(f'YAML file {yaml_filename} does not contain "__name__". Is the file a valid convention?')
     if '__contact__' not in attrs:
         raise ValueError(f'YAML file {yaml_filename} does not contain "__contact__". Is the file a valid convention?')
+
+    # check if name already exists!
+    convention_name = attrs['__name__'].lower().replace('-', '_')
+    if convention_name in [d.name for d in CV_DIR.glob('*')]:
+        if not overwrite:
+            raise FileExistsError('Convention already exists with this name: {convention_name}')
+        delete(convention_name)
 
     from . import generate
     generate.write_convention_module_from_yaml(yaml_filename, name=attrs['__name__'])
@@ -482,7 +499,9 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     # return cv
 
 
-def from_zenodo(doi, name=None, register: bool = True, force_download: bool = False) -> Convention:
+def from_zenodo(doi, name=None,
+                overwrite: bool = False,
+                force_download: bool = False) -> Convention:
     """Download a YAML file from a zenodo repository
 
     Parameters
@@ -490,8 +509,8 @@ def from_zenodo(doi, name=None, register: bool = True, force_download: bool = Fa
     doi: str
         DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8357399 or
         10.5281/zenodo.8357399 or https://doi.org/10.5281/zenodo.8357399)
-    register: bool
-        Whether to register the convention for direct use. Default is True
+    overwrite: bool = False
+        Whether to overwrite existing convention with the same name. Default is False
     force_download: bool
         Whether to force download the file even if it is already cached. Default is False
 
@@ -525,4 +544,4 @@ def from_zenodo(doi, name=None, register: bool = True, force_download: bool = Fa
         _filename = file0.download(destination_dir=filename.parent)
         shutil.move(_filename, filename)
 
-    return from_yaml(filename)
+    return from_yaml(filename, overwrite=overwrite)

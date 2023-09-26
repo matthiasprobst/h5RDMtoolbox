@@ -64,7 +64,7 @@ class TestFile(unittest.TestCase):
 
     def test_reopen_file(self):
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
+        cv = h5tbx.conventions.from_yaml(cv_yaml_filename, overwrite=True)
         h5tbx.use(cv)
         with h5tbx.File(data_type='experimental',
                         contact=h5tbx.__author_orcid__) as h5:
@@ -82,7 +82,7 @@ class TestFile(unittest.TestCase):
     def test_scale(self):
         h5tbx.use(None)
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
+        cv = h5tbx.conventions.from_yaml(cv_yaml_filename, overwrite=True)
         h5tbx.use(cv)
 
         self.assertTrue('scale' in cv.properties[h5tbx.Dataset])
@@ -106,7 +106,7 @@ class TestFile(unittest.TestCase):
     def test_offset(self):
         from h5rdmtoolbox import tutorial
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.from_yaml(cv_yaml_filename)
+        cv = h5tbx.conventions.from_yaml(cv_yaml_filename, overwrite=True)
         h5tbx.use(cv)
         with h5tbx.File(data_type='experimental',
                         contact=h5tbx.__author_orcid__) as h5:
@@ -117,6 +117,10 @@ class TestFile(unittest.TestCase):
                                        offset=0.1,
                                        scale='0.2 Pa/V',
                                        long_name='pressure')
+
+            # offset follows eqation y=m*x+b or y=(m/v*x) + b depending on the units
+            # pressure stores 4.3 V. offset is 0.1 V and scale is 0.2 Pa/V
+            # so return data is (4.3V+0.1V)*0.2Pa/V = 0.88 Pa
             ds = h5.create_dataset('pressure',
                                    data=4.3,
                                    units='V',

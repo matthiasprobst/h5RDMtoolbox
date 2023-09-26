@@ -1,9 +1,7 @@
 import datetime
 import numpy as np
-import pymongo.collection
 import unittest
 import warnings
-from pymongo import MongoClient
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import File
@@ -13,6 +11,8 @@ from h5rdmtoolbox import use
 try:
     # noinspection PyUnresolvedReferences
     from h5rdmtoolbox.database import mongo
+    import pymongo.collection
+    from pymongo import MongoClient
 
     mongo_installed = True
 except ImportError:

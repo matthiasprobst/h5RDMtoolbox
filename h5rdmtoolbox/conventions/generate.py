@@ -50,6 +50,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         f.writelines('\nfrom pydantic import BaseModel\n')
         f.writelines('from pydantic.functional_validators import WrapValidator\n')
         f.writelines('from typing_extensions import Annotated\n\n')
+        f.writelines('from typing import *\n\n')
 
     if special_type_info:
         with open(py_filename, 'a') as f:

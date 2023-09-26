@@ -227,7 +227,14 @@ class StandardAttribute(abc.ABC):
                         if hasattr(_value.value, '__to_h5attrs__'):
                             validated_value = _value.value.__to_h5attrs__()
                         else:
-                            validated_value = str(_value.value)  # self.validator(value, parent, attrs)
+                            # TODO why set str here?
+                            # validated_value = str(_value.value)  # self.validator(value, parent, attrs)
+                            if isinstance(_value.value, dict):
+                                validated_value = json.dumps(_value.value)
+                            elif isinstance(_value.value, (int, float, List)):
+                                validated_value = _value.value  # self.validator(value, parent, attrs)
+                            else:
+                                validated_value = str(_value.value)  # self.validator(value, parent, attrs)
         except Exception as e:
             if get_config('ignore_standard_attribute_errors'):
                 logger.warning(f'Setting "{value}" for standard attribute "{self.name}" failed. '
@@ -270,28 +277,30 @@ class StandardAttribute(abc.ABC):
         # is there a return value associated with the validator?
         return self.validate(ret_val, parent=parent)
 
-    def validate(self, value, parent=None):
-        if value:
+    def validate(self, value, parent, attrs=None):
+        """validate"""
+        if value is not None:
             if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
                 value = json.loads(value)
                 try:
                     model_fields = self.validator.model_fields
                     if 'value' in model_fields and 'typing.Dict' in str(model_fields['value'].annotation):
                         return self.validator.model_validate(dict(value=value),
-                                                             context=dict(attrs=None, parent=parent)).value
+                                                             context=dict(attrs=attrs, parent=parent)).value
                     else:
-                        return self.validator.model_validate(value, context=dict(attrs=None, parent=parent))
+                        return self.validator.model_validate(value, context=dict(attrs=attrs, parent=parent))
                 except pydantic.ValidationError as err:
                     warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                                   convention_warnings.StandardAttributeValidationWarning)
                     return value
 
         try:
-            _value = self.validator.model_validate(dict(value=value), context=dict(attrs=None, parent=parent)).value
+            _value = self.validator.model_validate(dict(value=value), context=dict(attrs=attrs, parent=parent)).value
             if isinstance(_value, enum.Enum):
                 return _value.value
             return _value
         except pydantic.ValidationError as err:
             warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                           convention_warnings.StandardAttributeValidationWarning)
-        return self.validator.model_validate(dict(value=self.default_value), context=dict(attrs=None, parent=None))
+        return self.validator.model_validate(dict(value=self.default_value),
+                                             context=dict(attrs=attrs, parent=parent))

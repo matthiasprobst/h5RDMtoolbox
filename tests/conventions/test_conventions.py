@@ -100,7 +100,7 @@ def validate_f1(a, b, c=3, d=2):
 
     def test_overload_standard_attributes(self):
         yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
+        cv = h5tbx.conventions.Convention.from_yaml(yaml_filename, overwrite=True)
         self.assertIsInstance(cv, h5tbx.conventions.Convention)
         self.assertTupleEqual(('scale_and_offset',), cv.decoders)
         self.assertIn('comment', cv.properties[h5tbx.File])
@@ -178,7 +178,7 @@ def validate_f1(a, b, c=3, d=2):
         with open(yaml_filename, 'w') as f:
             yaml.safe_dump(sa_dict, f)
 
-        local_cv = h5tbx.conventions.Convention.from_yaml(yaml_filename)
+        local_cv = h5tbx.conventions.Convention.from_yaml(yaml_filename, overwrite=True)
         local_cv.register()
         with h5tbx.use(local_cv.name):
             with h5tbx.File() as h5:
@@ -232,11 +232,14 @@ def validate_f1(a, b, c=3, d=2):
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.writelines(['__name__: test\n', '__contact__: me'])
 
-        cv = h5tbx.conventions.from_yaml(f.name)
+        _ = h5tbx.conventions.from_yaml(f.name, overwrite=True)
+        cv = h5tbx.conventions.from_yaml(f.name, overwrite=True)
+        with self.assertRaises(FileExistsError):
+            _ = h5tbx.conventions.from_yaml(f.name, overwrite=False)
         self.assertEqual(cv.name, 'test')
         self.assertEqual(cv.contact, 'me')
 
-        cv = h5tbx.conventions.Convention.from_yaml(f.name)
+        cv = h5tbx.conventions.Convention.from_yaml(f.name, overwrite=True)
         self.assertEqual(cv.name, 'test')
         self.assertEqual(cv.contact, 'me')
 

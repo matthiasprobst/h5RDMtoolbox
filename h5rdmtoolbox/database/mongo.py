@@ -77,7 +77,8 @@ class MongoGroupAccessor:
                use_relative_filename: bool = False,
                additional_fields: Dict = None) -> pymongo.collection.Collection:
         """Insert HDF group into collection"""
-
+        if not isinstance(collection, pymongo.collection.Collection):
+            raise TypeError(f'collection must be of type pymongo.collection.Collection, but is {type(collection)}')
         filename_ctime = get_file_creation_time(self._h5grp.file.filename)
         if use_relative_filename:
             filename = self._h5grp.file.filename

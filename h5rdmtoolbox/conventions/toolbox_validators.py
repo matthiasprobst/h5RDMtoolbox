@@ -22,6 +22,8 @@ def __validate_list_of_str(value, handler, info):
 
 def __validate_orcid(value, handler, info):
     from h5rdmtoolbox import orcid
+    if not isinstance(value, str):
+        raise TypeError(f'Expected a string but got {type(value)}')
     oid = orcid.ORCID(value)
     if not oid.exists():
         raise ValueError(f'Not an ORCID ID: {oid}')
@@ -76,6 +78,13 @@ def __validate_url(value, handler, info):
     from h5rdmtoolbox.conventions.references import validate_url
     if not isinstance(value, (list, tuple)):
         references = [value, ]
+    else:
+        references = value
+
+    for r in references:
+        if not isinstance(r, str):
+            raise TypeError(f'Expected a string but got {type(r)}')
+
     if all(validate_url(r) for r in references):
         if len(references) == 1:
             return references[0]
@@ -101,9 +110,12 @@ def __validate_units(value, handler, info):
 
 
 def __validate_offset(value, handler, info):
-    if info.context:
-        parent = info.context.get('parent', None)
-        attrs = info.context.get('attrs', None)
+    if not info.context:
+        raise RuntimeError('Require context to validate offset!')
+    parent = info.context.get('parent', None)
+    if parent is None:
+        raise RuntimeError('Require parent dataset to validate offset!')
+    attrs = info.context.get('attrs', None)
 
     qoffset = get_ureg().Quantity(value)
 
@@ -120,7 +132,7 @@ def __validate_offset(value, handler, info):
     if ds_units is None:
         if scale is None:
             # dataset has no units and no scale given, thus offset must be dimensionless
-            if qoffset.dimensionality != pint.dimensionless.dimensionality:
+            if not qoffset.dimensionless:
                 raise ValueError(f'Offset must be dimensionless if no units are given. '
                                  f'Got: {qoffset.dimensionality}')
         else:

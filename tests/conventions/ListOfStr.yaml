@@ -1,0 +1,8 @@
+__name__: list-of-str-convention
+__contact__: https://orcid.org/0000-0001-8729-0482
+
+keywords:
+  target_method: __init__
+  validator: List[str]
+  description: Scale factor for the dataset values.
+  default_value: $EMPTY

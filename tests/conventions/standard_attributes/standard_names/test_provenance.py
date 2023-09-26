@@ -9,7 +9,7 @@ from h5rdmtoolbox.conventions.standard_names import accessor
 class TestProvenance(unittest.TestCase):
 
     def setUp(self) -> None:
-        cv = h5tbx.conventions.from_zenodo('https://zenodo.org/record/8357399')
+        cv = h5tbx.conventions.from_zenodo('https://zenodo.org/record/8357399', overwrite=True)
 
         h5tbx.use(cv)
         with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
