@@ -288,7 +288,11 @@ class StandardAttribute(abc.ABC):
                         return self.validator.model_validate(dict(value=value),
                                                              context=dict(attrs=attrs, parent=parent)).value
                     else:
-                        return self.validator.model_validate(value, context=dict(attrs=attrs, parent=parent))
+                        _value = value.copy()
+                        for k, v in value.items():
+                            if self.validator.model_fields[k].annotation not in (int, str, float, bool):
+                                _value[k] = {'value': v}
+                        return self.validator.model_validate(_value, context=dict(attrs=attrs, parent=parent))
                 except pydantic.ValidationError as err:
                     warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
                                   convention_warnings.StandardAttributeValidationWarning)

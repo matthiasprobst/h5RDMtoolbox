@@ -89,7 +89,7 @@ description:
 keywords:
   description: List of describing keywords.
   target_method: __init__
-  validator: List[str]
+  validator: $list_of_str
   default_value: $NONE
 
 $subject:
@@ -162,7 +162,7 @@ $instrumentType:
   related: str=None
   content: str=None
 
-#Computation environment of the data. Important for numerical simulations or other software code. Is specified by a name, the number of nodes and the number of processors per node (ppn). An unbounded number of compilers can be specified by name and flags
+#Computation environment of the data. Important for      simulations or other software code. Is specified by a name, the number of nodes and the number of processors per node (ppn). An unbounded number of compilers can be specified by name and flags
 $environment:
   name: str=None
   compiler: str=None
