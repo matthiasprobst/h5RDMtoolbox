@@ -549,7 +549,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if isinstance(data, np.ndarray):
             return self.create_string_dataset(name, data=[t.astype(datetime).isoformat() for t in data],
                                               overwrite=overwrite, attrs=attrs, **kwargs)
-        return self.create_string_dataset(name, data=[t.isoformat() for t in data],
+        _data = np.asarray(data)
+        _orig_shape = _data.shape
+        _flat_data = _data.flatten()
+        _flat_data = np.asarray([t.isoformat() for t in _flat_data])
+        _reshaped_data = _flat_data.reshape(_orig_shape)
+        return self.create_string_dataset(name, data=_reshaped_data.tolist(),
                                           overwrite=overwrite, attrs=attrs, **kwargs)
 
     def create_string_dataset(self,
@@ -570,7 +575,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if isinstance(data, str):
             n_letter = len(data)
         elif isinstance(data, (tuple, list)):
-            n_letter = max([len(d) for d in data])
+            n_letter = max([len(d) for d in np.asarray(data).flatten()])
         else:
             raise TypeError(f'Unexpected type for parameter "data": {type(data)}. Expected str or List/Tuple of str')
         dtype = f'S{n_letter}'
@@ -1668,7 +1673,8 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                     if dim_ds_data.dtype.kind == 'S':
                         # decode string array
                         if dim_ds_attrs.get('ISTIMEDS', False):
-                            dim_ds_data = np.array([datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(datetime)
+                            dim_ds_data = np.array([datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
+                                datetime)
                     if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
                             coords[coord_name] = xr.DataArray(name=coord_name,
@@ -1718,7 +1724,15 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             # decode string array
             _arr = arr.astype(str)
             if self.attrs.get('ISTIMEDS', False):
-                return xr.DataArray([datetime.fromisoformat(t) for t in _arr], attrs=attrs)
+                if _arr.ndim == 0:
+                    _arr = np.asarray(datetime.fromisoformat(_arr))
+                elif _arr.ndim == 1:
+                    _arr = [datetime.fromisoformat(t) for t in _arr]
+                else:  # _arr.ndim > 1:
+                    orig_shape = _arr.shape
+                    _flat_arr = np.asarray([datetime.fromisoformat(t) for t in _arr.flatten()])
+                    _arr = _flat_arr.reshape(orig_shape)
+                return xr.DataArray(_arr, attrs=attrs)
             else:
                 if isinstance(_arr, np.ndarray):
                     return tuple(_arr)

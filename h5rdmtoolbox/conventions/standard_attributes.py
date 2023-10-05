@@ -282,6 +282,7 @@ class StandardAttribute(abc.ABC):
         if value is not None:
             if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
                 value = json.loads(value)
+            if isinstance(value, dict):
                 try:
                     model_fields = self.validator.model_fields
                     if 'value' in model_fields and 'typing.Dict' in str(model_fields['value'].annotation):

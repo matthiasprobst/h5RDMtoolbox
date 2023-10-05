@@ -6,7 +6,7 @@ import pandas as pd
 import pathlib
 import unittest
 import xarray as xr
-from datetime import datetime
+from datetime import datetime, timedelta
 from numpy import linspace as ls
 
 import h5rdmtoolbox as h5tbx
@@ -730,9 +730,8 @@ class TestCore(unittest.TestCase):
                 h5.create_dataset('vel3', data=[1.5, 2.5], attach_scale='3D')
 
     def test_time(self):
-        import datetime
-        tdata = [datetime.datetime.now(),
-                 (datetime.datetime.now() + datetime.timedelta(hours=1))]
+        tdata = [datetime.now(),
+                 (datetime.now() + timedelta(hours=1))]
         tdata_np = np.asarray(tdata, dtype=np.datetime64)
         with h5tbx.File() as h5:
             h5.create_string_dataset('time', data=[t.isoformat() for t in tdata],
@@ -761,14 +760,27 @@ class TestCore(unittest.TestCase):
             np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
 
     def test_time_as_coord(self):
-        import datetime
         with h5tbx.File() as h5:
-            h5.create_time_dataset('time', data=[datetime.datetime.now(),
-                                                 datetime.datetime.now() + datetime.timedelta(hours=1),
-                                                 datetime.datetime.now() + datetime.timedelta(hours=3)],
+            h5.create_time_dataset('time', data=[datetime.now(),
+                                                 datetime.now() + timedelta(hours=1),
+                                                 datetime.now() + timedelta(hours=3)],
                                    attrs={'ISTIMEDS': True,
                                           'TIMEFORMAT': 'ISO'}, make_scale=True)
             h5.create_dataset('vel', data=[1, 2, -3], attach_scale='time')
             v = h5.vel[()]
 
-        print(v.time)
+    def test_multidim_time_ds(self):
+        with h5tbx.File() as h5:
+            h5.create_time_dataset('time', data=[[datetime.now(),
+                                                  datetime.now() + timedelta(hours=1),
+                                                  datetime.now() + timedelta(hours=3)],
+                                                 [datetime.now(),
+                                                  datetime.now() + timedelta(hours=6),
+                                                  datetime.now() + timedelta(hours=10)]
+                                                 ],
+                                   attrs={'ISTIMEDS': True,
+                                          'TIMEFORMAT': 'ISO'})
+            t = h5.time[()]
+            self.assertIsInstance(t, xr.DataArray)
+            self.assertEqual(t.shape, (2, 3))
+            self.assertIsInstance(t[0, 0].values, np.datetime64)
