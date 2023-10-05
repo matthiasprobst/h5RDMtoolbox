@@ -194,7 +194,9 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
 
     def __stringdataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         """string representation of a string dataset"""
-        return f"\033[1m{name}\033[0m: {h5obj.values[()]}"
+        if h5obj.ndim == 0:
+            return f"\033[1m{name}\033[0m: {h5obj.values[()]}"
+        return f"\033[1m{name}\033[0m: {h5obj.shape}, dtype: {h5obj.dtype}"
 
     def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         """string representation of a 0D dataset"""
@@ -248,15 +250,16 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         return _html
 
     def __stringdataset__(self, name, h5obj) -> str:
-        _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
-        _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
-        _html = f"""\n
-                <ul id="{_id1}" class="h5tb-var-list">
-                <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
-                <label class='h5tb-varname' 
-                for="{_id2}">{name}</label>: {h5obj.values[()]}
-                """
-        return _html
+        if h5obj.ndim == 0:
+            _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
+            _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
+            return f"""\n
+                    <ul id="{_id1}" class="h5tb-var-list">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <label class='h5tb-varname' 
+                    for="{_id2}">{name}</label>: {h5obj.values[()]}
+                    """
+        return self.__NDdataset__(name, h5obj)
 
     def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
@@ -424,7 +427,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             else:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
-                        _value_str = f'{_value_str[0:self.max_attr_length-3]}...'
+                        _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
                     else:
                         _value_str = h5obj
                 else:
@@ -443,7 +446,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     _value_str = _value_str[1:-1]
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
-                        _value_str = f'{_value_str[0:self.max_attr_length-3]}...'
+                        _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
                     else:
                         _value_str = h5obj
                 else:

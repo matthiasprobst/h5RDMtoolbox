@@ -12,6 +12,8 @@ from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import core
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 
+__this_dir__ = pathlib.Path(__file__).parent
+
 
 class TestConventions(unittest.TestCase):
 
@@ -185,7 +187,6 @@ def validate_f1(a, b, c=3, d=2):
                 self.assertIsInstance(h5.standard_name_table, StandardNameTable)
 
     def test_process_paths(self):
-        __this_dir__ = pathlib.Path(__file__).parent
         abspath = str((__this_dir__ / 'a/path/').absolute())
 
         self.assertEqual({'a': []}, core._process_paths({'a': []}, __this_dir__))
@@ -384,3 +385,19 @@ def validate_f1(a, b, c=3, d=2):
         self.assertEqual(d.value, DefaultValue.NONE)
         d = DefaultValue('$empty')
         self.assertEqual(d.value, DefaultValue.EMPTY)
+
+    def test_engmeta_example(self):
+        import h5rdmtoolbox as h5tbx
+        cv = h5tbx.conventions.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
+        h5tbx.use(cv)
+
+        with h5tbx.File(contact=dict(name='Matthias Probst'),
+                        creator=dict(name='Matthias Probst',
+                                     id='https://orcid.org/0000-0001-8729-0482',
+                                     role='Researcher'
+                                     ),
+                        pid=dict(id='123', type='other'),
+                        title='Test file to demonstrate usage of EngMeta schema') as h5:
+            fname = h5.hdf_filename
+            # h5.dump()
+            # print(h5.creator)

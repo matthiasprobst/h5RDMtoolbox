@@ -6,6 +6,7 @@ from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
 from typing import Dict
 
+from . import logger
 from .h5utils import get_rootparent
 from .. import get_config, conventions, utils
 from .. import get_ureg
@@ -128,7 +129,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         value : any
             Attribute value.
         """
-
         if name == '_parent':
             return
         if not isinstance(name, str):
@@ -139,9 +139,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         parent = self._parent
         # obj_type = parent.__class__
         if parent.__class__ in curr_cv.properties:
-
             sattr = curr_cv.properties[parent.__class__].get(name, None)
             if sattr is not None:
+                logger.debug(f'validating {name} with {sattr}')
                 try:
                     if value == 'None':
                         value = None
