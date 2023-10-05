@@ -728,3 +728,47 @@ class TestCore(unittest.TestCase):
             h5.create_dataset(name='3D', data=np.random.rand(2, 3, 4), make_scale=True)
             with self.assertRaises(ValueError):
                 h5.create_dataset('vel3', data=[1.5, 2.5], attach_scale='3D')
+
+    def test_time(self):
+        import datetime
+        tdata = [datetime.datetime.now(),
+                 (datetime.datetime.now() + datetime.timedelta(hours=1))]
+        tdata_np = np.asarray(tdata, dtype=np.datetime64)
+        with h5tbx.File() as h5:
+            h5.create_string_dataset('time', data=[t.isoformat() for t in tdata],
+                                     attrs={'ISTIMEDS': True,
+                                            'TIMEFORMAT': 'ISO'})
+            tds = h5['time'][()]
+
+            h5.create_time_dataset('time2', data=tdata)
+            tds2 = h5['time2'][()]
+
+            h5.create_time_dataset('time3', data=tdata_np,
+                                   attrs={'ISTIMEDS': True,
+                                          'TIMEFORMAT': 'ISO'})
+            tds3 = h5['time3'][()]
+
+        for it, t in enumerate(tds):
+            self.assertIsInstance(t.values, np.datetime64)
+            np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
+
+        for it, t in enumerate(tds2):
+            self.assertIsInstance(t.values, np.datetime64)
+            np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
+
+        for it, t in enumerate(tds3):
+            self.assertIsInstance(t.values, np.datetime64)
+            np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
+
+    def test_time_as_coord(self):
+        import datetime
+        with h5tbx.File() as h5:
+            h5.create_time_dataset('time', data=[datetime.datetime.now(),
+                                                 datetime.datetime.now() + datetime.timedelta(hours=1),
+                                                 datetime.datetime.now() + datetime.timedelta(hours=3)],
+                                   attrs={'ISTIMEDS': True,
+                                          'TIMEFORMAT': 'ISO'}, make_scale=True)
+            h5.create_dataset('vel', data=[1, 2, -3], attach_scale='time')
+            v = h5.vel[()]
+
+        print(v.time)

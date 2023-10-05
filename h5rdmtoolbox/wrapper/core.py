@@ -534,6 +534,24 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                     raise e
         return h5tbxgrp
 
+    def create_time_dataset(self,
+                            name: str,
+                            data: Union[datetime, List[datetime]],
+                            overwrite: bool = False,
+                            attrs: Dict = None,
+                            **kwargs):
+        """Special creation function to create a time vector. Data is stored as a string dataset
+        where each datetime is converted to a string with ISO format"""
+        if attrs is None:
+            attrs = {}
+        attrs.update({'ISTIMEDS': True,
+                      'TIMEFORMAT': 'ISO'})
+        if isinstance(data, np.ndarray):
+            return self.create_string_dataset(name, data=[t.astype(datetime).isoformat() for t in data],
+                                              overwrite=overwrite, attrs=attrs, **kwargs)
+        return self.create_string_dataset(name, data=[t.isoformat() for t in data],
+                                          overwrite=overwrite, attrs=attrs, **kwargs)
+
     def create_string_dataset(self,
                               name: str,
                               data: Union[str, List[str]],
@@ -1622,7 +1640,6 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             args = tuple(args)
 
         arr = super().__getitem__(args, new_dtype=new_dtype)
-
         ds_attrs = self.attrs
         attrs = pop_hdf_attributes(ds_attrs)
 
@@ -1648,6 +1665,10 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                     else:
                         dim_ds_data = dim_ds[arg]
                     dim_ds_attrs = pop_hdf_attributes(dim_ds.attrs)
+                    if dim_ds_data.dtype.kind == 'S':
+                        # decode string array
+                        if dim_ds_attrs.get('ISTIMEDS', False):
+                            dim_ds_data = np.array([datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(datetime)
                     if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
                             coords[coord_name] = xr.DataArray(name=coord_name,
@@ -1696,8 +1717,11 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         if arr.dtype.kind == 'S':
             # decode string array
             _arr = arr.astype(str)
-            if isinstance(_arr, np.ndarray):
-                return tuple(_arr)
+            if self.attrs.get('ISTIMEDS', False):
+                return xr.DataArray([datetime.fromisoformat(t) for t in _arr], attrs=attrs)
+            else:
+                if isinstance(_arr, np.ndarray):
+                    return tuple(_arr)
             return _arr
 
         return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
