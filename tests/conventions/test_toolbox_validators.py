@@ -36,6 +36,15 @@ class TestTbxValidators(unittest.TestCase):
                 self.assertListEqual(['1', '2'], h5.keywords)
         cv.delete()
 
+    def test_validate_regex(self):
+        from h5rdmtoolbox.conventions.generate_utils import RegexProcessor
+
+        rp = RegexProcessor({'validator': 'regex(r"^[a-zA-Z0-9_]*$")'})
+        self.assertEqual('r"^[a-zA-Z0-9_]*$"', rp.re_pattern)
+
+        rp = RegexProcessor({'validator': '$regex(^[a-zA-Z].*(?<!\s)$)'})
+        self.assertEqual('^[a-zA-Z].*(?<!\s)$', rp.re_pattern)
+
     def test_validate_orcid(self):
         class Validator(BaseModel):
             orcid: toolbox_validators.orcid

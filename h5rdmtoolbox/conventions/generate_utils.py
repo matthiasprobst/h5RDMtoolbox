@@ -10,12 +10,20 @@ def get_regex_name():
 
 
 class RegexProcessor:
+    """Process regex validator.
+
+    Parameters
+    ----------
+    standard_attribute: Dict
+        Standard attribute dictionary, e.g. {'validator': 'regex(r"^[a-zA-Z0-9_]*$")'}
+    """
     def __init__(self, standard_attribute: Dict):
         regex_validator = get_regex_name()
         validator = standard_attribute['validator']
         self.name = regex_validator
-        match = re.search(r'regex\((.*?)\)', validator)
-        re_pattern = match.group(1)
+        re_pattern = validator.split('regex(', 1)[1].rsplit(')', 1)[0]
+        # match = re.search(r'regex\((.*?)\)', validator)
+        # re_pattern = match.group(1)
 
         self.standard_attribute = standard_attribute.copy()
         if re_pattern.startswith("r'") and re_pattern.endswith("'"):
