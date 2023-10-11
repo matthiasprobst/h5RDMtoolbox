@@ -171,6 +171,9 @@ class MongoDatasetAccessor:
                    "ndim": ds.ndim,
                    'hdfobj': 'dataset'}
 
+            if ds.ndim == 0:
+                doc['data'] = type2mongo(ds[()])
+
             for ak, av in ds.attrs.items():
                 if ak not in H5_DIM_ATTRS:
                     if ak not in ignore_attrs:

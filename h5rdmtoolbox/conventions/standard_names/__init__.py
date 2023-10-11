@@ -6,6 +6,7 @@ from .h5interface import HDF5StandardNameInterface
 from .name import StandardName
 from .table import StandardNameTable
 from .. import logger
+from ..consts import DefaultValue
 
 
 def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
@@ -27,6 +28,8 @@ def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
         return StandardNameTable.from_dict(snt)
     if isinstance(snt, pathlib.Path):
         return parse_snt(str(snt))
+    if isinstance(snt, DefaultValue):
+        return parse_snt(snt.value)
     raise TypeError(f'Invalid type for standard_name_table: {type(snt)}')
 
 
