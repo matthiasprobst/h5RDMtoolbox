@@ -21,6 +21,7 @@ CONFIG = {'return_xarray': True,
           'natural_naming': True,
           'hdf_compression': 'gzip',
           'hdf_compression_opts': 5,
+          'adjusting_plotting_labels': True,
           'xarray_unit_repr_in_plots': 'in',
           'plotting_name_order': ('plot_name', 'long_name', 'standard_name'),
           'require_unit': True,  # datasets require units

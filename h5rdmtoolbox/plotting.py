@@ -102,26 +102,28 @@ class XarrayLabelManipulation(plt.Axes):
 
     def set_xlabel(self, xlabel: Union[str, xr.DataArray], *args, **kwargs):
         """set the (adjusted) xlabel"""
-        if isinstance(xlabel, xr.DataArray):
-            for plotting_name in get_config('plotting_name_order'):
-                name = xlabel.attrs.get(plotting_name, None)
-                if name:
-                    xlabel = f'{name} [{xlabel.attrs.get("units", "")}]'
-                    return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
-            xlabel = f'{xlabel.name} [{xlabel.attrs.get("units", "")}]'
-            return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
+        if get_config('adjusting_plotting_labels'):
+            if isinstance(xlabel, xr.DataArray):
+                for plotting_name in get_config('plotting_name_order'):
+                    name = xlabel.attrs.get(plotting_name, None)
+                    if name:
+                        xlabel = f'{name} [{xlabel.attrs.get("units", "")}]'
+                        return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
+                xlabel = f'{xlabel.name} [{xlabel.attrs.get("units", "")}]'
+                return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
         return super().set_xlabel(self._adjust_units_label(xlabel), *args, **kwargs)
 
     def set_ylabel(self, ylabel: Union[str, xr.DataArray], *args, **kwargs):
         """set the (adjusted) ylabel"""
-        if isinstance(ylabel, xr.DataArray):
-            for plotting_name in get_config('plotting_name_order'):
-                name = ylabel.attrs.get(plotting_name, None)
-                if name:
-                    ylabel = f'{name} [{ylabel.attrs.get("units", "")}]'
-                    return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
-            ylabel = f'{ylabel.name} [{ylabel.attrs.get("units", "")}]'
-            return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
+        if get_config('adjusting_plotting_labels'):
+            if isinstance(ylabel, xr.DataArray):
+                for plotting_name in get_config('plotting_name_order'):
+                    name = ylabel.attrs.get(plotting_name, None)
+                    if name:
+                        ylabel = f'{name} [{ylabel.attrs.get("units", "")}]'
+                        return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
+                ylabel = f'{ylabel.name} [{ylabel.attrs.get("units", "")}]'
+                return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
         return super().set_ylabel(self._adjust_units_label(ylabel), *args, **kwargs)
 
 
