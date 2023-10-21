@@ -17,6 +17,9 @@ class TestUtils(unittest.TestCase):
                                                        attrs={'dtime': now})
         self.assertTrue(h5tbx.UserDir['tmp'] in tmp_hdf5file.parents)
 
+        self.assertEqual(h5tbx.utils.get_filesize(tmp_hdf5file).magnitude, 6144)
+        self.assertEqual(h5tbx.utils.get_filesize(tmp_hdf5file).units, h5tbx.get_ureg().Unit('byte'))
+
     def test_create_tbx_logger(self):
         logger = h5tbx.utils.create_tbx_logger('test')
         self.assertEqual(pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox')), logger._directory)

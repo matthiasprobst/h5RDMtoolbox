@@ -1947,7 +1947,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             The file size in units of bytes.
 
         """
-        return os.path.getsize(self.filename) * get_ureg().byte
+        return utils.get_filesize(self.filename)
 
     @property
     def layout(self) -> LayoutFile:

@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import numpy as np
+import os
 import pathlib
 import pint
 import re
@@ -17,6 +18,7 @@ from re import sub as re_sub
 from typing import Dict, Union, Callable
 
 from . import _user, get_config
+from . import get_ureg
 from ._version import __version__
 
 DEFAULT_LOGGING_LEVEL = logging.INFO
@@ -62,6 +64,11 @@ def create_tbx_logger(name, logdir=None) -> ToolboxLogger:
     _logger.addHandler(_stream_handler)
 
     return _logger
+
+
+def get_filesize(path: Union[str, pathlib.Path]) -> int:
+    """Get the size of a file in bytes"""
+    return os.path.getsize(path) * get_ureg().byte
 
 
 def has_internet_connection(timeout: int = 5) -> bool:
