@@ -41,8 +41,7 @@ Use python 3.8 or higher (tested until 3.10). If you are a regular user, you can
 
 ### Install from source:
 
-Developers may clone the repository and install the package from source.
-Clone the repository first:
+Developers may clone the repository and install the package from source. Clone the repository first:
 
     git clone https://github.com/matthiasprobst/h5RDMtoolbox.git
 
@@ -58,8 +57,7 @@ For development installation run
 
 ### Dependencies
 
-The core functionality depends on the following packages.
-Some of them are for general management others are very
+The core functionality depends on the following packages. Some of them are for general management others are very
 specific to the features of the package:
 
 **General dependencies are ...**
@@ -78,7 +76,8 @@ specific to the features of the package:
   to user
 - `pint>=0.19.2`: Allows working with units
 - `pint_xarray>=0.2.1`: Working with units for usage with xarray
-- `python-forge==18.6.0`: Used to update function signatures when using the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+- `python-forge==18.6.0`: Used to update function signatures when using
+  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
 - `pyyaml`: Reading and writing of yaml files, e.g. metadata definitions (conventions)
 - `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
 
@@ -106,6 +105,10 @@ Install optional dependencies by specifying them in square brackets after the pa
 - `tabulate>=0.8.10`: Pretty printing of tables
 - `python-gitlab`: Access to gitlab repositories
 - `pandoc>=2.3`: Conversion of markdown files to html
+
+## Planned, future developments
+
+- Using JSON schema definitions for layouts and conventions
 
 ## Contribution
 
