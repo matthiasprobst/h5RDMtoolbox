@@ -4,7 +4,7 @@ import os
 import pathlib
 import pymongo.collection
 import warnings
-from datetime import datetime, timezone
+from datetime import datetime
 from pymongo.errors import InvalidDocument
 from typing import Dict, List, Any
 
@@ -15,9 +15,9 @@ from ..wrapper.core import Dataset, Group
 from ..wrapper.h5attr import H5_DIM_ATTRS
 
 
-def get_file_creation_time(filename: str) -> datetime:
+def get_file_creation_time(filename: str, tz=None) -> datetime:
     """Return the creation time of the passed filename"""
-    return datetime.fromtimestamp(pathlib.Path(filename).stat().st_ctime, tz=timezone.utc)
+    return datetime.fromtimestamp(pathlib.Path(filename).stat().st_ctime, tz=tz)
 
 
 def make_dict_mongo_compatible(dictionary: Dict):
@@ -127,7 +127,8 @@ class MongoGroupAccessor:
             for h5obj in grp.values():
                 if isinstance(h5obj, h5py.Dataset):
                     if include_dataset:
-                        h5obj.mongo.insert(axis=None, collection=collection,
+                        h5obj.mongo.insert(axis=None,
+                                           collection=collection,
                                            update=update,
                                            ignore_attrs=ignore_attrs)
                 else:
