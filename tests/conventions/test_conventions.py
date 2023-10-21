@@ -1,9 +1,10 @@
 import pathlib
-import pint
-import requests
 import shutil
 import unittest
 import warnings
+
+import pint
+import requests
 import yaml
 
 import h5rdmtoolbox
@@ -330,7 +331,7 @@ def validate_f1(a, b, c=3, d=2):
             _ddir = h5tbx.UserDir['conventions'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.conventions.from_zenodo(doi=8357399)
+            h5tbx.conventions.from_zenodo(doi='8357399')  # sandbox:8281285 # orig:8357399
             # h5tbx.conventions.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 

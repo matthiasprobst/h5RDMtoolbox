@@ -1,14 +1,15 @@
 import copy
-import forge
 import inspect
 import pathlib
 import re
 import shutil
 import sys
-import yaml
-import zenodo_search as zsearch
 from pydoc import locate
 from typing import Union, List, Dict
+
+import forge
+import yaml
+import zenodo_search as zsearch
 
 from . import cfg
 from . import errors
@@ -16,6 +17,7 @@ from . import logger
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .._repr import make_italic, make_bold
 from .._user import UserDir
+from .standard_names import cache
 
 CV_DIR = UserDir['conventions']
 
@@ -524,16 +526,17 @@ def from_zenodo(doi, name=None,
         The convention object
     """
     # depending on the input, try to convert to a valid DOI:
-    doi = zsearch.utils.parse_doi(doi)
+    # doi = zsearch.utils.parse_doi(doi)
+    doi = str(doi)
     if name is None:
         filename = UserDir['cache'] / f'{doi.replace("/", "_")}'
     else:
         filename = UserDir['cache'] / f'{doi.replace("/", "_")}/{name}'
 
     if not filename.exists() or force_download:
-        record = zsearch.search_doi(doi)
+        record = zsearch.search_doi(doi, parse_doi=False)
         if name is None:
-            matches = [file for file in record.files if file['type'] == 'yaml']
+            matches = [file for file in record.files if file['filename'].rsplit('.', 1)[-1] == 'yaml']
             if len(matches) == 0:
                 raise ValueError(f'No file with suffix ".yaml" found in record {doi}')
         else:
@@ -542,7 +545,7 @@ def from_zenodo(doi, name=None,
                 raise ValueError(f'No file with name "{name}" found in record {doi}')
 
         file0 = zsearch.ZenodoFile(matches[0])
-        if file0['type'] != 'yaml':
+        if file0['filename'].rsplit('.', 1)[-1] != 'yaml':
             raise ValueError(f'The file with name "{name}" is not a YAML file')
 
         _filename = file0.download(destination_dir=filename.parent)

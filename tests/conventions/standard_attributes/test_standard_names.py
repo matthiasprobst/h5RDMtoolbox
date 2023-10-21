@@ -216,7 +216,7 @@ class TestStandardAttributes(unittest.TestCase):
             doi = zsearch.utils.parse_doi('8266929')
             snt = StandardNameTable.from_zenodo(doi=8266929)
             self.assertIsInstance(snt, StandardNameTable)
-            filename = h5tbx.UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
+            filename = h5tbx.UserDir['standard_name_tables'] / f'8266929.yaml'
             self.assertTrue(filename.exists())
             filename.unlink(missing_ok=True)
 

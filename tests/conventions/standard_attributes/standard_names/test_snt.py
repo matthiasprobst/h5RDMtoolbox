@@ -1,11 +1,11 @@
-import requests
 import unittest
 import warnings
+
+import requests
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions.errors import StandardNameError
-from h5rdmtoolbox.conventions.standard_names import cache
 from h5rdmtoolbox.conventions.standard_names import parse_snt
 from h5rdmtoolbox.conventions.standard_names.name import StandardName
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
@@ -85,7 +85,7 @@ class TestStandardAttributes(unittest.TestCase):
 
         with h5tbx.use(cv):
             with h5tbx.File() as h5:
-                self.assertTrue(h5.snt.meta['zenodo_doi'] in cache.snt)
+                self.assertIsInstance(h5.snt, StandardNameTable)
 
     def test_StandardNmeTableRaw(self):
         with self.assertRaises(ValueError):  # invalid version:

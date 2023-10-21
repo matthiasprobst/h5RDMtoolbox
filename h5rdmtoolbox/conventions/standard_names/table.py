@@ -1,14 +1,15 @@
 """Standard name table module"""
-import h5py
 import json
 import pathlib
-import pint
 import shutil
 import warnings
-import yaml
-from IPython.display import display, HTML
 from datetime import datetime, timezone
 from typing import List, Union, Dict, Tuple
+
+import h5py
+import pint
+import yaml
+from IPython.display import display, HTML
 
 from h5rdmtoolbox._user import UserDir
 from h5rdmtoolbox.utils import generate_temporary_filename, download_file, is_xml_file
@@ -690,18 +691,24 @@ class StandardNameTable:
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
+        doi = str(doi)
         if doi in cache.snt:
             return cache.snt[doi]
-        import zenodo_search as zsearch
 
-        doi = zsearch.utils.parse_doi(doi)
+        if 'zenodo' in doi:
+            doi = doi.split('/')[-1]
 
-        yaml_filename = UserDir['standard_name_tables'] / f'{doi.replace("/", "_")}.yaml'
+        yaml_filename = UserDir['standard_name_tables'] / f'{doi}.yaml'
+
         if not yaml_filename.exists():
-            record = zsearch.search_doi(doi)
-            file0 = record.files[0]
-            assert record.files[0].type == 'yaml'
-            _yaml_filename = file0.download(destination_dir=UserDir['standard_name_tables'])
+            import zenodo_search as zsearch
+            zenrec = zsearch.search_doi(doi)
+            zenfile = zenrec.files[0]
+
+            yaml_name = zenrec.files[0]['filename']
+            if not yaml_name.endswith('.yaml'):
+                raise ValueError(f'Expected yaml file, got {yaml_name}')
+            _yaml_filename = zenfile.download()
             shutil.move(_yaml_filename, yaml_filename)
         snt = StandardNameTable.from_yaml(yaml_filename)
         snt._meta.update(dict(zenodo_doi=doi))
