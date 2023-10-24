@@ -1,11 +1,12 @@
 """h5rdtoolbox repository"""
 import atexit
 import pathlib
+import shutil
+from typing import Union, Callable
+
 # noinspection PyUnresolvedReferences
 import pint_xarray
-import shutil
 import xarray as xr
-from typing import Union, Callable
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
@@ -65,6 +66,14 @@ class FileDB:
         if path.is_dir():
             return database.Folder(path, rec=rec, **kwargs)
         return database.File(path, **kwargs)
+
+
+def find(hdf_filename, *args, **kwargs):
+    return FileDB(hdf_filename).find(*args, **kwargs)
+
+
+def find_one(hdf_filename, *args, **kwargs):
+    return FileDB(hdf_filename).find_one(*args, **kwargs)
 
 
 def dump(src: Union[str, File, pathlib.Path]) -> None:

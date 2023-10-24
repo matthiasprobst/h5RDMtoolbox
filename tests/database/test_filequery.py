@@ -1,5 +1,6 @@
-import numpy as np
 import unittest
+
+import numpy as np
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.wrapper.core import File
@@ -259,6 +260,18 @@ class TestFileQuery(unittest.TestCase):
                 self.assertEqual(res[0].basename, h5['u'].basename)
                 res = h5.find({'$eq': [1.2, 3.4, 4.0]}, rec=False)
                 self.assertEqual(0, len(res))
+
+    def test_find_init_function(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('u', data=[1.2, 3.4, 4.5], attrs=dict(units='m/s', standard_name='x_velocity'))
+            h5.create_dataset('v', data=[4.0, 13.5, -3.4], attrs=dict(units='m/s', standard_name='y_velocity'))
+        res = h5tbx.find_one(h5.hdf_filename, {'$eq': [1.2, 3.4, 4.5]}, rec=False)
+        self.assertEqual(res.basename, 'u')
+        res = sorted(h5tbx.find(h5.hdf_filename, {}))
+        self.assertEqual(len(res), 3)
+        self.assertEqual(res[0].basename, '')
+        self.assertEqual(res[1].basename, 'u')
+        self.assertEqual(res[2].basename, 'v')
 
     def test_compare_to_dataset_values_mean(self):
         with h5tbx.use('h5tbx'):
