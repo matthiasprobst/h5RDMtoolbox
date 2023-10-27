@@ -69,11 +69,19 @@ class FileDB:
 
 
 def find(hdf_filename, *args, **kwargs):
+    """Opens file with `FileDB` and calls `find()` on the root group"""
     return FileDB(hdf_filename).find(*args, **kwargs)
 
 
 def find_one(hdf_filename, *args, **kwargs):
+    """Opens file with `FileDB` and calls `find_one()` on the root group"""
     return FileDB(hdf_filename).find_one(*args, **kwargs)
+
+
+def distinct(hdf_filename, key, objfilter=None):
+    """Opens file and calls `distinct()` on the root group"""
+    with File(hdf_filename) as h5:
+        return h5.distinct(key, objfilter)
 
 
 def dump(src: Union[str, File, pathlib.Path]) -> None:
