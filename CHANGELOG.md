@@ -2,6 +2,9 @@
 
 Log of changes in the versions
 
+## v0.12.1
+- bugfix in zenodo search (did Zenodo change their API?)
+
 ## v0.12.0
 - 0D data is written to MongoDB
 - new utils like computing filesize 

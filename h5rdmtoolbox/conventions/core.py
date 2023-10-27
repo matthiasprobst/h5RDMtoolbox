@@ -536,7 +536,7 @@ def from_zenodo(doi, name=None,
     if not filename.exists() or force_download:
         record = zsearch.search_doi(doi, parse_doi=False)
         if name is None:
-            matches = [file for file in record.files if file['filename'].rsplit('.', 1)[-1] == 'yaml']
+            matches = [file for file in record.files if file['key'].rsplit('.', 1)[-1] == 'yaml']
             if len(matches) == 0:
                 raise ValueError(f'No file with suffix ".yaml" found in record {doi}')
         else:
@@ -545,7 +545,7 @@ def from_zenodo(doi, name=None,
                 raise ValueError(f'No file with name "{name}" found in record {doi}')
 
         file0 = zsearch.ZenodoFile(matches[0])
-        if file0['filename'].rsplit('.', 1)[-1] != 'yaml':
+        if file0['key'].rsplit('.', 1)[-1] != 'yaml':
             raise ValueError(f'The file with name "{name}" is not a YAML file')
 
         _filename = file0.download(destination_dir=filename.parent)
