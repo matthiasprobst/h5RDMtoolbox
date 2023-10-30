@@ -69,8 +69,15 @@ def _regex(value, pattern) -> bool:
         return False
     return True
 
+def _exists(value, tf: bool) -> bool:
+    if tf:
+        return value is not None
+    else:
+        return value is None
 
-operator = {'$regex': _regex, '$eq': _eq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
+
+operator = {'$regex': _regex, '$eq': _eq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte,
+            '$exists': _exists}
 value_operator = {'$eq': _arreq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
 
 

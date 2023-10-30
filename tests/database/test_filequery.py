@@ -1,6 +1,5 @@
-import unittest
-
 import numpy as np
+import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.wrapper.core import File
@@ -108,6 +107,17 @@ class TestFileQuery(unittest.TestCase):
 
         res = fd.find_one_per_file({'$basename': {'$regex': 'ds[0-9]'}})
         self.assertEqual(2, len(res))
+
+    def test_exists(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+            h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
+
+            self.assertTrue('long_name' in h5.find_one({'long_name': {'$exists': True}}).attrs)
+            self.assertIsInstance(h5.find_one({'long_name': {'$exists': True}}), h5tbx.wrapper.core.Dataset)
+
+            mres = h5.find({'long_name': {'$exists': True}})
+            self.assertEqual(2, len(mres))
 
     def test_chained_find(self):
         with h5tbx.File() as h5:
