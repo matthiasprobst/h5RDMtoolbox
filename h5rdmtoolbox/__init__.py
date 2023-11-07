@@ -1,12 +1,11 @@
 """h5rdtoolbox repository"""
 import atexit
 import pathlib
-import shutil
-from typing import Union, Callable
-
 # noinspection PyUnresolvedReferences
 import pint_xarray
+import shutil
 import xarray as xr
+from typing import Union, Callable
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
@@ -68,16 +67,33 @@ class FileDB:
         return database.File(path, **kwargs)
 
 
+def guess_filename(func):
+    """wrapper to guess the filename from the first argument"""
+
+    def wrapper(hdf_filename, *args, **kwargs):
+        if not isinstance(hdf_filename, (str, pathlib.Path)):
+            if hasattr(hdf_filename, 'hdf_filename'):
+                hdf_filename = hdf_filename.hdf_filename
+            else:
+                raise TypeError(f'Expected str or pathlib.Path, got {type(hdf_filename)}')
+        return func(hdf_filename, *args, **kwargs)
+
+    return wrapper
+
+
+@guess_filename
 def find(hdf_filename, *args, **kwargs):
     """Opens file with `FileDB` and calls `find()` on the root group"""
     return FileDB(hdf_filename).find(*args, **kwargs)
 
 
+@guess_filename
 def find_one(hdf_filename, *args, **kwargs):
     """Opens file with `FileDB` and calls `find_one()` on the root group"""
     return FileDB(hdf_filename).find_one(*args, **kwargs)
 
 
+@guess_filename
 def distinct(hdf_filename, key, objfilter=None):
     """Opens file and calls `distinct()` on the root group"""
     with File(hdf_filename) as h5:
