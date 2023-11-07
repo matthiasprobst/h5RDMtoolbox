@@ -31,6 +31,8 @@ A quickstart notebook can be tested by clicking on the following badge:
 Please find a comprehensive documentation with many examples [here](h5rdmtoolbox.readthedocs.io/en/latest/) or by click
 on the image, which shows the research data lifecycle in the center and the respective toolbox features on the outside:
 
+A paper is published in the journal [inggrid](https://preprints.inggrid.org/repository/view/23/).
+
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
 
 ## Installation
@@ -109,6 +111,19 @@ Install optional dependencies by specifying them in square brackets after the pa
 ## Planned, future developments
 
 - Using JSON schema definitions for layouts and conventions
+
+## Citing the package
+If you intend to use the package in your work, you may cite the paper in the journal [inggrid](https://preprints.inggrid.org/repository/view/23/)
+
+Here's the bibtext to it:
+```
+@article{probst2023h5rdmtoolbox,
+  title={h5RDMtoolbox-A Python Toolbox for FAIR Data Management around HDF5},
+  author={Probst, Matthias and Pritz, Balazs},
+  year={2023},
+  publisher={ing. grid Preprint Repository}
+}
+```
 
 ## Contribution
 
