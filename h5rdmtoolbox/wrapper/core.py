@@ -23,7 +23,7 @@ from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
-from .. import _repr, get_config, conventions, utils, consts, get_ureg, protected_attributes
+from .. import _repr, get_config, conventions, utils, consts, protected_attributes
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
@@ -1673,13 +1673,18 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                     if dim_ds_data.dtype.kind == 'S':
                         # decode string array
                         if dim_ds_attrs.get('ISTIMEDS', False):
-                            dim_ds_data = np.array([datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
-                                datetime)
+                            if dim_ds_data.ndim == 0:
+                                dim_ds_data = np.array(datetime.fromisoformat(dim_ds_data.astype(str))).astype(datetime)
+                            else:
+                                dim_ds_data = np.array(
+                                    [datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
+                                    datetime)
                     if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
                             coords[coord_name] = xr.DataArray(name=coord_name,
                                                               dims=(
-                                                              ), data=dim_ds_data,
+                                                              ),
+                                                              data=dim_ds_data,
                                                               attrs=dim_ds_attrs)
                         else:
                             coords[coord_name] = xr.DataArray(name=coord_name, dims=coord_name,
