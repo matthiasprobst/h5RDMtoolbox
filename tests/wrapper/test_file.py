@@ -141,6 +141,17 @@ class TestFile(unittest.TestCase):
             self.assertEqual('/pressure_scale', ds.scale)
             self.assertEqual('Pa', ds[()].units)
 
+            ds2 = h5.create_dataset('pressure2',
+                                   data=4.3,
+                                   units='V',
+                                   offset=ds_offset.name,
+                                   scale=ds_scale.name,
+                                   long_name='pressure')
+            self.assertEqual('/pressure_offset', ds2.offset)
+            self.assertEqual('/pressure_scale', ds2.scale)
+            self.assertEqual('Pa', ds2[()].units)
+
+
     def test_dumps(self):
         with h5tbx.File() as h5:
             h5.dumps()
