@@ -11,13 +11,13 @@ units:
 
 scale:
   target_method: create_dataset
-  validator: $quantity
+  validator: $data_scale
   description: Scale factor for the dataset values.
   default_value: $NONE
 
 offset:
   target_method: create_dataset
-  validator: $offset
+  validator: $data_offset
   description: The offset of the dataset.
   default_value: $NONE
 

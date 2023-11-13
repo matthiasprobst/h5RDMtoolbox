@@ -1,5 +1,4 @@
 """dataset decoders"""
-import json
 
 import h5py
 import numpy as np
@@ -25,15 +24,11 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
     offset = xarr.attrs.pop('offset', None)
 
     if scale and offset:
-        offset = get_ureg().Quantity(offset)
-        scale = get_ureg().Quantity(scale)
+        scale_xrda = ds.rootparent[scale][()]
+        offset_xrda = ds.rootparent[offset][()]
+
         with xr.set_options(keep_attrs=True):
-            if equal_base_units(xarr.units, offset.units):
-                # f(x) = m*(x - b/m) where offset = b/m
-                return _dequantify((_quanitfy(xarr) + offset) * scale)
-            else:
-                # f(x) = m*x + b
-                return _dequantify(_quanitfy(xarr) * scale + offset)
+            return _dequantify(_quanitfy(xarr) * scale_xrda.pint.quantify() + offset_xrda.pint.quantify())
 
     elif scale:
         scale = get_ureg().Quantity(scale)

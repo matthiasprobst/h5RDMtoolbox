@@ -97,7 +97,7 @@ class TestTbxValidators(unittest.TestCase):
                 self.attrs = attrs
 
         class Validator(BaseModel):
-            offset: toolbox_validators.offset
+            offset: toolbox_validators.data_scale_offset
 
         with self.assertRaises(RuntimeError):
             Validator.model_validate({'offset': '3.4 V'})

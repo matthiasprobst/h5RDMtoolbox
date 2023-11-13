@@ -100,7 +100,7 @@ def __validate_units(value, handler, info):
         raise ValueError(f'Units cannot be understood using ureg package: {value}. Original error: {e}')
 
 
-def __validate_offset(value, handler, info):
+def __validate_scale(value, handler, info):
     if not info.context:
         raise RuntimeError('Require context to validate offset!')
     parent = info.context.get('parent', None)
@@ -108,41 +108,41 @@ def __validate_offset(value, handler, info):
         raise RuntimeError('Require parent dataset to validate offset!')
     attrs = info.context.get('attrs', None)
 
-    qoffset = get_ureg().Quantity(value)
+    parent_group = info.context['parent'].parent
 
-    if attrs:
-        scale = attrs.get('scale', parent.attrs.get('scale', None))
-        ds_units = attrs.get('units', parent.attrs.get('units', None))
-    else:
-        scale = parent.attrs.get('scale', None)
-        ds_units = parent.attrs.get('units', None)
+    if isinstance(value, str) and value in parent_group:
+        return parent_group[value][()]
 
-    if scale is not None:
-        scale = get_ureg().Quantity(scale)
+    raise KeyError(f'No dataset found with name {value}!')
 
-    if ds_units is None:
-        if scale is None:
-            # dataset has no units and no scale given, thus offset must be dimensionless
-            if not qoffset.dimensionless:
-                raise ValueError(f'Offset must be dimensionless if no units are given. '
-                                 f'Got: {qoffset.dimensionality}')
+
+def __validate_offset_or_scale(value, handler, info):
+    if not info.context:
+        raise RuntimeError('Require context to validate offset!')
+    parent = info.context.get('parent', None)
+    if parent is None:
+        raise RuntimeError('Require parent dataset to validate offset!')
+
+    parent_group = info.context['parent'].parent
+
+    if isinstance(value, str):
+        if value.startswith('/'):
+            try:
+                offset_or_scale_ds = parent.rootparent[value]
+            except KeyError:
+                raise KeyError(f'No dataset found with name {value}!')
         else:
-            # scale is given but dataset is dimensionless, scale and offset must have same units
-            if qoffset.dimensionality != scale.dimensionality:
-                raise ValueError(f'Offset and scale must have same units if dataset is dimensionless. '
-                                 f'Got: {qoffset.dimensionality} and {scale.dimensionality}')
+            try:
+                offset_or_scale_ds = parent_group[value]
+            except KeyError:
+                raise KeyError(f'No dataset found with name {value}!')
     else:
-        ds_units = get_ureg().Unit(ds_units)
-        # dataset has units, offset must either have units of dataset or product of scale and dataset
-        from .utils import equal_base_units
-        if scale is None:
-            resulting_units = ds_units
-        else:
-            resulting_units = get_ureg().Unit(f'{ds_units} {scale.units}')
-        if not equal_base_units(qoffset.units, ds_units) and not equal_base_units(qoffset.units, resulting_units):
-            raise ValueError(f'Offset must have same units as dataset or product of scale and dataset. '
-                             f'Got: {qoffset.units} and {ds_units}')
-    return qoffset
+        raise TypeError(f'Offset dataset must be dataset name of dataset object, not {type(value)}')
+
+    assert offset_or_scale_ds.ndim == 0
+
+    offset_or_scale_ds_name = offset_or_scale_ds.name
+    return offset_or_scale_ds_name
 
 
 def __validate_date_format(value, handler, info):
@@ -184,7 +184,8 @@ class IntValidator(BaseModel):
 units = Annotated[str, WrapValidator(__validate_units)]
 dateFormat = Annotated[str, WrapValidator(__validate_date_format)]
 quantity = Annotated[str, WrapValidator(__validate_quantity)]
-offset = Annotated[str, WrapValidator(__validate_offset)]
+data_offset = Annotated[str, WrapValidator(__validate_offset_or_scale)]
+data_scale = Annotated[str, WrapValidator(__validate_offset_or_scale)]
 orcid = Annotated[str, WrapValidator(__validate_orcid)]
 standard_name_table = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]
 standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
