@@ -299,7 +299,6 @@ def validate_f1(a, b, c=3, d=2):
 
         with h5tbx.File() as h5:
             ds_scale = h5.create_dataset('test_scale', data=1, units='m/s/V')
-            ds_scale.make_data_scale()
 
             ds = h5.create_dataset('test', data=1, units='V')
             ds.attach_data_scale_and_offset(ds_scale, None)
@@ -311,7 +310,6 @@ def validate_f1(a, b, c=3, d=2):
 
         with h5tbx.File() as h5:
             ds_offset = h5.create_dataset('test_offset', data=1, units='m/s/V')
-            ds_offset.make_data_scale()
 
             ds = h5.create_dataset('test', data=1, units='V')
             with self.assertRaises(ValueError):
@@ -319,7 +317,6 @@ def validate_f1(a, b, c=3, d=2):
 
         with h5tbx.File() as h5:
             ds_offset = h5.create_dataset('test_offset', data=0.5, units='m/s')
-            ds_offset.make_data_scale()
 
             ds = h5.create_dataset('test', data=2.3, units='m/s')
             ds.attach_data_scale_and_offset(None, ds_offset)
@@ -332,7 +329,6 @@ def validate_f1(a, b, c=3, d=2):
 
         with h5tbx.File() as h5:
             ds_offset = h5.create_dataset('test_offset', data=0.5, units='km/s')
-            ds_offset.make_data_scale()
 
             ds = h5.create_dataset('test', data=1, units='m/s')
             ds.attach_data_scale_and_offset(None, ds_offset)
@@ -345,10 +341,8 @@ def validate_f1(a, b, c=3, d=2):
 
         with h5tbx.File() as h5:
             ds_offset = h5.create_dataset('test_offset', data=1, units='km/s')
-            ds_offset.make_data_scale()
 
             ds_scale = h5.create_dataset('test_scale', data=1, units='m/s/V')
-            ds_scale.make_data_scale()
 
             ds = h5.create_dataset('test', data=1, units='V')
             ds.attach_data_scale_and_offset(ds_scale, ds_offset)
@@ -358,20 +352,6 @@ def validate_f1(a, b, c=3, d=2):
 
             self.assertEqual(ds[()].units, 'm/s')
             self.assertEqual(float(ds[()].data), 1 + 1000)
-
-        #
-        #     self.assertEqual(1, int(ds.values[()]))
-        #     self.assertEqual(1, int(ds[()]))
-        #     self.assertEqual('m/s', str(ds[()].units))
-        #     self.assertEqual('V', str(ds.attrs.units))
-        #
-        # with h5tbx.File() as h5:
-        #     ds_scale = h5.create_dataset('test_scale', data=1, units='m/s/V')
-        #     ds = h5.create_dataset('test', data=1, units='V', scale=ds_scale)
-        #     self.assertEqual(1, int(ds.values[()]))
-        #     self.assertEqual(1, int(ds[()]))
-        #     self.assertEqual('m/s', str(ds[()].units))
-        #     self.assertEqual('V', str(ds.attrs.units))
 
     def test_from_zenodo(self):
         if self.connected:
@@ -437,7 +417,6 @@ def validate_f1(a, b, c=3, d=2):
         self.assertEqual(d.value, DefaultValue.EMPTY)
 
     def test_engmeta_example(self):
-        import h5rdmtoolbox as h5tbx
         cv = h5tbx.conventions.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
         h5tbx.use(cv)
 
@@ -448,6 +427,3 @@ def validate_f1(a, b, c=3, d=2):
                                      ),
                         pid=dict(id='123', type='other'),
                         title='Test file to demonstrate usage of EngMeta schema') as h5:
-            fname = h5.hdf_filename
-            # h5.dump()
-            # print(h5.creator)

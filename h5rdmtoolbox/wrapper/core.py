@@ -1520,11 +1520,17 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     #     """Check if the dataset has a flag dataset attached."""
     #     return ANCILLARY_DATASET in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
 
-    def make_data_scale(self):
-        """Mark this dataset as a data scale."""
-        if 'units' not in self.attrs:
-            raise ValueError('Cannot make data scale if no attribute "units" is not set!')
-        self.attrs['IS_DATA_SCALE'] = True
+    def detach_data_scale(self):
+        """Remove the attached data scale dataset from this dataset."""
+        warnings.warn('Note, that detaching data scale may influence the correctness and traceability of your data',
+                      UserWarning)
+        self.attrs.pop('DATA_SCALE', None)
+
+    def detach_data_offset(self):
+        """Remove the attached data offset dataset from this dataset."""
+        warnings.warn('Note, that detaching data offset may influence the correctness and traceability of your data',
+                      UserWarning)
+        self.attrs.pop('DATA_OFFSET', None)
 
     def attach_data_scale_and_offset(self, scale: Union[None, h5py.Dataset], offset: Union[None, h5py.Dataset]):
         """Attach a data scale and offset to this dataset. The scale and offset must have the same"""

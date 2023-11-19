@@ -235,7 +235,7 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
 
             ds_scale = h5.create_dataset('y_velocity_scale', data=2, units='m/s/V')
-            ds_scale.make_data_scale()
+            
             ds_yvel = h5.create_dataset('y_velocity', data=1.4,
                                         attach_data_scale=ds_scale,
                                         units='V',

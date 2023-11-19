@@ -358,6 +358,19 @@ class TestFile(unittest.TestCase):
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
+    def test_data_scale_and_offset(self):
+        with h5tbx.use('h5tbx') as cv5:
+            with File(mode='w') as h5:
+                ds = h5.create_dataset('ds', data=np.arange(10), attrs=dict(units='V'))
+                ds_scale = h5.create_dataset('ds_scale', data=1, attrs=dict(units='m/s/V'))
+                # ds_scale.make_data_scale()
+                ds.attach_data_scale_and_offset(ds_scale, None)
+                self.assertEqual(ds_scale, ds.get_data_scale())
+                self.assertEqual('m/s', ds[()].units)
+
+                ds.detach_data_scale()
+                self.assertEqual('V', str(ds[()].units))
+
     def test_assign_data_to_existing_dset(self):
         h5tbx.set_config(natural_naming=True)
         with File(mode='w') as h5:
