@@ -46,13 +46,12 @@ def __validate_standard_name(value, handler, info) -> "StandardNameTable":
             raise KeyError('No units defined for this variable!')
 
         # check if scale is provided:
-        scale = attrs.get('scale',
-                          parent.attrs.get('scale', None))
-        if scale is not None:
-            scale_ds = parent.rootparent[scale]
+        data_scale = parent.attrs.get('DATA_SCALE', None)
+        if data_scale is not None:
+            scale_ds = parent.rootparent[data_scale]
             ds_scale_units = scale_ds.attrs.raw.get('units', '')
             ureg = get_ureg()
-            units = str(ureg.Unit(ds_scale_units)*units)
+            units = str(ureg.Unit(ds_scale_units) * units)
 
         sn = snt[value]
         if sn.is_vector():

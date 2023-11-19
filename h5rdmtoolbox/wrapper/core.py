@@ -24,6 +24,7 @@ from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, conventions, utils, consts, protected_attributes
+from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
@@ -121,29 +122,31 @@ def process_attributes(cls,
     _pop = []
     # only consider non-None standard attributes
     for k, v in skwargs.items():
-        if v == DefaultValue.NONE:
-            _pop.append(k)  # dont consider values with DefaultValue.NONE
-        elif v == DefaultValue.EMPTY:
-            # None may be only a placeholder, but a real value is expected
-            # this is the case if the registered default value is DefaultValue.EMPTY:
-            alt_attr_name = curr_cv.methods[cls][meth_name][k].alternative_standard_attribute
-            if alt_attr_name in skwargs:
-                logger.debug(f'Standard attribute {k} is empty and alternative standard attribute given by the user')
-                if skwargs[alt_attr_name] == DefaultValue.EMPTY:
-                    raise conventions.standard_attributes.errors.StandardAttributeError(
-                        f'Error creating {cls.__name__} "{name}": The standard attribute "{k}" '
-                        f'is required but not provided. The alternative '
-                        f'{alt_attr_name} '
-                        f'is also not provided.')
+        if isinstance(v, (str, DefaultValue)):
+            if v == DefaultValue.NONE:
+                _pop.append(k)  # dont consider values with DefaultValue.NONE
+            elif v == DefaultValue.EMPTY:
+                # None may be only a placeholder, but a real value is expected
+                # this is the case if the registered default value is DefaultValue.EMPTY:
+                alt_attr_name = curr_cv.methods[cls][meth_name][k].alternative_standard_attribute
+                if alt_attr_name in skwargs:
+                    logger.debug(
+                        f'Standard attribute {k} is empty and alternative standard attribute given by the user')
+                    if skwargs[alt_attr_name] == DefaultValue.EMPTY:
+                        raise conventions.standard_attributes.errors.StandardAttributeError(
+                            f'Error creating {cls.__name__} "{name}": The standard attribute "{k}" '
+                            f'is required but not provided. The alternative '
+                            f'{alt_attr_name} '
+                            f'is also not provided.')
+                    else:
+                        logger.debug(f'Remove standard attribute {k} from the parameters and use alternative: '
+                                     f'{alt_attr_name}')
+                        _pop.append(k)
                 else:
-                    logger.debug(f'Remove standard attribute {k} from the parameters and use alternative: '
-                                 f'{alt_attr_name}')
-                    _pop.append(k)
-            else:
-                logger.debug(f'Standard attribute {k} is empty but no alternative attribute given by the user.')
-                if not get_config('ignore_standard_attribute_errors'):
-                    raise conventions.standard_attributes.errors.StandardAttributeError(
-                        f'The standard attribute "{k}" is required but not provided.')
+                    logger.debug(f'Standard attribute {k} is empty but no alternative attribute given by the user.')
+                    if not get_config('ignore_standard_attribute_errors'):
+                        raise conventions.standard_attributes.errors.StandardAttributeError(
+                            f'The standard attribute "{k}" is required but not provided.')
 
     _ = [skwargs.pop(p) for p in _pop]
 
@@ -598,6 +601,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                        overwrite=None,
                        chunks=True,
                        make_scale=False,
+                       attach_data_scale=None,
+                       attach_data_offset=None,
                        attach_scales=None,
                        ancillary_datasets=None,
                        attrs=None,
@@ -628,6 +633,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             Needs to be True if later resizing is planned
         make_scale: bool, default=False
             Makes this dataset scale. The parameter attach_scale must be uses, thus be None.
+        attach_data_scale: Union[None, h5py.Dataset], default=None
+            If not None, attach this dataset as scale to the dataset.
+        attach_data_offset: Union[None, h5py.Dataset], default=None
+            If not None, attach this dataset as offset to the dataset.
         attach_scales : tuple, optional
             Tuple defining the datasets to attach scales to. Content of tuples are
             internal hdf paths. If an axis should not be attached to any axis leave it
@@ -661,6 +670,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         """
 
         if isinstance(data, str):
+            if attach_data_scale is not None or attach_data_offset is not None:
+                raise ValueError('Cannot set data_scale or data_offset for string datasets.')
             return self.create_string_dataset(name=name,
                                               data=data,
                                               overwrite=overwrite,
@@ -793,6 +804,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                                          **kwargs)
 
         ds = self._h5ds(_ds.id)
+        if attach_data_scale is not None or attach_data_offset is not None:
+            units = attrs.get('units', None)
+            if units:
+                ds.attrs['units'] = units
+            ds.attach_data_scale_and_offset(attach_data_scale, attach_data_offset)
 
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
@@ -800,7 +816,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 for k, v in attrs.items():
                     # call __setitem__ because then we can pass attrs which is needed by the potential validators of
                     # standard attributes
-                    ds.attrs.__setitem__(k, v, attrs)
+                    if isinstance(v, h5py.Dataset):
+                        ds.attrs.__setitem__(k, v.name, attrs)
+                    else:
+                        ds.attrs.__setitem__(k, v, attrs)
             except Exception as e:
                 logger.error(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}"')
                 del self[name]
@@ -1500,6 +1519,52 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     # def has_flag_data(self):
     #     """Check if the dataset has a flag dataset attached."""
     #     return ANCILLARY_DATASET in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
+
+    def make_data_scale(self):
+        """Mark this dataset as a data scale."""
+        if 'units' not in self.attrs:
+            raise ValueError('Cannot make data scale if no attribute "units" is not set!')
+        self.attrs['IS_DATA_SCALE'] = True
+
+    def attach_data_scale_and_offset(self, scale: Union[None, h5py.Dataset], offset: Union[None, h5py.Dataset]):
+        """Attach a data scale and offset to this dataset. The scale and offset must have the same"""
+        if self.attrs.get('IS_DATA_SCALE', False):
+            raise ValueError('Cannot attach data scale to a dataset, which is already a data scale!')
+        if self.attrs.get('IS_DATA_OFFSET', False):
+            raise ValueError('Cannot attach data offset to a dataset, which is already a data offset!')
+        if 'units' not in self.attrs:
+            raise ValueError('Cannot attach data scale if no attribute "units" is not set!')
+
+        this_units = get_ureg().Unit(self.attrs.get('units', ''))
+
+        # try:
+        if scale is not None:
+            scaled_units = this_units * get_ureg().Unit(scale.attrs.get('units', ''))
+        else:
+            scaled_units = this_units
+
+        if offset is not None:
+            if scaled_units.dimensionality == get_ureg().Unit(offset.attrs.get('units', '')).dimensionality:
+                pass
+            else:
+                raise ValueError('Units of scale and offset must be compatible!')
+
+        if scale is not None:
+            self.attrs['DATA_SCALE'] = scale.name
+        if offset is not None:
+            self.attrs['DATA_OFFSET'] = offset.name
+
+    def get_data_scale(self):
+        """Return the data scale dataset if attached to this dataset."""
+        if 'DATA_SCALE' in self.attrs:
+            return self.rootparent[self.attrs['DATA_SCALE']]
+        return None
+
+    def get_data_offset(self):
+        """Return the data offset dataset if attached to this dataset."""
+        if 'DATA_OFFSET' in self.attrs:
+            return self.rootparent[self.attrs['DATA_OFFSET']]
+        return None
 
     def modify(self, tqdm_pbar=False, **properties) -> "Dataset":
         """modify property of dataset such as `chunks` or `dtpye`. This is

@@ -8,6 +8,7 @@ from typing import Dict
 
 from . import logger
 from .h5utils import get_rootparent
+from .. import errors
 from .. import get_config, conventions, utils
 from .. import get_ureg
 from .. import protected_attributes
@@ -148,8 +149,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     if value is consts.DefaultValue.EMPTY:
                         # no value given, but is mandatory. check if there's an alternative
                         if sattr.alternative_standard_attribute is None:
-                            raise ValueError(f'Parameter (standard attribute) "{name}" must be provided and '
-                                             f'cannot be None!')
+                            raise errors.StandardAttributeError(
+                                f'Parameter (standard attribute) "{name}" must be provided and cannot be None!'
+                            )
                         return
                     if value is consts.DefaultValue.NONE:
                         # no value given and not mandatory. just not set it and do nothing

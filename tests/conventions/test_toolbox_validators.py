@@ -91,37 +91,6 @@ class TestTbxValidators(unittest.TestCase):
         self.assertIsInstance(Validator(units=pint.Unit('m')).units, pint.Unit)
         self.assertIsInstance(Validator(units='m').units, pint.Unit)
 
-    def test_validate_offset(self):
-        class _Parent:
-            def __init__(self, attrs):
-                self.attrs = attrs
-
-        class Validator(BaseModel):
-            offset: toolbox_validators.data_scale_offset
-
-        with self.assertRaises(RuntimeError):
-            Validator.model_validate({'offset': '3.4 V'})
-            # Validator.model_validate({'offset': '3.4 V'}, context={'attrs': {}, 'parent': {}})
-
-        with self.assertRaises(ValueError):
-            Validator.model_validate({'offset': '3.4 V'},
-                                     context={'attrs': {},
-                                              'parent': _Parent({'scale': None})})
-        Validator.model_validate({'offset': '3.4 V'},
-                                 context={'attrs': {'units': 'V'},
-                                          'parent': _Parent({'scale': None})})
-        with self.assertRaises(ValueError):
-            Validator.model_validate({'offset': '3.4 V'},
-                                     context={'attrs': {},
-                                              'parent': _Parent({'scale': None})})
-        with self.assertRaises(ValueError):
-            Validator.model_validate({'offset': '3.4 V'},
-                                     context={'attrs': {},
-                                              'parent': _Parent({'scale': None})})
-        Validator.model_validate({'offset': '3.4'},
-                                 context={'attrs': {},
-                                          'parent': _Parent({'scale': None})})
-
     def test_date_format(self):
         class Validator(BaseModel):
             date: toolbox_validators.dateFormat

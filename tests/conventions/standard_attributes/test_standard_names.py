@@ -223,7 +223,7 @@ class TestStandardAttributes(unittest.TestCase):
     def test_from_yaml(self):
         cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), overwrite=True)
         h5tbx.use(cv)
-        self.assertTrue('scale' in cv.properties[h5tbx.Dataset])
+
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
             with self.assertRaises(StandardAttributeError):
                 # difference_of_x_velocity not found!
@@ -233,9 +233,14 @@ class TestStandardAttributes(unittest.TestCase):
             with self.assertRaises(StandardAttributeError):
                 # wrong units!
                 h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
-            print('scale in sa:', 'scale' in h5['x_velocity'].standard_attributes)
-            h5.create_dataset('y_velocity', data=1.4, units='V', scale='1 m/s/V', standard_name='y_velocity')
-            self.assertEqual(h5['y_velocity'].attrs['standard_name'], 'y_velocity')
+
+            ds_scale = h5.create_dataset('y_velocity_scale', data=2, units='m/s/V')
+            ds_scale.make_data_scale()
+            ds_yvel = h5.create_dataset('y_velocity', data=1.4,
+                                        data_scale=ds_scale,
+                                        units='V',
+                                        standard_name='y_velocity')
+            self.assertEqual(ds_yvel.attrs['standard_name'], 'y_velocity')
 
             with self.assertRaises(StandardAttributeError):
                 h5.create_dataset('velocity', data=2.3, units='m/s', standard_name='velocity')

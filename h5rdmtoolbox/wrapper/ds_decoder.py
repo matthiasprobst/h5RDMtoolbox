@@ -5,12 +5,11 @@ import numpy as np
 import xarray as xr
 
 from .. import consts, get_ureg, get_config, protected_attributes
-from ..conventions.utils import equal_base_units
 
 
 def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArray:
     """Assumes that scale and offset are available as attributes. The return value is a new xarray.DataArray,
-    which data has been transformed according to ret = (xarr + offset) * scale or ret = xarr * scale + offset
+    which data has been transformed according to ret = xarr * scale + offset
     depending on the units of xarr and offset.
     """
 
@@ -20,8 +19,8 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
     def _dequantify(obj):
         return obj.pint.dequantify(format=get_config()['ureg_format'])
 
-    scale = xarr.attrs.pop('scale', None)
-    offset = xarr.attrs.pop('offset', None)
+    scale = xarr.attrs.pop('DATA_SCALE', None)
+    offset = xarr.attrs.pop('DATA_OFFSET', None)
 
     if scale and offset:
         scale_xrda = ds.rootparent[scale][()]
@@ -31,16 +30,17 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
             return _dequantify(_quanitfy(xarr) * scale_xrda.pint.quantify() + offset_xrda.pint.quantify())
 
     elif scale:
-        scale = get_ureg().Quantity(scale)
-        with xr.set_options(keep_attrs=True):
-            return (xarr.pint.quantify(unit_registry=get_ureg()) * scale).pint.dequantify(
-                format=get_config()['ureg_format'])
+        scale_xrda = ds.rootparent[scale][()]
+        return _dequantify(_quanitfy(xarr) * scale_xrda.pint.quantify())
+
     elif offset:
-        offset = get_ureg().Quantity(offset)
+        offset_xrda = ds.rootparent[offset][()]
         with xr.set_options(keep_attrs=True):
-            if equal_base_units(xarr.units, offset.units):
-                return _dequantify(_quanitfy(xarr) + offset)
-            raise ValueError(f'Units of dataset "{ds.name}" and offset do not match')
+            return _dequantify(_quanitfy(xarr) + offset_xrda.pint.quantify())
+
+    for a in ('IS_DATA_SCALE', 'IS_DATA_SCALE', 'DATA_SCALE' 'DATA_OFFSET'):
+        xarr.attrs.pop(a, None)
+
     return xarr
 
 
@@ -53,11 +53,7 @@ def dataset_value_decoder(func):
     """decorator during slicing of dataset"""
 
     def wrapper(*args, **kwargs):
-        """wrapper that decodes the xarray.DataArray
-
-        Note, if offset is used, this is the formular:
-        xarr = (xarr - offset) * scale
-        """
+        """wrapper that decodes the xarray.DataArray object"""
         ds = args[0]
         assert isinstance(ds, h5py.Dataset)
         xarr = func(*args, **kwargs)
