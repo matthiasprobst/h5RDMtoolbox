@@ -237,7 +237,7 @@ class TestStandardAttributes(unittest.TestCase):
             ds_scale = h5.create_dataset('y_velocity_scale', data=2, units='m/s/V')
             ds_scale.make_data_scale()
             ds_yvel = h5.create_dataset('y_velocity', data=1.4,
-                                        data_scale=ds_scale,
+                                        attach_data_scale=ds_scale,
                                         units='V',
                                         standard_name='y_velocity')
             self.assertEqual(ds_yvel.attrs['standard_name'], 'y_velocity')
