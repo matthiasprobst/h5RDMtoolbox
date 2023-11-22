@@ -427,3 +427,4 @@ def validate_f1(a, b, c=3, d=2):
                                      ),
                         pid=dict(id='123', type='other'),
                         title='Test file to demonstrate usage of EngMeta schema') as h5:
+            fname = h5.hdf_filename
