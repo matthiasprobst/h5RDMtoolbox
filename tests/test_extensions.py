@@ -96,7 +96,7 @@ class TestExtension(unittest.TestCase):
             u_xnorm = h5['u'][:].normalize.coords(dict(L='3m'), rename=True)
             self.assertEqual('u', u_xnorm.name)
             for coord in u_xnorm.coords:
-                self.assertEqual('_L', coord[-2:])
+                self.assertEqual(f'{normalize.NORM_DELIMITER}L', coord[-2:])
             self.assertEqual('', u_xnorm.attrs.get('units', ''))
             self.assertEqual('1/m', u_xnorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
             self.assertEqual('1/m', u_xnorm[f'y{normalize.NORM_DELIMITER}L'].attrs['units'])
