@@ -1,7 +1,6 @@
 import h5py
 import numpy as np
 import pathlib
-import pint
 import time
 import unittest
 import uuid
@@ -78,92 +77,6 @@ class TestFile(unittest.TestCase):
         with h5tbx.File(h5.hdf_filename, 'r+') as h5:
             self.assertTrue('data_type' in h5.attrs.raw)
             self.assertTrue('contact' in h5.attrs.raw)
-
-    def test_scale(self):
-        h5tbx.use(None)
-        cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.from_yaml(cv_yaml_filename, overwrite=True)
-        h5tbx.use(cv)
-
-        self.assertTrue('scale' in cv.properties[h5tbx.Dataset])
-
-        for scale in (0.2 * pint.Unit('Pa/V'), 0.2 * pint.Unit('Pa/V'), '0.2 Pa/V', '0.2Pa/V'):
-            with h5tbx.File(data_type='experimental',
-                            contact=h5tbx.__author_orcid__) as h5:
-                ds = h5.create_dataset('pressure',
-                                       data=4.3,
-                                       units='V',
-                                       offset='0.1 V',
-                                       scale=scale,
-                                       long_name='pressure')
-                self.assertEqual(ds.units, h5tbx.get_ureg().Unit('V'))
-                self.assertEqual(ds.scale, pint.Quantity(0.2, 'Pa/V'))
-                self.assertEqual(ds.offset, pint.Quantity(0.1, 'V'))
-                arr = ds[()]
-                self.assertEqual(arr.units, 'Pa')
-                self.assertEqual(arr.values, (4.3 + 0.1) * 0.2)
-
-    def test_offset(self):
-        from h5rdmtoolbox import tutorial
-        cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.from_yaml(cv_yaml_filename, overwrite=True)
-        h5tbx.use(cv)
-        with h5tbx.File(data_type='experimental',
-                        contact=h5tbx.__author_orcid__) as h5:
-            with self.assertRaises(h5tbx.errors.StandardAttributeError):
-                ds = h5.create_dataset('pressure',
-                                       data=4.3,
-                                       units='V',
-                                       offset=0.1,
-                                       scale='0.2 Pa/V',
-                                       long_name='pressure')
-
-            # offset follows eqation y=m*x+b or y=(m/v*x) + b depending on the units
-            # pressure stores 4.3 V. offset is 0.1 V and scale is 0.2 Pa/V
-            # so return data is (4.3V+0.1V)*0.2Pa/V = 0.88 Pa
-            ds = h5.create_dataset('pressure',
-                                   data=4.3,
-                                   units='V',
-                                   offset='0.1 V',
-                                   scale='0.2 Pa/V',
-                                   long_name='pressure')
-
-            arr = ds[()]
-            self.assertEqual(arr.units, 'Pa')
-            self.assertEqual(arr.values, (4.3 + 0.1) * 0.2)
-
-            with self.assertRaises(h5tbx.errors.StandardAttributeError):
-                ds.offset = 0.2
-
-            with self.assertRaises(h5tbx.errors.StandardAttributeError):
-                ds.attrs['offset'] = 0.2
-
-            ds = h5.create_dataset('pressure2',
-                                   data=4.3,
-                                   units='V',
-                                   offset='0.1 Pa',
-                                   scale='0.2 Pa/V',
-                                   long_name='pressure')
-
-            arr = ds[()]
-            self.assertEqual(arr.units, 'Pa')
-            self.assertEqual(arr.values, 4.3 * 0.2 + 0.1)
-
-            with self.assertRaises(h5tbx.errors.StandardAttributeError):
-                h5.create_dataset('pressure3',
-                                  data=4.3,
-                                  units='V',
-                                  offset='0.1 Pa',
-                                  long_name='pressure')
-            ds = h5.create_dataset('pressure3',
-                                   data=4.3,
-                                   units='Pa',
-                                   offset='0.1 Pa',
-                                   long_name='pressure')
-
-            arr = ds[()]
-            self.assertEqual(arr.units, 'Pa')
-            self.assertEqual(arr.values, 4.3 + 0.1)
 
     def test_dumps(self):
         with h5tbx.File() as h5:
@@ -444,6 +357,19 @@ class TestFile(unittest.TestCase):
 
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
+
+    def test_data_scale_and_offset(self):
+        with h5tbx.use('h5tbx') as cv5:
+            with File(mode='w') as h5:
+                ds = h5.create_dataset('ds', data=np.arange(10), attrs=dict(units='V'))
+                ds_scale = h5.create_dataset('ds_scale', data=1, attrs=dict(units='m/s/V'))
+                # ds_scale.make_data_scale()
+                ds.attach_data_scale_and_offset(ds_scale, None)
+                self.assertEqual(ds_scale, ds.get_data_scale())
+                self.assertEqual('m/s', ds[()].units)
+
+                ds.detach_data_scale()
+                self.assertEqual('V', str(ds[()].units))
 
     def test_assign_data_to_existing_dset(self):
         h5tbx.set_config(natural_naming=True)

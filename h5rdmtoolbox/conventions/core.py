@@ -1,15 +1,14 @@
 import copy
+import forge
 import inspect
 import pathlib
 import re
 import shutil
 import sys
-from pydoc import locate
-from typing import Union, List, Dict
-
-import forge
 import yaml
 import zenodo_search as zsearch
+from pydoc import locate
+from typing import Union, List, Dict
 
 from . import cfg
 from . import errors
@@ -17,7 +16,6 @@ from . import logger
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .._repr import make_italic, make_bold
 from .._user import UserDir
-from .standard_names import cache
 
 CV_DIR = UserDir['conventions']
 
@@ -292,7 +290,9 @@ def _get_convention_from_dir(convention_name: str) -> "Convention":
     # import:
     _import_convention(_convention_name)
     # now it is registered and can be returned:
-    return get_registered_conventions()[convention_name]
+    cv = get_registered_conventions()[convention_name]
+    cv.filename = _convention_py_filename
+    return cv
 
 
 class use:
@@ -377,7 +377,7 @@ def add_convention(convention, name=None):
     cfg._registered_conventions[name] = convention
 
 
-def get_current_convention():
+def get_current_convention() -> Union[None, Convention]:
     """Return the current convention"""
     return cfg._current_convention
 

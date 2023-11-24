@@ -1,0 +1,8 @@
+__name__: regex-convention
+__contact__: https://orcid.org/0000-0001-8729-0482
+
+long_name:
+  target_method: create_dataset
+  validator: $regex(^[a-zA-Z].*(?<!\s)$)
+  alternative_standard_attribute: standard_name
+  description: An comprehensive description of the dataset. If not set, the standard_name attribute must be given.
