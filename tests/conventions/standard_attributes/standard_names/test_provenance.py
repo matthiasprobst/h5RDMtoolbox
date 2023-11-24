@@ -25,71 +25,75 @@ class TestProvenance(unittest.TestCase):
         h5tbx.use(None)
 
     def test_provenance_basics(self):
-        with h5tbx.File(self.filename) as h5:
-            u = h5.u[:]
+        with h5tbx.set_config(add_provenance=True):
+            with h5tbx.File(self.filename) as h5:
+                u = h5.u[:]
 
-        u_mean = u.snt[0:2, ...].snt.arithmetic_mean_of(dim='time')
+            u_mean = u.snt[0:2, ...].snt.arithmetic_mean_of(dim='time')
 
-        # u_mean = u.snt.arithmetic_mean_of()
-        self.assertTrue('PROVENANCE' in u_mean.attrs)
-        self.assertIn('__getitem__', u_mean.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('arithmetic_mean_of', u_mean.attrs['PROVENANCE']['processing_history'][1]['name'])
+            # u_mean = u.snt.arithmetic_mean_of()
+            self.assertTrue('PROVENANCE' in u_mean.attrs)
+            self.assertIn('__getitem__', u_mean.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('arithmetic_mean_of', u_mean.attrs['PROVENANCE']['processing_history'][1]['name'])
 
-        with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
-            h5.create_dataset('u_mean', data=u_mean)
-            um = h5['u_mean'][()]
+            with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                h5.create_dataset('u_mean', data=u_mean)
+                um = h5['u_mean'][()]
 
-        self.assertTrue('PROVENANCE' in um.attrs)
-        self.assertIn('__getitem__', u_mean.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('arithmetic_mean_of', um.attrs['PROVENANCE']['processing_history'][1]['name'])
+            self.assertTrue('PROVENANCE' in um.attrs)
+            self.assertIn('__getitem__', u_mean.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('arithmetic_mean_of', um.attrs['PROVENANCE']['processing_history'][1]['name'])
 
     def test_rolling_mean(self):
-        with h5tbx.File(self.filename) as h5:
-            u = h5.u[:]
-            window = 2
-            u_rmean = u.snt[0:2, ...].snt.rolling(time=window).mean()
-        self.assertIn('__getitem__', u_rmean.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('rolling_mean', u_rmean.attrs['PROVENANCE']['processing_history'][1]['name'])
-        self.assertEqual([2], u_rmean.attrs['PROVENANCE']['processing_history'][1]['window'])
+        with h5tbx.set_config(add_provenance=True):
+            with h5tbx.File(self.filename) as h5:
+                u = h5.u[:]
+                window = 2
+                u_rmean = u.snt[0:2, ...].snt.rolling(time=window).mean()
+            self.assertIn('__getitem__', u_rmean.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('rolling_mean', u_rmean.attrs['PROVENANCE']['processing_history'][1]['name'])
+            self.assertEqual([2], u_rmean.attrs['PROVENANCE']['processing_history'][1]['window'])
 
-        with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
-            h5.create_dataset('u_rmean', data=u_rmean)
-            u_rmean2 = h5['u_rmean'][()]
+            with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                h5.create_dataset('u_rmean', data=u_rmean)
+                u_rmean2 = h5['u_rmean'][()]
 
-        self.assertIn('__getitem__', u_rmean2.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('rolling_mean', u_rmean2.attrs['PROVENANCE']['processing_history'][1]['name'])
-        self.assertEqual([2], u_rmean2.attrs['PROVENANCE']['processing_history'][1]['window'])
+            self.assertIn('__getitem__', u_rmean2.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('rolling_mean', u_rmean2.attrs['PROVENANCE']['processing_history'][1]['name'])
+            self.assertEqual([2], u_rmean2.attrs['PROVENANCE']['processing_history'][1]['window'])
 
     def test_rolling_max(self):
-        with h5tbx.File(self.filename) as h5:
-            u = h5.u[:]
-            window = 2
-            u_rmax = u.snt[0:2, ...].snt.rolling(time=window).max()
-        self.assertIn('__getitem__', u_rmax.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('rolling_max', u_rmax.attrs['PROVENANCE']['processing_history'][1]['name'])
-        self.assertEqual([2], u_rmax.attrs['PROVENANCE']['processing_history'][1]['window'])
+        with h5tbx.set_config(add_provenance=True):
+            with h5tbx.File(self.filename) as h5:
+                u = h5.u[:]
+                window = 2
+                u_rmax = u.snt[0:2, ...].snt.rolling(time=window).max()
+            self.assertIn('__getitem__', u_rmax.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('rolling_max', u_rmax.attrs['PROVENANCE']['processing_history'][1]['name'])
+            self.assertEqual([2], u_rmax.attrs['PROVENANCE']['processing_history'][1]['window'])
 
-        with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
-            h5.create_dataset('u_rmax', data=u_rmax)
-            u_rmean2 = h5['u_rmax'][()]
+            with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                h5.create_dataset('u_rmax', data=u_rmax)
+                u_rmean2 = h5['u_rmax'][()]
 
-        self.assertIn('__getitem__', u_rmean2.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('rolling_max', u_rmean2.attrs['PROVENANCE']['processing_history'][1]['name'])
-        self.assertEqual([2], u_rmean2.attrs['PROVENANCE']['processing_history'][1]['window'])
+            self.assertIn('__getitem__', u_rmean2.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('rolling_max', u_rmean2.attrs['PROVENANCE']['processing_history'][1]['name'])
+            self.assertEqual([2], u_rmean2.attrs['PROVENANCE']['processing_history'][1]['window'])
 
     def test_rolling_std(self):
-        with h5tbx.File(self.filename) as h5:
-            u = h5.u[:]
-            window = 2
-            u_rstd = u.snt[0:2, ...].snt.rolling(time=window).std()
-        self.assertIn('__getitem__', u_rstd.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('rolling_std_of', u_rstd.attrs['PROVENANCE']['processing_history'][1]['name'])
-        self.assertEqual([2], u_rstd.attrs['PROVENANCE']['processing_history'][1]['window'])
+        with h5tbx.set_config(add_provenance=True):
+            with h5tbx.File(self.filename) as h5:
+                u = h5.u[:]
+                window = 2
+                u_rstd = u.snt[0:2, ...].snt.rolling(time=window).std()
+            self.assertIn('__getitem__', u_rstd.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('rolling_std_of', u_rstd.attrs['PROVENANCE']['processing_history'][1]['name'])
+            self.assertEqual([2], u_rstd.attrs['PROVENANCE']['processing_history'][1]['window'])
 
-        with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
-            h5.create_dataset('u_rstd', data=u_rstd)
-            u_rmean2 = h5['u_rstd'][()]
+            with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                h5.create_dataset('u_rstd', data=u_rstd)
+                u_rmean2 = h5['u_rstd'][()]
 
-        self.assertIn('__getitem__', u_rmean2.attrs['PROVENANCE']['processing_history'][0]['name'])
-        self.assertIn('rolling_std_of', u_rmean2.attrs['PROVENANCE']['processing_history'][1]['name'])
-        self.assertEqual([2], u_rmean2.attrs['PROVENANCE']['processing_history'][1]['window'])
+            self.assertIn('__getitem__', u_rmean2.attrs['PROVENANCE']['processing_history'][0]['name'])
+            self.assertIn('rolling_std_of', u_rmean2.attrs['PROVENANCE']['processing_history'][1]['name'])
+            self.assertEqual([2], u_rmean2.attrs['PROVENANCE']['processing_history'][1]['window'])

@@ -3,6 +3,7 @@ import sys
 
 from . import generate
 from .._user import UserDir
+from ..errors import ImportConventionError
 
 __this_dir__ = pathlib.Path(__file__)
 convention_name = 'h5tbx'
@@ -28,5 +29,9 @@ try:
     # Now, you can use the imported module as needed
     # For example:
     imported_module.cv
+except NameError:
+    raise ImportConventionError(
+        f'The convention "{convention_name}" could not be imported. Please check the convention file content '
+        f'(location: {UserDir["conventions"] / convention_name}).')
 except ImportError:
     print(f"Failed to import module {convention_name}")
