@@ -31,7 +31,7 @@ CONFIG = {'return_xarray': True,
           'expose_user_prop_to_attrs': True,
           'scale_attribute_name': 'scale',
           'offset_attribute_name': 'offset',
-          'add_provenance': True,
+          'add_provenance': False,
           'ignore_standard_attribute_errors': False,
           'allow_deleting_standard_attributes': False,
           'parallel_find': True, }
