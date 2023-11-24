@@ -513,8 +513,8 @@ def from_zenodo(doi, name=None,
     Parameters
     ----------
     doi: str
-        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8357399 or
-        10.5281/zenodo.8357399 or https://doi.org/10.5281/zenodo.8357399)
+        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10156750 or
+        10.5281/zenodo.10156750 or https://doi.org/10.5281/zenodo.10156750)
     overwrite: bool = False
         Whether to overwrite existing convention with the same name. Default is False
     force_download: bool

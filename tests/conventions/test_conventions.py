@@ -331,7 +331,7 @@ def validate_f1(a, b, c=3, d=2):
             _ddir = h5tbx.UserDir['conventions'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.conventions.from_zenodo(doi='8357399')  # sandbox:8281285 # orig:8357399
+            h5tbx.conventions.from_zenodo(doi='10156750')
             # h5tbx.conventions.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
@@ -370,8 +370,8 @@ def validate_f1(a, b, c=3, d=2):
 
                 # we can download from zenodo by passing the short or full DOI or the URL:
 
-                dois = ('8357399', '10.5281/zenodo.8357399', 'https://zenodo.org/record/8357399',
-                        'https://doi.org/10.5281/zenodo.8357399')
+                dois = ('10156750', '10.5281/zenodo.10156750', 'https://zenodo.org/record/10156750',
+                        'https://doi.org/10.5281/zenodo.10156750')
                 h5tbx.UserDir.clear_cache()
                 with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                     cv = h5tbx.conventions.from_zenodo(doi=8266929)
