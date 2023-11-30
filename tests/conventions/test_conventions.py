@@ -1,10 +1,9 @@
 import pathlib
+import pint
+import requests
 import shutil
 import unittest
 import warnings
-
-import pint
-import requests
 import yaml
 
 import h5rdmtoolbox
@@ -69,19 +68,19 @@ def validate_f1(a, b, c=3, d=2):
 
         with h5tbx.File(creation_mode='experimental') as h5:
             self.assertIsInstance(h5.creation_mode, type(h5.creation_mode))
-            ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='v')
+            ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='U')
 
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
-                _ = h5.create_dataset(name='ds2', data=3.4, units='3.4', symbol='v')
+                _ = h5.create_dataset(name='ds2', data=3.4, units='3.4', symbol='U')
 
-            with self.assertRaises(h5tbx.errors.StandardAttributeError):
-                _ = h5.create_dataset(name='ds2', data=3.4, units='V', scale='scale', symbol='v')
+            with self.assertRaises(ValueError):
+                _ = h5.create_dataset(name='ds', data=3.4, units='V', symbol='U')
 
             self.assertIsInstance(ds.units, pint.Unit)
             self.assertIsInstance(ds.symbol, str)
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 ds.symbol = 1.4
-            self.assertEqual(ds.symbol, 'v')
+            self.assertEqual(ds.symbol, 'U')
             ds.symbol = 'P'
             self.assertEqual(ds.symbol, 'P')
             self.assertEqual(str(ds.units), 'm/s')
@@ -292,37 +291,67 @@ def validate_f1(a, b, c=3, d=2):
             self.assertEqual(h5.convention, h5tbx.conventions.get_current_convention())
             self.assertEqual(sorted(['creation_mode', ]), sorted(list(h5.standard_attributes)))
             ds = h5.create_dataset('test', data=1, units='m/s')
-            self.assertEqual(sorted(['offset', 'scale', 'units', 'symbol']), sorted(ds.standard_attributes.keys()))
+            self.assertEqual(sorted(['units', 'symbol']), sorted(ds.standard_attributes.keys()))
             self.assertEqual(ds.convention, h5tbx.conventions.get_current_convention())
 
-    def test_del_standard_attribute(self):
+    def test_data_scale_and_offset(self):
         h5tbx.use('h5tbx')
 
         with h5tbx.File() as h5:
-            ds = h5.create_dataset('test', data=1, units='m/s', scale=3)
-            self.assertEqual(1, int(ds.values[()]))
-            self.assertEqual(3, int(ds[()]))
+            ds_scale = h5.create_dataset('test_scale', data=1, units='m/s/V')
+
+            ds = h5.create_dataset('test', data=1, units='V')
+            ds.attach_data_scale_and_offset(ds_scale, None)
+
+            self.assertEqual(ds.get_data_scale(), ds_scale)
+            self.assertEqual(ds.get_data_offset(), None)
+
+            self.assertEqual(ds[()].units, 'm/s')
 
         with h5tbx.File() as h5:
-            ds = h5.create_dataset('test', data=1, units='m/s', scale='3')
-            self.assertEqual(1, int(ds.values[()]))
-            self.assertEqual(3, int(ds[()]))
+            ds_offset = h5.create_dataset('test_offset', data=1, units='m/s/V')
 
-        with h5tbx.File() as h5:
-            ds = h5.create_dataset('test', data=1, units='m/s', scale='3 1/s')
-            self.assertEqual(1, int(ds.values[()]))
-            self.assertEqual(3, int(ds[()]))
-            self.assertEqual('m/s', str(ds.units))
-            self.assertEqual('m/s**2', str(ds[()].attrs['units']))
-
-        with h5tbx.File() as h5:
-            ds = h5.create_dataset('test', data=1, units='m/s', scale=3)
+            ds = h5.create_dataset('test', data=1, units='V')
             with self.assertRaises(ValueError):
-                del ds.scale
-            self.assertTrue('scale' in ds.attrs)
-            with h5tbx.set_config(allow_deleting_standard_attributes=True):
-                del ds.scale
-                self.assertTrue('scale' not in ds.attrs)
+                ds.attach_data_scale_and_offset(None, ds_offset)
+
+        with h5tbx.File() as h5:
+            ds_offset = h5.create_dataset('test_offset', data=0.5, units='m/s')
+
+            ds = h5.create_dataset('test', data=2.3, units='m/s')
+            ds.attach_data_scale_and_offset(None, ds_offset)
+
+            self.assertEqual(ds.get_data_scale(), None)
+            self.assertEqual(str(ds.get_data_offset().attrs['units']), 'm/s')
+
+            self.assertEqual(ds[()].units, 'm/s')
+            self.assertEqual(float(ds[()].data), 2.3 + 0.5)
+
+        with h5tbx.File() as h5:
+            ds_offset = h5.create_dataset('test_offset', data=0.5, units='km/s')
+
+            ds = h5.create_dataset('test', data=1, units='m/s')
+            ds.attach_data_scale_and_offset(None, ds_offset)
+
+            self.assertEqual(ds.get_data_scale(), None)
+            self.assertEqual(str(ds.get_data_offset().attrs['units']), 'km/s')
+
+            self.assertEqual(ds[()].units, 'm/s')
+            self.assertEqual(float(ds[()].data), 1 + 500.)
+
+        with h5tbx.File() as h5:
+            ds_offset = h5.create_dataset('test_offset', data=1, units='km/s')
+
+            ds_scale = h5.create_dataset('test_scale', data=1, units='m/s/V')
+
+            ds = h5.create_dataset('test', data=1, units='V')
+            ds.attach_data_scale_and_offset(ds_scale, ds_offset)
+
+            self.assertEqual(ds.get_data_scale().attrs['units'], h5tbx.get_ureg().Unit('m/s/V'))
+            self.assertEqual(str(ds.get_data_offset().attrs['units']), 'km/s')
+
+            self.assertEqual(ds[()].units, 'm/s')
+            self.assertEqual(float(ds[()].data), 1 + 1000)
 
     def test_from_zenodo(self):
         if self.connected:
@@ -331,7 +360,7 @@ def validate_f1(a, b, c=3, d=2):
             _ddir = h5tbx.UserDir['conventions'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.conventions.from_zenodo(doi='8357399')  # sandbox:8281285 # orig:8357399
+            h5tbx.conventions.from_zenodo(doi='10156750')
             # h5tbx.conventions.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
@@ -370,8 +399,8 @@ def validate_f1(a, b, c=3, d=2):
 
                 # we can download from zenodo by passing the short or full DOI or the URL:
 
-                dois = ('8357399', '10.5281/zenodo.8357399', 'https://zenodo.org/record/8357399',
-                        'https://doi.org/10.5281/zenodo.8357399')
+                dois = ('10156750', '10.5281/zenodo.10156750', 'https://zenodo.org/record/10156750',
+                        'https://doi.org/10.5281/zenodo.10156750')
                 h5tbx.UserDir.clear_cache()
                 with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                     cv = h5tbx.conventions.from_zenodo(doi=8266929)
@@ -388,7 +417,6 @@ def validate_f1(a, b, c=3, d=2):
         self.assertEqual(d.value, DefaultValue.EMPTY)
 
     def test_engmeta_example(self):
-        import h5rdmtoolbox as h5tbx
         cv = h5tbx.conventions.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
         h5tbx.use(cv)
 
@@ -400,5 +428,3 @@ def validate_f1(a, b, c=3, d=2):
                         pid=dict(id='123', type='other'),
                         title='Test file to demonstrate usage of EngMeta schema') as h5:
             fname = h5.hdf_filename
-            # h5.dump()
-            # print(h5.creator)

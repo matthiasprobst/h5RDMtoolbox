@@ -1,15 +1,14 @@
 import copy
+import forge
 import inspect
 import pathlib
 import re
 import shutil
 import sys
-from pydoc import locate
-from typing import Union, List, Dict
-
-import forge
 import yaml
 import zenodo_search as zsearch
+from pydoc import locate
+from typing import Union, List, Dict
 
 from . import cfg
 from . import errors
@@ -17,7 +16,6 @@ from . import logger
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .._repr import make_italic, make_bold
 from .._user import UserDir
-from .standard_names import cache
 
 CV_DIR = UserDir['conventions']
 
@@ -292,7 +290,9 @@ def _get_convention_from_dir(convention_name: str) -> "Convention":
     # import:
     _import_convention(_convention_name)
     # now it is registered and can be returned:
-    return get_registered_conventions()[convention_name]
+    cv = get_registered_conventions()[convention_name]
+    cv.filename = _convention_py_filename
+    return cv
 
 
 class use:
@@ -377,7 +377,7 @@ def add_convention(convention, name=None):
     cfg._registered_conventions[name] = convention
 
 
-def get_current_convention():
+def get_current_convention() -> Union[None, Convention]:
     """Return the current convention"""
     return cfg._current_convention
 
@@ -513,8 +513,8 @@ def from_zenodo(doi, name=None,
     Parameters
     ----------
     doi: str
-        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 8357399 or
-        10.5281/zenodo.8357399 or https://doi.org/10.5281/zenodo.8357399)
+        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10156750 or
+        10.5281/zenodo.10156750 or https://doi.org/10.5281/zenodo.10156750)
     overwrite: bool = False
         Whether to overwrite existing convention with the same name. Default is False
     force_download: bool
@@ -536,7 +536,7 @@ def from_zenodo(doi, name=None,
     if not filename.exists() or force_download:
         record = zsearch.search_doi(doi, parse_doi=False)
         if name is None:
-            matches = [file for file in record.files if file['filename'].rsplit('.', 1)[-1] == 'yaml']
+            matches = [file for file in record.files if file['key'].rsplit('.', 1)[-1] == 'yaml']
             if len(matches) == 0:
                 raise ValueError(f'No file with suffix ".yaml" found in record {doi}')
         else:
@@ -545,7 +545,7 @@ def from_zenodo(doi, name=None,
                 raise ValueError(f'No file with name "{name}" found in record {doi}')
 
         file0 = zsearch.ZenodoFile(matches[0])
-        if file0['filename'].rsplit('.', 1)[-1] != 'yaml':
+        if file0['key'].rsplit('.', 1)[-1] != 'yaml':
             raise ValueError(f'The file with name "{name}" is not a YAML file')
 
         _filename = file0.download(destination_dir=filename.parent)

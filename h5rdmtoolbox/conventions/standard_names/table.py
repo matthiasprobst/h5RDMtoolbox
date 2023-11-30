@@ -705,7 +705,7 @@ class StandardNameTable:
             zenrec = zsearch.search_doi(doi)
             zenfile = zenrec.files[0]
 
-            yaml_name = zenrec.files[0]['filename']
+            yaml_name = zenrec.files[0]['key']
             if not yaml_name.endswith('.yaml'):
                 raise ValueError(f'Expected yaml file, got {yaml_name}')
             _yaml_filename = zenfile.download()
