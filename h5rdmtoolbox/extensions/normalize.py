@@ -6,6 +6,8 @@ from typing import Union, Dict
 
 import h5rdmtoolbox as h5tbx
 
+from numpy.core._exceptions import _UFuncBinaryResolutionError
+
 
 def to_base_units(da: xr.DataArray) -> xr.DataArray:
     """Turns the units of an xarray to the base units, e.g. m/mm turns to dimensionless
@@ -39,11 +41,18 @@ class NormalizeAccessor:
         if isinstance(value, str):
             qobj = obj.pint.quantify(unit_registry=h5tbx.get_ureg())
             q = h5tbx.get_ureg()(value)
-            norm_obj = (qobj/q).pint.dequantify()
+            norm_obj = (qobj / q).pint.dequantify()
         elif isinstance(value, (int, float)):
             # user indicates a float or int, which is interpreted as dimensionless
             with xr.set_options(keep_attrs=True):
-                norm_obj = obj / value
+                try:
+                    norm_obj = obj / value
+                except _UFuncBinaryResolutionError:
+                    raise RuntimeError(f'A error occurred while normalizing {obj.name} by {name}={value}. '
+                                       'This is likely due to a mismatch of data types. '
+                                       'you might specify the dimension to be normalized by '
+                                       'because not every dimension might of of a numeric type. '
+                                       'Orig. error: {e}')
         else:
             raise TypeError(f'Normalization must be either a string or a float, not {type(v)}.')
 

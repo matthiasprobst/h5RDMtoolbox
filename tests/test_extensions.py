@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import unittest
 import xarray as xr
@@ -61,6 +62,21 @@ class TestExtension(unittest.TestCase):
                                               attrs={'test': 1})
             self.assertEqual(vec2.attrs['test'], 1)
             self.assertIsInstance(vec2, xr.DataArray)
+
+    def test_normalize_issue_with_time_vector(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('x', data=[1, 2, 3], make_scale=True)
+            now = datetime.datetime.now()
+            h5.create_time_dataset('t',
+                                   data=[now, now + datetime.timedelta(seconds=1), now + datetime.timedelta(seconds=2)],
+                                   make_scale=True)
+            u = h5.create_dataset('u', data=[-4, 10, 0], attach_scales=[('t', 'x'), ])
+
+            with self.assertRaises(RuntimeError):
+                u[()].normalize.coords(rename=True, L=5)
+            unorm = u[()].normalize.coords(rename=True, x=dict(L=5))
+            np.testing.assert_array_equal(unorm.x.values, u[()].x.values / 5)
+            np.testing.assert_array_equal(unorm.values, u[()].values)
 
     def test_norm_one_for_all_without_unit(self):
         with h5tbx.File() as h5:
