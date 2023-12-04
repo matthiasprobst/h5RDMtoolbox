@@ -75,7 +75,7 @@ class TestExtension(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 u[()].normalize.coords(rename=True, L=5)
             unorm = u[()].normalize.coords(rename=True, x=dict(L=5))
-            np.testing.assert_array_equal(unorm.x.values, u[()].x.values / 5)
+            np.testing.assert_array_equal(unorm['x/L'].values, u[()].x.values / 5)
             np.testing.assert_array_equal(unorm.values, u[()].values)
 
     def test_norm_one_for_all_without_unit(self):
