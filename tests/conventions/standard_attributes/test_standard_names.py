@@ -1,6 +1,7 @@
-import requests
 import unittest
 import warnings
+
+import requests
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
@@ -119,24 +120,30 @@ class TestStandardAttributes(unittest.TestCase):
                     StandardNameTable.validate_version(version)
 
     def test_StandardNameTableFromWeb(self):
+        try:
+            import xmltodict
+            xmltodict_exists = True
+        except ImportError:
+            xmltodict_exists = False
+            warnings.warn('xmltodict not installed. Cannot test "test_StandardNameTableFromWeb"', UserWarning)
+        if xmltodict_exists:
+            cf = StandardNameTable.from_web(
+                url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+                name='standard_name_table',
+                known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
+            self.assertEqual(cf.name, 'standard_name_table')
+            self.assertEqual(cf.versionname, 'standard_name_table-v79')
+            if self.connected:
+                self.assertTrue(check_url(cf.meta['url']))
+                self.assertFalse(check_url(cf.meta['url'] + '123'))
 
-        cf = StandardNameTable.from_web(
-            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
-            name='standard_name_table',
-            known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
-        self.assertEqual(cf.name, 'standard_name_table')
-        self.assertEqual(cf.versionname, 'standard_name_table-v79')
-        if self.connected:
-            self.assertTrue(check_url(cf.meta['url']))
-            self.assertFalse(check_url(cf.meta['url'] + '123'))
-
-        if self.connected:
-            opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                     file_path='open_centrifugal_fan_database-v1.yaml',
-                                                     project_id='35443',
-                                                     ref_name='main')
-            self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
-            self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+            if self.connected:
+                opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                         file_path='open_centrifugal_fan_database-v1.yaml',
+                                                         project_id='35443',
+                                                         ref_name='main')
+                self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
+                self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
 
     def test_StandardNameTableFromYaml_special(self):
         table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
@@ -196,7 +203,14 @@ class TestStandardAttributes(unittest.TestCase):
                                         contact='https://orcid.org/0000-0001-8729-0482'))
 
     def test_to_html(self):
-        if self.connected:
+        try:
+            import pypandoc
+            pypandoc_exists = True
+        except OSError:
+            pypandoc_exists = False
+            warnings.warn('pypandoc not properly installed. Cannot test "test_to_html"', UserWarning)
+
+        if self.connected and pypandoc_exists:
             snt = StandardNameTable(name='test_snt',
                                     standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
                                     version='v1.0dev',
@@ -235,7 +249,7 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
 
             ds_scale = h5.create_dataset('y_velocity_scale', data=2, units='m/s/V')
-            
+
             ds_yvel = h5.create_dataset('y_velocity', data=1.4,
                                         attach_data_scale=ds_scale,
                                         units='V',

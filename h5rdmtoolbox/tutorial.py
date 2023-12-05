@@ -3,8 +3,9 @@ Tutorial module providing easy access to particular data.
 """
 import os
 import pathlib
-import xarray as xr
 from typing import List
+
+import xarray as xr
 
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 from .utils import generate_temporary_directory
@@ -186,7 +187,7 @@ class Database:
 
         _folders = ('d1', 'd2', 'd3', 'd1/d11', 'd1/d11/d111', 'd2/d21')
         folders = [os.path.join(repo_dir, _f) for _f in _folders]
-        operators = ('Mike', 'Ellen', 'John', 'Susi')
+        contact_persons = ('Mike', 'Ellen', 'John', 'Susi')
         db_file_type = ('fan_case', 'piv_case')
 
         file_ids = range(n_files)
@@ -200,7 +201,9 @@ class Database:
 
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
             with File(filename, 'w') as h5:
-                h5.attrs['operator'] = operators[np.random.randint(4)]
+                h5.attrs['contact_person'] = contact_persons[np.random.randint(4)]
+                h5.iri['contact_person'] = 'http://www.w3.org/ns/prov#Person'
+
                 if fid % 2:
                     __ftype__ = db_file_type[0]
                 else:
@@ -239,6 +242,7 @@ class Database:
                                      shape=(zplanes, 64, 86, 2))
                     g.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'mean v-component'},
                                      shape=(zplanes, 64, 86, 2))
+                    g.iri['units'] = 'http://qudt.org/schema/qudt/Unit'
 
     @staticmethod
     def generate_test_files(n_files: int = 5) -> List[pathlib.Path]:

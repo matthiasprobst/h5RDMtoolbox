@@ -1,14 +1,16 @@
-import h5py
-import numpy as np
 import pathlib
 import time
 import unittest
 import uuid
-import yaml
 from datetime import datetime
 from pathlib import Path
 
+import h5py
+import numpy as np
+import yaml
+
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import consts
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
@@ -452,3 +454,35 @@ class TestFile(unittest.TestCase):
             x = h5['x'][:]
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
+
+    def test_set_ATTRIRI(self):
+        """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
+
+        with h5tbx.File() as h5:
+            self.assertEqual({}, h5.iri)
+            h5.attrs['creator'] = {'firstName': 'John', 'lastName': 'Doe'}
+            h5.iri['creator'] = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
+            self.assertDictEqual(h5.attrs.iri, dict(creator='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'))
+            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'}, h5.iri)
+
+            ds = h5.create_dataset('ds', data=1, attrs={'units': 'm/s'})
+            ds.iri['units'] = 'http://qudt.org/schema/qudt/Unit'
+
+            self.assertTrue('units' in ds.attrs)
+            self.assertFalse(consts.IRI_ATTR_NAME in ds.attrs)
+            self.assertFalse(consts.IRI_ATTR_NAME in h5.attrs)
+
+            data = ds[()]
+        self.assertTrue('units' in data.attrs)
+        self.assertTrue(consts.IRI_ATTR_NAME in data.attrs)
+
+        with h5tbx.File(h5.hdf_filename) as h5:
+            self.assertTrue(consts.IRI_ATTR_NAME in h5.attrs)
+            self.assertEqual(h5.attrs[consts.IRI_ATTR_NAME], h5.iri)
+
+        with h5tbx.File() as h5:
+            self.assertEqual({}, h5.iri)
+            from h5rdmtoolbox import iri
+            h5.attrs['contact'] = iri.IRI('John Doe', 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson')
+            h5.attrs['number'] = 5
+            self.assertEqual({'contact': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'}, h5.iri)

@@ -1,11 +1,12 @@
 """h5rdtoolbox repository"""
 import atexit
 import pathlib
+import shutil
+from typing import Union, Callable
+
 # noinspection PyUnresolvedReferences
 import pint_xarray
-import shutil
 import xarray as xr
-from typing import Union, Callable
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
@@ -13,7 +14,7 @@ pint_xarray.unit_registry = get_ureg()
 
 from . import conventions
 from .conventions.core import Convention
-from . import plotting
+# from . import plotting
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
@@ -21,7 +22,6 @@ from . import database
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import errors
-
 from .wrapper.accessory import register_special_dataset
 
 name = 'h5rdmtoolbox'

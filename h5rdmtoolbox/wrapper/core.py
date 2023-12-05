@@ -1,21 +1,22 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
-import h5py
-import numpy as np
 import os
 import pathlib
-# noinspection PyUnresolvedReferences
-import pint
 import shutil
 import warnings
-import xarray as xr
 from collections.abc import Iterable
 from datetime import datetime, timezone
-from h5py._hl.base import phil, with_phil
-from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
+
+import h5py
+import numpy as np
+# noinspection PyUnresolvedReferences
+import pint
+import xarray as xr
+from h5py._hl.base import phil, with_phil
+from h5py._objects import ObjectID
 
 from . import logger
 # noinspection PyUnresolvedReferences
@@ -25,6 +26,7 @@ from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, conventions, utils, consts, protected_attributes
 from .. import get_ureg
+from .. import iri
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
@@ -37,6 +39,13 @@ H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
             'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
             'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
             'alignment_threshold', 'alignment_interval', 'meta_block_size')
+
+
+def convert_strings_to_datetimes(array):
+    if np.issubdtype(array.dtype, np.str_):
+        return np.array([datetime.fromisoformat(date_str) for date_str in array.flat]).reshape(array.shape)
+    else:
+        return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -167,6 +176,14 @@ def process_attributes(cls,
 
 class Core:
     """Class inherited by File, Dataset and Group containing common methods."""
+
+    @property
+    def iri(self) -> Dict:
+        if self.hdf_filename not in iri.irimanager:
+            existing_iri = self.rootparent.attrs.get(consts.IRI_ATTR_NAME, {})
+        else:
+            existing_iri = {}
+        return iri.irimanager.get(self.hdf_filename, existing_iri=existing_iri)
 
     def __delattr__(self, item):
         if self.standard_attributes.get(item, None):
@@ -1747,9 +1764,10 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                             if dim_ds_data.ndim == 0:
                                 dim_ds_data = np.array(datetime.fromisoformat(dim_ds_data.astype(str))).astype(datetime)
                             else:
-                                dim_ds_data = np.array(
-                                    [datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
-                                    datetime)
+                                dim_ds_data = convert_strings_to_datetimes(dim_ds_data.astype(str))
+                                # dim_ds_data = np.array(
+                                #     [datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
+                                #     datetime)
                     if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
                             coords[coord_name] = xr.DataArray(name=coord_name,
@@ -2278,6 +2296,12 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         Subclass of File
         """
         return File(filename, mode)
+
+    def close(self):
+        # if writable, update IRI
+        if self.mode in ('r+', 'w'):
+            self.attrs[consts.IRI_ATTR_NAME] = self.iri
+        super().close()
 
 
 Dataset._h5grp = Group

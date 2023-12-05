@@ -807,7 +807,10 @@ class StandardNameTable:
             raise FileNotFoundError(f'Could not find the template file at {template_filename.absolute()}')
 
         # Convert Markdown to HTML using pandoc
-        import pypandoc
+        try:
+            import pypandoc
+        except ImportError:
+            raise ImportError('Package "pypandoc" is required for this function.')
         output = pypandoc.convert_file(str(markdown_filename.absolute()), 'html', format='md',
                                        extra_args=['--template', template_filename])
 
