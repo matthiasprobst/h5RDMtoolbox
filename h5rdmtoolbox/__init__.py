@@ -100,17 +100,20 @@ def distinct(hdf_filename, key, objfilter=None):
         return h5.distinct(key, objfilter)
 
 
-def dump(src: Union[str, File, pathlib.Path]) -> None:
+def dump(src: Union[str, File, pathlib.Path],
+         **kwargs) -> None:
     """Call h5.dump() on the provided HDF5 file
 
     Parameters
     ----------
     src : str, File, pathlib.Path
         the HDF5 file or filename to dump. An object which has a hdf_filename attribute can also be provided.
+    kwargs
+        kwargs passed to h5.dump(). See h5.dump() for more information.
     """
     if isinstance(src, File):
         with File(src.hdf_filename) as h5:
-            return h5.dump()
+            return h5.dump(**kwargs)
 
     if isinstance(src, (str, pathlib.Path)):
         pass
@@ -119,7 +122,7 @@ def dump(src: Union[str, File, pathlib.Path]) -> None:
             src = src.hdf_filename
 
     with File(src) as h5:
-        return h5.dump()
+        return h5.dump(**kwargs)
 
 
 def dumps(src: Union[str, File, pathlib.Path]):

@@ -133,12 +133,17 @@ class _HDF5StructureRepr:
     def __init__(self, ignore_attrs=None):
         self.base_intent = '  '
         self.max_attr_length = 100
-        self.collapsed = True
+        self.collapsed = None
+
         self._obj_cfg = {}
         if ignore_attrs is None:
             self.ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
         else:
             self.ignore_attrs = ignore_attrs
+
+    @property
+    def checkbox_state(self) -> str:
+        return '' if self.collapsed else 'checked'
 
     def __dataset__(self, name, h5obj) -> str:
         """overwrite the H5Repr parent method"""
@@ -262,7 +267,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
             return f"""\n
                     <ul id="{_id1}" class="h5tb-var-list">
-                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                     <label class='h5tb-varname' 
                     for="{_id2}">{name}</label>: {h5obj.values[()]}
                     """
@@ -274,7 +279,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         units = h5obj.attrs.get('units', '')
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
-                <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                 <label class='h5tb-varname' for="{_id2}">{name}</label>
                 <span class="h5tb-dims">{h5obj.values[()]} [{units}] ({h5obj.dtype})</span>"""
         return _html
@@ -323,9 +328,10 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
         _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
+
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
-                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                     <label class='h5tb-varname' for="{_id2}">{name}</label>
                     <span class="h5tb-dims">{_shape_repr} [{h5obj.dtype}]{chunks_str}{maxshape_str}</span>"""
         return _html
@@ -359,12 +365,12 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         nkeys = len(h5obj.keys())
         _id = f'ds-{name}-{perf_counter_ns().__str__()}'
         _groupname = os.path.basename(h5obj.name)
-        checkbox_state = 'checked'
+
         if _groupname == '':
             _groupname = '/'  # recover root name
+            checkbox_state = 'checked'
         else:
-            if self.collapsed:
-                checkbox_state = ''
+            checkbox_state = self.checkbox_state
 
         _html = f"""\n
               <ul style="list-style-type: none;" class="h5grp-sections">

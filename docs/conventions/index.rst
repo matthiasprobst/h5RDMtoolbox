@@ -20,6 +20,7 @@ The following chapters will explain the usage of conventions (standard attribute
     :maxdepth: 2
     :hidden:
 
+    ontologies.ipynb
     standard_attributes_and_conventions.ipynb
     layouts.ipynb
     Examples <examples/index>
