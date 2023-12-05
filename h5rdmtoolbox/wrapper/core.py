@@ -564,7 +564,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         where each datetime is converted to a string with ISO format"""
         if attrs is None:
             attrs = {}
-        attrs.update({'ISTIMEDS': True,
+        attrs.update({'ISTIMEDS': 1,
                       'TIMEFORMAT': 'ISO'})
         if isinstance(data, np.ndarray):
             return self.create_string_dataset(name, data=[t.astype(datetime).isoformat() for t in data],
