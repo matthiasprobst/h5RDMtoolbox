@@ -205,12 +205,14 @@ class TestStandardAttributes(unittest.TestCase):
     def test_to_html(self):
         try:
             import pypandoc
-            pypandoc_exists = True
+            from h5rdmtoolbox.utils import generate_temporary_filename
+            pypandoc.convert_file(generate_temporary_filename(touch=True), 'html', format='md')
+            pypandoc_works = True
         except OSError:
-            pypandoc_exists = False
+            pypandoc_works = False
             warnings.warn('pypandoc not properly installed. Cannot test "test_to_html"', UserWarning)
 
-        if self.connected and pypandoc_exists:
+        if self.connected and pypandoc_works:
             snt = StandardNameTable(name='test_snt',
                                     standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
                                     version='v1.0dev',
