@@ -191,7 +191,8 @@ class Core:
                 del self.attrs[item]
                 return
             raise ValueError('Deleting standard attributes is not allowed based on the current configuration! '
-                             'You may change this by calling set_config("allow_deleting_standard_attributes", True).')
+                             'You may change this by calling '
+                             '"h5tbx.set_config(allow_deleting_standard_attributes=True)".')
         if item in self and get_config('natural_naming'):
             del self[item]
             return
@@ -2079,6 +2080,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             self._hdf_filename = Path(self.filename)
             return
 
+        fname = None
         # name is path or None:
         if name is None:
             _tmp_init = True
@@ -2089,6 +2091,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             else:
                 mode = mode
         elif isinstance(name, (str, pathlib.Path)):
+            logger.debug('A filename is given to initialize the File class')
             fname = pathlib.Path(name)
             # a filename is given.
 
@@ -2096,18 +2099,24 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 # file does exist and mode not given --> read only!
                 if fname.exists():
                     mode = 'r'
+                    logger.debug('Mode is set to "r" because file exists and mode was not given.')
 
                 # file does not exist and mode is not given--> write!
                 elif not fname.exists():
                     mode = 'w'
-            # else mode is given, so just continue... may be correct, may be not...
+                    logger.debug('Mode is set to "w" because file does not exist and mode was not given.')
+            elif mode == 'w' and fname.exists():
+                fname.unlink()
+                logger.debug('File exists and mode is set to "w". Deleting file first.')
+            # else mode is given, so just continue... may be correct, may be not... let h5py find out
 
         if mode is None:
             logger.debug('Mode not set. Set it to "r" by default')
             mode = 'r'
         elif not isinstance(name, (str, Path)):
             raise ValueError(
-                f'It seems that no proper file name is passed: type of "{name}" is {type(name)}')
+                f'It seems that no proper file name is passed: type of "{name}" is {type(name)}'
+            )
         else:
             if mode == 'r+':
                 if not Path(name).exists():

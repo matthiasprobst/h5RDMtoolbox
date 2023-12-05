@@ -5,6 +5,8 @@ Log of changes in the versions
 ## v0.13.0
 - scale and offset is now implemented in the package is should not longer be defined in a convention.
 - bugfix normalization extension
+- bugfix exporting xr.DataArray built with the toolbox to netCDF
+- support usage of IRI to describe metadata
 
 ## v0.12.2
 

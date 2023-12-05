@@ -1,9 +1,10 @@
 import pathlib
-import pint
-import requests
 import shutil
 import unittest
 import warnings
+
+import pint
+import requests
 import yaml
 
 import h5rdmtoolbox
@@ -107,6 +108,28 @@ def validate_f1(a, b, c=3, d=2):
         self.assertTupleEqual(('scale_and_offset',), cv.decoders)
         self.assertIn('comment', cv.properties[h5tbx.File])
         self.assertIn('comment', cv.properties[h5tbx.Group])
+
+    def test_overwrite_existing_file(self):
+        if self.connected:
+            # delete an existing convention like this first:
+            h5tbx.conventions.from_zenodo(doi='10156750')
+            # h5tbx.conventions.from_yaml('test_convention.yaml')
+            h5tbx.use('h5rdmtoolbox-tutorial-convention')
+
+            with h5tbx.File(mode='w',
+                            attrs=dict(
+                                data_type='experimental',
+                                contact='https://orcid.org/0000-0001-8729-0482')) as h5:
+                self.assertTrue('contact' in h5.attrs)
+                self.assertTrue('data_type' in h5.attrs)
+
+            # there was a bug, that data was not correctly written to the file when an existing file was overwritten
+            # so let's check that:
+            with h5tbx.File(h5.hdf_filename, mode='w',
+                            data_type='experimental',
+                            contact='https://orcid.org/0000-0001-8729-0482') as h5:
+                self.assertTrue('contact' in h5.attrs)
+                self.assertTrue('data_type' in h5.attrs)
 
     def test_add_decoder(self):
         h5tbx.use('h5tbx')

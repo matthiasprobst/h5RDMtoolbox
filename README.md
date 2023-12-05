@@ -12,13 +12,13 @@ HDF5 to achieve a sustainable data lifecycle which follows
 the [FAIR (Findable, Accessible, Interoperable, Reusable)](https://www.nature.com/articles/sdata201618)
 principles. It specifically supports the five main steps of
 
-1. Planning (defining a internal layout for HDF5 a metadata convention for attribute usage)
+1. Planning (defining an internal layout for HDF5 a metadata convention or ontology for attribute usage)
 2. Collecting data (creating HDF5 files or converting to HDF5 files from other sources)
 3. Analyzing and processing data (Plotting, deriving data, ...)
 4. Sharing data (publishing, archiving, ... e.g. to databases like [mongoDB](https://www.mongodb.com/) or repositories
    like [Zenodo](https://zenodo.org/))
 5. Reusing data (Searching data in databases, local file structures or online repositories
-   like [Zenodo](https://zenodo.org)).
+   like [Zenodo](https://zenodo.org), discover metadata based on persistent identifier like IRI).
 
 ## Quickstart
 
