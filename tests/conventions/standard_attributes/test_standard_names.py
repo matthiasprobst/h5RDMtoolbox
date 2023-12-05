@@ -206,7 +206,10 @@ class TestStandardAttributes(unittest.TestCase):
         try:
             import pypandoc
             from h5rdmtoolbox.utils import generate_temporary_filename
-            pypandoc.convert_file(generate_temporary_filename(touch=True), 'html', format='md')
+            fname = generate_temporary_filename(touch=False)
+            with open(fname, 'w') as f:
+                f.write('# test')
+            pypandoc.convert_file(fname, 'html', format='md')
             pypandoc_works = True
         except OSError:
             pypandoc_works = False
