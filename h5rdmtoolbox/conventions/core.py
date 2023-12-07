@@ -505,7 +505,8 @@ def from_yaml(yaml_filename: Union[str, pathlib.Path, List[str], List[pathlib.Pa
     # return cv
 
 
-def from_zenodo(doi, name=None,
+def from_zenodo(doi,
+                name: str = None,
                 overwrite: bool = False,
                 force_download: bool = False) -> Convention:
     """Download a YAML file from a zenodo repository
@@ -515,6 +516,8 @@ def from_zenodo(doi, name=None,
     doi: str
         DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10156750 or
         10.5281/zenodo.10156750 or https://doi.org/10.5281/zenodo.10156750)
+    name: str=None
+        Name to be sed for the filename. If None, the name is taken from the zenodo record.
     overwrite: bool = False
         Whether to overwrite existing convention with the same name. Default is False
     force_download: bool
@@ -529,9 +532,9 @@ def from_zenodo(doi, name=None,
     # doi = zsearch.utils.parse_doi(doi)
     doi = str(doi)
     if name is None:
-        filename = UserDir['cache'] / f'{doi.replace("/", "_")}'
+        filename = UserDir['cache'] / f'{doi.replace("/", "_").replace(":", "_")}'
     else:
-        filename = UserDir['cache'] / f'{doi.replace("/", "_")}/{name}'
+        filename = UserDir['cache'] / f'{doi.replace("/", "_").replace(":", "_")}/{name}'
 
     if not filename.exists() or force_download:
         record = zsearch.search_doi(doi, parse_doi=False)

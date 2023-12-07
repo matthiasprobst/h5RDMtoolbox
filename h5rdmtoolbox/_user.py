@@ -1,6 +1,6 @@
 import appdirs
+import importlib_resources
 import pathlib
-import pkg_resources
 import shutil
 from itertools import count
 from typing import Tuple
@@ -94,12 +94,14 @@ class DirManger:
 UserDir = DirManger()
 
 
-def _get_pkg_resource_filename(fname):
-    try:
-        filename = pkg_resources.resource_filename('h5rdmtoolbox', fname)
-    except TypeError:
-        filename = pathlib.Path(__file__).parent / fname
-    return filename
+def _get_pkg_resource_filename(fname: str) -> pathlib.Path:
+    """Returns a filename or folder in the package data folder."""
+    return importlib_resources.files('h5rdmtoolbox') / fname
+    # try:
+    #     filename = importlib_resources.files('h5rdmtoolbox') / fname
+    # except TypeError:
+    #     filename = pathlib.Path(__file__).parent / fname
+    # return filename
 
 
 config_dir = pathlib.Path.home() / ".config" / 'h5rdmtoolbox'

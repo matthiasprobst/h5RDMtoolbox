@@ -1,14 +1,13 @@
+import h5py
+import importlib_resources
+import numpy as np
 import os
 import re
 import typing
-from abc import abstractmethod
-from time import perf_counter_ns
-
-import h5py
-import numpy as np
-import pkg_resources
 from IPython.display import HTML, display
+from abc import abstractmethod
 from numpy import ndarray
+from time import perf_counter_ns
 
 from . import get_config
 from . import protected_attributes
@@ -16,7 +15,7 @@ from .orcid import is_valid_orcid_pattern, get_html_repr
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
-    CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
+    CSS_STR = importlib_resources.files('h5rdmtoolbox').joinpath('data/style.css').read_bytes().decode("utf8")
 except FileNotFoundError:
     import pathlib
 
@@ -438,7 +437,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     _value_str = _value_str[1:-1]
 
             _value, is_url = process_string_for_link(_value_str)
-            if is_url:
+            if is_url and not _value.startswith('{'):
                 if 'orcid.org' in _value:
                     from . import orcid
                     orcid_html = orcid.get_html_repr(attr_value.strip('/').rsplit('/', 1)[-1])

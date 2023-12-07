@@ -106,7 +106,7 @@ Install optional dependencies by specifying them in square brackets after the pa
 - `xmltodict`: Reading of xml files
 - `tabulate>=0.8.10`: Pretty printing of tables
 - `python-gitlab`: Access to gitlab repositories
-- `pandoc>=2.3`: Conversion of markdown files to html
+- `pypandoc>=2.3`: Conversion of markdown files to html
 
 ## Planned, future developments
 
