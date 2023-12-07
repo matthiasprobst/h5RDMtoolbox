@@ -28,7 +28,7 @@ A quickstart notebook can be tested by clicking on the following badge:
 
 ## Documentation
 
-Please find a comprehensive documentation with many examples [here](h5rdmtoolbox.readthedocs.io/en/latest/) or by click
+Please find a comprehensive documentation with many examples [here](https://h5rdmtoolbox.readthedocs.io/en/latest/) or by click
 on the image, which shows the research data lifecycle in the center and the respective toolbox features on the outside:
 
 A paper is published in the journal [inggrid](https://preprints.inggrid.org/repository/view/23/).
