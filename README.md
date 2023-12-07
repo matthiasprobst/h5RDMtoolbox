@@ -3,7 +3,7 @@
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
 ![DOCS](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/branch/dev/graph/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
-![pyvers](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)
+![pyvers](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)
 
 *Note, that the project is still under development!*
 
@@ -37,7 +37,7 @@ A paper is published in the journal [inggrid](https://preprints.inggrid.org/repo
 
 ## Installation
 
-Use python 3.8 or higher (tested until 3.10). If you are a regular user, you can install the package via pip:
+Use python 3.8 or higher (automatic testing is performed until 3.12). If you are a regular user, you can install the package via pip:
 
     pip install h5RDMtoolbox
 
@@ -45,7 +45,7 @@ Use python 3.8 or higher (tested until 3.10). If you are a regular user, you can
 
 Developers may clone the repository and install the package from source. Clone the repository first:
 
-    git clone https://github.com/matthiasprobst/h5RDMtoolbox.git
+    git clone https://github.com/matthiasprobst/h5RDMtoolbox.git@main
 
 Then, run
 
@@ -64,7 +64,7 @@ specific to the features of the package:
 
 **General dependencies are ...**
 
-- `numpy>=1.20,<1.23.0`: Scientific computing, handling of arrays
+- `numpy>=1.20`: Scientific computing, handling of arrays
 - `matplotlib>=3.5.2`: Plotting
 - `appdirs>=1.4.4`: Managing user and application directories
 - `packaging`: Version handling
@@ -80,7 +80,7 @@ specific to the features of the package:
 - `pint_xarray>=0.2.1`: Working with units for usage with xarray
 - `python-forge==18.6.0`: Used to update function signatures when using
   the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
-- `pyyaml`: Reading and writing of yaml files, e.g. metadata definitions (conventions)
+- `pyyaml>6.0.0`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions collide with python 3.11
 - `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
 
 #### Optional dependencies

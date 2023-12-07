@@ -52,7 +52,7 @@ Please navigate through the chapters on the left to learn more about the package
 
 Installation
 ------------
-The repository requires python 3.8. or higher (tested for 3.8, 3.9, 3.10).
+The repository requires python 3.8. or higher (automatic testing is performed until 3.12).
 
 .. code:: sh
 
