@@ -10,6 +10,7 @@ from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import consts
+from h5rdmtoolbox import iri
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
@@ -459,58 +460,56 @@ class TestFile(unittest.TestCase):
 
         with h5tbx.File() as h5:
             h5.attrs['creator'] = 'John Doe'
-            self.assertEqual(None, h5.iri['creator']['class'])
-            self.assertEqual(None, h5.iri['creator']['individual'])
-            self.assertEqual(None, h5.iri.get('creator')['individual'])
-            self.assertEqual(None, h5.iri.get('creator').get('class', None))
-            self.assertEqual(None, h5.iri.get('creator').get('individual', None))
+            self.assertEqual(None, h5.iri['creator'].name)
+            self.assertEqual(None, h5.iri['creator'][iri.DATA_KW])
+            self.assertEqual(None, h5.iri.get('creator')[iri.DATA_KW])
+            self.assertEqual(None, h5.iri.get('creator').get(iri.NAME_KW, None))
+            self.assertEqual(None, h5.iri.get('creator').get(iri.DATA_KW, None))
 
-            self.assertEqual({}, h5.attrs.get(consts.IRI_CLASS_ATTR_NAME, {}))
-            self.assertEqual({}, h5.attrs.get(consts.IRI_INDIVIDUAL_ATTR_NAME, {}))
+            self.assertEqual({}, h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
+            self.assertEqual({}, h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
             h5.attrs.create('creator', data='John Doe',
                             iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
                             iri_individual=None
                             )
 
             self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
-                             h5.attrs.get(consts.IRI_CLASS_ATTR_NAME, {}))
-            self.assertEqual({}, h5.attrs.get(consts.IRI_INDIVIDUAL_ATTR_NAME, {}))
+                             h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
+            self.assertEqual({}, h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
 
             h5.attrs.create('creator', data='John Doe',
                             iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
                             iri_individual='test'
                             )
             self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-                             h5.iri.get('creator').get('class', None))
-            self.assertEqual('test', h5.iri.get('creator').get('individual', None))
+                             h5.iri.get('creator').get(iri.NAME_KW, None))
+            self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
             self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-                             h5.iri.get('creator').get('class', None))
-            self.assertEqual('test', h5.iri.get('creator').get('individual', None))
+                             h5.iri.get('creator').get(iri.NAME_KW, None))
+            self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
 
             self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
-                             h5.attrs.get(consts.IRI_CLASS_ATTR_NAME, {}))
+                             h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
             self.assertEqual({'creator': 'test'},
-                             h5.attrs.get(consts.IRI_INDIVIDUAL_ATTR_NAME, {}))
+                             h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
 
-            h5.iri_cls['creator'] = '1'
-            self.assertEqual('1', h5.iri_cls['creator'])
-
-            h5.iri_individual['creator'] = '2'
-            self.assertEqual('2', h5.iri_individual['creator'])
-
-            h5.iri['creator'] = {'class': '1',
-                                 'individual': '2'}
-            self.assertEqual({'class': '1', 'individual': '2'},
+            h5.iri['creator'] = {iri.NAME_KW: '1',
+                                 iri.DATA_KW: '2'}
+            self.assertEqual({iri.NAME_KW: '1', iri.DATA_KW: '2'},
                              h5.iri['creator'])
 
-            h5.iri['creator'] = {'class': '3', }
-            self.assertEqual('3', h5.iri['creator']['class'])
+            h5.iri['creator'] = {iri.NAME_KW: '3', }
+            self.assertEqual('3', h5.iri['creator'][iri.NAME_KW])
 
             with self.assertRaises(ValueError):
                 h5.iri['creator'] = {'invalid': 5}
 
-            h5.iri['creator']['class'] = '4'
-            self.assertEqual('4', h5.iri['creator']['class'])
+            h5.iri['creator'][iri.NAME_KW] = '4'
+            self.assertEqual('4', h5.iri['creator'].name)
 
-            h5.iri['creator']['individual'] = '5'
-            self.assertEqual('5', h5.iri['creator']['individual'])
+            h5.iri['creator'][iri.DATA_KW] = '5'
+            self.assertEqual('5', h5.iri['creator'].data)
+
+            del h5.iri['creator']
+            self.assertEqual(None, h5.iri['creator'].name)
+            self.assertEqual(None, h5.iri['creator'].data)

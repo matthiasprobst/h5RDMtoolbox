@@ -133,9 +133,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
     def create(self, name, data, shape=None, dtype=None, iri_cls: str = None, iri_individual: str = None):
         r = super().create(name, data, shape, dtype)
         if iri_cls is not None:
-            iri.set_cls(self, name, iri_cls)
+            iri.set_name(self, name, iri_cls)
         if iri_individual is not None:
-            iri.set_individual(self, name, iri_individual)
+            iri.set_data(self, name, iri_individual)
         return r
 
     @with_phil

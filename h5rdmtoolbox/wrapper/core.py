@@ -206,16 +206,9 @@ class Core:
         return self.convention.properties.get(self.__class__, {})
 
     @property
-    def iri_cls(self):
-        return iri.IRIC(self.attrs)
-
-    @property
-    def iri_individual(self):
-        return iri.IRIC(self.attrs)
-
-    @property
     def iri(self):
         return iri.IRIManager(self.attrs)
+
 
 
 class SpecialAttributeWriter:

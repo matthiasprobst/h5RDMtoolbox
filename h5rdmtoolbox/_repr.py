@@ -22,9 +22,6 @@ except FileNotFoundError:
     with open(pathlib.Path(__file__).parent / 'data/style.css') as f:
         CSS_STR = f.read().rstrip()
 
-IRI_ICON_FILENAME = importlib_resources.files('h5rdmtoolbox').joinpath('data/iri_icon.png').absolute()
-assert IRI_ICON_FILENAME.exists()
-
 """
 disclaimer:
 
@@ -129,10 +126,11 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
 
     return string, False
 
-def get_iri_repr(iri: str) -> str:
+
+def get_iri_icon_href(iri: str) -> str:
     """get html representation of an IRI with icon"""
-    print('file:///' + str(IRI_ICON_FILENAME).replace("\\", "/"))
-    return f'<a href="{iri}"><img src="file:///{str(IRI_ICON_FILENAME).replace("\\", "/")}" alt=" [IRI]" width="16" height="16" /></a>'
+    return f'<a href="{iri}"><img src="https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-PIDattr/h5rdmtoolbox/data/iri_icon.png?raw=true" alt=" [IRI]" width="16" height="16" /></a>'
+
 
 class _HDF5StructureRepr:
 
@@ -410,15 +408,13 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __attrs__(self, name, h5obj):
         attr_value = h5obj.attrs.raw[name]
-
         iri = h5obj.iri.get(name)
 
-        iri_cls = iri.get('class', None)
-        if iri_cls is not None:
-            # name += make_href(iri_cls, ' [IRI]')
-            name += get_iri_repr(iri_cls)#make_href(get_iri_repr(iri_cls), ' [IRI]')
+        iri_name = iri.name
+        if iri_name is not None:
+            name += get_iri_icon_href(iri_name)
 
-        iri_individual = iri.get('individual', None)
+        iri_data = iri.data
 
         if isinstance(attr_value, ndarray):
 
@@ -432,8 +428,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _string_value_list.append(item)
                 _value_str = ", ".join(_string_value_list)
 
-                if iri_individual is not None:
-                    _value_str += make_href(iri_individual, ' [IRI]')
+                if iri_data is not None:
+                    _value_str += get_iri_icon_href(iri_data)
                 return '<li style="list-style-type: none; ' \
                        f'font-style: italic">{name} : {_value_str}</li>'
             else:
@@ -442,8 +438,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if len(_value) > self.max_attr_length:
                     _value = f'{_value[0:self.max_attr_length]}...'
 
-                if iri_individual is not None:
-                    _value += make_href(iri_individual, ' [IRI]')
+                if iri_data is not None:
+                    _value += get_iri_icon_href(iri_name)
 
                 return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
 
@@ -458,8 +454,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if 'orcid.org' in _value:
                     from . import orcid
                     orcid_html = orcid.get_html_repr(attr_value.strip('/').rsplit('/', 1)[-1])
-                    if iri_individual is not None:
-                        orcid_html += make_href(iri_individual, ' [IRI]')
+                    if iri_data is not None:
+                        orcid_html += get_iri_icon_href(iri_data)
                     return f'<li style="list-style-type: none; font-style: italic">{name} : {orcid_html}</li>'
             else:
                 if self.max_attr_length:
@@ -473,8 +469,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             # if len(_value_str) > self.max_attr_length:
             #     _value_str = f'{_value_str[0:self.max_attr_length-1]}...'
             # print(f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>')
-            if iri_individual is not None:
-                _value_str += make_href(iri_individual, ' [IRI]')
+            if iri_data is not None:
+                _value_str += get_iri_icon_href(iri_data)
             return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
         if not isinstance(attr_value, ndarray):
@@ -492,8 +488,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 else:
                     _value_str = attr_value
 
-        if iri_individual is not None:
-            _value_str += make_href(iri_individual, ' [IRI]')
+        if iri_data is not None:
+            _value_str += get_iri_icon_href(iri_data)# make_href(iri_data, ' [IRI]')
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 

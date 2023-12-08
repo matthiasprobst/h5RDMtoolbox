@@ -3,23 +3,40 @@ from typing import Dict
 
 from . import consts
 
+NAME_KW = 'name'
+DATA_KW = 'data'
 
-def set_cls(attr: h5py.AttributeManager, attr_name: str, cls: str) -> None:
+
+def set_name(attr: h5py.AttributeManager, attr_name: str, cls: str) -> None:
     """Set the class of an attribute"""
-    iri_cls_data = attr.get(consts.IRI_CLASS_ATTR_NAME, None)
-    if iri_cls_data is None:
-        iri_cls_data = {}
-    iri_cls_data.update({attr_name: cls})
-    attr[consts.IRI_CLASS_ATTR_NAME] = iri_cls_data
+    iri_name_data = attr.get(consts.IRI_NAME_ATTR_NAME, None)
+    if iri_name_data is None:
+        iri_name_data = {}
+    iri_name_data.update({attr_name: cls})
+    attr[consts.IRI_NAME_ATTR_NAME] = iri_name_data
 
 
-def set_individual(attr: h5py.AttributeManager, attr_name: str, individual: str) -> None:
+def del_iri_entry(attr: h5py.AttributeManager, attr_name: str) -> None:
+    """Delete the attribute name from name and data iri dicts"""
+    iri_name_data = attr.get(consts.IRI_NAME_ATTR_NAME, None)
+    iri_data_data = attr.get(consts.IRI_NAME_ATTR_NAME, None)
+    if iri_name_data is None:
+        iri_name_data = {}
+    if iri_data_data is None:
+        iri_data_data = {}
+    iri_name_data.pop(attr_name, None)
+    iri_data_data.pop(attr_name, None)
+    attr[consts.IRI_NAME_ATTR_NAME] = iri_name_data
+    attr[consts.IRI_DATA_ATTR_NAME] = iri_data_data
+
+
+def set_data(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
     """Set the class of an attribute"""
-    iri_individual_data = attr.get(consts.IRI_INDIVIDUAL_ATTR_NAME, None)
-    if iri_individual_data is None:
-        iri_individual_data = {}
-    iri_individual_data.update({attr_name: individual})
-    attr[consts.IRI_INDIVIDUAL_ATTR_NAME] = iri_individual_data
+    iri_data_data = attr.get(consts.IRI_DATA_ATTR_NAME, None)
+    if iri_data_data is None:
+        iri_data_data = {}
+    iri_data_data.update({attr_name: data})
+    attr[consts.IRI_DATA_ATTR_NAME] = iri_data_data
 
 
 class IRIDict(Dict):
@@ -28,13 +45,29 @@ class IRIDict(Dict):
         self._attr = attr
         self._attr_name = attr_name
 
+    @property
+    def name(self):
+        return self[NAME_KW]
+
+    @name.setter
+    def name(self, value):
+        set_name(self._attr, self._attr_name, value)
+
+    @property
+    def data(self):
+        return self[DATA_KW]
+
+    @data.setter
+    def data(self, value):
+        set_data(self._attr, self._attr_name, value)
+
     def __setitem__(self, key, value):
-        if key == 'class':
-            set_cls(self._attr, self._attr_name, value)
-        elif key == 'individual':
-            set_individual(self._attr, self._attr_name, value)
+        if key == NAME_KW:
+            set_name(self._attr, self._attr_name, value)
+        elif key == DATA_KW:
+            set_data(self._attr, self._attr_name, value)
         else:
-            raise KeyError('key must be "class" or "individual"')
+            raise KeyError(f'key must be "{NAME_KW}" or "{DATA_KW}"')
 
 
 class IRIManager:
@@ -49,22 +82,25 @@ class IRIManager:
     def __setitem__(self, key, value):
         if not isinstance(value, dict):
             raise TypeError('value must be a dict')
-        cls = value.pop('class', None)
-        individual = value.pop('individual', None)
+        cls = value.pop(NAME_KW, None)
+        data = value.pop(DATA_KW, None)
         if len(value) > 0:
-            raise ValueError('value must be a dict with keys "class" and/or "individual"')
+            raise ValueError(f'value must be a dict with keys "{NAME_KW}" and/or "{DATA_KW}"')
         if cls is not None:
-            set_cls(self._attr, key, cls)
-        if individual is not None:
-            set_individual(self._attr, key, individual)
+            set_name(self._attr, key, cls)
+        if data is not None:
+            set_data(self._attr, key, data)
 
     def __getitem__(self, item) -> IRIDict:
-        return IRIDict({'class': self._attr.get(consts.IRI_CLASS_ATTR_NAME, {}).get(item, None),
-                        'individual': self._attr.get(consts.IRI_INDIVIDUAL_ATTR_NAME, {}).get(item, None)},
+        return IRIDict({NAME_KW: self._attr.get(consts.IRI_NAME_ATTR_NAME, {}).get(item, None),
+                        DATA_KW: self._attr.get(consts.IRI_DATA_ATTR_NAME, {}).get(item, None)},
                        self._attr, item)
 
+    def __delitem__(self, attr_name: str):
+        del_iri_entry(self._attr, attr_name)
 
-class IRIC(str):
+
+class IRI_NAME(str):
     """IRI class attribute manager"""
 
     def __new__(cls, attr):
@@ -73,14 +109,14 @@ class IRIC(str):
         return instance
 
     def __setitem__(self, key, value):
-        set_cls(self._attr, key, value)
+        set_name(self._attr, key, value)
 
     def __getitem__(self, item):
-        return self._attr[consts.IRI_CLASS_ATTR_NAME].get(item, None)
+        return self._attr[consts.IRI_NAME_ATTR_NAME].get(item, None)
 
 
-class IRII(IRIManager):
-    """IRI individual attribute manager"""
+class IRI_DATA(IRIManager):
+    """IRI data attribute manager"""
 
     def __setitem__(self, key, value):
-        set_cls(self._attr, key, value)
+        set_name(self._attr, key, value)
