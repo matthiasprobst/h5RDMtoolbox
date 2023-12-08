@@ -129,7 +129,7 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
 
 def get_iri_icon_href(iri: str) -> str:
     """get html representation of an IRI with icon"""
-    return f'<a href="{iri}"><img src="https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-PIDattr/h5rdmtoolbox/data/iri_icon.png?raw=true" alt=" [IRI]" width="16" height="16" /></a>'
+    return f'<a href="{iri}"><img src="https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true" alt=" [IRI]" width="16" height="16" /></a>'
 
 
 class _HDF5StructureRepr:
