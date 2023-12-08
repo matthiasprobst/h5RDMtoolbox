@@ -513,3 +513,9 @@ class TestFile(unittest.TestCase):
             del h5.iri['creator']
             self.assertEqual(None, h5.iri['creator'].name)
             self.assertEqual(None, h5.iri['creator'].data)
+
+            h5.create_dataset('test', data=[1, 2, 3], attrs={'contact_person': 'John Doe'})
+            h5['test'].iri['contact_person'].name = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
+            data = h5['test'][()]
+            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                             data.attrs['IRI_NAME']['contact_person'])

@@ -57,10 +57,6 @@ def dataset_value_decoder(func):
         ds = args[0]
         assert isinstance(ds, h5py.Dataset)
         xarr = func(*args, **kwargs)
-        if isinstance(xarr, xr.DataArray):
-            iri_attr = {k: v for k, v in ds.attrs.items() if k in ds.attrs_iri_name}
-            if iri_attr:  # only add if there is something to add
-                xarr.attrs[consts.IRI_ATTR_NAME] = iri_attr
 
         parent_slice = args[1]
 
