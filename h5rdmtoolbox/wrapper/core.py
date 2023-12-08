@@ -1,22 +1,21 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
-import os
-import pathlib
-import shutil
-import warnings
-from collections.abc import Iterable
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import List, Dict, Union, Tuple, Callable
-
 import h5py
 import numpy as np
+import os
+import pathlib
 # noinspection PyUnresolvedReferences
 import pint
+import shutil
+import warnings
 import xarray as xr
+from collections.abc import Iterable
+from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
+from pathlib import Path
+from typing import List, Dict, Union, Tuple, Callable
 
 from . import logger
 # noinspection PyUnresolvedReferences
@@ -177,14 +176,6 @@ def process_attributes(cls,
 class Core:
     """Class inherited by File, Dataset and Group containing common methods."""
 
-    @property
-    def iri(self) -> Dict:
-        if self.hdf_filename not in iri.irimanager:
-            existing_iri = self.rootparent.attrs.get(consts.IRI_ATTR_NAME, {})
-        else:
-            existing_iri = {}
-        return iri.irimanager.get(self.hdf_filename, existing_iri=existing_iri)
-
     def __delattr__(self, item):
         if self.standard_attributes.get(item, None):
             if get_config('allow_deleting_standard_attributes'):
@@ -213,6 +204,18 @@ class Core:
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
         return self.convention.properties.get(self.__class__, {})
+
+    @property
+    def iri_cls(self):
+        return iri.IRIC(self.attrs)
+
+    @property
+    def iri_individual(self):
+        return iri.IRIC(self.attrs)
+
+    @property
+    def iri(self):
+        return iri.IRIManager(self.attrs)
 
 
 class SpecialAttributeWriter:
@@ -2306,11 +2309,11 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         """
         return File(filename, mode)
 
-    def close(self):
-        # if writable, update IRI
-        if self.mode in ('r+', 'w'):
-            self.attrs[consts.IRI_ATTR_NAME] = self.iri
-        super().close()
+    # def close(self):
+    #     # if writable, update IRI
+    #     if self.mode in ('r+', 'w'):
+    #         self.attrs[consts.ATTR_IRI_NAME] = self.attr_name_iri
+    #     super().close()
 
 
 Dataset._h5grp = Group

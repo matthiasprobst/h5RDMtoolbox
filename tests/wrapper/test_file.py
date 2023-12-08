@@ -1,13 +1,12 @@
+import h5py
+import numpy as np
 import pathlib
 import time
 import unittest
 import uuid
+import yaml
 from datetime import datetime
 from pathlib import Path
-
-import h5py
-import numpy as np
-import yaml
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import consts
@@ -459,30 +458,59 @@ class TestFile(unittest.TestCase):
         """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
 
         with h5tbx.File() as h5:
-            self.assertEqual({}, h5.iri)
-            h5.attrs['creator'] = {'firstName': 'John', 'lastName': 'Doe'}
-            h5.iri['creator'] = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
-            self.assertDictEqual(h5.attrs.iri, dict(creator='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'))
-            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'}, h5.iri)
+            h5.attrs['creator'] = 'John Doe'
+            self.assertEqual(None, h5.iri['creator']['class'])
+            self.assertEqual(None, h5.iri['creator']['individual'])
+            self.assertEqual(None, h5.iri.get('creator')['individual'])
+            self.assertEqual(None, h5.iri.get('creator').get('class', None))
+            self.assertEqual(None, h5.iri.get('creator').get('individual', None))
 
-            ds = h5.create_dataset('ds', data=1, attrs={'units': 'm/s'})
-            ds.iri['units'] = 'http://qudt.org/schema/qudt/Unit'
+            self.assertEqual({}, h5.attrs.get(consts.IRI_CLASS_ATTR_NAME, {}))
+            self.assertEqual({}, h5.attrs.get(consts.IRI_INDIVIDUAL_ATTR_NAME, {}))
+            h5.attrs.create('creator', data='John Doe',
+                            iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                            iri_individual=None
+                            )
 
-            self.assertTrue('units' in ds.attrs)
-            self.assertFalse(consts.IRI_ATTR_NAME in ds.attrs)
-            self.assertFalse(consts.IRI_ATTR_NAME in h5.attrs)
+            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
+                             h5.attrs.get(consts.IRI_CLASS_ATTR_NAME, {}))
+            self.assertEqual({}, h5.attrs.get(consts.IRI_INDIVIDUAL_ATTR_NAME, {}))
 
-            data = ds[()]
-        self.assertTrue('units' in data.attrs)
-        self.assertTrue(consts.IRI_ATTR_NAME in data.attrs)
+            h5.attrs.create('creator', data='John Doe',
+                            iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                            iri_individual='test'
+                            )
+            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                             h5.iri.get('creator').get('class', None))
+            self.assertEqual('test', h5.iri.get('creator').get('individual', None))
+            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                             h5.iri.get('creator').get('class', None))
+            self.assertEqual('test', h5.iri.get('creator').get('individual', None))
 
-        with h5tbx.File(h5.hdf_filename) as h5:
-            self.assertTrue(consts.IRI_ATTR_NAME in h5.attrs)
-            self.assertEqual(h5.attrs[consts.IRI_ATTR_NAME], h5.iri)
+            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
+                             h5.attrs.get(consts.IRI_CLASS_ATTR_NAME, {}))
+            self.assertEqual({'creator': 'test'},
+                             h5.attrs.get(consts.IRI_INDIVIDUAL_ATTR_NAME, {}))
 
-        with h5tbx.File() as h5:
-            self.assertEqual({}, h5.iri)
-            from h5rdmtoolbox import iri
-            h5.attrs['contact'] = iri.IRI('John Doe', 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson')
-            h5.attrs['number'] = 5
-            self.assertEqual({'contact': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'}, h5.iri)
+            h5.iri_cls['creator'] = '1'
+            self.assertEqual('1', h5.iri_cls['creator'])
+
+            h5.iri_individual['creator'] = '2'
+            self.assertEqual('2', h5.iri_individual['creator'])
+
+            h5.iri['creator'] = {'class': '1',
+                                 'individual': '2'}
+            self.assertEqual({'class': '1', 'individual': '2'},
+                             h5.iri['creator'])
+
+            h5.iri['creator'] = {'class': '3', }
+            self.assertEqual('3', h5.iri['creator']['class'])
+
+            with self.assertRaises(ValueError):
+                h5.iri['creator'] = {'invalid': 5}
+
+            h5.iri['creator']['class'] = '4'
+            self.assertEqual('4', h5.iri['creator']['class'])
+
+            h5.iri['creator']['individual'] = '5'
+            self.assertEqual('5', h5.iri['creator']['individual'])

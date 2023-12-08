@@ -1,20 +1,19 @@
 import ast
-import json
-from typing import Dict
-
 import h5py
+import json
 import pint
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
+from typing import Dict
 
 from . import logger
 from .h5utils import get_rootparent
 from .. import errors
 from .. import get_config, conventions, utils
 from .. import get_ureg
+from .. import iri
 from .. import protected_attributes
 from ..conventions import consts
-from ..iri import IRI
 
 H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox
 
@@ -65,11 +64,11 @@ class WrapperAttributeManager(h5py.AttributeManager):
         super().__init__(parent)
         self._parent = parent
 
-    @property
-    def iri(self) -> dict:
-        """Return dictionary of IRIs stored in the attributes of this object"""
-        iri_dict = self._parent.iri
-        return {k: iri_dict[k] for k, v in self.items() if k in iri_dict}
+    # @property
+    # def iri(self) -> dict:
+    #     """Return dictionary of IRIs stored in the attributes of this object"""
+    #     iri_dict = self._parent.iri
+    #     return {k: iri_dict[k] for k, v in self.items() if k in iri_dict}
 
     @staticmethod
     def _parse_return_value(_id, ret):
@@ -131,10 +130,12 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 return conventions.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
 
-    def create(self, name, data, shape=None, dtype=None, iri=None):
+    def create(self, name, data, shape=None, dtype=None, iri_cls: str = None, iri_individual: str = None):
         r = super().create(name, data, shape, dtype)
-        if iri:
-            self.set_iri(name, iri)
+        if iri_cls is not None:
+            iri.set_cls(self, name, iri_cls)
+        if iri_individual is not None:
+            iri.set_individual(self, name, iri_individual)
         return r
 
     @with_phil
@@ -156,12 +157,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
             return
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
-
-        if isinstance(value, IRI):
-            # write the attribute (name, value.value) and the IRI (name, value.iri)
-            self.__setitem__(name, value.value, attrs)
-            self._parent.iri[name] = value.iri
-            return
 
         curr_cv = conventions.get_current_convention()
 
@@ -226,14 +221,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 raise RuntimeError('Natural naming is disabled. Use the setitem method to set attributes.')
         super().__setattr__(key, value)
 
-    def get_iri(self, name: str):
-        """Return PID corresponding to attribute with name `name`"""
-        return get_attr_iri(self, name)
-
-    def set_iri(self, name: str, iri: str) -> None:
-        """Set PID with value `iri` corresponding to attribute with name `name`"""
-        set_attr_iri(self, name, iri)
-
     def rename(self, key, new_name):
         """Rename an existing attribute"""
         tmp_val = self[key]
@@ -269,7 +256,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             print(f'{k:{keylen}}:  {v}')
 
     @property
-    def raw(self) -> "h5py._hl.attrs.AttributeManager":
+    def raw(self) -> "h5py.AttributeManager":
         """Return the original h5py attribute object manager"""
         from h5py._hl import attrs
         from h5py._objects import phil
