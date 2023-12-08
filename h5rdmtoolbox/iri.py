@@ -80,16 +80,8 @@ class IRIManager:
         return self.__getitem__(attr_name)
 
     def __setitem__(self, key, value):
-        if not isinstance(value, dict):
-            raise TypeError('value must be a dict')
-        cls = value.pop(NAME_KW, None)
-        data = value.pop(DATA_KW, None)
-        if len(value) > 0:
-            raise ValueError(f'value must be a dict with keys "{NAME_KW}" and/or "{DATA_KW}"')
-        if cls is not None:
-            set_name(self._attr, key, cls)
-        if data is not None:
-            set_data(self._attr, key, data)
+        raise NotImplementedError('IRIManager is read-only. Use properties .name or .data to assign IRI to '
+                                  'attribute name or data.')
 
     def __getitem__(self, item) -> IRIDict:
         return IRIDict({NAME_KW: self._attr.get(consts.IRI_NAME_ATTR_NAME, {}).get(item, None),

@@ -202,7 +202,7 @@ class Database:
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
             with File(filename, 'w') as h5:
                 h5.attrs['contact_person'] = contact_persons[np.random.randint(4)]
-                h5.iri['contact_person'] = 'http://www.w3.org/ns/prov#Person'
+                h5.iri['contact_person'].name = 'http://www.w3.org/ns/prov#Person'
 
                 if fid % 2:
                     __ftype__ = db_file_type[0]
@@ -242,7 +242,7 @@ class Database:
                                      shape=(zplanes, 64, 86, 2))
                     g.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'mean v-component'},
                                      shape=(zplanes, 64, 86, 2))
-                    g.iri['units'] = 'http://qudt.org/schema/qudt/Unit'
+                    g.iri['units'].name = 'http://qudt.org/schema/qudt/Unit'
 
     @staticmethod
     def generate_test_files(n_files: int = 5) -> List[pathlib.Path]:

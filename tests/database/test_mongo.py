@@ -235,7 +235,7 @@ if mongo_installed:
                     h5.mongo.insert(self.collection)
 
                     self.assertEqual(self.collection.count_documents({}), 2)
-                    now = datetime.datetime.utcnow()
+                    now = datetime.datetime.now()
                     for r in self.collection.find({}):
                         self.assertTrue((now - r['file_creation_time']).total_seconds() < 1)
 
@@ -247,6 +247,6 @@ if mongo_installed:
                 for fname in repo_filenames:
                     with File(fname) as h5:
                         h5.mongo.insert(collection=self.collection, recursive=True, flatten_tree=True)
-                now = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
+                now = datetime.datetime.now() - datetime.timedelta(minutes=1)
                 for r in self.collection.find({}):
                     self.assertTrue((now - r['file_creation_time']).total_seconds() < 20)

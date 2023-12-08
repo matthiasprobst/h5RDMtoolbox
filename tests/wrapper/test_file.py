@@ -460,6 +460,8 @@ class TestFile(unittest.TestCase):
 
         with h5tbx.File() as h5:
             h5.attrs['creator'] = 'John Doe'
+            with self.assertRaises(NotImplementedError):
+                h5.iri['creator'] = 'John Doe'
             self.assertEqual(None, h5.iri['creator'].name)
             self.assertEqual(None, h5.iri['creator'][iri.DATA_KW])
             self.assertEqual(None, h5.iri.get('creator')[iri.DATA_KW])
@@ -492,17 +494,6 @@ class TestFile(unittest.TestCase):
                              h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
             self.assertEqual({'creator': 'test'},
                              h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
-
-            h5.iri['creator'] = {iri.NAME_KW: '1',
-                                 iri.DATA_KW: '2'}
-            self.assertEqual({iri.NAME_KW: '1', iri.DATA_KW: '2'},
-                             h5.iri['creator'])
-
-            h5.iri['creator'] = {iri.NAME_KW: '3', }
-            self.assertEqual('3', h5.iri['creator'][iri.NAME_KW])
-
-            with self.assertRaises(ValueError):
-                h5.iri['creator'] = {'invalid': 5}
 
             h5.iri['creator'][iri.NAME_KW] = '4'
             self.assertEqual('4', h5.iri['creator'].name)
