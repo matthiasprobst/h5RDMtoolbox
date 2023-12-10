@@ -210,7 +210,6 @@ class Core:
         return iri.IRIManager(self.attrs)
 
 
-
 class SpecialAttributeWriter:
     """Accessor class, which provides methods to write special attributes to a dataset or group."""
 
@@ -471,18 +470,36 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
             ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
-        tree = dict(self.attrs.items())
+
+        if self.basename == '':
+            tree = {'/': {'props': {'__class__': self.__class__.__name__,
+                                    'name': self.name, },
+                          'attrs': dict(self.attrs.items())
+                          }
+                    }
+        else:
+            tree = {'props': {'__class__': self.__class__.__name__,
+                              'name': self.name, },
+                    'attrs': dict(self.attrs.items())
+                    }
+
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
-                ds_dict = {'shape': v.shape, 'ndim': v.ndim}
+                ds_dict = {'props': {'name': v.name,
+                                     'shape': v.shape,
+                                     'ndim': v.ndim,
+                                     'dtype': v.dtype,
+                                     '__class__': v.__class__.__name__},
+                           'attrs': dict(v.attrs)
+                           }
                 for ak, av in v.attrs.items():
                     if ak not in H5_DIM_ATTRS:
                         if ak not in ignore_attrs:
                             ds_dict[ak] = av
-                tree[k] = ds_dict
+                tree[v.basename] = ds_dict
             else:
                 if recursive:
-                    tree[k] = v.get_tree_structure(recursive)
+                    tree[v.basename] = v.get_tree_structure(recursive)
         return tree
 
     def create_group(self,
