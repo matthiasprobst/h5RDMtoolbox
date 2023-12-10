@@ -1,10 +1,9 @@
 import pathlib
+import pint
+import requests
 import shutil
 import unittest
 import warnings
-
-import pint
-import requests
 import yaml
 
 import h5rdmtoolbox
@@ -30,6 +29,12 @@ class TestConventions(unittest.TestCase):
         # setting logger to debug:
         from h5rdmtoolbox.conventions import logger
         logger.setLevel('DEBUG')
+
+    def test_delete(self):
+        cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        self.assertIn('simple_cv', h5tbx.conventions.get_registered_conventions())
+        cv.delete()
+        self.assertNotIn('simple_cv', h5tbx.conventions.get_registered_conventions())
 
     def test_extract_function_info(self):
         from h5rdmtoolbox.conventions.generate import extract_function_info, validate_specialtype_functions

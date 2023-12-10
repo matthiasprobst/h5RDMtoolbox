@@ -1,10 +1,12 @@
 """utilities of package conventions"""
+import json
 import pathlib
 import pint
 import re
 import requests
 import warnings
 import xml.etree.ElementTree as ET
+import yaml
 from datetime import timezone, datetime
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -13,6 +15,68 @@ from typing import Dict, Union, Tuple
 from .. import get_ureg
 
 STANDARD_NAME_TABLE_FORMAT_FILE = Path(__file__).parent / 'standard_name_table_format.html'
+
+
+def yaml2json(yaml_filename: Union[str, pathlib.Path],
+              json_filename: Union[str, pathlib.Path, None] = None) -> pathlib.Path:
+    """convert a yaml file to json
+
+    Parameters
+    ----------
+    yaml_filename : Union[str, pathlib.Path]
+        yaml filename to convert into json
+    json_filename : Union[str, pathlib.Path, None], optional
+        json filename to write to. If None, the json filename is the same as the yaml filename but with extension json, by default None
+
+    Returns
+    -------
+    json_filename: pathlib.Path
+        json filename
+    """
+    yaml_filename = pathlib.Path(yaml_filename)
+    with open(yaml_filename, 'r') as file:
+        configuration = yaml.safe_load(file)
+
+    if json_filename is None:
+        json_filename = yaml_filename.parent / f'{yaml_filename.stem}.json'
+    else:
+        json_filename = pathlib.Path(json_filename)
+
+    with open(json_filename, 'w') as json_file:
+        json.dump(configuration, json_file)
+
+    return json_filename
+
+
+def json2yaml(json_filename: Union[str, pathlib.Path],
+              yaml_filename: Union[str, pathlib.Path, None] = None) -> pathlib.Path:
+    """convert a json file to yaml
+
+    Parameters
+    ----------
+    json_filename : Union[str, pathlib.Path]
+        json filename to convert into yaml
+    yaml_filename : Union[str, pathlib.Path, None], optional
+        yaml filename to write to. If None, the yaml filename is the same as the json filename but with extension yaml, by default None
+
+    Returns
+    -------
+    yaml_filename: pathlib.Path
+        yaml filename
+    """
+    json_filename = pathlib.Path(json_filename)
+    with open(json_filename, 'r') as file:
+        json_data = json.load(file)
+
+    if yaml_filename is None:
+        yaml_filename = json_filename.parent / f'{json_filename.stem}.yaml'
+    else:
+        yaml_filename = pathlib.Path(yaml_filename)
+
+    with open(yaml_filename, 'w') as yaml_file:
+        yaml.dump(json_data, yaml_file)
+
+    return yaml_filename
 
 
 # wrapper that updates datetime in meta

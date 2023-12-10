@@ -274,12 +274,26 @@ class TestFile(unittest.TestCase):
         with File() as h5:
             h5.attrs['one'] = 1
             h5.attrs['two'] = 2
-            h5.create_dataset('rootds', shape=(2, 40, 3))
+            h5.create_dataset('root_ds', shape=(2, 40, 3))
             grp = h5.create_group('grp',
                                   attrs={'description': 'group description'})
-            grp.create_dataset('grpds',
+            grp.create_dataset('grp_ds',
+                               shape=(2, 40, 3))
+            sub_grp = grp.create_group('sub_grp',
+                                  attrs={'description': 'sub group description'})
+            sub_grp.create_dataset('sub_grp_ds',
                                shape=(2, 40, 3))
             tree = h5.get_tree_structure()
+            print(tree.keys())
+            self.assertTrue('/' in tree)
+            self.assertTrue('grp' in tree)
+            self.assertTrue('root_ds' in tree)
+
+            self.assertFalse('sub_grp' in tree)
+            self.assertFalse('sub_grp' in tree['/'])
+
+            self.assertTrue('sub_grp' in tree['grp'])
+            self.assertTrue('sub_grp' in tree['grp'])
 
     def test_rename(self):
         with File(mode='w') as h5:

@@ -1,12 +1,11 @@
 """h5rdtoolbox repository"""
 import atexit
 import pathlib
-import shutil
-from typing import Union, Callable
-
 # noinspection PyUnresolvedReferences
 import pint_xarray
+import shutil
 import xarray as xr
+from typing import Union, Callable
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
@@ -33,7 +32,7 @@ logger = utils.create_tbx_logger('h5rdmtoolbox')
 
 logger.setLevel(get_config()['init_logger_level'])
 
-cv_h5py = conventions.Convention('h5py',
+cv_h5py = conventions.Convention(name='h5py',
                                  contact=__author_orcid__)
 cv_h5py.register()
 

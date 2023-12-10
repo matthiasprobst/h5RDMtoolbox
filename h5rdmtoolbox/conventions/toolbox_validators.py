@@ -5,7 +5,7 @@ must be provided during initialization of a Convention"""
 import pint
 from pydantic import BaseModel
 from pydantic.functional_validators import WrapValidator
-from typing import Union, Dict
+from typing import Union, Dict, Tuple
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg, errors
@@ -191,3 +191,15 @@ orcid = Annotated[str, WrapValidator(__validate_orcid)]
 standard_name_table = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]
 standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
 url = Annotated[str, WrapValidator(__validate_url)]
+
+validators = [units, dateFormat, quantity, data_offset, data_scale, orcid, standard_name_table, standard_name, url]
+
+
+def get_validator_names() -> Tuple[str]:
+    """Get a list of all available validators"""
+    return tuple([v for v in validators])
+
+
+if __name__ == '__main__':
+    print('Available validators:')
+    print(get_validator_names())

@@ -173,7 +173,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     decoders={_str_getter(meta, 'decoders', None)},
     standard_attributes=standard_attributes
 )
-logger.debug(f'Registering convention {{cv.name}}')
+logger.debug(f'Registering convention "{{cv.name}}"')
 cv.register()
 """)
 

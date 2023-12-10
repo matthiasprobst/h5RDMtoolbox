@@ -277,6 +277,21 @@ class StandardAttribute(abc.ABC):
         # is there a return value associated with the validator?
         return self.validate(ret_val, parent=parent)
 
+    def to_dict(self):
+        """return a dict representation of the standard attribute"""
+
+        if self.default_value is DefaultValue.NONE:
+            default_value_str = '$NONE'
+        elif self.default_value is DefaultValue.EMPTY:
+            default_value_str = '$EMPTY'
+        else:
+            default_value_str = self.default_value
+
+        return dict(description=self.description,
+                    target_method=self.target_method,
+                    validator=f'${self.validator.__name__}',
+                    default_value=default_value_str)
+
     def validate(self, value, parent, attrs=None):
         """validate"""
         if value is not None:

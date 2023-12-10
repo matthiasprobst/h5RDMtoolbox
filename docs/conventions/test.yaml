@@ -1,0 +1,8 @@
+__contact__: https://orcid.org/0000-0001-8729-0482
+__institution__: https://orcid.org/members/001G000001e5aUTIAY
+__name__: tutorial-units-convention
+units:
+  default_value: $EMPTY
+  description: The physical unit of the dataset. If dimensionless, the unit is ''.
+  target_method: create_dataset
+  validator: $units

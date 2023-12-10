@@ -1,0 +1,1 @@
+{"__name__": "tutorial-units-convention", "__institution__": "https://orcid.org/members/001G000001e5aUTIAY", "__contact__": "https://orcid.org/0000-0001-8729-0482", "units": {"target_method": "create_dataset", "validator": "$units", "description": "The physical unit of the dataset. If dimensionless, the unit is ''.", "default_value": "$EMPTY"}}
