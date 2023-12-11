@@ -2,6 +2,7 @@ import pathlib
 import pint
 import requests
 import shutil
+import sys
 import unittest
 import warnings
 import yaml
@@ -32,8 +33,12 @@ class TestConventions(unittest.TestCase):
 
     def test_delete(self):
         cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        self.assertTrue(cv.name in sys.modules)
         self.assertIn('simple_cv', h5tbx.conventions.get_registered_conventions())
         cv.delete()
+        self.assertFalse(cv.name in sys.modules)
+        cv.delete()
+        self.assertFalse(cv.name in sys.modules)
         self.assertNotIn('simple_cv', h5tbx.conventions.get_registered_conventions())
 
     def test_extract_function_info(self):
@@ -456,3 +461,20 @@ def validate_f1(a, b, c=3, d=2):
                         pid=dict(id='123', type='other'),
                         title='Test file to demonstrate usage of EngMeta schema') as h5:
             fname = h5.hdf_filename
+
+    def test_read_invalid_attribute(self):
+        cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        h5tbx.use(None)
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', data=[1, 2], attrs=dict(units='invalid'))
+        with h5tbx.use(cv):
+            with h5tbx.File(h5.hdf_filename) as h5:
+                with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
+                    units = h5.ds.units
+                self.assertEqual(units, 'invalid')
+        with h5tbx.use(None):
+            with h5tbx.File(h5.hdf_filename) as h5:
+                with self.assertRaises(AttributeError):
+                    _ = h5.ds.units
+                units = h5.ds.attrs['units']
+                self.assertEqual(units, 'invalid')

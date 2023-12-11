@@ -458,20 +458,31 @@ def _get_convention_from_dir(convention_name: str) -> "Convention":
 
 
 class use:
-    """Set the configuration parameters."""
+    """Enable a convention.
+    To disable the convention, active an empty convention like so: cv.use(None)
 
-    def __init__(self, convention_name: Union[str, Convention]):
+    Parameters
+    ----------
+    convention_or_name: Union[str, Convention, None]
+        The convention name or object to enable.
+    """
+
+    def __init__(self, convention_or_name: Union[str, Convention, None]):
         self._latest_convention = get_current_convention()
         registered_conventions = get_registered_conventions()
-        if convention_name is not None:
-            if isinstance(convention_name, Convention):
-                convention_name = convention_name.name
+        if convention_or_name is None:
+            self._current_convention = _use(None)
+        else:
+            if isinstance(convention_or_name, Convention):
+                convention_name = convention_or_name.name
+            else:
+                convention_name = convention_or_name
             _convention_name = convention_name.lower().replace('-', '_')
             assert '-' not in _convention_name
             if _convention_name not in registered_conventions:
                 cv = _get_convention_from_dir(convention_name)
                 convention_name = cv.name
-        self._current_convention = _use(convention_name)
+            self._current_convention = _use(convention_name)
 
     def __repr__(self):
         return f'using("{self._current_convention.name}")'
@@ -486,10 +497,12 @@ class use:
 from h5rdmtoolbox.wrapper import ds_decoder
 
 
-def _use(convention_name: Union[str, Convention]) -> Convention:
-    """Use a convention by name"""
-    if isinstance(convention_name, Convention):
-        convention_name = convention_name.name
+def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
+    """Use a convention by name or Convention object"""
+    if isinstance(convention_or_name, Convention):
+        convention_name = convention_or_name.name
+    else:
+        convention_name = convention_or_name
     current_convention = get_current_convention()
 
     if convention_name is None:
@@ -584,11 +597,19 @@ def _process_paths(data: Union[Dict, str], relative_to) -> Dict:
     return data
 
 
-def delete(convention_name: str):
+def delete(convention: Union[str, Convention]):
     """Delete convention from directory"""
-    shutil.rmtree(CV_DIR / convention_name)
+    if isinstance(convention, Convention):
+        convention_name = convention.name
+    else:
+        convention_name = convention
+    cv_dir = CV_DIR / convention_name
+    if cv_dir.exists():
+        shutil.rmtree(CV_DIR / convention_name)
     cfg._registered_conventions.pop(convention_name, None)
-    del sys.modules[convention_name]
+    if convention_name in sys.modules:
+        # if the convention (py script) already has been imported, remove it from the list of imported modules:
+        del sys.modules[convention_name]
 
 
 def from_yaml(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Convention:

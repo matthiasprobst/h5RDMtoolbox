@@ -173,7 +173,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                         # no value given, but is mandatory. check if there's an alternative
                         if sattr.alternative_standard_attribute is None:
                             raise errors.StandardAttributeError(
-                                f'Parameter (standard attribute) "{name}" must be provided and cannot be None!'
+                                f'Convention "{curr_cv.name}" expects standard attribute "{name}" to be provided '
+                                f'as an argument during {self._parent.__class__.__name__.lower()} creation.'
                             )
                         return
                     if value is consts.DefaultValue.NONE:
@@ -183,6 +184,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                         value = value.value
                     return curr_cv.properties[parent.__class__][name].set(parent, value, attrs)
                 except TypeError as e:
+                    if value is consts.DefaultValue.EMPTY:
+                        raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
                     raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)
 

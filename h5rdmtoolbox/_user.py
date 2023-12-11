@@ -90,6 +90,14 @@ class DirManger:
         if self.user_dirs['cache'].exists():
             shutil.rmtree(self.user_dirs['cache'])
 
+    def reset(self):
+        """Deletes all user data"""
+        shutil.rmtree(self.user_dirs['cache'])
+        shutil.rmtree(self.user_dirs['conventions'])
+        shutil.rmtree(self.user_dirs['standard_name_tables'])
+        shutil.rmtree(self.user_dirs['layouts'])
+        shutil.rmtree(self.user_dirs['tmp'], ignore_errors=True)
+
 
 UserDir = DirManger()
 

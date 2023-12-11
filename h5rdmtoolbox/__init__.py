@@ -20,7 +20,7 @@ from ._version import __version__
 from . import database
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
-from . import errors
+from . import warnings, errors
 from .wrapper.accessory import register_special_dataset
 
 name = 'h5rdmtoolbox'

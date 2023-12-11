@@ -241,8 +241,10 @@ class StandardAttribute(abc.ABC):
                                f'Original error: {e}')
                 validated_value = value
             else:
-                raise errors.StandardAttributeError(f'Setting "{value}" for standard attribute "{self.name}" failed. '
-                                                    f'Original error: {e}') from e
+                raise errors.StandardAttributeError(f'The value "{value}" for standard attribute "{self.name}" '
+                                                    f'could not be set. Please check the convention file wrt. the '
+                                                    f'rule for this attribute. The following error message might '
+                                                    f'not always explain the origin of the problem:\n{e}') from e
         super(type(parent.attrs), parent.attrs).__setitem__(self.name, validated_value)
 
     def get(self, parent):
@@ -276,6 +278,13 @@ class StandardAttribute(abc.ABC):
                 return None
         # is there a return value associated with the validator?
         return self.validate(ret_val, parent=parent)
+        # try:
+        #     ret_val = self.validate(ret_val, parent=parent)
+        # except pydantic.ValidationError as e:
+        #     errors.StandardAttributeError(f'The convention "{parent.convention.name}" detected an invalid attribute: '
+        #                                   f'Value "{ret_val}" for "{self.name}" is invalid.')
+        # finally:
+        #     return ret_val
 
     def to_dict(self):
         """return a dict representation of the standard attribute"""
@@ -316,12 +325,15 @@ class StandardAttribute(abc.ABC):
                     return value
 
         try:
-            _value = self.validator.model_validate(dict(value=value), context=dict(attrs=attrs, parent=parent)).value
+            _value = self.validator.model_validate(dict(value=value),
+                                                   context=dict(attrs=attrs, parent=parent)).value
             if isinstance(_value, enum.Enum):
                 return _value.value
             return _value
         except pydantic.ValidationError as err:
-            warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
+            warnings.warn(f'The attribute "{self.name}" could not be validated by the convention '
+                          f'"{parent.convention.name}".\nPydantic error: \n{err}',
                           convention_warnings.StandardAttributeValidationWarning)
-        return self.validator.model_validate(dict(value=self.default_value),
-                                             context=dict(attrs=attrs, parent=parent))
+        return value
+        # return self.validator.model_validate(dict(value=self.default_value),
+        #                                      context=dict(attrs=attrs, parent=parent))

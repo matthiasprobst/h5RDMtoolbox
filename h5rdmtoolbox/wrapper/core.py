@@ -210,7 +210,6 @@ class Core:
         return iri.IRIManager(self.attrs)
 
 
-
 class SpecialAttributeWriter:
     """Accessor class, which provides methods to write special attributes to a dataset or group."""
 
@@ -834,8 +833,9 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                         ds.attrs.__setitem__(k, v.name, attrs)
                     else:
                         ds.attrs.__setitem__(k, v, attrs)
-            except Exception as e:
-                logger.error(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}"')
+            except conventions.standard_attributes.errors.StandardAttributeError as e:
+                logger.debug(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
+                             f'{self.convention.name}. Orig err: "{e}"')
                 del self[name]
                 raise e
         if isinstance(data, np.ndarray):

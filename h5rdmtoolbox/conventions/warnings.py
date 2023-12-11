@@ -1,4 +1,4 @@
-"""package warnings"""
+"""module warnings"""
 
 
 class StandardAttributeValidationWarning(Warning):
