@@ -49,23 +49,6 @@ class TestCore(unittest.TestCase):
         h5tbx.dumps(h5)
         h5tbx.dumps(str(h5.hdf_filename))
 
-    def test_Files(self):
-        with h5tbx.File() as h5:
-            f1 = h5.hdf_filename
-        with h5tbx.File() as h5:
-            f2 = h5.hdf_filename
-        with h5tbx.FileDB([f1, ]) as h5:
-            self.assertIsInstance(h5[0], h5tbx.File)
-            self.assertEqual(str(h5), "<Files (1 files)>")
-        with h5tbx.FileDB([f1, f2]) as h5:
-            self.assertEqual(str(h5), "<Files (2 files)>")
-            self.assertIsInstance(h5[0], h5tbx.File)
-            self.assertIsInstance(h5[1], h5tbx.File)
-        with h5tbx.FileDB([f1, f2], file_instance=h5tbx.File) as h5:
-            self.assertEqual(str(h5), "<Files (2 files)>")
-            self.assertIsInstance(h5[0], h5tbx.File)
-            self.assertIsInstance(h5[1], h5tbx.File)
-
     def test_subclassstr_attrs(self):
         class MyString(str):
             def some_method(self):
@@ -368,10 +351,10 @@ class TestCore(unittest.TestCase):
         with h5tbx.File() as h5:
             grp = h5.create_group('grp')
             grp.create_dataset('data', data=np.random.rand(10, 20, 30))
-            self.assertEqual(grp.get_datasets('data'), [grp['data'], ])
-            self.assertEqual(grp.get_datasets('dat*'), [grp['data'], ])
+            self.assertEqual(list(grp.get_datasets('data')), [grp['data'], ])
+            self.assertEqual(list(grp.get_datasets('dat*')), [grp['data'], ])
             self.assertEqual(sorted(grp.get_datasets('.*')), [grp['data'], ])
-            self.assertEqual(grp.get_datasets('idat*'), [])
+            self.assertEqual(list(grp.get_datasets('idat*')), [])
             with self.assertRaises(ValueError):
                 h5tbx.Group(4.3)
             with self.assertRaises(TypeError):

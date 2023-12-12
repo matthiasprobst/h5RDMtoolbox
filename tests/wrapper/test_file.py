@@ -159,74 +159,6 @@ class TestFile(unittest.TestCase):
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
 
-    def test_attrs_find(self):
-        with File(self.test_filename, mode='r') as h5:
-            self.assertEqual(
-                h5['/grp_1'],
-                h5.find_one(
-                    {
-                        '$basename': {
-                            '$regex': 'grp_[0-1]'
-                        }
-                    },
-                    '$group'
-                )
-            )
-            #
-            self.assertListEqual(
-                [h5['/grp_1'], h5['/grp_2'], h5['/grp_3']],
-                sorted(
-                    h5.find(
-                        {'$basename': {'$regex': 'grp_[0-3]'}
-                         },
-                        '$group'
-                    )
-                )
-            )
-            self.assertListEqual(
-                [h5['/ds1'], h5['/ds2'], ],
-                sorted(
-                    h5.find(
-                        {'$basename': {'$regex': 'ds[0-9]'}},
-                        '$dataset')
-                )
-            )
-            self.assertEqual(
-                h5['/ds'], h5.find_one({'one': 1}, '$dataset')
-            )
-            self.assertEqual(
-                [h5['/'], h5['/ds'], h5['grp_1']],
-                sorted(h5.find({'one': 1}))
-            )
-            self.assertListEqual(
-                [], h5.find({'one': {'$gt': 1}})
-            )
-            self.assertListEqual(
-                [h5['/'], h5['ds'], h5['grp_1']],
-                sorted(h5.find({'one': {'$gte': 1}}))
-            )
-
-    def test_find_group_data(self):
-        with File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5.find({'$basename': 'grp_1'}, '$group')[0],
-                             h5.find_one({'$basename': 'grp_1'}, '$group'))
-            self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
-            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, "$dataset"))
-            self.assertEqual(h5.find({'$ndim': 1}, "$dataset")[0], h5.find_one({'$ndim': 1}, "$dataset"))
-
-    def test_find_dataset_data(self):
-        with File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
-            self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
-            self.assertEqual([h5['ds'], ], h5.find({'$basename': 'ds'}))
-            self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}, '$dataset'))
-            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, '$dataset'))
-            r = h5.find_one({'$ndim': 1}, '$dataset')
-            self.assertEqual(h5['ds'].ndim, 1)
-            self.assertIsInstance(h5['ds'], h5py.Dataset)
-            self.assertEqual([h5['ds'], h5['ds1'], h5['ds2'], h5['dsY']],
-                             sorted(h5.find({'$ndim': 1}, '$dataset')))
-
     def test_open(self):
         with File(mode='w') as h5:
             h5.attrs['one'] = 1
@@ -243,32 +175,6 @@ class TestFile(unittest.TestCase):
         h5.reopen('r+')
         self.assertEqual(h5.mode, 'r+')
         h5.close()
-
-    def test_groups(self):
-        with File() as h5:
-            groups = h5.get_groups()
-            self.assertEqual(groups, [])
-            h5.create_group('grp_1', attrs=dict(a=1))
-            h5.create_group('grp_2', attrs=dict(a=1))
-            h5.create_group('grpXYZ', attrs=dict(b=2))
-            h5.create_group('mygrp_2')
-
-            groups = h5.get_groups()
-            self.assertEqual(len(groups), 4)
-            self.assertEqual(groups, [h5['grpXYZ'], h5['grp_1'], h5['grp_2'], h5['mygrp_2']])
-
-            groups = h5.get_groups('^grp_[0-9]$')
-            self.assertEqual(len(groups), 2)
-            self.assertEqual(sorted(groups), sorted([h5['grp_1'], h5['grp_2']]))
-            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]), sorted(h5.find({'a': 1}, rec=True)))
-
-            h5.create_group('grpXYZ/grp123', attrs=dict(a=1))
-            self.assertEqual(sorted([h5['grpXYZ/grp123'],
-                                     h5['grp_1'],
-                                     h5['grp_2'], ]),
-                             sorted(h5.find({'a': 1}, rec=True)))
-            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]),
-                             sorted(h5.find({'a': 1}, rec=False)))
 
     def test_tree_structure(self):
         with File() as h5:

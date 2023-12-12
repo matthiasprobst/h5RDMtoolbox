@@ -17,7 +17,7 @@ from .conventions.core import Convention
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
-from . import database
+# from . import database
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import warnings, errors
@@ -42,28 +42,28 @@ use = conventions.core.use
 use(None)
 
 
-class FileDB:
-    """User-friendly interface to database.Folder, database.File or database.Files"""
-
-    def __new__(cls, path, rec=False, **kwargs):
-        if isinstance(path, (list, tuple)):
-            filenames = []
-            for p in [pathlib.Path(_p) for _p in path]:
-                if p.is_file():
-                    filenames.append(p)
-                elif p.is_dir():
-                    if rec:
-                        for f in p.rglob('*.hdf'):
-                            filenames.append(f)
-                    else:
-                        for f in p.glob('*.hdf'):
-                            filenames.append(f)
-            return database.Files(filenames, **kwargs)
-
-        path = pathlib.Path(path)
-        if path.is_dir():
-            return database.Folder(path, rec=rec, **kwargs)
-        return database.File(path, **kwargs)
+# class FileDB:
+#     """User-friendly interface to database.Folder, database.File or database.Files"""
+#
+#     def __new__(cls, path, rec=False, **kwargs):
+#         if isinstance(path, (list, tuple)):
+#             filenames = []
+#             for p in [pathlib.Path(_p) for _p in path]:
+#                 if p.is_file():
+#                     filenames.append(p)
+#                 elif p.is_dir():
+#                     if rec:
+#                         for f in p.rglob('*.hdf'):
+#                             filenames.append(f)
+#                     else:
+#                         for f in p.glob('*.hdf'):
+#                             filenames.append(f)
+#             return database.Files(filenames, **kwargs)
+#
+#         path = pathlib.Path(path)
+#         if path.is_dir():
+#             return database.Folder(path, rec=rec, **kwargs)
+#         return database.File(path, **kwargs)
 
 
 def guess_filename(func):

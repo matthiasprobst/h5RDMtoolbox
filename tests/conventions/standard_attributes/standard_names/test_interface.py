@@ -19,6 +19,7 @@ class TestStandardAttributes(unittest.TestCase):
         h5tbx.use(None)
 
     def assertUnitEqual(self, unit1, unit2):
+        """Assert that two units are equal."""
         return h5tbx.get_ureg().Unit(unit1), h5tbx.get_ureg().Unit(unit2)
 
     def test_interface_without_coords(self):

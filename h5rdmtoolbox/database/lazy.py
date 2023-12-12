@@ -4,21 +4,15 @@ import pathlib
 from typing import Union, List, Dict
 
 
-class LGroup:
-    """Lazy Group"""
-
-    def __init__(self, obj: h5py.Group):
-        self.filename = pathlib.Path(obj.file.filename)
-        if isinstance(obj.attrs, h5py._hl.attrs.AttributeManager):
-            self._attrs = dict(obj.attrs)
-        else:
-            self._attrs = dict(obj.attrs.raw)
-
-        for k, v in _get_dataset_properties(obj, ('file', 'name',)).items():
-            setattr(self, k, v)
+class LHDFObject:
+    """Lazy HDF object. This object is a proxy for a HDF object (dataset or group) that returns data
+    on-demand. This means, that the file is opened when the object is accessed and closed when the object
+    is no longer needed. This is useful for working with large files, where the user does not want to
+    open the file manually, but still wants to work with the dataset.
+    """
 
     def __repr__(self):
-        return f'<LGroup "{self.name}" in "{self.filename}">'
+        return f'<{self.__class__.__name__} "{self.name}" in "{self.filename}">'
 
     def __lt__(self, other):
         return self.name < other.name
@@ -65,7 +59,7 @@ class LGroup:
                 return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=False,
                                                ignore_attribute_error=ignore_attribute_error)]
             return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=rec,
-                      ignore_attribute_error=ignore_attribute_error)]
+                                           ignore_attribute_error=ignore_attribute_error)]
 
     def find_one(self,
                  flt: Union[Dict, str],
@@ -77,6 +71,20 @@ class LGroup:
         with self as obj:
             return lazy(_find(obj, flt, objfilter, find_one=True, recursive=rec,
                               ignore_attribute_error=ignore_attribute_error))
+
+
+class LGroup(LHDFObject):
+    """Lazy Group"""
+
+    def __init__(self, obj: h5py.Group):
+        self.filename = pathlib.Path(obj.file.filename)
+        if isinstance(obj.attrs, h5py.AttributeManager):
+            self._attrs = dict(obj.attrs)
+        else:
+            self._attrs = dict(obj.attrs.raw)
+
+        for k, v in _get_dataset_properties(obj, ('file', 'name',)).items():
+            setattr(self, k, v)
 
 
 class LDataset(LGroup):

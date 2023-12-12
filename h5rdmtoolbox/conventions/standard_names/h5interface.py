@@ -4,6 +4,7 @@ import xarray as xr
 from typing import Dict
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.database import GroupDB
 
 
 class StandardCoordinate:
@@ -130,16 +131,19 @@ class HDF5StandardNameInterface:
         self.standard_dict = standard_dict
 
     @classmethod
-    def from_hdf(cls, hdf_filename, group='/', rec: bool = False):
+    def from_hdf(cls, hdf_filename, group='/', recursive: bool = False):
         """search withing a group. Note, that duplicate standard names are not considered"""
         from ...database.lazy import lazy
         hdf_filename = pathlib.Path(hdf_filename)
         standard_datasets = {}
         with h5tbx.File(hdf_filename) as h5:
-            std_ds = h5[group].find({'standard_name': {'$regex': '.*'}}, rec=rec, objfilter='$dataset')
+            std_ds = GroupDB(h5).find({'standard_name': {'$regex': '.*'}},
+                                      recursive=recursive,
+                                      objfilter='$dataset')
+            # std_ds = h5[group].find({'standard_name': {'$regex': '.*'}}, rec=rec, objfilter='$dataset')
             for ds in std_ds:
-                if ds.attrs.raw['standard_name'] not in standard_datasets:
-                    standard_datasets[ds.attrs.raw['standard_name']] = lazy(ds)
+                if ds.attrs['standard_name'] not in standard_datasets:
+                    standard_datasets[ds.attrs['standard_name']] = lazy(ds)
         return cls(standard_datasets)
 
     def __repr__(self):

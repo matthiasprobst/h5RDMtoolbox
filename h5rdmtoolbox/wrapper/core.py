@@ -16,7 +16,7 @@ from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
-
+from h5rdmtoolbox.database import GroupDB
 from . import logger
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -278,23 +278,24 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         """Basename of dataset (path without leading forward slash)"""
         return os.path.basename(self.name)
 
-    def get_datasets(self, pattern: str = '.*', rec: bool = False) -> List[h5py.Dataset]:
+    def get_datasets(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Dataset]:
         """Return list of datasets in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the datasets."""
-        if pattern == '.*' and not rec:
+        if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Dataset)]
-        return self.find({'$basename': {'$regex': pattern}}, '$Dataset', rec=rec)
+        grpDB = GroupDB(self)
+        return grpDB.find({'$basename': {'$regex': pattern}}, '$Dataset', recursive=recursive)
 
-    def get_groups(self, pattern: str = '.*', rec: bool = False) -> List[h5py.Group]:
+    def get_groups(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Group]:
         """Return list of groups in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the groups."""
-        if pattern == '.*' and not rec:
+        if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Group)]
-        return self.find({'$basename': {'$regex': pattern}}, '$Group', rec=rec)
+        return self.find({'$basename': {'$regex': pattern}}, '$Group', recursive=recursive)
 
     def modify_dataset_properties(self, dataset, tqdm_pbar: bool = False, **dataset_properties):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
@@ -876,9 +877,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
     def find_one(self, flt: Union[Dict, str],
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-                 rec: bool = True,
+                 recursive: bool = True,
                  ignore_attribute_error: bool = False):
         """See find()"""
+        raise NotImplemented('Moved to database package!')
         from ..database import file
         if flt == {}:
             return None
@@ -886,7 +888,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             self,
             flt,
             objfilter=objfilter,
-            recursive=rec,
+            recursive=recursive,
             find_one=True,
             ignore_attribute_error=ignore_attribute_error
         )
@@ -896,12 +898,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None
                  ) -> List:
         """Find a distinct key (only one result is returned although multiple objects match the filter)"""
-        from ..database.file import distinct
-        return distinct(self, key, objfilter)
+        from h5rdmtoolbox.database import GroupDB
+        return GroupDB(self).distinct(key, objfilter)
 
     def find(self, flt: Union[Dict, str],
              objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             rec: bool = True,
+             recursive: bool = True,
              ignore_attribute_error: bool = False) -> List:
         """
         Examples for filter parameters:
@@ -915,7 +917,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             Filter request
         objfilter: str | h5py.Dataset | h5py.Group | None
             Filter. Default is None. Otherwise, only dataset or group types are returned.
-        rec: bool, optional
+        recursive: bool, optional
             Recursive search. Default is True
         ignore_attribute_error: bool, optional=False
             If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
@@ -925,12 +927,13 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         -------
         h5obj: h5py.Dataset or h5py.Group
         """
+        raise NotImplemented('Moved to database package!')
         from ..database import file
         return file.find(
             h5obj=self,
             flt=flt,
             objfilter=objfilter,
-            recursive=rec,
+            recursive=recursive,
             find_one=False,
             ignore_attribute_error=ignore_attribute_error)
 
@@ -1935,7 +1938,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             Filter request
         objfilter: str | h5py.Dataset | h5py.Group | None
             Filter. Default is None. Otherwise, only dataset or group types are returned.
-        rec: bool, optional
+        recursive: bool, optional
             Recursive search. Default is True
         ignore_attribute_error: bool, optional=False
             If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.

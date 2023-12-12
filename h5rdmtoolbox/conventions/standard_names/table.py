@@ -20,6 +20,7 @@ from .transformation import *
 from .. import logger
 from ..utils import dict2xml, get_similar_names_ratio
 from ... import errors
+from h5rdmtoolbox.database import GroupDB
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -363,7 +364,8 @@ class StandardNameTable:
         A list of datasets with invalid standard names is returned.
         """
         issues = []
-        for ds in h5grp.find({'standard_name': {'$regex': '.*'}}, '$dataset', rec=recursive):
+        grpDB = GroupDB(h5grp)
+        for ds in grpDB.find({'standard_name': {'$regex': '.*'}}, '$dataset', recursive=recursive):
             if not self[ds.attrs['standard_name']].equal_unit(ds.attrs.get('units', None)):
                 issues.append(ds)
         return issues
