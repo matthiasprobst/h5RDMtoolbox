@@ -22,7 +22,9 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
     def find(self, *args, **kwargs) -> Generator[lazy.LHDFObject, None, None]:
         """Please refer to the docstring of the find method of the GroupDB class"""
         with h5py.File(self.filename, 'r') as h5:
-            return GroupDB(h5).find(*args, **kwargs)
+            results = list(GroupDB(h5).find(*args, **kwargs))
+        for r in results:
+            yield r
 
 
 class FilesDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
