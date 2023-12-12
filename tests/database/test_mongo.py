@@ -58,9 +58,9 @@ class TestH5Mongo(unittest.TestCase):
         mongoDBInterface = MongoDBInterface(collection=self.collection)
 
         with h5py.File('test.h5', 'w') as h5:
-            h5.create_dataset('dataset', data=42)
+            h5.create_dataset('dataset', shape=(10, 20, 4))
 
-            mongoDBInterface.insert_dataset(h5['dataset'])
+            mongoDBInterface.insert_dataset(h5['dataset'], axis=None)
 
         self.assertEqual(1, mongoDBInterface.collection.count_documents({}))
 
@@ -79,6 +79,30 @@ class TestH5Mongo(unittest.TestCase):
                               types.GeneratorType)
         for r in mongoDBInterface.find({'basename': 'dataset'}):
             self.assertIsInstance(r, LDataset)
+
+        # insert zero-th axis:
+        self.client.drop_database('hdf_database_test')
+        mongoDBInterface = MongoDBInterface(collection=self.collection)
+        with h5py.File('test.h5', 'w') as h5:
+            h5.create_dataset('dataset', shape=(10, 20, 4))
+
+            mongoDBInterface.insert_dataset(h5['dataset'], axis=0)
+        self.assertEqual(10, mongoDBInterface.collection.count_documents({}))
+
+    @is_testable
+    def test_find_one(self):
+
+        mongoDBInterface = MongoDBInterface(collection=self.collection)
+        self.assertEqual(0, mongoDBInterface.collection.count_documents({}))
+
+        with h5py.File('test.h5', 'w') as h5:
+            h5.create_dataset('dataset', shape=(10, 20, 4))
+
+            mongoDBInterface.insert_dataset(h5['dataset'], axis=0)
+
+        self.assertEqual(10, mongoDBInterface.collection.count_documents({}))
+        res = mongoDBInterface.find_one({'basename': 'dataset'})
+        self.assertEqual(res[()].shape, (1, 20, 4))
 
     def tearDown(self) -> None:
         """Delete the database"""

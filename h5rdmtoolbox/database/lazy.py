@@ -48,29 +48,29 @@ class LHDFObject:
         """Return the attributes of the group as a LAttributeManager object"""
         return self._attrs
 
-    def find(self, flt: Union[Dict, str],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             rec: bool = True,
-             ignore_attribute_error: bool = False):
-        """Find"""
-        from .file import find as _find
-        with self as obj:
-            if isinstance(obj, h5py.Dataset):
-                return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=False,
-                                               ignore_attribute_error=ignore_attribute_error)]
-            return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=rec,
-                                           ignore_attribute_error=ignore_attribute_error)]
-
-    def find_one(self,
-                 flt: Union[Dict, str],
-                 objfilter=None,
-                 rec: bool = True,
-                 ignore_attribute_error: bool = False):
-        """Find one occurrence"""
-        from .file import find as _find
-        with self as obj:
-            return lazy(_find(obj, flt, objfilter, find_one=True, recursive=rec,
-                              ignore_attribute_error=ignore_attribute_error))
+    # def find(self, flt: Union[Dict, str],
+    #          objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+    #          rec: bool = True,
+    #          ignore_attribute_error: bool = False):
+    #     """Find"""
+    #     from .file import find as _find
+    #     with self as obj:
+    #         if isinstance(obj, h5py.Dataset):
+    #             return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=False,
+    #                                            ignore_attribute_error=ignore_attribute_error)]
+    #         return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=rec,
+    #                                        ignore_attribute_error=ignore_attribute_error)]
+    #
+    # def find_one(self,
+    #              flt: Union[Dict, str],
+    #              objfilter=None,
+    #              rec: bool = True,
+    #              ignore_attribute_error: bool = False):
+    #     """Find one occurrence"""
+    #     from .file import find as _find
+    #     with self as obj:
+    #         return lazy(_find(obj, flt, objfilter, find_one=True, recursive=rec,
+    #                           ignore_attribute_error=ignore_attribute_error))
 
 
 class LGroup(LHDFObject):
@@ -144,8 +144,13 @@ def _get_dataset_properties(h5obj, keys):
     return {k: getattr(h5obj, k) for k in keys}
 
 
-def lazy(h5obj) -> Union[None, LDataset, LGroup]:
+def lazy(h5obj: Union[List[Union[h5py.Group, h5py.Dataset, LHDFObject]],
+                      h5py.Dataset, h5py.Group, LHDFObject]) -> Union[None, LDataset, LGroup]:
     """Make a lazy object from a h5py object"""
+    if isinstance(h5obj, LHDFObject):
+        return h5obj
+    if isinstance(h5obj, list):
+        return [lazy(i) for i in h5obj]
     if h5obj is None:
         return None
     if isinstance(h5obj, h5py.Group):

@@ -3,8 +3,7 @@ import numpy as np
 import pathlib
 from typing import Union, Dict, List, Callable, Generator
 
-from . import query
-from . import utils
+from . import query, utils
 from .nonsearchable import NonInsertableDatabaseInterface
 from .. import lazy
 from ..interface import HDF5DatabaseInterface
@@ -87,9 +86,8 @@ class RecAttrFind:
                 if _attr_value:
                     if self._func(_attr_value, self._value):
                         self.found_objects.append(obj)
-        elif self._attribute in obj.attrs:
-            if self._func(obj.attrs[self._attribute], self._value):
-                self.found_objects.append(obj)
+        if self._func(obj.attrs.get(self._attribute, None), self._value):
+            self.found_objects.append(obj)
 
 
 class RecPropCollect:
@@ -320,7 +318,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
         _results = _h5find(h5obj, k, v, recursive, objfilter, ignore_attribute_error)
         results.append(_results)
     # only get common results from all results:
-    common_results = list(set.intersection(*map(set, results)))
+    common_results = lazy.lazy(list(set.intersection(*map(set, results))))
 
     if find_one:
         if len(common_results):

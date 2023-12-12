@@ -282,6 +282,20 @@ def _insert_group(
     return collection
 
 
+class MongoDBLazyDataset(lazy.LDataset):
+
+    def __init__(self, obj: h5py.Dataset, mongo_doc):
+        super().__init__(obj)
+        self.__mongo_doc__ = mongo_doc
+
+    def __getitem__(self, item):
+        if 'slice' in self.__mongo_doc__:
+            _slice = self.__mongo_doc__['slice']
+            sliced_ds = super().__getitem__(tuple(slice(*s) for s in _slice))
+            return sliced_ds.__getitem__(item)
+        super().__getitem__(item)
+
+
 class MongoDBInterface(HDF5DatabaseInterface):
     """The database interface between HDF5 and MongoDB.
 
@@ -317,6 +331,8 @@ class MongoDBInterface(HDF5DatabaseInterface):
                                'plain dictionary object.')
 
             with h5py.File(res['filename'], 'r') as h5:
+                if 'slice' in res:
+                    return MongoDBLazyDataset(h5[res['name']], res)
                 return lazy.lazy(h5[res['name']])
 
     def find(self, *args, **kwargs) -> Generator[lazy.LHDFObject, None, None]:
@@ -348,4 +364,7 @@ class MongoDBInterface(HDF5DatabaseInterface):
                                'with the original pymongo package, which will return the '
                                'plain dictionary object.')
             with h5py.File(res['filename'], 'r') as h5:
-                yield lazy.lazy(h5[res['name']])
+                if 'slice' in res:
+                    yield MongoDBLazyDataset(h5[res['name']], res)
+                else:
+                    yield lazy.lazy(h5[res['name']])

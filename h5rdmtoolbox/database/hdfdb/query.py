@@ -5,35 +5,50 @@ import re
 
 def _eq(a, b):
     """Check if a == b"""
+    if a is None or b is None:
+        return False
     return a == b
 
 
 def _arreq(a, b):
     """Check if a == b"""
+    if a is None or b is None:
+        return False
     return np.array_equal(a, b)
 
 
 def _gt(a, b):
     """Check if a > b"""
+    if a is None or b is None:
+        return False
     return a > b
 
 
 def _gte(a, b):
     """Check if a >= b"""
+    if a is None or b is None:
+        return False
     return a >= b
 
 
 def _lt(a, b):
     """Check if a < b"""
+    if a is None or b is None:
+        return False
     return a < b
 
 
 def _lte(a, b):
     """Check if a <= b"""
+    if a is None or b is None:
+        return False
     return a <= b
 
 
 def _regex(value, pattern) -> bool:
+    if value is None:
+        return False
+
     if value is None:
         return False
     match = re.search(pattern, value)
@@ -42,17 +57,28 @@ def _regex(value, pattern) -> bool:
     return True
 
 
+def _basename(value, basename) -> bool:
+    if value is None:
+        return False
+
+    return _regex(value, pattern=basename + '^.*/{basename}$')
+
+
 def _exists(value, tf: bool) -> bool:
     if tf:
         return value is not None
-    else:
-        return value is None
+    return value is None
 
 
-operator = {'$regex': _regex, '$eq': _eq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte,
+operator = {'$regex': _regex,
+            '$basename': _basename,
+            '$eq': _eq,
+            '$gt': _gt,
+            '$gte': _gte,
+            '$lt': _lt,
+            '$lte': _lte,
             '$exists': _exists}
 value_operator = {'$eq': _arreq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
-
 
 AV_SPECIAL_FILTERS = ('$basename', '$name')
 

@@ -22,52 +22,74 @@ class TestHDFDB(unittest.TestCase):
     def test_find_one(self):
         with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
                        'w') as h5:
+            h5.attrs['long_name'] = 'root group'
             grp = h5.create_group('grp')
-            grp.attrs['a'] = '1'
+            grp.attrs['a'] = 1
+            grp.attrs['long_name'] = 'a group'
             ds = h5.create_dataset('dataset', shape=(2, 3))
-            ds.attrs['a'] = '1'
-            ds.attrs['b'] = '2'
+            ds.attrs['a'] = 1
+            ds.attrs['b'] = 2
 
             gdb_grp = hdfdb.GroupDB(h5['grp'])
 
-            sing_res = gdb_grp.find_one({'a': '1'}, recursive=False)
-            self.assertIsInstance(sing_res, database.lazy.LGroup)
-            self.assertEqual(sing_res.basename, 'grp')
+            single_res = gdb_grp.find_one({'a': 1}, recursive=False)
+            self.assertIsInstance(single_res, database.lazy.LGroup)
+            self.assertEqual(single_res.basename, 'grp')
 
             gdb_root = hdfdb.GroupDB(h5['/'])
-            sing_res = gdb_root.find_one({'a': '1'}, objfilter=h5py.Dataset)
-            self.assertIsInstance(sing_res, database.lazy.LDataset)
-            self.assertEqual(sing_res.basename, 'dataset')
+            single_res = gdb_root.find_one({'a': 1}, objfilter=h5py.Dataset)
+            self.assertIsInstance(single_res, database.lazy.LDataset)
+            self.assertEqual(single_res.basename, 'dataset')
 
             gdb_root = hdfdb.GroupDB(h5['/'])
-            sing_res = gdb_root.find_one({'a': '1'}, objfilter='dataset')
-            self.assertIsInstance(sing_res, database.lazy.LDataset)
-            self.assertEqual(sing_res.basename, 'dataset')
+            single_res = gdb_root.find_one({'a': 1}, objfilter='dataset')
+            self.assertIsInstance(single_res, database.lazy.LDataset)
+            self.assertEqual(single_res.basename, 'dataset')
 
-            sing_res = gdb_root.find_one({'b': '2'}, recursive=True)
-            self.assertIsInstance(sing_res, database.lazy.LDataset)
-            self.assertEqual(sing_res.basename, 'dataset')
+            single_res = gdb_root.find_one({'b': 2}, recursive=True)
+            self.assertIsInstance(single_res, database.lazy.LDataset)
+            self.assertEqual(single_res.basename, 'dataset')
+
+            # check $exists operator:
+            single_res = gdb_root.find_one({'long_name': {'$exists': True}},
+                                           recursive=True)
+            self.assertIsInstance(single_res, database.lazy.LGroup)
+            self.assertTrue(single_res.basename in ('grp', ''))
+
+            single_res = gdb_root.find_one({'long_name': {'$exists': False}},
+                                           recursive=True)
+            self.assertIsInstance(single_res, database.lazy.LDataset)
+            self.assertEqual(single_res.basename, 'dataset')
+
+            # check $gt, ... operators:
+            single_res = gdb_root.find_one({'a': {'$gt': 0}}, recursive=True)
+            self.assertTrue(single_res.attrs['a'] > 0)
+
+            single_res = gdb_root.find_one({'a': {'$gte': 0}}, recursive=True)
+            self.assertTrue(single_res.attrs['a'] >= 0)
 
     def test_find(self):
         with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
                        'w') as h5:
             grp = h5.create_group('grp')
-            grp.attrs['a'] = '1'
+            grp.attrs['a'] = 1
             ds = h5.create_dataset('dataset', shape=(2, 3))
-            ds.attrs['a'] = '1'
-            ds.attrs['b'] = '2'
+            ds.attrs['a'] = 1
+            ds.attrs['b'] = 2
 
             gdb_root = hdfdb.GroupDB(h5)
-            multiple_results = gdb_root.find({'a': '1'}, recursive=True)
+            multiple_results = gdb_root.find({'a': 1}, recursive=True)
             self.assertIsInstance(multiple_results, types.GeneratorType)
 
-            self.assertEqual(len(list(multiple_results)), 2)
+            multiple_results = list(multiple_results)
+            self.assertEqual(len(multiple_results), 2)
+            self.assertIsInstance(multiple_results[0], h5tbx.database.lazy.LHDFObject)
 
-            multiple_results = gdb_root.find({'b': '1'}, recursive=True)
+            multiple_results = gdb_root.find({'b': 1}, recursive=True)
             self.assertIsInstance(multiple_results, types.GeneratorType)
             self.assertEqual(len(list(multiple_results)), 0)
 
-            multiple_results = gdb_root.find({'b': '2'}, recursive=True)
+            multiple_results = gdb_root.find({'b': 2}, recursive=True)
             self.assertIsInstance(multiple_results, types.GeneratorType)
             self.assertEqual(len(list(multiple_results)), 1)
 
@@ -77,20 +99,20 @@ class TestHDFDB(unittest.TestCase):
 
         with h5py.File(filename1, 'w') as h5:
             grp = h5.create_group('grp')
-            grp.attrs['a'] = '1'
+            grp.attrs['a'] = 1
             grp.attrs['i am'] = 'a group 1'
             ds = h5.create_dataset('dataset', shape=(2, 3))
-            ds.attrs['a'] = '1'
-            ds.attrs['b'] = '2'
+            ds.attrs['a'] = 1
+            ds.attrs['b'] = 2
             ds.attrs['i am'] = 'a dataset'
 
         with h5py.File(filename2, 'w') as h5:
             grp = h5.create_group('grp')
-            grp.attrs['a'] = '1'
+            grp.attrs['a'] = 1
             grp.attrs['i am'] = 'a group 2'
             ds = h5.create_dataset('dataset', shape=(2, 3))
-            ds.attrs['a'] = '1'
-            ds.attrs['b'] = '2'
+            ds.attrs['a'] = 1
+            ds.attrs['b'] = 2
             ds.attrs['c'] = '3'
             ds.attrs['d'] = 4
             ds.attrs['i am'] = 'a dataset'
