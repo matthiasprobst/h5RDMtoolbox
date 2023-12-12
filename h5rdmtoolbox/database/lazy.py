@@ -18,7 +18,11 @@ class LHDFObject:
         return self.name < other.name
 
     def __eq__(self, other):
-        return self.name == other.name and self.filename == other.filename and self.attrs == other.attrs
+        if isinstance(other, h5py.Dataset):
+            other_filename = pathlib.Path(other.file.filename)
+        else:
+            other_filename = other.filename
+        return self.name == other.name and self.filename == other_filename and self.attrs == other.attrs
 
     def __enter__(self):
         from .. import File
@@ -48,6 +52,10 @@ class LHDFObject:
         """Return the attributes of the group as a LAttributeManager object"""
         return self._attrs
 
+    @property
+    def hdf_filename(self):
+        """Return the hdf filename"""
+        return self.filename
     # def find(self, flt: Union[Dict, str],
     #          objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
     #          rec: bool = True,

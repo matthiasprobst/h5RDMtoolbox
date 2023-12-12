@@ -18,5 +18,6 @@ The following two chapters show how the aforementioned approaches (using HDF5 it
     :titlesonly:
     :glob:
 
+    firstSteps.ipynb
     hdfDB.ipynb
     mongo.ipynb
