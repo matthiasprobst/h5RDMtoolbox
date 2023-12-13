@@ -69,6 +69,7 @@ class TestConfig(unittest.TestCase):
         old_rec_id = z.rec_id
 
         z.delete()
+
         with self.assertRaises(ValueError):
             _ = zenodo.ZenodoSandboxDeposit(old_rec_id)
 
@@ -80,7 +81,7 @@ class TestConfig(unittest.TestCase):
 
         meta = Metadata(
             version="0.1.0-rc.1+build.1",
-            title='[test]h5tbxZenodoInterface',
+            title='[deleteme]h5tbxZenodoInterface',
             description='A toolbox for managing HDF5-based research data management',
             creators=[Creator(name="Probst, Matthias",
                               affiliation="KIT - ITS",

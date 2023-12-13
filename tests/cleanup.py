@@ -14,11 +14,12 @@ def delete_sandbox_deposits():
         try:
             # if deposit['title'].startswith('[test]'):
             if not deposit['submitted']:
-                print(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
-                r = requests.delete(
-                    'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(deposit['id']),
-                    params={'access_token': get_api_token(sandbox=True)}
-                )
+                if deposit['title'].startswith('[test]'):
+                    print(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
+                    r = requests.delete(
+                        'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(deposit['id']),
+                        params={'access_token': get_api_token(sandbox=True)}
+                    )
             else:
                 print(
                     f'Cannot delete {deposit["title"]} with id {deposit["id"]} because it is already published."'
