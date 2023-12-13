@@ -1,7 +1,6 @@
 import json
 import logging
 import pathlib
-import requests
 import unittest
 from datetime import datetime
 
@@ -13,7 +12,7 @@ from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
 
 logger = logging.getLogger(__name__)
 
-CLEANUP_ZENODO_SANDBOX = True
+
 
 
 class TestConfig(unittest.TestCase):
@@ -137,36 +136,3 @@ class TestConfig(unittest.TestCase):
 
         z.delete()
         self.assertFalse(z.exists())
-
-    def delete_sandbox_deposits(self):
-        """Delete all deposits in the sandbox account."""
-        r = requests.get(
-            'https://sandbox.zenodo.org/api/deposit/depositions',
-            params={'access_token': get_api_token(sandbox=True)}
-        )
-        r.raise_for_status()
-        for deposit in r.json():
-            try:
-                # if deposit['title'].startswith('[test]'):
-                if not deposit['submitted']:
-                    logger.debug(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
-                    r = requests.delete(
-                        'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(deposit['id']),
-                        params={'access_token': get_api_token(sandbox=True)}
-                    )
-                    self.assertEqual(204, r.status_code)
-                else:
-                    logger.debug(
-                        f'Cannot delete {deposit["title"]} with id {deposit["id"]} because it is already published."')
-            except Exception as e:
-                pass
-
-    def setUp(self) -> None:
-        """Delete all deposits in the sandbox account."""
-        if CLEANUP_ZENODO_SANDBOX:
-            self.delete_sandbox_deposits()
-
-    def tearDown(self) -> None:
-        """Delete all deposits in the sandbox account."""
-        if CLEANUP_ZENODO_SANDBOX:
-            self.delete_sandbox_deposits()
