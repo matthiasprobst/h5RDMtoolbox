@@ -1,3 +1,4 @@
+import appdirs
 import pathlib
 import pint
 import requests
@@ -15,6 +16,8 @@ from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
 
 __this_dir__ = pathlib.Path(__file__).parent
 
+ZENODO_TUTORIAL_CONVENTION_DEPOSIT_ID = 8363
+
 
 class TestConventions(unittest.TestCase):
 
@@ -30,6 +33,44 @@ class TestConventions(unittest.TestCase):
         # setting logger to debug:
         from h5rdmtoolbox.conventions import logger
         logger.setLevel('DEBUG')
+
+    def test_upload_convention(self):
+        cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
+        print(cv_yaml_filename)
+        # upload to zenodo sandbox
+        from h5rdmtoolbox.database.zenodo.deposit import ZenodoSandboxRecord
+        from h5rdmtoolbox.database.zenodo.metadata import Metadata, Creator
+        from datetime import datetime
+        meta = Metadata(
+            version="1.0.0",
+            title='H5TBX Tutorial Convention Definition',
+            description='The convention file used in tests and documentation as part of '
+                        f'the h5rdmtoolbox={h5tbx.__version__}.',
+            creators=[Creator(name="Probst, Matthias",
+                              affiliation="Karlsruhe Institute of Technology, Institute for Thermal Turbomachinery",
+                              orcid="0000-0001-8729-0482")],
+            upload_type='other',
+            access_right='open',
+            keywords=['h5rdmtoolbox', 'tutorial', 'convention'],
+            publication_date=datetime.now(),
+        )
+        zsr = ZenodoSandboxRecord(deposit_id=ZENODO_TUTORIAL_CONVENTION_DEPOSIT_ID,
+                                  metadata=meta,
+                                  file_or_filenames=cv_yaml_filename)
+        if not zsr.exists():
+            zsr.deposit_id = None
+            zsr.create()
+        else:
+            zsr.update()
+
+        # download file from zenodo deposit:
+        self.assertEqual(1, len(zsr.get_filenames()))
+        zsr.download_files()
+        zsr.download_file('tutorial_convention.yaml')
+        download_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads'
+        self.assertTrue(
+            (download_dir / f'{ZENODO_TUTORIAL_CONVENTION_DEPOSIT_ID}' / 'tutorial_convention.yaml').exists()
+        )
 
     def test_delete(self):
         cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')

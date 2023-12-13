@@ -1,4 +1,5 @@
 import abc
+import appdirs
 import pathlib
 import requests
 from typing import List, Union
@@ -51,6 +52,18 @@ class AbstractZenodoRecord(abc.ABC):
     def add_file(self, filename):
         """Add a file to the deposit."""
 
+    @abc.abstractmethod
+    def download_files(self):
+        """Download all (!) files from Zenodo."""
+
+    @abc.abstractmethod
+    def download_file(self, name):
+        """Download a specific file from Zenodo."""
+
+    @abc.abstractmethod
+    def get_filenames(self):
+        """Get a list of all filenames."""
+
 
 class ZenodoRecordInterface(AbstractZenodoRecord):
 
@@ -58,7 +71,7 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
                  metadata: Metadata,
                  deposit_id: Union[int, None] = None,
                  file_or_filenames: Union[List[Union[str, pathlib.Path]], None] = None):
-        self.deposit_id = deposit_id
+        self.deposit_id = int(deposit_id)
         self.metadata = metadata
         self.filenames = []
 
@@ -74,6 +87,8 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
 
     def _get(self, raise_for_status: bool = False):
         """Get the deposit from Zenodo."""
+        if self.deposit_id is None:
+            raise ValueError('The deposit_id must be set.')
         base_url = self.base_url + f'/{self.deposit_id}'
         r = requests.get(
             base_url,
@@ -97,14 +112,22 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
         data = {
             'metadata': self.metadata.model_dump()
         }
+        if self.deposit_id is not None:
+            url = self.base_url + f'/{self.deposit_id}/actions/edit'
+        else:
+            url = self.base_url
         r = requests.post(
-            self.base_url,
+            url,
             json=data,
             params={"access_token": self.api_token},
             headers={"Content-Type": "application/json"}
         )
+        logger.debug(f'creating deposit on Zenodo: request response: {r.json()}')
         r.raise_for_status()
-        self.deposit_id = r.json()['id']
+        if self.deposit_id is None:
+            self.deposit_id = r.json()['id']
+        else:
+            assert self.deposit_id == r.json()['id']
         self._push_files()
         return self.deposit_id
 
@@ -149,6 +172,52 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
         if not filename.exists():
             raise FileNotFoundError(f'{filename} does not exist.')
         self.filenames.append(filename)
+
+    def get_filenames(self):
+        """Get a list of all filenames."""
+        r = self._get()
+        return [f['filename'] for f in r.json()['files']]
+
+    def download_files(self, target_folder: Union[str, pathlib.Path] = None):
+        """Download all (!) files from Zenodo."""
+        r = self._get()
+        download_files = []
+        for f in r.json()['files']:
+            if target_folder is None:
+                target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
+                    self.deposit_id)
+                target_folder.mkdir(exist_ok=True, parents=True)
+            else:
+                target_folder = pathlib.Path(target_folder)
+            fname = f["filename"]
+            target_filename = target_folder / fname
+            bucket_dict = requests.get(f['links']['self'],
+                                       params={'access_token': self.api_token}).json()
+            logger.debug(f'downloading file "{fname}" to "{target_filename}"')
+            download_files.append(target_filename)
+            with open(target_filename, 'wb') as file:
+                file.write(requests.get(bucket_dict['links']['self']).content)
+        return download_files
+
+    def download_file(self, name, target_folder: Union[str, pathlib.Path] = None):
+        """Download a single file from Zenodo."""
+        if target_folder is None:
+            target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
+                self.deposit_id)
+            target_folder.mkdir(exist_ok=True, parents=True)
+        else:
+            target_folder = pathlib.Path(target_folder)
+        r = self._get()
+        for f in r.json()['files']:
+            if f['filename'] == name:
+                fname = f["filename"]
+                target_filename = target_folder / fname
+                bucket_dict = requests.get(f['links']['self'],
+                                           params={'access_token': self.api_token}).json()
+                logger.debug(f'downloading file "{fname}" to "{target_filename}"')
+                with open(target_filename, 'wb') as file:
+                    file.write(requests.get(bucket_dict['links']['self']).content)
+                return target_filename
 
 
 class ZenodoRecord(ZenodoRecordInterface):

@@ -22,9 +22,7 @@ from typing_extensions import Literal
 
 def verify_version(version: str) -> str:
     """Verify that version is a valid as defined in https://semver.org/"""
-    re_pattern = '^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
-    # print(f'check {version}')
-    assert re.match(pattern=re_pattern, string=version) is not None
+    re_pattern = r'^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
     return re.match(pattern=re_pattern, string=version) is not None
 
 
@@ -131,7 +129,7 @@ class Metadata(BaseModel):
     image_type: Optional[ImageType] = None  # if upload_type == image
     keywords: List[str]
     notes: Optional[str] = None
-    contributors: Optional[List[Contributor]] = None
+    contributors: Optional[List[Contributor]] = []
     access_right: Optional[Literal["open", "closed", "restricted", "embargoed"]] = "open"
     publication_date: Optional[Union[str, datetime]] = Field(default_factory=datetime.today)
     license: Optional[str] = "cc-by-4.0"
@@ -189,18 +187,15 @@ class Metadata(BaseModel):
 
 
 if __name__ == '__main__':
-    # testing
-    # assert verify_version("0.1.0-rc.1+build.1")
-
     meta = Metadata(version="0.1.0-rc.1+build.1",
                     title='h5rdmtoolbox',
                     description='A toolbox for managing HDF5-based research data management',
                     creators=[Creator(name="Probst, Matthias",
                                       affiliation="KIT - ITS",
-                                      orcid="0000-0003-4423-4370")],
+                                      orcid="0000-0001-8729-0482")],
                     contributors=[Contributor(name="Probst, Matthias",
                                               affiliation="KIT - ITS",
-                                              orcid="0000-0003-4423-4370",
+                                              orcid="0000-0001-8729-0482",
                                               type="ContactPerson")],
                     publication_type='other',
                     access_right='open',

@@ -2,7 +2,6 @@ import appdirs
 import configparser
 import os
 import pathlib
-import requests
 from typing import Union
 
 from h5rdmtoolbox.utils import create_tbx_logger
@@ -27,7 +26,6 @@ def get_api_token(sandbox: bool,
     if env_token is not None:
         env_token = env_token.strip()
         logger.debug('Took token from environment variable ZENODO_API_TOKEN.')
-        verify_token(sandbox, env_token)
         return env_token
     zenodo_ini_filename = _parse_ini_file(zenodo_ini_filename)
     config = configparser.ConfigParser()
@@ -40,22 +38,7 @@ def get_api_token(sandbox: bool,
         raise ValueError(f'No API token found in {zenodo_ini_filename}. Please verify the correctness of the file '
                          f'{zenodo_ini_filename}. The api_token entry must be in the section [zenodo] or '
                          f'[zenodo:sandbox].')
-    verify_token(sandbox, api_token)
     return api_token
-
-
-def verify_token(sandbox: bool, api_token: str):
-    # validate the token
-    if sandbox:
-        url = 'https://sandbox.zenodo.org/api/deposit/depositions'
-    else:
-        url = 'https://zenodo.org/api/deposit/depositions'
-    r = requests.get(url,
-                     params={'access_token': api_token})
-    try:
-        r.raise_for_status()
-    except requests.exceptions.HTTPError:
-        raise ValueError(f'Zenodo api token is invalid: {api_token}')
 
 
 def set_api_token(sandbox: bool,
