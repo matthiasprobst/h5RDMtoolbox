@@ -59,9 +59,9 @@ jobs:
           mongodb-version: ${{ matrix.mongodb-version }}
 
       - name: Run pytest coverage
-#        env:
-#          ENV_SECRET: ${{ secrest.ZENODO_API_TOKEN }}
-        run: TEST_SECRET=${{ secrets.ZENODO_API_TOKEN }} pytest --cov --cov-report=xml
+        env:
+          ZENODO_API_TOKEN: ${{ secrest.ZENODO_API_TOKEN }}
+        run: pytest --cov --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
