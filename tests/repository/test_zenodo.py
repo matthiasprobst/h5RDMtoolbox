@@ -1,22 +1,55 @@
+import json
 import logging
 import pathlib
 import requests
 import unittest
 from datetime import datetime
 
-from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.repository import zenodo, upload_file
+from h5rdmtoolbox.repository.h5metamapper import hdf2json
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
+from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
 
 logger = logging.getLogger(__name__)
 
-CLEANUP_ZENODO_SANDBOX = True
+CLEANUP_ZENODO_SANDBOX = False
 
 
 class TestConfig(unittest.TestCase):
 
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)
+
+    def test_upload_hdf(self):
+        z = zenodo.ZenodoSandboxDeposit(None)
+        with h5tbx.File() as h5:
+            h5.attrs['long_name'] = 'root'
+            h5.create_dataset('test', data=1, attrs={'units': 'm/s', 'long_name': 'dataset 1'})
+            h5.create_dataset('grp1/test2', data=2, attrs={'test': 1, 'long_name': 'dataset 2'})
+        z.upload_hdf_file(h5.hdf_filename, metamapper=hdf2json)
+        filenames = z.get_filenames()
+        self.assertIn('tmp0.hdf', filenames)
+        self.assertIn('tmp0.json', filenames)
+        with self.assertRaises(KeyError):
+            _ = z.download_file('test.hdf')
+        hdf_filename = z.download_file('tmp0.hdf')
+
+        self.assertTrue(hdf_filename.exists())
+
+        with h5tbx.File(hdf_filename) as h5:
+            self.assertEqual(h5.attrs['long_name'], 'root')
+            self.assertEqual(h5['test'].attrs['units'], 'm/s')
+            self.assertEqual(h5['test'].attrs['long_name'], 'dataset 1')
+            self.assertEqual(h5['grp1/test2'].attrs['test'], 1)
+            self.assertEqual(h5['grp1/test2'].attrs['long_name'], 'dataset 2')
+
+        json_filename = z.download_file('tmp0.json')
+        self.assertTrue(json_filename.exists())
+        with open(json_filename) as f:
+            json_dict = json.loads(f.read())
+
+        self.assertEqual(json_dict['attrs'], {'__h5rdmtoolbox_version__': '1.0.0', 'long_name': 'root'})
 
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoSandboxDeposit(None)
@@ -99,25 +132,26 @@ class TestConfig(unittest.TestCase):
         z.delete()
         self.assertFalse(z.exists())
 
-    def delete_sandbox_deposits(self):
-        """Delete all deposits in the sandbox account."""
-        r = requests.get(
-            'https://sandbox.zenodo.org/api/deposit/depositions',
-            params={'access_token': get_api_token(sandbox=True)}
-        )
-        r.raise_for_status()
-        for deposit in r.json():
-            # if deposit['title'].startswith('[test]'):
-            if not deposit['submitted']:
-                logger.debug(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
-                r = requests.delete(
-                    'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(deposit['id']),
-                    params={'access_token': get_api_token(sandbox=True)}
-                )
-                self.assertEqual(204, r.status_code)
-            else:
-                logger.debug(
-                    f'Cannot delete {deposit["title"]} with id {deposit["id"]} because it is already published."')
+    if CLEANUP_ZENODO_SANDBOX:
+        def delete_sandbox_deposits(self):
+            """Delete all deposits in the sandbox account."""
+            r = requests.get(
+                'https://sandbox.zenodo.org/api/deposit/depositions',
+                params={'access_token': get_api_token(sandbox=True)}
+            )
+            r.raise_for_status()
+            for deposit in r.json():
+                # if deposit['title'].startswith('[test]'):
+                if not deposit['submitted']:
+                    logger.debug(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
+                    r = requests.delete(
+                        'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(deposit['id']),
+                        params={'access_token': get_api_token(sandbox=True)}
+                    )
+                    self.assertEqual(204, r.status_code)
+                else:
+                    logger.debug(
+                        f'Cannot delete {deposit["title"]} with id {deposit["id"]} because it is already published."')
 
     def setUp(self) -> None:
         """Delete all deposits in the sandbox account."""

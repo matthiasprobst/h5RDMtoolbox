@@ -8,6 +8,8 @@ major changes:
 - zenodo is part or `repository` which is designed to provide interfaces to different data repositories (however, only `zenodo` is implemented at the moment)
 - the database architecture is changed in a similar way, such that it has a more logic structure
 - both above changes follow a more or less strict inheritance structure from abstract classes defining the interface to repositories or databases (databases are meant to be local, like mongoDB, sql, etc, repositories are online data storages, like zenodo, which allows to search for metadata but not within the raw files.)
+- python 3.8 until 3.12 inclusive are supported
+- IRI as persistent identifier is now supported, which fulfills thr F3 requirement of the FAIR principles ("Metadata clearly and explicitly include the identifier of the data they describe", https://www.go-fair.org/fair-principles/)
 
 ## v0.13.0
 - scale and offset is now implemented in the package is should not longer be defined in a convention.

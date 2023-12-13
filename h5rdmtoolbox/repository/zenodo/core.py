@@ -3,7 +3,7 @@ import appdirs
 import pathlib
 import requests
 import warnings
-from typing import Union, List
+from typing import Union, List, Callable
 
 from h5rdmtoolbox.utils import create_tbx_logger
 from .metadata import Metadata
@@ -204,8 +204,10 @@ class ZenodoDepositInterface(ZenodoInterface):
                                            params={'access_token': self.access_token}).json()
                 logger.debug(f'downloading file "{fname}" to "{target_filename}"')
                 with open(target_filename, 'wb') as file:
-                    file.write(requests.get(bucket_dict['links']['self']).content)
+                    file.write(requests.get(bucket_dict['links']['download'],
+                                            params={'access_token': self.access_token}).content)
                 return target_filename
+        raise KeyError(f'File "{filename}" not found in deposit "{self.rec_id}"')
 
     def delete(self):
         """Delete the deposit."""
@@ -228,6 +230,9 @@ class ZenodoRecord(ZenodoInterface):
     base_url = 'https://zenodo.org/api/records'
 
     def upload_file(self, filename, overwrite: bool = False):
+        raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
+
+    def upload_hdf_file(self, filename, metamapper: Callable, overwrite: bool = False):
         raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
 
     def delete(self):

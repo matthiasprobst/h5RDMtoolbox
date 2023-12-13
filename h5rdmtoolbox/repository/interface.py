@@ -1,5 +1,5 @@
 import abc
-from typing import List
+from typing import List, Callable
 
 
 class RepositoryInterface(abc.ABC):
@@ -38,6 +38,13 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def upload_file(self, filename, overwrite: bool = False):
         """Upload a file to the repository."""
+
+    def upload_hdf_file(self, filename, metamapper: Callable, overwrite: bool = False):
+        """Upload an HDF5 file. Additionally a metadata file will be extracted from the
+        HDF5 file using the metamapper function and is uploaded as well."""
+        meta_data_file = metamapper(filename)
+        self.upload_file(filename=filename, overwrite=overwrite)
+        self.upload_file(filename=meta_data_file, overwrite=overwrite)
 
     @abc.abstractmethod
     def get_doi(self):
