@@ -1,7 +1,6 @@
+import requests
 import unittest
 import warnings
-
-import requests
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
@@ -231,9 +230,7 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
-            import zenodo_search as zsearch
-            doi = zsearch.utils.parse_doi('8266929')
-            snt = StandardNameTable.from_zenodo(doi=8266929)
+            snt = StandardNameTable.from_zenodo(doi_or_recid=8266929)
             self.assertIsInstance(snt, StandardNameTable)
             filename = h5tbx.UserDir['standard_name_tables'] / f'8266929.yaml'
             self.assertTrue(filename.exists())

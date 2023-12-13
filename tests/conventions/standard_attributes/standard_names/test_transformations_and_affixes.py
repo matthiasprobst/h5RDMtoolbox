@@ -41,10 +41,9 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
     def test_adding_transformation(self):
-
-        snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(doi=8276716)
-        from h5rdmtoolbox.database.zenodo.deposit import ZenodoRecord
-        z = ZenodoRecord(deposit_id=8276716)
+        snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(doi_or_recid=8276716)
+        from h5rdmtoolbox.repository.zenodo import ZenodoRecord
+        z = ZenodoRecord(rec_id=8276716)
         self.assertTrue(z.exists())
 
         # check if the problem really exists:

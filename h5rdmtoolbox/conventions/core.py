@@ -9,7 +9,6 @@ import shutil
 import sys
 import warnings
 import yaml
-import zenodo_search as zsearch
 from pydoc import locate
 from typing import Union, List, Dict, Tuple
 
@@ -21,6 +20,9 @@ from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
 from .._repr import make_italic, make_bold
 from .._user import UserDir
+from ..repository.zenodo.utils import recid_from_doi_or_redid
+from ..repository import zenodo
+
 
 CV_DIR = UserDir['conventions']
 
@@ -622,7 +624,7 @@ def from_json(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Co
     return Convention.from_json(filename, overwrite=overwrite)
 
 
-def from_zenodo(doi,
+def from_zenodo(doi_or_recid: str,
                 name: str = None,
                 overwrite: bool = False,
                 force_download: bool = False) -> Convention:
@@ -630,9 +632,9 @@ def from_zenodo(doi,
 
     Parameters
     ----------
-    doi: str
+    doi_or_recid: str
         DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10156750 or
-        10.5281/zenodo.10156750 or https://doi.org/10.5281/zenodo.10156750)
+        10.5281/zenodo.10156750 or https://doi.org/10.5281/zenodo.10156750 or only the record id, e.g. 10156750)
     name: str=None
         Name to be sed for the filename. If None, the name is taken from the zenodo record.
     overwrite: bool = False
@@ -646,29 +648,27 @@ def from_zenodo(doi,
         The convention object
     """
     # depending on the input, try to convert to a valid DOI:
-    # doi = zsearch.utils.parse_doi(doi)
-    doi = str(doi)
+    # parse record id:
+
+    rec_id = recid_from_doi_or_redid(doi_or_recid)
+
     if name is None:
-        filename = UserDir['cache'] / f'{doi.replace("/", "_").replace(":", "_")}'
+        filename = UserDir['cache'] / f'{rec_id}'
     else:
-        filename = UserDir['cache'] / f'{doi.replace("/", "_").replace(":", "_")}/{name}'
+        filename = UserDir['cache'] / f'{rec_id}/{name}'
 
     if not filename.exists() or force_download:
-        record = zsearch.search_doi(doi, parse_doi=False)
+        record = zenodo.ZenodoRecord(rec_id)
+
+        filenames = record.get_filenames()
         if name is None:
-            matches = [file for file in record.files if file['key'].rsplit('.', 1)[-1] == 'yaml']
-            if len(matches) == 0:
-                raise ValueError(f'No file with suffix ".yaml" found in record {doi}')
+            matches = [file for file in filenames if pathlib.Path(file).suffix == '.yaml']
         else:
-            matches = [file for file in record.files if file['key'] == name]
+            matches = [file for file in filenames if file == name]
             if len(matches) == 0:
-                raise ValueError(f'No file with name "{name}" found in record {doi}')
+                raise ValueError(f'No file with name "{name}" found in record {doi_or_recid}')
 
-        file0 = zsearch.ZenodoFile(matches[0])
-        if file0['key'].rsplit('.', 1)[-1] != 'yaml':
-            raise ValueError(f'The file with name "{name}" is not a YAML file')
-
-        _filename = file0.download(destination_dir=filename.parent)
+        _filename = record.download_file(matches[0], target_folder=filename.parent)
         shutil.move(_filename, filename)
 
     return from_yaml(filename, overwrite=overwrite)

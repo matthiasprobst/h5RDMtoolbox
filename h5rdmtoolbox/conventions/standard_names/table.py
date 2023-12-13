@@ -1,17 +1,17 @@
 """Standard name table module"""
+import h5py
 import json
 import pathlib
-import shutil
+import pint
 import warnings
+import yaml
+from IPython.display import display, HTML
 from datetime import datetime, timezone
 from typing import List, Union, Dict, Tuple
 
-import h5py
-import pint
-import yaml
-from IPython.display import display, HTML
-
 from h5rdmtoolbox._user import UserDir
+from h5rdmtoolbox.database import GroupDB
+from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.utils import generate_temporary_filename, download_file, is_xml_file
 from . import cache
 from . import consts
@@ -20,7 +20,6 @@ from .transformation import *
 from .. import logger
 from ..utils import dict2xml, get_similar_names_ratio
 from ... import errors
-from h5rdmtoolbox.database import GroupDB
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -667,14 +666,15 @@ class StandardNameTable:
         return snt
 
     @staticmethod
-    def from_zenodo(doi: str) -> "StandardNameTable":
+    def from_zenodo(doi_or_recid: str) -> "StandardNameTable":
         """Download a standard name table from Zenodo based on its DOI.
 
 
         Parameters
         ----------
-        doi: str
-            The DOI. It can hav the following formats:
+        doi_or_recid: str
+            The DOI or record id. It can have the following formats:
+            - 8266929
             - 10.5281/zenodo.8266929
             - https://doi.org/10.5281/zenodo.8266929
             - https://zenodo.org/record/8266929
@@ -693,29 +693,27 @@ class StandardNameTable:
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
-        doi = str(doi)
-        if doi in cache.snt:
-            return cache.snt[doi]
 
-        if 'zenodo' in doi:
-            doi = doi.split('/')[-1]
+        # parse input:
+        rec_id = zenodo.utils.recid_from_doi_or_redid(doi_or_recid)
+        if rec_id in cache.snt:
+            return cache.snt[rec_id]
 
-        yaml_filename = UserDir['standard_name_tables'] / f'{doi}.yaml'
+        z = zenodo.ZenodoRecord(rec_id)
+        assert z.exists()
 
-        if not yaml_filename.exists():
-            import zenodo_search as zsearch
-            zenrec = zsearch.search_doi(doi)
-            zenfile = zenrec.files[0]
-
-            yaml_name = zenrec.files[0]['key']
-            if not yaml_name.endswith('.yaml'):
-                raise ValueError(f'Expected yaml file, got {yaml_name}')
-            _yaml_filename = zenfile.download()
-            shutil.move(_yaml_filename, yaml_filename)
+        filenames = z.download_files(target_folder=UserDir['standard_name_tables'])
+        assert len(filenames) == 1
+        filename = filenames[0]
+        assert filename.suffix == '.yaml'
+        new_filename = UserDir['standard_name_tables'] / f'{rec_id}.yaml'
+        if new_filename.exists():
+            new_filename.unlink()
+        yaml_filename = filename.rename(UserDir['standard_name_tables'] / f'{rec_id}.yaml')
         snt = StandardNameTable.from_yaml(yaml_filename)
-        snt._meta.update(dict(zenodo_doi=doi))
+        snt._meta.update(dict(zenodo_doi=doi_or_recid))
 
-        cache.snt[doi] = snt
+        cache.snt[rec_id] = snt
         return snt
 
     @staticmethod

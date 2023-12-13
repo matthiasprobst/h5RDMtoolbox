@@ -1,5 +1,3 @@
-import warnings
-
 import appdirs
 import configparser
 import os
@@ -36,23 +34,18 @@ def get_api_token(sandbox: bool,
     config = configparser.ConfigParser()
     config.read(zenodo_ini_filename)
     if sandbox:
-        api_token = config['zenodo:sandbox']['api_token']
+        access_token = config['zenodo:sandbox']['access_token']
     else:
-        api_token = config['zenodo']['api_token']
-    if not api_token:
-        warnings.warn(f'No API token found in {zenodo_ini_filename}. '
-                      f'Accessing Zenodo without API token may work, but if not it is because '
-                      f'of the missing api_token.')
-        api_token = ''
-    # if not api_token:
-    #     raise ValueError(f'No API token found in {zenodo_ini_filename}. Please verify the correctness of the file '
-    #                      f'{zenodo_ini_filename}. The api_token entry must be in the section [zenodo] or '
-    #                      f'[zenodo:sandbox].')
-    return api_token
+        access_token = config['zenodo']['access_token']
+    if not access_token:
+        raise ValueError(f'No API token found in {zenodo_ini_filename}. Please verify the correctness of the file '
+                         f'{zenodo_ini_filename}. The access_token entry must be in the section [zenodo] or '
+                         f'[zenodo:sandbox].')
+    return access_token
 
 
 def set_api_token(sandbox: bool,
-                  api_token: str,
+                  access_token: str,
                   zenodo_ini_filename: Union[str, pathlib.Path] = None):
     """Write the Zenodo API token to the config file."""
     zenodo_ini_filename = _parse_ini_file(zenodo_ini_filename)
@@ -64,6 +57,6 @@ def set_api_token(sandbox: bool,
         section = 'zenodo'
     if section not in config:
         config[section] = {}
-    config[section]['api_token'] = api_token
+    config[section]['access_token'] = access_token
     with open(zenodo_ini_filename, 'w') as f:
         config.write(f)
