@@ -24,6 +24,7 @@ class TestConfig(unittest.TestCase):
             'https://sandbox.zenodo.org/api/deposit/depositions',
             params={'access_token': get_api_token(sandbox=True)}
         )
+        r.raise_for_status()
         for deposit in r.json():
             # if deposit['title'].startswith('[test]'):
             if not deposit['submitted']:
@@ -71,6 +72,7 @@ class TestConfig(unittest.TestCase):
             f.write('This is a test file.')
         zsr.add_file('testfile.txt')
         zsr.create()
+        zsr.create()  # call it again. does it crash?
         pathlib.Path('testfile.txt').unlink()
         self.assertTrue(zsr.exists())
         zsr.delete()

@@ -7,15 +7,19 @@ on:
     branches:
       - main
       - dev
+      - dev-zenodo
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
-        python-version: [ '3.8', '3.9' , '3.10', '3.11', '3.12']
-        mongodb-version: ['5.0', '6.0']
+#        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ windows-latest ]
+        python-version: [ '3.8', ]
+        mongodb-version: ['5.0', ]
+#        python-version: [ '3.8', '3.9' , '3.10', '3.11', '3.12']
+#        mongodb-version: ['5.0', '6.0']
 
     steps:
       - name: Checkout repo
@@ -55,8 +59,9 @@ jobs:
           mongodb-version: ${{ matrix.mongodb-version }}
 
       - name: Run pytest coverage
-        run: |
-          pytest --cov --cov-report=xml
+#        env:
+#          ENV_SECRET: ${{ secrest.ZENODO_API_TOKEN }}
+        run: TEST_SECRET=${{ secrets.ZENODO_API_TOKEN }} pytest --cov --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
