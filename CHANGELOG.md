@@ -2,6 +2,13 @@
 
 Log of changes in the versions
 
+## v1.0.0
+major changes:
+- zenodo is not a dependency anymore but introduces as a new subpackage of the toolbox
+- zenodo is part or `repository` which is designed to provide interfaces to different data repositories (however, only `zenodo` is implemented at the moment)
+- the database architecture is changed in a similar way, such that it has a more logic structure
+- both above changes follow a more or less strict inheritance structure from abstract classes defining the interface to repositories or databases (databases are meant to be local, like mongoDB, sql, etc, repositories are online data storages, like zenodo, which allows to search for metadata but not within the raw files.)
+
 ## v0.13.0
 - scale and offset is now implemented in the package is should not longer be defined in a convention.
 - bugfix normalization extension
