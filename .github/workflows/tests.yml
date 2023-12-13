@@ -61,6 +61,8 @@ jobs:
         run: pytest --cov --cov-report=xml
 
       - name: Cleanup test repository data
+        env:
+          ZENODO_SANDBOX_API_TOKEN: ${{ secrets.ZENODO_SANDBOX_API_TOKEN }}
         run: python tests/cleanup.py
 
       - name: Upload coverage to Codecov
