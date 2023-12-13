@@ -15,7 +15,9 @@ class AbstractZenodoRecord(abc.ABC):
     """An abstract Zenodo record."""
     base_url = None
 
-    def __init__(self, metadata: Metadata, deposit_id: Union[int, None] = None):
+    def __init__(self,
+                 deposit_id: Union[int, None] = None,
+                 metadata: Metadata = None):
         if self.base_url is None:
             raise ValueError('The base_url must be set.')
         self.deposit_id = deposit_id
@@ -66,34 +68,40 @@ class AbstractZenodoRecord(abc.ABC):
 
 
 class ZenodoRecordInterface(AbstractZenodoRecord):
+    """A Zenodo record interface."""
 
     def __init__(self,
-                 metadata: Metadata,
                  deposit_id: Union[int, None] = None,
-                 file_or_filenames: Union[List[Union[str, pathlib.Path]], None] = None):
-        self.deposit_id = int(deposit_id)
-        self.metadata = metadata
-        self.filenames = []
+                 metadata: Metadata = None):
+        self.deposit_id = deposit_id
+        self._metadata = metadata
 
-        if file_or_filenames is not None:
-            if isinstance(file_or_filenames, (str, pathlib.Path)):
-                self.add_file(file_or_filenames)
-            elif isinstance(file_or_filenames, (tuple, list)):
-                self.add_file(*file_or_filenames)
-            else:
-                raise TypeError(
-                    'file_or_filenames must be a string, pathlib.Path, or a list of strings or pathlib.Path. '
-                    f'Got {type(file_or_filenames)} instead.')
+    @property
+    def metadata(self):
+        if self._metadata is None:
+            raise ValueError('The metadata must be set.')
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value: Metadata):
+        if not isinstance(value, Metadata):
+            raise TypeError('The metadata must be a Metadata object.')
+        self._metadata = value
 
     def _get(self, raise_for_status: bool = False):
         """Get the deposit from Zenodo."""
         if self.deposit_id is None:
             raise ValueError('The deposit_id must be set.')
         base_url = self.base_url + f'/{self.deposit_id}'
-        r = requests.get(
-            base_url,
-            params={'access_token': self.api_token}
-        )
+        if not self.api_token:
+            r = requests.get(
+                base_url,
+            )
+        else:
+            r = requests.get(
+                base_url,
+                params={'access_token': self.api_token}
+            )
         if raise_for_status:
             r.raise_for_status()
         return r
@@ -128,36 +136,31 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
             self.deposit_id = r.json()['id']
         else:
             assert self.deposit_id == r.json()['id']
-        self._push_files()
         return self.deposit_id
-
-    def _push_files(self):
-        """Push the files to the deposit."""
-
-        bucket_url = self._get().json()["links"]["bucket"]
-        for filename in self.filenames:
-            logger.debug(f'adding file "{filename}" to deposit "{self.deposit_id}"')
-            with open(filename, "rb") as fp:
-                r = requests.put(
-                    "%s/%s" % (bucket_url, filename.name),
-                    data=fp,
-                    params={"access_token": self.api_token},
-                )
-                r.raise_for_status()
 
     def delete(self):
         """Delete the deposit on Zenodo."""
         logger.debug(f'getting deposit "{self.deposit_id}"')
-        r = requests.get(
-            f'https://sandbox.zenodo.org/api/deposit/depositions/{self.deposit_id}',
-            params={'access_token': self.api_token}
-        )
+        if not self.api_token:
+            r = requests.get(
+                f'https://sandbox.zenodo.org/api/deposit/depositions/{self.deposit_id}',
+            )
+        else:
+            r = requests.get(
+                f'https://sandbox.zenodo.org/api/deposit/depositions/{self.deposit_id}',
+                params={'access_token': self.api_token}
+            )
         r.raise_for_status()
         logger.debug('deleting deposit {self.deposit_id}')
-        r = requests.delete(
-            'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(r.json()['id']),
-            params={'access_token': self.api_token}
-        )
+        if not self.api_token:
+            r = requests.delete(
+                'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(r.json()['id']),
+            )
+        else:
+            r = requests.delete(
+                'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(r.json()['id']),
+                params={'access_token': self.api_token}
+            )
         r.raise_for_status()
 
     def update(self):
@@ -170,8 +173,16 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
         """Add a file to the deposit."""
         filename = pathlib.Path(filename)
         if not filename.exists():
-            raise FileNotFoundError(f'{filename} does not exist.')
-        self.filenames.append(filename)
+            raise FileNotFoundError(f'File "{filename}" does not exist.')
+        bucket_url = self._get().json()["links"]["bucket"]
+        logger.debug(f'adding file "{filename}" to deposit "{self.deposit_id}"')
+        with open(filename, "rb") as fp:
+            r = requests.put(
+                "%s/%s" % (bucket_url, filename.name),
+                data=fp,
+                params={"access_token": self.api_token},
+            )
+            r.raise_for_status()
 
     def get_filenames(self):
         """Get a list of all filenames."""
@@ -191,8 +202,11 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
                 target_folder = pathlib.Path(target_folder)
             fname = f["filename"]
             target_filename = target_folder / fname
-            bucket_dict = requests.get(f['links']['self'],
-                                       params={'access_token': self.api_token}).json()
+            if not self.api_token:
+                bucket_dict = requests.get(f['links']['self']).json()
+            else:
+                bucket_dict = requests.get(f['links']['self'],
+                                           params={'access_token': self.api_token}).json()
             logger.debug(f'downloading file "{fname}" to "{target_filename}"')
             download_files.append(target_filename)
             with open(target_filename, 'wb') as file:
@@ -212,8 +226,11 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
             if f['filename'] == name:
                 fname = f["filename"]
                 target_filename = target_folder / fname
-                bucket_dict = requests.get(f['links']['self'],
-                                           params={'access_token': self.api_token}).json()
+                if not self.api_token:
+                    bucket_dict = requests.get(f['links']['self']).json()
+                else:
+                    bucket_dict = requests.get(f['links']['self'],
+                                               params={'access_token': self.api_token}).json()
                 logger.debug(f'downloading file "{fname}" to "{target_filename}"')
                 with open(target_filename, 'wb') as file:
                     file.write(requests.get(bucket_dict['links']['self']).content)
@@ -221,11 +238,13 @@ class ZenodoRecordInterface(AbstractZenodoRecord):
 
 
 class ZenodoRecord(ZenodoRecordInterface):
+    """A Zenodo record in the production environment."""
     base_url = 'https://zenodo.org/api/deposit/depositions'
 
     @property
-    def api_token(self):
-        return self.api_token(sandbox=False)
+    def api_token(self) -> str:
+        """Get the API token for the production environment."""
+        return get_api_token(sandbox=False)
 
 
 class ZenodoSandboxRecord(ZenodoRecordInterface):

@@ -1,3 +1,5 @@
+import warnings
+
 import appdirs
 import configparser
 import os
@@ -22,10 +24,13 @@ def _parse_ini_file(zenodo_ini_filename: Union[str, pathlib.Path]):
 def get_api_token(sandbox: bool,
                   zenodo_ini_filename: Union[str, pathlib.Path] = None):
     """Read the Zenodo API token from the config file."""
-    env_token = os.environ.get('ZENODO_API_TOKEN', None)
+    if sandbox:
+        env_token = os.environ.get('ZENODO_SANDBOX_API_TOKEN', None)
+    else:
+        env_token = os.environ.get('ZENODO_API_TOKEN', None)
     if env_token is not None:
         env_token = env_token.strip()
-        logger.debug('Took token from environment variable ZENODO_API_TOKEN.')
+        logger.debug('Took token from environment variable ZENODO_SANDBOX_API_TOKEN.')
         return env_token
     zenodo_ini_filename = _parse_ini_file(zenodo_ini_filename)
     config = configparser.ConfigParser()
@@ -35,9 +40,14 @@ def get_api_token(sandbox: bool,
     else:
         api_token = config['zenodo']['api_token']
     if not api_token:
-        raise ValueError(f'No API token found in {zenodo_ini_filename}. Please verify the correctness of the file '
-                         f'{zenodo_ini_filename}. The api_token entry must be in the section [zenodo] or '
-                         f'[zenodo:sandbox].')
+        warnings.warn(f'No API token found in {zenodo_ini_filename}. '
+                      f'Accessing Zenodo without API token may work, but if not it is because '
+                      f'of the missing api_token.')
+        api_token = ''
+    # if not api_token:
+    #     raise ValueError(f'No API token found in {zenodo_ini_filename}. Please verify the correctness of the file '
+    #                      f'{zenodo_ini_filename}. The api_token entry must be in the section [zenodo] or '
+    #                      f'[zenodo:sandbox].')
     return api_token
 
 

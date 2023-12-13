@@ -70,8 +70,8 @@ class TestConfig(unittest.TestCase):
         self.assertFalse(zsr.exists())
         with open('testfile.txt', 'w') as f:
             f.write('This is a test file.')
-        zsr.add_file('testfile.txt')
         zsr.create()
+        zsr.add_file('testfile.txt')
         zsr.create()  # call it again. does it crash?
         pathlib.Path('testfile.txt').unlink()
         self.assertTrue(zsr.exists())

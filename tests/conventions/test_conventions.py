@@ -55,13 +55,13 @@ class TestConventions(unittest.TestCase):
             publication_date=datetime.now(),
         )
         zsr = ZenodoSandboxRecord(deposit_id=ZENODO_TUTORIAL_CONVENTION_DEPOSIT_ID,
-                                  metadata=meta,
-                                  file_or_filenames=cv_yaml_filename)
+                                  metadata=meta)
         if not zsr.exists():
             zsr.deposit_id = None
             zsr.create()
         else:
             zsr.update()
+        zsr.add_file(cv_yaml_filename)
 
         # download file from zenodo deposit:
         self.assertEqual(1, len(zsr.get_filenames()))
