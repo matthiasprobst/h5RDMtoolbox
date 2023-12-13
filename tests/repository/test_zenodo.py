@@ -13,8 +13,6 @@ from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
 logger = logging.getLogger(__name__)
 
 
-
-
 class TestConfig(unittest.TestCase):
 
     def test_get_api(self):
@@ -22,6 +20,7 @@ class TestConfig(unittest.TestCase):
 
     def test_upload_hdf(self):
         z = zenodo.ZenodoSandboxDeposit(None)
+
         with h5tbx.File() as h5:
             h5.attrs['long_name'] = 'root'
             h5.create_dataset('test', data=1, attrs={'units': 'm/s', 'long_name': 'dataset 1'})
@@ -55,6 +54,7 @@ class TestConfig(unittest.TestCase):
             json_dict = json.loads(f.read())
 
         self.assertEqual(json_dict['attrs'], {'__h5rdmtoolbox_version__': '1.0.0', 'long_name': 'root'})
+        z.delete()
 
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoSandboxDeposit(None)
@@ -97,6 +97,7 @@ class TestConfig(unittest.TestCase):
             publication_date=datetime.now(),
             embargo_date='2020'
         )
+
         z.metadata = meta
         ret_metadata = z.metadata
         self.assertEqual(ret_metadata['upload_type'],
