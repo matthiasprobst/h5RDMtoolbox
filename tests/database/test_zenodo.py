@@ -1,3 +1,5 @@
+import logging
+import pathlib
 import requests
 import unittest
 from datetime import datetime
@@ -5,6 +7,10 @@ from datetime import datetime
 from h5rdmtoolbox.database.zenodo.config import get_api_token
 from h5rdmtoolbox.database.zenodo.metadata import Creator, Contributor
 from h5rdmtoolbox.database.zenodo.metadata import Metadata
+
+logger = logging.getLogger(__name__)
+
+CLEANUP_ZENODO_SANDBOX = True
 
 
 class TestConfig(unittest.TestCase):
@@ -21,14 +27,15 @@ class TestConfig(unittest.TestCase):
         for deposit in r.json():
             # if deposit['title'].startswith('[test]'):
             if not deposit['submitted']:
-                print(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
+                logger.debug(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
                 r = requests.delete(
                     'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(deposit['id']),
                     params={'access_token': get_api_token(sandbox=True)}
                 )
                 self.assertEqual(204, r.status_code)
             else:
-                print(f'Cannot delete {deposit["title"]} with id {deposit["id"]} because it is already published."')
+                logger.debug(
+                    f'Cannot delete {deposit["title"]} with id {deposit["id"]} because it is already published."')
 
     def test_create_new_deposit(self):
 
@@ -60,17 +67,21 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(zsr.deposit_id, None)
         self.assertEqual(zsr.metadata, meta)
         self.assertFalse(zsr.exists())
+        with open('testfile.txt', 'w') as f:
+            f.write('This is a test file.')
+        zsr.add_file('testfile.txt')
         zsr.create()
+        pathlib.Path('testfile.txt').unlink()
         self.assertTrue(zsr.exists())
         zsr.delete()
         self.assertFalse(zsr.exists())
 
     def setUp(self) -> None:
         """Delete all deposits in the sandbox account."""
-        if True:
+        if CLEANUP_ZENODO_SANDBOX:
             self.delete_sandbox_deposits()
 
     def tearDown(self) -> None:
         """Delete all deposits in the sandbox account."""
-        if True:
+        if CLEANUP_ZENODO_SANDBOX:
             self.delete_sandbox_deposits()
