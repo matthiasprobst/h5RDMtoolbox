@@ -15,11 +15,11 @@ from h5rdmtoolbox.utils import create_tbx_logger
 
 logger = create_tbx_logger('conventions')
 
-from .core import Convention, from_yaml, from_zenodo, get_current_convention, from_zenodo, get_registered_conventions
+from .core import Convention, from_yaml, from_repo, from_zenodo, get_current_convention, from_zenodo, get_registered_conventions
 from .standard_attributes import StandardAttribute
 from . import standard_names
 from . import _h5tbx as __h5tbx_convention
 
-__all__ = ['Convention', 'from_yaml', 'from_zenodo',
+__all__ = ['Convention', 'from_yaml', 'from_zenodo', 'from_repo',
            'get_current_convention', 'get_registered_conventions',
            'from_zenodo', 'StandardAttribute']

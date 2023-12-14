@@ -692,7 +692,7 @@ class StandardNameTable:
 
         Example
         -------
-        >>> snt = StandardNameTable.from_zenodo(doi="doi:10.5281/zenodo.8266929")
+        >>> snt = StandardNameTable.from_zenodo(doi_or_recid="doi:10.5281/zenodo.8266929")
 
         Notes
         -----

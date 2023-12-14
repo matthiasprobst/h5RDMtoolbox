@@ -67,6 +67,7 @@ class TestConventions(unittest.TestCase):
         self.assertTrue(
             (download_dir / f'{zsr.rec_id}' / 'tutorial_convention.yaml').exists()
         )
+        zsr.delete()
 
     def test_delete(self):
         cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')

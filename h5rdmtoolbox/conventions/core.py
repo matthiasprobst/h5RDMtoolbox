@@ -12,6 +12,7 @@ import yaml
 from pydoc import locate
 from typing import Union, List, Dict, Tuple
 
+from h5rdmtoolbox.repository import RepositoryInterface
 from . import cfg
 from . import consts
 from . import errors
@@ -20,9 +21,8 @@ from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
 from .._repr import make_italic, make_bold
 from .._user import UserDir
-from ..repository.zenodo.utils import recid_from_doi_or_redid
 from ..repository import zenodo
-
+from ..repository.zenodo.utils import recid_from_doi_or_redid
 
 CV_DIR = UserDir['conventions']
 
@@ -614,6 +614,16 @@ def delete(convention: Union[str, Convention]):
         del sys.modules[convention_name]
 
 
+def from_file(filename) -> Convention:
+    """Load a convention from a file. Currently yaml and json files are supported"""
+    if filename.suffix == '.yaml':
+        return from_yaml(filename)
+    elif filename.suffix == '.json':
+        return from_json(filename)
+    else:
+        raise ValueError(f'File {filename} has an unknown suffix')
+
+
 def from_yaml(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Convention:
     """Load a convention from a YAML file. See Convention.from_yaml() for details"""
     return Convention.from_yaml(filename, overwrite=overwrite)
@@ -624,11 +634,35 @@ def from_json(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Co
     return Convention.from_json(filename, overwrite=overwrite)
 
 
+def from_repo(repo_interface: RepositoryInterface,
+              name: str,
+              overwrite: bool = False,
+              force_download: bool = False):
+    """Download a YAML file from a repository"""
+    # check if file exists:
+    path_compatible_doi = repo_interface.get_doi().replace('/', '_')
+    estimated_filename = UserDir['cache'] / f'{path_compatible_doi}' / name
+    estimated_filename.parent.mkdir(parents=True, exist_ok=True)
+    if estimated_filename.exists():
+        if not overwrite:
+            raise FileExistsError(f'File {name} exists in cache and overwrite is set to False.')
+        if overwrite and not force_download:
+            return from_file(estimated_filename)
+
+    filename = repo_interface.download_file(name)
+    if estimated_filename.exists():
+        estimated_filename.unlink()
+    filename.rename(estimated_filename)
+    return from_file(estimated_filename)
+
+
 def from_zenodo(doi_or_recid: str,
                 name: str = None,
                 overwrite: bool = False,
                 force_download: bool = False) -> Convention:
     """Download a YAML file from a zenodo repository
+
+    Depreciated. Use `from_repo` in future.
 
     Parameters
     ----------
@@ -649,7 +683,7 @@ def from_zenodo(doi_or_recid: str,
     """
     # depending on the input, try to convert to a valid DOI:
     # parse record id:
-
+    warnings.warn('Please use `from_repo` instead of from_zenodo', DeprecationWarning)
     rec_id = recid_from_doi_or_redid(doi_or_recid)
 
     if name is None:

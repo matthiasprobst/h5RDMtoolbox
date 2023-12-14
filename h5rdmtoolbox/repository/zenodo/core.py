@@ -2,6 +2,7 @@ import abc
 import appdirs
 import pathlib
 import requests
+import time
 import warnings
 from typing import Union, List, Callable
 
@@ -62,9 +63,12 @@ class ZenodoInterface(RepositoryInterface, abc.ABC):
     def get(self, raise_for_status: bool):
         """Get the deposit (json) data."""
 
-    def get_doi(self):
+    def get_doi(self) -> str:
         """Get the DOI of the deposit."""
-        return self.get().json()['metadata']['prereserve_doi']['doi']
+        doi = self.get().json()['metadata'].get('doi', None)
+        if doi is None:
+            return self.get().json()['metadata']['prereserve_doi']['doi']
+        return doi
 
     def exists(self) -> bool:
         """Check if the deposit exists on Zenodo."""
@@ -116,10 +120,24 @@ class ZenodoDepositInterface(ZenodoInterface):
 
     def get(self, raise_for_status: bool = False):
         """Get the deposit (json) data."""
-        r = requests.get(
-            "%s/%s" % (self.base_url, self.rec_id),
-            params={"access_token": self.access_token},
-        )
+
+        def _fetch():
+            return requests.get(
+                "%s/%s" % (self.base_url, self.rec_id),
+                params={"access_token": self.access_token},
+            )
+
+        r = _fetch()
+        while r.status_code == 429:
+            logger.info(f"Too many requests message: {r.json()}. Sleep for 60 seconds and try again.")
+            time.sleep(60)
+            r = _fetch()
+
+        while r.status_code == 500:
+            logger.info(f"Internal error: {r.json()}. Sleep for 60 seconds and try again.")
+            time.sleep(60)
+            r = _fetch()
+
         if raise_for_status:
             r.raise_for_status()
         return r
@@ -155,40 +173,43 @@ class ZenodoDepositInterface(ZenodoInterface):
                                 f"You can only modify metadata.")
             r.raise_for_status()
 
-    def download_files(self, target_folder: Union[str, pathlib.Path] = None) -> List[pathlib.Path]:
-        """Download all (!) files from Zenodo.
+    def download_files(self,
+                       target_folder: Union[str, pathlib.Path] = None,
+                       suffix: Union[str, List[str], None] = None) -> List[pathlib.Path]:
+        """Download all (!) files from Zenodo. You may specify one or multiple suffixes to only download certain files.
 
         Parameters
         ----------
         target_folder : str or pathlib.Path, optional
             The target folder, by default None
+        suffix: Union[str, List[str], None], optional=None
+            Specify a suffix to only download certain files
 
         Returns
         -------
         List[pathlib.Path]
             A list of all downloaded files.
         """
-        r = self.get()
-        downloaded_files = []
-        for f in r.json()['files']:
-            if target_folder is None:
-                target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
-                    self.rec_id)
-                target_folder.mkdir(exist_ok=True, parents=True)
-            else:
-                target_folder = pathlib.Path(target_folder)
-            fname = f["filename"]
-            target_filename = target_folder / fname
-            bucket_dict = requests.get(f['links']['self'],
-                                       params={'access_token': self.access_token}).json()
-            logger.debug(f'downloading file "{fname}" to "{target_filename}"')
-            downloaded_files.append(target_filename)
-            with open(target_filename, 'wb') as file:
-                file.write(requests.get(bucket_dict['links']['self']).content)
-        return downloaded_files
+        if suffix is None:
+            return [self.download_file(filename) for filename in self.get_filenames()]
+        if isinstance(suffix, str):
+            suffix = [suffix]
+        return [self.download_file(filename) for filename in self.get_filenames() if filename.endswith(tuple(suffix))]
 
-    def download_file(self, filename, target_folder: Union[str, pathlib.Path] = None):
-        """Download a single file from Zenodo."""
+    def download_file(self,
+                      filename: str,
+                      target_folder: Union[str, pathlib.Path] = None):
+        """Download a single file from Zenodo.
+
+        Parameters
+        ----------
+        filename : str
+            The filename to download
+        target_folder : Union[str, pathlib.Path], optional
+            The target folder, by default None
+            If None, the file will be downloaded to the default folder, which is in
+            the user data directory of the h5rdmtoolbox package.
+        """
         if target_folder is None:
             target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
                 self.rec_id)
