@@ -418,8 +418,13 @@ class StandardNameTable:
         """Initialize a StandardNameTable from a YAML file"""
         invalid = False
         with open(yaml_filename, 'r') as f:
-            if '503 Service Unavailable' in f.readline():
-                invalid = True
+            for line in f.readlines():
+                if '503 Service Unavailable' in line:
+                    invalid = True
+                    break
+                if '{"error_id"' in line:
+                    invalid = True
+                    break
         if invalid:
             pathlib.Path(yaml_filename).unlink()
             raise ConnectionError('The requested file was not properly downloaded: 503 Service Unavailable. '

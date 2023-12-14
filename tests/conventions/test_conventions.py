@@ -425,7 +425,6 @@ def validate_f1(a, b, c=3, d=2):
 
     def test_from_zenodo(self):
         if self.connected:
-
             # delete an existing convention like this first:
             _ddir = h5tbx.UserDir['conventions'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
