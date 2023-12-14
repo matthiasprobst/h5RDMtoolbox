@@ -9,6 +9,7 @@ on:
       - dev
       - dev-repository
 
+jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
