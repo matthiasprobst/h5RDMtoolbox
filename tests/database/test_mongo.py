@@ -53,6 +53,21 @@ class TestH5Mongo(unittest.TestCase):
         use(None)
 
     @is_testable
+    def test_make_dict_mongo_compatible(self):
+        import numpy as np
+        from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
+        self.assertEqual(make_dict_mongo_compatible({'a': 1}), {'a': 1})
+        self.assertEqual(make_dict_mongo_compatible({'a': {'b': 4}}), {'a': {'b': 4}})
+        self.assertEqual(make_dict_mongo_compatible({'a': None}), {'a': None})
+        self.assertEqual(make_dict_mongo_compatible({'a': np.float(4.1)}),
+                         {'a': 4.1})
+        self.assertEqual(make_dict_mongo_compatible({'a': np.int(4)}),
+                         {'a': 4})
+        with self.assertWarns(UserWarning):
+            self.assertEqual(make_dict_mongo_compatible({'a': np.array(5.5)}),
+                             {'a': np.array(5.5)})
+
+    @is_testable
     def test_insert(self):
         """Test the MongoDBInterface class"""
         mongoDBInterface = MongoDBInterface(collection=self.collection)

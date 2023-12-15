@@ -49,7 +49,8 @@ def make_dict_mongo_compatible(dictionary: Dict):
             except Exception as e:
                 warnings.warn(
                     f'Could not determine/convert type of {ak}. Try to continue with type {type(av)} of {av}. '
-                    f'Original error: {e}')
+                    f'Original error: {e}',
+                    UserWarning)
     return dictionary
 
 

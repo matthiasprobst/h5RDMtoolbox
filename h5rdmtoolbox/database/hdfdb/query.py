@@ -1,6 +1,10 @@
-import numpy as np
+import warnings
 
+import logging
+import numpy as np
 import re
+
+
 
 
 def _eq(a, b):
@@ -51,6 +55,14 @@ def _regex(value, pattern) -> bool:
 
     if value is None:
         return False
+
+    if isinstance(value, np.bytes_):
+        try:
+            value = value.decode()
+        except UnicodeDecodeError:
+            warnings.warn(f'could not decode {value}', UserWarning)
+            return False
+
     match = re.search(pattern, value)
     if match is None:
         return False
@@ -60,8 +72,7 @@ def _regex(value, pattern) -> bool:
 def _basename(value, basename) -> bool:
     if value is None:
         return False
-
-    return _regex(value, pattern=basename + '^.*/{basename}$')
+    return _regex(value, pattern=f'^.*/{basename}$')
 
 
 def _exists(value, tf: bool) -> bool:

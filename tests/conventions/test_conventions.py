@@ -486,6 +486,15 @@ def validate_f1(a, b, c=3, d=2):
         d = DefaultValue('$empty')
         self.assertEqual(d.value, DefaultValue.EMPTY)
 
+    def test_validate_convention(self):
+        cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        # units is default for all dataset, but not for string datasets!
+        h5tbx.use(cv)
+        with h5tbx.File() as h5:
+            h5.create_string_dataset('ds_str', data='a string')
+            h5.create_dataset('ds_int', data=123, units='m/s')
+        cv.validate(h5.hdf_filename)
+
     def test_engmeta_example(self):
         cv = h5tbx.conventions.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
         h5tbx.use(cv)

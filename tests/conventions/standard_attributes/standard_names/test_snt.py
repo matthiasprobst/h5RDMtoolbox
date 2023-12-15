@@ -1,7 +1,6 @@
+import requests
 import unittest
 import warnings
-
-import requests
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
@@ -80,7 +79,7 @@ class TestStandardAttributes(unittest.TestCase):
             description='Standard name table.',
             default_value='10.5281/zenodo.8220739'
         )
-        cv.add(sa)
+        cv.add_standard_attribute(sa)
         cv.register()
 
         with h5tbx.use(cv):

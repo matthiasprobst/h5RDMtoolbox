@@ -4,6 +4,7 @@ import numpy as np
 import os
 import re
 import typing
+import warnings
 from IPython.display import HTML, display
 from abc import abstractmethod
 from numpy import ndarray
@@ -267,13 +268,28 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __stringdataset__(self, name, h5obj) -> str:
         if h5obj.ndim == 0:
-            _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
-            _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
+            _pcns = perf_counter_ns().__str__()
+            _id1 = f'ds-1-{h5obj.name}-{_pcns}1'
+            _id2 = f'ds-2-{h5obj.name}-{_pcns}2'
             return f"""\n
                     <ul id="{_id1}" class="h5tb-var-list">
                     <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                     <label class='h5tb-varname' 
-                    for="{_id2}">{name}</label>: {h5obj.values[()]}
+                    for="{_id2}">{name}</label>: [{h5obj.dtype}] data={h5obj.values[()]}
+                    """
+        elif h5obj.ndim == 1:
+            _pcns = perf_counter_ns().__str__()
+            _id1 = f'ds-1-{h5obj.name}-{_pcns}1'
+            _id2 = f'ds-2-{h5obj.name}-{_pcns}2'
+            try:
+                str_values = ', '.join(h5obj[()])
+            except UnicodeDecodeError:
+                str_values = '<i>UnicodeDecodeError</i>'
+            return f"""\n
+                    <ul id="{_id1}" class="h5tb-var-list">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
+                    <label class='h5tb-varname'
+                    for="{_id2}">{name}</label>: [{h5obj.dtype}] data="{str_values}"
                     """
         return self.__NDdataset__(name, h5obj)
 
@@ -342,7 +358,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
-        if h5obj.dtype.char == 'S':
+        is_string_dataset = h5obj.dtype.char == 'S'
+        if is_string_dataset:
             _html_pre = self.__stringdataset__(name, h5obj)
         else:
             if h5obj.ndim == 0:
@@ -354,6 +371,21 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         # open attribute section:
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
+        # if is_string_dataset:
+        #     if h5obj.ndim in (0, 1):
+        #         if h5obj.ndim == 0:
+        #             try:
+        #                 str_data = h5obj[()]
+        #             except UnicodeDecodeError:
+        #                 str_data = 'UnicodeDecodeError'
+        #         elif h5obj.ndim == 1:
+        #             try:
+        #                 str_data = ', '.join(h5obj[()])
+        #             except UnicodeDecodeError:
+        #                 str_data = 'UnicodeDecodeError'
+        #         _html_ds_attrs += '<li style="list-style-type: none; ' \
+        #                           f'font-style: bold">data : {str_data}</li>'
+
         for k in h5obj.attrs.keys():
             if k not in self.ignore_attrs and not k.isupper():
                 _html_ds_attrs += self.__attrs__(k, h5obj)
@@ -408,6 +440,11 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __attrs__(self, name, h5obj):
         attr_value = h5obj.attrs.raw[name]
+        if isinstance(attr_value, np.bytes_):
+            try:
+                attr_value = attr_value.decode('utf-8')
+            except UnicodeDecodeError:
+                warnings.warn(f'Cannot decode attribute value for {name}', RuntimeWarning)
         iri = h5obj.iri.get(name)
 
         iri_name = iri.name
@@ -489,7 +526,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     _value_str = attr_value
 
         if iri_data is not None:
-            _value_str += get_iri_icon_href(iri_data)# make_href(iri_data, ' [IRI]')
+            _value_str += get_iri_icon_href(iri_data)  # make_href(iri_data, ' [IRI]')
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 

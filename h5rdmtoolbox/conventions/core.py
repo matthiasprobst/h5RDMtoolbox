@@ -405,15 +405,26 @@ class Convention(AbstractConvention):
 
         convention = self
 
+        def _is_str_dataset(node):
+            if node.dtype.kind == 'S':
+                return True
+            return False
+
         def _validate_convention(name, node):
             """Checks if the node (dataset or group) is compliant with the convention"""
             for k, v in convention.properties.items():
                 if isinstance(node, k):
                     for ak, av in v.items():
                         if av.default_value is consts.DefaultValue.EMPTY:
+                            if av.target_method == 'create_string_dataset' and not _is_str_dataset(node):
+                                continue  # not the responsibility of this validator
+                            if av.target_method == 'create_dataset' and _is_str_dataset(node):
+                                continue  # not the responsibility of this validator
+
                             if ak not in node.attrs:
                                 logger.debug(
-                                    f'The attribute "{ak}" is missing in the dataset but is required by the convention')
+                                    f'The attribute "{ak}" is missing in the dataset "{name}" but '
+                                    'is required by the convention')
                                 failed.append(dict(name=node.name, attr_name=ak, reason='missing_attribute'))
                             else:
                                 value_to_check = node.attrs[ak]

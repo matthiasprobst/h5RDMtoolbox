@@ -15,20 +15,20 @@ logger = logging.getLogger(__name__)
 
 class TestConfig(unittest.TestCase):
 
-    def test_max_requests(self):
-        """The number of requests per minute is limited to X (~100) per minute and Y (~5000) per hour.
-        It the number is exceeded, a 429 error is returned."""
-        from h5rdmtoolbox.repository.zenodo.core import logger
-        logger.setLevel(logging.DEBUG)
-        z = zenodo.ZenodoSandboxDeposit(8561)
-        for i in range(200):
-            r = z.get()
-            print(i+1, r.status_code)
-            filenames = z.download_files()
-            assert len(filenames) == 1
-            h5tbx.conventions.from_yaml(filenames[0])
-            for f in filenames:
-                f.unlink()
+    # def test_max_requests(self):
+    #     """The number of requests per minute is limited to X (~100) per minute and Y (~5000) per hour.
+    #     It the number is exceeded, a 429 error is returned."""
+    #     from h5rdmtoolbox.repository.zenodo.core import logger
+    #     logger.setLevel(logging.DEBUG)
+    #     z = zenodo.ZenodoSandboxDeposit(8561)
+    #     for i in range(200):
+    #         r = z.get()
+    #         print(i+1, r.status_code)
+    #         filenames = z.download_files()
+    #         assert len(filenames) == 1
+    #         h5tbx.conventions.from_yaml(filenames[0])
+    #         for f in filenames:
+    #             f.unlink()
 
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)

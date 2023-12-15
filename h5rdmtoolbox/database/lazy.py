@@ -11,6 +11,16 @@ class LHDFObject:
     open the file manually, but still wants to work with the dataset.
     """
 
+    def __init__(self, obj: h5py.Group):
+        self.filename = pathlib.Path(obj.file.filename)
+        if isinstance(obj.attrs, h5py.AttributeManager):
+            self._attrs = dict(obj.attrs)
+        else:
+            self._attrs = dict(obj.attrs.raw)
+
+        for k, v in _get_dataset_properties(obj, ('file', 'name',)).items():
+            setattr(self, k, v)
+
     def __repr__(self):
         return f'<{self.__class__.__name__} "{self.name}" in "{self.filename}">'
 
@@ -85,17 +95,30 @@ class LGroup(LHDFObject):
     """Lazy Group"""
 
     def __init__(self, obj: h5py.Group):
-        self.filename = pathlib.Path(obj.file.filename)
-        if isinstance(obj.attrs, h5py.AttributeManager):
-            self._attrs = dict(obj.attrs)
-        else:
-            self._attrs = dict(obj.attrs.raw)
+        super().__init__(obj)
 
-        for k, v in _get_dataset_properties(obj, ('file', 'name',)).items():
-            setattr(self, k, v)
+        self._children = {}
+        for k, v in obj.items():
+            if isinstance(v, h5py.Group):
+                self._children[k] = LGroup(v)
+                if ' ' not in k and not hasattr(self, k):
+                    setattr(self, k, self._children[k])
+            elif isinstance(v, h5py.Dataset):
+                self._children[k] = LDataset(v)
+                if ' ' not in k and not hasattr(self, k):
+                    setattr(self, k, self._children[k])
+
+    def keys(self):
+        """Return the keys of the group which are the names of datasets and groups"""
+        return self._children.keys()
+
+    def __getitem__(self, item):
+        if item in self._children:
+            return self._children[item]
+        return super(LGroup, self).__getitem__(item)
 
 
-class LDataset(LGroup):
+class LDataset(LHDFObject):
     """Lazy Dataset"""
 
     def __init__(self, obj: h5py.Dataset):
