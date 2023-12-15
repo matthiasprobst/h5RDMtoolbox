@@ -59,9 +59,9 @@ class TestH5Mongo(unittest.TestCase):
         self.assertEqual(make_dict_mongo_compatible({'a': 1}), {'a': 1})
         self.assertEqual(make_dict_mongo_compatible({'a': {'b': 4}}), {'a': {'b': 4}})
         self.assertEqual(make_dict_mongo_compatible({'a': None}), {'a': None})
-        self.assertEqual(make_dict_mongo_compatible({'a': np.float(4.1)}),
+        self.assertEqual(make_dict_mongo_compatible({'a': 4.1}),
                          {'a': 4.1})
-        self.assertEqual(make_dict_mongo_compatible({'a': np.int(4)}),
+        self.assertEqual(make_dict_mongo_compatible({'a': 4}),
                          {'a': 4})
         with self.assertWarns(UserWarning):
             self.assertEqual(make_dict_mongo_compatible({'a': np.array(5.5)}),
