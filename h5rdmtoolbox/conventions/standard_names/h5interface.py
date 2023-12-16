@@ -4,7 +4,7 @@ import xarray as xr
 from typing import Dict
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.database import GroupDB
+from h5rdmtoolbox.database import H5ObjDB
 
 
 class StandardCoordinate:
@@ -137,7 +137,7 @@ class HDF5StandardNameInterface:
         hdf_filename = pathlib.Path(hdf_filename)
         standard_datasets = {}
         with h5tbx.File(hdf_filename) as h5:
-            std_ds = GroupDB(h5).find({'standard_name': {'$regex': '.*'}},
+            std_ds = H5ObjDB(h5).find({'standard_name': {'$regex': '.*'}},
                                       recursive=recursive,
                                       objfilter='$dataset')
             # std_ds = h5[group].find({'standard_name': {'$regex': '.*'}}, rec=rec, objfilter='$dataset')

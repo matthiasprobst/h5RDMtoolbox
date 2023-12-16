@@ -548,7 +548,7 @@
 #         raise NotImplementedError('By using an HDF5 file as a database, you cannot insert groups')
 #
 #
-# class GroupDB(HDF5DatabaseInterface, NonInsertableDatabaseInterface):
+# class H5ObjDB(HDF5DatabaseInterface, NonInsertableDatabaseInterface):
 #     """HDF5 Group as a database"""
 #
 #     def __init__(self, group: h5py.Group):

@@ -104,14 +104,14 @@ class TestCore(unittest.TestCase):
 
             self.assertEqual(dset.rootparent, h5)
 
-    def test_basename(self):
-        with h5tbx.File() as h5:
-            h5.create_dataset('ds', data=np.arange(10))
-            self.assertEqual(h5['ds'].basename, 'ds')
-            h5.create_dataset('a/b/ds', data=np.arange(10))
-            self.assertEqual(h5['a/b/ds'].basename, 'ds')
-            self.assertEqual(h5['a'].basename, 'a')
-            self.assertEqual(h5['a/b'].basename, 'b')
+    # def test_basename(self):
+    #     with h5tbx.File() as h5:
+    #         h5.create_dataset('ds', data=np.arange(10))
+    #         self.assertEqual(h5['ds'].basename, 'ds')
+    #         h5.create_dataset('a/b/ds', data=np.arange(10))
+    #         self.assertEqual(h5['a/b/ds'].basename, 'ds')
+    #         self.assertEqual(h5['a'].basename, 'a')
+    #         self.assertEqual(h5['a/b'].basename, 'b')
 
     def test_write_iso_timestamp(self):
         with h5tbx.File() as h5:

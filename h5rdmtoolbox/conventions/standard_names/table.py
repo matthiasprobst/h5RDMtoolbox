@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import List, Union, Dict, Tuple
 
 from h5rdmtoolbox._user import UserDir
-from h5rdmtoolbox.database import GroupDB
+from h5rdmtoolbox.database import H5ObjDB
 from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.utils import generate_temporary_filename, download_file, is_xml_file
 from . import cache
@@ -363,7 +363,7 @@ class StandardNameTable:
         A list of datasets with invalid standard names is returned.
         """
         issues = []
-        grpDB = GroupDB(h5grp)
+        grpDB = H5ObjDB(h5grp)
         for ds in grpDB.find({'standard_name': {'$regex': '.*'}}, '$dataset', recursive=recursive):
             if not self[ds.attrs['standard_name']].equal_unit(ds.attrs.get('units', None)):
                 issues.append(ds)

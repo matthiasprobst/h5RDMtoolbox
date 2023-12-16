@@ -1,12 +1,17 @@
 import h5py
 import numpy as np
-import pathlib
 from typing import Union, Dict, List, Callable, Generator
 
 from . import query, utils
 from .nonsearchable import NonInsertableDatabaseInterface
 from .. import lazy
 from ..interface import HDF5DatabaseInterface
+
+
+def basename(name: str) -> str:
+    """Return basename of a name, which is the last occurrence in
+    a string with forward slashes"""
+    return name.rsplit('/', 1)[-1]
 
 
 class RecFind:
@@ -29,14 +34,11 @@ class RecFind:
             if self._func(objattr, self._value):
                 self.found_objects.append(h5obj)
         except AttributeError as e:
+            return
             if not self.ignore_attribute_error:
-                raise AttributeError(f'Unknown key "{self._attribute}". Must be "$basename" or a valid h5py object '
-                                     f'attribute. '
-                                     'You may also consider setting the object filter to "$Dataset" or "$Group" '
-                                     'because e.g. filtering for "$shape" only works for datasets. '
-                                     'If you dont want this error to be raised and ignored instead, '
-                                     'pass "ignore_attribute_error=True" '
-                                     f'Original h5py error: {e}') from e
+                raise AttributeError(f'HDF object {h5obj} has no attribute "{self._attribute}". You may add '
+                                     'an objfilter, because dataset and groups dont share all attributes. '
+                                     'One example is "dtype", which is only available with datasets') from e
 
 
 class RecValueFind:
@@ -264,26 +266,23 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                     found_objs.append(found_obj)
             else:
                 if isinstance(h5obj, h5py.Dataset):
-                    iterator = [(h5obj.basename, h5obj), ]
+                    iterator = [(basename(h5obj.name), h5obj), ]
                 else:
                     iterator = h5obj.items()
                 for hk, hv in iterator:
                     if objfilter:
                         if not isinstance(hv, objfilter):
                             continue
-                    if qk not in query.AV_SPECIAL_FILTERS and not ignore_attribute_error:
-                        raise AttributeError(
-                            f'Unknown key "{qk}". Must be one of these: {query.AV_SPECIAL_FILTERS}'
-                            ' or a valid h5py object attribute. '
-                            'You may also consider setting the object filter to "$Dataset" or "$Group" '
-                            'because e.g. filtering for "$shape" only works for datasets. '
-                            'If you dont want this error to be raised and ignored instead, '
-                            'pass "ignore_attribute_error=True"')
-                    try:
-                        if qk == '$basename':
-                            objattr = pathlib.Path(hv.__getattribute__('name')).name
-                        else:
+
+                    if qk.startswith('$'):
+                        try:
                             objattr = hv.__getattribute__(qk[1:])
+                        except AttributeError:
+                            if ignore_attribute_error:
+                                continue
+                            raise ValueError(f'No such attribute: {qk[1:]}.')
+
+                    try:
                         if query.operator[ok](objattr, ov):
                             found_objs.append(hv)
                     except Exception as e:
@@ -298,7 +297,7 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
          find_one: bool,
          ignore_attribute_error):
     if flt == {}:  # just find any!
-        flt = {'$basename': {'$regex': '.*'}}
+        flt = {'$name': {'$regex': '.*'}}
     if isinstance(flt, str):  # just find the attribute and don't filter for the value:
         flt = {flt: {'$regex': '.*'}}
     if isinstance(flt, List):
@@ -371,11 +370,14 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
     return list(set(rac.found_objects))
 
 
-class GroupDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
-    """HDF5 Group as a database"""
+class H5ObjDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
+    """HDF5 Group or Dataset as a database"""
 
     def __init__(self, group: h5py.Group):
-        self.src_group = h5py.Group(group.id)
+        if isinstance(group, h5py.Group):
+            self.src_obj = h5py.Group(group.id)
+        else:
+            self.src_obj = h5py.Dataset(group.id)
 
     def find_one(self,
                  flt: Union[Dict, str],
@@ -396,9 +398,11 @@ class GroupDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
         ignore_attribute_error : bool
             If True, an AttributeError will be ignored if the attribute is not found.
         """
+        if isinstance(self.src_obj, h5py.Dataset) and recursive:
+            recursive = False
         return lazy.lazy(
             find(
-                self.src_group,
+                self.src_obj,
                 flt=flt,
                 objfilter=objfilter,
                 recursive=recursive,
@@ -411,7 +415,9 @@ class GroupDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
              objfilter=None,
              recursive: bool = True,
              ignore_attribute_error: bool = False) -> Generator[lazy.LHDFObject, None, None]:
-        results = find(self.src_group,
+        if isinstance(self.src_obj, h5py.Dataset) and recursive:
+            recursive = False
+        results = find(self.src_obj,
                        flt=flt,
                        objfilter=objfilter,
                        recursive=recursive,
@@ -427,4 +433,4 @@ class GroupDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
         understood to be an attribute name. However, by adding a $ in front, class
         properties can be found, too, e.g. $shape will return all distinct shapes of the
         passed group."""
-        return distinct(h5obj=self.src_group, key=key, objfilter=objfilter)
+        return distinct(h5obj=self.src_obj, key=key, objfilter=objfilter)

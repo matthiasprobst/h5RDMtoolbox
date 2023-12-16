@@ -286,7 +286,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Dataset)]
         grpDB = H5ObjDB(self)
-        return grpDB.find({'$basename': {'$regex': pattern}}, '$Dataset', recursive=recursive)
+        return grpDB.find({'$name': {'$regex': pattern}}, '$Dataset', recursive=recursive)
 
     def get_groups(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Group]:
         """Return list of groups in the current group.
@@ -295,7 +295,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         on the basenames of the groups."""
         if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Group)]
-        return self.find({'$basename': {'$regex': pattern}}, '$Group', recursive=recursive)
+        return self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)
 
     def modify_dataset_properties(self, dataset, tqdm_pbar: bool = False, **dataset_properties):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
