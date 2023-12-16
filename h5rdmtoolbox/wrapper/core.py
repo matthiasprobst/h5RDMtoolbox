@@ -16,7 +16,7 @@ from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
-from h5rdmtoolbox.database import GroupDB
+from h5rdmtoolbox.database import H5ObjDB
 from . import logger
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -285,7 +285,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         on the basenames of the datasets."""
         if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Dataset)]
-        grpDB = GroupDB(self)
+        grpDB = H5ObjDB(self)
         return grpDB.find({'$basename': {'$regex': pattern}}, '$Dataset', recursive=recursive)
 
     def get_groups(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Group]:
@@ -898,8 +898,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None
                  ) -> List:
         """Find a distinct key (only one result is returned although multiple objects match the filter)"""
-        from h5rdmtoolbox.database import GroupDB
-        return GroupDB(self).distinct(key, objfilter)
+        from h5rdmtoolbox.database import H5ObjDB
+        return H5ObjDB(self).distinct(key, objfilter)
 
     def find(self, flt: Union[Dict, str],
              objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
