@@ -27,12 +27,8 @@ Layouts
 .. autosummary::
     :toctree: generated/
 
-    h5rdmtoolbox.conventions.layout.core.Layout
-    h5rdmtoolbox.conventions.layout.validators.Equal
-    h5rdmtoolbox.conventions.layout.validators.Regex
-    h5rdmtoolbox.conventions.layout.validators.Any
-    h5rdmtoolbox.conventions.layout.validators.ExistIn
-    h5rdmtoolbox.conventions.layout.validators.In
+    h5rdmtoolbox.layout.core.LayoutSpecification
+    h5rdmtoolbox.layout.core.Layout
 
 
 
@@ -42,9 +38,9 @@ Standard attributes
 .. autosummary::
    :toctree: generated/
 
-   h5rdmtoolbox.conventions.StandardAttribute
-   h5rdmtoolbox.conventions.StandardAttribute.get
-   h5rdmtoolbox.conventions.StandardAttribute.set
+   h5rdmtoolbox.convention.StandardAttribute
+   h5rdmtoolbox.convention.StandardAttribute.get
+   h5rdmtoolbox.convention.StandardAttribute.set
 
 Standard names and tables
 -------------------------
@@ -52,9 +48,9 @@ Standard names and tables
 .. autosummary::
    :toctree: generated/
 
-   h5rdmtoolbox.conventions.standard_names.name.StandardName
-   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable
-   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_web
-   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_yaml
-   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_xml
-   h5rdmtoolbox.conventions.standard_names.table.StandardNameTable.from_zenodo
+   h5rdmtoolbox.convention.standard_names.name.StandardName
+   h5rdmtoolbox.convention.standard_names.table.StandardNameTable
+   h5rdmtoolbox.convention.standard_names.table.StandardNameTable.from_web
+   h5rdmtoolbox.convention.standard_names.table.StandardNameTable.from_yaml
+   h5rdmtoolbox.convention.standard_names.table.StandardNameTable.from_xml
+   h5rdmtoolbox.convention.standard_names.table.StandardNameTable.from_zenodo

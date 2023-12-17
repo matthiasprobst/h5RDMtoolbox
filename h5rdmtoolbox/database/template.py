@@ -5,7 +5,7 @@ from typing import Generator
 from .lazy import LHDFObject
 
 
-class HDF5DatabaseInterface(abc.ABC):
+class HDF5DBInterface(abc.ABC):
     """Abstract HDF5 Database interface.
 
     The init method is not abstract. Each database implementation

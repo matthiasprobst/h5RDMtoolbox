@@ -576,21 +576,22 @@ class TestCore(unittest.TestCase):
         self.assertEqual(data[0:2].flag.where(1, 0).shape, (2,))
 
     def test_compression(self):
-        with h5tbx.File() as h5:
-            h5.create_dataset('no_compression', data=[1, 2, 3])
-            self.assertEqual(h5tbx.get_config('hdf_compression'), h5['no_compression'].compression)
-            self.assertEqual(h5tbx.get_config('hdf_compression_opts'), h5['no_compression'].compression_opts)
+        with h5tbx.set_config(hdf_compression='gzip', hdf_compression_opts=5) as _:
+            with h5tbx.File() as h5:
+                h5.create_dataset('no_compression', data=[1, 2, 3])
+                self.assertEqual(h5tbx.get_config('hdf_compression'), h5['no_compression'].compression)
+                self.assertEqual(h5tbx.get_config('hdf_compression_opts'), h5['no_compression'].compression_opts)
 
-            h5.create_dataset('gzip', data=[1, 2, 3], compression='gzip', compression_opts=1)
-            self.assertEqual('gzip', h5['gzip'].compression)
-            self.assertEqual(1, h5['gzip'].compression_opts)
+                h5.create_dataset('gzip', data=[1, 2, 3], compression='gzip', compression_opts=1)
+                self.assertEqual('gzip', h5['gzip'].compression)
+                self.assertEqual(1, h5['gzip'].compression_opts)
 
-            h5.create_dataset('lzf', data=[1, 2, 3], compression='lzf')
-            self.assertEqual('lzf', h5['lzf'].compression)
-            self.assertEqual(None, h5['lzf'].compression_opts)
+                h5.create_dataset('lzf', data=[1, 2, 3], compression='lzf')
+                self.assertEqual('lzf', h5['lzf'].compression)
+                self.assertEqual(None, h5['lzf'].compression_opts)
 
-            with self.assertRaises(ValueError):
-                h5.create_dataset('lzf2', data=[1, 2, 3], compression='lzf', compression_opts=2)
+                with self.assertRaises(ValueError):
+                    h5.create_dataset('lzf2', data=[1, 2, 3], compression='lzf', compression_opts=2)
 
     def test_create_dataset_from_xr(self):
         with h5tbx.File() as h5:

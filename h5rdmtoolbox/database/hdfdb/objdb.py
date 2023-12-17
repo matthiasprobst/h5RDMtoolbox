@@ -5,7 +5,7 @@ from typing import Union, Dict, List, Callable, Generator
 from . import query, utils
 from .nonsearchable import NonInsertableDatabaseInterface
 from .. import lazy
-from ..interface import HDF5DatabaseInterface
+from ..template import HDF5DBInterface
 
 
 def basename(name: str) -> str:
@@ -370,7 +370,7 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
     return list(set(rac.found_objects))
 
 
-class ObjDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
+class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
     """HDF5 Group or Dataset as a database"""
 
     def __init__(self, obj: Union[h5py.Dataset, h5py.Group]):

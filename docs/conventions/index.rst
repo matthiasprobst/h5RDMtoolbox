@@ -22,5 +22,4 @@ The following chapters will explain the usage of conventions (standard attribute
 
     ontologies.ipynb
     standard_attributes_and_conventions.ipynb
-    layout.ipynb
     Examples <examples/index>

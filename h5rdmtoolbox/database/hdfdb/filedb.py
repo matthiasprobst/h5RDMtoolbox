@@ -5,10 +5,10 @@ from typing import Union, Generator, List
 from .objdb import ObjDB
 from .nonsearchable import NonInsertableDatabaseInterface
 from .. import lazy
-from ..interface import HDF5DatabaseInterface
+from ..template import HDF5DBInterface
 
 
-class FileDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
+class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
     """A database interface for an HDF5 file, where the filename is given."""
 
     def __init__(self, filename: Union[str, pathlib.Path]):
@@ -46,7 +46,7 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
                 yield r
 
 
-class FilesDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
+class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
     """A database interface for an HDF5 file, where the filename is given."""
 
     def __init__(self, filenames: List[Union[str, pathlib.Path]]):

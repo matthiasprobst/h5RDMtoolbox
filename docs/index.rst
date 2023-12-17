@@ -34,7 +34,7 @@ Overview
 The packages come with three sub-packages, each covering a different aspect of efficient and sustainable work with
 HDF5 files:
 
-  - :doc:`convention <conventions/index>`: Modular construction of conventions (meta data standardization for HDF files)
+  - :doc:`convention <conventions/index>`: Modular construction of conventions (metadata standardization for HDF files)
   - :doc:`wrapper <wrapper/index>`: User-friendly wrapper around `h5py` implementation for efficient work with HDF5 files and above conventions
   - :doc:`database <database/index>`: Querying HDF5 files (A database for HDF5 files or interfacing with mongoDB)
 
@@ -43,7 +43,9 @@ Please navigate through the chapters on the left to learn more about the package
 
       - :doc:`Getting Started <gettingstarted/index>`: A quick introduction to the package
       - :doc:`Working with HDF5 files <wrapper/index>`: A high-level wrapper for HDF5 files
-      - :doc:`Conventions <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
+      - :doc:`Convention <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
+      - :doc:`Layout <layout/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
+      - :doc:`Repository <repository/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
       - :doc:`Database <database/index>`: A database for HDF5 files
       - :doc:`HowTo and FAQs <howto/index>`: A collection of FAQs
       - :doc:`API Reference <api>`: The API reference
@@ -58,7 +60,7 @@ The repository requires python 3.8. or higher (automatic testing is performed un
 
    pip install h5RDMtoolbox
 
-You may want install optional dependencies:
+You may want to install optional dependencies:
 
 .. code:: sh
 
@@ -83,7 +85,10 @@ You may want install optional dependencies:
     Getting Started <gettingstarted/index>
     Working with HDF <wrapper/index>
     Conventions <conventions/index>
+    Layout <layout/index>
     Database <database/index>
+    Repository <repository/index>
+    Practical Examples <practical_examples/index>
     HowTo <howto/index>
     API Reference <api>
     Glossary <glossary/index>

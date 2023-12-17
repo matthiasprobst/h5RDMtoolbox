@@ -5,6 +5,7 @@ import os
 import re
 import typing
 import warnings
+import xarray as xr
 from IPython.display import HTML, display
 from abc import abstractmethod
 from numpy import ndarray
@@ -281,10 +282,20 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             _pcns = perf_counter_ns().__str__()
             _id1 = f'ds-1-{h5obj.name}-{_pcns}1'
             _id2 = f'ds-2-{h5obj.name}-{_pcns}2'
+            _strdata = h5obj[()]
+            if isinstance(_strdata, xr.DataArray):
+                return f"""\n
+                        <ul id="{_id1}" class="h5tb-var-list">
+                        <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
+                        <label class='h5tb-varname'
+                        for="{_id2}">{name}</label>: [{h5obj.dtype}]
+                        """
             try:
-                str_values = ', '.join(h5obj[()])
+                str_values = ', '.join(_strdata)
             except UnicodeDecodeError:
                 str_values = '<i>UnicodeDecodeError</i>'
+            except TypeError:
+                str_values = f'<i>TypeError: {type(_strdata)}</i>'
             return f"""\n
                     <ul id="{_id1}" class="h5tb-var-list">
                     <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>

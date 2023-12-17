@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Union, Generator
 
 from . import lazy
-from .interface import HDF5DatabaseInterface
+from .template import HDF5DBInterface
 from .. import protected_attributes
 
 
@@ -297,7 +297,7 @@ class MongoDBLazyDataset(lazy.LDataset):
         super().__getitem__(item)
 
 
-class MongoDBInterface(HDF5DatabaseInterface):
+class MongoDBInterface(HDF5DBInterface):
     """The database interface between HDF5 and MongoDB.
 
     Call `.insert()` on opened HDF5 files to insert them into the database.
