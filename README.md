@@ -12,13 +12,34 @@ HDF5 to achieve a sustainable data lifecycle which follows
 the [FAIR (Findable, Accessible, Interoperable, Reusable)](https://www.nature.com/articles/sdata201618)
 principles. It specifically supports the five main steps of
 
-1. Planning (defining an internal layout for HDF5 a metadata convention or ontology for attribute usage)
-2. Collecting data (creating HDF5 files or converting to HDF5 files from other sources)
-3. Analyzing and processing data (Plotting, deriving data, ...)
-4. Sharing data (publishing, archiving, ... e.g. to databases like [mongoDB](https://www.mongodb.com/) or repositories
-   like [Zenodo](https://zenodo.org/))
-5. Reusing data (Searching data in databases, local file structures or online repositories
-   like [Zenodo](https://zenodo.org), discover metadata based on persistent identifier like IRI).
+1. **Planning** (defining an internal layout for HDF5, a metadata convention or/and an ontology for attribute usage)
+2. **Collecting** data (creating HDF5 files with a convention in place supervising metadata usage)
+3. **Analyzing** and processing data (E.g. through interface with [xarray](https://docs.xarray.dev/en/stable/), ...)
+4. **Sharing data** (upload and download to repositories. Currently implemented: [Zenodo](https://zenodo.org/))
+5. **Reusing data** (Map metadata to dedicated databases like [mongoDB](https://www.mongodb.com/) or use local HDF5
+   files themselves as a database to search for attributes).
+
+The toolbox implements five modules, which are shown below. The numbers reference to their main usage in the stages in
+the data lifecycle above. Except the wrapper module, which uses the convention module, all other modules are independent
+of each other.
+
+<a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/h5tbx_modules.svg" alt="H5TBX modules" style="widht:600px;"></a>
+
+Current implementation highlights in the modules:
+
+- The **wrapper** module adds functionality on top of the `h5py` package. It allows to include so-called standard names,
+  which are defined in conventions. And it implements an interface with the package `xarray`, which allows to carry
+  metadata from HDF5 to the user.
+- For the **database** module, `hdfDB` and `mongoDB` are implemented. The `hdfDB` module allows to use HDF5 files as a
+  database. The `mongoDB` module allows to use mongoDB as a database by mapping the metadata of HDF5 files to the
+  database.
+- For the **repository** module, a Zenodo interface is implemented. Zenodo is a repository, which allows to upload and
+  download data with a persistent identifier.
+- For the **convention** module,
+  the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+  are implemented.
+- The **layout** module allows to define expectations on the internal layout (object names, location, attributes,
+  properties) of HDF5 files.
 
 ## Quickstart
 
@@ -37,7 +58,8 @@ A paper is published in the journal [inggrid](https://preprints.inggrid.org/repo
 
 ## Installation
 
-Use python 3.8 or higher (automatic testing is performed until 3.12). If you are a regular user, you can install the package via pip:
+Use python 3.8 or higher (automatic testing is performed until 3.12). If you are a regular user, you can install the
+package via pip:
 
     pip install h5RDMtoolbox
 
@@ -80,7 +102,8 @@ specific to the features of the package:
 - `pint_xarray>=0.2.1`: Working with units for usage with xarray
 - `python-forge==18.6.0`: Used to update function signatures when using
   the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
-- `pyyaml>6.0.0`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions collide with python 3.11
+- `pyyaml>6.0.0`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions
+  collide with python 3.11
 - `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
 
 #### Optional dependencies
@@ -95,10 +118,8 @@ Install optional dependencies by specifying them in square brackets after the pa
 
 - `pymongo>=4.2.0`: Database solution for HDF5 files
 
-[io]
+[csv]
 
-- `pco_tools>=1.0.0`: Reading of pco image files
-- `opencv-python>=4.5.3.56`: Reading of image files (other than pco)
 - `pandas>=1.4.3`: Mainly used for reading csv and pretty printing
 
 [snt]
@@ -113,9 +134,12 @@ Install optional dependencies by specifying them in square brackets after the pa
 - Using JSON schema definitions for layouts and conventions
 
 ## Citing the package
-If you intend to use the package in your work, you may cite the paper in the journal [inggrid](https://preprints.inggrid.org/repository/view/23/)
+
+If you intend to use the package in your work, you may cite the paper in the
+journal [inggrid](https://preprints.inggrid.org/repository/view/23/)
 
 Here's the bibtext to it:
+
 ```
 @article{probst2023h5rdmtoolbox,
   title={h5RDMtoolbox-A Python Toolbox for FAIR Data Management around HDF5},
