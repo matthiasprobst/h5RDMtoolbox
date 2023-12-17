@@ -31,7 +31,7 @@ class DirManger:
 
         self.user_dirs = {'root': _user_root_dir,
                           'tmp': tmp_dir,
-                          'conventions': _user_root_dir / 'conventions',
+                          'convention': _user_root_dir / 'convention',
                           'layouts': _user_root_dir / 'layouts',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'cache': _user_root_dir / 'cache'}
@@ -93,7 +93,7 @@ class DirManger:
     def reset(self):
         """Deletes all user data"""
         shutil.rmtree(self.user_dirs['cache'])
-        shutil.rmtree(self.user_dirs['conventions'])
+        shutil.rmtree(self.user_dirs['convention'])
         shutil.rmtree(self.user_dirs['standard_name_tables'])
         shutil.rmtree(self.user_dirs['layouts'])
         shutil.rmtree(self.user_dirs['tmp'], ignore_errors=True)

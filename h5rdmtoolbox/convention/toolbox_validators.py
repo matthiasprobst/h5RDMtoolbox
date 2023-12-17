@@ -1,4 +1,4 @@
-"""general validation functions of the toolbox usable by conventions. If users wish to user
+"""general validation functions of the toolbox usable by convention. If users wish to user
 their own validators, they need to define them separately. The respective python script then
 must be provided during initialization of a Convention"""
 
@@ -22,12 +22,12 @@ def __validate_orcid(value, handler, info):
 
 
 def __validate_standard_name_table(value, handler, info) -> "StandardNameTable":
-    from h5rdmtoolbox.conventions import standard_names
+    from h5rdmtoolbox.convention import standard_names
     return standard_names.parse_snt(value)
 
 
 def __validate_standard_name(value, handler, info) -> "StandardNameTable":
-    from h5rdmtoolbox.conventions import standard_names
+    from h5rdmtoolbox.convention import standard_names
     if not isinstance(value, (str, standard_names.StandardName)):
         raise TypeError(f'Expected a string or StandardName object, got {type(value)}')
     if info.context:
@@ -67,7 +67,7 @@ def __validate_standard_name(value, handler, info) -> "StandardNameTable":
 
 
 def __validate_url(value, handler, info):
-    from h5rdmtoolbox.conventions.references import validate_url
+    from h5rdmtoolbox.convention.references import validate_url
     if not isinstance(value, (list, tuple)):
         references = [value, ]
     else:

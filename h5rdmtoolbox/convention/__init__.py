@@ -1,6 +1,6 @@
 """"
 
-This sub-package provides conventions such as standard_names
+This sub-package provides convention such as standard_names
 
 The concept of standard_names is adopted from the climate forecast community (see cfconventions.org)
 
@@ -13,7 +13,7 @@ Helpful functions:
 
 from h5rdmtoolbox.utils import create_tbx_logger
 
-logger = create_tbx_logger('conventions')
+logger = create_tbx_logger('convention')
 
 from .core import Convention, from_yaml, from_repo, get_current_convention, from_zenodo, get_registered_conventions
 from .standard_attributes import StandardAttribute

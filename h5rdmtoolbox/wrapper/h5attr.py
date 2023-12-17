@@ -9,11 +9,11 @@ from typing import Dict
 from . import logger
 from .h5utils import get_rootparent
 from .. import errors
-from .. import get_config, conventions, utils
+from .. import get_config, convention, utils
 from .. import get_ureg
 from .. import iri
 from .. import protected_attributes
-from ..conventions import consts
+from ..convention import consts
 
 H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox
 
@@ -125,9 +125,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         parent = self._parent
 
         if get_config(
-                'expose_user_prop_to_attrs') and parent.__class__ in conventions.get_current_convention().properties:
-            if name in conventions.get_current_convention().properties[parent.__class__]:
-                return conventions.get_current_convention().properties[parent.__class__][name].get(parent)
+                'expose_user_prop_to_attrs') and parent.__class__ in convention.get_current_convention().properties:
+            if name in convention.get_current_convention().properties[parent.__class__]:
+                return convention.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
 
     def create(self, name, data, shape=None, dtype=None, iri_cls: str = None, iri_individual: str = None):
@@ -158,7 +158,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
-        curr_cv = conventions.get_current_convention()
+        curr_cv = convention.get_current_convention()
 
         parent = self._parent
         # obj_type = parent.__class__

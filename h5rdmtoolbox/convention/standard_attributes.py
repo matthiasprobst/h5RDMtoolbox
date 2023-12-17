@@ -180,7 +180,7 @@ class StandardAttribute(abc.ABC):
         self.default_value = DefaultValue.NONE
         # disable and enable the convention to make the change effective:
         import h5rdmtoolbox as h5tbx
-        _cache_cv = h5tbx.conventions.get_current_convention()
+        _cache_cv = h5tbx.convention.get_current_convention()
         h5tbx.use(None)
         h5tbx.use(_cache_cv)
 

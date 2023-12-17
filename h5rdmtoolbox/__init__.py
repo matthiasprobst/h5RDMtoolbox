@@ -11,8 +11,8 @@ from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
 pint_xarray.unit_registry = get_ureg()
 
-from . import conventions
-from .conventions.core import Convention
+from . import convention
+from .convention.core import Convention
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
@@ -30,11 +30,11 @@ logger = utils.create_tbx_logger('h5rdmtoolbox')
 
 logger.setLevel(get_config()['init_logger_level'])
 
-cv_h5py = conventions.Convention(name='h5py',
-                                 contact=__author_orcid__)
+cv_h5py = convention.Convention(name='h5py',
+                                contact=__author_orcid__)
 cv_h5py.register()
 
-use = conventions.core.use
+use = convention.core.use
 use(None)
 
 

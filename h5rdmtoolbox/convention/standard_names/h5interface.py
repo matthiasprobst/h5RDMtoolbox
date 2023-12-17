@@ -4,7 +4,7 @@ import xarray as xr
 from typing import Dict
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.databases import ObjDB
+from h5rdmtoolbox.database import ObjDB
 
 
 class StandardCoordinate:
@@ -83,7 +83,7 @@ class StandardTensor(StandardCoordinate):
 
 
 class HDF5StandardNameInterface:
-    """High level interface to HDF5 files following conventions which use
+    """High level interface to HDF5 files following convention which use
     the standard_name attribute"""
 
     def __init__(self, standard_dict):
@@ -133,7 +133,7 @@ class HDF5StandardNameInterface:
     @classmethod
     def from_hdf(cls, hdf_filename, group='/', recursive: bool = False):
         """search withing a group. Note, that duplicate standard names are not considered"""
-        from ...databases.lazy import lazy
+        from ...database.lazy import lazy
         hdf_filename = pathlib.Path(hdf_filename)
         standard_datasets = {}
         with h5tbx.File(hdf_filename) as h5:

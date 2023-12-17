@@ -8,7 +8,7 @@ import xarray as xr
 from typing import List
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from .utils import generate_temporary_directory
 from .wrapper.core import File
 
@@ -157,7 +157,7 @@ def get_xr_dataset(name):
 
 
 class Conventions:
-    """Tutorial methods for package conventions"""
+    """Tutorial methods for package convention"""
 
     @staticmethod
     def fetch_cf_standard_name_table():

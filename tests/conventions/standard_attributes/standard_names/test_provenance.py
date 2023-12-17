@@ -5,7 +5,7 @@ import warnings
 
 import h5rdmtoolbox as h5tbx
 # noinspection PyUnresolvedReferences
-from h5rdmtoolbox.conventions.standard_names import accessor
+from h5rdmtoolbox.convention.standard_names import accessor
 
 
 class TestProvenance(unittest.TestCase):
@@ -21,16 +21,16 @@ class TestProvenance(unittest.TestCase):
 
         h5tbx.use(None)
 
-        # cv = h5tbx.conventions.from_zenodo('https://zenodo.org/record/10156750',
+        # cv = h5tbx.convention.from_zenodo('https://zenodo.org/record/10156750',
         #                                    overwrite=True,
         #                                    force_download=True)
-        from h5rdmtoolbox.repositories.zenodo import ZenodoRecord
+        from h5rdmtoolbox.repository.zenodo import ZenodoRecord
         repo = ZenodoRecord(10156750)
-        cv = h5tbx.conventions.from_repo(repo,
+        cv = h5tbx.convention.from_repo(repo,
                                          name='tutorial_convention.yaml',
                                          overwrite=True,
                                          force_download=True)
-        # cv = h5tbx.conventions.from_zenodo('https://zenodo.org/record/10156750',
+        # cv = h5tbx.convention.from_zenodo('https://zenodo.org/record/10156750',
         #                                    overwrite=True,
         #                                    force_download=True)
 

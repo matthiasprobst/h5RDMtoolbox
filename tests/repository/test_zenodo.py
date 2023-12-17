@@ -5,10 +5,10 @@ import unittest
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.repositories import zenodo, upload_file
-from h5rdmtoolbox.repositories.h5metamapper import hdf2json
-from h5rdmtoolbox.repositories.zenodo.metadata import Metadata, Creator, Contributor
-from h5rdmtoolbox.repositories.zenodo.tokens import get_api_token
+from h5rdmtoolbox.repository import zenodo, upload_file
+from h5rdmtoolbox.repository.h5metamapper import hdf2json
+from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
+from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class TestConfig(unittest.TestCase):
     # def test_max_requests(self):
     #     """The number of requests per minute is limited to X (~100) per minute and Y (~5000) per hour.
     #     It the number is exceeded, a 429 error is returned."""
-    #     from h5rdmtoolbox.repositories.zenodo.core import logger
+    #     from h5rdmtoolbox.repository.zenodo.core import logger
     #     logger.setLevel(logging.DEBUG)
     #     z = zenodo.ZenodoSandboxDeposit(8561)
     #     for i in range(200):
@@ -26,7 +26,7 @@ class TestConfig(unittest.TestCase):
     #         print(i+1, r.status_code)
     #         filenames = z.download_files()
     #         assert len(filenames) == 1
-    #         h5tbx.conventions.from_yaml(filenames[0])
+    #         h5tbx.convention.from_yaml(filenames[0])
     #         for f in filenames:
     #             f.unlink()
 

@@ -14,7 +14,7 @@ class TestUser(unittest.TestCase):
 
     def test_user_dir(self):
         self.assertListEqual(sorted(h5tbx.UserDir.names),
-                             sorted(('root', 'tmp', 'layouts', 'standard_name_tables', 'cache', 'conventions')))
+                             sorted(('root', 'tmp', 'layouts', 'standard_name_tables', 'cache', 'convention')))
         self.assertTrue('root' in h5tbx.UserDir)
 
         cache_dir = h5tbx.UserDir['cache']

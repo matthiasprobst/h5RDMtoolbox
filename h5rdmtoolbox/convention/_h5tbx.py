@@ -7,7 +7,7 @@ from ..errors import ImportConventionError
 
 __this_dir__ = pathlib.Path(__file__)
 convention_name = 'h5tbx'
-convention_user_dir = UserDir['conventions'] / convention_name
+convention_user_dir = UserDir['convention'] / convention_name
 
 
 def build_convention():
@@ -20,7 +20,7 @@ def build_convention():
 if not (convention_user_dir / f'{convention_user_dir.name}.py').exists():
     build_convention()
 
-sys.path.insert(0, str(UserDir['conventions'] / convention_name))
+sys.path.insert(0, str(UserDir['convention'] / convention_name))
 
 import importlib
 
@@ -32,6 +32,6 @@ try:
 except NameError:
     raise ImportConventionError(
         f'The convention "{convention_name}" could not be imported. Please check the convention file content '
-        f'(location: {UserDir["conventions"] / convention_name}).')
+        f'(location: {UserDir["convention"] / convention_name}).')
 except ImportError:
     print(f"Failed to import module {convention_name}")

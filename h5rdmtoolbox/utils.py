@@ -358,7 +358,7 @@ class DocStringParser:
 
     def get_docstring(self) -> str:
         """Reassembles the docstring from the parsed components"""
-        from .conventions.standard_attributes import DefaultValue
+        from .convention.standard_attributes import DefaultValue
 
         new_doc = ''
         if self.abstract:

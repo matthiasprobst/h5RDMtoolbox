@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 from typing import List, Union, Dict, Tuple
 
 from h5rdmtoolbox._user import UserDir
-from h5rdmtoolbox.databases import ObjDB
-from h5rdmtoolbox.repositories import zenodo
+from h5rdmtoolbox.database import ObjDB
+from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.utils import generate_temporary_filename, download_file, is_xml_file
 from . import cache
 from . import consts
@@ -91,7 +91,7 @@ class StandardNameTable:
 
     Examples
     --------
-    >>> from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+    >>> from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
     >>> table = StandardNameTable.from_yaml('standard_name_table.yaml')
     >>> # check a standard name
     >>> table.check('x_velocity')

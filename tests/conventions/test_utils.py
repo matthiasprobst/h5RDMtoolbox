@@ -4,8 +4,8 @@ import pint
 import unittest
 import yaml
 
-from h5rdmtoolbox.conventions import utils
-from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+from h5rdmtoolbox.convention import utils
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.utils import generate_temporary_filename
 
 

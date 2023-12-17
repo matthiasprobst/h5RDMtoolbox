@@ -2,6 +2,7 @@ import h5py
 import pathlib
 import types
 import uuid
+import warnings
 from typing import Callable, Dict, Union, List
 
 import h5rdmtoolbox
@@ -22,6 +23,13 @@ class LayoutSpecification:
         self.failed = None
         self._n_calls = 0
         self._n_fails = 0
+
+    def __eq__(self, other):
+        if not isinstance(other, LayoutSpecification):
+            return False
+        same_id = self.id == other.id
+        same_props = self.func == other.func and self.kwargs == other.kwargs
+        return same_id or same_props
 
     @property
     def n_calls(self):
@@ -59,7 +67,7 @@ class LayoutSpecification:
         return f'{self.__class__.__name__} (kwargs={self.kwargs})'
 
     def __call__(self, target: Union[h5py.Group, h5py.Dataset]):
-        if isinstance(target, h5rdmtoolbox.databases.lazy.LHDFObject):
+        if isinstance(target, h5rdmtoolbox.database.lazy.LHDFObject):
             with target as _target:
                 return self.__call__(_target)
 
@@ -130,7 +138,7 @@ class LayoutSpecification:
 
         Examples
         --------
-        >>> from h5rdmtoolbox.databases import hdfdb
+        >>> from h5rdmtoolbox.database import hdfdb
         >>> lay = LayoutSpecification()
         >>> spec1 = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
         >>> spec2 = lay.add(...) # add another spec to layout
@@ -141,6 +149,11 @@ class LayoutSpecification:
                                        n=n,
                                        comment=comment,
                                        parent=self)
+        for spec in self.specifications:
+            if spec == new_spec:
+                warnings.warn(f'Specification "{new_spec}" already exists. Skipping.',
+                              UserWarning)
+                return spec
         self.specifications.append(new_spec)
         return new_spec
 

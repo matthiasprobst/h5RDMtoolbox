@@ -104,7 +104,7 @@ class StandardNameTableAccessor:
         filename = da.attrs.get('PROVENANCE', None).get('HDF', None).get('filename', None)
         if filename:
             with h5tbx.File(filename, mode='r') as h5:
-                self._snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(
+                self._snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(
                     h5.attrs.raw['standard_name_table'])
 
         if self._snt:

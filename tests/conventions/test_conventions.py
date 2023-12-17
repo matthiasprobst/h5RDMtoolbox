@@ -12,10 +12,10 @@ from datetime import datetime
 import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions import core
-from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
-from h5rdmtoolbox.repositories.zenodo import ZenodoSandboxDeposit
-from h5rdmtoolbox.repositories.zenodo.metadata import Metadata, Creator
+from h5rdmtoolbox.convention import core
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
+from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
+from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -32,7 +32,7 @@ class TestConventions(unittest.TestCase):
             warnings.warn('No internet connection', UserWarning)
 
         # setting logger to debug:
-        from h5rdmtoolbox.conventions import logger
+        from h5rdmtoolbox.convention import logger
         logger.setLevel('DEBUG')
 
     def test_upload_convention(self):
@@ -70,17 +70,17 @@ class TestConventions(unittest.TestCase):
         zsr.delete()
 
     def test_delete(self):
-        cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
         self.assertTrue(cv.name in sys.modules)
-        self.assertIn('simple_cv', h5tbx.conventions.get_registered_conventions())
+        self.assertIn('simple_cv', h5tbx.convention.get_registered_conventions())
         cv.delete()
         self.assertFalse(cv.name in sys.modules)
         cv.delete()
         self.assertFalse(cv.name in sys.modules)
-        self.assertNotIn('simple_cv', h5tbx.conventions.get_registered_conventions())
+        self.assertNotIn('simple_cv', h5tbx.convention.get_registered_conventions())
 
     def test_extract_function_info(self):
-        from h5rdmtoolbox.conventions.generate import extract_function_info, validate_specialtype_functions
+        from h5rdmtoolbox.convention.generate import extract_function_info, validate_specialtype_functions
         import ast
         tree = ast.parse(" ")
         self.assertEqual(extract_function_info(tree), [])
@@ -105,15 +105,15 @@ def validate_f1(a, b, c=3, d=2):
             validate_specialtype_functions({r[0][0]: r[0][1]})
 
     def test_h5tbx(self):
-        f = h5tbx.UserDir['conventions'] / 'h5tbx' / 'h5tbx.py'
+        f = h5tbx.UserDir['convention'] / 'h5tbx' / 'h5tbx.py'
         f.unlink(missing_ok=True)
-        from h5rdmtoolbox.conventions._h5tbx import build_convention
+        from h5rdmtoolbox.convention._h5tbx import build_convention
         build_convention()
 
         h5tbx.use('h5tbx')
-        cv = h5tbx.conventions.get_current_convention()
+        cv = h5tbx.convention.get_current_convention()
 
-        self.assertEqual('h5tbx', h5tbx.conventions.get_current_convention().name)
+        self.assertEqual('h5tbx', h5tbx.convention.get_current_convention().name)
 
         with h5tbx.File(creation_mode='experimental') as h5:
             self.assertIsInstance(h5.creation_mode, type(h5.creation_mode))
@@ -137,22 +137,22 @@ def validate_f1(a, b, c=3, d=2):
             self.assertEqual(str(ds.units), 'N*m')
 
         h5tbx.use(None)
-        self.assertEqual('h5py', h5tbx.conventions.get_current_convention().name)
+        self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
 
     def test_getattr(self):
         h5tbx.use(None)
-        self.assertEqual('h5py', h5tbx.conventions.get_current_convention().name)
+        self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
         with h5tbx.use('h5tbx') as cv:
-            isinstance(cv, h5tbx.conventions.Convention)
+            isinstance(cv, h5tbx.convention.Convention)
             with h5tbx.File(creation_mode='experimental') as h5:
                 h5.create_dataset('test', data=1, units='m/s')
                 self.assertEqual('m/s', str(h5.test.units))
-        self.assertEqual('h5py', h5tbx.conventions.get_current_convention().name)
+        self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
 
     def test_overload_standard_attributes(self):
         yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.Convention.from_yaml(yaml_filename, overwrite=True)
-        self.assertIsInstance(cv, h5tbx.conventions.Convention)
+        cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
+        self.assertIsInstance(cv, h5tbx.convention.Convention)
         self.assertTupleEqual(('scale_and_offset',), cv.decoders)
         self.assertIn('comment', cv.properties[h5tbx.File])
         self.assertIn('comment', cv.properties[h5tbx.Group])
@@ -160,8 +160,8 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            h5tbx.conventions.from_zenodo(doi_or_recid='10156750')
-            # h5tbx.conventions.from_yaml('test_convention.yaml')
+            h5tbx.convention.from_zenodo(doi_or_recid='10156750')
+            # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             with h5tbx.File(mode='w',
@@ -181,7 +181,7 @@ def validate_f1(a, b, c=3, d=2):
 
     def test_add_decoder(self):
         h5tbx.use('h5tbx')
-        cv = h5tbx.conventions.get_current_convention()
+        cv = h5tbx.convention.get_current_convention()
 
         def multiply_by_2_decoder(xarr, _):
             return xarr * 2
@@ -251,7 +251,7 @@ def validate_f1(a, b, c=3, d=2):
         with open(yaml_filename, 'w') as f:
             yaml.safe_dump(sa_dict, f)
 
-        local_cv = h5tbx.conventions.Convention.from_yaml(yaml_filename, overwrite=True)
+        local_cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
         local_cv.register()
         with h5tbx.use(local_cv.name):
             with h5tbx.File() as h5:
@@ -275,16 +275,16 @@ def validate_f1(a, b, c=3, d=2):
 
     def test_use(self):
         h5tbx.use(None)
-        self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5py')
+        self.assertEqual(h5tbx.convention.get_current_convention().name, 'h5py')
         self.assertEqual('using("h5py")', h5tbx.use('h5py').__repr__())
         self.assertEqual('using("h5py")', h5tbx.use('h5py').__repr__())
         self.assertEqual('using("h5py")', h5tbx.use(None).__repr__())
         self.assertEqual('using("h5py")', h5tbx.use('h5py').__repr__())
-        self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5py')
+        self.assertEqual(h5tbx.convention.get_current_convention().name, 'h5py')
         h5tbx.use('h5tbx')
         self.assertEqual('using("h5tbx")', h5tbx.use('h5tbx').__repr__())
         self.assertEqual('using("h5tbx")', h5tbx.use('h5tbx').__repr__())
-        self.assertEqual(h5tbx.conventions.get_current_convention().name, 'h5tbx')
+        self.assertEqual(h5tbx.convention.get_current_convention().name, 'h5tbx')
         with self.assertRaises(h5rdmtoolbox.errors.ConventionNotFound):
             h5tbx.use('invalid_convention')
 
@@ -292,24 +292,24 @@ def validate_f1(a, b, c=3, d=2):
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.write("""name: test""")
         with self.assertRaises(ValueError):
-            h5tbx.conventions.from_yaml(f.name)
+            h5tbx.convention.from_yaml(f.name)
         with self.assertRaises(ValueError):
-            h5tbx.conventions.Convention.from_yaml(f.name)
+            h5tbx.convention.Convention.from_yaml(f.name)
 
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.write("""__name__: test""")
         with self.assertRaises(ValueError):
-            h5tbx.conventions.from_yaml(f.name)
+            h5tbx.convention.from_yaml(f.name)
 
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.writelines(['__name__: test\n', '__contact__: me'])
 
-        cv = h5tbx.conventions.from_yaml(f.name, overwrite=False)
-        cv = h5tbx.conventions.from_yaml(f.name, overwrite=True)
+        cv = h5tbx.convention.from_yaml(f.name, overwrite=False)
+        cv = h5tbx.convention.from_yaml(f.name, overwrite=True)
         self.assertEqual(cv.name, 'test')
         self.assertEqual(cv.contact, 'me')
 
-        cv = h5tbx.conventions.Convention.from_yaml(f.name, overwrite=True)
+        cv = h5tbx.convention.Convention.from_yaml(f.name, overwrite=True)
         self.assertEqual(cv.name, 'test')
         self.assertEqual(cv.contact, 'me')
 
@@ -326,7 +326,7 @@ def validate_f1(a, b, c=3, d=2):
             yaml.safe_dump(test_std_attr, f)
 
         with self.assertRaises(ValueError):
-            h5tbx.conventions.from_yaml([f1, f2])
+            h5tbx.convention.from_yaml([f1, f2])
 
     def test_cv_h5tbx(self):
         h5tbx.use(None)
@@ -359,11 +359,11 @@ def validate_f1(a, b, c=3, d=2):
     def test_convention_file_props(self):
         h5tbx.use('h5tbx')
         with h5tbx.File() as h5:
-            self.assertEqual(h5.convention, h5tbx.conventions.get_current_convention())
+            self.assertEqual(h5.convention, h5tbx.convention.get_current_convention())
             self.assertEqual(sorted(['creation_mode', ]), sorted(list(h5.standard_attributes)))
             ds = h5.create_dataset('test', data=1, units='m/s')
             self.assertEqual(sorted(['units', 'symbol']), sorted(ds.standard_attributes.keys()))
-            self.assertEqual(ds.convention, h5tbx.conventions.get_current_convention())
+            self.assertEqual(ds.convention, h5tbx.convention.get_current_convention())
 
     def test_data_scale_and_offset(self):
         h5tbx.use('h5tbx')
@@ -427,14 +427,14 @@ def validate_f1(a, b, c=3, d=2):
     def test_from_zenodo(self):
         if self.connected:
             # delete an existing convention like this first:
-            _ddir = h5tbx.UserDir['conventions'] / 'h5rdmtoolbox_tutorial_convention'
+            _ddir = h5tbx.UserDir['convention'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.conventions.from_zenodo(doi_or_recid='10156750')
-            # h5tbx.conventions.from_yaml('test_convention.yaml')
+            h5tbx.convention.from_zenodo(doi_or_recid='10156750')
+            # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
-            cv = h5tbx.conventions.get_current_convention()
+            cv = h5tbx.convention.get_current_convention()
             with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
                 h5.comment = 'This is a comment'
                 self.assertEqual(h5.comment, 'This is a comment')
@@ -447,10 +447,10 @@ def validate_f1(a, b, c=3, d=2):
 
                 h5.create_dataset('test', data=4.3, standard_name='x_velocity', units='m/s')
                 self.assertEqual(h5['test'].standard_name, 'x_velocity')
-                self.assertIsInstance(h5['test'].standard_name, h5tbx.conventions.standard_names.StandardName)
+                self.assertIsInstance(h5['test'].standard_name, h5tbx.convention.standard_names.StandardName)
                 h5.contact  # takes a bit because validated online!
                 snt = h5.standard_name_table
-                self.assertIsInstance(snt, h5tbx.conventions.standard_names.StandardNameTable)
+                self.assertIsInstance(snt, h5tbx.convention.standard_names.StandardNameTable)
                 for sa in h5.standard_attributes:
                     self.assertFalse('-' in sa)
                 self.assertNotEqual(h5.standard_attributes['comment'].description,
@@ -458,12 +458,12 @@ def validate_f1(a, b, c=3, d=2):
             if False:
                 self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
                 self.assertEqual(
-                    h5tbx.conventions.standard_attributes.DefaultValue.EMPTY,
+                    h5tbx.convention.standard_attributes.DefaultValue.EMPTY,
                     cv.properties[h5tbx.File]['data_type'].default_value
                 )
                 cv.properties[h5tbx.File]['data_type'].make_optional()
                 self.assertEqual(
-                    h5tbx.conventions.standard_attributes.DefaultValue.NONE,
+                    h5tbx.convention.standard_attributes.DefaultValue.NONE,
                     cv.properties[h5tbx.File]['data_type'].default_value
                 )
 
@@ -473,21 +473,21 @@ def validate_f1(a, b, c=3, d=2):
                         'https://doi.org/10.5281/zenodo.10156750')
                 h5tbx.UserDir.clear_cache()
                 with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
-                    cv = h5tbx.conventions.from_zenodo(doi=8266929)
+                    cv = h5tbx.convention.from_zenodo(doi=8266929)
 
                 for doi in dois:
-                    cv = h5tbx.conventions.from_zenodo(doi=doi)
+                    cv = h5tbx.convention.from_zenodo(doi=doi)
                     self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
 
     def test_default_value(self):
-        from h5rdmtoolbox.conventions.consts import DefaultValue
+        from h5rdmtoolbox.convention.consts import DefaultValue
         d = DefaultValue('$none')
         self.assertEqual(d.value, DefaultValue.NONE)
         d = DefaultValue('$empty')
         self.assertEqual(d.value, DefaultValue.EMPTY)
 
     def test_validate_convention(self):
-        cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
         # units is default for all dataset, but not for string datasets!
         h5tbx.use(cv)
         with h5tbx.File() as h5:
@@ -496,7 +496,7 @@ def validate_f1(a, b, c=3, d=2):
         cv.validate(h5.hdf_filename)
 
     def test_engmeta_example(self):
-        cv = h5tbx.conventions.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
+        cv = h5tbx.convention.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
         h5tbx.use(cv)
 
         with h5tbx.File(contact=dict(name='Matthias Probst'),
@@ -509,7 +509,7 @@ def validate_f1(a, b, c=3, d=2):
             fname = h5.hdf_filename
 
     def test_read_invalid_attribute(self):
-        cv = h5tbx.conventions.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
         h5tbx.use(None)
         with h5tbx.File() as h5:
             h5.create_dataset('ds', data=[1, 2], attrs=dict(units='invalid'))

@@ -12,7 +12,7 @@ import yaml
 from pydoc import locate
 from typing import Union, List, Dict, Tuple
 
-from h5rdmtoolbox.repositories import RepositoryInterface
+from h5rdmtoolbox.repository import RepositoryInterface
 from . import cfg
 from . import consts
 from . import errors
@@ -21,14 +21,14 @@ from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
 from .._repr import make_italic, make_bold
 from .._user import UserDir
-from ..repositories import zenodo
-from ..repositories.zenodo.utils import recid_from_doi_or_redid
+from ..repository import zenodo
+from ..repository.zenodo.utils import recid_from_doi_or_redid
 
-CV_DIR = UserDir['conventions']
+CV_DIR = UserDir['convention']
 
 
 class AbstractConvention(abc.ABC):
-    """Abstract class definition for conventions"""
+    """Abstract class definition for convention"""
 
     # Class interfaces:
     # Reader interfaces:
@@ -548,20 +548,20 @@ def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
 
 
 def get_registered_conventions() -> Dict:
-    """Return dictionary of registered conventions"""
+    """Return dictionary of registered convention"""
     return cfg._registered_conventions
 
 
 # unused:
 # def register_convention(new_convention: Convention) -> None:
-#     """Return dictionary of registered conventions"""
+#     """Return dictionary of registered convention"""
 #     if new_convention in cfg._registered_conventions:
 #         raise ValueError(f'Convention "{new_convention}" is already registered')
 #     cfg._registered_conventions[new_convention.name] = new_convention
 
 
 def add_convention(convention: Convention, name=None):
-    """Add a convention to the list of registered conventions"""
+    """Add a convention to the list of registered convention"""
     if not isinstance(convention, Convention):
         raise ValueError(f'Convention "{convention}" is not a valid convention')
     if name is None:

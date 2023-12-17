@@ -1,4 +1,4 @@
-"""utilities of package conventions"""
+"""utilities of package convention"""
 import json
 import pathlib
 import pint

@@ -7,7 +7,7 @@ Log of changes in the versions
 major changes:
 
 - zenodo is not a dependency anymore but introduces as a new subpackage of the toolbox
-- zenodo is part or `repositories` which is designed to provide interfaces to different data repositories (however,
+- zenodo is part or `repository` which is designed to provide interfaces to different data repositories (however,
   only `zenodo` is implemented at the moment)
 - the database architecture is changed in a similar way, such that it has a more logic structure
 - both above changes follow a more or less strict inheritance structure from abstract classes defining the interface to
@@ -16,7 +16,7 @@ major changes:
 - python 3.8 until 3.12 inclusive are supported
 - IRI as persistent identifier is now supported, which fulfills thr F3 requirement of the FAIR principles ("Metadata
   clearly and explicitly include the identifier of the data they describe", https://www.go-fair.org/fair-principles/)
-- package renaming and reorganization: `database` is now `databases`, `layout` is now `layouts`; new is `repositories`
+- package renaming and reorganization: `conventions` is now `convention`, `layout` is now a module, new is `repository`
 
 ## v0.13.0
 

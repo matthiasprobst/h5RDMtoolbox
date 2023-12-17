@@ -4,11 +4,11 @@ import warnings
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError
-from h5rdmtoolbox.conventions.standard_names import utils
-from h5rdmtoolbox.conventions.standard_names.name import StandardName
-from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
-from h5rdmtoolbox.conventions.utils import check_url
+from h5rdmtoolbox.convention.errors import StandardNameError, StandardAttributeError
+from h5rdmtoolbox.convention.standard_names import utils
+from h5rdmtoolbox.convention.standard_names.name import StandardName
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
+from h5rdmtoolbox.convention.utils import check_url
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -237,7 +237,7 @@ class TestStandardAttributes(unittest.TestCase):
             filename.unlink(missing_ok=True)
 
     def test_from_yaml(self):
-        cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), overwrite=True)
+        cv = h5tbx.convention.from_yaml(tutorial.get_standard_attribute_yaml_filename(), overwrite=True)
         h5tbx.use(cv)
 
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:

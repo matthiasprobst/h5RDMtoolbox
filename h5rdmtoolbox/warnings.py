@@ -1,4 +1,4 @@
 """package warnings"""
 
 # noinspection PyUnresolvedReferences
-from .conventions.warnings import *
+from .convention.warnings import *

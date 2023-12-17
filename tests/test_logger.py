@@ -1,7 +1,7 @@
 import unittest
 
 from h5rdmtoolbox import logger as core_logger
-from h5rdmtoolbox.conventions import logger as conventions_logger
+from h5rdmtoolbox.convention import logger as conventions_logger
 from h5rdmtoolbox.wrapper import logger as wrapper_logger
 
 levels = dict(

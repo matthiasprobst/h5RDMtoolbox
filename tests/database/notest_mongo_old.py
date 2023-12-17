@@ -10,14 +10,14 @@ from h5rdmtoolbox import use
 
 try:
     # noinspection PyUnresolvedReferences
-    from h5rdmtoolbox.databases import mongo
+    from h5rdmtoolbox.database import mongo
     import pymongo.collection
     from pymongo import MongoClient
 
     mongo_installed = True
 except ImportError:
     mongo_installed = False
-from h5rdmtoolbox.databases.mongo import make_dict_mongo_compatible, type2mongo
+from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible, type2mongo
 
 if mongo_installed:
     class TestH5Mongo(unittest.TestCase):
@@ -244,7 +244,7 @@ if mongo_installed:
             if self.mongodb_running:
                 self.collection.drop()
 
-                repo_filenames = tutorial.databases.generate_test_files()
+                repo_filenames = tutorial.database.generate_test_files()
                 for fname in repo_filenames:
                     with File(fname) as h5:
                         h5.mongo.insert(collection=self.collection, recursive=True, flatten_tree=True)

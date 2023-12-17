@@ -5,8 +5,8 @@ import types
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import databases
-from h5rdmtoolbox.databases import hdfdb
+from h5rdmtoolbox import database
+from h5rdmtoolbox.database import hdfdb
 
 
 class TestHDFDB(unittest.TestCase):
@@ -66,32 +66,32 @@ class TestHDFDB(unittest.TestCase):
             self.assertFalse(res is None)
 
             single_res = gdb_grp.find_one({'a': 1}, recursive=False)
-            self.assertIsInstance(single_res, databases.lazy.LGroup)
+            self.assertIsInstance(single_res, database.lazy.LGroup)
             self.assertEqual(single_res.basename, 'grp')
 
             gdb_root = hdfdb.ObjDB(h5['/'])
             single_res = gdb_root.find_one({'a': 1}, objfilter=h5py.Dataset)
-            self.assertIsInstance(single_res, databases.lazy.LDataset)
+            self.assertIsInstance(single_res, database.lazy.LDataset)
             self.assertEqual(single_res.basename, 'dataset')
 
             gdb_root = hdfdb.ObjDB(h5['/'])
             single_res = gdb_root.find_one({'a': 1}, objfilter='dataset')
-            self.assertIsInstance(single_res, databases.lazy.LDataset)
+            self.assertIsInstance(single_res, database.lazy.LDataset)
             self.assertEqual(single_res.basename, 'dataset')
 
             single_res = gdb_root.find_one({'b': 2}, recursive=True)
-            self.assertIsInstance(single_res, databases.lazy.LDataset)
+            self.assertIsInstance(single_res, database.lazy.LDataset)
             self.assertEqual(single_res.basename, 'dataset')
 
             # check $exists operator:
             single_res = gdb_root.find_one({'long_name': {'$exists': True}},
                                            recursive=True)
-            self.assertIsInstance(single_res, databases.lazy.LGroup)
+            self.assertIsInstance(single_res, database.lazy.LGroup)
             self.assertTrue(single_res.basename in ('grp', ''))
 
             single_res = gdb_root.find_one({'long_name': {'$exists': False}},
                                            recursive=True)
-            self.assertIsInstance(single_res, databases.lazy.LDataset)
+            self.assertIsInstance(single_res, database.lazy.LDataset)
             self.assertEqual(single_res.basename, 'dataset')
 
             # check $gt, ... operators:
@@ -116,7 +116,7 @@ class TestHDFDB(unittest.TestCase):
 
             multiple_results = list(multiple_results)
             self.assertEqual(len(multiple_results), 2)
-            self.assertIsInstance(multiple_results[0], h5tbx.databases.lazy.LHDFObject)
+            self.assertIsInstance(multiple_results[0], h5tbx.database.lazy.LHDFObject)
 
             multiple_results = gdb_root.find({'b': 1}, recursive=True)
             self.assertIsInstance(multiple_results, types.GeneratorType)
@@ -156,15 +156,15 @@ class TestHDFDB(unittest.TestCase):
         filesdb = hdfdb.FilesDB([filename1, filename2])
 
         single_res = filesdb.find_one({'i am': 'a group 1'}, recursive=True)
-        self.assertIsInstance(single_res, databases.lazy.LGroup)
+        self.assertIsInstance(single_res, database.lazy.LGroup)
         self.assertEqual(single_res.filename, filename1)
 
         single_res = filesdb.find_one({'i am': 'a group 2'}, recursive=True)
-        self.assertIsInstance(single_res, databases.lazy.LGroup)
+        self.assertIsInstance(single_res, database.lazy.LGroup)
         self.assertEqual(single_res.filename, filename2)
 
         single_res = filesdb.find_one({'d': 4}, recursive=True)
-        self.assertIsInstance(single_res, databases.lazy.LDataset)
+        self.assertIsInstance(single_res, database.lazy.LDataset)
         self.assertEqual(single_res.filename, filename2)
 
     def test_filesDB_insert_filename(self):

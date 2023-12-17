@@ -23,7 +23,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
 
     convention_name = convention_name.lower().replace("-", "_")
 
-    convention_dir = UserDir.user_dirs['conventions'] / convention_name
+    convention_dir = UserDir.user_dirs['convention'] / convention_name
     convention_dir.mkdir(parents=True, exist_ok=True)
 
     py_filename = convention_dir / f'{convention_name}.py'
@@ -46,7 +46,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
 
     special_type_info = get_specialtype_function_info(py_filename)
     with open(py_filename, 'a') as f:
-        f.writelines('\n# ---- generated code: ----\nfrom h5rdmtoolbox.conventions.toolbox_validators import *\n')
+        f.writelines('\n# ---- generated code: ----\nfrom h5rdmtoolbox.convention.toolbox_validators import *\n')
         f.writelines('\nfrom pydantic import BaseModel\n')
         f.writelines('from pydantic.functional_validators import WrapValidator\n')
         f.writelines('from typing_extensions import Annotated\n\n')
@@ -138,14 +138,14 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
 
         f.writelines('validator_dict = {\n    ')
         f.writelines('\n    '.join(f"'{k}': {v}," for k, v in validator_dict.items()))
-        f.writelines("\n    '$int': IntValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-        f.writelines("\n    '$str': StringValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
-        f.writelines("\n    '$float': FloatValidator,  # see h5rdmtoolbox.conventions.toolbox_validators")
+        f.writelines("\n    '$int': IntValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
+        f.writelines("\n    '$str': StringValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
+        f.writelines("\n    '$float': FloatValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
         f.writelines("\n}\n")
         # f.writelines(f'standard_attributes_dict = {standard_attributes}\n')
 
         f.writelines('\n')
-        f.writelines(f'from h5rdmtoolbox.conventions import Convention, standard_attributes, logger\n\n')
+        f.writelines(f'from h5rdmtoolbox.convention import Convention, standard_attributes, logger\n\n')
         f.writelines('standard_attributes = {\n    ')
         for kk, vv in standard_attributes.items():
             _default_value = _process_paths(vv.get('default_value', None), relative_to=yaml_filename.parent)

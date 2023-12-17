@@ -4,8 +4,8 @@ import numpy as np
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import layouts
-from h5rdmtoolbox.databases import hdfdb
+from h5rdmtoolbox import layout
+from h5rdmtoolbox.database import hdfdb
 
 
 class TestCore(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestCore(unittest.TestCase):
             ds = h5.create_dataset('u', shape=(3, 4), dtype='float32')
             h5.create_dataset('a/b/c/u', shape=(3, 4), dtype='float64')
 
-            lay = layouts.Layout()
+            lay = layout.Layout()
             spec_number_of_specific_datasets = lay.add(
                 hdfdb.FileDB.find,
                 flt={'$name': {'$regex': '.*/u$'}}, n=2, recursive=True,
@@ -26,7 +26,7 @@ class TestCore(unittest.TestCase):
             self.assertFalse(spec_number_of_specific_datasets.failed)
             self.assertEqual(spec_number_of_specific_datasets.n_fails, 0)
 
-            lay = layouts.Layout()
+            lay = layout.Layout()
             spec_number_of_specific_datasets = lay.add(
                 hdfdb.FileDB.find,
                 flt={'$name': {'$regex': '.*/u$'}}, n=1, recursive=True,
@@ -53,7 +53,7 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('a/v', shape=(3, 4), dtype='float32')
             h5.create_dataset('a/b/c/u', shape=(3, 4), dtype='float64')
 
-            lay = layouts.Layout()
+            lay = layout.Layout()
             spec_all_ds = lay.add(hdfdb.FileDB.find,
                                   comment='Any dataset',
                                   n=None,
