@@ -30,7 +30,7 @@
 #         self.assertEqual(0, len(h5tbx.FileDB(h5.hdf_filename).find({'noContact.lastName': 'Doe'})))
 #
 #     def test_regex(self):
-#         from h5rdmtoolbox.database.file import _regex
+#         from h5rdmtoolbox.databases.file import _regex
 #         self.assertFalse(_regex(None, '*'))
 #         self.assertFalse(_regex('hallo', r'\d4'))
 #         self.assertFalse(_regex('hallo', 'hello'))
@@ -49,7 +49,7 @@
 #         fd = h5tbx.FileDB([tmp_dir, ])
 #         self.assertEqual(fd.filenames, [fname3])
 #         f = h5tbx.FileDB(fname1)
-#         self.assertIsInstance(f, h5tbx.database.File)
+#         self.assertIsInstance(f, h5tbx.databases.File)
 #
 #         fname4 = tmp_dir / 'sub_grp/tmpX.hdf'
 #         fname4.parent.mkdir()
@@ -81,17 +81,17 @@
 #             h5.create_dataset('ds3', shape=(4, 2, 3), attrs=dict(units='', long_name='long name 3'))
 #
 #         with self.assertRaises(ValueError):
-#             h5tbx.database.Folder('here')
+#             h5tbx.databases.Folder('here')
 #
-#         fd = h5tbx.database.Folder(folder_dir, rec=False)
+#         fd = h5tbx.databases.Folder(folder_dir, rec=False)
 #         self.assertFalse(fd.rec)
 #
 #         fdauto = h5tbx.FileDB(folder_dir, rec=False)
-#         self.assertIsInstance(fdauto, h5tbx.database.Folder)
+#         self.assertIsInstance(fdauto, h5tbx.databases.Folder)
 #         self.assertFalse(fdauto.rec)
 #
 #         fdauto = h5tbx.FileDB(folder_dir, rec=True)
-#         self.assertIsInstance(fdauto, h5tbx.database.Folder)
+#         self.assertIsInstance(fdauto, h5tbx.databases.Folder)
 #         self.assertTrue(fdauto.rec)
 #
 #         self.assertEqual(2, len(list(fd.filenames)))
@@ -102,7 +102,7 @@
 #
 #         self.assertEqual(2, len(fd.find({'long_name': 'long name 1'})))
 #
-#         fdr = h5tbx.database.Folder(folder_dir, rec=True)
+#         fdr = h5tbx.databases.Folder(folder_dir, rec=True)
 #         self.assertEqual(3, len(list(fdr.filenames)))
 #
 #         res = fd.find_one_per_file({'$basename': {'$regex': 'ds[0-9]'}})
@@ -133,18 +133,18 @@
 #             self.assertEqual(r.name, '/grp1/ds1')
 #
 #         lazy_results = h5tbx.FileDB(h5.hdf_filename).find({'$basename': 'grp1'})
-#         r = h5tbx.database.file.ResultList(lazy_results).find_one({'$basename': 'ds1'})
+#         r = h5tbx.databases.file.ResultList(lazy_results).find_one({'$basename': 'ds1'})
 #         self.assertEqual(r.name, '/grp1/ds1')
 #
 #         lazy_results = h5tbx.FileDB(h5.hdf_filename).find({'$basename': 'grp1'})
-#         r = h5tbx.database.file.ResultList(lazy_results).find({'$basename': 'ds1'})
+#         r = h5tbx.databases.file.ResultList(lazy_results).find({'$basename': 'ds1'})
 #         self.assertEqual(r[0].name, '/grp1/ds1')
 #
 #         r = lazy_results.find_one({'$basename': 'non-existent'})
 #         self.assertTrue(r is None)
 #
 #     def test_math_operators(self):
-#         from h5rdmtoolbox.database.file import _pass, _mean
+#         from h5rdmtoolbox.databases.file import _pass, _mean
 #         self.assertEqual(None, _pass(np.array([1, 2, 3]), 1))
 #         self.assertEqual(None, _mean(np.array(['hello', 'world'], dtype='S'), 1))
 #
@@ -177,7 +177,7 @@
 #                 fnames.append(h52.hdf_filename)
 #
 #                 with h5tbx.FileDB(fnames) as h5s:
-#                     self.assertIsInstance(h5s, h5tbx.database.Files)
+#                     self.assertIsInstance(h5s, h5tbx.databases.Files)
 #                     self.assertEqual(2, len(h5s['ds']))
 #                     self.assertIsInstance(h5s['ds'][0], h5tbx.Dataset)
 #                     self.assertTrue(len(h5s.filenames) == 2)
@@ -205,22 +205,22 @@
 #             h5.dump()
 #             filename = h5.hdf_filename
 #
-#         res_v1 = h5tbx.database.File(filename).find({'standard_name': {'$regex': '.*'}}, '$dataset')
-#         res_v2 = h5tbx.database.File(filename).find('standard_name', '$dataset')
+#         res_v1 = h5tbx.databases.File(filename).find({'standard_name': {'$regex': '.*'}}, '$dataset')
+#         res_v2 = h5tbx.databases.File(filename).find('standard_name', '$dataset')
 #         for r1, r2 in zip(sorted(res_v1), sorted(res_v2)):
 #             self.assertEqual(r1, r2)
 #
-#         res_v1 = h5tbx.database.File(filename).find({'standard_name': {'$regex': '.*'},
+#         res_v1 = h5tbx.databases.File(filename).find({'standard_name': {'$regex': '.*'},
 #                                                      'units': {'$regex': '.*'}}, '$dataset')
-#         res_v2 = h5tbx.database.File(filename).find(['standard_name', 'units'], '$dataset')
+#         res_v2 = h5tbx.databases.File(filename).find(['standard_name', 'units'], '$dataset')
 #         for r1, r2 in zip(sorted(res_v1), sorted(res_v2)):
 #             self.assertEqual(r1, r2)
 #
 #         with self.assertRaises(TypeError):
-#             h5tbx.database.File(filename).find(2, '$dataset')
+#             h5tbx.databases.File(filename).find(2, '$dataset')
 #
 #         with self.assertRaises(TypeError):
-#             h5tbx.database.File(filename).find([2, 2], '$dataset')
+#             h5tbx.databases.File(filename).find([2, 2], '$dataset')
 #
 #     def test_compare_to_dataset_values(self):
 #         with h5tbx.use('h5tbx'):
@@ -357,17 +357,17 @@
 #             self.assertIn(h5.find_one({'a': {'$gte': 3}}), [h5['a3'], h5['a4'], ])  # $gte
 #
 #     def test_lazy(self):
-#         self.assertTrue(h5tbx.database.lazy.lazy(None) is None)
+#         self.assertTrue(h5tbx.databases.lazy.lazy(None) is None)
 #         with self.assertRaises(TypeError):
-#             h5tbx.database.lazy.lazy(3.4)
+#             h5tbx.databases.lazy.lazy(3.4)
 #
 #         with h5tbx.File() as h5:
 #             h5.create_group('grp', attrs={'a': 1, 'b': 2})
 #             h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(a=99, b=100))
-#         self.assertIsInstance(h5tbx.database.lazy.lazy([h5.hdf_filename, 'ds1']),
-#                               h5tbx.database.lazy.LDataset)
-#         self.assertIsInstance(h5tbx.database.lazy.lazy([h5.hdf_filename, 'grp']),
-#                               h5tbx.database.lazy.LGroup)
+#         self.assertIsInstance(h5tbx.databases.lazy.lazy([h5.hdf_filename, 'ds1']),
+#                               h5tbx.databases.lazy.LDataset)
+#         self.assertIsInstance(h5tbx.databases.lazy.lazy([h5.hdf_filename, 'grp']),
+#                               h5tbx.databases.lazy.LGroup)
 #
 #         with h5tbx.File() as h5:
 #             h5.create_group('g1', attrs={'a': 1, 'b': 2})
@@ -375,8 +375,8 @@
 #             h5.create_dataset('ds1', shape=(1, 2, 3), attrs=dict(a=99, b=100))
 #             h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(a=2))
 #             h5.create_group('/a/b/c/d', attrs={'is_subgroup': True})
-#         r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 80}})
-#         self.assertIsInstance(r, h5tbx.database.lazy.LDataset)
+#         r = h5tbx.databases.File(h5.hdf_filename).find_one({'a': {'$gte': 80}})
+#         self.assertIsInstance(r, h5tbx.databases.lazy.LDataset)
 #         self.assertIsInstance(r.attrs, dict)
 #         self.assertEqual(r.attrs['a'], 99)
 #         with h5tbx.set_config(add_provenance=False):
@@ -388,14 +388,14 @@
 #         with r as h5:
 #             self.assertIsInstance(h5, h5tbx.Dataset)
 #
-#         r = h5tbx.database.File(h5.hdf_filename).find_one({'a': {'$gte': 0}}, '$group')
+#         r = h5tbx.databases.File(h5.hdf_filename).find_one({'a': {'$gte': 0}}, '$group')
 #
-#         self.assertIsInstance(r, h5tbx.database.lazy.LGroup)
+#         self.assertIsInstance(r, h5tbx.databases.lazy.LGroup)
 #         self.assertEqual('', r.parentname)
 #         self.assertEqual([], r.parentnames)
 #
-#         r_subgrp = h5tbx.database.File(h5.hdf_filename).find_one({'is_subgroup': True}, '$group')
-#         self.assertIsInstance(r_subgrp, h5tbx.database.lazy.LGroup)
+#         r_subgrp = h5tbx.databases.File(h5.hdf_filename).find_one({'is_subgroup': True}, '$group')
+#         self.assertIsInstance(r_subgrp, h5tbx.databases.lazy.LGroup)
 #         self.assertEqual('/a/b/c', r_subgrp.parentname)
 #         self.assertEqual(['a', 'b', 'c'], r_subgrp.parentnames)
 #
@@ -431,7 +431,7 @@
 #             self.assertEqual(res[1], h5['ds2'])
 #             res = h5.find_one({'$shape': (1, 2, 3), 'long_name': 'long name 1'}, '$dataset')
 #             self.assertIn(res, [h5['ds'], h5['ds2']])
-#         res = h5tbx.database.File(h5.hdf_filename).find_one({'$basename': 'ds', 'long_name': 'long name 1'})
+#         res = h5tbx.databases.File(h5.hdf_filename).find_one({'$basename': 'ds', 'long_name': 'long name 1'})
 #         self.assertEqual('ds', res.basename)
 #
 #     def test_recursive_find(self):
@@ -477,8 +477,8 @@
 #             h5.create_dataset('ds2', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 1'))
 #             h5.create_dataset('ds3', shape=(1, 2, 3), attrs=dict(units='', long_name='long name 2'))
 #
-#         self.assertTrue(h5tbx.database.File(h5.hdf_filename).find_one({}, '$dataset') is None)
-#         res = h5tbx.database.File(h5.hdf_filename).find({}, '$dataset')
+#         self.assertTrue(h5tbx.databases.File(h5.hdf_filename).find_one({}, '$dataset') is None)
+#         res = h5tbx.databases.File(h5.hdf_filename).find({}, '$dataset')
 #         self.assertEqual(len(res), 3)
 #
 #         self.assertTupleEqual((2, 3), res[0].isel(dim_0=0).shape)
@@ -501,7 +501,7 @@
 #             h5.create_dataset('ds1', data=[1, 2, 3], attrs=dict(units='', long_name='long name 1'),
 #                               attach_scales=('z',))
 #
-#         res = h5tbx.database.File(h5.hdf_filename).find({'$basename': {'$regex': '^ds[0-3]'}}, '$dataset')
+#         res = h5tbx.databases.File(h5.hdf_filename).find({'$basename': {'$regex': '^ds[0-3]'}}, '$dataset')
 #         self.assertEqual(len(res), 1)
 #
 #         with self.assertRaises(ValueError):

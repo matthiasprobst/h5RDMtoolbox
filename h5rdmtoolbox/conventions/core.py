@@ -12,7 +12,7 @@ import yaml
 from pydoc import locate
 from typing import Union, List, Dict, Tuple
 
-from h5rdmtoolbox.repository import RepositoryInterface
+from h5rdmtoolbox.repositories import RepositoryInterface
 from . import cfg
 from . import consts
 from . import errors
@@ -21,8 +21,8 @@ from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
 from .._repr import make_italic, make_bold
 from .._user import UserDir
-from ..repository import zenodo
-from ..repository.zenodo.utils import recid_from_doi_or_redid
+from ..repositories import zenodo
+from ..repositories.zenodo.utils import recid_from_doi_or_redid
 
 CV_DIR = UserDir['conventions']
 

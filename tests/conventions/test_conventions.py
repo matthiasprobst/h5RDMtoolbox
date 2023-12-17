@@ -14,8 +14,8 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.conventions import core
 from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
-from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
-from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
+from h5rdmtoolbox.repositories.zenodo import ZenodoSandboxDeposit
+from h5rdmtoolbox.repositories.zenodo.metadata import Metadata, Creator
 
 __this_dir__ = pathlib.Path(__file__).parent
 

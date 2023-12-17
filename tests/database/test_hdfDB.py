@@ -5,8 +5,8 @@ import types
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import database
-from h5rdmtoolbox.database import hdfdb
+from h5rdmtoolbox import databases
+from h5rdmtoolbox.databases import hdfdb
 
 
 class TestHDFDB(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestHDFDB(unittest.TestCase):
     def test_insert(self):
         with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
                        'w') as h5:
-            gdb = hdfdb.H5ObjDB(h5['/'])
+            gdb = hdfdb.ObjDB(h5['/'])
             with self.assertRaises(NotImplementedError):
                 gdb.insert_dataset(None)
             with self.assertRaises(NotImplementedError):
@@ -32,18 +32,18 @@ class TestHDFDB(unittest.TestCase):
             ds.attrs['b'] = 2
             grp.create_dataset('sub_grp_dataset', shape=(4,))
 
-            dsdb = hdfdb.H5ObjDB(h5)
+            dsdb = hdfdb.ObjDB(h5)
 
             res_only_dataset = dsdb.find({'$dtype': {'$exists': True}})
             self.assertEqual(len(list(res_only_dataset)), 2)
 
             del grp['sub_grp_dataset']
 
-            grpdb = hdfdb.H5ObjDB(h5['grp'])
+            grpdb = hdfdb.ObjDB(h5['grp'])
             res_is_dataset = grpdb.find_one({'$dtype': {'$exists': True}}, recursive=False)
             self.assertTrue(res_is_dataset is None)
 
-            dsdb = hdfdb.H5ObjDB(h5['dataset'])
+            dsdb = hdfdb.ObjDB(h5['dataset'])
             res_is_dataset = dsdb.find_one({'$dtype': {'$exists': True}})
             self.assertTrue(res_is_dataset is not None)
 
@@ -52,7 +52,7 @@ class TestHDFDB(unittest.TestCase):
             res = dsdb.find_one({'$dtype': np.dtype('<f4')}, objfilter='dataset')  # is float64
             self.assertEqual(res, None)
 
-            gdb_grp = hdfdb.H5ObjDB(h5['grp'])
+            gdb_grp = hdfdb.ObjDB(h5['grp'])
             res = dsdb.find_one({'$name': '/dataset'}, recursive=False)
             with res as res_ds:
                 self.assertEqual(res_ds, ds)
@@ -69,12 +69,12 @@ class TestHDFDB(unittest.TestCase):
             self.assertIsInstance(single_res, database.lazy.LGroup)
             self.assertEqual(single_res.basename, 'grp')
 
-            gdb_root = hdfdb.H5ObjDB(h5['/'])
+            gdb_root = hdfdb.ObjDB(h5['/'])
             single_res = gdb_root.find_one({'a': 1}, objfilter=h5py.Dataset)
             self.assertIsInstance(single_res, database.lazy.LDataset)
             self.assertEqual(single_res.basename, 'dataset')
 
-            gdb_root = hdfdb.H5ObjDB(h5['/'])
+            gdb_root = hdfdb.ObjDB(h5['/'])
             single_res = gdb_root.find_one({'a': 1}, objfilter='dataset')
             self.assertIsInstance(single_res, database.lazy.LDataset)
             self.assertEqual(single_res.basename, 'dataset')
@@ -110,13 +110,13 @@ class TestHDFDB(unittest.TestCase):
             ds.attrs['a'] = 1
             ds.attrs['b'] = 2
 
-            gdb_root = hdfdb.H5ObjDB(h5)
+            gdb_root = hdfdb.ObjDB(h5)
             multiple_results = gdb_root.find({'a': 1}, recursive=True)
             self.assertIsInstance(multiple_results, types.GeneratorType)
 
             multiple_results = list(multiple_results)
             self.assertEqual(len(multiple_results), 2)
-            self.assertIsInstance(multiple_results[0], h5tbx.database.lazy.LHDFObject)
+            self.assertIsInstance(multiple_results[0], h5tbx.databases.lazy.LHDFObject)
 
             multiple_results = gdb_root.find({'b': 1}, recursive=True)
             self.assertIsInstance(multiple_results, types.GeneratorType)

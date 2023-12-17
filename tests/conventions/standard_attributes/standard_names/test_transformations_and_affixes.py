@@ -42,7 +42,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
 
     def test_adding_transformation(self):
         snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(doi_or_recid=8276716)
-        from h5rdmtoolbox.repository.zenodo import ZenodoRecord
+        from h5rdmtoolbox.repositories.zenodo import ZenodoRecord
         z = ZenodoRecord(rec_id=8276716)
         self.assertTrue(z.exists())
 

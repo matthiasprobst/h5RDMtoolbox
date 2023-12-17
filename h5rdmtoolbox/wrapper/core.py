@@ -16,7 +16,8 @@ from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
-from h5rdmtoolbox.database import H5ObjDB
+
+from h5rdmtoolbox.databases import ObjDB
 from . import logger
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -29,7 +30,6 @@ from .. import iri
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..conventions.consts import DefaultValue
-from ..conventions.layout import Layout as LayoutFile
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
@@ -285,7 +285,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         on the basenames of the datasets."""
         if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Dataset)]
-        grpDB = H5ObjDB(self)
+        grpDB = ObjDB(self)
         return grpDB.find({'$name': {'$regex': pattern}}, '$Dataset', recursive=recursive)
 
     def get_groups(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Group]:
@@ -730,8 +730,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        compression = kwargs.pop('compression', get_config('hdf_compression'))
-        compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+        if not kwargs.get('compression', None):
+            compression = get_config('hdf_compression')
+            compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+        else:
+            compression = kwargs.pop('compression')
+            compression_opts = kwargs.pop('compression_opts', None)
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
@@ -881,7 +885,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  ignore_attribute_error: bool = False):
         """See find()"""
         raise NotImplemented('Moved to database package!')
-        from ..database import file
+        from ..databases import file
         if flt == {}:
             return None
         return file.find(
@@ -892,50 +896,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             find_one=True,
             ignore_attribute_error=ignore_attribute_error
         )
-
-    def distinct(self,
-                 key,
-                 objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None
-                 ) -> List:
-        """Find a distinct key (only one result is returned although multiple objects match the filter)"""
-        from h5rdmtoolbox.database import H5ObjDB
-        return H5ObjDB(self).distinct(key, objfilter)
-
-    def find(self, flt: Union[Dict, str],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             recursive: bool = True,
-             ignore_attribute_error: bool = False) -> List:
-        """
-        Examples for filter parameters:
-        filter = {'long_name': 'any objects long name'} --> searches in attributes only
-        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
-        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
-
-        Parameters
-        ----------
-        flt: Dict
-            Filter request
-        objfilter: str | h5py.Dataset | h5py.Group | None
-            Filter. Default is None. Otherwise, only dataset or group types are returned.
-        recursive: bool, optional
-            Recursive search. Default is True
-        ignore_attribute_error: bool, optional=False
-            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
-            Otherwise, the KeyError is raised.
-
-        Returns
-        -------
-        h5obj: h5py.Dataset or h5py.Group
-        """
-        raise NotImplemented('Moved to database package!')
-        from ..database import file
-        return file.find(
-            h5obj=self,
-            flt=flt,
-            objfilter=objfilter,
-            recursive=recursive,
-            find_one=False,
-            ignore_attribute_error=ignore_attribute_error)
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
@@ -1948,7 +1908,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         -------
         h5obj: h5py.Dataset or h5py.Group
         """
-        from ..database import file
+        from ..databases import file
         return file.find(
             h5obj=self,
             flt=flt,
@@ -1962,10 +1922,8 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     """Main wrapper around h5py.File.
 
     Adds additional features and methods to h5py.File in order to streamline the work with
-    HDF5 files and to incorporate usage of metadata (attribute naming) conventions and layouts.
-    An additional argument is added to the h5py.File with "layout" to specify the layout of the file.
-    The layout specifies the structure of the file and the expected content of each group and dataset.
-    A check can be performed to verify that the file is in accordance with the layout.
+    HDF5 files and to incorporate usage of metadata (attribute naming) conventions.
+    An additional argument is added to the h5py.
 
 
     .. seealso:: :meth:`check`
@@ -1981,8 +1939,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         a temporary file is created in the user's temporary directory.
     mode : {'r', 'r+', 'w', 'w-', 'x', 'a'}, optional
         The mode in which to open the file. The default is 'r'.
-    layout : Path | str | LayoutFile, optional
-        The layout of the file.
     **kwargs : Dict
         Additional keyword arguments are passed to h5py.File.
 
@@ -1991,16 +1947,15 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     -----
     The following methods are added to the h5py.File object:
 
-    * check(): Run layout check.
     * moveto(): Move the file to a new location.
     * saveas(): Save the file to a new location.
+    * ...
 
     The following attributes are added to the h5py.File object:
 
     * version: (str) The version of the package used to create the file.
     * modification_time: (datetime) The modification time of the file.
     * creation_time: (datetime) The creation time of the file.
-    * layout: (LayoutFile) The layout of the file.
     * filesize: (int) The size of the file in bytes.
 
     .. seealso:: :class:`h5rdmtoolbox.core.Group`
@@ -2043,29 +1998,9 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         """
         return utils.get_filesize(self.filename)
 
-    @property
-    def layout(self) -> LayoutFile:
-        """Return the HDF-Layout object for this file."""
-        return self._layout
-
-    @layout.setter
-    def layout(self, layout: Union[Path, str, LayoutFile]):
-        if isinstance(layout, str):
-            self._layout = LayoutFile.load_registered(name=layout, h5repr=self.hdfrepr)
-        elif isinstance(layout, Path):
-            self._layout = LayoutFile(layout, self.hdfrepr)
-        elif layout is None:
-            self._layout = LayoutFile()
-        elif isinstance(layout, LayoutFile):
-            self._layout = layout
-        else:
-            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or LayoutFile but got '
-                            f'{type(layout)}')
-
     def __init__(self,
                  name: Path = None,
                  mode: str = None,
-                 layout: Union[Path, str, LayoutFile, None] = None,
                  attrs: Dict = None,
                  **kwargs):
         # path is file object:
@@ -2173,8 +2108,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             for k, v in attrs.items():
                 self.attrs[k] = v
 
-        self._layout = layout
-
     def __setattr__(self, key, value):
         props = self.convention.properties.get(self.__class__, None)
         if props:
@@ -2183,8 +2116,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 return prop.set(self, value)
         if key.startswith('_'):
             return super().__setattr__(key, value)
-        # if key in ('layout', ):
-        #     return super().__setattr__(key, value)
         raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
                              f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
 
@@ -2194,23 +2125,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
     def __str__(self) -> str:
         return f'<class "{self.__class__.__name__}" convention: "{conventions.get_current_convention().name}">'
-
-    def check(self, grp: Union[str, h5py.Group] = '/') -> int:
-        """Run layout check. This method may be overwritten to add conditional
-         checking.
-
-         Parameters
-         ----------
-         grp: str or h5py.Group, default='/'
-            Group from where to start the layout check.
-            Per default starts at root level
-
-         Returns
-         -------
-         int
-            Number of detected issues.
-         """
-        return self._layout.validate(self[grp])
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.

@@ -1,6 +1,6 @@
 import requests
 
-from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
+from h5rdmtoolbox.repositories.zenodo.tokens import get_api_token
 
 
 def delete_sandbox_deposits():

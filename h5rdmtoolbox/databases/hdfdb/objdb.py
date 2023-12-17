@@ -370,21 +370,23 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
     return list(set(rac.found_objects))
 
 
-class H5ObjDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
+class ObjDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
     """HDF5 Group or Dataset as a database"""
 
-    def __init__(self, group: h5py.Group):
-        if isinstance(group, h5py.Group):
-            self.src_obj = h5py.Group(group.id)
+    def __init__(self, obj: Union[h5py.Dataset, h5py.Group]):
+        if isinstance(obj, h5py.Group):
+            self.src_obj = h5py.Group(obj.id)
+        elif isinstance(obj, h5py.Dataset):
+            self.src_obj = h5py.Dataset(obj.id)
         else:
-            self.src_obj = h5py.Dataset(group.id)
+            raise TypeError(f'Unexpected type: {type(obj)}')
 
     def find_one(self,
                  flt: Union[Dict, str],
                  objfilter=None,
                  recursive: bool = True,
                  ignore_attribute_error: bool = False) -> lazy.LHDFObject:
-        """Find one object in the group
+        """Find one object in the obj
 
         Parameters
         ----------
@@ -393,7 +395,7 @@ class H5ObjDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
         objfilter : Union[h5py.Group, h5py.Dataset, None]
             If provided, only objects of this type will be returned.
         recursive : bool
-            If True, the search will be recursive. If False, only the current group
+            If True, the search will be recursive. If False, only the current obj
             will be searched.
         ignore_attribute_error : bool
             If True, an AttributeError will be ignored if the attribute is not found.
@@ -432,5 +434,5 @@ class H5ObjDB(NonInsertableDatabaseInterface, HDF5DatabaseInterface):
         """Return a distinct list of all found targets. A target generally is
         understood to be an attribute name. However, by adding a $ in front, class
         properties can be found, too, e.g. $shape will return all distinct shapes of the
-        passed group."""
+        passed obj."""
         return distinct(h5obj=self.src_obj, key=key, objfilter=objfilter)

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import unittest
 import xarray as xr
-from h5rdmtoolbox.repository import zenodo
+from h5rdmtoolbox.repositories import zenodo
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.conventions.standard_names import HDF5StandardNameInterface
@@ -86,7 +86,7 @@ class TestStandardAttributes(unittest.TestCase):
                               attach_scales=('y', 'x'))
         h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
         for c in h5sni.coordinate:
-            self.assertIsInstance(c, h5tbx.database.lazy.LDataset)
+            self.assertIsInstance(c, h5tbx.databases.lazy.LDataset)
         self.assertEqual(h5sni.coordinate.x, h5sni.coordinate[0])
         self.assertEqual(h5sni.coordinate.y, h5sni.coordinate[1])
         self.assertDictEqual({'x': 5, 'y': 3}, h5sni.coordinate.shape)

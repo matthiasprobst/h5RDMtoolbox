@@ -1,12 +1,14 @@
 """Test the mongoDB interface"""
+import pathlib
+
 import h5py
 import types
 import unittest
 import warnings
 
 from h5rdmtoolbox import use
-from h5rdmtoolbox.database.lazy import LDataset
-from h5rdmtoolbox.database.mongo import MongoDBInterface
+from h5rdmtoolbox.databases.lazy import LDataset
+from h5rdmtoolbox.databases.mongo import MongoDBInterface
 
 try:
     import pymongo
@@ -55,7 +57,7 @@ class TestH5Mongo(unittest.TestCase):
     @is_testable
     def test_make_dict_mongo_compatible(self):
         import numpy as np
-        from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
+        from h5rdmtoolbox.databases.mongo import make_dict_mongo_compatible
         self.assertEqual(make_dict_mongo_compatible({'a': 1}), {'a': 1})
         self.assertEqual(make_dict_mongo_compatible({'a': {'b': 4}}), {'a': {'b': 4}})
         self.assertEqual(make_dict_mongo_compatible({'a': None}), {'a': None})
@@ -103,6 +105,8 @@ class TestH5Mongo(unittest.TestCase):
 
             mongoDBInterface.insert_dataset(h5['dataset'], axis=0)
         self.assertEqual(10, mongoDBInterface.collection.count_documents({}))
+
+        pathlib.Path('test.h5').unlink()
 
     @is_testable
     def test_find_one(self):
