@@ -1773,7 +1773,10 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         # check if arr is string
         if arr.dtype.kind == 'S':
             # decode string array
-            _arr = arr.astype(str)
+            try:
+                _arr = arr.astype(str)
+            except UnicodeDecodeError:
+                return xr.DataArray(arr, attrs=attrs)
             if self.attrs.get('ISTIMEDS', False):
                 if _arr.ndim == 0:
                     _arr = np.asarray(datetime.fromisoformat(_arr))
@@ -2212,12 +2215,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         Subclass of File
         """
         return File(filename, mode)
-
-    # def close(self):
-    #     # if writable, update IRI
-    #     if self.mode in ('r+', 'w'):
-    #         self.attrs[consts.ATTR_IRI_NAME] = self.attr_name_iri
-    #     super().close()
 
 
 Dataset._h5grp = Group
