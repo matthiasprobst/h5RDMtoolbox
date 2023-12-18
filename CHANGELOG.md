@@ -17,6 +17,7 @@ major changes:
 - IRI as persistent identifier is now supported, which fulfills thr F3 requirement of the FAIR principles ("Metadata
   clearly and explicitly include the identifier of the data they describe", https://www.go-fair.org/fair-principles/)
 - package renaming and reorganization: `conventions` is now `convention`, `layout` is now a module, new is `repository`
+- usage of IRI (persistent identifier) is now supported
 
 ## v0.13.0
 
