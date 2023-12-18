@@ -39,6 +39,8 @@ class TestConfig(unittest.TestCase):
         fname = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo.ini'
         if fname.exists():
             bak_fname = fname.rename(fname.with_suffix('.bak'))
+        else:
+            bak_fname = None
 
         with self.assertRaises(FileNotFoundError):
             _parse_ini_file(None)
@@ -49,7 +51,8 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             _parse_ini_file(None)
 
-        bak_fname.rename(fname)
+        if bak_fname:
+            bak_fname.rename(fname)
 
         tmp_ini_file = h5tbx.utils.generate_temporary_filename(suffix='.ini', touch=True)
         ini_filename = _parse_ini_file(tmp_ini_file)
