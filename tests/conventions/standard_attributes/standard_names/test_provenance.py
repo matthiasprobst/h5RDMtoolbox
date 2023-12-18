@@ -28,7 +28,7 @@ class TestProvenance(unittest.TestCase):
         repo = ZenodoRecord(10156750)
         cv = h5tbx.convention.from_repo(repo,
                                          name='tutorial_convention.yaml',
-                                         overwrite=True,
+                                         take_existing=True,
                                          force_download=True)
         # cv = h5tbx.convention.from_zenodo('https://zenodo.org/record/10156750',
         #                                    overwrite=True,

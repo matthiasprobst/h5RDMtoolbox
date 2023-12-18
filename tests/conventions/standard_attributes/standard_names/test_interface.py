@@ -15,7 +15,7 @@ class TestStandardAttributes(unittest.TestCase):
         repo = zenodo.ZenodoRecord(10156750)
         cv = h5tbx.convention.from_repo(repo,
                                          name='tutorial_convention.yaml',
-                                         overwrite=True)
+                                         take_existing=True)
         cv.properties[h5tbx.File]['data_type'].make_optional()
         cv.properties[h5tbx.File]['contact'].make_optional()
         h5tbx.use(cv)
