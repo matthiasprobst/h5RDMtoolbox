@@ -19,6 +19,22 @@ principles. It specifically supports the five main steps of
 5. **Reusing data** (Map metadata to dedicated databases like [mongoDB](https://www.mongodb.com/) or use local HDF5
    files themselves as a database to search for attributes).
 
+## Who is the package for?
+- For everybody, who is looking for a management approach for his or her data
+- For everybody, who's community has not yet established a stable convention
+- For everybody, who is working with small and big data, that fits into HDF5 files
+- For everybody, who is looking for an easy way to work with HDF5, especially through Jupyter Notebooks
+- For everybody, who is looking to integrate HDF5 with repositories and databases
+- For everybody, who is looking for a way to do all the above whiles not needing to learn a new syntax
+- For everybody, who is new to HDF5 and wants to learn about it, especially with respect to the FAIR principles and data management
+
+## Who is it not for?
+- For everybody, who is looking for a management approach which at the same time allows high-performance and/or parallel work with HDF5
+- For everybody, who has established conventions and managements approaches in his or her community
+ 
+
+## Package Architecture/structure
+
 The toolbox implements five modules, which are shown below. The numbers reference to their main usage in the stages in
 the data lifecycle above. Except the wrapper module, which uses the convention module, all other modules are independent
 of each other.
