@@ -13,7 +13,7 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
     depending on the units of xarr and offset.
     """
 
-    def _quanitfy(obj):
+    def _quantify(obj):
         return obj.pint.quantify(unit_registry=get_ureg())
 
     def _dequantify(obj):
@@ -27,16 +27,16 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
         offset_xrda = ds.rootparent[offset][()]
 
         with xr.set_options(keep_attrs=True):
-            return _dequantify(_quanitfy(xarr) * scale_xrda.pint.quantify() + offset_xrda.pint.quantify())
+            return _dequantify(_quantify(xarr) * _quantify(scale_xrda) + _quantify(offset_xrda))
 
     elif scale:
         scale_xrda = ds.rootparent[scale][()]
-        return _dequantify(_quanitfy(xarr) * scale_xrda.pint.quantify())
+        return _dequantify(_quantify(xarr) * _quantify(scale_xrda))
 
     elif offset:
         offset_xrda = ds.rootparent[offset][()]
         with xr.set_options(keep_attrs=True):
-            return _dequantify(_quanitfy(xarr) + offset_xrda.pint.quantify())
+            return _dequantify(_quantify(xarr) + _quantify(offset_xrda))
 
     for a in ('IS_DATA_SCALE', 'IS_DATA_SCALE', 'DATA_SCALE' 'DATA_OFFSET'):
         xarr.attrs.pop(a, None)

@@ -1,0 +1,14 @@
+__contact__: https://orcid.org/0000-0001-8729-0482
+__institution__: https://orcid.org/members/001G000001e5aUTIAY
+__name__: simple_cv
+units:
+  default_value: $EMPTY
+  description: The physical unit of the dataset. If dimensionless, the unit is ''.
+  target_method: create_dataset
+  validator: $units
+
+comment:
+  description: Comment to a dataset
+  target_method: create_dataset
+  validator: $regex(^[A-Z].*)
+  default_value: $NONE

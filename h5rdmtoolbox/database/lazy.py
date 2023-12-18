@@ -4,12 +4,16 @@ import pathlib
 from typing import Union, List, Dict
 
 
-class LGroup:
-    """Lazy Group"""
+class LHDFObject:
+    """Lazy HDF object. This object is a proxy for a HDF object (dataset or group) that returns data
+    on-demand. This means, that the file is opened when the object is accessed and closed when the object
+    is no longer needed. This is useful for working with large files, where the user does not want to
+    open the file manually, but still wants to work with the dataset.
+    """
 
     def __init__(self, obj: h5py.Group):
         self.filename = pathlib.Path(obj.file.filename)
-        if isinstance(obj.attrs, h5py._hl.attrs.AttributeManager):
+        if isinstance(obj.attrs, h5py.AttributeManager):
             self._attrs = dict(obj.attrs)
         else:
             self._attrs = dict(obj.attrs.raw)
@@ -18,13 +22,17 @@ class LGroup:
             setattr(self, k, v)
 
     def __repr__(self):
-        return f'<LGroup "{self.name}" in "{self.filename}">'
+        return f'<{self.__class__.__name__} "{self.name}" in "{self.filename}">'
 
     def __lt__(self, other):
         return self.name < other.name
 
     def __eq__(self, other):
-        return self.name == other.name and self.filename == other.filename and self.attrs == other.attrs
+        if isinstance(other, h5py.Dataset):
+            other_filename = pathlib.Path(other.file.filename)
+        else:
+            other_filename = other.filename
+        return self.name == other.name and self.filename == other_filename and self.attrs == other.attrs
 
     def __enter__(self):
         from .. import File
@@ -54,32 +62,63 @@ class LGroup:
         """Return the attributes of the group as a LAttributeManager object"""
         return self._attrs
 
-    def find(self, flt: Union[Dict, str],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             rec: bool = True,
-             ignore_attribute_error: bool = False):
-        """Find"""
-        from .file import find as _find
-        with self as obj:
-            if isinstance(obj, h5py.Dataset):
-                return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=False,
-                                               ignore_attribute_error=ignore_attribute_error)]
-            return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=rec,
-                      ignore_attribute_error=ignore_attribute_error)]
+    @property
+    def hdf_filename(self):
+        """Return the hdf filename"""
+        return self.filename
+    # def find(self, flt: Union[Dict, str],
+    #          objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+    #          rec: bool = True,
+    #          ignore_attribute_error: bool = False):
+    #     """Find"""
+    #     from .file import find as _find
+    #     with self as obj:
+    #         if isinstance(obj, h5py.Dataset):
+    #             return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=False,
+    #                                            ignore_attribute_error=ignore_attribute_error)]
+    #         return [lazy(i) for i in _find(obj, flt, objfilter, find_one=False, recursive=rec,
+    #                                        ignore_attribute_error=ignore_attribute_error)]
+    #
+    # def find_one(self,
+    #              flt: Union[Dict, str],
+    #              objfilter=None,
+    #              rec: bool = True,
+    #              ignore_attribute_error: bool = False):
+    #     """Find one occurrence"""
+    #     from .file import find as _find
+    #     with self as obj:
+    #         return lazy(_find(obj, flt, objfilter, find_one=True, recursive=rec,
+    #                           ignore_attribute_error=ignore_attribute_error))
 
-    def find_one(self,
-                 flt: Union[Dict, str],
-                 objfilter=None,
-                 rec: bool = True,
-                 ignore_attribute_error: bool = False):
-        """Find one occurrence"""
-        from .file import find as _find
-        with self as obj:
-            return lazy(_find(obj, flt, objfilter, find_one=True, recursive=rec,
-                              ignore_attribute_error=ignore_attribute_error))
+
+class LGroup(LHDFObject):
+    """Lazy Group"""
+
+    def __init__(self, obj: h5py.Group):
+        super().__init__(obj)
+
+        self._children = {}
+        for k, v in obj.items():
+            if isinstance(v, h5py.Group):
+                self._children[k] = LGroup(v)
+                if ' ' not in k and not hasattr(self, k):
+                    setattr(self, k, self._children[k])
+            elif isinstance(v, h5py.Dataset):
+                self._children[k] = LDataset(v)
+                if ' ' not in k and not hasattr(self, k):
+                    setattr(self, k, self._children[k])
+
+    def keys(self):
+        """Return the keys of the group which are the names of datasets and groups"""
+        return self._children.keys()
+
+    def __getitem__(self, item):
+        if item in self._children:
+            return self._children[item]
+        return super(LGroup, self).__getitem__(item)
 
 
-class LDataset(LGroup):
+class LDataset(LHDFObject):
     """Lazy Dataset"""
 
     def __init__(self, obj: h5py.Dataset):
@@ -136,8 +175,13 @@ def _get_dataset_properties(h5obj, keys):
     return {k: getattr(h5obj, k) for k in keys}
 
 
-def lazy(h5obj) -> Union[None, LDataset, LGroup]:
+def lazy(h5obj: Union[List[Union[h5py.Group, h5py.Dataset, LHDFObject]],
+                      h5py.Dataset, h5py.Group, LHDFObject]) -> Union[None, LDataset, LGroup]:
     """Make a lazy object from a h5py object"""
+    if isinstance(h5obj, LHDFObject):
+        return h5obj
+    if isinstance(h5obj, list):
+        return [lazy(i) for i in h5obj]
     if h5obj is None:
         return None
     if isinstance(h5obj, h5py.Group):

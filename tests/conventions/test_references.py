@@ -2,7 +2,7 @@
 import pathlib
 import unittest
 
-from h5rdmtoolbox.conventions import references
+from h5rdmtoolbox.convention import references
 
 __this_dir__ = pathlib.Path(__file__).parent
 

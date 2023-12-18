@@ -11,17 +11,14 @@ from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
 pint_xarray.unit_registry = get_ureg()
 
-from . import conventions
-from .conventions.core import Convention
-from . import plotting
+from . import convention
+from .convention.core import Convention
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
-from . import database
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
-from . import errors
-
+from . import warnings, errors
 from .wrapper.accessory import register_special_dataset
 
 name = 'h5rdmtoolbox'
@@ -33,84 +30,28 @@ logger = utils.create_tbx_logger('h5rdmtoolbox')
 
 logger.setLevel(get_config()['init_logger_level'])
 
-cv_h5py = conventions.Convention('h5py',
-                                 contact=__author_orcid__)
+cv_h5py = convention.Convention(name='h5py',
+                                contact=__author_orcid__)
 cv_h5py.register()
 
-# cv_h5tbx = conventions.Convention.from_yaml(__this_dir__ / 'data/h5tbx_convention.yaml')
-
-use = conventions.core.use
+use = convention.core.use
 use(None)
 
 
-class FileDB:
-    """User-friendly interface to database.Folder, database.File or database.Files"""
-
-    def __new__(cls, path, rec=False, **kwargs):
-        if isinstance(path, (list, tuple)):
-            filenames = []
-            for p in [pathlib.Path(_p) for _p in path]:
-                if p.is_file():
-                    filenames.append(p)
-                elif p.is_dir():
-                    if rec:
-                        for f in p.rglob('*.hdf'):
-                            filenames.append(f)
-                    else:
-                        for f in p.glob('*.hdf'):
-                            filenames.append(f)
-            return database.Files(filenames, **kwargs)
-
-        path = pathlib.Path(path)
-        if path.is_dir():
-            return database.Folder(path, rec=rec, **kwargs)
-        return database.File(path, **kwargs)
-
-
-def guess_filename(func):
-    """wrapper to guess the filename from the first argument"""
-
-    def wrapper(hdf_filename, *args, **kwargs):
-        if not isinstance(hdf_filename, (str, pathlib.Path)):
-            if hasattr(hdf_filename, 'hdf_filename'):
-                hdf_filename = hdf_filename.hdf_filename
-            else:
-                raise TypeError(f'Expected str or pathlib.Path, got {type(hdf_filename)}')
-        return func(hdf_filename, *args, **kwargs)
-
-    return wrapper
-
-
-@guess_filename
-def find(hdf_filename, *args, **kwargs):
-    """Opens file with `FileDB` and calls `find()` on the root group"""
-    return FileDB(hdf_filename).find(*args, **kwargs)
-
-
-@guess_filename
-def find_one(hdf_filename, *args, **kwargs):
-    """Opens file with `FileDB` and calls `find_one()` on the root group"""
-    return FileDB(hdf_filename).find_one(*args, **kwargs)
-
-
-@guess_filename
-def distinct(hdf_filename, key, objfilter=None):
-    """Opens file and calls `distinct()` on the root group"""
-    with File(hdf_filename) as h5:
-        return h5.distinct(key, objfilter)
-
-
-def dump(src: Union[str, File, pathlib.Path]) -> None:
+def dump(src: Union[str, File, pathlib.Path],
+         **kwargs) -> None:
     """Call h5.dump() on the provided HDF5 file
 
     Parameters
     ----------
     src : str, File, pathlib.Path
         the HDF5 file or filename to dump. An object which has a hdf_filename attribute can also be provided.
+    kwargs
+        kwargs passed to h5.dump(). See h5.dump() for more information.
     """
     if isinstance(src, File):
         with File(src.hdf_filename) as h5:
-            return h5.dump()
+            return h5.dump(**kwargs)
 
     if isinstance(src, (str, pathlib.Path)):
         pass
@@ -119,7 +60,7 @@ def dump(src: Union[str, File, pathlib.Path]) -> None:
             src = src.hdf_filename
 
     with File(src) as h5:
-        return h5.dump()
+        return h5.dump(**kwargs)
 
 
 def dumps(src: Union[str, File, pathlib.Path]):
@@ -219,7 +160,8 @@ def clean_temp_data(full: bool = False):
 
 xr.set_options(display_expand_data=False)
 
-__all__ = ('__version__', '__author__', '__author_orcid__', 'UserDir', 'use',
+__all__ = ('__version__', '__author__', '__author_orcid__',
+           'UserDir', 'use',
            'File', 'Group', 'Dataset',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',

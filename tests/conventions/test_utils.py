@@ -1,12 +1,73 @@
+import json
+import pathlib
 import pint
 import unittest
+import yaml
 
-from h5rdmtoolbox.conventions import utils
-from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+from h5rdmtoolbox.convention import utils
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.utils import generate_temporary_filename
 
 
 class TestTranslation(unittest.TestCase):
+
+    def test_yaml2json(self):
+        data = {
+            "__name__": "tutorial-units-convention",
+            "__institution__": "https://orcid.org/members/001G000001e5aUTIAY",
+            "__contact__": "https://orcid.org/0000-0001-8729-0482",
+            "units": {
+                "target_method": "create_dataset",
+                "validator": "$units",
+                "description": "The physical unit of the dataset. If dimensionless, the unit is ''.",
+                "default_value": "$EMPTY"
+            }
+        }
+        yaml_filename = generate_temporary_filename(suffix='.yaml')
+        with open(yaml_filename, 'w') as f:
+            yaml.safe_dump(data, f)
+
+        json_filename = utils.yaml2json(yaml_filename)
+        self.assertEqual(json_filename.suffix, '.json')
+        self.assertEqual(json_filename.stem, yaml_filename.stem)
+        with open(json_filename, 'r') as f:
+            output = json.load(f)
+        self.assertDictEqual(data, output)
+
+        json_filename = utils.yaml2json(yaml_filename,
+                                        json_filename=yaml_filename.parent / 'test.json')
+        self.assertIsInstance(json_filename, pathlib.Path)
+        self.assertEqual(json_filename.absolute(),
+                         yaml_filename.parent / 'test.json')
+
+    def test_json2yaml(self):
+        data = {
+            "__name__": "tutorial-units-convention",
+            "__institution__": "https://orcid.org/members/001G000001e5aUTIAY",
+            "__contact__": "https://orcid.org/0000-0001-8729-0482",
+            "units": {
+                "target_method": "create_dataset",
+                "validator": "$units",
+                "description": "The physical unit of the dataset. If dimensionless, the unit is ''.",
+                "default_value": "$EMPTY"
+            }
+        }
+        json_filename = generate_temporary_filename(suffix='.json')
+        with open(json_filename, 'w') as f:
+            json.dump(data, f)
+
+        yaml_filename = utils.json2yaml(json_filename)
+        self.assertEqual(yaml_filename.suffix, '.yaml')
+        self.assertEqual(yaml_filename.stem, json_filename.stem)
+        with open(yaml_filename, 'r') as f:
+            output = yaml.safe_load(f)
+        self.assertDictEqual(data, output)
+
+        yaml_filename = utils.json2yaml(json_filename,
+                                        yaml_filename=json_filename.parent / 'test.yaml')
+        self.assertIsInstance(yaml_filename, pathlib.Path)
+        self.assertEqual(yaml_filename.absolute(),
+                         json_filename.parent / 'test.yaml')
 
     def test_equal_base_units(self):
         u1 = pint.Unit('m')

@@ -51,3 +51,5 @@ docs/jupyter_execute
 htmlcov
 coverage.svg
 docs/colab/my_file.hdf
+*.h5
+*.nxs

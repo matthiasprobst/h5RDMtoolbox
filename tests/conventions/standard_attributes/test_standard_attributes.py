@@ -4,7 +4,7 @@ import unittest
 from typing import Union
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions.standard_attributes import StandardAttribute
+from h5rdmtoolbox.convention.standard_attributes import StandardAttribute
 
 
 class TestStandardAttributes(unittest.TestCase):

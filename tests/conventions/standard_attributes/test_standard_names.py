@@ -4,11 +4,11 @@ import warnings
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.errors import StandardNameError, StandardAttributeError
-from h5rdmtoolbox.conventions.standard_names import utils
-from h5rdmtoolbox.conventions.standard_names.name import StandardName
-from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
-from h5rdmtoolbox.conventions.utils import check_url
+from h5rdmtoolbox.convention.errors import StandardNameError, StandardAttributeError
+from h5rdmtoolbox.convention.standard_names import utils
+from h5rdmtoolbox.convention.standard_names.name import StandardName
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
+from h5rdmtoolbox.convention.utils import check_url
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -119,24 +119,30 @@ class TestStandardAttributes(unittest.TestCase):
                     StandardNameTable.validate_version(version)
 
     def test_StandardNameTableFromWeb(self):
+        try:
+            import xmltodict
+            xmltodict_exists = True
+        except ImportError:
+            xmltodict_exists = False
+            warnings.warn('xmltodict not installed. Cannot test "test_StandardNameTableFromWeb"', UserWarning)
+        if xmltodict_exists:
+            cf = StandardNameTable.from_web(
+                url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
+                name='standard_name_table',
+                known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
+            self.assertEqual(cf.name, 'standard_name_table')
+            self.assertEqual(cf.versionname, 'standard_name_table-v79')
+            if self.connected:
+                self.assertTrue(check_url(cf.meta['url']))
+                self.assertFalse(check_url(cf.meta['url'] + '123'))
 
-        cf = StandardNameTable.from_web(
-            url='https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml',
-            name='standard_name_table',
-            known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
-        self.assertEqual(cf.name, 'standard_name_table')
-        self.assertEqual(cf.versionname, 'standard_name_table-v79')
-        if self.connected:
-            self.assertTrue(check_url(cf.meta['url']))
-            self.assertFalse(check_url(cf.meta['url'] + '123'))
-
-        if self.connected:
-            opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
-                                                     file_path='open_centrifugal_fan_database-v1.yaml',
-                                                     project_id='35443',
-                                                     ref_name='main')
-            self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
-            self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+            if self.connected:
+                opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                                                         file_path='open_centrifugal_fan_database-v1.yaml',
+                                                         project_id='35443',
+                                                         ref_name='main')
+                self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
+                self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
 
     def test_StandardNameTableFromYaml_special(self):
         table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
@@ -196,7 +202,19 @@ class TestStandardAttributes(unittest.TestCase):
                                         contact='https://orcid.org/0000-0001-8729-0482'))
 
     def test_to_html(self):
-        if self.connected:
+        try:
+            import pypandoc
+            from h5rdmtoolbox.utils import generate_temporary_filename
+            fname = generate_temporary_filename(touch=False)
+            with open(fname, 'w') as f:
+                f.write('# test')
+            pypandoc.convert_file(fname, 'html', format='md')
+            pypandoc_works = True
+        except OSError:
+            pypandoc_works = False
+            warnings.warn('pypandoc not properly installed. Cannot test "test_to_html"', UserWarning)
+
+        if self.connected and pypandoc_works:
             snt = StandardNameTable(name='test_snt',
                                     standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
                                     version='v1.0dev',
@@ -212,16 +230,14 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
-            import zenodo_search as zsearch
-            doi = zsearch.utils.parse_doi('8266929')
-            snt = StandardNameTable.from_zenodo(doi=8266929)
+            snt = StandardNameTable.from_zenodo(doi_or_recid=8266929)
             self.assertIsInstance(snt, StandardNameTable)
             filename = h5tbx.UserDir['standard_name_tables'] / f'8266929.yaml'
             self.assertTrue(filename.exists())
             filename.unlink(missing_ok=True)
 
     def test_from_yaml(self):
-        cv = h5tbx.conventions.from_yaml(tutorial.get_standard_attribute_yaml_filename(), overwrite=True)
+        cv = h5tbx.convention.from_yaml(tutorial.get_standard_attribute_yaml_filename(), overwrite=True)
         h5tbx.use(cv)
 
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
@@ -235,7 +251,7 @@ class TestStandardAttributes(unittest.TestCase):
                 h5.create_dataset('y_velocity', data=1.4, units='V', standard_name='y_velocity')
 
             ds_scale = h5.create_dataset('y_velocity_scale', data=2, units='m/s/V')
-            
+
             ds_yvel = h5.create_dataset('y_velocity', data=1.4,
                                         attach_data_scale=ds_scale,
                                         units='V',

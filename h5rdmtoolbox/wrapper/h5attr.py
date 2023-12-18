@@ -9,10 +9,11 @@ from typing import Dict
 from . import logger
 from .h5utils import get_rootparent
 from .. import errors
-from .. import get_config, conventions, utils
+from .. import get_config, convention, utils
 from .. import get_ureg
+from .. import iri
 from .. import protected_attributes
-from ..conventions import consts
+from ..convention import consts
 
 H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox
 
@@ -31,6 +32,14 @@ def pop_hdf_attributes(attrs: Dict) -> Dict:
         Dictionary without entries registered in `H5_DIM_ATTRS`
     """
     return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
+
+
+def _check_iri(url):
+    import requests
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise ConnectionError(f'URL {url} does not exist.')
+    return True
 
 
 class AttributeString(str):
@@ -54,6 +63,12 @@ class WrapperAttributeManager(h5py.AttributeManager):
         """ Private constructor."""
         super().__init__(parent)
         self._parent = parent
+
+    # @property
+    # def iri(self) -> dict:
+    #     """Return dictionary of IRIs stored in the attributes of this object"""
+    #     iri_dict = self._parent.iri
+    #     return {k: iri_dict[k] for k, v in self.items() if k in iri_dict}
 
     @staticmethod
     def _parse_return_value(_id, ret):
@@ -110,10 +125,18 @@ class WrapperAttributeManager(h5py.AttributeManager):
         parent = self._parent
 
         if get_config(
-                'expose_user_prop_to_attrs') and parent.__class__ in conventions.get_current_convention().properties:
-            if name in conventions.get_current_convention().properties[parent.__class__]:
-                return conventions.get_current_convention().properties[parent.__class__][name].get(parent)
+                'expose_user_prop_to_attrs') and parent.__class__ in convention.get_current_convention().properties:
+            if name in convention.get_current_convention().properties[parent.__class__]:
+                return convention.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
+
+    def create(self, name, data, shape=None, dtype=None, iri_cls: str = None, iri_individual: str = None):
+        r = super().create(name, data, shape, dtype)
+        if iri_cls is not None:
+            iri.set_name(self, name, iri_cls)
+        if iri_individual is not None:
+            iri.set_data(self, name, iri_individual)
+        return r
 
     @with_phil
     def __setitem__(self, name, value, attrs=None):
@@ -135,7 +158,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
-        curr_cv = conventions.get_current_convention()
+        curr_cv = convention.get_current_convention()
 
         parent = self._parent
         # obj_type = parent.__class__
@@ -150,7 +173,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                         # no value given, but is mandatory. check if there's an alternative
                         if sattr.alternative_standard_attribute is None:
                             raise errors.StandardAttributeError(
-                                f'Parameter (standard attribute) "{name}" must be provided and cannot be None!'
+                                f'Convention "{curr_cv.name}" expects standard attribute "{name}" to be provided '
+                                f'as an argument during {self._parent.__class__.__name__.lower()} creation.'
                             )
                         return
                     if value is consts.DefaultValue.NONE:
@@ -160,6 +184,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                         value = value.value
                     return curr_cv.properties[parent.__class__][name].set(parent, value, attrs)
                 except TypeError as e:
+                    if value is consts.DefaultValue.EMPTY:
+                        raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
                     raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
         utils.create_special_attribute(self, name, value)
 
@@ -233,7 +259,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             print(f'{k:{keylen}}:  {v}')
 
     @property
-    def raw(self) -> "h5py._hl.attrs.AttributeManager":
+    def raw(self) -> "h5py.AttributeManager":
         """Return the original h5py attribute object manager"""
         from h5py._hl import attrs
         from h5py._objects import phil

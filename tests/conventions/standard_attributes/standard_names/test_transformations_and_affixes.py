@@ -5,8 +5,8 @@ import warnings
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import errors
 from h5rdmtoolbox import tutorial
-from h5rdmtoolbox.conventions.standard_names import StandardName
-from h5rdmtoolbox.conventions.standard_names.transformation import Transformation
+from h5rdmtoolbox.convention.standard_names import StandardName
+from h5rdmtoolbox.convention.standard_names.transformation import Transformation
 
 
 def maximum_of(match, snt):
@@ -41,8 +41,10 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
     def test_adding_transformation(self):
-
-        snt = h5tbx.conventions.standard_names.StandardNameTable.from_zenodo(doi=8276716)
+        snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(doi_or_recid=8276716)
+        from h5rdmtoolbox.repository.zenodo import ZenodoRecord
+        z = ZenodoRecord(rec_id=8276716)
+        self.assertTrue(z.exists())
 
         # check if the problem really exists:
         with self.assertRaises(errors.StandardNameError):
@@ -82,7 +84,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             snt.add_affix(duplicate_affix)
 
     def test_get_transformation(self):
-        from h5rdmtoolbox.conventions.standard_names.affixes import _get_transformation, affix_transformations
+        from h5rdmtoolbox.convention.standard_names.affixes import _get_transformation, affix_transformations
         with self.assertRaises(KeyError):
             _get_transformation('invalid_transformation')
         self.assertEqual(affix_transformations['component'], _get_transformation('component'))
@@ -158,7 +160,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
                                                   f"{self.snt[sn2].description}")
 
     def test_surface(self):
-        from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+        from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
         snt = StandardNameTable.from_dict(
             {'name': 'test',
              'version': 'v1.2',

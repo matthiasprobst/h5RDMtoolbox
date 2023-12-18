@@ -1,10 +1,9 @@
 appdirs>=1.4.4
-numpy>=1.20,<1.23.0
+numpy>=1.20
 h5py>3.7.0
 matplotlib>=3.5.2
-pandas>=1.4.3
 IPython>=8.4.0
-pyyaml
+pyyaml>6.0.0
 xarray>=2022.3.0
 pint==0.21.1
 pint_xarray>=0.2.1
@@ -13,11 +12,10 @@ packaging
 python-forge==18.6.0
 requests
 zenodo_search==0.2.1
-# mongodb:
+# database:
 pymongo>=4.2.0
-# io
-pco_tools>=1.0.0
-opencv-python>=4.5.3.56
+# csv
+pandas>=1.4.3
 # snt
 xmltodict
 tabulate>=0.8.10

@@ -1,9 +1,11 @@
 import h5py
+import importlib_resources
 import numpy as np
 import os
-import pkg_resources
 import re
 import typing
+import warnings
+import xarray as xr
 from IPython.display import HTML, display
 from abc import abstractmethod
 from numpy import ndarray
@@ -15,7 +17,7 @@ from .orcid import is_valid_orcid_pattern, get_html_repr
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
-    CSS_STR = pkg_resources.resource_string('h5rdmtoolbox', 'data/style.css').decode("utf8")
+    CSS_STR = importlib_resources.files('h5rdmtoolbox').joinpath('data/style.css').read_bytes().decode("utf8")
 except FileNotFoundError:
     import pathlib
 
@@ -83,6 +85,12 @@ def okprint(string):
     print(oktext(string))
 
 
+def make_href(url, text) -> str:
+    if not url.startswith('http'):
+        raise ValueError(f'Invalid URL: "{url}". Must start with "http"')
+    return f'<a href="{url}">{text}</a>'
+
+
 def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
     """process string to make links actually clickable in html
 
@@ -106,7 +114,7 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
         if string.startswith('https://zenodo.org/record/'):
             zenodo_url = string
             img_url = f'https://zenodo.org/badge/DOI/10.5281/zenodo.{string.split("/")[-1]}.svg'
-        return f'<a href="{zenodo_url}"><img src="{img_url}" alt="DOI"></a>', True
+        return make_href(url=zenodo_url, text=f'<img src="{img_url}" alt="DOI">'), True
     for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
         urls = re.findall(p, string)
         if urls:
@@ -115,10 +123,15 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
                     orcid_url_repr = get_html_repr(url)
                     string = string.replace(url, orcid_url_repr)
                 else:
-                    string = string.replace(url, f'<a href="{url}">{url}</a>')
+                    string = string.replace(url, make_href(url, url))
             return string, True
 
     return string, False
+
+
+def get_iri_icon_href(iri: str) -> str:
+    """get html representation of an IRI with icon"""
+    return f'<a href="{iri}"><img src="https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true" alt=" [IRI]" width="16" height="16" /></a>'
 
 
 class _HDF5StructureRepr:
@@ -126,12 +139,17 @@ class _HDF5StructureRepr:
     def __init__(self, ignore_attrs=None):
         self.base_intent = '  '
         self.max_attr_length = 100
-        self.collapsed = True
+        self.collapsed = None
+
         self._obj_cfg = {}
         if ignore_attrs is None:
             self.ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
         else:
             self.ignore_attrs = ignore_attrs
+
+    @property
+    def checkbox_state(self) -> str:
+        return '' if self.collapsed else 'checked'
 
     def __dataset__(self, name, h5obj) -> str:
         """overwrite the H5Repr parent method"""
@@ -168,15 +186,15 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __call__(self, group, indent=0, preamble=None):
         if preamble:
             print(preamble)
-        for attr_name, attr_value in group.attrs.raw.items():
+        for attr_name in group.attrs.raw.keys():
             if not attr_name.isupper():
-                print(self.base_intent * indent + self.__attrs__(attr_name, attr_value))
+                print(self.base_intent * indent + self.__attrs__(attr_name, group))
         for key, item in group.items():
             if isinstance(item, h5py.Dataset):
                 print(self.base_intent * indent + self.__dataset__(key, item))
-                for attr_name, attr_value in item.attrs.raw.items():
+                for attr_name in item.attrs.raw.keys():
                     if not attr_name.isupper() and attr_name not in self.ignore_attrs:
-                        print(self.base_intent * (indent + 2) + self.__attrs__(attr_name, attr_value))
+                        print(self.base_intent * (indent + 2) + self.__attrs__(attr_name, item))
             elif isinstance(item, h5py.Group):
                 print(self.base_intent * indent + self.__group__(key, item))
                 self(item, indent + 1)
@@ -251,13 +269,38 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __stringdataset__(self, name, h5obj) -> str:
         if h5obj.ndim == 0:
-            _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
-            _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
+            _pcns = perf_counter_ns().__str__()
+            _id1 = f'ds-1-{h5obj.name}-{_pcns}1'
+            _id2 = f'ds-2-{h5obj.name}-{_pcns}2'
             return f"""\n
                     <ul id="{_id1}" class="h5tb-var-list">
-                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                     <label class='h5tb-varname' 
-                    for="{_id2}">{name}</label>: {h5obj.values[()]}
+                    for="{_id2}">{name}</label>: [{h5obj.dtype}] data={h5obj.values[()]}
+                    """
+        elif h5obj.ndim == 1:
+            _pcns = perf_counter_ns().__str__()
+            _id1 = f'ds-1-{h5obj.name}-{_pcns}1'
+            _id2 = f'ds-2-{h5obj.name}-{_pcns}2'
+            _strdata = h5obj[()]
+            if isinstance(_strdata, xr.DataArray):
+                return f"""\n
+                        <ul id="{_id1}" class="h5tb-var-list">
+                        <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
+                        <label class='h5tb-varname'
+                        for="{_id2}">{name}</label>: [{h5obj.dtype}]
+                        """
+            try:
+                str_values = ', '.join(_strdata)
+            except UnicodeDecodeError:
+                str_values = '<i>UnicodeDecodeError</i>'
+            except TypeError:
+                str_values = f'<i>TypeError: {type(_strdata)}</i>'
+            return f"""\n
+                    <ul id="{_id1}" class="h5tb-var-list">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
+                    <label class='h5tb-varname'
+                    for="{_id2}">{name}</label>: [{h5obj.dtype}] data="{str_values}"
                     """
         return self.__NDdataset__(name, h5obj)
 
@@ -267,7 +310,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         units = h5obj.attrs.get('units', '')
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
-                <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                 <label class='h5tb-varname' for="{_id2}">{name}</label>
                 <span class="h5tb-dims">{h5obj.values[()]} [{units}] ({h5obj.dtype})</span>"""
         return _html
@@ -316,16 +359,18 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
         _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
+
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
-                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox">
+                    <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                     <label class='h5tb-varname' for="{_id2}">{name}</label>
                     <span class="h5tb-dims">{_shape_repr} [{h5obj.dtype}]{chunks_str}{maxshape_str}</span>"""
         return _html
 
     def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
-        if h5obj.dtype.char == 'S':
+        is_string_dataset = h5obj.dtype.char == 'S'
+        if is_string_dataset:
             _html_pre = self.__stringdataset__(name, h5obj)
         else:
             if h5obj.ndim == 0:
@@ -337,9 +382,24 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         # open attribute section:
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in h5obj.attrs.items():
+        # if is_string_dataset:
+        #     if h5obj.ndim in (0, 1):
+        #         if h5obj.ndim == 0:
+        #             try:
+        #                 str_data = h5obj[()]
+        #             except UnicodeDecodeError:
+        #                 str_data = 'UnicodeDecodeError'
+        #         elif h5obj.ndim == 1:
+        #             try:
+        #                 str_data = ', '.join(h5obj[()])
+        #             except UnicodeDecodeError:
+        #                 str_data = 'UnicodeDecodeError'
+        #         _html_ds_attrs += '<li style="list-style-type: none; ' \
+        #                           f'font-style: bold">data : {str_data}</li>'
+
+        for k in h5obj.attrs.keys():
             if k not in self.ignore_attrs and not k.isupper():
-                _html_ds_attrs += self.__attrs__(k, v)
+                _html_ds_attrs += self.__attrs__(k, h5obj)
         # close attribute section
         _html_ds_attrs += """\n                </ul>"""
 
@@ -352,12 +412,12 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         nkeys = len(h5obj.keys())
         _id = f'ds-{name}-{perf_counter_ns().__str__()}'
         _groupname = os.path.basename(h5obj.name)
-        checkbox_state = 'checked'
+
         if _groupname == '':
             _groupname = '/'  # recover root name
+            checkbox_state = 'checked'
         else:
-            if self.collapsed:
-                checkbox_state = ''
+            checkbox_state = self.checkbox_state
 
         _html = f"""\n
               <ul style="list-style-type: none;" class="h5grp-sections">
@@ -370,8 +430,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html += """\n
                     <ul class="h5tb-attr-list">"""
         # write attributes:
-        for k, v in h5obj.attrs.items():
-            _html += self.__attrs__(k, v)
+        for k in h5obj.attrs.keys():
+            if not k.isupper():
+                _html += self.__attrs__(k, h5obj)
         # close attribute section
         _html += """
                     </ul>"""
@@ -389,69 +450,94 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         return _html
 
     def __attrs__(self, name, h5obj):
+        attr_value = h5obj.attrs.raw[name]
+        if isinstance(attr_value, np.bytes_):
+            try:
+                attr_value = attr_value.decode('utf-8')
+            except UnicodeDecodeError:
+                warnings.warn(f'Cannot decode attribute value for {name}', RuntimeWarning)
+        iri = h5obj.iri.get(name)
 
-        if name in ('DIMENSION_LIST', 'REFERENCE_LIST'):
-            _value = h5obj.__str__().replace('<', '&#60;')
-            _value = _value.replace('>', '&#62;')
-            return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
+        iri_name = iri.name
+        if iri_name is not None:
+            name += get_iri_icon_href(iri_name)
 
-        if isinstance(h5obj, ndarray):
-            if all(isinstance(item, str) for item in h5obj):
+        iri_data = iri.data
+
+        if isinstance(attr_value, ndarray):
+
+            if all(isinstance(item, str) for item in attr_value):
                 _string_value_list = []
-                for item in h5obj:
+                for item in attr_value:
                     _value, is_url = process_string_for_link(item)
                     if is_url:
                         _string_value_list.append(_value)
                     else:
                         _string_value_list.append(item)
+                _value_str = ", ".join(_string_value_list)
+
+                if iri_data is not None:
+                    _value_str += get_iri_icon_href(iri_data)
                 return '<li style="list-style-type: none; ' \
-                       f'font-style: italic">{name} : {", ".join(_string_value_list)}</li>'
+                       f'font-style: italic">{name} : {_value_str}</li>'
             else:
-                _value = h5obj.__repr__()
+                _value = attr_value.__repr__()
+
                 if len(_value) > self.max_attr_length:
                     _value = f'{_value[0:self.max_attr_length]}...'
+
+                if iri_data is not None:
+                    _value += get_iri_icon_href(iri_name)
+
                 return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
 
-        if isinstance(h5obj, str):
-            _value_str = f'{h5obj}'
+        if isinstance(attr_value, str):
+            _value_str = f'{attr_value}'
             if len(_value_str) > 1:
                 if _value_str[0] == '<' and _value_str[-1] == '>':
                     _value_str = _value_str[1:-1]
 
             _value, is_url = process_string_for_link(_value_str)
-            if is_url:
+            if is_url and not _value.startswith('{'):
                 if 'orcid.org' in _value:
                     from . import orcid
-                    orcid_html = orcid.get_html_repr(h5obj.strip('/').rsplit('/', 1)[-1])
+                    orcid_html = orcid.get_html_repr(attr_value.strip('/').rsplit('/', 1)[-1])
+                    if iri_data is not None:
+                        orcid_html += get_iri_icon_href(iri_data)
                     return f'<li style="list-style-type: none; font-style: italic">{name} : {orcid_html}</li>'
             else:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
                         _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
                     else:
-                        _value_str = h5obj
+                        _value_str = attr_value
                 else:
-                    _value_str = h5obj
+                    _value_str = attr_value
             #
             # if len(_value_str) > self.max_attr_length:
             #     _value_str = f'{_value_str[0:self.max_attr_length-1]}...'
+            # print(f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>')
+            if iri_data is not None:
+                _value_str += get_iri_icon_href(iri_data)
             return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
-        if not isinstance(h5obj, ndarray):
-            if getattr(h5obj, '_repr_html_', None):
-                _value_str = h5obj._repr_html_()
+        if not isinstance(attr_value, ndarray):
+            if getattr(attr_value, '_repr_html_', None):
+                _value_str = attr_value._repr_html_()
             else:
-                _value_str = str(h5obj)
+                _value_str = str(attr_value)
                 if _value_str[0] == '<' and _value_str[-1] == '>':
                     _value_str = _value_str[1:-1]
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
                         _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
                     else:
-                        _value_str = h5obj
+                        _value_str = attr_value
                 else:
-                    _value_str = h5obj
+                    _value_str = attr_value
 
+        if iri_data is not None:
+            _value_str += get_iri_icon_href(iri_data)  # make_href(iri_data, ' [IRI]')
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 

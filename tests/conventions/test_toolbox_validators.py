@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from typing import List, Union
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.conventions import toolbox_validators
+from h5rdmtoolbox.convention import toolbox_validators
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -29,7 +29,7 @@ class TestTbxValidators(unittest.TestCase):
         with self.assertRaises(ValidationError):
             MyStr(los=['3.4', 3.4])
 
-        cv = h5tbx.conventions.from_yaml(__this_dir__ / 'ListOfStr.yaml', overwrite=True)
+        cv = h5tbx.convention.from_yaml(__this_dir__ / 'ListOfStr.yaml', overwrite=True)
         with h5tbx.use(cv):
             print(cv)
             with h5tbx.File(keywords=['1', '2']) as h5:
@@ -37,7 +37,7 @@ class TestTbxValidators(unittest.TestCase):
         cv.delete()
 
     def test_validate_regex(self):
-        from h5rdmtoolbox.conventions.generate_utils import RegexProcessor
+        from h5rdmtoolbox.convention.generate_utils import RegexProcessor
 
         rp = RegexProcessor({'validator': 'regex(r"^[a-zA-Z0-9_]*$")'})
         self.assertEqual('r"^[a-zA-Z0-9_]*$"', rp.re_pattern)

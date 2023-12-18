@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import consts
+from h5rdmtoolbox import iri
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
@@ -63,7 +65,7 @@ class TestFile(unittest.TestCase):
 
     def test_reopen_file(self):
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
-        cv = h5tbx.conventions.from_yaml(cv_yaml_filename, overwrite=True)
+        cv = h5tbx.convention.from_yaml(cv_yaml_filename, overwrite=True)
         h5tbx.use(cv)
         with h5tbx.File(data_type='experimental',
                         contact=h5tbx.__author_orcid__) as h5:
@@ -157,74 +159,6 @@ class TestFile(unittest.TestCase):
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
 
-    def test_attrs_find(self):
-        with File(self.test_filename, mode='r') as h5:
-            self.assertEqual(
-                h5['/grp_1'],
-                h5.find_one(
-                    {
-                        '$basename': {
-                            '$regex': 'grp_[0-1]'
-                        }
-                    },
-                    '$group'
-                )
-            )
-            #
-            self.assertListEqual(
-                [h5['/grp_1'], h5['/grp_2'], h5['/grp_3']],
-                sorted(
-                    h5.find(
-                        {'$basename': {'$regex': 'grp_[0-3]'}
-                         },
-                        '$group'
-                    )
-                )
-            )
-            self.assertListEqual(
-                [h5['/ds1'], h5['/ds2'], ],
-                sorted(
-                    h5.find(
-                        {'$basename': {'$regex': 'ds[0-9]'}},
-                        '$dataset')
-                )
-            )
-            self.assertEqual(
-                h5['/ds'], h5.find_one({'one': 1}, '$dataset')
-            )
-            self.assertEqual(
-                [h5['/'], h5['/ds'], h5['grp_1']],
-                sorted(h5.find({'one': 1}))
-            )
-            self.assertListEqual(
-                [], h5.find({'one': {'$gt': 1}})
-            )
-            self.assertListEqual(
-                [h5['/'], h5['ds'], h5['grp_1']],
-                sorted(h5.find({'one': {'$gte': 1}}))
-            )
-
-    def test_find_group_data(self):
-        with File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5.find({'$basename': 'grp_1'}, '$group')[0],
-                             h5.find_one({'$basename': 'grp_1'}, '$group'))
-            self.assertEqual([h5['grp_1'], ], h5.find({'$basename': 'grp_1'}, '$group'))
-            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, "$dataset"))
-            self.assertEqual(h5.find({'$ndim': 1}, "$dataset")[0], h5.find_one({'$ndim': 1}, "$dataset"))
-
-    def test_find_dataset_data(self):
-        with File(self.test_filename, mode='r') as h5:
-            self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
-            self.assertEqual(h5['ds'], h5.find_one({'$basename': 'ds'}, '$dataset'))
-            self.assertEqual([h5['ds'], ], h5.find({'$basename': 'ds'}))
-            self.assertEqual([h5['ds'], ], h5.find({'$shape': (4,)}, '$dataset'))
-            self.assertEqual(h5['ds'], h5.find_one({'$shape': (4,)}, '$dataset'))
-            r = h5.find_one({'$ndim': 1}, '$dataset')
-            self.assertEqual(h5['ds'].ndim, 1)
-            self.assertIsInstance(h5['ds'], h5py.Dataset)
-            self.assertEqual([h5['ds'], h5['ds1'], h5['ds2'], h5['dsY']],
-                             sorted(h5.find({'$ndim': 1}, '$dataset')))
-
     def test_open(self):
         with File(mode='w') as h5:
             h5.attrs['one'] = 1
@@ -242,42 +176,32 @@ class TestFile(unittest.TestCase):
         self.assertEqual(h5.mode, 'r+')
         h5.close()
 
-    def test_groups(self):
-        with File() as h5:
-            groups = h5.get_groups()
-            self.assertEqual(groups, [])
-            h5.create_group('grp_1', attrs=dict(a=1))
-            h5.create_group('grp_2', attrs=dict(a=1))
-            h5.create_group('grpXYZ', attrs=dict(b=2))
-            h5.create_group('mygrp_2')
-
-            groups = h5.get_groups()
-            self.assertEqual(len(groups), 4)
-            self.assertEqual(groups, [h5['grpXYZ'], h5['grp_1'], h5['grp_2'], h5['mygrp_2']])
-
-            groups = h5.get_groups('^grp_[0-9]$')
-            self.assertEqual(len(groups), 2)
-            self.assertEqual(sorted(groups), sorted([h5['grp_1'], h5['grp_2']]))
-            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]), sorted(h5.find({'a': 1}, rec=True)))
-
-            h5.create_group('grpXYZ/grp123', attrs=dict(a=1))
-            self.assertEqual(sorted([h5['grpXYZ/grp123'],
-                                     h5['grp_1'],
-                                     h5['grp_2'], ]),
-                             sorted(h5.find({'a': 1}, rec=True)))
-            self.assertEqual(sorted([h5['grp_1'], h5['grp_2']]),
-                             sorted(h5.find({'a': 1}, rec=False)))
-
-    def test_tree_structur(self):
+    def test_tree_structure(self):
         with File() as h5:
             h5.attrs['one'] = 1
             h5.attrs['two'] = 2
-            h5.create_dataset('rootds', shape=(2, 40, 3))
+            h5.create_dataset('root_ds', shape=(2, 40, 3))
             grp = h5.create_group('grp',
                                   attrs={'description': 'group description'})
-            grp.create_dataset('grpds',
+            grp.create_dataset('grp_ds',
                                shape=(2, 40, 3))
+            sub_grp = grp.create_group('sub_grp',
+                                       attrs={'description': 'sub group description'})
+            sub_grp.create_dataset('sub_grp_ds',
+                                   shape=(2, 40, 3))
             tree = h5.get_tree_structure()
+
+            # TODO: there is a branch with improved tree structure code. however, the monogoDB scripts depend on it and nee to be changed accordingly first!
+
+            # self.assertTrue('/' in tree)
+            # self.assertTrue('grp' in tree)
+            # self.assertTrue('root_ds' in tree)
+
+            # self.assertFalse('sub_grp' in tree)
+            # self.assertFalse('sub_grp' in tree['/'])
+            #
+            # self.assertTrue('sub_grp' in tree['grp'])
+            # self.assertTrue('sub_grp' in tree['grp'])
 
     def test_rename(self):
         with File(mode='w') as h5:
@@ -452,3 +376,59 @@ class TestFile(unittest.TestCase):
             x = h5['x'][:]
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
+
+    def test_set_ATTRIRI(self):
+        """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
+
+        with h5tbx.File() as h5:
+            h5.attrs['creator'] = 'John Doe'
+            with self.assertRaises(NotImplementedError):
+                h5.iri['creator'] = 'John Doe'
+            self.assertEqual(None, h5.iri['creator'].name)
+            self.assertEqual(None, h5.iri['creator'][iri.DATA_KW])
+            self.assertEqual(None, h5.iri.get('creator')[iri.DATA_KW])
+            self.assertEqual(None, h5.iri.get('creator').get(iri.NAME_KW, None))
+            self.assertEqual(None, h5.iri.get('creator').get(iri.DATA_KW, None))
+
+            self.assertEqual({}, h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
+            self.assertEqual({}, h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
+            h5.attrs.create('creator', data='John Doe',
+                            iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                            iri_individual=None
+                            )
+
+            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
+                             h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
+            self.assertEqual({}, h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
+
+            h5.attrs.create('creator', data='John Doe',
+                            iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                            iri_individual='test'
+                            )
+            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                             h5.iri.get('creator').get(iri.NAME_KW, None))
+            self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
+            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                             h5.iri.get('creator').get(iri.NAME_KW, None))
+            self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
+
+            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
+                             h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
+            self.assertEqual({'creator': 'test'},
+                             h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
+
+            h5.iri['creator'][iri.NAME_KW] = '4'
+            self.assertEqual('4', h5.iri['creator'].name)
+
+            h5.iri['creator'][iri.DATA_KW] = '5'
+            self.assertEqual('5', h5.iri['creator'].data)
+
+            del h5.iri['creator']
+            self.assertEqual(None, h5.iri['creator'].name)
+            self.assertEqual(None, h5.iri['creator'].data)
+
+            h5.create_dataset('test', data=[1, 2, 3], attrs={'contact_person': 'John Doe'})
+            h5['test'].iri['contact_person'].name = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
+            data = h5['test'][()]
+            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+                             data.attrs['IRI_NAME']['contact_person'])

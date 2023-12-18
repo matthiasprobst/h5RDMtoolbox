@@ -1,12 +1,14 @@
 """
 Tutorial module providing easy access to particular data.
 """
+import numpy as np
 import os
 import pathlib
 import xarray as xr
 from typing import List
 
-from h5rdmtoolbox.conventions.standard_names.table import StandardNameTable
+import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from .utils import generate_temporary_directory
 from .wrapper.core import File
 
@@ -155,7 +157,7 @@ def get_xr_dataset(name):
 
 
 class Conventions:
-    """Tutorial methods for package conventions"""
+    """Tutorial methods for package convention"""
 
     @staticmethod
     def fetch_cf_standard_name_table():
@@ -186,7 +188,7 @@ class Database:
 
         _folders = ('d1', 'd2', 'd3', 'd1/d11', 'd1/d11/d111', 'd2/d21')
         folders = [os.path.join(repo_dir, _f) for _f in _folders]
-        operators = ('Mike', 'Ellen', 'John', 'Susi')
+        contact_persons = ('Mike', 'Ellen', 'John', 'Susi')
         db_file_type = ('fan_case', 'piv_case')
 
         file_ids = range(n_files)
@@ -200,7 +202,9 @@ class Database:
 
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
             with File(filename, 'w') as h5:
-                h5.attrs['operator'] = operators[np.random.randint(4)]
+                h5.attrs['contact_person'] = contact_persons[np.random.randint(4)]
+                h5.iri['contact_person'].name = 'http://www.w3.org/ns/prov#Person'
+
                 if fid % 2:
                     __ftype__ = db_file_type[0]
                 else:
@@ -239,6 +243,7 @@ class Database:
                                      shape=(zplanes, 64, 86, 2))
                     g.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'mean v-component'},
                                      shape=(zplanes, 64, 86, 2))
+                    g.iri['units'].name = 'http://qudt.org/schema/qudt/Unit'
 
     @staticmethod
     def generate_test_files(n_files: int = 5) -> List[pathlib.Path]:
@@ -247,8 +252,6 @@ class Database:
         Database.build_test_repo(tocdir, n_files=n_files)
         return sorted(tocdir.rglob('*.hdf'))
 
-
-import numpy as np
 
 np.random.seed(100)
 
@@ -316,3 +319,30 @@ class FlowDataset(File):
             self.create_dataset('w', data=w,
                                 attrs=dict(units='m/s', standard_name='z_velocity'),
                                 attach_scales=scales)
+
+
+def generate_fluid_hdf_file() -> pathlib.Path:
+    """Generate a hdf file with a velocity and pressure dataset"""
+    with h5tbx.File() as h5:
+        h5.write_iso_timestamp(name='timestamp', dt=None)  # writes the current date time in iso format to the attribute
+        h5.attrs['project'] = 'tutorial'
+        h5.attrs['contact'] = {'name': 'John Doe', 'surname': 'Doe'}
+        h5.attrs['check_value'] = 0
+        h5.create_dataset('pressure1', data=np.random.random(size=10) * 800,
+                          attrs=dict(units='Pa', standard_name='pressure',
+                                     check_value=-140.3))
+        h5.create_dataset('velocity', data=[1, 2, -1],
+                          attrs=dict(units='m/s', standard_name='velocity',
+                                     check_value=14.2))
+        g = h5.create_group('group1', attrs={'check_value': 0})
+        g.create_dataset('velocity', data=[4, 0, -3, 12, 3], attrs=dict(units='m/s', standard_name='velocity'))
+        g = h5.create_group('group2')
+        g.attrs['check_value'] = 0
+        g.create_dataset('velocity', data=[12, 11.3, 4.6, 7.3, 8.1],
+                         attrs=dict(units='m/s', standard_name='velocity',
+                                    check_value=30.2))
+        g.create_dataset('z', data=5.4, attrs=dict(units='m', standard_name='z_coordinate'))
+        g.create_dataset('pressure2', data=np.random.random(size=10),
+                         attrs=dict(units='kPa', standard_name='pressure',
+                                    check_value=-10.3))
+    return h5.hdf_filename

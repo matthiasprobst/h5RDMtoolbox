@@ -17,18 +17,19 @@ from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
 
+from h5rdmtoolbox.database import ObjDB
 from . import logger
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
-from .. import _repr, get_config, conventions, utils, consts, protected_attributes
+from .. import _repr, get_config, convention, utils, consts, protected_attributes
 from .. import get_ureg
+from .. import iri
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
-from ..conventions.consts import DefaultValue
-from ..conventions.layout import Layout as LayoutFile
+from ..convention.consts import DefaultValue
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
@@ -37,6 +38,13 @@ H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
             'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
             'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
             'alignment_threshold', 'alignment_interval', 'meta_block_size')
+
+
+def convert_strings_to_datetimes(array):
+    if np.issubdtype(array.dtype, np.str_):
+        return np.array([datetime.fromisoformat(date_str) for date_str in array.flat]).reshape(array.shape)
+    else:
+        return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -86,7 +94,7 @@ def process_attributes(cls,
     if existing_attrs is None:
         existing_attrs = list()
 
-    curr_cv = conventions.get_current_convention()
+    curr_cv = convention.get_current_convention()
 
     # go through list of registered standard attributes, and check whether they are in kwargs:
     if meth_name not in curr_cv.methods[cls]:
@@ -115,7 +123,7 @@ def process_attributes(cls,
                     skwargs[ak] = v
                 # else raise error
                 else:
-                    raise conventions.standard_attributes.errors.StandardAttributeError(
+                    raise convention.standard_attributes.errors.StandardAttributeError(
                         f'You passed the standard attribute "{ak}" as a standard argument and it is '
                         f'also in the "attrs" argument. This is not allowed!')
 
@@ -133,7 +141,7 @@ def process_attributes(cls,
                     logger.debug(
                         f'Standard attribute {k} is empty and alternative standard attribute given by the user')
                     if skwargs[alt_attr_name] == DefaultValue.EMPTY:
-                        raise conventions.standard_attributes.errors.StandardAttributeError(
+                        raise convention.standard_attributes.errors.StandardAttributeError(
                             f'Error creating {cls.__name__} "{name}": The standard attribute "{k}" '
                             f'is required but not provided. The alternative '
                             f'{alt_attr_name} '
@@ -145,7 +153,7 @@ def process_attributes(cls,
                 else:
                     logger.debug(f'Standard attribute {k} is empty but no alternative attribute given by the user.')
                     if not get_config('ignore_standard_attribute_errors'):
-                        raise conventions.standard_attributes.errors.StandardAttributeError(
+                        raise convention.standard_attributes.errors.StandardAttributeError(
                             f'The standard attribute "{k}" is required but not provided.')
 
     _ = [skwargs.pop(p) for p in _pop]
@@ -157,7 +165,7 @@ def process_attributes(cls,
     #             # pass over the attribute value to the skwargs dict:
     #             skwargs[skey] = attrs[skey]
     #         else:
-    #             raise conventions.standard_attributes.errors.StandardAttributeError(
+    #             raise convention.standard_attributes.errors.StandardAttributeError(
     #                 f'You passed the standard attribute "{skey}" as a standard argument and it is '
     #                 f'also in the "attrs" argument. This is not allowed!')
 
@@ -174,7 +182,8 @@ class Core:
                 del self.attrs[item]
                 return
             raise ValueError('Deleting standard attributes is not allowed based on the current configuration! '
-                             'You may change this by calling set_config("allow_deleting_standard_attributes", True).')
+                             'You may change this by calling '
+                             '"h5tbx.set_config(allow_deleting_standard_attributes=True)".')
         if item in self and get_config('natural_naming'):
             del self[item]
             return
@@ -189,12 +198,16 @@ class Core:
     @property
     def convention(self):
         """Return the convention currently enabled."""
-        return conventions.get_current_convention()
+        return convention.get_current_convention()
 
     @property
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
         return self.convention.properties.get(self.__class__, {})
+
+    @property
+    def iri(self):
+        return iri.IRIManager(self.attrs)
 
 
 class SpecialAttributeWriter:
@@ -265,23 +278,24 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         """Basename of dataset (path without leading forward slash)"""
         return os.path.basename(self.name)
 
-    def get_datasets(self, pattern: str = '.*', rec: bool = False) -> List[h5py.Dataset]:
+    def get_datasets(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Dataset]:
         """Return list of datasets in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the datasets."""
-        if pattern == '.*' and not rec:
+        if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Dataset)]
-        return self.find({'$basename': {'$regex': pattern}}, '$Dataset', rec=rec)
+        grpDB = ObjDB(self)
+        return grpDB.find({'$name': {'$regex': pattern}}, '$Dataset', recursive=recursive)
 
-    def get_groups(self, pattern: str = '.*', rec: bool = False) -> List[h5py.Group]:
+    def get_groups(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Group]:
         """Return list of groups in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the groups."""
-        if pattern == '.*' and not rec:
+        if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Group)]
-        return self.find({'$basename': {'$regex': pattern}}, '$Group', rec=rec)
+        return self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)
 
     def modify_dataset_properties(self, dataset, tqdm_pbar: bool = False, **dataset_properties):
         """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
@@ -439,13 +453,13 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             raise AttributeError(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in conventions.get_current_convention().properties:
-            if key in conventions.get_current_convention().properties[self.__class__]:
-                return conventions.get_current_convention().properties[self.__class__][key](self).set(value)
+        if self.__class__ in convention.get_current_convention().properties:
+            if key in convention.get_current_convention().properties[self.__class__]:
+                return convention.get_current_convention().properties[self.__class__][key](self).set(value)
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
-        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{conventions.get_current_convention().name}")>'
+        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{convention.get_current_convention().name}")>'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -532,7 +546,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             for k, v in attrs.items():
                 try:
                     h5tbxgrp.attrs[k] = v
-                except conventions.standard_attributes.errors.StandardAttributeError as e:
+                except convention.standard_attributes.errors.StandardAttributeError as e:
                     del self[name]  # undo group creation
                     raise e
         return h5tbxgrp
@@ -547,7 +561,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         where each datetime is converted to a string with ISO format"""
         if attrs is None:
             attrs = {}
-        attrs.update({'ISTIMEDS': True,
+        attrs.update({'ISTIMEDS': 1,
                       'TIMEFORMAT': 'ISO'})
         if isinstance(data, np.ndarray):
             return self.create_string_dataset(name, data=[t.astype(datetime).isoformat() for t in data],
@@ -718,6 +732,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         # take compression from kwargs or config:
         compression = kwargs.pop('compression', get_config('hdf_compression'))
         compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
@@ -820,8 +835,9 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                         ds.attrs.__setitem__(k, v.name, attrs)
                     else:
                         ds.attrs.__setitem__(k, v, attrs)
-            except Exception as e:
-                logger.error(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}"')
+            except convention.standard_attributes.errors.StandardAttributeError as e:
+                logger.debug(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
+                             f'{self.convention.name}. Orig err: "{e}"')
                 del self[name]
                 raise e
         if isinstance(data, np.ndarray):
@@ -862,9 +878,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
     def find_one(self, flt: Union[Dict, str],
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-                 rec: bool = True,
+                 recursive: bool = True,
                  ignore_attribute_error: bool = False):
         """See find()"""
+        raise NotImplemented('Moved to database package!')
         from ..database import file
         if flt == {}:
             return None
@@ -872,53 +889,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             self,
             flt,
             objfilter=objfilter,
-            recursive=rec,
+            recursive=recursive,
             find_one=True,
             ignore_attribute_error=ignore_attribute_error
         )
-
-    def distinct(self,
-                 key,
-                 objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None
-                 ) -> List:
-        """Find a distinct key (only one result is returned although multiple objects match the filter)"""
-        from ..database.file import distinct
-        return distinct(self, key, objfilter)
-
-    def find(self, flt: Union[Dict, str],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             rec: bool = True,
-             ignore_attribute_error: bool = False) -> List:
-        """
-        Examples for filter parameters:
-        filter = {'long_name': 'any objects long name'} --> searches in attributes only
-        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
-        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
-
-        Parameters
-        ----------
-        flt: Dict
-            Filter request
-        objfilter: str | h5py.Dataset | h5py.Group | None
-            Filter. Default is None. Otherwise, only dataset or group types are returned.
-        rec: bool, optional
-            Recursive search. Default is True
-        ignore_attribute_error: bool, optional=False
-            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
-            Otherwise, the KeyError is raised.
-
-        Returns
-        -------
-        h5obj: h5py.Dataset or h5py.Group
-        """
-        from ..database import file
-        return file.find(
-            h5obj=self,
-            flt=flt,
-            objfilter=objfilter,
-            recursive=rec,
-            find_one=False,
-            ignore_attribute_error=ignore_attribute_error)
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
@@ -1680,9 +1654,9 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in conventions.get_current_convention().properties:
-            if key in conventions.get_current_convention().properties[self.__class__]:
-                return conventions.get_current_convention().properties[self.__class__][key].set(self, value)
+        if self.__class__ in convention.get_current_convention().properties:
+            if key in convention.get_current_convention().properties[self.__class__]:
+                return convention.get_current_convention().properties[self.__class__][key].set(self, value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -1747,9 +1721,10 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                             if dim_ds_data.ndim == 0:
                                 dim_ds_data = np.array(datetime.fromisoformat(dim_ds_data.astype(str))).astype(datetime)
                             else:
-                                dim_ds_data = np.array(
-                                    [datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
-                                    datetime)
+                                dim_ds_data = convert_strings_to_datetimes(dim_ds_data.astype(str))
+                                # dim_ds_data = np.array(
+                                #     [datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
+                                #     datetime)
                     if dim_ds_data.ndim == 0:
                         if isinstance(arg, int):
                             coords[coord_name] = xr.DataArray(name=coord_name,
@@ -1819,9 +1794,9 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     def __repr__(self) -> str:
         r = super().__repr__()
         if not self:
-            return r[:-1] + f' (convention "{conventions.get_current_convention().name}")>'
+            return r[:-1] + f' (convention "{convention.get_current_convention().name}")>'
         else:
-            return r[:-1] + f', convention "{conventions.get_current_convention().name}">'
+            return r[:-1] + f', convention "{convention.get_current_convention().name}">'
 
     def dump(self) -> None:
         """Call sdump()"""
@@ -1920,7 +1895,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             Filter request
         objfilter: str | h5py.Dataset | h5py.Group | None
             Filter. Default is None. Otherwise, only dataset or group types are returned.
-        rec: bool, optional
+        recursive: bool, optional
             Recursive search. Default is True
         ignore_attribute_error: bool, optional=False
             If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
@@ -1944,13 +1919,8 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     """Main wrapper around h5py.File.
 
     Adds additional features and methods to h5py.File in order to streamline the work with
-    HDF5 files and to incorporate usage of metadata (attribute naming) conventions and layouts.
-    An additional argument is added to the h5py.File with "layout" to specify the layout of the file.
-    The layout specifies the structure of the file and the expected content of each group and dataset.
-    A check can be performed to verify that the file is in accordance with the layout.
-
-
-    .. seealso:: :meth:`check`
+    HDF5 files and to incorporate usage of metadata (attribute naming) convention.
+    An additional argument is added to the h5py.
 
 
     .. note:: All features from h5py packages are preserved.
@@ -1963,8 +1933,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         a temporary file is created in the user's temporary directory.
     mode : {'r', 'r+', 'w', 'w-', 'x', 'a'}, optional
         The mode in which to open the file. The default is 'r'.
-    layout : Path | str | LayoutFile, optional
-        The layout of the file.
     **kwargs : Dict
         Additional keyword arguments are passed to h5py.File.
 
@@ -1973,16 +1941,15 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     -----
     The following methods are added to the h5py.File object:
 
-    * check(): Run layout check.
     * moveto(): Move the file to a new location.
     * saveas(): Save the file to a new location.
+    * ...
 
     The following attributes are added to the h5py.File object:
 
     * version: (str) The version of the package used to create the file.
     * modification_time: (datetime) The modification time of the file.
     * creation_time: (datetime) The creation time of the file.
-    * layout: (LayoutFile) The layout of the file.
     * filesize: (int) The size of the file in bytes.
 
     .. seealso:: :class:`h5rdmtoolbox.core.Group`
@@ -2025,42 +1992,23 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         """
         return utils.get_filesize(self.filename)
 
-    @property
-    def layout(self) -> LayoutFile:
-        """Return the HDF-Layout object for this file."""
-        return self._layout
-
-    @layout.setter
-    def layout(self, layout: Union[Path, str, LayoutFile]):
-        if isinstance(layout, str):
-            self._layout = LayoutFile.load_registered(name=layout, h5repr=self.hdfrepr)
-        elif isinstance(layout, Path):
-            self._layout = LayoutFile(layout, self.hdfrepr)
-        elif layout is None:
-            self._layout = LayoutFile()
-        elif isinstance(layout, LayoutFile):
-            self._layout = layout
-        else:
-            raise TypeError('Unexpected type for layout. Expect str, pathlib.Path or LayoutFile but got '
-                            f'{type(layout)}')
-
     def __init__(self,
                  name: Path = None,
                  mode: str = None,
-                 layout: Union[Path, str, LayoutFile, None] = None,
                  attrs: Dict = None,
                  **kwargs):
         # path is file object:
         if isinstance(name, ObjectID):
             # filter out standard attributes from kwargs:
-            if "__init__" in conventions.get_current_convention().methods[self.__class__]:
+            if "__init__" in convention.get_current_convention().methods[self.__class__]:
                 kwargs, _ = _pop_standard_attributes(
-                    kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
+                    kwargs, cache_entry=convention.get_current_convention().methods[self.__class__]["__init__"]
                 )
             super(File, self).__init__(name, mode, **kwargs)
             self._hdf_filename = Path(self.filename)
             return
 
+        fname = None
         # name is path or None:
         if name is None:
             _tmp_init = True
@@ -2071,6 +2019,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             else:
                 mode = mode
         elif isinstance(name, (str, pathlib.Path)):
+            logger.debug('A filename is given to initialize the File class')
             fname = pathlib.Path(name)
             # a filename is given.
 
@@ -2078,18 +2027,24 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 # file does exist and mode not given --> read only!
                 if fname.exists():
                     mode = 'r'
+                    logger.debug('Mode is set to "r" because file exists and mode was not given.')
 
                 # file does not exist and mode is not given--> write!
                 elif not fname.exists():
                     mode = 'w'
-            # else mode is given, so just continue... may be correct, may be not...
+                    logger.debug('Mode is set to "w" because file does not exist and mode was not given.')
+            elif mode == 'w' and fname.exists():
+                fname.unlink()
+                logger.debug('File exists and mode is set to "w". Deleting file first.')
+            # else mode is given, so just continue... may be correct, may be not... let h5py find out
 
         if mode is None:
             logger.debug('Mode not set. Set it to "r" by default')
             mode = 'r'
         elif not isinstance(name, (str, Path)):
             raise ValueError(
-                f'It seems that no proper file name is passed: type of "{name}" is {type(name)}')
+                f'It seems that no proper file name is passed: type of "{name}" is {type(name)}'
+            )
         else:
             if mode == 'r+':
                 if not Path(name).exists():
@@ -2109,9 +2064,9 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
         if mode == 'r':
             # check for required standard attributes
-            if "__init__" in conventions.get_current_convention().methods[self.__class__]:
+            if "__init__" in convention.get_current_convention().methods[self.__class__]:
                 kwargs, skwargs = _pop_standard_attributes(
-                    kwargs, cache_entry=conventions.get_current_convention().methods[self.__class__]["__init__"]
+                    kwargs, cache_entry=convention.get_current_convention().methods[self.__class__]["__init__"]
                 )
                 logger.debug('The file mode is read only ("r"). Provided standard attributes are ignored: '
                              f'{skwargs.keys()}')
@@ -2147,8 +2102,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             for k, v in attrs.items():
                 self.attrs[k] = v
 
-        self._layout = layout
-
     def __setattr__(self, key, value):
         props = self.convention.properties.get(self.__class__, None)
         if props:
@@ -2157,34 +2110,15 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
                 return prop.set(self, value)
         if key.startswith('_'):
             return super().__setattr__(key, value)
-        # if key in ('layout', ):
-        #     return super().__setattr__(key, value)
         raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
                              f'to be set in this way. "{key}" seems not be standardized in the current convention. ')
 
     def __repr__(self) -> str:
         r = super().__repr__()
-        return r.replace('HDF5', f'HDF5 (convention: "{conventions.get_current_convention().name}")')
+        return r.replace('HDF5', f'HDF5 (convention: "{convention.get_current_convention().name}")')
 
     def __str__(self) -> str:
-        return f'<class "{self.__class__.__name__}" convention: "{conventions.get_current_convention().name}">'
-
-    def check(self, grp: Union[str, h5py.Group] = '/') -> int:
-        """Run layout check. This method may be overwritten to add conditional
-         checking.
-
-         Parameters
-         ----------
-         grp: str or h5py.Group, default='/'
-            Group from where to start the layout check.
-            Per default starts at root level
-
-         Returns
-         -------
-         int
-            Number of detected issues.
-         """
-        return self._layout.validate(self[grp])
+        return f'<class "{self.__class__.__name__}" convention: "{convention.get_current_convention().name}">'
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.
@@ -2278,6 +2212,12 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         Subclass of File
         """
         return File(filename, mode)
+
+    # def close(self):
+    #     # if writable, update IRI
+    #     if self.mode in ('r+', 'w'):
+    #         self.attrs[consts.ATTR_IRI_NAME] = self.attr_name_iri
+    #     super().close()
 
 
 Dataset._h5grp = Group
