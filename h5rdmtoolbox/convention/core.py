@@ -647,7 +647,7 @@ def from_json(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Co
 
 def from_repo(repo_interface: RepositoryInterface,
               name: str,
-              overwrite: bool = False,
+              take_existing: bool = True,
               force_download: bool = False):
     """Download a YAML file from a repository"""
     # check if file exists:
@@ -655,9 +655,9 @@ def from_repo(repo_interface: RepositoryInterface,
     estimated_filename = UserDir['cache'] / f'{path_compatible_doi}' / name
     estimated_filename.parent.mkdir(parents=True, exist_ok=True)
     if estimated_filename.exists():
-        if not overwrite:
-            raise FileExistsError(f'File {name} exists in cache and overwrite is set to False.')
-        if overwrite and not force_download:
+        if not take_existing:
+            raise FileExistsError(f'File {name} exists in cache but take_existing is set to False.')
+        if take_existing and not force_download:
             return from_file(estimated_filename)
 
     filename = repo_interface.download_file(name)

@@ -171,7 +171,7 @@ class LayoutSpecification:
 
         Examples
         --------
-        >>> from h5rdmtoolbox.database import hdfdb
+        >>> from h5rdmtoolbox.database import FileDB
         >>> lay = LayoutSpecification()
         >>> spec1 = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
         >>> spec2 = lay.add(...) # add another spec to layout

@@ -8,7 +8,7 @@ import warnings
 
 from h5rdmtoolbox import use
 from h5rdmtoolbox.database.lazy import LDataset
-from h5rdmtoolbox.database.mongo import MongoDBInterface
+from h5rdmtoolbox.database.mongo import MongoDB
 
 try:
     import pymongo
@@ -71,8 +71,8 @@ class TestH5Mongo(unittest.TestCase):
 
     @is_testable
     def test_insert(self):
-        """Test the MongoDBInterface class"""
-        mongoDBInterface = MongoDBInterface(collection=self.collection)
+        """Test the MongoDB class"""
+        mongoDBInterface = MongoDB(collection=self.collection)
 
         with h5py.File('test.h5', 'w') as h5:
             h5.create_dataset('dataset', shape=(10, 20, 4))
@@ -99,7 +99,7 @@ class TestH5Mongo(unittest.TestCase):
 
         # insert zero-th axis:
         self.client.drop_database('hdf_database_test')
-        mongoDBInterface = MongoDBInterface(collection=self.collection)
+        mongoDBInterface = MongoDB(collection=self.collection)
         with h5py.File('test.h5', 'w') as h5:
             h5.create_dataset('dataset', shape=(10, 20, 4))
 
@@ -111,7 +111,7 @@ class TestH5Mongo(unittest.TestCase):
     @is_testable
     def test_find_one(self):
 
-        mongoDBInterface = MongoDBInterface(collection=self.collection)
+        mongoDBInterface = MongoDB(collection=self.collection)
         self.assertEqual(0, mongoDBInterface.collection.count_documents({}))
 
         with h5py.File('test.h5', 'w') as h5:

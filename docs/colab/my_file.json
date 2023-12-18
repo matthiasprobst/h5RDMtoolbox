@@ -1,0 +1,40 @@
+{
+  "attrs": {
+    "IRI_NAME": "{\"contact\": \"http://w3id.org/nfdi4ing/metadata4ing#ContactPerson\"}",
+    "__h5rdmtoolbox_version__": "1.0.0",
+    "contact": "https://orcid.org/0000-0001-8729-0482",
+    "data_type": "experimental",
+    "standard_name_table": "https://zenodo.org/record/8276716"
+  },
+  "time": {
+    "props": {
+      "shape": [
+        1000
+      ],
+      "dtype": "float64"
+    },
+    "attrs": {
+      "NAME": "b''",
+      "standard_name": "time",
+      "units": "ms"
+    }
+  },
+  "u": {
+    "props": {
+      "shape": [
+        1000
+      ],
+      "dtype": "float64"
+    },
+    "attrs": {
+      "DIMENSION_LIST": [
+        [
+          "<HDF5 object reference>"
+        ]
+      ],
+      "IRI_NAME": "{\"units\": \"http://qudt.org/schema/qudt/Unit\"}",
+      "standard_name": "x_velocity",
+      "units": "m/s"
+    }
+  }
+}

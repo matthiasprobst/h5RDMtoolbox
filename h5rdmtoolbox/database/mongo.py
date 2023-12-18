@@ -297,7 +297,7 @@ class MongoDBLazyDataset(lazy.LDataset):
         super().__getitem__(item)
 
 
-class MongoDBInterface(HDF5DBInterface):
+class MongoDB(HDF5DBInterface):
     """The database interface between HDF5 and MongoDB.
 
     Call `.insert()` on opened HDF5 files to insert them into the database.

@@ -16,9 +16,10 @@ logger = create_tbx_logger('zenodo')
 __all__ = ['Metadata']
 
 
-class ZenodoInterface(RepositoryInterface, abc.ABC):
+class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
     """Interface for Zenodo.
     """
+    base_url = None
 
     def __init__(self,
                  rec_id: Union[int, None]):
@@ -80,9 +81,9 @@ class ZenodoInterface(RepositoryInterface, abc.ABC):
         return True
 
 
-class ZenodoDepositInterface(ZenodoInterface):
-    """A Zenodo deposit interface. API TOKEN needed"""
-    base_url = None
+class ZenodoSandboxDeposit(AbstractZenodoInterface):
+    """Interface to Zenodo's testing (sandbox) api. API TOKEN needed"""
+    base_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
 
     @property
     def metadata(self):
@@ -114,9 +115,8 @@ class ZenodoDepositInterface(ZenodoInterface):
                              params={'access_token': self.access_token})
 
     @property
-    @abc.abstractmethod
-    def access_token(self) -> str:
-        """The API token for the Zenodo account."""
+    def access_token(self):
+        return get_api_token(sandbox=True)
 
     def get(self, raise_for_status: bool = False):
         """Get the deposit (json) data."""
@@ -239,15 +239,9 @@ class ZenodoDepositInterface(ZenodoInterface):
         r.raise_for_status()
 
 
-class ZenodoSandboxDeposit(ZenodoDepositInterface):
-    base_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
+class ZenodoRecord(AbstractZenodoInterface):
+    """Interface to Zenodo records."""
 
-    @property
-    def access_token(self):
-        return get_api_token(sandbox=True)
-
-
-class ZenodoRecord(ZenodoInterface):
     base_url = 'https://zenodo.org/api/records'
 
     def upload_file(self, filename, overwrite: bool = False):

@@ -34,7 +34,7 @@ The `h5rdmtoolbox` is organized in five sub-packages corresponding to main featu
 sustainable data lifecycle. The sub-packages are:
 
   - :doc:`wrapper <wrapper/index>`: User-friendly wrapper around `h5py` implementation for efficient work with HDF5 files and conventions
-  - :doc:`convention <conventions/index>`: Simple, user-definable construction of conventions (metadata standardization for HDF files)
+  - :doc:`convention <convention/index>`: Simple, user-definable construction of conventions (metadata standardization for HDF files)
   - :doc:`database <database/index>`: Querying HDF5 files (A database for HDF5 files or interfacing with dedicated solutions, like mongoDB)
   - :doc:`repository <repository/index>`: Up/Download to/from repositories (currently, a Zenodo interface is implemented)
   - :doc:`layout <layout/index>`: User-definable specifications for the layout of HDF5 files (attributes, datasets, groups and properties)
@@ -52,7 +52,7 @@ Please navigate through the chapters on the left to learn more about the package
 
       - :doc:`Getting Started <gettingstarted/index>`: A quick introduction to the package
       - :doc:`Working with HDF5 files <wrapper/index>`: A high-level wrapper for HDF5 files
-      - :doc:`Convention <conventions/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
+      - :doc:`Convention <convention/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
       - :doc:`Layout <layout/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
       - :doc:`Repository <repository/index>`: Modular construction of conventions (sets of standardized HDF5 attributes)
       - :doc:`Database <database/index>`: A database for HDF5 files
