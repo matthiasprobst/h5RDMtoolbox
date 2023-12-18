@@ -586,7 +586,7 @@ class TestCore(unittest.TestCase):
                 self.assertEqual('gzip', h5['gzip'].compression)
                 self.assertEqual(1, h5['gzip'].compression_opts)
 
-                h5.create_dataset('lzf', data=[1, 2, 3], compression='lzf')
+                h5.create_dataset('lzf', data=[1, 2, 3], compression='lzf', compression_opts=None)
                 self.assertEqual('lzf', h5['lzf'].compression)
                 self.assertEqual(None, h5['lzf'].compression_opts)
 

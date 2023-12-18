@@ -730,12 +730,9 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                     super().create_dataset(name, shape, dtype, data, **kwargs)
 
         # take compression from kwargs or config:
-        if not kwargs.get('compression', None):
-            compression = get_config('hdf_compression')
-            compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
-        else:
-            compression = kwargs.pop('compression')
-            compression_opts = kwargs.pop('compression_opts', None)
+        compression = kwargs.pop('compression', get_config('hdf_compression'))
+        compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+
         if shape is not None:
             if len(shape) == 0:
                 compression, compression_opts, chunks = None, None, None
