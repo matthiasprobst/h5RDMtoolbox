@@ -93,7 +93,7 @@ You may want to install optional dependencies:
 
     Getting Started <gettingstarted/index>
     Working with HDF <wrapper/index>
-    Conventions <conventions/index>
+    Conventions <convention/index>
     Layout <layout/index>
     Database <database/index>
     Repository <repository/index>
