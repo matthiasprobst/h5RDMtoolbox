@@ -1923,9 +1923,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     An additional argument is added to the h5py.
 
 
-    .. seealso:: :meth:`check`
-
-
     .. note:: All features from h5py packages are preserved.
 
 

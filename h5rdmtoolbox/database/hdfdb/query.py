@@ -1,10 +1,6 @@
-import warnings
-
-import logging
 import numpy as np
 import re
-
-
+import warnings
 
 
 def _eq(a, b):
@@ -53,15 +49,14 @@ def _regex(value, pattern) -> bool:
     if value is None:
         return False
 
-    if value is None:
-        return False
-
     if isinstance(value, np.bytes_):
         try:
             value = value.decode()
         except UnicodeDecodeError:
             warnings.warn(f'could not decode {value}', UserWarning)
             return False
+    if isinstance(value, bytes):
+        value = value.decode()
 
     match = re.search(pattern, value)
     if match is None:

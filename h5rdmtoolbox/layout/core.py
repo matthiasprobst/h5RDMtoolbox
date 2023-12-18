@@ -11,6 +11,27 @@ logger = h5rdmtoolbox.utils.create_tbx_logger('layout')
 
 
 class LayoutSpecification:
+    """Specification for a layout
+
+    Parameters
+    ----------
+    func: Callable
+        Function to be called on the hdf5 file. The first argument of the function will be
+        an opened h5py.File or h5py.Group or h5py.Dataset object.
+    kwargs: Dict
+        Keyword arguments passed to the func.
+    n: int
+        Number of matches if function returns an iterable object. Only used, if `func`
+        return an iterable object.
+    comment: Optional[str]
+        Optional comment explaining the specification
+    parent: Optional[LayoutSpecification]
+        Parent specification. If the specification is a conditional one, it has a parent.
+        If this is the case, the function `func` is called on the parent's results.
+        If the parent's specification fails, the specification is not applied.
+        If `parent` is None, the specification has no parent and is applied to the
+        hdf5 root group.
+    """
 
     def __init__(self, func, kwargs, n=None, comment: str = None, parent=None):
         self.func = func
@@ -24,24 +45,35 @@ class LayoutSpecification:
         self._n_calls = 0
         self._n_fails = 0
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
+        """A specification is equal to another if the ID is identical or the
+        function, kwargs, comment and parent are identical."""
         if not isinstance(other, LayoutSpecification):
             return False
+        if isinstance(other, Layout):
+            return False
         same_id = self.id == other.id
-        same_props = self.func == other.func and self.kwargs == other.kwargs
-        return same_id or same_props
+        if same_id:
+            return True
+        same_parent = self.parent == other.parent
+        same_comment = self.comment == other.comment
+        same_kwargs = self.kwargs == other.kwargs
+        same_func = self.func == other.func
+        same_n = self.n == other.n
+
+        return all([same_parent, same_comment, same_kwargs, same_func, same_n])
 
     @property
-    def n_calls(self):
+    def n_calls(self) -> int:
         """Return number of calls"""
         return self._n_calls
 
     @property
-    def n_fails(self):
+    def n_fails(self) -> int:
         """Return number of failed calls"""
         return self._n_fails
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the specification and all its children"""
         self.failed = None
         self._n_calls = 0
@@ -50,8 +82,9 @@ class LayoutSpecification:
             spec.reset()
 
     @property
-    def called(self):
-        """Return True if the specification has been called at least once"""
+    def called(self) -> bool:
+        """Return True if the specification has been called at least once.
+        This is determined by the number of calls."""
         return self.n_calls > 0
 
     @property
@@ -190,17 +223,54 @@ class LayoutSpecification:
 
 
 class LayoutResult:
+    """Container for the result of a layout validation. It only contains a list of failed specs."""
 
     def __init__(self, list_of_failed_specs: List[LayoutSpecification]):
         self.list_of_failed_specs = list_of_failed_specs
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
+        """Return True if the layout is valid, which is the case if no specs failed"""
         return len(self.list_of_failed_specs) == 0
 
 
 class Layout(LayoutSpecification):
+    """A layout is a collection of specifications that can be applied to an HDF5 file or group.
+
+    The class is inherited from LayoutSpecification. Some methods are overwritten.
+
+    Examples
+    --------
+    >>> from h5rdmtoolbox import layout
+    >>> lay = layout.Layout()
+    >>> spec_all_dataset = lay.add(
+    >>> hdfdb.FileDB.find,  # query function
+    >>>     flt={},
+    >>>     objfilter='dataset'
+    >>> )
+    >>>
+    >>> # all datasets must be compressed with gzip (conditional spec. only called if parent spec is successful)
+    >>> spec_compression = spec_all_dataset.add(
+    >>>     hdfdb.FileDB.find_one,  # query function
+    >>>     flt={'$compression': 'gzip'}  # query parameter
+    >>> )
+    >>>
+    >>> # the file must have the dataset "/u"
+    >>> spec_ds_u = lay.add(
+    >>>     hdfdb.FileDB.find,  # query function
+    >>>     flt={'$name': '/u'},
+    >>>     objfilter='dataset'
+    >>> )
+    >>> lay.validate('path/to/file.h5')
+    """
+
+
     def __init__(self):
         self.specifications = []
+
+    def __eq__(self, other):
+        if not isinstance(other, Layout):
+            return False
+        return self.specifications == other.specifications
 
     def validate(self, filename_or_root_group: Union[str, pathlib.Path, h5py.Group]) -> LayoutResult:
         """Validate the layout by passing a filename or an opened root group"""

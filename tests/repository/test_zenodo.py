@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import pathlib
 import unittest
 from datetime import datetime
@@ -8,7 +9,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.repository import zenodo, upload_file
 from h5rdmtoolbox.repository.h5metamapper import hdf2json
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
-from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
+from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,83 @@ class TestConfig(unittest.TestCase):
 
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)
+
+        from h5rdmtoolbox.repository.zenodo.tokens import _parse_ini_file
+        import appdirs
+        fname = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo.ini'
+        if fname.exists():
+            bak_fname = fname.rename(fname.with_suffix('.bak'))
+
+        with self.assertRaises(FileNotFoundError):
+            _parse_ini_file(None)
+
+        with self.assertRaises(FileNotFoundError):
+            _parse_ini_file('invalid.ini')
+
+        with self.assertRaises(FileNotFoundError):
+            _parse_ini_file(None)
+
+        bak_fname.rename(fname)
+
+        tmp_ini_file = h5tbx.utils.generate_temporary_filename(suffix='.ini', touch=True)
+        ini_filename = _parse_ini_file(tmp_ini_file)
+        self.assertEqual(ini_filename, tmp_ini_file)
+        self.assertTrue(ini_filename.exists())
+        ini_filename.unlink()
+
+    def test_get_api_token(self):
+        env_token_sb = os.environ.pop('ZENODO_SANDBOX_API_TOKEN', None)
+        env_token = os.environ.pop('ZENODO_API_TOKEN', None)
+        test_ini_filename = pathlib.Path(__file__).parent / 'test.ini'
+        self.assertEqual(get_api_token(sandbox=True, zenodo_ini_filename=test_ini_filename), '123')
+        self.assertEqual(get_api_token(sandbox=False, zenodo_ini_filename=test_ini_filename), '456')
+
+        os.environ['ZENODO_SANDBOX_API_TOKEN'] = 'abc'
+        self.assertEqual(get_api_token(sandbox=True, zenodo_ini_filename=test_ini_filename), 'abc')
+
+        os.environ['ZENODO_API_TOKEN'] = 'def'
+        self.assertEqual('def', os.environ.get('ZENODO_API_TOKEN', None))
+        self.assertEqual(get_api_token(sandbox=False, zenodo_ini_filename=test_ini_filename), 'def')
+        os.environ.pop('ZENODO_API_TOKEN', None)
+
+        # reset environment variable
+        if env_token_sb is not None:
+            os.environ['ZENODO_SANDBOX_API_TOKEN'] = env_token_sb
+        self.assertEqual(env_token_sb, os.environ.get('ZENODO_SANDBOX_API_TOKEN', None))
+        if env_token is not None:
+            os.environ['ZENODO_API_TOKEN'] = env_token
+        self.assertEqual(env_token, os.environ.get('ZENODO_API_TOKEN', None))
+
+    def test_set_api_token(self):
+
+        env_token_sb = os.environ.pop('ZENODO_SANDBOX_API_TOKEN', None)
+        env_token = os.environ.pop('ZENODO_API_TOKEN', None)
+
+        ini_filename = h5tbx.utils.generate_temporary_filename(suffix='.ini', touch=False)
+        with self.assertRaises(FileNotFoundError):
+            set_api_token(sandbox=True,
+                          access_token='321',
+                          zenodo_ini_filename=ini_filename)
+        ini_filename = h5tbx.utils.generate_temporary_filename(suffix='.ini', touch=False)
+        with open(ini_filename, 'w') as f:
+            pass
+        set_api_token(sandbox=True,
+                      access_token='321',
+                      zenodo_ini_filename=ini_filename)
+        t = get_api_token(sandbox=True, zenodo_ini_filename=ini_filename)
+        self.assertEqual(t, '321')
+
+        set_api_token(sandbox=False,
+                      access_token='321123',
+                      zenodo_ini_filename=ini_filename)
+        t = get_api_token(sandbox=False, zenodo_ini_filename=ini_filename)
+        self.assertEqual(t, '321123')
+
+        if env_token_sb is not None:
+            os.environ['ZENODO_SANDBOX_API_TOKEN'] = env_token_sb
+        self.assertEqual(env_token_sb, os.environ.get('ZENODO_SANDBOX_API_TOKEN', None))
+        if env_token is not None:
+            os.environ['ZENODO_API_TOKEN'] = env_token
 
     def test_upload_hdf(self):
         z = zenodo.ZenodoSandboxDeposit(None)

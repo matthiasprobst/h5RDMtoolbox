@@ -10,5 +10,4 @@ Get a quick insight into the toolbox and an overview about the capabilities.
 
     motivation
     quickoverview.ipynb
-    command_line_interface
 

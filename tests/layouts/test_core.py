@@ -10,6 +10,26 @@ from h5rdmtoolbox.database import hdfdb
 
 class TestCore(unittest.TestCase):
 
+    def test_eq(self):
+        lay = layout.Layout()
+        spec1 = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
+        spec2 = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)  # return spec1 object!
+        self.assertEqual(spec1, spec2)
+        self.assertEqual(spec1, spec1)  # same id
+        self.assertNotEqual(spec1, None)
+        self.assertNotEqual(spec1, 1)
+        self.assertNotEqual(spec1, 'a')
+        self.assertNotEqual(spec1, [])
+        self.assertNotEqual(spec1, {})
+        self.assertNotEqual(spec1, set())
+        self.assertNotEqual(spec1, lay)
+
+        spec3 = lay.add(hdfdb.FileDB.find, flt={'$name': '/v'}, n=2)
+        self.assertNotEqual(spec1, spec3)
+
+        spec_sub_1 = spec1.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
+        self.assertNotEqual(spec1, spec_sub_1)
+
     def test_number_of_datasets(self):
         filename = h5tbx.utils.generate_temporary_filename(suffix='.hdf')
         with h5py.File(filename, 'w') as h5:

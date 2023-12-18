@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'h5RDMtoolbox'
-copyright = '2022, Matthias Probst'
+copyright = '2023, Matthias Probst'
 author = 'Matthias Probst'
 
 # -- General configuration ---------------------------------------------------

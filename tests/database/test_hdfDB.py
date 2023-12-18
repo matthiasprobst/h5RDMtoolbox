@@ -101,6 +101,72 @@ class TestHDFDB(unittest.TestCase):
             single_res = gdb_root.find_one({'a': {'$gte': 0}}, recursive=True)
             self.assertTrue(single_res.attrs['a'] >= 0)
 
+    def test_regex(self):
+        from h5rdmtoolbox.database.hdfdb.query import _regex
+        self.assertFalse(_regex(None, 'b'))
+        self.assertTrue(_regex('a', 'a'))
+        self.assertTrue(_regex(b'a', 'a'))
+        self.assertTrue(_regex(np.bytes_('a'), 'a'))
+
+    def test_eq(self):
+        from h5rdmtoolbox.database.hdfdb.query import _eq
+        self.assertFalse(_eq(None, 'b'))
+        self.assertTrue(_eq('a', 'a'))
+        self.assertTrue(_eq(1, 1))
+        self.assertFalse(_eq(1, 2))
+
+    def test_lte(self):
+        from h5rdmtoolbox.database.hdfdb.query import _lte
+        self.assertFalse(_lte(None, 'b'))
+        self.assertFalse(_lte('a', None))
+        self.assertTrue(_lte(1, 2))
+        self.assertTrue(_lte(1, 1))
+        self.assertFalse(_lte(2, 1))
+
+    def test_gte(self):
+        from h5rdmtoolbox.database.hdfdb.query import _gte
+        self.assertFalse(_gte(None, 'b'))
+        self.assertFalse(_gte('a', None))
+        self.assertTrue(_gte(2, 1))
+        self.assertTrue(_gte(1, 1))
+        self.assertFalse(_gte(1, 2))
+
+    def test_lt(self):
+        from h5rdmtoolbox.database.hdfdb.query import _lt
+        self.assertFalse(_lt(None, 'b'))
+        self.assertFalse(_lt('a', None))
+        self.assertTrue(_lt(1, 2))
+        self.assertFalse(_lt(1, 1))
+        self.assertFalse(_lt(2, 1))
+
+    def test_gt(self):
+        from h5rdmtoolbox.database.hdfdb.query import _gt
+        self.assertFalse(_gt(None, 'b'))
+        self.assertFalse(_gt('a', None))
+        self.assertTrue(_gt(2, 1))
+        self.assertFalse(_gt(1, 1))
+        self.assertFalse(_gt(1, 2))
+
+    def test_basename(self):
+        from h5rdmtoolbox.database.hdfdb.query import _basename
+        self.assertFalse(_basename(None, 'b'))
+        self.assertFalse(_basename('a', None))
+        self.assertTrue(_basename('/a', 'a'))
+        self.assertTrue(_basename('/a/b', 'b'))
+        self.assertTrue(_basename('/a/b/c', 'c'))
+        self.assertFalse(_basename('/a/b/c', 'c/d'))
+        self.assertFalse(_basename('/a/b/c', 'b'))
+        self.assertFalse(_basename('/a/b/c', 'a'))
+        self.assertFalse(_basename('/a/b/c', '/a/b/c'))
+
+    def test_get_ndim(self):
+        from h5rdmtoolbox.database.hdfdb.query import get_ndim
+        self.assertEqual(0, get_ndim(5))
+        self.assertEqual(0, get_ndim(np.array(5.4)))
+        self.assertEqual(1, get_ndim(np.array([1, 2, 3])))
+        self.assertEqual(2, get_ndim(np.array([[1, 2, 3]])))
+        self.assertEqual(3, get_ndim(np.array([[[1, 2, 3]]])))
+
     def test_find(self):
         with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
                        'w') as h5:
