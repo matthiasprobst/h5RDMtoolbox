@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v1.0.1
+
+- fixed unnecessary call in `create_dataset`, which writes the data twice. Now, the time data is written is comparable to 
+  the time `h5py` needs to write the data (for small datasets `h5py` is still faster due to the (constant) overhead, `h5tbx` adds).
+
 ## v1.0.0
 
 major changes:

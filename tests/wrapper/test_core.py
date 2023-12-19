@@ -122,6 +122,23 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(TypeError):
                 h5.write_iso_timestamp('timestamp', dt='now', overwrite=True)
 
+    def test_create_dataset(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', data=np.arange(10))
+            np.testing.assert_equal(h5['ds'][:], np.arange(10))
+
+            h5.create_dataset('ds2', shape=(10,), dtype=np.float32)
+            h5['ds2'][:] = np.arange(10)
+            np.testing.assert_equal(h5['ds2'][:], np.arange(10))
+
+            h5.create_dataset('ds3', (10,))
+            np.testing.assert_equal(h5['ds3'][:], np.zeros(10))
+            h5['ds3'][:] = np.arange(10)
+            np.testing.assert_equal(h5['ds3'][:], np.arange(10))
+
+            h5.create_dataset('ds4', np.arange(20))
+            np.testing.assert_equal(h5['ds4'][:], np.arange(20))
+
     def test_create_datasets_from_csv(self):
         df = pd.DataFrame({'x': [1, 5, 10, 0], 'y': [-3, 20, 0, 11.5]})
         csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv')

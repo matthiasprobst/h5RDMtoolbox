@@ -765,7 +765,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if not isinstance(make_scale, (bool, str)):
             raise TypeError(f'Make scale must be a boolean or a string not {type(make_scale)}')
 
-        if isinstance(shape, np.ndarray):  # need if no keyword is used
+        if isinstance(shape, np.ndarray):  # needed if no keyword is used
             data = shape
             shape = None
 
@@ -840,9 +840,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                              f'{self.convention.name}. Orig err: "{e}"')
                 del self[name]
                 raise e
-        if isinstance(data, np.ndarray):
-            if data is not None and data.ndim > 0:
-                ds[()] = data
+
+        # what is this for? uncommented it in version v1.0.1
+        # if isinstance(data, np.ndarray):
+        #     if data is not None and data.ndim > 0:
+        #         print('DAWDD')
+        #         ds[()] = data
 
         # make scale
         if make_scale:
