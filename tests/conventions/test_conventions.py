@@ -4,6 +4,7 @@ import pint
 import requests
 import shutil
 import sys
+import typing_extensions
 import unittest
 import warnings
 import yaml
@@ -11,6 +12,7 @@ from datetime import datetime
 
 import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import convention
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention import core
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
@@ -34,6 +36,54 @@ class TestConventions(unittest.TestCase):
         # setting logger to debug:
         from h5rdmtoolbox.convention import logger
         logger.setLevel('DEBUG')
+
+    def test_list_of_validators(self):
+        lov = convention.get_list_of_validators()
+        self.assertIsInstance(lov, dict)
+        self.assertTrue(len(lov) > 0)
+        self.assertIsInstance(lov['units'], typing_extensions._AnnotatedAlias)
+
+    def test_create_with_code(self):
+        cv = convention.Convention(name='MyFirstConvention', contact='John Doe')
+        cv.register()
+        self.assertNotEqual(cv, convention.get_current_convention())
+        h5tbx.use('MyFirstConvention')
+        self.assertEqual(cv, convention.get_current_convention())
+
+        from pydantic import BaseModel
+        from typing_extensions import Literal
+
+        PublicationType = Literal[
+            "book",
+            "conferencepaper",
+            "article",
+            "patent",
+            "report",
+            "other",
+        ]
+
+        class PublicationValidator(BaseModel):
+            """Validate an orcid (a simple naive version)"""
+            value: PublicationType
+
+        # create a standard attribute:
+        std_attr = h5tbx.convention.standard_attributes.StandardAttribute(
+            name='publication_type',
+            validator=PublicationValidator,
+            target_method='__init__',
+            description='Publication type',
+            default_value='$empty'
+        )
+        cv.add_standard_attribute(std_attr)
+
+        h5tbx.use(None)
+        h5tbx.use(cv.name)
+        with self.assertRaises(h5tbx.errors.StandardAttributeError):
+            with h5tbx.File() as _:
+                pass
+        with h5tbx.File(publication_type='book') as h5:
+            self.assertEqual(h5.attrs['publication_type'], 'book')
+        h5tbx.use(None)
 
     def test_upload_convention(self):
         cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
@@ -325,7 +375,7 @@ def validate_f1(a, b, c=3, d=2):
         with open(f2, 'w') as f:
             yaml.safe_dump(test_std_attr, f)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             h5tbx.convention.from_yaml([f1, f2])
 
     def test_cv_h5tbx(self):

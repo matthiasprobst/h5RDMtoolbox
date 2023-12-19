@@ -3,9 +3,10 @@ their own validators, they need to define them separately. The respective python
 must be provided during initialization of a Convention"""
 
 import pint
+import typing_extensions
 from pydantic import BaseModel
 from pydantic.functional_validators import WrapValidator
-from typing import Union, Dict, Tuple
+from typing import Union, Dict
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg, errors
@@ -192,14 +193,17 @@ standard_name_table = Annotated[Union[str, Dict], WrapValidator(__validate_stand
 standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
 url = Annotated[str, WrapValidator(__validate_url)]
 
-validators = [units, dateFormat, quantity, data_offset, data_scale, orcid, standard_name_table, standard_name, url]
+validators = {'units': units,
+              'dateFormat': dateFormat,
+              'quantity': quantity,
+              'data_offset': data_offset,
+              'data_scale': data_scale,
+              'orcid': orcid,
+              'standard_name_table': standard_name_table,
+              'standard_name': standard_name,
+              'url': url}
 
 
-def get_validator_names() -> Tuple[str]:
+def get_list_of_validators() -> Dict[str, typing_extensions._AnnotatedAlias]:
     """Get a list of all available validators"""
-    return tuple([v for v in validators])
-
-
-if __name__ == '__main__':
-    print('Available validators:')
-    print(get_validator_names())
+    return validators

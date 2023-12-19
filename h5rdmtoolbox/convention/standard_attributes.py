@@ -163,17 +163,19 @@ class StandardAttribute(abc.ABC):
 
     def __repr__(self):
         if self.is_positional():
-            return f'<{self.__class__.__name__}[positional]("{self.name}"): "{self.description}">'
-        return f'<{self.__class__.__name__} [keyword]("{self.name}"): default_value="{self.default_value}" | "{self.description}">'
-
-    @property
-    def target_methods(self):
-        warnings.warn('target_methods is deprecated. Use target_method instead.', DeprecationWarning)
-        return self.target_method
+            return f'<{self.__class__.__name__}[positional/obligatory]("{self.name}"): "{self.description}">'
+        return f'<{self.__class__.__name__} [keyword/optional]("{self.name}"): default_value="{self.default_value}" | "{self.description}">'
 
     def is_positional(self):
         """has no default value"""
         return self.default_value == DefaultValue.EMPTY
+
+    # alias:
+    is_optional = is_positional
+
+    def is_obligatory(self):
+        """is an obligatory attribute"""
+        return self.default_value == DefaultValue.NONE
 
     def make_optional(self):
         """make this standard attribute optional by setting the default value to Default.NONE"""
@@ -290,9 +292,9 @@ class StandardAttribute(abc.ABC):
         """return a dict representation of the standard attribute"""
 
         if self.default_value is DefaultValue.NONE:
-            default_value_str = '$NONE'
+            default_value_str = '$optional'
         elif self.default_value is DefaultValue.EMPTY:
-            default_value_str = '$EMPTY'
+            default_value_str = '$obligatory'
         else:
             default_value_str = self.default_value
 

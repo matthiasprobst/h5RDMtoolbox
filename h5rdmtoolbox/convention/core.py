@@ -13,10 +13,12 @@ from pydoc import locate
 from typing import Union, List, Dict, Tuple
 
 from h5rdmtoolbox.repository import RepositoryInterface
+from h5rdmtoolbox.wrapper import ds_decoder
 from . import cfg
 from . import consts
 from . import errors
 from . import logger
+from .errors import ConventionNotFound
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
 from .._repr import make_italic, make_bold
@@ -25,6 +27,8 @@ from ..repository import zenodo
 from ..repository.zenodo.utils import recid_from_doi_or_redid
 
 CV_DIR = UserDir['convention']
+
+datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
 
 
 class AbstractConvention(abc.ABC):
@@ -164,6 +168,9 @@ class Convention(AbstractConvention):
         delete(self.name.lower().replace('-', '_'))
 
     def __repr__(self):
+        return f'{self.__class__.__name__}("{self.name}")'
+
+    def __str__(self):
         header = f'Convention("{self.name}")'
         out = f'{make_bold(header)}'
         out += f'\ncontact: {self.contact}'
@@ -184,15 +191,16 @@ class Convention(AbstractConvention):
                         prop_dict['keyword'][std_attr_name] = std_attr
 
                 for k, v in prop_dict['positional'].items():
-                    out += f'\n    * {make_bold(k)}:\n\t\t' \
+                    out += f'\n    * {make_bold(k + " (obligatory)")} :\n\t\t' \
                            f'{v.description}'
                 for k, v in prop_dict['keyword'].items():
                     default_value = v.default_value
                     if default_value == StandardAttribute.NONE:
-                        default_value = 'None'
-
-                    out += f'\n    * {make_italic(k)} (default={default_value}):\n\t\t' \
-                           f'{v.description}'
+                        out += f'\n    * {make_italic(k)}:\n\t\t' \
+                               f'{v.description}'
+                    else:
+                        out += f'\n    * {make_italic(k)} (default={default_value}):\n\t\t' \
+                               f'{v.description}'
         out += '\n'
         return out
 
@@ -237,12 +245,12 @@ class Convention(AbstractConvention):
         return self._decoders
 
     @classmethod
-    def from_json(cls, json_filename, overwrite: bool = False) -> "Convention":
+    def from_json(cls, json_filename: Union[str, pathlib.Path], overwrite: bool = False) -> "Convention":
         """Create a convention from a json file."""
         return cls.from_yaml(json2yaml(json_filename), overwrite=overwrite)
 
     @classmethod
-    def from_yaml(cls, yaml_filename, overwrite: bool = False):
+    def from_yaml(cls, yaml_filename: Union[str, pathlib.Path], overwrite: bool = False):
         """Create a convention from a yaml file.
         The YAML file must have the following structure:
 
@@ -279,8 +287,9 @@ class Convention(AbstractConvention):
         ValueError
             If the YAML file does not contain "__name__" or "__contact__"
         """
-        if isinstance(yaml_filename, (list, tuple)):
-            raise ValueError('Only one YAML file can be specified')
+        if not isinstance(yaml_filename, (str, pathlib.Path)):
+            raise TypeError('Parameter yaml_filename must be a filename, i.e. str or pathlib.Path, '
+                            f'got {type(yaml_filename)}')
 
         yaml_filename = pathlib.Path(yaml_filename)
 
@@ -376,7 +385,10 @@ class Convention(AbstractConvention):
         for cls, methods in self.methods.items():
             for name, props in methods.items():
                 for prop_name, prop_attrs in props.items():
-                    setattr(cls, name, forge.delete(f'{prop_name}')(cls.__dict__[name]))
+                    try:  # try it. If a convention is created during runtime, this may happen!
+                        setattr(cls, name, forge.delete(f'{prop_name}')(cls.__dict__[name]))
+                    except ValueError:
+                        pass
                     __doc_string_parser__[cls][name].restore_docstring()
                     # orig_docs[cls][name]['callable'].__doc__ = orig_docs[cls][name]['doc']
 
@@ -442,9 +454,6 @@ class Convention(AbstractConvention):
         return failed
 
 
-from .errors import ConventionNotFound
-
-
 def _import_convention(convention_name) -> "module":
     import importlib
     try:
@@ -492,7 +501,8 @@ class use:
                 convention_name = convention_or_name
             _convention_name = convention_name.lower().replace('-', '_')
             assert '-' not in _convention_name
-            if _convention_name not in registered_conventions:
+            registered_convention_names = [n.lower().replace('-', '_') for n in registered_conventions]
+            if _convention_name not in registered_convention_names:
                 cv = _get_convention_from_dir(convention_name)
                 convention_name = cv.name
             self._current_convention = _use(convention_name)
@@ -505,9 +515,6 @@ class use:
 
     def __exit__(self, *args, **kwargs):
         _use(self._latest_convention)
-
-
-from h5rdmtoolbox.wrapper import ds_decoder
 
 
 def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
@@ -542,8 +549,8 @@ def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
     # update dataset decoders:
     ds_decoder.decoder_names = current_convention.decoders
 
-    set_current_convention(current_convention)
-
+    # set_current_convention(current_convention)
+    cfg._current_convention = current_convention
     return current_convention
 
 
@@ -572,14 +579,6 @@ def add_convention(convention: Convention, name=None):
 def get_current_convention() -> Union[None, Convention]:
     """Return the current convention"""
     return cfg._current_convention
-
-
-def set_current_convention(convention: Convention):
-    cfg._current_convention = convention
-
-
-datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
-__all__ = ['datetime_str', 'StandardAttribute']
 
 
 def _process_relpath(rel_filename, relative_to):
@@ -717,3 +716,6 @@ def from_zenodo(doi_or_recid: str,
         shutil.move(_filename, filename)
 
     return from_yaml(filename, overwrite=overwrite)
+
+
+__all__ = ['datetime_str', 'StandardAttribute']
