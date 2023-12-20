@@ -1,5 +1,4 @@
 """standard attribute module"""
-import abc
 import enum
 import json
 import pydantic
@@ -20,7 +19,7 @@ __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
 __all__ = ['StandardAttribute', ]
 
 
-class StandardAttribute(abc.ABC):
+class StandardAttribute:
     """StandardAttribute class for the standardized attributes
 
     Parameters
