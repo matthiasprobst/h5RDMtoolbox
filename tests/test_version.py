@@ -1,3 +1,4 @@
+import json
 import pathlib
 import unittest
 
@@ -17,3 +18,11 @@ class TestVersion(unittest.TestCase):
                 if 'version' in line:
                     this_version = line.split(' = ')[-1].strip()
         self.assertEqual(h5tbx.__version__, this_version)
+
+    def test_codemeta(self):
+        """checking if the version in codemeta.json is the same as the one of the toolbox"""
+
+        with open(__this_dir__ / '../codemeta.json', 'r') as f:
+            codemeta = json.loads(f.read())
+
+        assert codemeta['version'] == h5tbx.__version__
