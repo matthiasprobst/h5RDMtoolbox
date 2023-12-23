@@ -12,8 +12,8 @@ from numpy import ndarray
 from time import perf_counter_ns
 
 from . import get_config
+from . import identifiers
 from . import protected_attributes
-from .orcid import is_valid_orcid_pattern, get_html_repr
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
@@ -119,8 +119,9 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
         urls = re.findall(p, string)
         if urls:
             for url in urls:
-                if is_valid_orcid_pattern(url):
-                    orcid_url_repr = get_html_repr(url)
+                identifier = identifiers.from_url(url)
+                if identifier:
+                    orcid_url_repr = identifier._repr_html_()
                     string = string.replace(url, orcid_url_repr)
                 else:
                     string = string.replace(url, make_href(url, url))
@@ -497,14 +498,21 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if _value_str[0] == '<' and _value_str[-1] == '>':
                     _value_str = _value_str[1:-1]
 
-            _value, is_url = process_string_for_link(_value_str)
-            if is_url and not _value.startswith('{'):
-                if 'orcid.org' in _value:
-                    from . import orcid
-                    orcid_html = orcid.get_html_repr(attr_value.strip('/').rsplit('/', 1)[-1])
-                    if iri_data is not None:
-                        orcid_html += get_iri_icon_href(iri_data)
-                    return f'<li style="list-style-type: none; font-style: italic">{name} : {orcid_html}</li>'
+            # check if it is a identifier:
+            identifier = identifiers.from_url(_value_str)
+            if identifier is not None:
+                _value_html = identifier._repr_html_()
+                is_url = True
+            else:  # maybe some other url:
+                _value_html, is_url = process_string_for_link(_value_str)
+                # if is_url and not _value_html.startswith('{'):
+
+            # add iri icon if available:
+            if iri_data is not None:
+                _value_html += get_iri_icon_href(iri_data)
+
+            if is_url and not _value_html.startswith('{'):  # TODO: why the second condition?
+                return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_html}</li>'
             else:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
@@ -513,10 +521,6 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _value_str = attr_value
                 else:
                     _value_str = attr_value
-            #
-            # if len(_value_str) > self.max_attr_length:
-            #     _value_str = f'{_value_str[0:self.max_attr_length-1]}...'
-            # print(f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>')
             if iri_data is not None:
                 _value_str += get_iri_icon_href(iri_data)
             return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
