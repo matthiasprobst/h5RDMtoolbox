@@ -13,7 +13,7 @@ One of the o features of the toolbox is to provide the user with both, the data 
 `xarray` objects. This is achieved by wrapping the `h5py` package and extending it with a set of classes. The below
 figure illustrates the interaction between the HDF5 file and the user.
 
-.. image:: ../_static/hdf_to_xarray_interface.svg
+.. image:: ../../_static/hdf_to_xarray_interface.svg
   :width: 700
   :alt: Alternative text
   :align: center

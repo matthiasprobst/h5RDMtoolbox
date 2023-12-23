@@ -12,7 +12,7 @@ You may implement a new interface between HDF5 and your preferable database solu
 For this, please inherit from the abstract class `h5rdmtoolbox.database.interface.HDF5DBInterface`. The
 following class diagram shows the architecture of the database interfaces:
 
-.. image:: ../_static/database_class_diagram.svg
+.. image:: ../../_static/database_class_diagram.svg
   :width: 300
   :alt: database_class_diagram
   :align: center
