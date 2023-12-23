@@ -31,6 +31,8 @@ def pop_hdf_attributes(attrs: Dict) -> Dict:
     dict
         Dictionary without entries registered in `H5_DIM_ATTRS`
     """
+    keep = [k for k in attrs.keys() if k not in H5_DIM_ATTRS]
+    return {k: attrs[k] for k in keep}
     return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
 
 
@@ -131,7 +133,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return WrapperAttributeManager._parse_return_value(self._id, ret)
 
     def create(self, name, data, shape=None, dtype=None, iri_cls: str = None, iri_individual: str = None):
-        r = super().create(name, data, shape, dtype)
+        r = super().create(name, utils.parse_object_for_attribute_setting(data), shape, dtype)
         if iri_cls is not None:
             iri.set_name(self, name, iri_cls)
         if iri_individual is not None:
@@ -166,27 +168,32 @@ class WrapperAttributeManager(h5py.AttributeManager):
             sattr = curr_cv.properties[parent.__class__].get(name, None)
             if sattr is not None:
                 logger.debug(f'validating {name} with {sattr}')
-                try:
-                    if value == 'None':
-                        value = None
-                    if value is consts.DefaultValue.EMPTY:
-                        # no value given, but is mandatory. check if there's an alternative
-                        if sattr.alternative_standard_attribute is None:
-                            raise errors.StandardAttributeError(
-                                f'Convention "{curr_cv.name}" expects standard attribute "{name}" to be provided '
-                                f'as an argument during {self._parent.__class__.__name__.lower()} creation.'
-                            )
-                        return
-                    if value is consts.DefaultValue.NONE:
-                        # no value given and not mandatory. just not set it and do nothing
-                        return
-                    if isinstance(value, consts.DefaultValue):
-                        value = value.value
-                    return curr_cv.properties[parent.__class__][name].set(parent, value, attrs)
-                except TypeError as e:
-                    if value is consts.DefaultValue.EMPTY:
-                        raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
-                    raise TypeError(f'Could not set "{name}" (value="{value}") to "{parent.name}". Orig error: {e}')
+                # try:
+
+                if value is consts.DefaultValue.NONE:
+                    # no value given and not mandatory. just not set it and do nothing
+                    return
+
+                if value == 'None':
+                    value = None
+
+                if value is consts.DefaultValue.EMPTY:
+                    # no value given, but is mandatory. check if there's an alternative
+                    if sattr.alternative_standard_attribute is None:
+                        raise errors.StandardAttributeError(
+                            f'Convention "{curr_cv.name}" expects standard attribute "{name}" to be provided '
+                            f'as an argument during {self._parent.__class__.__name__.lower()} creation.'
+                        )
+                    return
+
+                if isinstance(value, consts.DefaultValue):
+                    value = value.value
+                return sattr.__setter__(
+                    parent=parent,
+                    value=value,
+                    attrs=attrs
+                )
+
         utils.create_special_attribute(self, name, value)
 
     def __repr__(self):
