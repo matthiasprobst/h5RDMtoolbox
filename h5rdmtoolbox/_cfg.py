@@ -34,7 +34,10 @@ CONFIG = {'return_xarray': True,
           'add_provenance': False,
           'ignore_standard_attribute_errors': False,
           'allow_deleting_standard_attributes': False,
-          'parallel_find': True, }
+
+          # if a standard attribute is defined and cannot be retrieved because the value is invalid, ignore it:
+          'ignore_get_std_attr_err': False,
+          }
 
 _VALIDATORS = {
     'return_xarray': lambda x: isinstance(x, bool),
@@ -54,7 +57,8 @@ _VALIDATORS = {
     'offset_attribute_name': lambda x: isinstance(x, str),
     'add_provenance': lambda x: isinstance(x, bool),
     'ignore_standard_attribute_errors': lambda x: isinstance(x, bool),
-    'parallel_find': lambda x: isinstance(x, bool),
+
+    'ignore_get_std_attr_err': lambda x: isinstance(x, bool),
 }
 
 

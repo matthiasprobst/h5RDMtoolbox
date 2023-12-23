@@ -160,11 +160,11 @@ class StandardNameTable:
         meta_str = ', '.join([f'{key}: {value}' for key, value in self.meta.items()])
         return f'<StandardNameTable: ({meta_str})>'
 
-    def __str__(self):
+    def __str__(self) -> str:
         zenodo_doi = self._meta.get('zenodo_doi', None)
         if zenodo_doi:
             return zenodo_doi
-        return self.to_dict()
+        return self.to_json()
 
     def __contains__(self, standard_name):
         if isinstance(standard_name, StandardName):

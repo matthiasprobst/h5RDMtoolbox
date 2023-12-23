@@ -66,11 +66,11 @@ class TestStandardAttributes(unittest.TestCase):
     def test_snt_cache(self):
         """caching of SNTs only works if they are zenodo references"""
         cv = h5tbx.convention.Convention(name='test', contact='me', institution='mine', decoders=())
-        from h5rdmtoolbox.convention.toolbox_validators import standard_name_table as snt_validator
+        from h5rdmtoolbox.convention.toolbox_validators import standardNameTableType
         from pydantic import BaseModel
         class standard_name_table_validator(BaseModel):
             """The standard name table of the convention."""
-            value: snt_validator
+            value: standardNameTableType
 
         sa = h5tbx.convention.standard_attributes.StandardAttribute(
             name='snt',

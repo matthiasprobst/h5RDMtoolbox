@@ -1,10 +1,10 @@
 import appdirs
+import h5py
 import pathlib
 import pint
 import requests
 import shutil
 import sys
-import typing_extensions
 import unittest
 import warnings
 import yaml
@@ -41,7 +41,6 @@ class TestConventions(unittest.TestCase):
         lov = convention.get_list_of_validators()
         self.assertIsInstance(lov, dict)
         self.assertTrue(len(lov) > 0)
-        self.assertIsInstance(lov['units'], typing_extensions._AnnotatedAlias)
 
     def test_create_with_code(self):
         cv = convention.Convention(name='MyFirstConvention', contact='John Doe')
@@ -168,7 +167,7 @@ def validate_f1(a, b, c=3, d=2):
         with h5tbx.File(creation_mode='experimental') as h5:
             self.assertIsInstance(h5.creation_mode, type(h5.creation_mode))
             ds = h5.create_dataset(name='ds', data=3.4, units='m/s', symbol='U')
-
+            self.assertEqual(ds.symbol, 'U')
             with self.assertRaises(h5tbx.errors.StandardAttributeError):
                 _ = h5.create_dataset(name='ds2', data=3.4, units='3.4', symbol='U')
 
@@ -210,16 +209,41 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            h5tbx.convention.from_zenodo(doi_or_recid='10156750')
+            h5tbx.convention.from_zenodo(doi_or_recid='10156750', overwrite=False)
             # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             with h5tbx.File(mode='w',
                             attrs=dict(
                                 data_type='experimental',
-                                contact='https://orcid.org/0000-0001-8729-0482')) as h5:
+                                contact='https://orcid.org/0000-0001-8729-0482'),
+                            comment='Root comment') as h5:
+                h5.create_group('g1', comment='Group comment')
+                h5.create_dataset('g1/ds1', data=1, comment='Dataset comment')
+                self.assertEqual(h5.attrs['comment'], 'Root comment')
+                self.assertEqual(h5.comment, 'Root comment')
+                self.assertEqual(h5.comment, 'Root comment')
+                self.assertEqual(h5.g1.attrs['comment'], 'Group comment')
+                self.assertEqual(h5.g1.comment, 'Group comment')
+                self.assertEqual(h5.g1.ds1.attrs['comment'], 'Dataset comment')
+                self.assertEqual(h5.g1.ds1.comment, 'Dataset comment')
+
                 self.assertTrue('contact' in h5.attrs)
+                self.assertEqual(str(h5.contact), 'https://orcid.org/0000-0001-8729-0482')
                 self.assertTrue('data_type' in h5.attrs)
+                self.assertEqual(str(h5.data_type), 'experimental')
+                self.assertEqual(str(h5.attrs['data_type']), 'experimental')
+
+            filename = h5tbx.utils.generate_temporary_filename(suffix='.hdf')
+            with h5py.File(filename, 'w') as h5:
+                h5.attrs['data_type'] = 'invalid'
+            with h5tbx.File(filename) as h5:
+                with h5tbx.set_config(ignore_get_std_attr_err=True):
+                    with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
+                        h5.data_type
+                with h5tbx.set_config(ignore_get_std_attr_err=False):
+                    with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                        h5.data_type
 
             # there was a bug, that data was not correctly written to the file when an existing file was overwritten
             # so let's check that:
@@ -538,6 +562,7 @@ def validate_f1(a, b, c=3, d=2):
 
     def test_validate_convention(self):
         cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
+        cv.register()
         # units is default for all dataset, but not for string datasets!
         h5tbx.use(cv)
         with h5tbx.File() as h5:
@@ -545,10 +570,41 @@ def validate_f1(a, b, c=3, d=2):
             h5.create_dataset('ds_int', data=123, units='m/s')
         cv.validate(h5.hdf_filename)
 
+        h5py_filename = h5tbx.utils.generate_temporary_filename(suffix='.hdf')
+        with h5py.File(h5py_filename, 'w') as h52:
+            ds = h52.create_dataset('ds_str', data=123.1)
+            ds.attrs['units'] = 'invalid'
+
+        cv.validate(h5py_filename)
+
+    def test_dates(self):
+        cv = h5tbx.convention.from_yaml(
+            __this_dir__ / 'date_convention.yaml', overwrite=True
+        )
+        h5tbx.use(cv)
+
+        with h5tbx.File(list_of_dates=['22.12.2023', '23.12.2023']) as h5:
+            self.assertIsInstance(h5.list_of_dates, list)
+            self.assertEqual(h5.list_of_dates, [datetime(2023, 12, 22), datetime(2023, 12, 23)])
+
+        with h5tbx.File(date='22.12.2023') as h5:
+            self.assertIsInstance(h5.date, datetime)
+            self.assertEqual(h5.date, datetime(2023, 12, 22))
+
+        with self.assertRaises(h5tbx.errors.StandardAttributeError):
+            with h5tbx.File(specific_date={'date': '22.12.invalid', 'dateType': 'Created'}) as h5:
+                pass
+        with self.assertRaises(h5tbx.errors.StandardAttributeError):
+            with h5tbx.File(specific_date={'date': '22.12.2023', 'dateType': 'invalid'}) as h5:
+                pass
+        with h5tbx.File(specific_date={'date': '22.12.2023', 'dateType': 'Created'}) as h5:
+            self.assertIsInstance(h5.specific_date.date, datetime)
+            self.assertEqual(h5.specific_date.dateType, 'Created')
+
     def test_engmeta_example(self):
         cv = h5tbx.convention.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
         h5tbx.use(cv)
-
+        self.assertEqual(h5tbx.convention.get_current_convention().name, cv.name)
         with h5tbx.File(contact=dict(name='Matthias Probst'),
                         creator=dict(name='Matthias Probst',
                                      id='https://orcid.org/0000-0001-8729-0482',
@@ -556,7 +612,31 @@ def validate_f1(a, b, c=3, d=2):
                                      ),
                         pid=dict(id='123', type='other'),
                         title='Test file to demonstrate usage of EngMeta schema') as h5:
-            fname = h5.hdf_filename
+            contact = h5.contact
+            self.assertEqual(contact.name, 'Matthias Probst')
+            self.assertEqual(h5.creator.name, 'Matthias Probst')
+            self.assertEqual(h5.creator.role, 'Researcher')
+            self.assertEqual(h5.creator.id, 'https://orcid.org/0000-0001-8729-0482')
+            self.assertEqual(h5.pid.id, '123')
+            self.assertEqual(h5.pid.type, 'other')
+        with self.assertRaises(h5tbx.errors.StandardAttributeError):
+            with h5tbx.File(contact=dict(invalid='Matthias Probst'),
+                            creator=dict(name='Matthias Probst',
+                                         id='https://orcid.org/0000-0001-8729-0482',
+                                         role='Researcher'
+                                         ),
+                            pid=dict(id='123', type='other'),
+                            title='Test file to demonstrate usage of EngMeta schema') as h5:
+                pass
+        with self.assertRaises(h5tbx.errors.StandardAttributeError):
+            with h5tbx.File(contact=dict(name=123),
+                            creator=dict(name='Matthias Probst',
+                                         id='https://orcid.org/0000-0001-8729-0482',
+                                         role='Researcher'
+                                         ),
+                            pid=dict(id='123', type='other'),
+                            title='Test file to demonstrate usage of EngMeta schema') as h5:
+                pass
 
     def test_read_invalid_attribute(self):
         cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
@@ -565,8 +645,9 @@ def validate_f1(a, b, c=3, d=2):
             h5.create_dataset('ds', data=[1, 2], attrs=dict(units='invalid'))
         with h5tbx.use(cv):
             with h5tbx.File(h5.hdf_filename) as h5:
-                with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
-                    units = h5.ds.units
+                with h5tbx.set_config(ignore_get_std_attr_err=True):
+                    with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
+                        units = h5.ds.units
                 self.assertEqual(units, 'invalid')
         with h5tbx.use(None):
             with h5tbx.File(h5.hdf_filename) as h5:

@@ -47,7 +47,7 @@ class TestTbxValidators(unittest.TestCase):
 
     def test_validate_orcid(self):
         class Validator(BaseModel):
-            orcid: toolbox_validators.orcid
+            orcid: toolbox_validators.orcidType
 
         with self.assertRaises(TypeError):
             Validator(orcid=3.4)
@@ -58,7 +58,7 @@ class TestTbxValidators(unittest.TestCase):
 
     def test_validate_url(self):
         class Validator(BaseModel):
-            url: toolbox_validators.url
+            url: toolbox_validators.validators["url"]
 
         with self.assertRaises(TypeError):
             Validator(url=3.4)
@@ -76,7 +76,7 @@ class TestTbxValidators(unittest.TestCase):
 
     def test_validate_quantity(self):
         class Validator(BaseModel):
-            quantity: toolbox_validators.quantity
+            quantity: toolbox_validators.quantityType
 
         Validator(quantity=pint.Quantity(3.4, 'm'))
         self.assertIsInstance(Validator(quantity=pint.Quantity(3.4, 'm')).quantity, pint.Quantity)
@@ -85,7 +85,7 @@ class TestTbxValidators(unittest.TestCase):
 
     def test_validate_units(self):
         class Validator(BaseModel):
-            units: toolbox_validators.units
+            units: toolbox_validators.unitsType
 
         Validator(units=pint.Unit('m'))
         self.assertIsInstance(Validator(units=pint.Unit('m')).units, pint.Unit)
@@ -93,8 +93,9 @@ class TestTbxValidators(unittest.TestCase):
 
     def test_date_format(self):
         class Validator(BaseModel):
-            date: toolbox_validators.dateFormat
+            date: toolbox_validators.dateFormatType
 
-        self.assertIsInstance(Validator(date='2021-01-01').date, datetime.datetime)
+        self.assertIsInstance(Validator(date='2021-01-01').date,
+                              datetime.datetime)
         with self.assertRaises(TypeError):
             Validator(date=3.4)

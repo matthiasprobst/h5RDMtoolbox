@@ -2,21 +2,25 @@
 import enum
 import json
 import pydantic
+import typing_extensions
 import warnings
 from typing import Dict, List, Union
 
 from . import errors, logger
 from . import warnings as convention_warnings
 from .consts import DefaultValue
-from .. import get_config
-from ..utils import DocStringParser
+from ..utils import DocStringParser, parse_object_for_attribute_setting
 from ..wrapper.core import File, Group, Dataset
+from .. import get_config
+
 
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),
                                  'create_dataset': DocStringParser(Group.create_dataset)}}
 
 __all__ = ['StandardAttribute', ]
+
+
 
 
 class StandardAttribute:
@@ -26,7 +30,7 @@ class StandardAttribute:
     ----------
     name: str
         The name of the attribute
-    validator: str | dict
+    validator: Union[pydantic.BaseModel, typing_extensions._AnnotatedAlias]
         The validator for the attribute. If the validator takes a parameter, pass it as dict.
         Examples for no-parameter validator: "$pintunits", "$standard_name", "$orcid", "$url"
         Examples for validator with parameter: {"$regex": "^[a-z0-9_]*$"}, {"$in": ["a", "b", "c"]}
@@ -64,7 +68,7 @@ class StandardAttribute:
                  name,
                  *,  # force keyword arguments
                  description,
-                 validator,
+                 validator: Union[pydantic.BaseModel, typing_extensions._AnnotatedAlias],
                  target_method: str = None,
                  default_value=DefaultValue.EMPTY,
                  alternative_standard_attribute: str = None,
@@ -72,37 +76,15 @@ class StandardAttribute:
                  requirements: List[str] = None,
                  type_hint: str = None,
                  **kwargs):
-        """
-
-        Parameters
-        ----------
-        name: str
-            The name of the attribute. The name is cut if it includes "-" and only the first part is taken,
-            e.g. "comment-file" will be "comment". This is needed to define multiple attributes in a YAML file
-            with the same "basename" ("basename" refers to the part before the "-", thus "comment" in the example).
-        validator
-        description
-        default_value
-        target_method: str
-            The method to which the attribute belongs. Only one method can be specified.
-
-            Note: In earlier versions multiple methods could be specified. This is not supported anymore because (a)
-            it facilitates the code and makes it better to read and (b) the description of the attribute should be
-            different depending on the method.
-        alternative_standard_attribute
-        position
-        return_type
-        requirements
-        kwargs
-        """
         # name of attribute:
         self.name = name.split('-', 1)[0]  # the attrs key
+        if validator is None:
+            raise TypeError(f'validator must not be None.')
 
-        try:
-            validator.model_validate
-        except AttributeError:
-            raise TypeError(f'validator must be a pydantic.BaseModel and therefore have a "model_validate" method. '
-                            f'Got {type(validator)} instead.')
+        if not isinstance(validator, typing_extensions._AnnotatedAlias):
+            if not issubclass(validator, pydantic.BaseModel):
+                raise TypeError(f'validator must be a pydantic.BaseModel or a typing_extensions._AnnotatedAlias. '
+                                f'Got {type(validator)} instead.')
         self.validator = validator
         # assert isinstance(self.validator, StandardAttributeValidator)
 
@@ -185,7 +167,7 @@ class StandardAttribute:
         h5tbx.use(None)
         h5tbx.use(_cache_cv)
 
-    def set(self, parent, value, attrs=None):
+    def __setter__(self, parent, value, attrs=None):
         """Write `value` to attribute of `parent`
 
         Parameters
@@ -198,55 +180,52 @@ class StandardAttribute:
             Other attributes to be set. This is used during dataset creation only.
         """
         # first call the validator on the value:
-        try:
-            if value is None:
-                return
-                # if self.validator.allow_None:
-                #     validated_value = self.validator(value, parent, attrs)
-                # else:
-                #     # None is passed. this is ignored
-                #     return
+        if value is None:
+            return
+            # if self.validator.allow_None:
+            #     validated_value = self.validator(value, parent, attrs)
+            # else:
+            #     # None is passed. this is ignored
+            #     return
+        else:
+            if isinstance(value, dict):
+                try:
+                    key0 = list(self.validator.model_fields.keys())[0]
+                    logger.debug(f'validating standard attribute "{self.name}" with '
+                                 f'"{self.validator.model_fields[key0]}"="{value}"')
+                    self.validator.model_validate({key0: value}, context={'parent': parent, 'attrs': attrs})
+                    return super(type(parent.attrs), parent.attrs).__setitem__(self.name, json.dumps(value))
+                except pydantic.ValidationError as err:
+                    raise errors.StandardAttributeError(
+                        f'Validation of "{value}" for standard attribute "{self.name}" failed.\n'
+                        f'Expected fields: {self.validator.model_fields}\nPydantic error: {err}')
             else:
-                if isinstance(value, dict):
+                try:
+                    model_fields = list(self.validator.model_fields.keys())
+                except AttributeError:
+                    tmp_model = pydantic.create_model(self.name, value=(self.validator, ...))
                     try:
-                        # if a dict, we must fix some entries if there are nested standard validators:
-                        for k in value.keys():
-                            if hasattr(self.validator.model_fields[k].annotation, 'model_fields'):
-                                value[k] = {'value': value[k]}
-                        _value = self.validator.model_validate(value, context={'parent': parent, 'attrs': attrs})
+                        _validated_value = tmp_model.model_validate({'value': value},
+                                                                    context={'parent': parent, 'attrs': attrs})
+                    except pydantic.ValidationError as err:
+                        raise errors.StandardAttributeError(
+                            f'Validation of "{value}" for standard attribute "{self.name}" failed.'
+                            f'\nPydantic error: {err}')
+                    validated_value = _validated_value.value
+                else:
+                    key0 = model_fields[0]  # ==self.name!
+                    try:
+                        _validated_value = self.validator.model_validate({key0: value},
+                                                                         context={'parent': parent, 'attrs': attrs})
                     except pydantic.ValidationError as err:
                         raise errors.StandardAttributeError(
                             f'Validation of "{value}" for standard attribute "{self.name}" failed.\n'
                             f'Expected fields: {self.validator.model_fields}\nPydantic error: {err}')
-                    validated_value = json.dumps(value)
-                else:
-                    _value = self.validator.model_validate(dict(value=value),
-                                                           context={'parent': parent, 'attrs': attrs})
-                    if isinstance(_value.value, enum.Enum):
-                        validated_value = _value.value.value
-                    else:
-                        if hasattr(_value.value, '__to_h5attrs__'):
-                            validated_value = _value.value.__to_h5attrs__()
-                        else:
-                            # TODO why set str here?
-                            # validated_value = str(_value.value)  # self.validator(value, parent, attrs)
-                            if isinstance(_value.value, dict):
-                                validated_value = json.dumps(_value.value)
-                            elif isinstance(_value.value, (int, float, List)):
-                                validated_value = _value.value  # self.validator(value, parent, attrs)
-                            else:
-                                validated_value = str(_value.value)  # self.validator(value, parent, attrs)
-        except Exception as e:
-            if get_config('ignore_standard_attribute_errors'):
-                logger.warning(f'Setting "{value}" for standard attribute "{self.name}" failed. '
-                               f'Original error: {e}')
-                validated_value = value
-            else:
-                raise errors.StandardAttributeError(f'The value "{value}" for standard attribute "{self.name}" '
-                                                    f'could not be set. Please check the convention file wrt. the '
-                                                    f'rule for this attribute. The following error message might '
-                                                    f'not always explain the origin of the problem:\n{e}') from e
-        super(type(parent.attrs), parent.attrs).__setitem__(self.name, validated_value)
+                    validated_value = getattr(_validated_value, key0)
+                return super(type(parent.attrs), parent.attrs).__setitem__(
+                    self.name,
+                    parse_object_for_attribute_setting(validated_value)
+                )
 
     def get(self, parent):
         """Read the attribute from `parent`
@@ -278,7 +257,50 @@ class StandardAttribute:
             if ret_val is self.NONE:
                 return None
         # is there a return value associated with the validator?
-        return self.validate(ret_val, parent=parent)
+        # validate:
+        if isinstance(ret_val, str):
+            if ret_val.startswith('{') and ret_val.endswith('}'):
+                ret_val = json.loads(ret_val)
+            # this is a reference to another attribute
+
+        ignore_get_std_attr_err = get_config('ignore_get_std_attr_err')
+        try:
+            model_fields = list(self.validator.model_fields.keys())
+        except AttributeError:
+            tmp_model = pydantic.create_model(self.name, value=(self.validator, ...))
+            try:
+                _validated_value = tmp_model.model_validate({'value': ret_val},
+                                                            context={'parent': parent, 'attrs': None})
+            except pydantic.ValidationError as err:
+                if ignore_get_std_attr_err:
+                    warnings.warn(f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'
+                                  f'Pydantic error: {err}',
+                                  convention_warnings.StandardAttributeValidationWarning)
+                else:
+                    raise errors.StandardAttributeError(
+                        f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'
+                        f'Pydantic error: {err}')
+            else:
+                ret_val = _validated_value.value
+        else:
+            key0 = model_fields[0]
+            try:
+                ret_val = getattr(
+                    self.validator.model_validate({key0: ret_val}, context=dict(attrs=None, parent=parent)),
+                    key0)
+            except pydantic.ValidationError as e:
+                if ignore_get_std_attr_err:
+                    warnings.warn(
+                        f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'
+                        f'Expected fields: {self.validator.model_fields}\nPydantic error: {e}',
+                        convention_warnings.StandardAttributeValidationWarning)
+                else:
+                    raise errors.StandardAttributeError(
+                        f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'
+                        f'Expected fields: {self.validator.model_fields}\nPydantic error: {e}')
+        return ret_val
+
+        # return self.validate(ret_val, parent=parent)
         # try:
         #     ret_val = self.validate(ret_val, parent=parent)
         # except pydantic.ValidationError as e:

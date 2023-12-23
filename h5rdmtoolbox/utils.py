@@ -15,7 +15,7 @@ import warnings
 from h5py import File
 from logging.handlers import RotatingFileHandler
 from re import sub as re_sub
-from typing import Dict, Union, Callable
+from typing import Dict, Union, Callable, List, Tuple
 
 from . import _user, get_config
 from . import get_ureg
@@ -299,6 +299,32 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
                                f'\n  name: {name}\n  value: {value} \n  type: {type(value)}\n'
                                f'Original error: {e2}') from e2
 
+
+def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, List[str], Tuple]:
+    """Parses an object to a string for setting an attribute"""
+    if isinstance(value, pint.Unit):
+        return str(value)
+    if isinstance(value, pint.Quantity):
+        return str(value)
+    if isinstance(value, dict):
+        return json.dumps(value)
+    if isinstance(value, datetime.datetime):
+        return value.isoformat()
+    if isinstance(value, list):
+        return [parse_object_for_attribute_setting(v) for v in value]
+    if isinstance(value, tuple):
+        return tuple([parse_object_for_attribute_setting(v) for v in value])
+    if isinstance(value, pathlib.Path):
+        return str(value)
+    if isinstance(value, str):
+        return str(value)
+    if isinstance(value, (int, float, bool)):
+        return value
+    try:
+        return str(value)  # try parsing to string
+    except TypeError:
+        print(type(value))
+        raise TypeError(f"Cannot parse type {type(value)} to string")
 
 OBJ_FLT_DICT = {'group': h5py.Group,
                 'groups': h5py.Group,

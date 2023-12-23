@@ -243,7 +243,7 @@ class TestStandardAttributes(unittest.TestCase):
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
             with self.assertRaises(StandardAttributeError):
                 # difference_of_x_velocity not found!
-                h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='difference_of_x_velocity')
+                h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='velocity')
             h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
 
             with self.assertRaises(StandardAttributeError):

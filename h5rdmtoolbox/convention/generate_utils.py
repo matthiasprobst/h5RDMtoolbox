@@ -42,7 +42,7 @@ class RegexProcessor:
         file.writelines("\n    if not pattern.match(value):")
         file.writelines("\n        raise ValueError('Invalid format for pattern')")
         file.writelines("\n    return value")
-        file.writelines(f"\n{self.name} = Annotated[int, WrapValidator({self.name})]\n")
+        file.writelines(f"\n{self.name} = Annotated[str, WrapValidator({self.name})]\n")
 
 
 def get_standard_attribute_class_lines(name, *, validator, description: str = None, **kwargs):
@@ -72,21 +72,22 @@ def get_enum_lines(name, values: List[str], description: str = None):
     """returns a list of lines for a enumerator validation class"""
     validator_name = name.strip('$').replace('-', '_')
     lines = []
-    lines.append(f'class {validator_name}(str, Enum):\n')
-    if description is None:
-        description = ''
-    lines.append(f'    """{description}"""\n')
-
+    # lines.append(f'class {validator_name}(str, Enum):\n')
+    lines.append('from typing_extensions import Literal\n')
+    if description:
+        lines.append(f'# {description}\n')
+    lines.append(f'{validator_name}_opts = Literal[\n')
     for enum_val in values:
         enum_split = enum_val.split(':', 1)
         if len(enum_split) == 1:
             enum_name, enum_value = enum_val, enum_val
         else:
             enum_name, enum_value = enum_split
-        lines.append(f'    {enum_name} = "{enum_value}"\n')
+        lines.append(f'    "{enum_value}",\n')
+    lines.append(f']\n')
 
     lines.append(f'\nclass {validator_name}(BaseModel):\n')
-    lines.append(f'    value: {validator_name}\n')
+    lines.append(f'    value: {validator_name}_opts\n')
     return lines
 
 

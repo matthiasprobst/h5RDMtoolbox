@@ -108,13 +108,12 @@ def equal_base_units(u1: Union[str, pint.Unit, pint.Quantity],
 
     def _convert(u):
         if isinstance(u, str):
-            return 1 * get_ureg()(u)
+            return 1 * get_ureg()(u.strip())
         if isinstance(u, pint.Unit):
             return 1 * u
         if isinstance(u, pint.Quantity):
             return u
         raise TypeError(f"u must be a str, pint.Unit or pint.Quantity, not {type(u)}")
-
     return _convert(u1).to_base_units().units == _convert(u2).to_base_units().units
 
 

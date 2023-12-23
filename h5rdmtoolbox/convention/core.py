@@ -4,6 +4,7 @@ import forge
 import h5py
 import inspect
 import pathlib
+import pydantic
 import re
 import shutil
 import sys
@@ -14,6 +15,7 @@ from typing import Union, List, Dict, Tuple
 
 from h5rdmtoolbox.repository import RepositoryInterface
 from h5rdmtoolbox.wrapper import ds_decoder
+from h5rdmtoolbox import errors
 from . import cfg
 from . import consts
 from . import errors
@@ -427,7 +429,15 @@ class Convention(AbstractConvention):
             for k, v in convention.properties.items():
                 if isinstance(node, k):
                     for ak, av in v.items():
-                        if av.default_value is consts.DefaultValue.EMPTY:
+                        if av.default_value is not consts.DefaultValue.EMPTY:
+                            if ak in node.attrs:
+                                try:
+                                    node.attrs[ak]
+                                except errors.StandardAttributeError as e:
+                                    failed.append(dict(name=node.name, attr_name=ak, attr_value=node.attrs.raw[ak],
+                                                       reason='invalid_value',
+                                                       error_message=str(e)))
+                        else:  # av.default_value is consts.DefaultValue.EMPTY:
                             if av.target_method == 'create_string_dataset' and not _is_str_dataset(node):
                                 continue  # not the responsibility of this validator
                             if av.target_method == 'create_dataset' and _is_str_dataset(node):
@@ -439,13 +449,23 @@ class Convention(AbstractConvention):
                                     'is required by the convention')
                                 failed.append(dict(name=node.name, attr_name=ak, reason='missing_attribute'))
                             else:
-                                value_to_check = node.attrs[ak]
-                                if av.validate(value_to_check, node):
-                                    logger.debug(f'The attribute "{ak}" valid')
-                                else:
+                                # just by accessing the standard attribute, the validation is performed
+                                try:
+                                    _ = node.attrs[ak]
+                                    # av.validate(value_to_check, parent=node, attrs=node.attrs.raw)
+                                    logger.debug(f'The attribute "{ak}" is valid')
+                                except errors.StandardAttributeError as e:
                                     logger.debug(f'The attribute "{ak}" exists but is invalid')
-                                    failed.append(dict(name=node.name, attr_name=ak, attr_value=value_to_check,
-                                                       reason='invalid_value'))
+                                    failed.append(dict(name=node.name, attr_name=ak, attr_value=node.attrs.raw[ak],
+                                                       reason='invalid_value',
+                                                       error_message=str(e)))
+
+                                # if av.validate(value_to_check, node):
+                                #     logger.debug(f'The attribute "{ak}" valid')
+                                # else:
+                                #     logger.debug(f'The attribute "{ak}" exists but is invalid')
+                                #     failed.append(dict(name=node.name, attr_name=ak, attr_value=value_to_check,
+                                #                        reason='invalid_value'))
 
         with File(file_or_filename, 'r') as f:
             logger.debug(f'Checking file {file_or_filename} for compliance with convention {self.name}')

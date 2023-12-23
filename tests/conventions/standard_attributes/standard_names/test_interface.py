@@ -25,7 +25,7 @@ class TestStandardAttributes(unittest.TestCase):
 
     def assertUnitEqual(self, unit1, unit2):
         """Assert that two units are equal."""
-        return h5tbx.get_ureg().Unit(unit1), h5tbx.get_ureg().Unit(unit2)
+        return h5tbx.get_ureg().Unit(unit1) == h5tbx.get_ureg().Unit(unit2)
 
     def test_interface_without_coords(self):
         with h5tbx.File(contact=h5tbx.__author_orcid__) as h5:

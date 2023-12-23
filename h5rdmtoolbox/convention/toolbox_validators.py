@@ -4,7 +4,6 @@ must be provided during initialization of a Convention"""
 
 import pint
 import typing_extensions
-from pydantic import BaseModel
 from pydantic.functional_validators import WrapValidator
 from typing import Union, Dict
 from typing_extensions import Annotated
@@ -13,13 +12,20 @@ from h5rdmtoolbox import get_ureg, errors
 
 
 def __validate_orcid(value, handler, info):
-    from h5rdmtoolbox import orcid
+    from h5rdmtoolbox import identifiers
     if not isinstance(value, str):
         raise TypeError(f'Expected a string but got {type(value)}')
-    oid = orcid.ORCID(value)
-    if not oid.exists():
-        raise ValueError(f'Not an ORCID ID: {oid}')
-    return oid
+    orcid = identifiers.Orcid(value)
+    if not orcid.validate():
+        raise ValueError(f'ORCID {value} is not valid!')
+    return orcid
+
+
+def __validate_identifier(value, handler, info):
+    from h5rdmtoolbox import identifiers
+    if not isinstance(value, str):
+        raise TypeError(f'Expected a string but got {type(value)}')
+    return identifiers.from_url(value).validate()
 
 
 def __validate_standard_name_table(value, handler, info) -> "StandardNameTable":
@@ -91,11 +97,13 @@ def __validate_quantity(value, handler, info):
     try:
         return get_ureg().Quantity(value)
     except (pint.UndefinedUnitError, TypeError) as e:
-        raise ValueError(f'Quantity cannot be understood using ureg package: {quantity}. Original error: {e}')
+        raise ValueError(f'Quantity cannot be understood using ureg package: {value}. Original error: {e}')
 
 
 def __validate_units(value, handler, info):
     """validate units using pint package"""
+    if isinstance(value, (int, float)):
+        raise TypeError(f'Expected a string but got {type(value)}')
     try:
         return get_ureg().Unit(value)
     except (pint.UndefinedUnitError, TypeError) as e:
@@ -108,7 +116,7 @@ def __validate_scale(value, handler, info):
     parent = info.context.get('parent', None)
     if parent is None:
         raise RuntimeError('Require parent dataset to validate offset!')
-    attrs = info.context.get('attrs', None)
+    # attrs = info.context.get('attrs', None)
 
     parent_group = info.context['parent'].parent
 
@@ -171,37 +179,38 @@ def _get_validate_type(_type):
     return __validate_type
 
 
-class StringValidator(BaseModel):
-    value: Annotated[str, WrapValidator(_get_validate_type(str))]
+unitsType = Annotated[str, WrapValidator(__validate_units)]
 
+dateFormatType = Annotated[str, WrapValidator(__validate_date_format)]
 
-class FloatValidator(BaseModel):
-    value: Annotated[str, WrapValidator(_get_validate_type(float))]
+quantityType = Annotated[str, WrapValidator(__validate_quantity)]
 
+dataOffsetType = Annotated[str, WrapValidator(__validate_offset_or_scale)]
 
-class IntValidator(BaseModel):
-    value: Annotated[str, WrapValidator(_get_validate_type(int))]
+dataScaleType = Annotated[str, WrapValidator(__validate_offset_or_scale)]
 
+orcidType = Annotated[str, WrapValidator(__validate_orcid)]
 
-units = Annotated[str, WrapValidator(__validate_units)]
-dateFormat = Annotated[str, WrapValidator(__validate_date_format)]
-quantity = Annotated[str, WrapValidator(__validate_quantity)]
-data_offset = Annotated[str, WrapValidator(__validate_offset_or_scale)]
-data_scale = Annotated[str, WrapValidator(__validate_offset_or_scale)]
-orcid = Annotated[str, WrapValidator(__validate_orcid)]
-standard_name_table = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]
-standard_name = Annotated[str, WrapValidator(__validate_standard_name)]
-url = Annotated[str, WrapValidator(__validate_url)]
+identifierType = Annotated[str, WrapValidator(__validate_identifier)]
 
-validators = {'units': units,
-              'dateFormat': dateFormat,
-              'quantity': quantity,
-              'data_offset': data_offset,
-              'data_scale': data_scale,
-              'orcid': orcid,
-              'standard_name_table': standard_name_table,
-              'standard_name': standard_name,
-              'url': url}
+standardNameTableType = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]
+
+standardNameType = Annotated[str, WrapValidator(__validate_standard_name)]
+
+urlType = Annotated[str, WrapValidator(__validate_url)]
+
+validators = {
+    'units': unitsType,
+    'dateFormat': dateFormatType,
+    'quantity': quantityType,
+    'data_offset': dataOffsetType,
+    'data_scale': dataScaleType,
+    'orcid': orcidType,
+    'identifier': identifierType,
+    'standard_name_table': standardNameTableType,
+    'standard_name': standardNameType,
+    'url': urlType
+}
 
 
 def get_list_of_validators() -> Dict[str, typing_extensions._AnnotatedAlias]:
