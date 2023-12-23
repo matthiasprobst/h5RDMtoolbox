@@ -1,0 +1,36 @@
+__contact__: https://orcid.org/0000-0001-8729-0482
+__institution__: https://orcid.org/members/001G000001e5aUTIAY
+__name__: date_convention
+
+date:
+  description: Add date to root.
+  target_method: __init__
+  validator: dateFormat
+  default_value: $NONE
+
+$dateType:
+  - Accepted
+  - Available
+  - Collected
+  - Copyright
+  - Created
+  - Issued
+  - Submitted
+  - Updated
+  - Valid
+
+$specific_date:
+  date: dateFormat
+  dateType: dateType
+
+list_of_dates:
+  description: Add date to root.
+  target_method: __init__
+  validator: List[toolbox_validators.validators["dateFormat"]]
+  default_value: $NONE
+
+specific_date:
+  description: Add date to root.
+  target_method: __init__
+  validator: $specific_date
+  default_value: $NONE
