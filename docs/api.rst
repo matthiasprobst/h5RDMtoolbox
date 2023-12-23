@@ -40,7 +40,7 @@ Standard attributes
 
    h5rdmtoolbox.convention.StandardAttribute
    h5rdmtoolbox.convention.StandardAttribute.get
-   h5rdmtoolbox.convention.StandardAttribute.set
+   h5rdmtoolbox.convention.StandardAttribute.__setter__
 
 Standard names and tables
 -------------------------
