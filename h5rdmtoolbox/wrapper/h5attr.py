@@ -188,7 +188,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
                 if isinstance(value, consts.DefaultValue):
                     value = value.value
-                return sattr.__setter__(
+                return sattr.set(
                     parent=parent,
                     value=value,
                     attrs=attrs

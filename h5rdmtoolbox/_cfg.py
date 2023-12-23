@@ -16,7 +16,8 @@ def is_valid_logger_level(level: Union[str, int]):
     return level in (0, 10, 20, 30, 40, 50)
 
 
-CONFIG = {'return_xarray': True,
+CONFIG = {
+          'return_xarray': True,
           'advanced_shape_repr': True,
           'natural_naming': True,
           'hdf_compression': None,  # 'gzip',
@@ -29,14 +30,12 @@ CONFIG = {'return_xarray': True,
           'init_logger_level': 'ERROR',
           'dtime_fmt': '%Y%m%d%H%M%S%f',
           'expose_user_prop_to_attrs': True,
-          'scale_attribute_name': 'scale',
-          'offset_attribute_name': 'offset',
           'add_provenance': False,
-          'ignore_standard_attribute_errors': False,
-          'allow_deleting_standard_attributes': False,
+          'ignore_set_std_attr_err': False,
 
           # if a standard attribute is defined and cannot be retrieved because the value is invalid, ignore it:
           'ignore_get_std_attr_err': False,
+          'allow_deleting_standard_attributes': False,
           }
 
 _VALIDATORS = {
@@ -53,10 +52,8 @@ _VALIDATORS = {
     'init_logger_level': lambda x: is_valid_logger_level(x),
     'dtime_fmt': lambda x: isinstance(x, str),
     'expose_user_prop_to_attrs': lambda x: isinstance(x, bool),
-    'scale_attribute_name': lambda x: isinstance(x, str),
-    'offset_attribute_name': lambda x: isinstance(x, str),
     'add_provenance': lambda x: isinstance(x, bool),
-    'ignore_standard_attribute_errors': lambda x: isinstance(x, bool),
+    'ignore_set_std_attr_err': lambda x: isinstance(x, bool),
 
     'ignore_get_std_attr_err': lambda x: isinstance(x, bool),
 }

@@ -38,7 +38,7 @@ class TestTbxValidators(unittest.TestCase):
         cv.delete()
 
     def test_validate_regex(self):
-        from h5rdmtoolbox.convention.generate_utils import RegexProcessor
+        from h5rdmtoolbox.convention.generate import RegexProcessor
 
         rp = RegexProcessor({'validator': 'regex(r"^[a-zA-Z0-9_]*$")'})
         self.assertEqual('r"^[a-zA-Z0-9_]*$"', rp.re_pattern)

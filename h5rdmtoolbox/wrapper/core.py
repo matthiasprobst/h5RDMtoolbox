@@ -152,7 +152,7 @@ def process_attributes(cls,
                         _pop.append(k)
                 else:
                     logger.debug(f'Standard attribute {k} is empty but no alternative attribute given by the user.')
-                    if not get_config('ignore_standard_attribute_errors'):
+                    if not get_config('ignore_set_std_attr_err'):
                         raise convention.standard_attributes.errors.StandardAttributeError(
                             f'The standard attribute "{k}" is required but not provided.')
 
@@ -1573,7 +1573,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     def __setattr__(self, key, value):
         if self.__class__ in convention.get_current_convention().properties:
             if key in convention.get_current_convention().properties[self.__class__]:
-                return convention.get_current_convention().properties[self.__class__][key].__setter__(self, value)
+                return convention.get_current_convention().properties[self.__class__][key].set(self, value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -2027,7 +2027,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         if props:
             prop = props.get(key, None)
             if prop:  # does the object have a standard attribute with name stored in key?
-                return prop.__setter__(self, value)
+                return prop.set(self, value)
         if key.startswith('_'):
             return super().__setattr__(key, value)
         raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '

@@ -15,7 +15,7 @@ from h5rdmtoolbox import identifiers
 def __validate_orcid(value, handler, info):
     if not isinstance(value, str):
         raise TypeError(f'Expected a string but got {type(value)}')
-    orcid = identifiers.Orcid(value)
+    orcid = identifiers.ORCID(value)
     if not orcid.validate():
         raise ValueError(f'ORCID {value} is not valid!')
     return orcid

@@ -1,5 +1,4 @@
 import enum
-import warnings
 
 
 class _SpecialDefaults(enum.Enum):

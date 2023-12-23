@@ -1,18 +1,48 @@
 """test h5rdmtoolbox.user.py"""
 import unittest
 
-import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import identifiers
 
 
 class TestOrcid(unittest.TestCase):
 
+    def test_urn(self):
+        self.assertTrue(identifiers.URN('urn:isbn:0143039431').validate())
+        self.assertTrue(identifiers.URN('urn:efg://wxyz').validate())
+        self.assertTrue(identifiers.URN('urn:issn:1476-4687').validate())
+        self.assertFalse(identifiers.URN('xyz:issn:1476-4687').validate())
+
+    def test_rorid(self):
+        self.assertTrue(identifiers.RORID('https://ror.org/04wxnsj81').validate())
+        self.assertFalse(identifiers.RORID('https://ror.org/?4wxnsj82').validate())
+        self.assertTrue(identifiers.RORID('04wxnsj81').validate())
+        self.assertEqual(str(identifiers.RORID('04wxnsj81')), 'https://ror.org/04wxnsj81')
+        self.assertFalse(identifiers.RORID('https://orcid.org/0000-0002-1825-0097').validate())
+
+    def test_from_url(self):
+        self.assertIsInstance(identifiers.from_url('https://orcid.org/0000-0002-1825-0097'),
+                              identifiers.ORCID)
+        # self.assertIsInstance(identifiers.from_url('https://ror.org/04t3en479'),
+        #                       identifiers.RORID)
+
+    # def test_gnd(self):
+    #     self.assertTrue(identifiers.GND('118540268').validate())
+    #     self.assertFalse(identifiers.GND('118540269').validate())
+
+    def test_isbn(self):
+        self.assertTrue(identifiers.ISBN10('80-85892-15-4').validate())
+        self.assertFalse(identifiers.ISBN10('80/85892-15-4').validate())
+        self.assertFalse(identifiers.ISBN10('80-85892-15-8').validate())
+        self.assertTrue(identifiers.ISBN13('978-80-85892-15-4').validate())
+        self.assertFalse(identifiers.ISBN13('978-80-85892-15-8').validate())
+        self.assertFalse(identifiers.ISBN13('978/80-85892-15-4').validate())
+
     def test_orcid(self):
-        self.assertTrue(identifiers.Orcid('https://orcid.org/0000-0002-1825-0097').validate())
-        self.assertFalse(identifiers.Orcid('https://orcid.org/0000-0002-1825-0096').validate())
-        self.assertTrue(identifiers.Orcid('0000-0002-1825-0097').validate())
-        self.assertTrue(identifiers.Orcid('https://orcid.org/0000-0001-5109-3700').validate())
-        self.assertTrue(identifiers.Orcid('https://orcid.org/0000-0002-1694-233X').validate())
+        self.assertTrue(identifiers.ORCID('https://orcid.org/0000-0002-1825-0097').validate())
+        self.assertFalse(identifiers.ORCID('https://orcid.org/0000-0002-1825-0096').validate())
+        self.assertTrue(identifiers.ORCID('0000-0002-1825-0097').validate())
+        self.assertTrue(identifiers.ORCID('https://orcid.org/0000-0001-5109-3700').validate())
+        self.assertTrue(identifiers.ORCID('https://orcid.org/0000-0002-1694-233X').validate())
 
     # def test_orcid(self):
     #     o = h5tbx.orcid.KnownOrcids()

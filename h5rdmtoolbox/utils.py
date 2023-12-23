@@ -288,7 +288,6 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         _value = value.strftime(get_config('dtime_fmt'))
     else:
         _value = value
-
     try:
         h5obj.create(name, data=_value)
     except TypeError:
@@ -325,6 +324,7 @@ def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, Li
     except TypeError:
         print(type(value))
         raise TypeError(f"Cannot parse type {type(value)} to string")
+
 
 OBJ_FLT_DICT = {'group': h5py.Group,
                 'groups': h5py.Group,

@@ -9,18 +9,15 @@ from typing import Dict, List, Union
 from . import errors, logger
 from . import warnings as convention_warnings
 from .consts import DefaultValue
+from .. import get_config
 from ..utils import DocStringParser, parse_object_for_attribute_setting
 from ..wrapper.core import File, Group, Dataset
-from .. import get_config
-
 
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),
                                  'create_dataset': DocStringParser(Group.create_dataset)}}
 
 __all__ = ['StandardAttribute', ]
-
-
 
 
 class StandardAttribute:
@@ -167,7 +164,7 @@ class StandardAttribute:
         h5tbx.use(None)
         h5tbx.use(_cache_cv)
 
-    def __setter__(self, parent, value, attrs=None):
+    def set(self, parent, value, attrs=None):
         """Write `value` to attribute of `parent`
 
         Parameters
@@ -324,39 +321,36 @@ class StandardAttribute:
                     validator=f'${self.validator.__name__}',
                     default_value=default_value_str)
 
-    def validate(self, value, parent, attrs=None):
+    def validate(self, value, parent=None, attrs=None) -> bool:
         """validate"""
-        if value is not None:
-            if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
-                value = json.loads(value)
-            if isinstance(value, dict):
-                try:
-                    model_fields = self.validator.model_fields
-                    if 'value' in model_fields and 'typing.Dict' in str(model_fields['value'].annotation):
-                        return self.validator.model_validate(dict(value=value),
-                                                             context=dict(attrs=attrs, parent=parent)).value
-                    else:
-                        _value = value.copy()
-                        for k, v in value.items():
-                            if self.validator.model_fields[k].annotation not in (int, str, float, bool):
-                                if not isinstance(v, dict):
-                                    _value[k] = {'value': v}
-                        return self.validator.model_validate(_value, context=dict(attrs=attrs, parent=parent))
-                except pydantic.ValidationError as err:
-                    warnings.warn(f'The attribute "{self.name}" could not be validated due to: {err}',
-                                  convention_warnings.StandardAttributeValidationWarning)
-                    return value
+        if value is None:
+            return True
+
+        if isinstance(value, dict):
+            try:
+                key0 = list(self.validator.model_fields.keys())[0]
+                logger.debug(f'validating standard attribute "{self.name}" with '
+                             f'"{self.validator.model_fields[key0]}"="{value}"')
+                self.validator.model_validate({key0: value}, context={'parent': parent, 'attrs': attrs})
+                return True
+            except pydantic.ValidationError as err:
+                return False
 
         try:
-            _value = self.validator.model_validate(dict(value=value),
-                                                   context=dict(attrs=attrs, parent=parent)).value
-            if isinstance(_value, enum.Enum):
-                return _value.value
-            return _value
+            model_fields = list(self.validator.model_fields.keys())
+        except AttributeError:
+            tmp_model = pydantic.create_model(self.name, value=(self.validator, ...))
+            try:
+                _validated_value = tmp_model.model_validate({'value': value},
+                                                            context={'parent': parent, 'attrs': attrs})
+            except pydantic.ValidationError as err:
+                return False
+            return False
+
+        key0 = model_fields[0]  # ==self.name!
+        try:
+            _validated_value = self.validator.model_validate({key0: value},
+                                                             context={'parent': parent, 'attrs': attrs})
         except pydantic.ValidationError as err:
-            warnings.warn(f'The attribute "{self.name}" could not be validated by the convention '
-                          f'"{parent.convention.name}".\nPydantic error: \n{err}',
-                          convention_warnings.StandardAttributeValidationWarning)
-        return value
-        # return self.validator.model_validate(dict(value=self.default_value),
-        #                                      context=dict(attrs=attrs, parent=parent))
+            return False
+        return True

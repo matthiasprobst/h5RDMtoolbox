@@ -5,11 +5,15 @@ import re
 import shutil
 import warnings
 import yaml
-from typing import List, Union, Dict
+from itertools import count
+from typing import Dict
+from typing import List, Union
 
 from h5rdmtoolbox._user import UserDir
 from h5rdmtoolbox.convention import toolbox_validators
-from . import generate_utils, logger
+from . import logger
+
+regex_counter = count()
 
 INDENT = '    '
 
@@ -99,7 +103,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     for k in standard_attributes.keys():
         validator = standard_attributes[k]['validator']
         if 'regex' in validator:
-            _regex_proc = generate_utils.RegexProcessor(standard_attributes[k])
+            _regex_proc = RegexProcessor(standard_attributes[k])
             standard_attributes[k] = _regex_proc.get_dict()
             with open(py_filename, 'a') as f:
                 _regex_proc.write_lines(f)
@@ -110,36 +114,6 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     literal_definition = {k: v for k, v in convention_dict.items() if isinstance(v, list) and k.startswith('$')}
     used_toolbox_validators = {}
     auto_created_classes = {}
-    # # imports = []
-    # for k, v in convention_dict.items():
-    #     if isinstance(v, dict):
-    #         # can be a type definition or a validator
-    #         if k.startswith('$'):
-    #             # it is a type definition
-    #             # if it is a dict of entries, it is something like this:
-    #             # class User(BaseModel):
-    #             #     name: str
-    #             #     personal_details: PersonalDetails
-    #             if isinstance(v, dict):
-    #                 type_definitions[k] = v
-    #         else:
-    #             if 'regex' in v['validator']:
-    #                 _regex_proc = generate_utils.RegexProcessor(v)
-    #                 standard_attributes[k] = _regex_proc.get_dict()
-    #                 with open(py_filename, 'a') as f:
-    #                     _regex_proc.write_lines(f)
-    #             else:
-    #                 # if not v['validator'].startswith('$'):
-    #                 #     v['validator'] = f'${k}'
-    #                 standard_attributes[k] = v
-    #
-    #     elif isinstance(v, str):
-    #         metadata[k.strip('_')] = v
-    #     elif isinstance(v, list):
-    #         # is an enum
-    #         type_definitions[k] = v
-    #     else:
-    #         raise KeyError(f'Unknown type for key {k}: {type(v)}')
 
     # first write literals
     with open(py_filename, 'a') as f:
@@ -200,42 +174,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             f.write('\n\n')
             auto_created_classes[_validator] = k
 
-    # # get validator and write them to convention-python file:
-    # enum_validator_lines = []
-    # standard_validator_lines = []
     # with open(py_filename, 'a') as f:
-    #     # write type definitions from YAML file:
-    #     for k, v in type_definitions.items():
-    #         validator_name = k.strip('$').replace('-', '_')
-    #         validator_dict[k] = f'{validator_name}'  # _validator'
-    #         if isinstance(v, list):
-    #             enum_validator_lines.append(generate_utils.get_enum_lines(k, v))
-    #         elif isinstance(v, dict):
-    #             standard_validator_lines.append(generate_utils.get_validator_lines(k, v))
-    #         else:
-    #             raise TypeError(f'Unknown type for type definition {k}: {type(v)}')
-    #
-    #     # then write standard attribute classes:
-    #     for lines in standard_validator_lines:
-    #         f.writelines(lines)
-    #         f.writelines('\n')
-    #
-    #     # write standard attribute classes:
-    #     for stda_name, stda in standard_attributes.items():
-    #         _type = stda["validator"]
-    #         if isinstance(_type, dict):
-    #             raise TypeError('A validator cannot be a dict but need to specify a validator type, like "$str". '
-    #                             'If you want to provide a default value, do it using the entry "default_value".')
-    #         if _type in type_definitions:
-    #             continue
-    #
-    #         lines = generate_utils.get_standard_attribute_class_lines(stda_name, **stda)
-    #         validator_class_name = stda_name.replace('-', '_')  # + '_validator'
-    #         validator_dict[_type] = validator_class_name
-    #         f.writelines(lines)
-    #         f.writelines('\n')
-
-    with open(py_filename, 'a') as f:
         f.write('\nvalidator_dict = {\n' + INDENT)
         f.write(f'\n{INDENT}'.join(f"'{k}': {k[1:]}," for k, v in class_definitions.items()))
         f.write(f'\n{INDENT}'.join(f"'{k}': {v}," for k, v in used_toolbox_validators.items()))
@@ -249,7 +188,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         f.write(f'from h5rdmtoolbox.convention import Convention, standard_attributes, logger\n\n')
         f.write('generated_standard_attributes = {\n')
 
-    with open(py_filename, 'a') as f:
+    # with open(py_filename, 'a') as f:
         for kk, vv in standard_attributes.items():
             _default_value = _process_paths(vv.get('default_value', None), relative_to=yaml_filename.parent)
             if _default_value is None:
@@ -288,9 +227,6 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
 logger.debug(f'Registering convention "{{cv.name}}"')
 cv.register()
 """)
-
-
-# UTILITIES:
 
 
 def _str_getter(_dict, key, default=None) -> str:
@@ -377,3 +313,40 @@ def _process_paths(paths: Union[Dict, str], relative_to) -> Union[str, List[str]
                 _paths[key] = _process_paths(_paths[key], relative_to)
         return _paths
     return paths
+
+
+class RegexProcessor:
+    """Process regex validator.
+
+    Parameters
+    ----------
+    standard_attribute: Dict
+        Standard attribute dictionary, e.g. {'validator': 'regex(r"^[a-zA-Z0-9_]*$")'}
+    """
+
+    def __init__(self, standard_attribute: Dict):
+        regex_validator = f'regex_{next(regex_counter)}'
+        validator = standard_attribute['validator']
+        self.name = regex_validator
+        re_pattern = validator.split('regex(', 1)[1].rsplit(')', 1)[0]
+        # match = re.search(r'regex\((.*?)\)', validator)
+        # re_pattern = match.group(1)
+
+        self.standard_attribute = standard_attribute.copy()
+        if re_pattern.startswith("r'") and re_pattern.endswith("'"):
+            re_pattern = re_pattern[2:-1]
+        self.standard_attribute['validator'] = f'{regex_validator}'
+        self.re_pattern = re_pattern
+
+    def get_dict(self):
+        return self.standard_attribute
+
+    def write_lines(self, file):
+        """Write validator lines to file"""
+        file.writelines(f'\n\nimport re\n\n')
+        file.writelines(f'\ndef {self.name}(value, parent=None, attrs=None):')
+        file.writelines(f"\n    pattern = re.compile(r'{self.re_pattern}')")
+        file.writelines("\n    if not pattern.match(value):")
+        file.writelines("\n        raise ValueError('Invalid format for pattern')")
+        file.writelines("\n    return value")
+        file.writelines(f"\n{self.name} = Annotated[str, WrapValidator({self.name})]\n")
