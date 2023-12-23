@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import pathlib
+import pydantic
 import unittest
 from datetime import datetime
 
@@ -30,6 +31,110 @@ class TestConfig(unittest.TestCase):
     #         h5tbx.convention.from_yaml(filenames[0])
     #         for f in filenames:
     #             f.unlink()
+
+    def test_creator(self):
+        from h5rdmtoolbox.repository.zenodo.metadata import Creator
+        with self.assertRaises(ValueError):
+            creator = Creator(name='John Doe', affiliation='University of Nowhere')
+        creator = Creator(name='Doe, John')
+        self.assertEqual(creator.name, 'Doe, John')
+        with self.assertRaises(pydantic.ValidationError):
+            Creator(affiliation='University of Nowhere')
+
+    def test_metadata(self):
+        from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
+        metadata = Metadata(version='0.1.0-rc.1+build.1',
+                            title='h5rdmtoolbox',
+                            description='A toolbox for managing HDF5-based research data management',
+                            creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                            keywords=['hdf5', 'research data management', 'rdm'],
+                            upload_type='publication',
+                            publication_type='other',
+                            access_right='open',
+                            publication_date=datetime.now())
+        self.assertEqual(metadata.version, '0.1.0-rc.1+build.1')
+        self.assertEqual(metadata.title, 'h5rdmtoolbox')
+        self.assertEqual(metadata.description, 'A toolbox for managing HDF5-based research data management')
+        self.assertEqual(metadata.creators[0].name, 'Doe, John')
+        self.assertEqual(metadata.creators[0].affiliation, 'University of Nowhere')
+        self.assertEqual(metadata.contributors, [])
+        self.assertEqual(metadata.keywords, ['hdf5', 'research data management', 'rdm'])
+        self.assertEqual(metadata.upload_type, 'publication')
+        self.assertEqual(metadata.publication_type, 'other')
+        self.assertEqual(metadata.access_right, 'open')
+        self.assertEqual(metadata.publication_date, datetime.today().strftime('%Y-%m-%d'))
+
+        metadata = Metadata(version='0.1.0-rc.1+build.1',
+                            title='h5rdmtoolbox',
+                            description='A toolbox for managing HDF5-based research data management',
+                            creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                            keywords=['hdf5', 'research data management', 'rdm'],
+                            upload_type='publication',
+                            publication_type='other',
+                            access_right='open',
+                            publication_date='today')
+        self.assertEqual(metadata.publication_date, datetime.today().strftime('%Y-%m-%d'))
+
+        with self.assertRaises(ValueError):
+            # wrong date format
+            metadata = Metadata(version='0.1.0-rc.1+build.1',
+                                title='h5rdmtoolbox',
+                                description='A toolbox for managing HDF5-based research data management',
+                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                                keywords=['hdf5', 'research data management', 'rdm'],
+                                upload_type='publication',
+                                publication_type='other',
+                                access_right='open',
+                                publication_date='1-1-23')
+        metadata = Metadata(version='0.1.0-rc.1+build.1',
+                            title='h5rdmtoolbox',
+                            description='A toolbox for managing HDF5-based research data management',
+                            creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                            keywords=['hdf5', 'research data management', 'rdm'],
+                            upload_type='publication',
+                            publication_type='other',
+                            access_right='open',
+                            publication_date='2023-01-01')
+        self.assertEqual(metadata.publication_date, '2023-01-01')
+
+        with self.assertRaises(ValueError):
+            # wrong version
+            metadata = Metadata(version='invalid',
+                                title='h5rdmtoolbox',
+                                description='A toolbox for managing HDF5-based research data management',
+                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                                keywords=['hdf5', 'research data management', 'rdm'],
+                                upload_type='publication',
+                                publication_type='other',
+                                access_right='open',
+                                publication_date='2023-01-01')
+
+        with self.assertRaises(ValueError):
+            # invalid embargo date
+            metadata = Metadata(version='0.1.0-rc.1+build.1',
+                                title='h5rdmtoolbox',
+                                description='A toolbox for managing HDF5-based research data management',
+                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                                keywords=['hdf5', 'research data management', 'rdm'],
+                                upload_type='publication',
+                                publication_type='other',
+                                access_right='embargoed',
+                                embargo_date='2022-01-01',  # too early!
+                                publication_date='2023-01-01')
+
+        # invalid embargo date format
+        with self.assertRaises(ValueError):
+            metadata = Metadata(version='0.1.0-rc.1+build.1',
+                                title='h5rdmtoolbox',
+                                description='A toolbox for managing HDF5-based research data management',
+                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                                keywords=['hdf5', 'research data management', 'rdm'],
+                                upload_type='publication',
+                                publication_type='other',
+                                access_right='embargoed',
+                                embargo_date='01-2022-01',  # wrong format!
+                                publication_date='2023-01-01')
+
 
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)
