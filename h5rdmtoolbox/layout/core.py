@@ -10,6 +10,18 @@ import h5rdmtoolbox
 logger = h5rdmtoolbox.utils.create_tbx_logger('layout')
 
 
+def _replace_callables_with_names(dict_with_callables: Dict) -> Dict:
+    """Replace all callables in a dictionary with their names plus '()'
+    Used by __repr__ of LayoutSpecification"""
+    dict_with_callables = dict_with_callables.copy()
+    for key in dict_with_callables.keys():
+        if callable(dict_with_callables[key]):
+            dict_with_callables[key] = f'{dict_with_callables[key].__name__}()'
+        elif isinstance(dict_with_callables[key], dict):
+            _replace_callables_with_names(dict_with_callables[key])
+    return dict_with_callables
+
+
 class LayoutSpecification:
     """Specification for a layout
 
@@ -95,9 +107,10 @@ class LayoutSpecification:
         return self.n_calls - self._n_fails
 
     def __repr__(self):
+        _kwargs = _replace_callables_with_names(self.kwargs)
         if self.comment:
-            return f'{self.__class__.__name__} (comment="{self.comment}", kwargs={self.kwargs})'
-        return f'{self.__class__.__name__} (kwargs={self.kwargs})'
+            return f'{self.__class__.__name__} (comment="{self.comment}", kwargs={_kwargs})'
+        return f'{self.__class__.__name__} (kwargs={_kwargs})'
 
     def __call__(self, target: Union[h5py.Group, h5py.Dataset]):
         if isinstance(target, h5rdmtoolbox.database.lazy.LHDFObject):
@@ -228,6 +241,9 @@ class LayoutResult:
     def __init__(self, list_of_failed_specs: List[LayoutSpecification]):
         self.list_of_failed_specs = list_of_failed_specs
 
+    def __len__(self):
+        return len(self.list_of_failed_specs)
+
     def is_valid(self) -> bool:
         """Return True if the layout is valid, which is the case if no specs failed"""
         return len(self.list_of_failed_specs) == 0
@@ -262,7 +278,6 @@ class Layout(LayoutSpecification):
     >>> )
     >>> lay.validate('path/to/file.h5')
     """
-
 
     def __init__(self):
         self.specifications = []
