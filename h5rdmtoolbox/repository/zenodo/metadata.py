@@ -14,7 +14,6 @@ Also note, that the above mentioned library cannot be used as not all required f
 
 import re
 from datetime import datetime
-from pprint import pprint
 from pydantic import BaseModel, field_validator, Field
 from typing import Optional, Union, List
 from typing_extensions import Literal
@@ -30,8 +29,8 @@ class Creator(BaseModel):
     """Creator Mode class according to Zenodo spec: https://developers.zenodo.org/#representation."""
 
     name: str
-    affiliation: Optional[str]
-    orcid: Optional[str]
+    affiliation: Optional[str] = Field(default=None)
+    orcid: Optional[str] = Field(default=None)
     gnd: Optional[str] = Field(default=None)
 
     @field_validator('name')
@@ -72,8 +71,6 @@ class Contributor(Creator):
     type: ContributorType
 
 
-
-
 UploadType = Literal[
     "publication",
     "poster",
@@ -85,7 +82,7 @@ UploadType = Literal[
     "lesson",
     "physicalobject",
     "other",
-    ]
+]
 
 PublicationType = Literal[
     "annotationcollection",
@@ -184,24 +181,3 @@ class Metadata(BaseModel):
 
             if self.embargo_date is not None and _parse_date(self.embargo_date) < _parse_date(self.publication_date):
                 raise ValueError("embargo_date is in the past")
-
-
-if __name__ == '__main__':
-    meta = Metadata(version="0.1.0-rc.1+build.1",
-                    title='h5rdmtoolbox',
-                    description='A toolbox for managing HDF5-based research data management',
-                    creators=[Creator(name="Probst, Matthias",
-                                      affiliation="KIT - ITS",
-                                      orcid="0000-0001-8729-0482")],
-                    contributors=[Contributor(name="Probst, Matthias",
-                                              affiliation="KIT - ITS",
-                                              orcid="0000-0001-8729-0482",
-                                              type="ContactPerson")],
-                    publication_type='other',
-                    access_right='open',
-                    keywords=['hdf5', 'research data management', 'rdm'],
-                    publication_date=datetime.now(),
-                    embargo_date='2020')
-    pprint(meta.model_dump())
-
-    import requests

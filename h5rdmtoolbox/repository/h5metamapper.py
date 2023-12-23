@@ -24,9 +24,7 @@ def _parse_dtype(v):
         return v
     if v is None:
         return None
-    if isinstance(v, object):
-        return str(v)
-    return v
+    return str(v)
 
 
 def _extract_metadata(group):
