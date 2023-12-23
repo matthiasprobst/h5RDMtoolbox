@@ -203,17 +203,6 @@ class TestFile(unittest.TestCase):
             # self.assertTrue('sub_grp' in tree['grp'])
             # self.assertTrue('sub_grp' in tree['grp'])
 
-    def test_rename(self):
-        with File(mode='w') as h5:
-            h5.create_dataset('testds',
-                              data=np.random.rand(10, 10))
-            h5.testds.rename('newname')
-            ds = h5.create_dataset('testds_scale',
-                                   data=np.random.rand(10, 10))
-            ds.make_scale()
-            with self.assertRaises(KeyError):
-                ds.rename('newname')
-
     def test_dimension_scales(self):
         with File(mode='w') as h5:
             _ = h5.create_dataset('x', data=[1, 2, 3], make_scale=True)

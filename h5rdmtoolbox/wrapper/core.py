@@ -297,81 +297,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             return [v for v in self.values() if isinstance(v, h5py.Group)]
         return self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)
 
-    def modify_dataset_properties(self, dataset, tqdm_pbar: bool = False, **dataset_properties):
-        """Modify properties of a dataset that requires to outsource the dataset (copy to tmp file)
-        and then copy it back with the new properties. 'static' properties are considered properties
-        that cannot be changed once the dataset has been written, such as max_shape, dtype etc."""
-        for k in dataset_properties.keys():
-            if k not in MODIFIABLE_PROPERTIES_OF_A_DATASET:
-                raise KeyError(f'Property "{k}" not in list of modifiable properties: '
-                               f'{MODIFIABLE_PROPERTIES_OF_A_DATASET}')
-
-        dataset_basename = dataset.basename
-
-        name = dataset_properties.get('name', dataset_basename)
-        if name != dataset_basename and name in self:
-            raise KeyError('Renaming the dataset is not possible because new name already exists in group'
-                           f' {self.name}')
-
-        # get properties or source dataset
-        _orig_dataset_properties = {k: dataset.__getattr__(k) for k in MODIFIABLE_PROPERTIES_OF_A_DATASET}
-        worth_changing = False
-        for k, v in dataset_properties.items():
-            if v != _orig_dataset_properties[k]:
-                worth_changing = True
-                _orig_dataset_properties.update({k: v})
-
-        if not worth_changing:
-            warnings.warn('No changes were applied because new properties a no different to present ones', UserWarning)
-            return dataset
-
-        if tqdm_pbar:
-            try:
-                from tqdm import tqdm
-            except ImportError:
-                raise ImportError('tqdm is not installed. Please install it to use the progress bar.')
-
-        with File() as temp_h5dest:
-            if tqdm_pbar:
-                progress_bar = tqdm(total=4, desc='Progress')
-                progress_bar.desc = 'Copy dataset to temporary file'
-
-            self.copy(dataset_basename, temp_h5dest)
-            if tqdm_pbar:
-                progress_bar.update(1)
-
-            tmp_ds = temp_h5dest[dataset_basename]
-
-            if tqdm_pbar:
-                progress_bar.desc = 'Delete old dataset'
-
-            # delete dataset from this file
-            del self[dataset_basename]
-            if tqdm_pbar:
-                progress_bar.update(1)
-
-                progress_bar.desc = 'Creating new dataset'
-
-            attrs = dict(tmp_ds.attrs.items())
-            # create new dataset with same name but different chunks:
-            new_ds = self.create_dataset(name=_orig_dataset_properties.pop('name'),
-                                         shape=tmp_ds.shape,
-                                         attrs=attrs,
-                                         **_orig_dataset_properties)
-            if tqdm_pbar:
-                progress_bar.update(1)
-
-                progress_bar.desc = 'Writing the data chunk-wise'
-            # copy the data chunk-wise
-            for chunk_slice in tmp_ds.iter_chunks():
-                new_ds.values[chunk_slice] = tmp_ds.values[chunk_slice]
-
-            if tqdm_pbar:
-                progress_bar.update(1)
-                progress_bar.close()
-
-        return new_ds
-
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
             _id = _id.id
@@ -844,7 +769,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         # what is this for? uncommented it in version v1.0.1
         # if isinstance(data, np.ndarray):
         #     if data is not None and data.ndim > 0:
-        #         print('DAWDD')
         #         ds[()] = data
 
         # make scale
@@ -1549,17 +1473,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             return self.rootparent[self.attrs['DATA_OFFSET']]
         return None
 
-    def modify(self, tqdm_pbar=False, **properties) -> "Dataset":
-        """modify property of dataset such as `chunks` or `dtpye`. This is
-        not possible with the original implementation in `h5py`. Note, that
-        this may be a time-consuming task for large datasets! Better to set
-        the properties correct already during dataset creation!"""
-        return self.parent.modify_dataset_properties(self, tqdm_pbar=tqdm_pbar, **properties)
 
-    def rename(self, new_name, tqdm_pbar=False, ):
-        """Rename the dataset. This may be time and data intensive as
-        a new dataset is created first!"""
-        return self.parent.modify_dataset_properties(self, tqdm_pbar=tqdm_pbar, name=new_name)
 
     def coords(self) -> Dict[str, "Dataset"]:
         """Return a dictionary of the coordinates of the dataset. The dictionary"""
@@ -1659,7 +1573,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     def __setattr__(self, key, value):
         if self.__class__ in convention.get_current_convention().properties:
             if key in convention.get_current_convention().properties[self.__class__]:
-                return convention.get_current_convention().properties[self.__class__][key].set(self, value)
+                return convention.get_current_convention().properties[self.__class__][key].__setter__(self, value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -1704,7 +1618,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                 myargs[ia] = a
 
             # remember the first dimension name for all axis:
-            dims_names = [Path(d[0].name).stem if len(
+            dims_names = [d[0].name.rsplit('/')[-1] if len(
                 d) > 0 else f'dim_{ii}' for ii, d in enumerate(self.dims)]
 
             coords = {}
@@ -1712,7 +1626,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             for dim, dim_name, arg in zip(self.dims, dims_names, myargs):
                 for iax, _ in enumerate(dim):
                     dim_ds = dim[iax]
-                    coord_name = Path(dim[iax].name).stem
+                    coord_name = dim[iax].name.rsplit('/')[-1]
                     if dim_ds.ndim == 0:
                         dim_ds_data = dim_ds[()]
                     else:
@@ -2113,7 +2027,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         if props:
             prop = props.get(key, None)
             if prop:  # does the object have a standard attribute with name stored in key?
-                return prop.set(self, value)
+                return prop.__setter__(self, value)
         if key.startswith('_'):
             return super().__setattr__(key, value)
         raise AttributeError(f'Cannot set attribute {key} in {self.__class__}. Only standard attributes are allowed '
