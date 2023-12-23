@@ -63,6 +63,10 @@ def _regex(value, pattern) -> bool:
         return False
     return True
 
+def _userdefined(value, func) -> bool:
+    if value is None:
+        return False
+    return func(value)
 
 def _basename(value, basename) -> bool:
     if value is None:
@@ -83,7 +87,8 @@ operator = {'$regex': _regex,
             '$gte': _gte,
             '$lt': _lt,
             '$lte': _lte,
-            '$exists': _exists}
+            '$exists': _exists,
+            '$userdefined': _userdefined}
 value_operator = {'$eq': _arreq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
 
 AV_SPECIAL_FILTERS = ('$basename', '$name')

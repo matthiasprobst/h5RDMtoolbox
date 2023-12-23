@@ -213,8 +213,11 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
 
     is_hdf_attrs_search = qk[0] != '$'
 
-    if not isinstance(qv, Dict):
-        qv = {'$eq': qv}
+    if callable(qv):
+        qv = {'$userdefined': qv}
+    else:
+        if not isinstance(qv, Dict):
+            qv = {'$eq': qv}
 
     # find objects with equal value
     if is_hdf_attrs_search:
