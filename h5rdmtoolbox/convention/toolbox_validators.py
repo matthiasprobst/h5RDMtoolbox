@@ -9,10 +9,10 @@ from typing import Union, Dict
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg, errors
+from h5rdmtoolbox import identifiers
 
 
 def __validate_orcid(value, handler, info):
-    from h5rdmtoolbox import identifiers
     if not isinstance(value, str):
         raise TypeError(f'Expected a string but got {type(value)}')
     orcid = identifiers.Orcid(value)
@@ -21,11 +21,16 @@ def __validate_orcid(value, handler, info):
     return orcid
 
 
-def __validate_identifier(value, handler, info):
-    from h5rdmtoolbox import identifiers
+def __validate_identifier(value, handler, info) -> Union[None, identifiers.Identifier]:
     if not isinstance(value, str):
-        raise TypeError(f'Expected a string but got {type(value)}')
-    return identifiers.from_url(value).validate()
+        raise TypeError(f'Expected a string but got "{type(value)}"')
+    ident = identifiers.from_url(value)
+    if ident:
+        if not ident.validate():
+            raise ValueError(f'Identifier "{value}" is not valid!')
+    else:
+        raise ValueError(f'Identifier "{value}" is not valid!')
+    return ident
 
 
 def __validate_standard_name_table(value, handler, info) -> "StandardNameTable":

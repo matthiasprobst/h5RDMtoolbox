@@ -2,6 +2,7 @@
 import datetime
 import pathlib
 import pint
+import pydantic
 import unittest
 from pydantic import BaseModel
 from pydantic import ValidationError
@@ -44,6 +45,18 @@ class TestTbxValidators(unittest.TestCase):
 
         rp = RegexProcessor({'validator': '$regex(^[a-zA-Z].*(?<!\s)$)'})
         self.assertEqual('^[a-zA-Z].*(?<!\s)$', rp.re_pattern)
+
+    def test_validate_identifier(self):
+        class Identifier(BaseModel):
+            ident: toolbox_validators.identifierType
+
+        with self.assertRaises(ValueError):
+            Identifier(orcid=3.4)
+        with self.assertRaises(pydantic.ValidationError):
+            Identifier(ident='0000-0001-8729-0482')
+        Identifier(ident='https://orcid.org/0000-0002-1825-0097')
+        with self.assertRaises(pydantic.ValidationError):
+            Identifier(ident='https://orcid.org/0000-0002-1825-0096')  # invalid orcid due to checksum
 
     def test_validate_orcid(self):
         class Validator(BaseModel):
