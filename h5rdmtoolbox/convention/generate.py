@@ -153,8 +153,11 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             if _validator in toolbox_validators.validators:
                 # don't create a base class
                 try:
-                    used_toolbox_validators[
-                        f'${_validator}'] = f'toolbox_validators.{toolbox_validators.validators[_validator].__name__}'
+                    if toolbox_validators.validators[_validator].__name__ != 'Annotated':  # in py3.8 this will raise an error
+                        used_toolbox_validators[
+                            f'${_validator}'] = f'toolbox_validators.{toolbox_validators.validators[_validator].__name__}'
+                    else:
+                        used_toolbox_validators[f'${_validator}'] = f'toolbox_validators.validators["{_validator}"]'
                 except AttributeError:
                     used_toolbox_validators[f'${_validator}'] = f'toolbox_validators.validators["{_validator}"]'
                 continue
@@ -188,7 +191,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         f.write(f'from h5rdmtoolbox.convention import Convention, standard_attributes, logger\n\n')
         f.write('generated_standard_attributes = {\n')
 
-    # with open(py_filename, 'a') as f:
+    with open(py_filename, 'a') as f:
         for kk, vv in standard_attributes.items():
             _default_value = _process_paths(vv.get('default_value', None), relative_to=yaml_filename.parent)
             if _default_value is None:

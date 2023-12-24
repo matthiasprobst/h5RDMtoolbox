@@ -392,7 +392,7 @@ def validate_f1(a, b, c=3, d=2):
         with open(f1, 'w') as f:
             f.writelines(['__name__: test\n', '__contact__: me'])
 
-        test_std_attr = {'title': {'validator': {'$regex': '^[A-Z].*(?<!\s)$'},
+        test_std_attr = {'title': {'validator': {'$regex': r'^[A-Z].*(?<!\s)$'},
                                    'target_methods': '__init__',
                                    'description': 'This is a test', }
                          }

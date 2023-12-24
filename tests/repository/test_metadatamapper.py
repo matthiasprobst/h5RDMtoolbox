@@ -15,7 +15,7 @@ class TestMetadataMapper(unittest.TestCase):
     def test_hdf2json(self):
         with h5tbx.File() as h5:
             h5.attrs['title'] = 'test'
-            h5.create_dataset('test', data=1, attrs={'objtype': 'dataset'})
+            h5.create_dataset('test', data=1, attrs={'objtype': 'dataset'}, dtype='int32')
             json_filename = h5metamapper.hdf2json(file_or_filename=h5, json_filename=None)
         self.assertIsInstance(json_filename, pathlib.Path)
         self.assertTrue(json_filename.exists())
