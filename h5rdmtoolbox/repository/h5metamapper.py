@@ -48,7 +48,7 @@ def _extract_metadata(group):
 
 
 def hdf2json(file_or_filename: Union[str, pathlib.Path, h5py.Group],
-             json_filename: Union[None, str, pathlib.Path] = None):
+             json_filename: Union[None, str, pathlib.Path] = None) -> pathlib.Path:
     """Convert an HDF5 file to a JSON file."""
     if not isinstance(file_or_filename, h5py.Group):
         hdf_filename = file_or_filename
