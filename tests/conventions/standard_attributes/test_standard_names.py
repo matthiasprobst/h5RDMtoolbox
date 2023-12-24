@@ -98,25 +98,6 @@ class TestStandardAttributes(unittest.TestCase):
 
         table['x_velocity_in_stationary_frame']
 
-    def test_StandardNameTableVersion(self):
-        versions = [
-            ("v79", True),
-            ("v1.2", True),
-            ("v2.3a", True),
-            ("v3.0dev", True),
-            ("v3.0.1dev", False),
-            ("v4.5rc", True),
-            ("v4.5.6rc", False),
-            ("v7.8b", True),
-            ("v10", True),
-            ("invalid_version", False),
-        ]
-        for version, valid in versions:
-            if valid:
-                self.assertEqual(StandardNameTable.validate_version(version), version)
-            else:
-                with self.assertRaises(ValueError):
-                    StandardNameTable.validate_version(version)
 
     def test_StandardNameTableFromWeb(self):
         try:
@@ -131,23 +112,23 @@ class TestStandardAttributes(unittest.TestCase):
                 name='standard_name_table',
                 known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
             self.assertEqual(cf.name, 'standard_name_table')
-            self.assertEqual(cf.versionname, 'standard_name_table-v79')
+            self.assertEqual(cf.versionname, 'standard_name_table-v79.0.0')
             if self.connected:
                 self.assertTrue(check_url(cf.meta['url']))
                 self.assertFalse(check_url(cf.meta['url'] + '123'))
 
             if self.connected:
-                opencefa = StandardNameTable.from_gitlab(url='https://git.scc.kit.edu',
+                opencefa = StandardNameTable.from_gitlab(url='https://gitlab.kit.edu',
                                                          file_path='open_centrifugal_fan_database-v1.yaml',
-                                                         project_id='35443',
+                                                         project_id='166713',
                                                          ref_name='main')
                 self.assertEqual(opencefa.name, 'open_centrifugal_fan_database')
-                self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1')
+                self.assertEqual(opencefa.versionname, 'open_centrifugal_fan_database-v1.0.0')
 
     def test_StandardNameTableFromYaml_special(self):
         table = StandardNameTable.from_yaml(tutorial.testdir / 'sntable_with_split.yml')
         self.assertEqual(table.name, 'test')
-        self.assertEqual(table.version_number, str(1))
+        self.assertEqual(table.version, 'v1.0.0')
         self.assertEqual(table.institution, 'ITS')
         self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(table.valid_characters, '')
@@ -175,11 +156,18 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(table['synthetic_particle_image'], StandardName)
 
     def test_empty_SNT(self):
+        with self.assertRaises(ValueError):
+            snt = StandardNameTable(name='test_snt',
+                                    standard_names={},
+                                    version='v1.0.0beta',
+                                    meta=dict(institution='my_institution',
+                                              contact='https://orcid.org/0000-0001-8729-0482'))
         snt = StandardNameTable(name='test_snt',
                                 standard_names={},
-                                version='v1.0dev',
+                                version='v1.0.0-beta',
                                 meta=dict(institution='my_institution',
                                           contact='https://orcid.org/0000-0001-8729-0482'))
+        self.assertEqual('v1.0.0-beta', snt.version)
         self.assertIsInstance(snt.standard_names, dict)
 
         snt = StandardNameTable(name='test_snt',
@@ -190,13 +178,15 @@ class TestStandardAttributes(unittest.TestCase):
                                           version_number=1,
                                           contact='https://orcid.org/0000-0001-8729-0482'))
         self.assertListEqual(['x_velocity', ], snt.names)
-        self.assertEqual('v1', snt.version)
-        self.assertEqual('v0.0', StandardNameTable.validate_version(None))
+        self.assertEqual('v1.0.0', snt.version)
+
+        self.assertIsInstance(snt.to_dict(), dict)
+        self.assertIsInstance(snt.to_json(), str)
 
         with self.assertRaises(TypeError):
             StandardNameTable(name='test_snt',
                               standard_names={},
-                              version='v1.0dev',
+                              version='v1.0.0-beta',
                               affixes=4.3,
                               meta=dict(institution='my_institution',
                                         contact='https://orcid.org/0000-0001-8729-0482'))
@@ -217,7 +207,7 @@ class TestStandardAttributes(unittest.TestCase):
         if self.connected and pypandoc_works:
             snt = StandardNameTable(name='test_snt',
                                     standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
-                                    version='v1.0dev',
+                                    version='v1.0.0-beta',
                                     meta=dict(institution='my_institution',
                                               contact='https://orcid.org/0000-0001-8729-0482')
                                     )
@@ -230,9 +220,9 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
-            snt = StandardNameTable.from_zenodo(doi_or_recid=8266929)
+            snt = StandardNameTable.from_zenodo(doi_or_recid=10428795)
             self.assertIsInstance(snt, StandardNameTable)
-            filename = h5tbx.UserDir['standard_name_tables'] / f'8266929.yaml'
+            filename = h5tbx.UserDir['standard_name_tables'] / f'10428795.yaml'
             self.assertTrue(filename.exists())
             filename.unlink(missing_ok=True)
 
@@ -242,7 +232,7 @@ class TestStandardAttributes(unittest.TestCase):
 
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:
             with self.assertRaises(StandardAttributeError):
-                # difference_of_x_velocity not found!
+                # velocity not found!
                 h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='velocity')
             h5.create_dataset('x_velocity', data=1.4, units='km/s', standard_name='x_velocity')
 

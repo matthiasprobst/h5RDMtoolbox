@@ -77,7 +77,7 @@ class TestStandardAttributes(unittest.TestCase):
             validator=standard_name_table_validator,
             target_method='__init__',
             description='Standard name table.',
-            default_value='10.5281/zenodo.8220739'
+            default_value='10.5281/zenodo.10428808'
         )
         cv.add_standard_attribute(sa)
         cv.register()
@@ -89,17 +89,17 @@ class TestStandardAttributes(unittest.TestCase):
     def test_StandardNmeTableRaw(self):
         with self.assertRaises(ValueError):  # invalid version:
             snt = StandardNameTable('test', version='1.0', meta={}, standard_names=None)
-        snt = StandardNameTable('test', version='v1.0', meta={}, standard_names=None)
+        snt = StandardNameTable('test', version='v1.0.0', meta={}, standard_names=None)
         self.assertEqual({}, snt.standard_names)
 
         with self.assertWarns(UserWarning):
-            StandardNameTable('test', version='v1.0', meta={},
+            StandardNameTable('test', version='v1.0.0', meta={},
                               standard_names={'x_velocity': {
                                   'units': 'm/s', 'alias': 'u'},
                                   'y_velocity': {'canonical_units': 'm/s', 'description': 'y velocity', 'alias': 'v'}
                               })
 
-        snt = StandardNameTable('test', version='v1.0', meta={},
+        snt = StandardNameTable('test', version='v1.0.0', meta={},
                                 standard_names={'x_velocity': {
                                     'units': 'm/s', 'description': 'x velocity.', 'alias': 'u'},
                                     'y_velocity': {'canonical_units': 'm/s', 'description': 'y velocity', 'alias': 'v'}
@@ -108,12 +108,7 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertEqual('y velocity.', snt['y_velocity'].description)
 
         self.assertEqual({'u': 'x_velocity', 'v': 'y_velocity'}, snt.aliases)
-        self.assertEqual('1.0', snt.version_number)
-        snt.meta['version_number'] = '2.0'
-        self.assertEqual('2.0', snt.version_number)
-        snt.meta.pop('version_number')
-        snt.meta.pop('version')
-        self.assertEqual(None, snt.version_number)
+        self.assertEqual('v1.0.0', snt.version)
 
         self.assertIn('x_velocity', snt)
         self.assertEqual(snt['x_velocity'].description, snt['u'].description)
@@ -159,7 +154,7 @@ class TestStandardAttributes(unittest.TestCase):
             table['x_x_velocity']
 
         self.assertEqual(table.name, 'Test')
-        self.assertEqual(table.version, 'v1.1')
+        self.assertEqual(table.version, 'v1.1.0')
         self.assertEqual(table.institution, 'my_institution')
         self.assertEqual(table.contact, 'https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(table.valid_characters, '[^a-zA-Z0-9_]')
@@ -211,7 +206,7 @@ class TestStandardAttributes(unittest.TestCase):
     def test_to_dict(self):
         snt = StandardNameTable(name='test_snt',
                                 standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
-                                version='v1.0dev',
+                                version='v1.0.0-beta',
                                 affixes=dict(component={'description': 'test component',
                                                         'x': {'description': 'x coordinate'},
                                                         'y': {'description': 'y coordinate'},
@@ -225,7 +220,7 @@ class TestStandardAttributes(unittest.TestCase):
     def test_to_from_yaml(self):
         snt = StandardNameTable(name='test_snt',
                                 standard_names={'x_velocity': {'units': 'm/s', 'description': 'x velocity'}},
-                                version='v1.0dev',
+                                version='v1.0.0-beta',
                                 affixes=dict(component={'description': 'test component',
                                                         'x': {'description': 'x coordinate'},
                                                         'y': {'description': 'y coordinate'},

@@ -141,8 +141,8 @@ class StandardAttribute:
 
     def __repr__(self):
         if self.is_positional():
-            return f'<{self.__class__.__name__}[positional/obligatory]("{self.name}"): "{self.description}">'
-        return f'<{self.__class__.__name__} [keyword/optional]("{self.name}"): default_value="{self.default_value}" | "{self.description}">'
+            return f'<{self.__class__.__name__}@{self.target_method}[positional/obligatory]("{self.name}"): "{self.description}">'
+        return f'<{self.__class__.__name__}@{self.target_method}[keyword/optional]("{self.name}"): default_value="{self.default_value}" | "{self.description}">'
 
     def is_positional(self):
         """has no default value"""

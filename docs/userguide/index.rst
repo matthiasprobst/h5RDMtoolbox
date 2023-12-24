@@ -13,7 +13,7 @@ User Guide
         The wrapper is a thin layer on top of the h5py library. Improves
         interaction with HDF data and provides a set of useful functions.
 
-    .. grid-item-card:: convention
+    .. grid-item-card:: Convention
         :img-top: ../_static/icon_create_convention.svg
         :link: convention/index
         :link-type: doc

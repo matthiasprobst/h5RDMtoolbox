@@ -504,11 +504,12 @@ def validate_f1(a, b, c=3, d=2):
             _ddir = h5tbx.UserDir['convention'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.convention.from_zenodo(doi_or_recid='10156750')
+            h5tbx.convention.from_zenodo(doi_or_recid='10428822')
             # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             cv = h5tbx.convention.get_current_convention()
+            self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
             with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
                 h5.comment = 'This is a comment'
                 self.assertEqual(h5.comment, 'This is a comment')
@@ -547,7 +548,7 @@ def validate_f1(a, b, c=3, d=2):
                         'https://doi.org/10.5281/zenodo.10156750')
                 h5tbx.UserDir.clear_cache()
                 with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
-                    cv = h5tbx.convention.from_zenodo(doi=8266929)
+                    cv = h5tbx.convention.from_zenodo(doi=10428795)
 
                 for doi in dois:
                     cv = h5tbx.convention.from_zenodo(doi=doi)

@@ -39,6 +39,7 @@ class TestTranslation(unittest.TestCase):
         self.assertIsInstance(json_filename, pathlib.Path)
         self.assertEqual(json_filename.absolute(),
                          yaml_filename.parent / 'test.json')
+        json_filename.unlink(missing_ok=True)
 
     def test_json2yaml(self):
         data = {

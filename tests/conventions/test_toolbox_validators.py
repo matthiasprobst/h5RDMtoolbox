@@ -37,6 +37,21 @@ class TestTbxValidators(unittest.TestCase):
                 self.assertListEqual(['1', '2'], h5.keywords)
         cv.delete()
 
+    def test_version(self):
+        class Version(BaseModel):
+            ver: toolbox_validators.versionType
+
+        with self.assertRaises(TypeError):
+            Version(ver=3.4)
+
+        with self.assertRaises(ValidationError):
+            Version(ver='invalid')
+
+        vers = Version(ver='1.0.0')
+        self.assertEqual('1.0.0', vers.ver)
+        vers = Version(ver='1.0.0-alpha')
+        self.assertEqual('1.0.0-alpha', vers.ver)
+
     def test_validate_regex(self):
         from h5rdmtoolbox.convention.generate import RegexProcessor
 

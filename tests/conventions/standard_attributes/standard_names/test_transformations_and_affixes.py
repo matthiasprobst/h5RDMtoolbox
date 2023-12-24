@@ -31,7 +31,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
 
     def setUp(self) -> None:
         try:
-            requests.get('https://git.scc.kit.edu', timeout=5)
+            requests.get('https://gitlab.kit.edu', timeout=5)
             self.connected = True
         except (requests.ConnectionError,
                 requests.Timeout) as e:
@@ -41,9 +41,9 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
     def test_adding_transformation(self):
-        snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(doi_or_recid=8276716)
+        snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(doi_or_recid=10428795)
         from h5rdmtoolbox.repository.zenodo import ZenodoRecord
-        z = ZenodoRecord(rec_id=8276716)
+        z = ZenodoRecord(rec_id=10428795)
         self.assertTrue(z.exists())
 
         # check if the problem really exists:
@@ -57,7 +57,8 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         snt.add_transformation(max_of)
         sn = snt['maximum_of_static_pressure']
         self.assertEqual(
-            'Maximum of static_pressure. Static pressure refers to the force per unit area exerted by a fluid. Pressure is a scalar quantity.',
+            'Maximum of static_pressure. Static air pressure is '
+            'the amount of pressure exerted by air that is not moving.',
             sn.description)
         self.assertEqual(max_of, snt.transformations[-1])
         self.assertIn(max_of, snt.transformations)
@@ -163,7 +164,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
         snt = StandardNameTable.from_dict(
             {'name': 'test',
-             'version': 'v1.2',
+             'version': 'v1.2.0',
              'contact': h5tbx.__author_orcid__,
              'standard_names': {
                  'static_pressure': {'units': 'Pa',
@@ -179,6 +180,7 @@ class TestTransformationsAndAffixes(unittest.TestCase):
             snt['invalid_static_pressure']
         _sn = snt['wall_static_pressure']
         self.assertEqual(_sn.units, snt['static_pressure'].units)
+        self.assertEqual('v1.2.0', snt.version)
         self.assertEqual(_sn.description, f"Static pressure. Wall.")
 
     def test_derivative_of_X_with_respect_to_Y(self):

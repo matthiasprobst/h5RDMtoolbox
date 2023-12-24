@@ -3,6 +3,7 @@ their own validators, they need to define them separately. The respective python
 must be provided during initialization of a Convention"""
 
 import pint
+import re
 import typing_extensions
 from pydantic.functional_validators import WrapValidator
 from typing import Union, Dict
@@ -10,6 +11,14 @@ from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg, errors
 from h5rdmtoolbox import identifiers
+
+
+def __verify_version(version, handler, info) -> str:
+    """Verify that version is a valid as defined in https://semver.org/"""
+    re_pattern = r'^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+    if re.match(pattern=re_pattern, string=version) is not None:
+        return version
+    raise ValueError(f'Version {version} is not valid!')
 
 
 def __validate_orcid(value, handler, info):
@@ -204,6 +213,8 @@ standardNameType = Annotated[str, WrapValidator(__validate_standard_name)]
 
 urlType = Annotated[str, WrapValidator(__validate_url)]
 
+versionType = Annotated[str, WrapValidator(__verify_version)]
+
 validators = {
     'units': unitsType,
     'dateFormat': dateFormatType,
@@ -214,7 +225,8 @@ validators = {
     'identifier': identifierType,
     'standard_name_table': standardNameTableType,
     'standard_name': standardNameType,
-    'url': urlType
+    'url': urlType,
+    'version': versionType
 }
 
 

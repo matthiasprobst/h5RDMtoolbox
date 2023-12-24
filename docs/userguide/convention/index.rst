@@ -9,12 +9,12 @@ to improve the reusability and interoperability of data.
 Background/Motivation
 ---------------------
 HDF5 file are very popular due their hierarchical structure and the possibility to store
-large amounts of data and, more importantly, metadata together with data. However, the management of
-the key-value pairs (HDF attributes) is not standardized and their correctness is left to the user.
+large amounts of data and, more importantly, metadata together with data. **However, the management of
+the key-value pairs (HDF attributes) is not standardized and their correctness is left to the user**.
 
 Software and users, who want to reuse the data, have to know the meaning of the attributes and and
-dependent on the correctness and adherence to a common standard. The ``h5rdmtoolbox`` provides a
-mechanism to define and use standardized attributes for HDF5 files.
+dependent on the correctness and adherence to a common standard. **The h5rdmtoolbox provides a
+mechanism to define and use standardized attributes for HDF5 files**.
 
 Who is it for?
 --------------
@@ -33,16 +33,12 @@ if the attributes are not stored correctly.
     :width: 100%
     :align: center
 
-.. note::
-
-    Conventions establish an interface between the user and attributes. The interfaces are
-
-
 
 What is a convention exactly and how does it work?
 --------------------------------------------------
 **Definition:** A ``Convention`` is a class which holds a list of ``StandardAttribute`` objects, which are the interface between
 the user and a HDF5 attribute. A ``StandardAttribute`` object holds (among others) the following main information:
+
 - **name** of the attribute
 - **validator** for the attribute
 - **(h5py-)method** to be associated with
@@ -95,6 +91,8 @@ within a data project, you may be interested in different aspects of the convent
     :maxdepth: 2
     :hidden:
 
-    standard_attributes_and_conventions.ipynb
+    activating_a_convention.ipynb
+    working_with_conventions.ipynb
+    creating_a_new_convention.ipynb
     ontologies.ipynb
     Examples <examples/index>

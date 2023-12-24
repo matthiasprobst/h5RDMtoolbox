@@ -17,6 +17,8 @@ Base wrapper class
    :toctree: generated/
 
    h5rdmtoolbox.wrapper.core.File
+   h5rdmtoolbox.wrapper.core.Dataset
+   h5rdmtoolbox.wrapper.core.Group
 
 Conventions
 ===========
@@ -40,7 +42,7 @@ Standard attributes
 
    h5rdmtoolbox.convention.StandardAttribute
    h5rdmtoolbox.convention.StandardAttribute.get
-   h5rdmtoolbox.convention.StandardAttribute.__setter__
+   h5rdmtoolbox.convention.StandardAttribute.set
 
 Standard names and tables
 -------------------------

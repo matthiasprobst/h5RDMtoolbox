@@ -59,6 +59,14 @@ class Transformations:
         setattr(self, item.name, item)
 
 
+def parse_version(version: str) -> str:
+    """Sometime v1 or v79 is used instead of v1.0.0 or v79.0.0"""
+    if re.match(pattern=r'(?:v)?(\d*)$', string=version) is not None:
+        warnings.warn(f'Version {version} is not valid. Assuming {version}.0.0', UserWarning)
+        return f'{version}.0.0'
+    return version
+
+
 class StandardNameTable:
     """Standard Name Table (SNT) class
 
@@ -149,10 +157,25 @@ class StandardNameTable:
                                product_of_X_and_Y,
                                ratio_of_X_and_Y,):
             self.add_transformation(transformation)
+        if meta.get('version_number', None) is not None:
+            if isinstance(meta['version_number'], int) or meta['version_number'].isdigit():
+                version = f'v{meta["version_number"]}.0.0'
 
-        if version is None and meta.get('version_number', None) is not None:
-            version = f'v{meta["version_number"]}'
-        meta['version'] = StandardNameTable.validate_version(version)
+            else:
+                version = parse_version(meta['version_number'])
+
+        # validate version:
+        # Verify that version is a valid as defined in https://semver.org/
+        re_pattern = r'^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+
+        if version.startswith('v'):
+            _version = version[1:]
+        else:
+            _version = version
+        if re.match(pattern=re_pattern, string=_version) is None:
+            raise ValueError(f'Version {version} is not a valid version string as defined in https://semver.org/')
+
+        meta['version'] = version
         self._meta = meta
 
     def __repr__(self):
@@ -163,7 +186,7 @@ class StandardNameTable:
     def __str__(self) -> str:
         zenodo_doi = self._meta.get('zenodo_doi', None)
         if zenodo_doi:
-            return zenodo_doi
+            return str(zenodo_doi)
         return self.to_json()
 
     def __contains__(self, standard_name):
@@ -280,19 +303,6 @@ class StandardNameTable:
         return self._meta.get('pattern', None)
 
     @property
-    def version_number(self) -> str:
-        """Return version_number"""
-        vn = self._meta.get('version_number', None)
-        if vn is None:
-            if self._meta.get('version', None) is None:
-                return None
-            v = self._meta['version']
-            if v.startswith('v'):
-                self._meta['version_number'] = v[1:]  # expecting it to start with a v
-                return v[1:]
-        return vn
-
-    @property
     def versionname(self) -> str:
         """Return version name which is constructed like this: <name>-<version>"""
         return f'{self.name}-{self.version}'
@@ -301,18 +311,6 @@ class StandardNameTable:
     def names(self):
         """Return list of standard names"""
         return sorted(self.standard_names.keys())
-
-    @staticmethod
-    def validate_version(version_string: str) -> str:
-        """Validate version number. Must be MAJOR.MINOR(a|b|rc|dev). If validated, return version string, else
-        raise ValueError."""
-        if version_string is None:
-            version_string = 'v0.0'
-            warnings.warn(f'Version number is not set. Setting version number to {version_string}.')
-        version_string = str(version_string)
-        if not re.match(consts.VERSION_PATTERN, version_string):
-            raise ValueError(f'Version number "{version_string}" is not valid. Expecting MAJOR.MINOR(a|b|rc|dev).')
-        return version_string
 
     def update(self, **standard_names):
         """Update the table with new standard names"""
@@ -555,7 +553,7 @@ class StandardNameTable:
             meta['version'] = f"v{meta.get('version_number', None)}"
 
         snt = StandardNameTable(name=name,
-                                version=meta.pop('version'),
+                                version=parse_version(meta.pop('version')),
                                 meta=meta,
                                 standard_names=table)
         return snt
@@ -679,10 +677,10 @@ class StandardNameTable:
         ----------
         doi_or_recid: str
             The DOI or record id. It can have the following formats:
-            - 8266929
-            - 10.5281/zenodo.8266929
-            - https://doi.org/10.5281/zenodo.8266929
-            - https://zenodo.org/record/8266929
+            - 10428795
+            - 10.5281/zenodo.10428795
+            - https://doi.org/10.5281/zenodo.10428795
+            - https://zenodo.org/record/10428795
 
         Returns
         -------
@@ -692,7 +690,7 @@ class StandardNameTable:
 
         Example
         -------
-        >>> snt = StandardNameTable.from_zenodo(doi_or_recid="doi:10.5281/zenodo.8266929")
+        >>> snt = StandardNameTable.from_zenodo(doi_or_recid="doi:10.5281/zenodo.10428795")
 
         Notes
         -----
@@ -874,7 +872,9 @@ class StandardNameTable:
         """Export a StandardNameTable to a dictionary as string"""
         return json.dumps(self.to_dict())
 
-    to_json = to_sdict
+    def to_json(self) -> str:
+        """Export a StandardNameTable to a JSON string"""
+        return str(self.to_sdict())
 
     # End Export ---------------------------------------------------------------
 

@@ -41,6 +41,7 @@ class TestMetadataMapper(unittest.TestCase):
         self.assertEqual(json_data['test']['attrs']['objtype'], 'dataset')
         self.assertEqual(json_data['test']['props']['shape'], [])
         self.assertEqual(json_data['test']['props']['dtype'], 'int32')
+        json_filename.unlink(missing_ok=True)
 
     def test_parse_dtype(self):
         self.assertEqual(h5metamapper._parse_dtype(np.array([1, 2, 3], dtype=np.int32)),

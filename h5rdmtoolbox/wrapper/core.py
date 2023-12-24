@@ -1264,7 +1264,30 @@ def only_0d_and_1d(obj):
 
 
 class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
-    """Inherited Dataset group of the h5py package"""
+    """Wrapper around the h5py.Dataset
+
+    Notes
+    -----
+    The following methods are added to the h5py.File object:
+
+    * attach_ancillary_dataset: Associate a dataset to the current dataset.
+    * attach_data_scale_and_offset: Attach data scale and offset to the current dataset.
+    * detach_data_offset: Detach data offset from the current dataset.
+    * detach_data_scale: Detach data scale from the current dataset.
+    * coords: Return the coordinates of the current dataset similar to xarray.
+    * dump: Outputs xarray-inspired _html representation of the file content if a notebook environment is used.
+    * sdump: string representation of group
+    * isel: Select data by named dimension and index, mimics xarray.isel.
+    * sel: Select data by named dimension and values, mimics xarray.sel.
+    * to_units: Convert the dataset to a new unit.
+    * write_iso_timestamp: Write an ISO 8601 timestamp to the current dataset attribute.
+
+    The following properties are added to the h5py.File object:
+
+    * rootparent: The root group of the file.
+    * basename: The basename of the dataset.
+    * values: Accessor to return numpy array of the dataset.
+    """
 
     @only_0d_and_1d
     def __lt__(self, other: Union[int, float]):
@@ -1476,7 +1499,8 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
 
 
     def coords(self) -> Dict[str, "Dataset"]:
-        """Return a dictionary of the coordinates of the dataset. The dictionary"""
+        """Return a dictionary of the dimension scales of the dataset.
+        Corresponds to the xarray coordinates."""
         return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
     def isel(self, **indexers) -> xr.DataArray:
@@ -1860,13 +1884,14 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     Notes
     -----
     The following methods are added to the h5py.File object:
-
+    
     * moveto(): Move the file to a new location.
     * saveas(): Save the file to a new location.
-    * ...
+    * reopen(): Reopen the closed file.
 
     The following attributes are added to the h5py.File object:
 
+    * hdf_filename: (pathlib.Path) The name of the file, accessible even if the file is closed.
     * version: (str) The version of the package used to create the file.
     * modification_time: (datetime) The modification time of the file.
     * creation_time: (datetime) The creation time of the file.
