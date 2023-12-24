@@ -1884,7 +1884,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     Notes
     -----
     The following methods are added to the h5py.File object:
-    
+
     * moveto(): Move the file to a new location.
     * saveas(): Save the file to a new location.
     * reopen(): Reopen the closed file.
