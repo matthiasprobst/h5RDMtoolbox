@@ -55,10 +55,10 @@ class TestTbxValidators(unittest.TestCase):
     def test_validate_regex(self):
         from h5rdmtoolbox.convention.generate import RegexProcessor
 
-        rp = RegexProcessor({r'validator': r'regex(r"^[a-zA-Z0-9_]*$")'})
-        self.assertEqual('r"^[a-zA-Z0-9_]*$"', rp.re_pattern)
+        rp = RegexProcessor({r'validator': r'regex("^[a-zA-Z0-9_]*$")'})
+        self.assertEqual(r'"^[a-zA-Z0-9_]*$"', rp.re_pattern)
 
-        rp = RegexProcessor({r'validator': r'$regex(r^[a-zA-Z].*(?<!\s)$)'})
+        rp = RegexProcessor({r'validator': r'$regex(^[a-zA-Z].*(?<!\s)$)'})
         self.assertEqual(r'^[a-zA-Z].*(?<!\s)$', rp.re_pattern)
 
     def test_validate_identifier(self):

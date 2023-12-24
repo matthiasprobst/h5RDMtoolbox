@@ -5,7 +5,7 @@ __name__: date_convention
 date:
   description: Add date to root.
   target_method: __init__
-  validator: dateFormat
+  validator: $dateFormat
   default_value: $NONE
 
 $dateType:
@@ -20,7 +20,7 @@ $dateType:
   - Valid
 
 $specific_date:
-  date: dateFormat
+  date: $dateFormat
   dateType: dateType
 
 list_of_dates:

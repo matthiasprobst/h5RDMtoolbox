@@ -130,17 +130,23 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             f.write(f'\n{INDENT}"""{description}"""\n{INDENT}')
             validator = {}
             for kk, vv in v.items():
-                if vv in toolbox_validators.validators:
+                _vv = vv.strip('$')
+                if _vv in toolbox_validators.validators:
+
                     try:
-                        validator[kk] = f'toolbox_validators.{toolbox_validators.validators[vv].__name__}'
-                        used_toolbox_validators[vv] = f'toolbox_validators.{toolbox_validators.validators[vv].__name__}'
+                        if toolbox_validators.validators[_vv].__name__ != 'Annotated':  # in py3.8 this will raise an error
+                            validator[kk] = f'toolbox_validators.{toolbox_validators.validators[_vv].__name__}'
+                            used_toolbox_validators[_vv] = f'toolbox_validators.{toolbox_validators.validators[_vv].__name__}'
+                        else:
+                            validator[kk] = f'toolbox_validators.validators["{_vv}"]'
+                            used_toolbox_validators[_vv] = f'toolbox_validators.validators["{_vv}"]'
+
                     except AttributeError:
-                        validator[kk] = f'toolbox_validators.validators["{vv}"]'
-                        used_toolbox_validators[vv] = f'toolbox_validators.validators["{vv}"]'
+                        validator[kk] = f'toolbox_validators.validators["{_vv}"]'
+                        used_toolbox_validators[_vv] = f'toolbox_validators.validators["{_vv}"]'
                 else:
                     validator[kk] = vv
             f.write(f'\n{INDENT}'.join([f'{ak}: {av}' for ak, av in validator.items()]))
-            # f.write(f'\n{INDENT}'.join([f'{ak}: {av}' for ak, av in v.items()]))
             f.write('\n\n')
 
         # write standard attribute classes:
