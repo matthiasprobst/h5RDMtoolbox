@@ -15,6 +15,8 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import convention
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention import core
+from h5rdmtoolbox.convention.core import InvalidAttribute
+from h5rdmtoolbox.convention.core import MissingAttribute
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
@@ -573,10 +575,19 @@ def validate_f1(a, b, c=3, d=2):
 
         h5py_filename = h5tbx.utils.generate_temporary_filename(suffix='.hdf')
         with h5py.File(h5py_filename, 'w') as h52:
-            ds = h52.create_dataset('ds_str', data=123.1)
+            ds = h52.create_dataset('ds_float', data=123.1)
             ds.attrs['units'] = 'invalid'
 
         cv.validate(h5py_filename)
+
+    def test_InvalidAttribute(self):
+        ia = InvalidAttribute('/vel', 'units', 'invalid', 'Oups, wrong!')
+        self.assertEqual(str(ia), 'Attribute "units" in "/vel" has an '
+                                  'invalid value "invalid". Error message: "Oups, wrong!"')
+
+    def test_MissingAttribute(self):
+        ma = MissingAttribute('/vel', 'units')
+        self.assertEqual(str(ma), 'Attribute "units" is missing in "/vel".')
 
     def test_dates(self):
         cv = h5tbx.convention.from_yaml(

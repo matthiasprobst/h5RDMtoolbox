@@ -10,7 +10,7 @@ import sys
 import warnings
 import yaml
 from pydoc import locate
-from typing import Union, List, Dict, Tuple
+from typing import Union, List, Dict, Tuple, Any
 
 from h5rdmtoolbox import errors
 from h5rdmtoolbox.repository import RepositoryInterface
@@ -30,6 +30,40 @@ from ..repository.zenodo.utils import recid_from_doi_or_redid
 CV_DIR = UserDir['convention']
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
+
+
+class MissingAttribute:
+
+    def __init__(self,
+                 object_name: str,
+                 attribute_name: str):
+        self.object_name = object_name
+        self.attribute_name = attribute_name
+
+    def __str__(self):
+        return f'Attribute "{self.attribute_name}" is missing in "{self.object_name}".'
+
+    def __repr__(self):
+        return f'MissingAttribute({self.object_name}, {self.attribute_name})'
+
+
+class InvalidAttribute:
+    def __init__(self,
+                 object_name: str,
+                 attribute_name: str,
+                 attribute_value: Any,
+                 error_message: str):
+        self.object_name = object_name
+        self.attribute_name = attribute_name
+        self.attribute_value = attribute_value
+        self.error_message = error_message
+
+    def __str__(self):
+        return f'Attribute "{self.attribute_name}" in "{self.object_name}" has an invalid value ' \
+               f'"{self.attribute_value}". Error message: "{self.error_message}"'
+
+    def __repr__(self):
+        return f'InvalidAttribute({self.object_name}, {self.attribute_name}, {self.attribute_value}, {self.error_message})'
 
 
 class AbstractConvention(abc.ABC):
@@ -447,7 +481,8 @@ class Convention(AbstractConvention):
                                 logger.debug(
                                     f'The attribute "{ak}" is missing in the dataset "{name}" but '
                                     'is required by the convention')
-                                failed.append(dict(name=node.name, attr_name=ak, reason='missing_attribute'))
+                                failed.append(MissingAttribute(object_name=node.name,
+                                                               attribute_name=ak))
                             else:
                                 # just by accessing the standard attribute, the validation is performed
                                 try:
@@ -456,16 +491,10 @@ class Convention(AbstractConvention):
                                     logger.debug(f'The attribute "{ak}" is valid')
                                 except errors.StandardAttributeError as e:
                                     logger.debug(f'The attribute "{ak}" exists but is invalid')
-                                    failed.append(dict(name=node.name, attr_name=ak, attr_value=node.attrs.raw[ak],
-                                                       reason='invalid_value',
-                                                       error_message=str(e)))
-
-                                # if av.validate(value_to_check, node):
-                                #     logger.debug(f'The attribute "{ak}" valid')
-                                # else:
-                                #     logger.debug(f'The attribute "{ak}" exists but is invalid')
-                                #     failed.append(dict(name=node.name, attr_name=ak, attr_value=value_to_check,
-                                #                        reason='invalid_value'))
+                                    failed.append(InvalidAttribute(object_name=node.name,
+                                                                   attribute_name=ak,
+                                                                   attribute_value=node.attrs.raw[ak],
+                                                                   error_message=str(e)))
 
         with File(file_or_filename, 'r') as f:
             logger.debug(f'Checking file {file_or_filename} for compliance with convention {self.name}')
