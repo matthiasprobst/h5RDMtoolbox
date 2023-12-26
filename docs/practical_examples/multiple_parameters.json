@@ -1,0 +1,60 @@
+{
+  "@context": {
+    "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
+    "local": "https://local-domain.org/"
+  },
+  "@graph": [
+    {
+      "@id": "local:preparation_0001",
+      "@type": "processing step",
+      "label": "Sample preparation and parameter definition",
+      "has participant": "local:alex",
+      "start time": "2022-09-22T10:31:22"
+    },
+    {
+      "@id": "local:xrctscan_0001",
+      "@type": "processing step",
+      "label": "XRCT-Scan",
+      "has employed tool": "local:xray_source_finetec_180.01ctt_0001",
+      "realizes method": "local:cone_beam_scanning",
+      "investigates": "https://www.wikidata.org/wiki/Q189259",
+      "investigatesProperty": "https://www.wikidata.org/wiki/Q256699"
+    },
+    {
+      "@id": "local:cone_beam_scanning",
+      "@type": "method",
+      "label": "Standard cone beam scanning",
+      "description": "Standard cone beam scanning of the centered sample",
+      "has parameter": [
+          {
+            "@id": "local:xray_tube_voltage",
+            "@type": "numerical variable",
+            "label": "X-Ray Tube Voltage",
+            "has kind of quantity": "http://qudt.org/vocab/quantitykind/ElectricPotential",
+            "has unit": "http://qudt.org/vocab/unit/KiloV",
+            "has numerical value": "140"
+          },
+          {
+            "@id": "local:xray_tube_voltage2",
+            "@type": "numerical variable",
+            "label": "X-Ray Tube Voltage2",
+            "has kind of quantity": "http://qudt.org/vocab/quantitykind/ElectricPotential",
+            "has unit": "http://qudt.org/vocab/unit/KiloV",
+            "has numerical value": "140"
+          }
+        ]
+    },
+    {
+      "@id": "local:xray_source_finetec_180.01ctt_0001",
+      "@type": "tool",
+      "label": "FineTec FORE 180.01C TT"
+    },
+    {
+      "@id": "local:alex",
+      "@type": "person",
+      "ORCID Id": "0000-0000-0123-4567",
+      "first name": "Alexandra",
+      "last name": "Test"
+    }
+  ]
+}
