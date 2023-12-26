@@ -2,6 +2,9 @@
 
 Log of changes in the versions
 
+## v1.1.1
+- bugfix: Setting a default value for toolbox validators in convention yaml file was not working. Fixed it.
+
 ## v1.1.0
 - simplified and clean up much code, especially convention sub package
 - added identifier utils

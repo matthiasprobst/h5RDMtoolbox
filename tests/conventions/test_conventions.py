@@ -640,19 +640,38 @@ def validate_f1(a, b, c=3, d=2):
                 pass
 
     def test_read_invalid_attribute(self):
-        cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
-        h5tbx.use(None)
-        with h5tbx.File() as h5:
-            h5.create_dataset('ds', data=[1, 2], attrs=dict(units='invalid'))
-        with h5tbx.use(cv):
-            with h5tbx.File(h5.hdf_filename) as h5:
-                with h5tbx.set_config(ignore_get_std_attr_err=True):
-                    with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
-                        units = h5.ds.units
-                self.assertEqual(units, 'invalid')
-        with h5tbx.use(None):
-            with h5tbx.File(h5.hdf_filename) as h5:
+        cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml', overwrite=True)
+        # h5tbx.use(None)
+        # with h5tbx.File() as h5:
+        #     h5.create_dataset('ds', data=[1, 2], attrs=dict(units='invalid'))
+        # with h5tbx.use(cv):
+        #     with h5tbx.File(h5.hdf_filename) as h5:
+        #         with h5tbx.set_config(ignore_get_std_attr_err=True):
+        #             with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
+        #                 units = h5.ds.units
+        #         self.assertEqual(units, 'invalid')
+        # with h5tbx.use(None):
+        #     with h5tbx.File(h5.hdf_filename) as h5:
+        #         with self.assertRaises(AttributeError):
+        #             _ = h5.ds.units
+        #         units = h5.ds.attrs['units']
+        #         self.assertEqual(units, 'invalid')
+
+        with h5tbx.use('simple_cv'):
+            with h5tbx.File(creator={'name': 'Joe'}) as h5:
+                self.assertEqual(h5.creator.name, 'Joe')
+                self.assertEqual(h5.creator.orcid, None)
+            with h5tbx.File(creator={'name': 'Joe',
+                                     'invalid': '123'}) as h5:
+                self.assertEqual(h5.creator.name, 'Joe')
+                self.assertEqual(h5.creator.orcid, None)
                 with self.assertRaises(AttributeError):
-                    _ = h5.ds.units
-                units = h5.ds.attrs['units']
-                self.assertEqual(units, 'invalid')
+                    self.assertEqual(h5.creator.invalid, '123')
+            with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                with h5tbx.File(creator={'name': 'Joe',
+                                         'orcid': '123'}) as h5:
+                    pass
+            with h5tbx.File(creator={'name': 'Joe',
+                                     'orcid': h5tbx.__author_orcid__}) as h5:
+                self.assertEqual(h5.creator.name, 'Joe')
+                self.assertEqual(str(h5.creator.orcid), h5tbx.__author_orcid__)

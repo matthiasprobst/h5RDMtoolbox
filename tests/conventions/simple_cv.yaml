@@ -1,6 +1,17 @@
 __contact__: https://orcid.org/0000-0001-8729-0482
 __institution__: https://orcid.org/members/001G000001e5aUTIAY
 __name__: simple_cv
+
+$personOrOrganization:
+  name: str
+  orcid: $orcid=None
+
+creator:
+  validator: $personOrOrganization
+  description: Name and affiliation of the data creator.
+  target_method: __init__
+  default_value: $NONE
+
 units:
   default_value: $EMPTY
   description: The physical unit of the dataset. If dimensionless, the unit is ''.

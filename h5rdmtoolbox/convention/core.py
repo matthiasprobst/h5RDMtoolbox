@@ -4,7 +4,6 @@ import forge
 import h5py
 import inspect
 import pathlib
-import pydantic
 import re
 import shutil
 import sys
@@ -13,9 +12,9 @@ import yaml
 from pydoc import locate
 from typing import Union, List, Dict, Tuple
 
+from h5rdmtoolbox import errors
 from h5rdmtoolbox.repository import RepositoryInterface
 from h5rdmtoolbox.wrapper import ds_decoder
-from h5rdmtoolbox import errors
 from . import cfg
 from . import consts
 from . import errors
@@ -399,7 +398,8 @@ class Convention(AbstractConvention):
         add_convention(self)
 
     def validate(self, file_or_filename: Union[str, pathlib.Path, "File"]) -> List[Dict]:
-        """Checks a file for compliance with the convention
+        """Checks a file for compliance with the convention. It will NOT raise an error but
+        return a list of invalid attributes.
 
         Parameters
         ----------
@@ -469,6 +469,7 @@ class Convention(AbstractConvention):
 
         with File(file_or_filename, 'r') as f:
             logger.debug(f'Checking file {file_or_filename} for compliance with convention {self.name}')
+            _validate_convention('/', f)
             f.visititems(_validate_convention)
 
         return failed

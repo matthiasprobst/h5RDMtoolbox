@@ -127,26 +127,41 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         for k, v in class_definitions.items():
             f.write(f'\nclass {k[1:]}(BaseModel):')
             description = v.get('description', k[1:])
-            f.write(f'\n{INDENT}"""{description}"""\n{INDENT}')
+            f.write(f'\n{INDENT}"""{description}"""\n')
             validator = {}
+            _validator_default = {}
             for kk, vv in v.items():
-                _vv = vv.strip('$')
-                if _vv in toolbox_validators.validators:
+                # _vv = vv.strip('$')
+                splitted_validator = vv.strip('$').split('=', 1)
+                validator_name = splitted_validator[0].strip()
+                if len(splitted_validator) == 2:
+                    default_value = splitted_validator[1].strip()
+                else:
+                    default_value = None
+                _validator_default[kk] = [validator_name, default_value]
+
+                if validator_name in toolbox_validators.validators:
 
                     try:
-                        if toolbox_validators.validators[_vv].__name__ != 'Annotated':  # in py3.8 this will raise an error
-                            validator[kk] = f'toolbox_validators.{toolbox_validators.validators[_vv].__name__}'
-                            used_toolbox_validators[_vv] = f'toolbox_validators.{toolbox_validators.validators[_vv].__name__}'
+                        if toolbox_validators.validators[validator_name].__name__ != 'Annotated':  # in py3.8 this will raise an error
+                            validator[kk] = f'toolbox_validators.{toolbox_validators.validators[validator_name].__name__}'
+                            used_toolbox_validators[validator_name] = f'toolbox_validators.{toolbox_validators.validators[validator_name].__name__}'
                         else:
-                            validator[kk] = f'toolbox_validators.validators["{_vv}"]'
-                            used_toolbox_validators[_vv] = f'toolbox_validators.validators["{_vv}"]'
+                            validator[kk] = f'toolbox_validators.validators["{validator_name}"]'
+                            used_toolbox_validators[validator_name] = f'toolbox_validators.validators["{validator_name}"]'
 
                     except AttributeError:
-                        validator[kk] = f'toolbox_validators.validators["{_vv}"]'
-                        used_toolbox_validators[_vv] = f'toolbox_validators.validators["{_vv}"]'
+                        validator[kk] = f'toolbox_validators.validators["{validator_name}"]'
+                        used_toolbox_validators[validator_name] = f'toolbox_validators.validators["{validator_name}"]'
                 else:
                     validator[kk] = vv
-            f.write(f'\n{INDENT}'.join([f'{ak}: {av}' for ak, av in validator.items()]))
+            for ak, av in validator.items():
+                validator_value, validator_default = _validator_default[ak]
+                if validator_default is not None:
+                    f.write(f'{INDENT}{ak}: {used_toolbox_validators.get(validator_name, validator_value)} = {validator_default}\n')
+                else:
+                    f.write(f'{INDENT}{ak}: {av}\n')
+            # f.write(f'\n{INDENT}'.join([f'{ak}: {av}' for ak, av in validator.items()]))
             f.write('\n\n')
 
         # write standard attribute classes:
@@ -185,7 +200,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
 
     # with open(py_filename, 'a') as f:
         f.write('\nvalidator_dict = {\n' + INDENT)
-        f.write(f'\n{INDENT}'.join(f"'{k}': {k[1:]}," for k, v in class_definitions.items()))
+        f.write(f'\n{INDENT}'.join(f"\n'{k}': {k[1:]}," for k, v in class_definitions.items()))
         f.write(f'\n{INDENT}'.join(f"'{k}': {v}," for k, v in used_toolbox_validators.items()))
         # f.write(f"\n{INDENT}'$int': IntValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
         # f.write(f"\n{INDENT}'$str': StringValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
