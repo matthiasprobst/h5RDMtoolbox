@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v1.1.0
+- simplified and clean up much code, especially convention sub package
+- added identifier utils
+- updated and improved documentation
+
 ## v1.0.1
 
 - fixed unnecessary call in `create_dataset`, which writes the data twice. Now, the time data is written is comparable to 
