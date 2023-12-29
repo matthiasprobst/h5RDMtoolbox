@@ -209,6 +209,11 @@ class Core:
     def iri(self):
         return iri.IRIManager(self.attrs)
 
+    @iri.setter
+    def iri(self, value):
+        """Sets an IRI to the group or dataset"""
+        iri.IRIManager(self.attrs).set_subject(value)
+
 
 class SpecialAttributeWriter:
     """Accessor class, which provides methods to write special attributes to a dataset or group."""
@@ -520,7 +525,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             n_letter = max([len(d) for d in np.asarray(data).flatten()])
         else:
             raise TypeError(f'Unexpected type for parameter "data": {type(data)}. Expected str or List/Tuple of str')
-        dtype = f'S{n_letter}'
+        dtype = f'S{max(1, n_letter)}'
         if name in self:
             if overwrite is True:
                 del self[name]  # delete existing dataset
@@ -1495,8 +1500,6 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         if 'DATA_OFFSET' in self.attrs:
             return self.rootparent[self.attrs['DATA_OFFSET']]
         return None
-
-
 
     def coords(self) -> Dict[str, "Dataset"]:
         """Return a dictionary of the dimension scales of the dataset.

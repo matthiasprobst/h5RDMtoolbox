@@ -288,6 +288,16 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         _value = value.strftime(get_config('dtime_fmt'))
     else:
         _value = value
+
+    # parse name as well, it could be an identifier (URI or IRI):
+    if hasattr(name, 'fragment'):
+        fragment = name.fragment
+        if not fragment:
+            raise ValueError(f'Name {name} has no fragment')
+        from h5rdmtoolbox.iri import set_predicate
+        set_predicate(h5obj, fragment, name)
+        name = fragment
+
     try:
         h5obj.create(name, data=_value)
     except TypeError:
@@ -319,6 +329,8 @@ def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, Li
         return str(value)
     if isinstance(value, (int, float, bool)):
         return value
+    if isinstance(value, (h5py.Dataset, h5py.Group)):
+        return value.name
     try:
         return str(value)  # try parsing to string
     except TypeError:

@@ -30,7 +30,7 @@ def __validate_orcid(value, handler, info):
     return orcid
 
 
-def __validate_identifier(value, handler, info) -> Union[None, identifiers.Identifier]:
+def __validate_identifier(value, handler, info) -> Union[None, identifiers.ObjectIdentifier]:
     if not isinstance(value, str):
         raise TypeError(f'Expected a string but got "{type(value)}"')
     ident = identifiers.from_url(value)

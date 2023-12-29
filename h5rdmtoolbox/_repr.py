@@ -370,6 +370,11 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
+
+        iri = h5obj.iri.subject
+        if iri is not None:
+            name += get_iri_icon_href(iri)
+
         is_string_dataset = h5obj.dtype.char == 'S'
         if is_string_dataset:
             _html_pre = self.__stringdataset__(name, h5obj)
@@ -382,25 +387,11 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         # now all attributes of the dataset:
         # open attribute section:
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
-        # write attributes:
-        # if is_string_dataset:
-        #     if h5obj.ndim in (0, 1):
-        #         if h5obj.ndim == 0:
-        #             try:
-        #                 str_data = h5obj[()]
-        #             except UnicodeDecodeError:
-        #                 str_data = 'UnicodeDecodeError'
-        #         elif h5obj.ndim == 1:
-        #             try:
-        #                 str_data = ', '.join(h5obj[()])
-        #             except UnicodeDecodeError:
-        #                 str_data = 'UnicodeDecodeError'
-        #         _html_ds_attrs += '<li style="list-style-type: none; ' \
-        #                           f'font-style: bold">data : {str_data}</li>'
 
         for k in h5obj.attrs.keys():
             if k not in self.ignore_attrs and not k.isupper():
                 _html_ds_attrs += self.__attrs__(k, h5obj)
+
         # close attribute section
         _html_ds_attrs += """\n                </ul>"""
 
@@ -420,6 +411,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         else:
             checkbox_state = self.checkbox_state
 
+        iri = h5obj.iri.subject
+        if iri is not None:
+            _groupname += get_iri_icon_href(iri)
         _html = f"""\n
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
@@ -452,6 +446,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __attrs__(self, name, h5obj):
         attr_value = h5obj.attrs.raw[name]
+
         if isinstance(attr_value, np.bytes_):
             try:
                 attr_value = attr_value.decode('utf-8')
@@ -459,11 +454,11 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 warnings.warn(f'Cannot decode attribute value for {name}', RuntimeWarning)
         iri = h5obj.iri.get(name)
 
-        iri_name = iri.name
-        if iri_name is not None:
-            name += get_iri_icon_href(iri_name)
+        iri_predicate = iri.predicate
+        if iri_predicate is not None:
+            name += get_iri_icon_href(iri_predicate)
 
-        iri_data = iri.data
+        iri_object = iri.object
 
         if isinstance(attr_value, ndarray):
 
@@ -477,8 +472,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _string_value_list.append(item)
                 _value_str = ", ".join(_string_value_list)
 
-                if iri_data is not None:
-                    _value_str += get_iri_icon_href(iri_data)
+                if iri_object is not None:
+                    _value_str += get_iri_icon_href(iri_object)
                 return '<li style="list-style-type: none; ' \
                        f'font-style: italic">{name} : {_value_str}</li>'
             else:
@@ -487,8 +482,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if len(_value) > self.max_attr_length:
                     _value = f'{_value[0:self.max_attr_length]}...'
 
-                if iri_data is not None:
-                    _value += get_iri_icon_href(iri_name)
+                if iri_object is not None:
+                    _value += get_iri_icon_href(iri_predicate)
 
                 return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
 
@@ -508,8 +503,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 # if is_url and not _value_html.startswith('{'):
 
             # add iri icon if available:
-            if iri_data is not None:
-                _value_html += get_iri_icon_href(iri_data)
+            if iri_object is not None:
+                _value_html += get_iri_icon_href(iri_object)
 
             if is_url and not _value_html.startswith('{'):  # TODO: why the second condition?
                 return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_html}</li>'
@@ -521,8 +516,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _value_str = attr_value
                 else:
                     _value_str = attr_value
-            if iri_data is not None:
-                _value_str += get_iri_icon_href(iri_data)
+            if iri_object is not None:
+                _value_str += get_iri_icon_href(iri_object)
             return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
         if not isinstance(attr_value, ndarray):
@@ -540,8 +535,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 else:
                     _value_str = attr_value
 
-        if iri_data is not None:
-            _value_str += get_iri_icon_href(iri_data)  # make_href(iri_data, ' [IRI]')
+        if iri_object is not None:
+            _value_str += get_iri_icon_href(iri_object)  # make_href(iri_object, ' [IRI]')
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 

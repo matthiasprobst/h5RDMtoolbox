@@ -7,7 +7,7 @@ import warnings
 from typing import Union, List
 
 
-class Identifier(abc.ABC):
+class ObjectIdentifier(abc.ABC):
     """Abstract base class for identifiers"""
 
     wikidata: str = None  # url to wikidata page if exists
@@ -37,7 +37,7 @@ class Identifier(abc.ABC):
         return re.match(cls.pattern, identifier) is not None
 
 
-class ORCID(Identifier):
+class ORCID(ObjectIdentifier):
     """https://www.wikidata.org/wiki/Property:P496"""
     known_orcid_filename = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'known_and_validated_orcids.txt'
     pattern = r'^(https:\/\/orcid\.org\/)?(\d{4}-){3}\d{3}(\d|X)$'
@@ -125,7 +125,7 @@ class ORCID(Identifier):
                f'width="16" height="16" />{self.id}</a>'
 
 
-class ISBNX(Identifier):
+class ISBNX(ObjectIdentifier):
     """https://en.wikipedia.org/wiki/International_Standard_Book_Number"""
 
     def __init__(self, isbn: str):
@@ -202,7 +202,7 @@ class ISBN10(ISBNX):
 #                f'width="16" height="16" />{self.id}</a>'
 
 
-class RORID(Identifier):
+class RORID(ObjectIdentifier):
     """https://ror.org/"""
     pattern = r'^(https:\/\/ror\.org\/)?0[a-hj-km-np-tv-z|0-9]{6}[0-9]{2}$'
 
@@ -226,7 +226,8 @@ class RORID(Identifier):
     def validate(self):
         return self.check_pattern(self.id)
 
-class URN(Identifier):
+
+class URN(ObjectIdentifier):
     pattern = r'^urn:[a-z0-9][a-z0-9-]{0,31}:[a-z0-9()+,\-.:=@;$_!*\'%/?#]+$'
 
     def __init__(self, urn: str):

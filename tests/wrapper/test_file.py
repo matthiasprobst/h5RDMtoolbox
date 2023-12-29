@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 import pathlib
+import rdflib
 import time
 import unittest
 import uuid
@@ -9,10 +10,9 @@ from datetime import datetime
 from pathlib import Path
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import consts
-from h5rdmtoolbox import iri
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
+from h5rdmtoolbox.convention.namespace import M4I, OBO
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper.core import File
 
@@ -370,54 +370,99 @@ class TestFile(unittest.TestCase):
         """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
 
         with h5tbx.File() as h5:
-            h5.attrs['creator'] = 'John Doe'
-            with self.assertRaises(NotImplementedError):
-                h5.iri['creator'] = 'John Doe'
-            self.assertEqual(None, h5.iri['creator'].name)
-            self.assertEqual(None, h5.iri['creator'][iri.DATA_KW])
-            self.assertEqual(None, h5.iri.get('creator')[iri.DATA_KW])
-            self.assertEqual(None, h5.iri.get('creator').get(iri.NAME_KW, None))
-            self.assertEqual(None, h5.iri.get('creator').get(iri.DATA_KW, None))
+            from rdflib.namespace import FOAF
 
-            self.assertEqual({}, h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
-            self.assertEqual({}, h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
-            h5.attrs.create('creator', data='John Doe',
-                            iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-                            iri_individual=None
-                            )
+            grp = h5.create_group('contact_person')
+            grp.iri = FOAF.Person
+            grp.iri.subject = FOAF.Person
 
-            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
-                             h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
-            self.assertEqual({}, h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
+            method_grp = h5.create_group('a_method')
+            method_grp.iri = M4I.Method
+            method_grp.attrs['has_participants', OBO.RO_0000057] = h5['contact_person']  # has participants
 
-            h5.attrs.create('creator', data='John Doe',
-                            iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-                            iri_individual='test'
-                            )
-            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-                             h5.iri.get('creator').get(iri.NAME_KW, None))
-            self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
-            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-                             h5.iri.get('creator').get(iri.NAME_KW, None))
-            self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
+            self.assertEqual(method_grp.attrs['has_participants'], h5['contact_person'])
 
-            self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
-                             h5.attrs.get(consts.IRI_NAME_ATTR_NAME, {}))
-            self.assertEqual({'creator': 'test'},
-                             h5.attrs.get(consts.IRI_DATA_ATTR_NAME, {}))
+            grp.attrs['arbitrary'] = 'arbitrary'
+            self.assertEqual(grp.iri.predicate.get('arbitrary', 'invalid'), 'invalid')
 
-            h5.iri['creator'][iri.NAME_KW] = '4'
-            self.assertEqual('4', h5.iri['creator'].name)
+            with self.assertRaises(KeyError):
+                grp.iri.predicate['firstName'] = FOAF.firstName
+            with self.assertRaises(KeyError):
+                grp.iri.predicate['lastName'] = FOAF.lastName
+            grp.attrs['firstName'] = 'John'
+            grp.iri.predicate['firstName'] = FOAF.firstName
+            self.assertEqual(grp.attrs['firstName'], 'John')
+            self.assertEqual(grp.iri.predicate['firstName'], FOAF.firstName)
+            self.assertIsInstance(grp.iri.predicate['firstName'], rdflib.URIRef)
 
-            h5.iri['creator'][iri.DATA_KW] = '5'
-            self.assertEqual('5', h5.iri['creator'].data)
+            self.assertTrue(grp.iri == FOAF.Person)
 
-            del h5.iri['creator']
-            self.assertEqual(None, h5.iri['creator'].name)
-            self.assertEqual(None, h5.iri['creator'].data)
+        with h5tbx.File() as h5:
+            grp = h5.create_group('contact_person')
+            grp.iri = FOAF.Person
+            grp.attrs['firstName', FOAF.firstName] = 'John'
+            grp.attrs['lastName', FOAF.lastName] = 'Doe'
 
-            h5.create_dataset('test', data=[1, 2, 3], attrs={'contact_person': 'John Doe'})
-            h5['test'].iri['contact_person'].name = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
-            data = h5['test'][()]
-            self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-                             data.attrs['IRI_NAME']['contact_person'])
+            self.assertEqual(grp.attrs['firstName'], 'John')
+            self.assertEqual(grp.iri, FOAF.Person)
+            self.assertEqual(grp.iri['firstName'].predicate, FOAF.firstName)
+            self.assertEqual(grp.iri['lastName'].predicate, FOAF.lastName)
+
+            grp.iri = [FOAF.Person,
+                       'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
+            self.assertTrue(FOAF.Person in grp.iri)
+            self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.iri)
+
+        # with h5tbx.File() as h5:
+        #     grp = h5.create_group('contact_person')
+        #     h5.attrs['creator'] = 'John Doe'
+        #     with self.assertRaises(NotImplementedError):
+        #         h5.iri['creator'] = 'John Doe'
+        #     self.assertEqual(None, h5.iri['creator'].name)
+        #     self.assertEqual(None, h5.iri['creator'][iri.DATA_KW])
+        #     self.assertEqual(None, h5.iri.get('creator')[iri.DATA_KW])
+        #     self.assertEqual(None, h5.iri.get('creator').get(iri.NAME_KW, None))
+        #     self.assertEqual(None, h5.iri.get('creator').get(iri.DATA_KW, None))
+        #
+        #     self.assertEqual({}, h5.attrs.get(consts.IRI_PREDICATE_ATTR_NAME, {}))
+        #     self.assertEqual({}, h5.attrs.get(consts.IRI_OBJECT_ATTR_NAME, {}))
+        #     h5.attrs.create('creator', data='John Doe',
+        #                     iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+        #                     iri_individual=None
+        #                     )
+        #
+        #     self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
+        #                      h5.attrs.get(consts.IRI_PREDICATE_ATTR_NAME, {}))
+        #     self.assertEqual({}, h5.attrs.get(consts.IRI_OBJECT_ATTR_NAME, {}))
+        #
+        #     h5.attrs.create('creator', data='John Doe',
+        #                     iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+        #                     iri_individual='test'
+        #                     )
+        #     self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+        #                      h5.iri.get('creator').get(iri.NAME_KW, None))
+        #     self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
+        #     self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+        #                      h5.iri.get('creator').get(iri.NAME_KW, None))
+        #     self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
+        #
+        #     self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
+        #                      h5.attrs.get(consts.IRI_PREDICATE_ATTR_NAME, {}))
+        #     self.assertEqual({'creator': 'test'},
+        #                      h5.attrs.get(consts.IRI_OBJECT_ATTR_NAME, {}))
+        #
+        #     h5.iri['creator'][iri.NAME_KW] = '4'
+        #     self.assertEqual('4', h5.iri['creator'].name)
+        #
+        #     h5.iri['creator'][iri.DATA_KW] = '5'
+        #     self.assertEqual('5', h5.iri['creator'].data)
+        #
+        #     del h5.iri['creator']
+        #     self.assertEqual(None, h5.iri['creator'].name)
+        #     self.assertEqual(None, h5.iri['creator'].data)
+        #
+        #     h5.create_dataset('test', data=[1, 2, 3], attrs={'contact_person': 'John Doe'})
+        #     h5['test'].iri['contact_person'].name = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
+        #     data = h5['test'][()]
+        #     self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
+        #                      data.attrs[consts.IRI_PREDICATE_ATTR_NAME]['contact_person'])

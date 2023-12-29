@@ -11,7 +11,6 @@ from .h5utils import get_rootparent
 from .. import errors
 from .. import get_config, convention, utils
 from .. import get_ureg
-from .. import iri
 from .. import protected_attributes
 from ..convention import consts
 
@@ -33,7 +32,7 @@ def pop_hdf_attributes(attrs: Dict) -> Dict:
     """
     keep = [k for k in attrs.keys() if k not in H5_DIM_ATTRS]
     return {k: attrs[k] for k in keep}
-    return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
+    # return {k: v for k, v in attrs.items() if k not in H5_DIM_ATTRS}
 
 
 def _check_iri(url):
@@ -66,12 +65,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         super().__init__(parent)
         self._parent = parent
 
-    # @property
-    # def iri(self) -> dict:
-    #     """Return dictionary of IRIs stored in the attributes of this object"""
-    #     iri_dict = self._parent.iri
-    #     return {k: iri_dict[k] for k, v in self.items() if k in iri_dict}
-
     @staticmethod
     def _parse_return_value(_id, ret):
         if isinstance(ret, str):
@@ -100,10 +93,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     if rootgrp.get(ret) is None:
                         # not a dataset or group, maybe just a filename that has been stored
                         return ret
-                    return rootgrp.get(ret).name
+                    return rootgrp.get(ret)
                 else:
                     rootgrp = get_rootparent(h5py.Dataset(_id).parent)
-                    return rootgrp.get(ret).name
+                    return rootgrp.get(ret)
             if ret[0] == '(':
                 if ret[-1] == ')':
                     # might be a tuple object
@@ -132,12 +125,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 return convention.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
 
-    def create(self, name, data, shape=None, dtype=None, iri_cls: str = None, iri_individual: str = None):
-        r = super().create(name, utils.parse_object_for_attribute_setting(data), shape, dtype)
-        if iri_cls is not None:
-            iri.set_name(self, name, iri_cls)
-        if iri_individual is not None:
-            iri.set_data(self, name, iri_individual)
+    def create(self, name, data, shape=None, dtype=None):
+        r = super().create(name,
+                           utils.parse_object_for_attribute_setting(data),
+                           shape, dtype)
         return r
 
     @with_phil
@@ -157,6 +148,16 @@ class WrapperAttributeManager(h5py.AttributeManager):
         """
         if name == '_parent':
             return
+        if isinstance(name, tuple):
+            # length must be 2, second element must be a IRI (not checked though)
+            if not len(name) == 2:
+                raise ValueError('Tuple must have length 2 in order to interpret it as an'
+                                 'attribute name and its IRI')
+            _name, _iri = name
+            self.create(_name, value)
+            self._parent.iri.predicate[_name] = _iri
+            return
+
         if not isinstance(name, str):
             raise TypeError(f'Attribute name must be a str but got {type(name)}')
 
