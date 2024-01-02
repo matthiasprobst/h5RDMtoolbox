@@ -19,6 +19,7 @@ from ._version import __version__
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import warnings, errors
+from .wrapper import jsonld
 from .wrapper.accessory import register_special_dataset
 
 name = 'h5rdmtoolbox'
@@ -165,4 +166,5 @@ __all__ = ('__version__', '__author__', '__author_orcid__',
            'File', 'Group', 'Dataset',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
-           'Convention', 'namespace')
+           'Convention', 'namespace',
+           'jsonld')

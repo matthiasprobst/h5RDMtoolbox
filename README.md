@@ -35,6 +35,13 @@ For everybody, who ...
 - ... has established conventions and managements approaches in his or her community
  
 
+## Highlights
+
+- Assigning [metadata with "globally unique and persistent identifiers"]() as required by [F1 of the FAIR 
+  principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/). 
+  This "remove[s] ambiguity in the meaning of your published data...".
+- To be completed...
+
 ## Package Architecture/structure
 
 The toolbox implements five modules, which are shown below. The numbers reference to their main usage in the stages in

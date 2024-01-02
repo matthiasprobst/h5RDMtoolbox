@@ -7,7 +7,7 @@ from typing import Dict
 def dumpd(grp,
           iri_only=False,
           file_url="file://./",
-          recursive: bool = False) -> Dict:
+          recursive: bool = True) -> Dict:
     """Dump a group or a dataset to to dict."""
 
     if isinstance(grp, (str, pathlib.Path)):
@@ -34,7 +34,7 @@ def dumpd(grp,
                     if node.iri.object.get(k, None) is not None:
                         value = str(node.iri.object[k])
                     else:
-                        if isinstance(v, h5py.Group):
+                        if isinstance(v, (h5py.Group, h5py.Dataset)):
                             value = _get_id(v)
                         else:
                             value = str(v)
@@ -56,7 +56,7 @@ def dumpd(grp,
 
 def dumps(grp, iri_only=False,
           file_url="file://./",
-          recursive: bool = False,
+          recursive: bool = True,
           **kwargs):
     """Dump a group or a dataset to to string."""
     return json.dumps(dumpd(grp=grp, iri_only=iri_only, file_url=file_url, recursive=recursive), **kwargs)
@@ -66,6 +66,6 @@ def dump(grp,
          fp,
          iri_only=False,
          file_url="file://./",
-         recursive: bool = False):
+         recursive: bool = True):
     """Dump a group or a dataset to to file."""
     return json.dump(dumpd(grp, iri_only, file_url, recursive), fp, indent=4)

@@ -6,7 +6,7 @@ Working with HDF
 While processing data, auxiliary data is required to understand the context of the data. This includes information
 about the data itself (e.g. units, data type, etc.) as well as information about the data generation (e.g. instrument
 settings, etc.). This information is often stored in separate files, however, for HDF5 files it is stored in
-attributes right next to the data. This is a powerful feature of HDF5 files but the metadata is lost if data
+attributes right next to the data. This is a powerful feature of HDF5 files, but the metadata is lost if data
 is extracted by standard packages such as `h5py`.
 
 One of the o features of the toolbox is to provide the user with both, the data and the metadata, by returning
@@ -18,7 +18,7 @@ figure illustrates the interaction between the HDF5 file and the user.
   :alt: Alternative text
   :align: center
 
-All in all the wrapper classes around the `h5py` package aim to simplify data
+All in all, the wrapper classes around the `h5py` package aim to simplify data
 generation, processing, and analysis. The following sections will guide you through those steps.
 
 .. note::
@@ -34,6 +34,7 @@ generation, processing, and analysis. The following sections will guide you thro
 
     CreateFile.ipynb
     DatasetCreation.ipynb
+    FAIRAttributes.ipynb
     DatasetSlicing.ipynb
     GroupCreation.ipynb
     DumpFile.ipynb

@@ -234,7 +234,7 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     hdf_filepath = generate_temporary_filename(suffix='.hdf')
     if touch:
         with File(hdf_filepath, "w") as h5touch:
-            h5touch.attrs['__h5rdmtoolbox_version__'] = __version__
+            h5touch.attrs['__h5rdmtoolbox_version__', 'https://w3id.org/okn/o/sd#SoftwareVersion'] = __version__
             if attrs is not None:
                 for ak, av in attrs.items():
                     create_special_attribute(h5touch.attrs, ak, av)

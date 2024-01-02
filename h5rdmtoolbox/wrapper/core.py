@@ -2060,7 +2060,8 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
         if self.mode != 'r':
             # update file toolbox version, wrapper version
-            self.attrs['__h5rdmtoolbox_version__'] = __version__
+            if '__h5rdmtoolbox_version__' not in self.attrs:
+                self.attrs['__h5rdmtoolbox_version__', 'https://w3id.org/okn/o/sd#SoftwareVersion'] = __version__
             for k, v in attrs.items():
                 self.attrs[k] = v
 

@@ -14,6 +14,13 @@ with HDF5 to achieve a sustainable data lifecycle which follows the
    Thank you!
 
 
+Highlights
+----------
+- Assigning [metadata with "globally unique and persistent identifiers"]() as required by [F1 of the FAIR 
+  principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/). 
+  This "remove[s] ambiguity in the meaning of your published data...".
+- To be completed...
+
 
 .. grid:: 3
 
@@ -30,7 +37,7 @@ with HDF5 to achieve a sustainable data lifecycle which follows the
         :link-type: doc
 
         In-depth documentation of the *h5rdmtoolbox* features helping
-        you to get FAIR data.
+        you achieving FAIR data.
 
     .. grid-item-card::  API reference
         :img-top: _static/icon_api.svg
