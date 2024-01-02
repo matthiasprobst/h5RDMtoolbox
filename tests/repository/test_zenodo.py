@@ -254,9 +254,11 @@ class TestConfig(unittest.TestCase):
         with open(json_filename) as f:
             json_dict = json.loads(f.read())
 
+        from h5rdmtoolbox import consts
         self.assertEqual(json_dict['attrs'],
                          {'__h5rdmtoolbox_version__': h5tbx.__version__,
-                          'long_name': 'root'})
+                          'long_name': 'root',
+                          'IRI_PREDICATE': json.dumps({'__h5rdmtoolbox_version__': consts.VERSION_IRI})})
         z.delete()
 
     def test_ZenodoSandboxDeposit(self):
