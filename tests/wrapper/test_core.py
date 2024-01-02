@@ -451,11 +451,11 @@ class TestCore(unittest.TestCase):
 
                 # testing links:
                 obj.attrs['link_to_group'] = h5['/']
-                self.assertEqual(obj.attrs['link_to_group'], '/')
-                self.assertIsInstance(obj.attrs['link_to_group'], str)
+                self.assertEqual(obj.attrs['link_to_group'], h5['/'])
+                self.assertIsInstance(obj.attrs['link_to_group'], h5py.Group)
                 obj.attrs['link_to_ds'] = ds
-                self.assertEqual(obj.attrs['link_to_ds'], ds.name)
-                self.assertIsInstance(obj.attrs['link_to_ds'], str)
+                self.assertEqual(obj.attrs['link_to_ds'], ds)
+                self.assertIsInstance(obj.attrs['link_to_ds'], h5py.Dataset)
                 obj.attrs['attribute_of_links_to_ds'] = {'ds': ds, 'grp': grp, 'astr': 'test', 'afloat': 3.1}
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds'], dict)
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['ds'], h5py.Dataset)

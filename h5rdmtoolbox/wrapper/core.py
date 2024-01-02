@@ -1492,13 +1492,19 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     def get_data_scale(self):
         """Return the data scale dataset if attached to this dataset."""
         if 'DATA_SCALE' in self.attrs:
-            return self.rootparent[self.attrs['DATA_SCALE']]
+            _src = self.attrs['DATA_SCALE']
+            if isinstance(_src, str):
+                return self.rootparent[_src]
+            return self.rootparent[self.attrs['DATA_SCALE'].name]
         return None
 
     def get_data_offset(self):
         """Return the data offset dataset if attached to this dataset."""
         if 'DATA_OFFSET' in self.attrs:
-            return self.rootparent[self.attrs['DATA_OFFSET']]
+            _src = self.attrs['DATA_OFFSET']
+            if isinstance(_src, str):
+                return self.rootparent[_src]
+            return self.rootparent[self.attrs['DATA_OFFSET'].name]
         return None
 
     def coords(self) -> Dict[str, "Dataset"]:

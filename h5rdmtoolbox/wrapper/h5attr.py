@@ -89,13 +89,15 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 # it may be group or dataset path or actually just a filepath stored by the user
                 if isinstance(_id, h5py.h5g.GroupID):
                     # call like this, otherwise recursive call!
-                    rootgrp = get_rootparent(h5py.Group(_id))
+                    from .core import Group
+                    rootgrp = get_rootparent(Group(_id))
                     if rootgrp.get(ret) is None:
                         # not a dataset or group, maybe just a filename that has been stored
                         return ret
                     return rootgrp.get(ret)
                 else:
-                    rootgrp = get_rootparent(h5py.Dataset(_id).parent)
+                    from .core import Dataset
+                    rootgrp = get_rootparent(Dataset(_id).parent)
                     return rootgrp.get(ret)
             if ret[0] == '(':
                 if ret[-1] == ')':

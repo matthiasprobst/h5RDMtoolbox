@@ -23,18 +23,30 @@ def scale_and_offset_decoder(xarr: xr.DataArray, ds: h5py.Dataset) -> xr.DataArr
     offset = xarr.attrs.pop('DATA_OFFSET', None)
 
     if scale and offset:
-        scale_xrda = ds.rootparent[scale][()]
-        offset_xrda = ds.rootparent[offset][()]
+        if isinstance(scale, h5py.Dataset):
+            scale_xrda = scale[()]
+        else:
+            scale_xrda = ds.rootparent[scale][()]
+        if isinstance(offset, h5py.Dataset):
+            offset_xrda = offset[()]
+        else:
+            offset_xrda = ds.rootparent[offset][()]
 
         with xr.set_options(keep_attrs=True):
             return _dequantify(_quantify(xarr) * _quantify(scale_xrda) + _quantify(offset_xrda))
 
     elif scale:
-        scale_xrda = ds.rootparent[scale][()]
+        if isinstance(scale, h5py.Dataset):
+            scale_xrda = scale[()]
+        else:
+            scale_xrda = ds.rootparent[scale][()]
         return _dequantify(_quantify(xarr) * _quantify(scale_xrda))
 
     elif offset:
-        offset_xrda = ds.rootparent[offset][()]
+        if isinstance(offset, h5py.Dataset):
+            offset_xrda = offset[()]
+        else:
+            offset_xrda = ds.rootparent[offset][()]
         with xr.set_options(keep_attrs=True):
             return _dequantify(_quantify(xarr) + _quantify(offset_xrda))
 
