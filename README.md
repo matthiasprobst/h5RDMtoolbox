@@ -161,9 +161,6 @@ Install optional dependencies by specifying them in square brackets after the pa
 - `python-gitlab`: Access to gitlab repositories
 - `pypandoc>=2.3`: Conversion of markdown files to html
 
-## Planned, future developments
-
-- Using JSON schema definitions for layouts and conventions
 
 ## Citing the package
 
