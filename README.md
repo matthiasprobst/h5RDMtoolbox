@@ -7,17 +7,41 @@
 
 *Note, that the project is still under development!*
 
-The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everybody who is working with
-HDF5 to achieve a sustainable data lifecycle which follows
+The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everybody who is working 
+with HDF5 to achieve a sustainable data lifecycle which follows
 the [FAIR (Findable, Accessible, Interoperable, Reusable)](https://www.nature.com/articles/sdata201618)
-principles. It specifically supports the five main steps of
+principles. It specifically supports the five main steps of *planning*, *collecting*, *analyzing*, *sharing* and
+*reusing* data. Please visit the [documentation](https://h5rdmtoolbox.readthedocs.io/en/latest/) for detailed 
+information of try the [quickstart using colab](#quickstart).
 
-1. **Planning** (defining an internal layout for HDF5, a metadata convention or/and an ontology for attribute usage)
-2. **Collecting** data (creating HDF5 files with a convention in place supervising metadata usage)
-3. **Analyzing** and processing data (E.g. through interface with [xarray](https://docs.xarray.dev/en/stable/), ...)
-4. **Sharing data** (upload and download to repositories. Currently implemented: [Zenodo](https://zenodo.org/))
-5. **Reusing data** (Map metadata to dedicated databases like [mongoDB](https://www.mongodb.com/) or use local HDF5
-   files themselves as a database to search for attributes).
+
+
+[//]: # (1. **Planning** &#40;defining an internal layout for HDF5, a metadata convention or/and an ontology for attribute usage&#41;)
+
+[//]: # (2. **Collecting** data &#40;creating HDF5 files with a convention in place supervising metadata usage&#41;)
+
+[//]: # (3. **Analyzing** and processing data &#40;E.g. through interface with [xarray]&#40;https://docs.xarray.dev/en/stable/&#41;, ...&#41;)
+
+[//]: # (4. **Sharing data** &#40;upload and download to repositories. Currently implemented: [Zenodo]&#40;https://zenodo.org/&#41;&#41;)
+
+[//]: # (5. **Reusing data** &#40;Map metadata to dedicated databases like [mongoDB]&#40;https://www.mongodb.com/&#41; or use local HDF5)
+
+[//]: # (   files themselves as a database to search for attributes&#41;.)
+
+
+## Highlights
+
+- Combining HDF5 and [xarray](https://docs.xarray.dev/en/stable/) to allow easy access to metadata and data during
+  analysis and processing (see [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface).
+- Assigning [metadata with "globally unique and persistent identifiers"]() as required by [F1 of the FAIR 
+  principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/). 
+  This "remove[s] ambiguity in the meaning of your published data...".
+- Define standard attributes through 
+  [conventions](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html) and enforce users 
+  to use them
+- Upload HDF5 files directly to [repositories](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/repository/index.html)
+  like [Zenodo](https://zenodo.org/) or [use them with noSQL databases](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/database/index.html) like
+  [mongoDB](https://www.mongodb.com/).
 
 ## Who is the package for?
 For everybody, who is...
@@ -34,13 +58,6 @@ For everybody, who ...
 - ... is looking for a management approach which at the same time allows high-performance and/or parallel work with HDF5
 - ... has established conventions and managements approaches in his or her community
  
-
-## Highlights
-
-- Assigning [metadata with "globally unique and persistent identifiers"]() as required by [F1 of the FAIR 
-  principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/). 
-  This "remove[s] ambiguity in the meaning of your published data...".
-- To be completed...
 
 ## Package Architecture/structure
 
@@ -79,7 +96,6 @@ on the image, which shows the research data lifecycle in the center and the resp
 
 A paper is published in the journal [inggrid](https://preprints.inggrid.org/repository/view/23/).
 
-<a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/new_icon_with_text.svg" alt="RDM lifecycle" style="widht:600px;"></a>
 
 ## Installation
 

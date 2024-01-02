@@ -16,10 +16,17 @@ with HDF5 to achieve a sustainable data lifecycle which follows the
 
 Highlights
 ----------
-- Assigning [metadata with "globally unique and persistent identifiers"]() as required by [F1 of the FAIR 
-  principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/). 
+- Combining HDF5 and [xarray](https://docs.xarray.dev/en/stable/) to allow easy access to metadata and data during
+  analysis and processing (see [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface).
+- Assigning [metadata with "globally unique and persistent identifiers"]() as required by [F1 of the FAIR
+  principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/).
   This "remove[s] ambiguity in the meaning of your published data...".
-- To be completed...
+- Define standard attributes through
+  [conventions](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html) and enforce users
+  to use them
+- Upload HDF5 files directly to [repositories](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/repository/index.html)
+  like [Zenodo](https://zenodo.org/) or [use them with noSQL databases](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/database/index.html) like
+  [mongoDB](https://www.mongodb.com/).
 
 
 .. grid:: 3
