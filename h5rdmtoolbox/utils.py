@@ -17,8 +17,7 @@ from logging.handlers import RotatingFileHandler
 from re import sub as re_sub
 from typing import Dict, Union, Callable, List, Tuple
 
-from . import _user, get_config
-from . import get_ureg
+from . import _user, get_config, get_ureg, consts
 from ._version import __version__
 
 DEFAULT_LOGGING_LEVEL = logging.INFO
@@ -234,7 +233,9 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     hdf_filepath = generate_temporary_filename(suffix='.hdf')
     if touch:
         with File(hdf_filepath, "w") as h5touch:
-            h5touch.attrs['__h5rdmtoolbox_version__', 'https://w3id.org/okn/o/sd#SoftwareVersion'] = __version__
+            h5touch.attrs['__h5rdmtoolbox_version__'] = __version__
+            h5touch.attrs[
+                consts.IRI_PREDICATE_ATTR_NAME] = json.dumps({'__h5rdmtoolbox_version__': consts.VERSION_IRI})
             if attrs is not None:
                 for ak, av in attrs.items():
                     create_special_attribute(h5touch.attrs, ak, av)
