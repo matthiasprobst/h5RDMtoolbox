@@ -69,8 +69,8 @@ def __validate_standard_name(value, handler, info) -> "StandardNameTable":
         # check if scale is provided:
         data_scale = parent.attrs.get('DATA_SCALE', None)
         if data_scale is not None:
-            scale_ds = parent.rootparent[data_scale]
-            ds_scale_units = scale_ds.attrs.raw.get('units', '')
+            # scale_ds = parent.rootparent[data_scale]
+            ds_scale_units = data_scale.attrs.raw.get('units', '')
             ureg = get_ureg()
             units = str(ureg.Unit(ds_scale_units) * units)
 

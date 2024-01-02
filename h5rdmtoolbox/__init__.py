@@ -165,4 +165,4 @@ __all__ = ('__version__', '__author__', '__author_orcid__',
            'File', 'Group', 'Dataset',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
-           'Convention')
+           'Convention', 'namespace')

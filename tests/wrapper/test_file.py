@@ -12,7 +12,7 @@ from pathlib import Path
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
-from h5rdmtoolbox.convention.namespace import M4I, OBO
+from h5rdmtoolbox.namespace import M4I, OBO
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper.core import File
 
