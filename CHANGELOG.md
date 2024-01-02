@@ -2,6 +2,12 @@
 
 Log of changes in the versions
 
+## v1.2.0
+- Improved assignment of IRI to attributes
+- Export of a JSON-LD file possible
+- Updated documentation
+- bugfixes
+
 ## v1.1.1
 - bugfix: Setting a default value for toolbox validators in convention yaml file was not working. Fixed it.
 
