@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
 
 from h5rdmtoolbox.database import ObjDB
-from . import logger
+from . import logger, iri
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
@@ -26,7 +26,6 @@ from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, convention, utils, consts, protected_attributes
 from .. import get_ureg
-from .. import iri
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..convention.consts import DefaultValue
@@ -207,6 +206,7 @@ class Core:
 
     @property
     def iri(self):
+        """Return IRI Manager"""
         return iri.IRIManager(self.attrs)
 
     @iri.setter
@@ -261,7 +261,27 @@ class SpecialAttributeWriter:
 
 
 class Group(h5py.Group, SpecialAttributeWriter, Core):
-    """Inherited Group of the package h5py
+    """Inherited Group of the package h5py. Adds some useful methods on top
+    of the underlying *h5py* package.
+
+
+    .. note:: All features from h5py packages are preserved.
+
+
+    Notes
+    -----
+    The following methods are added:
+    * get_datasets() - returns a list of datasets in the group
+    * get_groups() - returns a list of groups in the group
+    * get_tree_structure() - returns a tree structure of the group
+    * create_string_dataset() - creates a dataset with string datatype
+    * create_time_dataset() - creates a dataset with time datatype
+
+    The following properties are added (or overwritten):
+    * attrs - returns the *h5tbx* attribute manager, which is a subclass of the *h5py* attribute manager
+    * iri - returns the IRI Manager
+    * rootparent - returns the root group instance
+    * basename - returns the basename of the group
     """
     hdfrepr = H5Repr()
 
@@ -813,18 +833,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  recursive: bool = True,
                  ignore_attribute_error: bool = False):
         """See find()"""
-        raise NotImplemented('Moved to database package!')
-        from ..database import file
-        if flt == {}:
-            return None
-        return file.find(
-            self,
-            flt,
-            objfilter=objfilter,
-            recursive=recursive,
-            find_one=True,
-            ignore_attribute_error=ignore_attribute_error
-        )
+        raise NotImplementedError('Move to database subpackage')
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
@@ -1269,25 +1278,30 @@ def only_0d_and_1d(obj):
 
 
 class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
-    """Wrapper around the h5py.Dataset
+    """Wrapper around the h5py.Dataset. Some useful methods are added on top of
+    the underlying *h5py* package.
+
+
+    .. note:: All features from h5py packages are preserved.
+
 
     Notes
     -----
-    The following methods are added to the h5py.File object:
+    The following methods are added to the *h5py.Dataset* object:
 
-    * attach_ancillary_dataset: Associate a dataset to the current dataset.
-    * attach_data_scale_and_offset: Attach data scale and offset to the current dataset.
-    * detach_data_offset: Detach data offset from the current dataset.
-    * detach_data_scale: Detach data scale from the current dataset.
-    * coords: Return the coordinates of the current dataset similar to xarray.
-    * dump: Outputs xarray-inspired _html representation of the file content if a notebook environment is used.
-    * sdump: string representation of group
-    * isel: Select data by named dimension and index, mimics xarray.isel.
-    * sel: Select data by named dimension and values, mimics xarray.sel.
-    * to_units: Convert the dataset to a new unit.
-    * write_iso_timestamp: Write an ISO 8601 timestamp to the current dataset attribute.
+    * attach_ancillary_dataset(): Associate a dataset to the current dataset.
+    * attach_data_scale_and_offset(): Attach data scale and offset to the current dataset.
+    * detach_data_offset(): Detach data offset from the current dataset.
+    * detach_data_scale(): Detach data scale from the current dataset.
+    * coords(): Return the coordinates of the current dataset similar to xarray.
+    * dump(): Outputs xarray-inspired _html representation of the file content if a notebook environment is used.
+    * dumps(): string representation of group
+    * isel(): Select data by named dimension and index, mimics xarray.isel.
+    * sel(): Select data by named dimension and values, mimics xarray.sel.
+    * to_units(): Convert the dataset to a new unit.
+    * write_iso_timestamp(): Write an ISO 8601 timestamp to the current dataset attribute.
 
-    The following properties are added to the h5py.File object:
+    The following properties are added to the h5py.Dataset object:
 
     * rootparent: The root group of the file.
     * basename: The basename of the dataset.
@@ -1807,20 +1821,20 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             logger.debug(f'Changed units of {self.name} from {old_units} to {new_units}.')
         return self[()].pint.quantify().pint.to(new_units).pint.dequantify()
 
-    def rename2(self, newname):
-        """renames the dataset. Note this may be a process that kills your RAM"""
-        # hard copy:
-        if 'CLASS' and 'NAME' in self.attrs:
-            raise RuntimeError(
-                f'Cannot rename {self.name} because it is a dimension scale!')
-
-        self.parent[newname] = self
-        del self.parent[self.name]
-
     def set_primary_scale(self, axis, iscale: int):
-        """define the axis for which the first scale should be set. iscale is the index
-        of the available scales to be set as primary.
-        Make sure you have written intent on file"""
+        """Set the primary scale for a specific axis.
+
+        Parameters
+        ----------
+        axis : int
+            The axis index
+        iscale : int
+            The index of the scale to be set as primary
+
+        Notes
+        -----
+        Ensure that you have opened the file in read/write mode.
+        """
         nscales = len(self.dims[axis])
         if iscale >= nscales:
             raise ValueError(
@@ -1858,14 +1872,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         -------
         h5obj: h5py.Dataset or h5py.Group
         """
-        from ..database import file
-        return file.find(
-            h5obj=self,
-            flt=flt,
-            objfilter=objfilter,
-            recursive=False,
-            find_one=False,
-            ignore_attribute_error=ignore_attribute_error)
+        raise NotImplementedError('Move to database subpackage')
 
 
 class File(h5py.File, Group, SpecialAttributeWriter, Core):
@@ -1900,6 +1907,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
     The following attributes are added to the h5py.File object:
 
+    * iri: IRI Manager
     * hdf_filename: (pathlib.Path) The name of the file, accessible even if the file is closed.
     * version: (str) The version of the package used to create the file.
     * modification_time: (datetime) The modification time of the file.

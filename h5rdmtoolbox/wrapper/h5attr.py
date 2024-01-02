@@ -2,9 +2,10 @@ import ast
 import h5py
 import json
 import pint
+import rdflib
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
-from typing import Dict
+from typing import Dict, Union
 
 from . import logger
 from .h5utils import get_rootparent
@@ -127,10 +128,19 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 return convention.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
 
-    def create(self, name, data, shape=None, dtype=None):
+    def create(self,
+               name,
+               data,
+               shape=None, dtype=None,
+               predicate: Union[str, rdflib.URIRef]=None,
+               object: Union[str, rdflib.URIRef]=None):
         r = super().create(name,
                            utils.parse_object_for_attribute_setting(data),
                            shape, dtype)
+        if predicate is not None:
+            self._parent.iri.predicate[name] = predicate
+        if object is not None:
+            self._parent.iri.object[name] = object
         return r
 
     @with_phil
@@ -275,3 +285,24 @@ class WrapperAttributeManager(h5py.AttributeManager):
         from h5py._objects import phil
         with phil:
             return attrs.AttributeManager(self._parent)
+
+
+# class IRIAttr:
+#     """Helper class to write attributes together with an IRI
+#
+#     Examples
+#     --------
+#     >>> import h5rdmtoolbox as h5tbx
+#     >>> hasKQ = namespace.M4I.hasKindOfQuantity
+#     >>> Velocity = 'https://qudt.org/vocab/quantitykind/Velocity'
+#     >>>
+#     >>> with h5tbx('test.h5') as h5:
+#     ...     h5.u.attrs['qK', hasKQ] = h5tbx.IRIAttr(value='Velocity', iri=Velocity)
+#     """
+#
+#     def __init__(self, value, iri):
+#         self.value = value
+#         self.iri = iri
+#
+#     def __repr__(self):
+#         return f'{self.__class__.__name__}({self.value} iri={self.iri})'

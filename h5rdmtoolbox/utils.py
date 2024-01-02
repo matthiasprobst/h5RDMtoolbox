@@ -294,7 +294,7 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         fragment = name.fragment
         if not fragment:
             raise ValueError(f'Name {name} has no fragment')
-        from h5rdmtoolbox.iri import set_predicate
+        from h5rdmtoolbox.wrapper.iri import set_predicate
         set_predicate(h5obj, fragment, name)
         name = fragment
 

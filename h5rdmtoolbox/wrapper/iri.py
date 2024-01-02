@@ -3,7 +3,7 @@ import h5py
 from rdflib import URIRef
 from typing import Dict, Union
 
-from . import consts
+from h5rdmtoolbox import consts
 
 PREDICATE_KW = 'predicate'
 OBJECT_KW = 'object'
@@ -82,7 +82,7 @@ class IRIDict(Dict):
 
     @object.setter
     def object(self, value):
-        set_predicate(self._attr, self._attr_name, value)
+        set_object(self._attr, self._attr_name, value)
 
     def __setitem__(self, key, value):
         if key == PREDICATE_KW:
@@ -190,4 +190,4 @@ class IRI_OBJECT(_IRIPO):
     IRI_ATTR_NAME = consts.IRI_OBJECT_ATTR_NAME
 
     def __setiri__(self, key, value):
-        set_predicate(self._attr, key, value)
+        set_object(self._attr, key, value)

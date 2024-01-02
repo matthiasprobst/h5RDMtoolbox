@@ -370,6 +370,29 @@ class TestFile(unittest.TestCase):
         """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
 
         with h5tbx.File() as h5:
+            h5.create_dataset('ds', data=1)
+            h5.ds.attrs.create('quantity_kind',
+                               data='velocity',
+                               predicate=M4I.hasKindOfQuantity,
+                               object='https://qudt.org/vocab/quantitykind/Velocity')
+            self.assertIsInstance(h5.ds.iri.predicate['quantity_kind'], rdflib.URIRef)
+            self.assertEqual(str(h5.ds.iri.predicate['quantity_kind']), str(M4I.hasKindOfQuantity))
+            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], rdflib.URIRef)
+            self.assertEqual(str(h5.ds.iri.object['quantity_kind']), 'https://qudt.org/vocab/quantitykind/Velocity')
+
+            h5.ds.attrs['units'] = 'm/s'
+            h5.ds.iri['units'].predicate = M4I.hasUnit
+            h5.ds.iri['units'].object = 'https://qudt.org/vocab/unit/M-PER-SEC'
+            self.assertEqual(str(h5.ds.iri.predicate['units']), str(M4I.hasUnit))
+            self.assertEqual(str(h5.ds.iri.object['units']), 'https://qudt.org/vocab/unit/M-PER-SEC')
+
+        with h5tbx.File(h5.hdf_filename) as h5:
+            self.assertIsInstance(h5.ds.iri.predicate['quantity_kind'], rdflib.URIRef)
+            self.assertEqual(str(h5.ds.iri.predicate['quantity_kind']), str(M4I.hasKindOfQuantity))
+            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], rdflib.URIRef)
+            self.assertEqual(str(h5.ds.iri.object['quantity_kind']), 'https://qudt.org/vocab/quantitykind/Velocity')
+
+        with h5tbx.File() as h5:
             from rdflib.namespace import FOAF
 
             grp = h5.create_group('contact_person')
