@@ -2,6 +2,9 @@
 
 Log of changes in the versions
 
+## v1.2.2
+- Hotfix dumping json-ld data (dimension scales were the issue)
+
 ## v1.2.1
 - Add codemeta namespace
 - Improved json-ld export
