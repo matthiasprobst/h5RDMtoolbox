@@ -5,6 +5,8 @@ import pathlib
 import requests
 import warnings
 
+from rdflib import Graph
+
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -57,7 +59,6 @@ def generate_namespace_file(namespace: str):
 
 def generate_qudt_unit_namespace():
     """Generate the qudt namespace."""
-    from rdflib import Graph
 
     namespace = 'qudt_unit'
 
@@ -87,7 +88,6 @@ def generate_qudt_unit_namespace():
 
 def generate_qudt_quantitykind_namespace():
     """Generate the qudt namespace."""
-    from rdflib import Graph
 
     namespace = 'qudt_quantitykind'
 
@@ -115,8 +115,53 @@ def generate_qudt_quantitykind_namespace():
         f.write('\n\nQUDT_QUANTITYKIND = _QUDT_QUANTITYKIND()')
 
 
+def generate_codemeta_namespace():
+    namespace = 'codemeta'
+    source = 'https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld'
+    context_file = __this_dir__ / f'_{namespace}.jsonld'
+    if not context_file.exists():
+        with open(context_file, 'w', encoding='utf-8') as f:
+            f.write(requests.get(source).text, )
+
+    g = Graph().parse(source, format='json-ld')
+    compact_context = json.loads(g.serialize(format='json-ld', indent=4, auto_compact=True))
+
+    with open(context_file) as f:
+        context = json.load(f)
+
+    uri_refs = {}
+    for k, v in context['@context'].items():
+        if k not in ('type', 'id'):
+            if '@id' in v:
+                if ':' in v['@id']:
+                    _context, value = v['@id'].split(':', 1)
+                    _expanded_context = compact_context['@context'][_context]
+                    uri = _expanded_context + value
+                else:
+                    uri = v['@id']
+                uri_refs[k] = uri
+
+    with open(__this_dir__ / f'_{namespace}_namespace.py', 'w',
+              encoding='UTF8') as f:
+        f.write('# automatically generated from https://codemeta.github.io/terms/\n')
+        f.write('from rdflib.namespace import Namespace\n')
+        f.write('from rdflib.term import URIRef\n\n\n')
+        f.write('class _CODEMETA:')
+
+        for k, v in uri_refs.items():
+            f.write(f'\n    {k} = URIRef("{v}")')
+
+        f.write('\n\n    _NS = Namespace("https://codemeta.github.io/terms/")')
+
+        f.write('\n\n')
+        f.write('\n\nCODEMETA = _CODEMETA()')
+
+    pathlib.Path(context_file).unlink(missing_ok=True)
+
+
 if __name__ == '__main__':
     # generate_namespace_file('m4i')  # be careful, german lines must be manually uncommented
     # generate_namespace_file('obo')  # be careful, german lines must be manually uncommented
-    generate_qudt_unit_namespace()  # write _qudt_namespace.py manually
-    generate_qudt_quantitykind_namespace()  # write _qudt_quantitykind_namespace.py manually
+    # generate_qudt_unit_namespace()  # write _qudt_namespace.py manually
+    # generate_qudt_quantitykind_namespace()  # write _qudt_quantitykind_namespace.py manually
+    generate_codemeta_namespace()

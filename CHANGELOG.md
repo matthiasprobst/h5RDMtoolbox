@@ -2,6 +2,12 @@
 
 Log of changes in the versions
 
+## v1.2.1
+- Add codemeta namespace
+- Improved json-ld export
+- Updated qudt namespace
+- colab notebook will be managed on a separate branch. the readme link points to the branch
+
 ## v1.2.0
 - Improved assignment of IRI to attributes
 - Export of a JSON-LD file possible
