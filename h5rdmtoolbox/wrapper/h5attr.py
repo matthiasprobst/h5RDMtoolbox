@@ -117,7 +117,10 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 return ret
             return AttributeString(ret)
         if isinstance(ret, np.ndarray) and ret.dtype.name == 'object':
-            return WrapperAttributeManager._parse_return_value(_id, str(ret.tolist()))
+            vstr = str(ret.tolist())
+            if '<HDF5 object reference>' in vstr:
+                return ret
+            return WrapperAttributeManager._parse_return_value(_id, vstr)
         return ret
 
     @with_phil

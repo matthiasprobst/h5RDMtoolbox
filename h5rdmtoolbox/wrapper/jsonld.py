@@ -57,8 +57,10 @@ def dumpd(grp,
         s = node.iri.subject
         if s is not None:
             j["@type"] = str(s)
-        for k, v in node.attrs.items():
+        for k in node.attrs.keys():
             if not k.isupper():
+                v = node.attrs[k]
+                print(k, v)
                 if node.iri.predicate.get(k, None) is not None:
                     if node.iri.object.get(k, None) is not None:
                         value = str(node.iri.object[k])
