@@ -1,6 +1,7 @@
 import ast
 import h5py
 import json
+import numpy as np
 import pint
 import rdflib
 from h5py._hl.base import with_phil
@@ -110,10 +111,13 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     # might be a list object
                     try:
                         return ast.literal_eval(ret)
+                        # return ast.literal_eval(ret.replace(' ', ', '))
                     except (ValueError, NameError, AttributeError):
                         return ret
                 return ret
             return AttributeString(ret)
+        if isinstance(ret, np.ndarray) and ret.dtype.name == 'object':
+            return WrapperAttributeManager._parse_return_value(_id, str(ret.tolist()))
         return ret
 
     @with_phil
@@ -132,8 +136,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                name,
                data,
                shape=None, dtype=None,
-               predicate: Union[str, rdflib.URIRef]=None,
-               object: Union[str, rdflib.URIRef]=None):
+               predicate: Union[str, rdflib.URIRef] = None,
+               object: Union[str, rdflib.URIRef] = None):
         r = super().create(name,
                            utils.parse_object_for_attribute_setting(data),
                            shape, dtype)
@@ -285,7 +289,6 @@ class WrapperAttributeManager(h5py.AttributeManager):
         from h5py._objects import phil
         with phil:
             return attrs.AttributeManager(self._parent)
-
 
 # class IRIAttr:
 #     """Helper class to write attributes together with an IRI

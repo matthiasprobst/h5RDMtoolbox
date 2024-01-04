@@ -78,7 +78,7 @@ Current implementation highlights in the modules:
 
 A quickstart notebook can be tested by clicking on the following badge:
 
-[![Open Quickstart Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/main/docs/colab/quickstart.ipynb)
+[![Open Quickstart Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/colab/docs/colab/quickstart.ipynb)
 
 ## Documentation
 
