@@ -4,7 +4,7 @@ from rdflib import URIRef
 from typing import Dict, Union
 
 from h5rdmtoolbox import consts
-
+from typing import List
 PREDICATE_KW = 'predicate'
 OBJECT_KW = 'object'
 
@@ -55,6 +55,30 @@ def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
     attr[consts.IRI_OBJECT_ATTR_NAME] = iri_data_data
 
 
+def append(attr: h5py.AttributeManager,
+                  attr_name: str,
+                  data: Union[str, List[str]],
+                  attr_identifier:str) -> None:
+    """Append the class, predicate or subject of an attribute"""
+    iri_data_data = attr.get(attr_identifier, None)
+    if iri_data_data is None:
+        iri_data_data = {}
+
+    curr_data = iri_data_data[attr_name]
+    if isinstance(curr_data, list):
+        if isinstance(data, list):
+            curr_data.extend(data)
+        else:
+            curr_data.append(data)
+            iri_data_data.update({attr_name: curr_data})
+    else:
+        if isinstance(data, list):
+            iri_data_data.update({attr_name: [curr_data, *data]})
+        else:
+            iri_data_data.update({attr_name: [curr_data, data]})
+    attr[attr_identifier] = iri_data_data
+
+
 class IRIDict(Dict):
 
     def __init__(self, _dict: Dict, attr: h5py.AttributeManager = None, attr_name: str = None):
@@ -73,16 +97,27 @@ class IRIDict(Dict):
     def predicate(self, value):
         set_predicate(self._attr, self._attr_name, value)
 
+    def append_object(self, value):
+        """Append the object of an attribute"""
+        append(self._attr, self._attr_name, value, consts.IRI_OBJECT_ATTR_NAME)
+
     @property
     def object(self):
         o = self[OBJECT_KW]
-        if o is not None:
-            return URIRef(o)
-        return o
+        if o is None:
+            return o
+        if isinstance(o, list):
+            return [URIRef(i) for i in o]
+        return URIRef(o)
 
     @object.setter
     def object(self, value):
-        set_object(self._attr, self._attr_name, value)
+        if isinstance(value, (list, tuple)):
+            set_object(self._attr, self._attr_name, value[0])
+            for v in value[1:]:
+                append(self._attr, self._attr_name, v, consts.IRI_OBJECT_ATTR_NAME)
+        else:
+            set_object(self._attr, self._attr_name, value)
 
     def __setitem__(self, key, value):
         if key == PREDICATE_KW:
@@ -103,12 +138,29 @@ class IRIManager:
     def subject(self) -> Union[URIRef, None]:
         s = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
         if s is not None:
+            if isinstance(s, list):
+                return [URIRef(i) for i in s]
             return URIRef(s)
         return s
 
     @subject.setter
     def subject(self, iri: Union[URIRef, str]):
         self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri)
+
+    def append_subject(self, subject: Union[URIRef, str]):
+        """Append the subject"""
+        curr_subjects = self._attr[consts.IRI_SUBJECT_ATTR_NAME]
+        if isinstance(curr_subjects, list):
+            if isinstance(subject, list):
+                curr_subjects.extend(subject)
+            else:
+                curr_subjects.append(subject)
+            self._attr[consts.IRI_SUBJECT_ATTR_NAME] = curr_subjects
+        else:
+            if isinstance(subject, list):
+                self._attr[consts.IRI_SUBJECT_ATTR_NAME] = [curr_subjects, *subject]
+            else:
+                self._attr[consts.IRI_SUBJECT_ATTR_NAME] = [curr_subjects, subject]
 
     # @property
     # def subject(self):
@@ -130,7 +182,8 @@ class IRIManager:
 
     def set_subject(self, iri):
         """Assign iri to an HDF5 object (group or dataset)"""
-        self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri)
+        if iri is not None:
+            self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri)
 
     def get(self, attr_name: str) -> IRIDict:
         return self.__getitem__(attr_name)
@@ -148,14 +201,17 @@ class IRIManager:
         del_iri_entry(self._attr, attr_name)
 
 
-class _IRIPO(str, abc.ABC):
+class _IRIPO(abc.ABC):
     """Abstract class for predicate (P) and object (O)"""
     IRI_ATTR_NAME = None
 
-    def __new__(cls, attr):
-        instance = super().__new__(cls, '')
-        instance._attr = attr
-        return instance
+    def __init__(self, attr):
+        self._attr = attr
+
+    # def __new__(cls, attr):
+    #     instance = super().__new__(cls, '')
+    #     instance._attr = attr
+    #     return instance
 
     @abc.abstractmethod
     def __setiri__(self, key, value):

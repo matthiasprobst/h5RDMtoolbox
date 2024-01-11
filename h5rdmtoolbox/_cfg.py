@@ -17,26 +17,26 @@ def is_valid_logger_level(level: Union[str, int]):
 
 
 CONFIG = {
-          'return_xarray': True,
-          'advanced_shape_repr': True,
-          'natural_naming': True,
-          'hdf_compression': None,  # 'gzip',
-          'hdf_compression_opts': None,  # 5,
-          'adjusting_plotting_labels': True,
-          'xarray_unit_repr_in_plots': 'in',
-          'plotting_name_order': ('plot_name', 'long_name', 'standard_name'),
-          'require_unit': True,  # datasets require units
-          'ureg_format': 'C~',
-          'init_logger_level': 'ERROR',
-          'dtime_fmt': '%Y%m%d%H%M%S%f',
-          'expose_user_prop_to_attrs': True,
-          'add_provenance': False,
-          'ignore_set_std_attr_err': False,
-
-          # if a standard attribute is defined and cannot be retrieved because the value is invalid, ignore it:
-          'ignore_get_std_attr_err': False,
-          'allow_deleting_standard_attributes': False,
-          }
+    'return_xarray': True,
+    'advanced_shape_repr': True,
+    'natural_naming': True,
+    'hdf_compression': None,  # 'gzip',
+    'hdf_compression_opts': None,  # 5,
+    'adjusting_plotting_labels': True,
+    'xarray_unit_repr_in_plots': 'in',
+    'plotting_name_order': ('plot_name', 'long_name', 'standard_name'),
+    'require_unit': True,  # datasets require units
+    'ureg_format': 'C~',
+    'init_logger_level': 'ERROR',
+    'dtime_fmt': '%Y%m%d%H%M%S%f',
+    'expose_user_prop_to_attrs': True,
+    'add_provenance': False,
+    'ignore_set_std_attr_err': False,
+    'uuid_name': 'uuid',  # attribute name used for UUIDs
+    # if a standard attribute is defined and cannot be retrieved because the value is invalid, ignore it:
+    'ignore_get_std_attr_err': False,
+    'allow_deleting_standard_attributes': False,
+}
 
 _VALIDATORS = {
     'return_xarray': lambda x: isinstance(x, bool),

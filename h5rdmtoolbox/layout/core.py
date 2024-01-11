@@ -186,9 +186,9 @@ class LayoutSpecification:
         --------
         >>> from h5rdmtoolbox.database import FileDB
         >>> lay = LayoutSpecification()
-        >>> spec1 = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
-        >>> spec2 = lay.add(...) # add another spec to layout
-        >>> spec_sub1 = spec1.add(...)  # add spec to `spec1` if it succeeds and apply to all results of `spec1`
+        >>> spec1 = lay.__set_meta_field__(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
+        >>> spec2 = lay.__set_meta_field__(...) # add another spec to layout
+        >>> spec_sub1 = spec1.__set_meta_field__(...)  # add spec to `spec1` if it succeeds and apply to all results of `spec1`
         """
         new_spec = LayoutSpecification(func=func,
                                        kwargs=kwargs,
@@ -258,20 +258,20 @@ class Layout(LayoutSpecification):
     --------
     >>> from h5rdmtoolbox import layout
     >>> lay = layout.Layout()
-    >>> spec_all_dataset = lay.add(
+    >>> spec_all_dataset = lay.__set_meta_field__(
     >>> hdfdb.FileDB.find,  # query function
     >>>     flt={},
     >>>     objfilter='dataset'
     >>> )
     >>>
     >>> # all datasets must be compressed with gzip (conditional spec. only called if parent spec is successful)
-    >>> spec_compression = spec_all_dataset.add(
+    >>> spec_compression = spec_all_dataset.__set_meta_field__(
     >>>     hdfdb.FileDB.find_one,  # query function
     >>>     flt={'$compression': 'gzip'}  # query parameter
     >>> )
     >>>
     >>> # the file must have the dataset "/u"
-    >>> spec_ds_u = lay.add(
+    >>> spec_ds_u = lay.__set_meta_field__(
     >>>     hdfdb.FileDB.find,  # query function
     >>>     flt={'$name': '/u'},
     >>>     objfilter='dataset'

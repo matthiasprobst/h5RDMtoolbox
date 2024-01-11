@@ -302,7 +302,7 @@ class StandardAttribute:
         #     ret_val = self.validate(ret_val, parent=parent)
         # except pydantic.ValidationError as e:
         #     errors.StandardAttributeError(f'The convention "{parent.convention.name}" detected an invalid attribute: '
-        #                                   f'Value "{ret_val}" for "{self.name}" is invalid.')
+        #                                   f'Parameter "{ret_val}" for "{self.name}" is invalid.')
         # finally:
         #     return ret_val
 

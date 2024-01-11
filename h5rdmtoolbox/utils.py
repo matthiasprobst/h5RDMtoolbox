@@ -14,8 +14,11 @@ import requests
 import warnings
 from h5py import File
 from logging.handlers import RotatingFileHandler
+from pydantic import HttpUrl, validate_call
+from rdflib.plugins.shared.jsonld.context import Context, CONTEXT
 from re import sub as re_sub
-from typing import Dict, Union, Callable, List, Tuple
+from typing import Dict
+from typing import Union, Callable, List, Tuple
 
 from . import _user, get_config, get_ureg, consts
 from ._version import __version__
@@ -537,3 +540,21 @@ class DocStringParser:
                     rkw.append(current_ret_param)
 
         return abstract, kw, rkw, notes_lines
+
+
+@validate_call
+def download_context(url: HttpUrl, force_download: bool = False) -> Context:
+    """Download a context file from a url
+
+    Examples
+    --------
+    >>> from h5rdmtoolbox.namespace import download_context
+    >>> context = download_context('https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
+    """
+    _url = str(url)
+    _fname = _url.rsplit('/', 1)[-1]
+    context_file = _user.UserDir['cache'] / _fname
+    if not context_file.exists() or force_download:
+        return Context(_url)
+    with open(context_file, 'r') as f:
+        return Context(json.load(f)[CONTEXT])

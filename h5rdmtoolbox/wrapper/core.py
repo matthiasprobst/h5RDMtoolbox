@@ -212,13 +212,14 @@ class Core:
     @iri.setter
     def iri(self, value):
         """Sets an IRI to the group or dataset"""
-        iri.IRIManager(self.attrs).set_subject(value)
+        if value is not None:
+            iri.IRIManager(self.attrs).set_subject(value)
 
 
 class SpecialAttributeWriter:
     """Accessor class, which provides methods to write special attributes to a dataset or group."""
 
-    def write_uuid(self, uuid: str = None, name='uuid', overwrite: bool = False) -> str:
+    def write_uuid(self, uuid: str = None, overwrite: bool = False, **kwargs) -> str:
         """Write a uuid to the attribute of the object.
 
         Parameters
@@ -233,6 +234,11 @@ class SpecialAttributeWriter:
         str
             The uuid as string.
         """
+        if 'name' in kwargs:
+            warnings.warn('Parameter "name" is deprecated. The attribute '
+                          'name for uuid is defined globally via the config',
+                          DeprecationWarning)
+        name = kwargs.get('name', get_config('uuid_name'))
         if name in self.attrs and not overwrite:
             raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
                              '"overwrite" is set to False')
@@ -242,6 +248,11 @@ class SpecialAttributeWriter:
         suuid = str(uuid)
         self.attrs[name] = suuid
         return suuid
+
+    def get_uuid(self, name=None, default=None):
+        """Get UUID if exists."""
+        _name = name or get_config('uuid_name')
+        return self.attrs.get(_name, default)
 
     def write_iso_timestamp(self, name='timestamp', dt: datetime = None, overwrite: bool = False, **kwargs):
         """Write the iso timestamp to the attribute of the object.
@@ -1018,7 +1029,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
 
         if axis not in (0, -1):
-            raise ValueError(f'Value for parameter axis can only be 0 or 1 but not {axis}')
+            raise ValueError(f'Parameter for parameter axis can only be 0 or 1 but not {axis}')
 
         is_list_tuple_or_numpy = isinstance(imgdata, (list, tuple, np.ndarray))
         if not is_list_tuple_or_numpy:

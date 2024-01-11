@@ -130,9 +130,14 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
     return string, False
 
 
+iri_icon_html = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
+
+
 def get_iri_icon_href(iri: str) -> str:
-    """get html representation of an IRI with icon"""
-    return f'<a href="{iri}"><img src="https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true" alt=" [IRI]" width="16" height="16" /></a>'
+    """get html representation of an IRI with icon. The URL is shown as a tooltip"""
+    return f'<a href="{iri}" target="_blank" class="tooltip"> ' \
+           f'<img class="size_of_img" src="{iri_icon_html}" alt="Image 1" width="16" height="16" />' \
+           f' <span class="tooltiptext">{iri}</span></a>'
 
 
 class _HDF5StructureRepr:
@@ -189,7 +194,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
             print(preamble)
         for attr_name in group.attrs.raw.keys():
             if not attr_name.isupper():
-                print(self.base_intent * indent + self.__attrs__(attr_name, group))
+                print(self.base_intent * indent + self.__attrs__(attr_name, group.attrs[attr_name]))
         for key, item in group.items():
             if isinstance(item, h5py.Dataset):
                 print(self.base_intent * indent + self.__dataset__(key, item))
@@ -236,6 +241,10 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
         return f"/\033[1m{name}\033[0m"
 
     def __attrs__(self, name, value) -> str:
+        if isinstance(value, h5py.Group):
+            value = f'grp:{value.name}'
+        elif isinstance(value, h5py.Dataset):
+            value = f'dset:{value.name}'
         return f'\033[3ma: {name}\033[0m: {value}'
 
 

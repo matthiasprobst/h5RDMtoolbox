@@ -187,7 +187,7 @@ def __validate_date_format(value, handler, info):
 def _get_validate_type(_type):
     def __validate_type(value, handler, info):
         if not isinstance(value, _type):
-            raise TypeError(f'Value must be a string but got {type(value)}')
+            raise TypeError(f'Parameter must be a string but got {type(value)}')
         return value
 
     return __validate_type

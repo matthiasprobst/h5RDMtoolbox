@@ -1,7 +1,12 @@
 import h5py
 import json
+import numpy as np
 import pathlib
-from typing import Dict
+from rdflib import Graph, URIRef, Literal
+from rdflib.namespace import RDF
+from typing import Optional, Union, Dict, List
+
+from h5rdmtoolbox import get_config
 
 
 def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
@@ -30,11 +35,125 @@ def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
     return _entries
 
 
+def _get_id_from_attr_value(_av, file_url):
+    if isinstance(_av, (h5py.Dataset, h5py.Group)):
+        return _get_id(_av, file_url)
+    else:
+        return Literal(_av)
+
+
+def _get_id(_node, file_url) -> URIRef:
+    """if an attribute in the node is called "@id", use that, otherwise use the node name"""
+    _id = _node.attrs.get('@id', None)
+    if _id is None:
+        _id = _node.attrs.get(get_config('uuid_name'),
+                              file_url + 'h5name:' + _node.name)
+    return URIRef(_id)
+
+
+def serialize(grp,
+              iri_only=False,
+              file_url="local:",
+              recursive: bool = True,
+              compact: bool = False,
+              context: Dict = None
+              ) -> Dict:
+    """using rdflib graph"""
+
+    if isinstance(grp, (str, pathlib.Path)):
+        from .core import File
+        with File(grp) as h5:
+            return serialize(h5,
+                             iri_only,
+                             file_url,
+                             recursive=recursive,
+                             compact=compact,
+                             context=context)
+
+    has_parameter = URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasParameter')
+
+    # global _context
+    _context = context or {}
+
+    def add_node(name, obj):
+        node = _get_id(obj, file_url)
+        node_type = obj.iri.subject
+        if node_type:
+            g.add((node, RDF.type, node_type))
+        if isinstance(obj, h5py.Dataset):
+            # node is Parameter
+            g.add((node, RDF.type, URIRef("http://www.molmod.info/semantics/pims-ii.ttl#Variable")))
+            # parent gets "hasParameter"
+            parent_node = _get_id(obj.parent, file_url)
+            g.add((parent_node, has_parameter, node))
+
+        for ak, av in obj.attrs.items():
+            if not ak.isupper() and not ak.startswith('@'):
+                if isinstance(av, (list, tuple)):
+                    value = [_get_id_from_attr_value(_av, file_url) for _av in av]
+                else:
+                    value = _get_id_from_attr_value(av, file_url)
+
+                # g.add((node, URIRef(ak), Literal(av)))
+                predicate = obj.iri.predicate.get(ak, None)
+
+                # only add if not defined in context:
+                if predicate and predicate not in _context:
+                    # irikey = str(obj.iri.predicate[ak])
+                    if isinstance(value, (list, tuple)):
+                        for v in value:
+                            g.add((node, URIRef(predicate), v))
+                    else:
+                        g.add((node, URIRef(predicate), value))
+
+                # context_iri = context.get(ak, None)
+                # if context_iri:
+                #     g.add((node, URIRef(context_iri), value))
+
+                if predicate is None and not iri_only:
+                    g.add((node, URIRef(ak), value))
+        # if isinstance(obj, h5py.Group):
+        #     for name, sub_obj in obj.items():
+        #         add_node(sub_obj, graph)
+        # else:
+        #     # has parameter
+        #     graph.add((node, has_parameter, node))
+
+    g = Graph()
+    add_node(grp.name, grp)
+
+    if recursive:
+        grp.visititems(add_node)
+
+    return g.serialize(
+        format='json-ld',
+        context=_context,
+        compact=compact
+    )
+
+
 def dumpd(grp,
           iri_only=False,
-          file_url="",
+          file_url="local:",
           recursive: bool = True,
-          compact: bool = False) -> Dict:
+          compact: bool = False,
+          context: Dict = None
+          ) -> Union[List, Dict]:
+    """If context is missing, return will be a List"""
+    s = serialize(grp,
+                  iri_only,
+                  file_url,
+                  recursive=recursive,
+                  compact=compact,
+                  context=context)
+    return json.loads(s)
+
+
+def depr_dumpd(grp,
+               iri_only=False,
+               file_url="",
+               recursive: bool = True,
+               compact: bool = False) -> Dict:
     """Dump a group or a dataset to to dict."""
 
     if isinstance(grp, (str, pathlib.Path)):
@@ -57,27 +176,51 @@ def dumpd(grp,
         s = node.iri.subject
         if s is not None:
             j["@type"] = str(s)
+
+        if isinstance(node, h5py.Dataset):
+            if node.ndim == 0:
+                # only write value if it is a scalar
+                if node.dtype.kind == 'S':
+                    j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = str(node.values[()])
+                data = node.values[()]
+                if isinstance(data, (int, np.integer)):
+                    j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = int(data)
+                elif data.dtype.kind == 'S':
+                    j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = str(data)
+                else:
+                    j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = float(data)
+
         for k in node.attrs.keys():
             if not k.isupper():
                 v = node.attrs[k]
                 if node.iri.predicate.get(k, None) is not None:
+                    irikey = str(node.iri.predicate[k])
                     if node.iri.object.get(k, None) is not None:
-                        value = str(node.iri.object[k])
+                        # value = str(node.iri.object[k])
+                        if isinstance(v, (list, tuple)):
+                            value = [str(i) for i in v]
+                        else:
+                            value = str(v)
+                        j[irikey] = [str(node.iri.object[k]), value]
                     else:
                         if isinstance(v, (h5py.Group, h5py.Dataset)):
                             if '@id' in v.attrs:
-                                value = v.attrs['@id']
+                                iri_value = v.attrs['@id']
                             else:
-                                value = _get_id(v)
+                                iri_value = _get_id(v)
+                            j[irikey] = [v.name, iri_value]
                         else:
                             if isinstance(v, (list, tuple)):
                                 value = [str(i) for i in v]
                             else:
                                 value = str(v)
-                    j[str(node.iri.predicate[k])] = value
+                        j[irikey] = value
                 else:
                     if not iri_only:
-                        j[k] = str(v)
+                        if isinstance(v, (h5py.Group, h5py.Dataset)):
+                            j[k] = v.name
+                        else:
+                            j[k] = str(v)
         entries[_id] = j
         # entries.append(j)
 
@@ -105,7 +248,8 @@ def dumpd(grp,
     return jsonld_dict
 
 
-def dumps(grp, iri_only=False,
+def dumps(grp,
+          iri_only=False,
           file_url="",
           recursive: bool = True,
           compact: bool = False,
@@ -123,11 +267,16 @@ def dump(grp,
          file_url="",
          recursive: bool = True,
          compact: bool = False,
+         context: Optional[Dict] = None,
          **kwargs):
     """Dump a group or a dataset to to file."""
     return json.dump(
         dumpd(
-            grp, iri_only, file_url, recursive=recursive, compact=compact
+            grp, iri_only,
+            file_url,
+            recursive=recursive,
+            compact=compact,
+            context=context
         ),
         fp,
         **kwargs
