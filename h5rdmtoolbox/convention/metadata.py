@@ -11,9 +11,34 @@ import typing
 import uuid
 import warnings
 from pydantic import __all__ as pydantic_all
-from typing import Union, Dict, Optional
+from typing import Union, Dict, Optional, List, Tuple
 
 import h5rdmtoolbox as h5tbx
+
+
+class JLDDict(dict):
+    """A subclass of dict which has the properties '_type' and '_context'.
+    Moreover it is a 'frozen' dictionary, so it cannot be changed.
+    """
+
+    def __init__(self, data, metadata=None):
+        super().__init__()
+        self.update(data)
+        self._metadata = metadata or {}
+
+    def __setitem__(self, key: str, item: str) -> None:
+        raise AttributeError(f"{self.__class__.__name__} is immutable.")
+
+    def __delitem__(self, key: str) -> None:
+        raise AttributeError(f"{self.__class__.__name__} is immutable.")
+
+    @property
+    def _type(self):
+        return self.get('@type', None)
+
+    @property
+    def _context(self):
+        return self.get('@context', None)
 
 
 def is_list_of_dicts(data):
@@ -83,30 +108,97 @@ class Metadata(_Metadata):
     Currently, it can only be read from JSON or JSON-LD files.
     """
 
-    def __init__(self, model: "PydanticBaseModel", context: Dict, ld_type: str = None,
-                 extra_fields: Dict = None):
+    def __init__(self, model: "PydanticBaseModel",
+                 context: Dict,
+                 ld_type: str = None,
+                 extra_fields: Dict = None,
+                 property_associations: Dict = None
+                 # sub_field_model_types: Dict = None
+                 ):
         self._model = model
         self._data = None
         self._extra_fields = extra_fields or {}
+        self._property_associations = property_associations or {}
+        # self._sub_field_model_types = sub_field_model_types or {}
         self._context = context
-        self._ld_type = str(ld_type) if ld_type else None  # jsonld type (@type)
+        self._type = str(ld_type) if ld_type else None  # jsonld type (@type)
         for k, v in self.get_data().items():
             setattr(self, k, v)
 
     def __repr__(self) -> str:
-        return self.get_data().__repr__()
+        return self.json_dump(indent=2)
 
     def __str__(self) -> str:
         return str(self.get_data())
 
-    def get_data(self, exclude_none=True) -> Dict:
+    def get_data(self, exclude_none=True) -> JLDDict:
         """Get data as dict"""
+
+        _context_entries = {}
+
+        def _process_json_ld_meta(_data):
+            """recursively run through nested dictionary and replace JSON_LD_TYPE key with @type if exists"""
+            if isinstance(_data, dict):
+                if 'JSON_LD_TYPE' in _data:
+                    ld_type = _data.pop('JSON_LD_TYPE', None)
+                    if ld_type:
+                        _data['@type'] = ld_type
+                if 'JSON_LD_CONTEXT' in _data:
+                    _context = _data.pop('JSON_LD_CONTEXT', None)
+                    if _context:
+                        # _data['@context'] = _context
+                        _context_entries.update(_context)
+                for k in _data.keys():
+                    if isinstance(_data[k], dict):
+                        _process_json_ld_meta(_data[k])
+
         if self._data is None:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                self._data = {**json.loads(self._model.model_dump_json(exclude_none=exclude_none)),
-                              **self._extra_fields}
-        return self._data
+                model_dict = json.loads(self._model.model_dump_json(exclude_none=exclude_none))
+
+                _process_json_ld_meta(model_dict)
+                # if self._type:
+                #     model_dict.pop('JSON_LD_TYPE', None)
+                # else:
+                #     self._type = model_dict.pop('JSON_LD_TYPE', None)
+                self._data = {
+                    **model_dict,
+                    **self._extra_fields}
+        if _context_entries:
+            self._data['@context'] = _context_entries
+        return JLDDict(self._data, self)
+
+    def jsonld_dump(self,
+                    exclude_none=True,
+                    exclude_context: bool = False,
+                    indent: int = 2, **kwargs) -> str:
+        """Generates a JSON-LD representation of the data"""
+        _d = {}
+        _type = self._type
+        if _type:
+            _d['@type'] = _type
+        if not exclude_context:
+            _d['@context'] = self._context
+        data = self.get_data(exclude_none=exclude_none)
+        prop_associations = data.pop('JSON_LD_IS_PROPERTY', None) or {}
+        for k, v in data.items():
+            if isinstance(v, str):
+                _d[k] = v
+            elif isinstance(v, dict):
+                prop_association = prop_associations.get(k, None)
+                if prop_association:
+                    if prop_association not in _d:
+                        _d[prop_association] = []
+                    # make sure @type comes first
+                    subdict = {}
+                    subtype = v.pop('@type', None)
+                    if subtype:
+                        subdict['@type'] = subtype
+                    subdict.update(v)
+                    _d[prop_association].append(subdict)
+
+        return json.dumps(_d, indent=indent, **kwargs)
 
     def json_dump(self, exclude_none=True, **kwargs) -> str:
         """Generates a JSON-LD representation of the data"""
@@ -160,31 +252,19 @@ class Metadata(_Metadata):
             Metadata ID. Will create an attribute with key "@id" and value
             according to the input.
         """
-        if self._ld_type:
-            target.iri.subject = self._ld_type
-        _h5dump(target, self.get_data(), self._context, id=id)
-        # data = self.data
-        # for k, v in data.items():
-        #     if isinstance(v, dict):
-        #
-        #     _type = data.get('@type', None)
-        #     if _type:
-        #         if _type in self.context:
-        #             target.iri.subject = self.context.get(_type).id
-        #     _id = data.get('@id', None)
-        #     if _id is None:
-        #         _id = '_:' + str(uuid.uuid4())
-        #
-        #     # for now assuming that it is a pure group. only if
-        #     # value in keys, it is a dataset
-        #     if not k.startswith('@'):
-        #         if k in self.context:
-        #             target.attrs.create(k, v, predicate=self.context.get(k).id)
-        #         else:
-        #             target.attrs.create(k, v)
-        # if k == '@id':
-        #     _id = v
-        # creating a new node (group) in the h5 file
+
+        def _rpop(_data, keys=['JSON_LD_IS_PROPERTY', 'JSON_LD_CONTEXT', 'JSON_LD_TYPE', '@context']):
+            for k, v in _data.copy().items():
+                if k in keys:
+                    _data.pop(k)
+                if isinstance(v, dict):
+                    _rpop(v)
+
+        _data = self.get_data()
+        _rpop(_data)
+        if self._type:
+            target.iri.subject = self._type
+        _h5dump(target, _data, self._context, id=id)
 
 
 def resolve_context(context: Dict) -> Dict:
@@ -250,7 +330,11 @@ def model_from_json(filename: Union[str, pathlib.Path],
         Type (not in a pythonic meaning but a JSON-LD type, e.g. an identifier) of the model
     """
     with open(filename) as f:
-        model_def_data = json.load(f)
+        try:
+            model_def_data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(f'Could not parse {filename} as JSON. Please check the syntax of the file content.'
+                             f'\nOrig. err: {e}') from e
 
     base_types = {
         'str': str,
@@ -260,7 +344,6 @@ def model_from_json(filename: Union[str, pathlib.Path],
     }
     user_types = user_types or {}
     for k, v in user_types.copy().items():
-        # print(f'parsing {k} with {v}')
         if isinstance(v, MetadataModel):
             user_types[k] = v._model_cls
 
@@ -301,30 +384,78 @@ def model_from_json(filename: Union[str, pathlib.Path],
         return defined_types.get(type_str, type_str)
 
     _model_def_data = model_def_data.copy()
-    for k, v in model_def_data.items():
-        if isinstance(v, dict):
-            raise TypeError(f'Nested dictionaries are not supported: {k}: {v}')
-        if not isinstance(v, (tuple, list)):
-            _model_def_data[k] = (v, ...)
-        if isinstance(v, list):
-            if v[1] == '...':
-                v[1] = Ellipsis
-            _model_def_data[k] = (v[0], v[1])
-        _type, _default = _model_def_data[k]
-        if _type in defined_types:
-            _model_def_data[k] = (defined_types[_type], _default)
-        elif _type in pydantic_all:
-            pd = importlib.import_module("pydantic")
-            pydatnic_type = getattr(pd, _type, None)
-            if pydatnic_type is None:
-                raise ValueError(f'pydantic.{_type} is not found.')
-            _model_def_data[k] = (pydatnic_type, _default)
-        else:
-            _model_def_data[k] = (_convert_to_type(_type), _default)
 
-    for k, v in _model_def_data.items():
-        if isinstance(v[0], str):
-            raise TypeError(f'Unknown type: {k}. Make sure it is a type or defined in user_types.')
+    def _parse_model_field(_field_data: Union[str, Dict, List[Dict]]) -> Tuple[str, str]:
+        if isinstance(_field_data, dict):
+            __type_hint = _field_data.get('type', None)
+            if __type_hint is None:
+                raise ValueError(f'No type hint is given for field {k} in filename {filename}.')
+            __default_value = _field_data.get('default', Ellipsis)
+        elif isinstance(_field_data, str):
+            __type_hint = _field_data
+            __default_value = Ellipsis
+        elif isinstance(_field_data, list):
+            pass  # TODO evaluated the type hint and default of the list entries
+        else:
+            raise TypeError(f'Invalid type for field {k} in filename {filename}. '
+                            f'Expecting str, dict or list but not {type(_field_data)}')
+        return __type_hint, __default_value
+
+    def _parse_type_hint(th):
+        if th in defined_types:
+            return defined_types[th]
+        elif th in pydantic_all:
+            __pydantic_package = importlib.import_module("pydantic")
+            pydantic_type = getattr(__pydantic_package, th, None)
+            if pydantic_type is None:
+                raise ValueError(f'pydantic.{th} is not found.')
+            return pydantic_type
+        else:
+            return _convert_to_type(th)
+
+    _is_property = {}  # collects all known properties
+    _pop_keys = []
+    for k, v in model_def_data.items():
+        if isinstance(v, list):
+            # fields with a known property IRI
+            for _item in v:
+                if not isinstance(_item, dict):
+                    raise TypeError(f'A list of field definitions must be a list of dicts but got {type(_item)}.\n'
+                                    f'Please check file {filename} for field "{k}".')
+                for _k, _v in _item.items():
+                    _type_hint, _default_value = _parse_model_field(_v)
+                    _model_def_data[_k] = (_parse_type_hint(_type_hint), _default_value)
+                    # if isinstance(_type_hint, str):
+                    #     raise ValueError(f'Could not parse type hint: {_type_hint}. Make sure special (user) types '
+                    #                      f'are provided in user_types.')
+                    _is_property[_k] = k
+                    _pop_keys.append(k)
+        else:
+            _type_hint, _default_value = _parse_model_field(v)
+            _model_def_data[k] = (_parse_type_hint(_type_hint), _default_value)
+
+    for _prop_key in _pop_keys:
+        _model_def_data.pop(_prop_key, None)
+
+    # for k, v in _model_def_data.items():
+    #     if isinstance(v[0], str):
+    #         raise TypeError(f'Unknown type: {k}. Make sure it is a type or defined in user_types.')
+
+    if 'JSON_LD_TYPE' in model_def_data:
+        raise ValueError(f'"JSON_LD_TYPE" is a reserved key. Please use @type instead.')
+
+    if 'JSON_LD_CONTEXT' in model_def_data:
+        raise ValueError(f'"JSON_LD_CONTEXT" is a reserved key. Please use @context instead.')
+
+    if ld_type:
+        _model_def_data['JSON_LD_TYPE'] = (str, ld_type)
+
+    if context:
+        _model_def_data['JSON_LD_CONTEXT'] = (Dict, context)
+
+    if _is_property:
+        _model_def_data['JSON_LD_IS_PROPERTY'] = (Dict, _is_property)
+
     model = pydantic.create_model(name,
                                   **_model_def_data,
                                   **kwargs)
@@ -332,31 +463,65 @@ def model_from_json(filename: Union[str, pathlib.Path],
     # model.model_config['extra'] = 'allow'
     # model.model_config = ConfigDict(extra='allow')
     model.__doc__ = model_description
-    return model, context, ld_type
+    return model, context, ld_type, _is_property
 
 
 class MetadataModel:
     """Interface to metadata models defined via a pydantic.BaseModel class"""
 
-    def __init__(self, model_cls, context, ld_type):
+    def __init__(self, model_cls, context, ld_type, property_association=None):
         self._model_cls = model_cls
         self.context = context
         self.ld_type = ld_type
+        self.property_association = property_association or {}
 
     def __call__(self, **kwargs) -> Metadata:
         exclude_none = kwargs.pop('exclude_none', True)
 
         extra_fields = {k: v for k, v in kwargs.items() if k not in self.model_fields}
 
+        # sub_field_model_types = {}  # e.g. "manufacturer" in "m4i:tool"
+
         # parse kwargs:
         def _parse(_name, _data):
             if isinstance(_data, Metadata):
-                return _data._model
+                # sub_field_model_types[_name] = _data._type
+                # return _data._model
+                return _data._data
             return _data
 
         pkwargs = {k: _parse(k, v) for k, v in kwargs.items()}
 
-        model_instance = self._model_cls(**pkwargs)
+        try:
+            model_instance = self._model_cls(**pkwargs)
+        except AttributeError as e:
+            # try to find the missing type
+            import re
+
+            pattern = r"ForwardRef\('([^']*)'\)"
+            missing_type_classes = []
+
+            def _get_missing_type(_field):
+                annotation = _field.annotation
+                matches = re.findall(pattern, str(annotation))
+
+                if matches:
+                    missing_type_classes.extend([extracted_string for extracted_string in matches])
+
+                if hasattr(annotation, 'model_fields'):
+                    for _sub_field in annotation.model_fields.values():
+                        _get_missing_type(_sub_field)
+
+            for field in self._model_cls.__fields__.values():
+                _get_missing_type(field)
+
+            if missing_type_classes:
+                raise RuntimeError('The model could not be validated because the following types are missing: '
+                                   f'{missing_type_classes}. \nThe reason is, that they types were not passed '
+                                   'during model creation via the parameter user_types.')
+            raise AttributeError(e)
+
+            # str(_model_def_data['quantum_efficiency'][0].model_fields['standard_name'].annotation)
         # model_dict = json.loads(model_instance.model_dump_json())
         return Metadata(
             model=model_instance,
@@ -418,19 +583,6 @@ class MetadataModel:
                 before='kwargs')(mm.__call__)
                     )
         return mm
-
-    # Organization = model_from_json('organization_model_definition.json', name='Organization')
-    # LaserModel = model_from_json('my_laser_model.json', name='laser',
-    #                              user_types={'Organization': Organization})
-    #
-    # Organization(name='Quantel', url='https://www.quantel-laser.com/')
-    #
-    # # print(MyModel.schema_json(indent=2))
-    #
-    # LaserModel(
-    #     model='TwinBSL',
-    #     manufacturer={'name': 'Quantel', 'url': 'https://www.quantel-laser.com/'}
-    # )
 
 
 if __name__ == '__main__':
