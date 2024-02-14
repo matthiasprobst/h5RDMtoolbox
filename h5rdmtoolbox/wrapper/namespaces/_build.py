@@ -163,5 +163,5 @@ if __name__ == '__main__':
     # generate_namespace_file('m4i')  # be careful, german lines must be manually uncommented
     # generate_namespace_file('obo')  # be careful, german lines must be manually uncommented
     # generate_qudt_unit_namespace()  # write _qudt_namespace.py manually
-    # generate_qudt_quantitykind_namespace()  # write _qudt_quantitykind_namespace.py manually
+    generate_qudt_quantitykind_namespace()  # write _qudt_quantitykind_namespace.py manually
     generate_codemeta_namespace()
