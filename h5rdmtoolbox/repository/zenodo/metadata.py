@@ -14,8 +14,9 @@ Also note, that the above mentioned library cannot be used as not all required f
 
 import re
 from datetime import datetime
-from pydantic import BaseModel, field_validator, Field
 from typing import Optional, Union, List
+
+from pydantic import BaseModel, field_validator, Field
 from typing_extensions import Literal
 
 
@@ -34,7 +35,8 @@ class Creator(BaseModel):
     gnd: Optional[str] = Field(default=None)
 
     @field_validator('name')
-    def validate_name(cls, value):
+    @classmethod
+    def _validate_name(cls, value):
         if "," not in value:
             raise ValueError(f'The creator name should be formatted "family name, given names" but is {value}')
         return value

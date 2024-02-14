@@ -42,9 +42,11 @@ class RepositoryInterface(abc.ABC):
     def upload_hdf_file(self, filename, metamapper: Callable, overwrite: bool = False):
         """Upload an HDF5 file. Additionally a metadata file will be extracted from the
         HDF5 file using the metamapper function and is uploaded as well."""
-        meta_data_file = metamapper(filename)
+        if metamapper:
+            meta_data_file = metamapper(filename)
         self.upload_file(filename=filename, overwrite=overwrite)
-        self.upload_file(filename=meta_data_file, overwrite=overwrite)
+        if metamapper:
+            self.upload_file(filename=meta_data_file, overwrite=overwrite)
 
     @abc.abstractmethod
     def get_doi(self):
