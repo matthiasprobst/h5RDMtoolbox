@@ -1,4 +1,5 @@
 import json
+import pathlib
 import rdflib
 import unittest
 from rdflib import URIRef
@@ -7,6 +8,8 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.namespace import CODEMETA, M4I
 from h5rdmtoolbox.utils import download_context
 from h5rdmtoolbox.wrapper import jsonld
+
+__this_dir__ = pathlib.Path(__file__).parent
 
 
 class TestNamespaces(unittest.TestCase):
@@ -27,11 +30,16 @@ class TestNamespaces(unittest.TestCase):
                 context={'units': URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasUnit'),
                          'local': '_:'}
             )
-            dd = json.loads(d)
-            self.assertEqual(dd['@graph'][1]['a number'], "3")
+            self.assertIsInstance(d, dict)
+            graph_data = sorted(d['@graph'], key=lambda x: x['@id'])
+            self.assertEqual(graph_data[1]['a number'], "3")
+            dd = json.loads(json.dumps(d))
+            graph_data = sorted(d['@graph'], key=lambda x: x['@id'])
+            self.assertEqual(graph_data[1]['a number'], "3")
 
     def test_download_context(self):
-        code_meta_context = download_context('https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
+        code_meta_context = download_context(
+            'https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld').to_dict()
         self.assertIsInstance(code_meta_context, dict)
         self.assertEqual(code_meta_context['type'], "@type")
         self.assertEqual(code_meta_context['id'], "@id")
@@ -40,9 +48,8 @@ class TestNamespaces(unittest.TestCase):
 
     def test_codemeta(self):
         self.assertIsInstance(CODEMETA.contributor, URIRef)
-        import pathlib
-        __this_dir__ = pathlib.Path('__file__').parent
         f = __this_dir__ / '../../codemeta.json'
+        print(f.resolve().absolute())
         self.assertTrue(f.exists())
         cm = rdflib.Graph().parse(location=f, format='json-ld')
         print(len(cm))
@@ -110,10 +117,10 @@ class TestNamespaces(unittest.TestCase):
             author2.attrs['@id'] = "https://orcid.org/0000-0002-4116-0065"
 
             code_meta_context = download_context(
-                'https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
+                'https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld').to_dict()
             m4i_context = download_context(
                 'https://git.rwth-aachen.de/nfdi4ing/metadata4ing/metadata4ing/-/raw/master/m4i_context.jsonld'
-            )
+            ).to_dict()
             context = {
                 # 'orcidid': 'http://w3id.org/nfdi4ing/metadata4ing#orcidId',
                 # 'version': 'http://schema.org/version',
@@ -156,7 +163,7 @@ class TestNamespaces(unittest.TestCase):
             self.assertIsInstance(entries, list)
             self.assertIsInstance(d, list)
 
-            for e in entries:
+            for e in sorted(entries):
                 self.assertTrue('@id' in e)
 
             # _entries = entries.copy()

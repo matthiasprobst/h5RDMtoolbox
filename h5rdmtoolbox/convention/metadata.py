@@ -395,6 +395,8 @@ def model_from_json(filename: Union[str, pathlib.Path],
             __type_hint = _field_data
             __default_value = Ellipsis
         elif isinstance(_field_data, list):
+            __type_hint = _field_data[0]
+            __default_value = _field_data[1]
             pass  # TODO evaluated the type hint and default of the list entries
         else:
             raise TypeError(f'Invalid type for field {k} in filename {filename}. '
@@ -417,19 +419,21 @@ def model_from_json(filename: Union[str, pathlib.Path],
     _pop_keys = []
     for k, v in model_def_data.items():
         if isinstance(v, list):
-            # fields with a known property IRI
-            for _item in v:
-                if not isinstance(_item, dict):
-                    raise TypeError(f'A list of field definitions must be a list of dicts but got {type(_item)}.\n'
-                                    f'Please check file {filename} for field "{k}".')
-                for _k, _v in _item.items():
-                    _type_hint, _default_value = _parse_model_field(_v)
-                    _model_def_data[_k] = (_parse_type_hint(_type_hint), _default_value)
-                    # if isinstance(_type_hint, str):
-                    #     raise ValueError(f'Could not parse type hint: {_type_hint}. Make sure special (user) types '
-                    #                      f'are provided in user_types.')
-                    _is_property[_k] = k
-                    _pop_keys.append(k)
+            _type_hint, _default_value = _parse_model_field(v)
+            _model_def_data[k] = (_parse_type_hint(_type_hint), _default_value)
+            # # fields with a known property IRI
+            # for _item in v:
+            #     if not isinstance(_item, dict):
+            #         raise TypeError(f'A list of field definitions must be a list of dicts but got {type(_item)}.\n'
+            #                         f'Please check file {filename} for field "{k}".')
+            #     for _k, _v in _item.items():
+            #         _type_hint, _default_value = _parse_model_field(_v)
+            #         _model_def_data[_k] = (_parse_type_hint(_type_hint), _default_value)
+            #         # if isinstance(_type_hint, str):
+            #         #     raise ValueError(f'Could not parse type hint: {_type_hint}. Make sure special (user) types '
+            #         #                      f'are provided in user_types.')
+            #         _is_property[_k] = k
+            #         _pop_keys.append(k)
         else:
             _type_hint, _default_value = _parse_model_field(v)
             _model_def_data[k] = (_parse_type_hint(_type_hint), _default_value)

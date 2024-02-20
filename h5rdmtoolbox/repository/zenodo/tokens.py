@@ -2,6 +2,7 @@ import appdirs
 import configparser
 import os
 import pathlib
+import warnings
 from typing import Union
 
 from h5rdmtoolbox.utils import create_tbx_logger
@@ -34,13 +35,19 @@ def get_api_token(sandbox: bool,
     config = configparser.ConfigParser()
     config.read(zenodo_ini_filename)
     if sandbox:
-        access_token = config['zenodo:sandbox']['access_token']
+        try:
+            access_token = config['zenodo:sandbox']['access_token']
+        except KeyError:
+            access_token = None
     else:
-        access_token = config['zenodo']['access_token']
+        try:
+            access_token = config['zenodo']['access_token']
+        except KeyError:
+            access_token = None
     if not access_token:
-        raise ValueError(f'No API token found in {zenodo_ini_filename}. Please verify the correctness of the file '
-                         f'{zenodo_ini_filename}. The access_token entry must be in the section [zenodo] or '
-                         f'[zenodo:sandbox].')
+        warnings.warn(f'No API token found in {zenodo_ini_filename}. Please verify the correctness of the file '
+                      f'{zenodo_ini_filename}. The access_token entry must be in the section [zenodo] or '
+                      f'[zenodo:sandbox].')
     return access_token
 
 

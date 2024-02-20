@@ -1,6 +1,5 @@
 import json
 import unittest
-from pprint import pprint
 from rdflib.namespace import FOAF
 
 import h5rdmtoolbox as h5tbx
@@ -31,12 +30,15 @@ class TestExtension(unittest.TestCase):
         }
         fname = h5tbx.utils.generate_temporary_filename(suffix='.json')
         with open(fname, 'w') as f:
-            json.dump(user_model, f)
+            json.dump(user_model, f, indent=4)
 
-        # sanity check check:
-        with open(fname) as f:
-            pprint(json.load(f))
+        # # sanity check check:
+        # with open(fname) as f:
+        #     pprint(json.load(f))
 
         UserName = MetadataModel.from_json(fname, 'UserName')
         john_doe = UserName(first_name='John', last_name='Doe', age=32, orcidid='https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(john_doe.first_name, 'John')
+        self.assertEqual(john_doe.last_name, 'Doe')
+        self.assertEqual(john_doe.age, 32)
+        self.assertEqual(john_doe.orcidid, 'https://orcid.org/0000-0001-8729-0482')

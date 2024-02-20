@@ -14,9 +14,8 @@ Also note, that the above mentioned library cannot be used as not all required f
 
 import re
 from datetime import datetime
-from typing import Optional, Union, List
-
 from pydantic import BaseModel, field_validator, Field
+from typing import Optional, Union, List
 from typing_extensions import Literal
 
 

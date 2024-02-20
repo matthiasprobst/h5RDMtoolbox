@@ -135,7 +135,6 @@ class TestConfig(unittest.TestCase):
                                 embargo_date='01-2022-01',  # wrong format!
                                 publication_date='2023-01-01')
 
-
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)
 
@@ -332,6 +331,8 @@ class TestConfig(unittest.TestCase):
         filename = z.download_file('testfile.txt', target_folder='.')
         self.assertIsInstance(filename, pathlib.Path)
         self.assertTrue(filename.exists())
+        with open(filename, 'r') as f:
+            self.assertEqual(f.read(), 'This is a test file.')
         filename.unlink()
 
         filenames = z.download_files(target_folder='.')

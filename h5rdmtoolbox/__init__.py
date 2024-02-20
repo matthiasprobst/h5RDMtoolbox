@@ -21,11 +21,20 @@ from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import warnings, errors
 from .wrapper import jsonld
 from .wrapper.accessory import register_special_dataset
+import json
 
 name = 'h5rdmtoolbox'
 __this_dir__ = pathlib.Path(__file__).parent
 __author__ = 'Matthias Probst'
 __author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
+
+
+def get_package_meta():
+    """Reads codemeta.json and returns it as dict"""
+    with open(__this_dir__ / '../codemeta.json', 'r') as f:
+        codemeta = json.loads(f.read())
+    return codemeta
+
 
 logger = utils.create_tbx_logger('h5rdmtoolbox')
 

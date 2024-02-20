@@ -57,7 +57,7 @@ class TestFile(unittest.TestCase):
         if pathlib.Path('test.hdf').exists():
             # just in case ...
             pathlib.Path('test.hdf').unlink()
-        with h5tbx.File('test.hdf') as h5:
+        with h5tbx.File('test.hdf', 'w') as h5:
             self.assertEqual('r+', h5.mode)
             self.assertEqual('test.hdf', h5.hdf_filename.name)
         if h5.hdf_filename.exists():
