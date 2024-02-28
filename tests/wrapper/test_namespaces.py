@@ -5,7 +5,7 @@ import unittest
 from rdflib import URIRef
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.namespace import CODEMETA, M4I
+from h5rdmtoolbox.namespace import CODEMETA, M4I, OBO
 from h5rdmtoolbox.utils import download_context
 from h5rdmtoolbox.wrapper import jsonld
 
@@ -16,6 +16,21 @@ class TestNamespaces(unittest.TestCase):
 
     def setUp(self) -> None:
         h5tbx.use(None)
+
+    def test_namespace_modules(self):
+        # check the german extension module
+        self.assertEqual(
+            str(M4I.de.Methode),
+            str(M4I.Method)
+        )
+        self.assertEqual(
+            str(M4I.de.Methode),
+            'http://w3id.org/nfdi4ing/metadata4ing#Method'
+        )
+        self.assertEqual(
+            str(OBO.de.Output_von),
+            str(OBO.output_of)
+        )
 
     def test_attr_obj_references(self):
         with h5tbx.File() as h5:
