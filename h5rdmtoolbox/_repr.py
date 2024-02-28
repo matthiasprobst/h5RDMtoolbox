@@ -24,6 +24,12 @@ except FileNotFoundError:
     with open(pathlib.Path(__file__).parent / 'data/style.css') as f:
         CSS_STR = f.read().rstrip()
 
+# IRI_ICON = importlib_resources.files('h5rdmtoolbox').joinpath('data/iri_icon.png')
+# if IRI_ICON.exists():
+#     IRI_ICON = rf'file:///{IRI_ICON}'
+# else:
+IRI_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
+
 """
 disclaimer:
 
@@ -32,8 +38,6 @@ is inspired and mostly taken from:
 https://jsfiddle.net/tay08cn9/4/ (xarray package)
 
 """
-
-SDUMP_TABLE_SPACING = 30, 20, 8, 30
 
 
 class BColors:
@@ -85,7 +89,20 @@ def okprint(string):
     print(oktext(string))
 
 
-def make_href(url, text) -> str:
+def make_href(url: str, text: str) -> str:
+    """Builds HTML hyperlink from url
+
+    Parameters
+    ----------
+    url: str
+        link destination
+    text: str
+        display text
+
+    Returns
+    -------
+    The HTML <a> tag string
+    """
     if not url.startswith('http'):
         raise ValueError(f'Invalid URL: "{url}". Must start with "http"')
     return f'<a href="{url}">{text}</a>'
@@ -130,14 +147,11 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
     return string, False
 
 
-iri_icon_html = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
-
-
-def get_iri_icon_href(iri: str) -> str:
+def get_iri_icon_href(iri: str, tooltiptext=None) -> str:
     """get html representation of an IRI with icon. The URL is shown as a tooltip"""
     return f'<a href="{iri}" target="_blank" class="tooltip"> ' \
-           f'<img class="size_of_img" src="{iri_icon_html}" alt="Image 1" width="16" height="16" />' \
-           f' <span class="tooltiptext">{iri}</span></a>'
+           f'<img class="size_of_img" src="{IRI_ICON}" alt="Image 1" width="16" height="16" />' \
+           f' <span class="tooltiptext">{tooltiptext or iri}</span></a>'
 
 
 class _HDF5StructureRepr:
@@ -380,7 +394,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
 
-        iri = h5obj.iri.subject
+        iri = h5obj.iri.predicate.get('SELF', None)
         if iri is not None:
             name += get_iri_icon_href(iri)
 
@@ -420,9 +434,16 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         else:
             checkbox_state = self.checkbox_state
 
-        iri = h5obj.iri.subject
-        if iri is not None:
-            _groupname += get_iri_icon_href(iri)
+        self_predicate = h5obj.iri.predicate.get('SELF', None)
+        self_subject = h5obj.iri.subject
+
+        if self_predicate is not None:
+            _groupname += get_iri_icon_href(self_predicate)
+
+        if self_subject is not None:
+            _groupname += get_iri_icon_href(self_subject,
+                                            tooltiptext=f'@type: {self_subject}')
+
         _html = f"""\n
               <ul style="list-style-type: none;" class="h5grp-sections">
                     <li>
