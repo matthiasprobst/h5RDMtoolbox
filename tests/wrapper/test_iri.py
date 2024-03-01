@@ -4,7 +4,7 @@ from rdflib import URIRef
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
-from h5rdmtoolbox.namespace import M4I, OBO
+from namespacelib import M4I, OBO
 
 
 class TestIRI(unittest.TestCase):
@@ -12,6 +12,27 @@ class TestIRI(unittest.TestCase):
     def setUp(self) -> None:
         """setup"""
         use(None)
+
+    def test_group_predicate(self):
+        with h5tbx.File() as h5:
+            grp = h5.create_group('has_contact')
+            # assign parent group
+            grp.iri.predicate = 'https://schema.org/author'
+            grp.iri.subject = 'http://xmlns.com/foaf/0.1/Person'
+            print(grp.iri.subject)
+
+            from h5rdmtoolbox import jsonld
+
+        print(
+            jsonld.dumps(
+                h5.hdf_filename,
+                indent=2,
+                context={'m4i': 'http://w3id.org/nfdi4ing/metadata4ing#',
+                         'foaf': 'http://xmlns.com/foaf/0.1/',
+                         'local': 'http://example.com/',
+                         }
+            )
+        )
 
     def test_multiple_subjects_or_objects(self):
         with h5tbx.File() as h5:
@@ -72,11 +93,10 @@ class TestIRI(unittest.TestCase):
             from rdflib.namespace import FOAF
 
             grp = h5.create_group('contact_person')
-            grp.iri = FOAF.Person
             grp.iri.subject = FOAF.Person
 
             method_grp = h5.create_group('a_method')
-            method_grp.iri = M4I.Method
+            method_grp.iri.subject = M4I.Method
             method_grp.attrs['has_participants', OBO.RO_0000057] = h5['contact_person']  # has participants
 
             self.assertEqual(method_grp.attrs['has_participants'], h5['contact_person'])
@@ -98,7 +118,7 @@ class TestIRI(unittest.TestCase):
 
         with h5tbx.File() as h5:
             grp = h5.create_group('contact_person')
-            grp.iri = FOAF.Person
+            grp.iri.subject = FOAF.Person
             grp.attrs['firstName', FOAF.firstName] = 'John'
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
 
@@ -107,7 +127,7 @@ class TestIRI(unittest.TestCase):
             self.assertEqual(grp.iri['firstName'].predicate, FOAF.firstName)
             self.assertEqual(grp.iri['lastName'].predicate, FOAF.lastName)
 
-            grp.iri = [FOAF.Person,
-                       'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
-            self.assertTrue(FOAF.Person in grp.iri)
-            self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.iri)
+            grp.iri.subject = [FOAF.Person,
+                               'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
+            self.assertTrue(FOAF.Person in grp.iri.subject)
+            self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.iri.subject)

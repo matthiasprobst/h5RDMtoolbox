@@ -2,9 +2,10 @@ import abc
 import h5py
 from rdflib import URIRef
 from typing import Dict, Union
+from typing import List
 
 from h5rdmtoolbox import consts
-from typing import List
+
 PREDICATE_KW = 'predicate'
 OBJECT_KW = 'object'
 
@@ -56,9 +57,9 @@ def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
 
 
 def append(attr: h5py.AttributeManager,
-                  attr_name: str,
-                  data: Union[str, List[str]],
-                  attr_identifier:str) -> None:
+           attr_name: str,
+           data: Union[str, List[str]],
+           attr_identifier: str) -> None:
     """Append the class, predicate or subject of an attribute"""
     iri_data_data = attr.get(attr_identifier, None)
     if iri_data_data is None:
@@ -134,19 +135,34 @@ class IRIManager:
     def __init__(self, attr: h5py.AttributeManager = None):
         self._attr = attr
 
+    # @property
+    # def type(self):
+    #     """Returns the type, the group describes"""
+    #     _type = self._attr.get('@type', None)
+    #     if _type is None:
+    #         return _type
+    #     return URIRef(_type)
+    #
+    # @type.setter
+    # def type(self, type: Union[URIRef, str]) -> None:
+    #     """Sets the type, the group describes"""
+    #     self._attr['@type'] = str(type)
+
     @property
     def subject(self) -> Union[URIRef, None]:
-        s = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
-        if s is not None:
-            if isinstance(s, list):
-                return [URIRef(i) for i in s]
-            return URIRef(s)
-        return s
+        s = self._attr.get('@type', None)
+        if s is None:
+            return s
+        return URIRef(s)
 
     @subject.setter
-    def subject(self, iri: Union[URIRef, str]):
-        self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri)
+    def subject(self, iri_type: Union[URIRef, str]):
+        self._attr['@type'] = str(iri_type)
+        # self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri)
 
+    # @property
+    # def subject(self):
+    #     return self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
     def append_subject(self, subject: Union[URIRef, str]):
         """Append the subject"""
         curr_subjects = self._attr[consts.IRI_SUBJECT_ATTR_NAME]
@@ -162,13 +178,17 @@ class IRIManager:
             else:
                 self._attr[consts.IRI_SUBJECT_ATTR_NAME] = [curr_subjects, subject]
 
-    # @property
-    # def subject(self):
-    #     return self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
-
     @property
     def predicate(self):
         return IRI_Predicate(self._attr)
+
+    @predicate.setter
+    def predicate(self, predicate: Union[URIRef, str]):
+        iri_sbj_data = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
+        if iri_sbj_data is None:
+            iri_sbj_data = {}
+        iri_sbj_data.update({'SELF': predicate})
+        self._attr[consts.IRI_PREDICATE_ATTR_NAME] = iri_sbj_data
 
     @property
     def object(self):

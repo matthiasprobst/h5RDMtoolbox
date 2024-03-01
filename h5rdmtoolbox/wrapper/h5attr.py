@@ -292,23 +292,3 @@ class WrapperAttributeManager(h5py.AttributeManager):
         from h5py._objects import phil
         with phil:
             return attrs.AttributeManager(self._parent)
-
-# class IRIAttr:
-#     """Helper class to write attributes together with an IRI
-#
-#     Examples
-#     --------
-#     >>> import h5rdmtoolbox as h5tbx
-#     >>> hasKQ = namespace.M4I.hasKindOfQuantity
-#     >>> Velocity = 'https://qudt.org/vocab/quantitykind/Velocity'
-#     >>>
-#     >>> with h5tbx('test.h5') as h5:
-#     ...     h5.u.attrs['qK', hasKQ] = h5tbx.IRIAttr(value='Velocity', iri=Velocity)
-#     """
-#
-#     def __init__(self, value, iri):
-#         self.value = value
-#         self.iri = iri
-#
-#     def __repr__(self):
-#         return f'{self.__class__.__name__}({self.value} iri={self.iri})'

@@ -5,10 +5,9 @@ import unittest
 from rdflib import URIRef
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.namespace import CODEMETA, M4I, OBO
 from h5rdmtoolbox.utils import download_context
 from h5rdmtoolbox.wrapper import jsonld
-
+import namespacelib
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -16,21 +15,6 @@ class TestNamespaces(unittest.TestCase):
 
     def setUp(self) -> None:
         h5tbx.use(None)
-
-    def test_namespace_modules(self):
-        # check the german extension module
-        self.assertEqual(
-            str(M4I.de.Methode),
-            str(M4I.Method)
-        )
-        self.assertEqual(
-            str(M4I.de.Methode),
-            'http://w3id.org/nfdi4ing/metadata4ing#Method'
-        )
-        self.assertEqual(
-            str(OBO.de.Output_von),
-            str(OBO.output_of)
-        )
 
     def test_attr_obj_references(self):
         with h5tbx.File() as h5:
@@ -42,7 +26,7 @@ class TestNamespaces(unittest.TestCase):
             d = jsonld.dumpd(
                 h5,
                 compact=True,
-                context={'units': URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasUnit'),
+                context={'units': namespacelib.M4I.hasUnit,
                          'local': '_:'}
             )
             self.assertIsInstance(d, dict)
@@ -62,9 +46,9 @@ class TestNamespaces(unittest.TestCase):
         self.assertEqual(code_meta_context['codemeta'], "https://codemeta.github.io/terms/")
 
     def test_codemeta(self):
-        self.assertIsInstance(CODEMETA.contributor, URIRef)
+        self.assertIsInstance(namespacelib.SCHEMA.contributor, URIRef)
         f = __this_dir__ / '../../codemeta.json'
-        print(f.resolve().absolute())
+        # print(f.resolve().absolute())
         self.assertTrue(f.exists())
         cm = rdflib.Graph().parse(location=f, format='json-ld')
         print(len(cm))
@@ -99,35 +83,35 @@ class TestNamespaces(unittest.TestCase):
         with h5tbx.File() as h5:
             del h5.attrs['__h5rdmtoolbox_version__']
             grp = h5.create_group('h5dmtoolbox')
-            grp.iri = CODEMETA.SoftwareSourceCode
+            grp.iri = namespacelib.CODEMETA.SoftwareSourceCode
 
-            grp.attrs['license', CODEMETA.license] = "https://spdx.org/licenses/MIT"
-            grp.attrs['codeRepository', CODEMETA.codeRepository] = "git+" \
+            grp.attrs['license', namespacelib.CODEMETA.license] = "https://spdx.org/licenses/MIT"
+            grp.attrs['codeRepository', namespacelib.CODEMETA.codeRepository] = "git+" \
                                                                    "https://github.com/matthiasprobst/h5RDMtoolbox.git"
-            grp.attrs['name', CODEMETA.name] = "h5RDMtoolbox"
-            grp.attrs['version', CODEMETA.version] = "1.2.2"
+            grp.attrs['name', namespacelib.CODEMETA.name] = "h5RDMtoolbox"
+            grp.attrs['version', namespacelib.CODEMETA.version] = "1.2.2"
 
             authors = grp.create_group('author')
 
-            # authors.iri = CODEMETA.author
+            # authors.iri = namespacelib.CODEMETA.author
             author1 = authors.create_group('author1')
             author2 = authors.create_group('author2')
 
             # use @id, not group name!
-            grp.attrs['author', CODEMETA.author] = [
+            grp.attrs['author', namespacelib.CODEMETA.author] = [
                 "https://orcid.org/0000-0001-8729-0482",
                 "https://orcid.org/0000-0002-4116-0065"
             ]
 
-            author1.iri = CODEMETA.Person
-            author1.attrs['givenName', CODEMETA.givenName] = "Matthias"
-            author1.attrs['familyName', CODEMETA.familyName] = "Probst"
+            author1.iri = namespacelib.SCHEMA.Person
+            author1.attrs['givenName', namespacelib.SCHEMA.givenName] = "Matthias"
+            author1.attrs['familyName', namespacelib.SCHEMA.familyName] = "Probst"
             author1.attrs['orcidid', M4I.orcidId] = "https://orcid.org/0000-0001-8729-0482"
             author1.attrs['@id'] = "https://orcid.org/0000-0001-8729-0482"
 
-            author2.iri = CODEMETA.Person
-            author2.attrs['givenName', CODEMETA.givenName] = "Lucas"
-            author2.attrs['familyName', CODEMETA.familyName] = "Büttner"
+            author2.iri = namespacelib.SCHEMA.Person
+            author2.attrs['givenName', namespacelib.SCHEMA.givenName] = "Lucas"
+            author2.attrs['familyName', namespacelib.SCHEMA.familyName] = "Büttner"
             author2.attrs['orcidid', M4I.orcidId] = "https://orcid.org/0000-0002-4116-0065"
             author2.attrs['@id'] = "https://orcid.org/0000-0002-4116-0065"
 

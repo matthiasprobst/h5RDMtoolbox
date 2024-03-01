@@ -209,11 +209,12 @@ class Core:
         """Return IRI Manager"""
         return iri.IRIManager(self.attrs)
 
-    @iri.setter
-    def iri(self, value):
-        """Sets an IRI to the group or dataset"""
-        if value is not None:
-            iri.IRIManager(self.attrs).set_subject(value)
+    # @iri.setter
+    # def iri(self, value):
+    #     """Sets an IRI to the group or dataset"""
+    #     if value is None:
+    #         raise ValueError(f'None is not allowed!')
+    #     iri.IRIManager(self.attrs).set_subject(value)
 
 
 class SpecialAttributeWriter:
@@ -565,7 +566,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         for ak, av in attrs.items():
             ds.attrs[ak] = av
-        # TODO: H5StingDataset
         return self._h5ds(ds.id)
 
     def create_dataset(self,
@@ -2004,8 +2004,8 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
                 # file does not exist and mode is not given--> write!
                 elif not fname.exists():
-                    mode = 'w'
-                    logger.debug('Mode is set to "w" because file does not exist and mode was not given.')
+                    raise FileNotFoundError(f'File "{fname}" does not exist and mode is not given.')
+
             elif mode == 'w' and fname.exists():
                 fname.unlink()
                 logger.debug('File exists and mode is set to "w". Deleting file first.')
@@ -2022,7 +2022,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             if mode == 'r+':
                 if not Path(name).exists():
                     _tmp_init = True
-                    mode = 'r+'
+                    # mode = 'r+'
                     # "touch" the file, so it exists
                     _h5pykwargs = kwargs.copy()
                     for k in list(kwargs.keys()):

@@ -15,8 +15,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import convention
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention import core
-from h5rdmtoolbox.convention.core import InvalidAttribute
-from h5rdmtoolbox.convention.core import MissingAttribute
+from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
