@@ -53,3 +53,4 @@ coverage.svg
 docs/colab/my_file.hdf
 *.h5
 *.nxs
+*.jsonld
