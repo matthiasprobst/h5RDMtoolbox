@@ -5,7 +5,7 @@ import pathlib
 import requests
 import time
 import warnings
-from typing import Union, List, Callable, Iterable
+from typing import Union, List, Callable, Iterable, Dict
 
 from h5rdmtoolbox.utils import create_tbx_logger
 from .metadata import Metadata
@@ -231,13 +231,17 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
     depositions_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
     rec_url = "https://sandbox.zenodo.org/api/records"
 
-    def get_metadata(self) -> Metadata:
-        return Metadata(**self.json()['metadata'])
+    def get_metadata(self) -> Dict:
+        return self.json()['metadata']
+        # return Metadata(**self.json()['metadata'])
 
-    def set_metadata(self, metadata: Metadata):
+    def set_metadata(self, metadata: Union[Dict, Metadata]):
         """update the metadata of the deposit"""
-        if not isinstance(metadata, Metadata):
-            raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
+        if isinstance(metadata, dict):
+            metadata = Metadata(**metadata)
+        else:
+            if not isinstance(metadata, Metadata):
+                raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
         r = requests.put(
             self.json()['links']['latest_draft'],
             data=json.dumps(dict(metadata=metadata.model_dump(exclude_none=True))),
@@ -364,6 +368,20 @@ class ZenodoRecord(AbstractZenodoInterface):
     def access_token(self):
         """Get the access token for the Zenodo API. This is needed to upload files."""
         return get_api_token(sandbox=False)
+
+    def set_metadata(self, metadata: Metadata):
+        """update the metadata of the deposit"""
+        if not isinstance(metadata, Metadata):
+            raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
+        r = requests.put(
+            self.json()['links']['latest_draft'],
+            data=json.dumps(dict(metadata=metadata.model_dump(exclude_none=True))),
+            params={"access_token": self.access_token},
+            # headers={"Content-Type": "application/json"}
+        )
+        if r.status_code == 400:
+            logger.critical(f"Bad request message: {r.json()}")
+        r.raise_for_status()
 
     def upload_file(self, filename, overwrite: bool = False):
         raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')

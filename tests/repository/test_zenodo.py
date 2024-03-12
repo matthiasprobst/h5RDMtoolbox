@@ -231,7 +231,7 @@ class TestConfig(unittest.TestCase):
         json_name = hdf_file_name.replace('.hdf', '.json')
 
         z.upload_hdf_file(orig_hdf_filename, metamapper=hdf2json)
-        filenames = z.get_filenames()
+        filenames = z.get_files()
         self.assertIn(hdf_file_name, filenames)
         self.assertIn(json_name, filenames)
         with self.assertRaises(KeyError):
@@ -262,12 +262,12 @@ class TestConfig(unittest.TestCase):
 
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoSandboxDeposit(None)
-        self.assertIsInstance(z.metadata, dict)
+        self.assertIsInstance(z.get_metadata(), dict)
         self.assertEqual(z.get_doi(), f'10.5281/zenodo.{z.rec_id}')
-        self.assertIn('access_right', z.metadata)
-        self.assertIn('prereserve_doi', z.metadata)
-        self.assertEqual('open', z.metadata['access_right'])
-        self.assertEqual(z.rec_id, z.metadata['prereserve_doi']['recid'])
+        self.assertIn('access_right', z.get_metadata())
+        self.assertIn('prereserve_doi', z.get_metadata())
+        self.assertEqual('open', z.get_metadata()['access_right'])
+        self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
         self.assertTrue(z.exists())
 
         old_rec_id = z.rec_id
@@ -280,8 +280,8 @@ class TestConfig(unittest.TestCase):
         z = zenodo.ZenodoSandboxDeposit(None)
         self.assertNotEqual(old_rec_id, z.rec_id)
 
-        with self.assertRaises(TypeError):
-            z.metadata = {'access_right': 'closed'}
+        # with self.assertRaises(TypeError):
+        #     z.metadata = {'access_right': 'closed'}
 
         meta = Metadata(
             version="0.1.0-rc.1+build.1",
@@ -302,8 +302,8 @@ class TestConfig(unittest.TestCase):
             embargo_date='2020'
         )
 
-        z.metadata = meta
-        ret_metadata = z.metadata
+        z.set_metadata(meta)
+        ret_metadata = z.get_metadata()
         self.assertEqual(ret_metadata['upload_type'],
                          meta.model_dump()['upload_type'])
         self.assertListEqual(ret_metadata['keywords'],
@@ -314,7 +314,7 @@ class TestConfig(unittest.TestCase):
         with open(tmpfile, 'w') as f:
             f.write('This is a test file.')
         z.upload_file(tmpfile, overwrite=True)
-        self.assertIn('testfile.txt', z.get_filenames())
+        self.assertIn('testfile.txt', z.get_files())
 
         with self.assertWarns(UserWarning):
             z.upload_file('testfile.txt', overwrite=False)

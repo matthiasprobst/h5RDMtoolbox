@@ -14,7 +14,7 @@ Also note, that the above mentioned library cannot be used as not all required f
 import pydantic
 import re
 from datetime import datetime
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, field_validator, Field, ConfigDict
 from typing import Optional, Union, List, Dict
 from typing_extensions import Literal
 
@@ -191,6 +191,8 @@ class Metadata(BaseModel):
     access_right: Optional[Literal["open", "closed", "restricted", "embargoed"]] = "open"
     license: Optional[str] = "cc-by-4.0"
     embargo_date: Optional[Union[str, datetime]] = None
+
+    model_config = ConfigDict(extra='forbid')
 
     @field_validator('publication_date')
     @classmethod

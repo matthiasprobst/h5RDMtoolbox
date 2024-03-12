@@ -754,7 +754,7 @@ def from_zenodo(doi_or_recid: str,
     if not filename.exists() or force_download:
         record = zenodo.ZenodoRecord(rec_id)
 
-        filenames = record.get_filenames()
+        filenames = record.get_files()
         if name is None:
             matches = [file for file in filenames if pathlib.Path(file).suffix == '.yaml']
         else:
