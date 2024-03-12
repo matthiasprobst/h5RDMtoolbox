@@ -95,7 +95,7 @@ def download_file(url, known_hash):
             if not calculated_hash == known_hash:
                 raise ValueError('File does not match the expected has')
         else:
-            warnings.warn('No has given!')
+            warnings.warn('No hash given! This is recommended when downloading files from the web.', UserWarning)
 
         # Save the content to a file
         fname = generate_temporary_filename()
