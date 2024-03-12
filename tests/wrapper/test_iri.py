@@ -4,7 +4,7 @@ from rdflib import URIRef
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
-from namespacelib import M4I, OBO
+from ontolutils.namespacelib import M4I, OBO
 
 
 class TestIRI(unittest.TestCase):

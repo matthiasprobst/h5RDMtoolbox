@@ -22,7 +22,7 @@ def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
                 # remove empty entry, Note, this could be a problem if the entry references elsewhere...
                 delete_candidates.append(_id)
                 continue
-            if k != '@id':
+            if k not in ('@id', '@type'):
                 if isinstance(v, list):
                     if all([i in ids for i in v]):
                         _entries[_id][k] = [_entries.pop(i) for i in v]
@@ -42,41 +42,42 @@ def _get_id_from_attr_value(_av, file_url):
         return Literal(_av)
 
 
-def _get_id(_node, file_url) -> URIRef:
+def _get_id(_node, local) -> URIRef:
     """if an attribute in the node is called "@id", use that, otherwise use the node name"""
     _id = _node.attrs.get('@id', None)
+    if not local:
+        local = rf'file://{_node.hdf_filename.resolve().absolute()}'
     if _id is None:
         _id = _node.attrs.get(get_config('uuid_name'),
-                              file_url + 'h5name:' + _node.name)
+                              local + ':' + _node.name)
     return URIRef(_id)
 
 
 def serialize(grp,
               iri_only=False,
-              file_url="local:",
+              local="https://www.example.org",
               recursive: bool = True,
               compact: bool = False,
               context: Dict = None
               ) -> Dict:
     """using rdflib graph"""
-
     if isinstance(grp, (str, pathlib.Path)):
         from .core import File
         with File(grp) as h5:
             return serialize(h5,
                              iri_only,
-                             file_url,
+                             local,
                              recursive=recursive,
                              compact=compact,
                              context=context)
 
-    has_parameter = URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasParameter')
+    hasParameter = URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasParameter')
 
     # global _context
     _context = context or {}
 
     def add_node(name, obj):
-        node = _get_id(obj, file_url)
+        node = _get_id(obj, local=local)
         node_type = obj.iri.subject
         if node_type:
             g.add((node, RDF.type, node_type))
@@ -84,15 +85,15 @@ def serialize(grp,
             # node is Parameter
             g.add((node, RDF.type, URIRef("http://www.molmod.info/semantics/pims-ii.ttl#Variable")))
             # parent gets "hasParameter"
-            parent_node = _get_id(obj.parent, file_url)
-            g.add((parent_node, has_parameter, node))
+            parent_node = _get_id(obj.parent, local)
+            g.add((parent_node, hasParameter, node))
 
         for ak, av in obj.attrs.items():
             if not ak.isupper() and not ak.startswith('@'):
                 if isinstance(av, (list, tuple)):
-                    value = [_get_id_from_attr_value(_av, file_url) for _av in av]
+                    value = [_get_id_from_attr_value(_av, local) for _av in av]
                 else:
-                    value = _get_id_from_attr_value(av, file_url)
+                    value = _get_id_from_attr_value(av, local)
 
                 # g.add((node, URIRef(ak), Literal(av)))
                 predicate = obj.iri.predicate.get(ak, None)
@@ -117,7 +118,7 @@ def serialize(grp,
         #         add_node(sub_obj, graph)
         # else:
         #     # has parameter
-        #     graph.add((node, has_parameter, node))
+        #     graph.add((node, hasParameter, node))
 
     g = Graph()
     add_node(grp.name, grp)
@@ -134,7 +135,7 @@ def serialize(grp,
 
 def dumpd(grp,
           iri_only=False,
-          file_url="local:",
+          local="https://www.example.org",
           recursive: bool = True,
           compact: bool = False,
           context: Dict = None
@@ -142,7 +143,7 @@ def dumpd(grp,
     """If context is missing, return will be a List"""
     s = serialize(grp,
                   iri_only,
-                  file_url,
+                  local,
                   recursive=recursive,
                   compact=compact,
                   context=context)
@@ -151,7 +152,7 @@ def dumpd(grp,
 
 def depr_dumpd(grp,
                iri_only=False,
-               file_url="",
+               local="https://www.example.org",
                recursive: bool = True,
                compact: bool = False) -> Dict:
     """Dump a group or a dataset to to dict."""
@@ -159,12 +160,12 @@ def depr_dumpd(grp,
     if isinstance(grp, (str, pathlib.Path)):
         from .core import File
         with File(grp) as h5:
-            return dumpd(h5, iri_only, file_url, recursive=recursive, compact=compact)
+            return dumpd(h5, iri_only, local, recursive=recursive, compact=compact)
 
     assert isinstance(grp, (h5py.Group, h5py.Dataset))
 
     def _get_id(_grp):
-        return file_url + 'grp:' + _grp.name
+        return local + 'grp:' + _grp.name
 
     entries = {}
 
@@ -250,13 +251,19 @@ def depr_dumpd(grp,
 
 def dumps(grp,
           iri_only=False,
-          file_url="",
+          local="https://www.example.org",
           recursive: bool = True,
           compact: bool = False,
+          context: Optional[Dict] = None,
           **kwargs) -> str:
     """Dump a group or a dataset to to string."""
     return json.dumps(dumpd(
-        grp=grp, iri_only=iri_only, file_url=file_url, recursive=recursive, compact=compact),
+        grp=grp,
+        iri_only=iri_only,
+        local=local,
+        recursive=recursive,
+        compact=compact,
+        context=context),
         **kwargs
     )
 
@@ -264,7 +271,7 @@ def dumps(grp,
 def dump(grp,
          fp,
          iri_only=False,
-         file_url="",
+         local="https://www.example.org",
          recursive: bool = True,
          compact: bool = False,
          context: Optional[Dict] = None,
@@ -273,7 +280,7 @@ def dump(grp,
     return json.dump(
         dumpd(
             grp, iri_only,
-            file_url,
+            local,
             recursive=recursive,
             compact=compact,
             context=context
@@ -281,3 +288,5 @@ def dump(grp,
         fp,
         **kwargs
     )
+
+# def create_from_jsonld

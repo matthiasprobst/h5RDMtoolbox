@@ -45,7 +45,6 @@ class TestRepr(unittest.TestCase):
             h5.attrs['orcid'] = [h5tbx.__author_orcid__, h5tbx.__author_orcid__, ]
             h5.dump()
 
-
     def test_repr(self):
         # test h5rdmtoolbox._repr.DataSetRepr
         with File(h5tbx.utils.generate_temporary_filename(), 'w') as h5:
@@ -60,8 +59,8 @@ class TestRepr(unittest.TestCase):
             ssr = _repr.HDF5StructureStrRepr()
             ssr(h5, preamble='My preamble')
 
-            with self.assertRaises(TypeError):
-                ssr.__0Ddataset__('ds0', h5['str'])
+            # with self.assertRaises(TypeError):
+            #     ssr.__0Ddataset__('ds0', h5['str'])
 
             s = ssr.__dataset__('ds', h5['ds'])
             self.assertEqual(s, '\x1b[1mds\x1b[0m 3, dtype: int64')

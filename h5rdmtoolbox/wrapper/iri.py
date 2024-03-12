@@ -150,14 +150,16 @@ class IRIManager:
 
     @property
     def subject(self) -> Union[URIRef, None]:
-        s = self._attr.get('@type', None)
+        s = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
+        if isinstance(s, list):
+            return [URIRef(i) for i in s]
         if s is None:
-            return s
+            return
         return URIRef(s)
 
     @subject.setter
     def subject(self, iri_type: Union[URIRef, str]):
-        self._attr['@type'] = str(iri_type)
+        self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri_type)
         # self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri)
 
     # @property
@@ -165,7 +167,7 @@ class IRIManager:
     #     return self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
     def append_subject(self, subject: Union[URIRef, str]):
         """Append the subject"""
-        curr_subjects = self._attr[consts.IRI_SUBJECT_ATTR_NAME]
+        curr_subjects = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, [])
         if isinstance(curr_subjects, list):
             if isinstance(subject, list):
                 curr_subjects.extend(subject)

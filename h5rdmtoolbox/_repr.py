@@ -247,7 +247,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
             value = f'{value}'
         else:
             warnings.warn(f'Unexpected type {type(value)}', UserWarning)
-            value = '???'
+            value = '?type?'
         return f"\033[1m{name}\033[0m {value}, dtype: {h5obj.dtype}"
 
     def __NDdataset__(self, name, h5obj: h5py.Dataset):
@@ -334,7 +334,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
         _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
-        units = h5obj.attrs.get('units', '')
+        units = h5obj.attrs.get('units', None)
+        if units is None:
+            units = h5obj.attrs.get('hasUnit', '')
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>

@@ -7,7 +7,8 @@ from rdflib import URIRef
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.utils import download_context
 from h5rdmtoolbox.wrapper import jsonld
-import namespacelib
+from ontolutils import namespacelib
+
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -87,7 +88,7 @@ class TestNamespaces(unittest.TestCase):
 
             grp.attrs['license', namespacelib.CODEMETA.license] = "https://spdx.org/licenses/MIT"
             grp.attrs['codeRepository', namespacelib.CODEMETA.codeRepository] = "git+" \
-                                                                   "https://github.com/matthiasprobst/h5RDMtoolbox.git"
+                                                                                "https://github.com/matthiasprobst/h5RDMtoolbox.git"
             grp.attrs['name', namespacelib.CODEMETA.name] = "h5RDMtoolbox"
             grp.attrs['version', namespacelib.CODEMETA.version] = "1.2.2"
 
