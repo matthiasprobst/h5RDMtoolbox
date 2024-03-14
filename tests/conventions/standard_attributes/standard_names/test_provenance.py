@@ -21,16 +21,16 @@ class TestProvenance(unittest.TestCase):
 
         h5tbx.use(None)
 
-        # cv = h5tbx.convention.from_zenodo('https://zenodo.org/record/10156750',
+        # cv = h5tbx.convention.from_zenodo('https://zenodo.org/record/10428822',
         #                                    overwrite=True,
         #                                    force_download=True)
         from h5rdmtoolbox.repository.zenodo import ZenodoRecord
-        repo = ZenodoRecord(10156750)
+        repo = ZenodoRecord(10428822)
         cv = h5tbx.convention.from_repo(repo,
                                          name='tutorial_convention.yaml',
                                          take_existing=True,
                                          force_download=True)
-        # cv = h5tbx.convention.from_zenodo('https://zenodo.org/record/10156750',
+        # cv = h5tbx.convention.from_zenodo('https://zenodo.org/record/10428822',
         #                                    overwrite=True,
         #                                    force_download=True)
 

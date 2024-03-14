@@ -38,7 +38,7 @@ def get_api_token(sandbox: bool,
 
     logger.debug('No environment variable found for the zenodo token. Trying to read it from the config file '
                  '%s .' % zenodo_ini_filename)
-
+    print(env_token)
     zenodo_ini_filename = _parse_ini_file(zenodo_ini_filename)
     config = configparser.ConfigParser()
     config.read(zenodo_ini_filename)

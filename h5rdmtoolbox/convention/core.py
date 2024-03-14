@@ -727,8 +727,8 @@ def from_zenodo(doi_or_recid: str,
     Parameters
     ----------
     doi_or_recid: str
-        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10156750 or
-        10.5281/zenodo.10156750 or https://doi.org/10.5281/zenodo.10156750 or only the record id, e.g. 10156750)
+        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10428822 or
+        10.5281/zenodo.10428822 or https://doi.org/10.5281/zenodo.10428822 or only the record id, e.g. 10428822)
     name: str=None
         Name to be sed for the filename. If None, the name is taken from the zenodo record.
     overwrite: bool = False

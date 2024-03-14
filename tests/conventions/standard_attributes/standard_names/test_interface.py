@@ -11,8 +11,8 @@ from h5rdmtoolbox.repository import zenodo
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
-        # cv = h5tbx.convention.from_zenodo(doi_or_recid=10156750, overwrite=True)
-        repo = zenodo.ZenodoRecord(10156750)
+        # cv = h5tbx.convention.from_zenodo(doi_or_recid=10428822, overwrite=True)
+        repo = zenodo.ZenodoRecord(10428822)
         cv = h5tbx.convention.from_repo(repo,
                                         name='tutorial_convention.yaml',
                                         take_existing=True)

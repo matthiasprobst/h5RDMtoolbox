@@ -210,7 +210,7 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            h5tbx.convention.from_zenodo(doi_or_recid='10156750', overwrite=False)
+            h5tbx.convention.from_zenodo(doi_or_recid='10428822', overwrite=False)
             # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
@@ -545,8 +545,8 @@ def validate_f1(a, b, c=3, d=2):
 
                 # we can download from zenodo by passing the short or full DOI or the URL:
 
-                dois = ('10156750', '10.5281/zenodo.10156750', 'https://zenodo.org/record/10156750',
-                        'https://doi.org/10.5281/zenodo.10156750')
+                dois = ('10428822', '10.5281/zenodo.10428822', 'https://zenodo.org/record/10428822',
+                        'https://doi.org/10.5281/zenodo.10428822')
                 h5tbx.UserDir.clear_cache()
                 with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
                     cv = h5tbx.convention.from_zenodo(doi=10428795)
