@@ -1,5 +1,5 @@
 import abc
-from typing import List, Callable
+from typing import Callable, Iterable
 
 
 class RepositoryInterface(abc.ABC):
@@ -13,14 +13,12 @@ class RepositoryInterface(abc.ABC):
     def exists(self):
         """Check if the repository exists."""
 
-    @property
     @abc.abstractmethod
-    def metadata(self):
+    def get_metadata(self):
         """Get the metadata of the repository."""
 
-    @metadata.setter
     @abc.abstractmethod
-    def metadata(self, value):
+    def set_metadata(self, value):
         """Set the metadata of the repository."""
 
     @abc.abstractmethod
@@ -32,7 +30,7 @@ class RepositoryInterface(abc.ABC):
         """Download all files from the repository."""
 
     @abc.abstractmethod
-    def get_filenames(self) -> List[str]:
+    def get_files(self) -> Iterable:
         """Get a list of all filenames."""
 
     @abc.abstractmethod
@@ -42,9 +40,11 @@ class RepositoryInterface(abc.ABC):
     def upload_hdf_file(self, filename, metamapper: Callable, overwrite: bool = False):
         """Upload an HDF5 file. Additionally a metadata file will be extracted from the
         HDF5 file using the metamapper function and is uploaded as well."""
-        meta_data_file = metamapper(filename)
+        if metamapper:
+            meta_data_file = metamapper(filename)
         self.upload_file(filename=filename, overwrite=overwrite)
-        self.upload_file(filename=meta_data_file, overwrite=overwrite)
+        if metamapper:
+            self.upload_file(filename=meta_data_file, overwrite=overwrite)
 
     @abc.abstractmethod
     def get_doi(self):

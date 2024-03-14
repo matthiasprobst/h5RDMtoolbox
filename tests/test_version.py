@@ -1,8 +1,7 @@
-import json
 import pathlib
 import unittest
 
-import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import __version__, get_package_meta
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -17,12 +16,11 @@ class TestVersion(unittest.TestCase):
             for line in lines:
                 if 'version' in line:
                     this_version = line.split(' = ')[-1].strip()
-        self.assertEqual(h5tbx.__version__, this_version)
+        self.assertEqual(__version__, this_version)
 
     def test_codemeta(self):
         """checking if the version in codemeta.json is the same as the one of the toolbox"""
 
-        with open(__this_dir__ / '../codemeta.json', 'r') as f:
-            codemeta = json.loads(f.read())
+        codemeta = get_package_meta()
 
-        assert codemeta['version'] == h5tbx.__version__
+        assert codemeta['version'] == __version__

@@ -2,33 +2,45 @@
 
 Log of changes in the versions
 
+## v1.X.Y
+
+- When a file is opened with a filename which does not exist and mode is None, the file will NOT be created. This was
+  the case in the past, but this may lead to unwanted empty files.
+- Bugfix namespace creation
+
 ## v1.2.2
+
 - Hotfix dumping json-ld data (dimension scales were the issue)
 
 ## v1.2.1
+
 - Add codemeta namespace
 - Improved json-ld export
 - Updated qudt namespace
 - colab notebook will be managed on a separate branch. the readme link points to the branch
 
 ## v1.2.0
+
 - Improved assignment of IRI to attributes
 - Export of a JSON-LD file possible
 - Updated documentation
 - bugfixes
 
 ## v1.1.1
+
 - bugfix: Setting a default value for toolbox validators in convention yaml file was not working. Fixed it.
 
 ## v1.1.0
+
 - simplified and clean up much code, especially convention sub package
 - added identifier utils
 - updated and improved documentation
 
 ## v1.0.1
 
-- fixed unnecessary call in `create_dataset`, which writes the data twice. Now, the time data is written is comparable to 
-  the time `h5py` needs to write the data (for small datasets `h5py` is still faster due to the (constant) overhead, `h5tbx` adds).
+- fixed unnecessary call in `create_dataset`, which writes the data twice. Now, the time data is written is comparable
+  to the time `h5py` needs to write the data (for small datasets `h5py` is still faster due to the (constant)
+  overhead, `h5tbx` adds).
 
 ## v1.0.0
 

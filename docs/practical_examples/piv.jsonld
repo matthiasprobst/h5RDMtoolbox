@@ -1,0 +1,44 @@
+{
+    "@context": {
+        "local": "https://local-domain.org/",
+        "piv": "https://piv.org/",
+        "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"
+    },
+    "@graph": [
+        {
+            "@id": "local:JD",
+            "@type": "person",
+            "name": "JD",
+            "first name": "John",
+            "last name": "Doe",
+            "ORCID Id": "https://orcid.org/0000-0002-1825-0097"
+        },
+        {
+            "@id": "local:pivEval",
+            "@type": "method",
+            "name": "pivEval",
+            "label": "PIV evaluation",
+            "has participant": "local:JD",
+            "has parameter": [
+                {
+                    "@id": "piv:PulseDelay",
+                    "@type": "numericalvariable",
+                    "name": "PulseDelay",
+                    "label": "Pulse Delay",
+                    "has numerical value": "120",
+                    "has unit": "https://qudt.org/vocab/unit/MilliSEC",
+                    "has kind of quantity": "http://dbpedia.org/resource/Time"
+                },
+                {
+                    "@id": "piv:WinSize",
+                    "@type": "numericalvariable",
+                    "name": "WinSize",
+                    "label": "Window Size",
+                    "has numerical value": "32, 32",
+                    "has unit": "https://qudt.org/vocab/unit/MilliSEC",
+                    "has kind of quantity": "http://dbpedia.org/resource/Time"
+                }
+            ]
+        }
+    ]
+}

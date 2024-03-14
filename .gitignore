@@ -53,3 +53,6 @@ coverage.svg
 docs/colab/my_file.hdf
 *.h5
 *.nxs
+*.jsonld
+docs/userguide/wrapper/test.hdf
+docs/userguide/wrapper/test.json

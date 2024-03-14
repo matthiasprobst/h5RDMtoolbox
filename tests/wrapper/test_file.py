@@ -1,7 +1,6 @@
 import h5py
 import numpy as np
 import pathlib
-import rdflib
 import time
 import unittest
 import uuid
@@ -12,7 +11,6 @@ from pathlib import Path
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
-from h5rdmtoolbox.namespace import M4I, OBO
 from h5rdmtoolbox.utils import generate_temporary_filename
 from h5rdmtoolbox.wrapper.core import File
 
@@ -57,7 +55,7 @@ class TestFile(unittest.TestCase):
         if pathlib.Path('test.hdf').exists():
             # just in case ...
             pathlib.Path('test.hdf').unlink()
-        with h5tbx.File('test.hdf') as h5:
+        with h5tbx.File('test.hdf', 'w') as h5:
             self.assertEqual('r+', h5.mode)
             self.assertEqual('test.hdf', h5.hdf_filename.name)
         if h5.hdf_filename.exists():
@@ -265,6 +263,14 @@ class TestFile(unittest.TestCase):
             self.assertEqual(dset.attrs.get('a1'), 1)
             self.assertEqual(dset.attrs.get('a2'), 'str')
 
+            h5.attrs['dsref'] = dset
+            self.assertEqual(h5.attrs.raw['dsref'], dset.name)
+            self.assertEqual(h5.attrs['dsref'], dset)
+
+            h5.attrs['dsref2'] = dset.name
+            self.assertEqual(h5.attrs.raw['dsref'], dset.name)
+            self.assertEqual(h5.attrs['dsref2'], dset)
+
             h5.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
             self.assertDictEqual(h5.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
@@ -366,126 +372,3 @@ class TestFile(unittest.TestCase):
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
 
-    def test_set_ATTRIRI(self):
-        """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
-
-        with h5tbx.File() as h5:
-            h5.create_dataset('ds', data=1)
-            h5.ds.attrs.create('quantity_kind',
-                               data='velocity',
-                               predicate=M4I.hasKindOfQuantity,
-                               object='https://qudt.org/vocab/quantitykind/Velocity')
-            self.assertIsInstance(h5.ds.iri.predicate['quantity_kind'], rdflib.URIRef)
-            self.assertEqual(str(h5.ds.iri.predicate['quantity_kind']), str(M4I.hasKindOfQuantity))
-            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], rdflib.URIRef)
-            self.assertEqual(str(h5.ds.iri.object['quantity_kind']), 'https://qudt.org/vocab/quantitykind/Velocity')
-
-            h5.ds.attrs['units'] = 'm/s'
-            h5.ds.iri['units'].predicate = M4I.hasUnit
-            h5.ds.iri['units'].object = 'https://qudt.org/vocab/unit/M-PER-SEC'
-            self.assertEqual(str(h5.ds.iri.predicate['units']), str(M4I.hasUnit))
-            self.assertEqual(str(h5.ds.iri.object['units']), 'https://qudt.org/vocab/unit/M-PER-SEC')
-
-        with h5tbx.File(h5.hdf_filename) as h5:
-            self.assertIsInstance(h5.ds.iri.predicate['quantity_kind'], rdflib.URIRef)
-            self.assertEqual(str(h5.ds.iri.predicate['quantity_kind']), str(M4I.hasKindOfQuantity))
-            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], rdflib.URIRef)
-            self.assertEqual(str(h5.ds.iri.object['quantity_kind']), 'https://qudt.org/vocab/quantitykind/Velocity')
-
-        with h5tbx.File() as h5:
-            from rdflib.namespace import FOAF
-
-            grp = h5.create_group('contact_person')
-            grp.iri = FOAF.Person
-            grp.iri.subject = FOAF.Person
-
-            method_grp = h5.create_group('a_method')
-            method_grp.iri = M4I.Method
-            method_grp.attrs['has_participants', OBO.RO_0000057] = h5['contact_person']  # has participants
-
-            self.assertEqual(method_grp.attrs['has_participants'], h5['contact_person'])
-
-            grp.attrs['arbitrary'] = 'arbitrary'
-            self.assertEqual(grp.iri.predicate.get('arbitrary', 'invalid'), 'invalid')
-
-            with self.assertRaises(KeyError):
-                grp.iri.predicate['firstName'] = FOAF.firstName
-            with self.assertRaises(KeyError):
-                grp.iri.predicate['lastName'] = FOAF.lastName
-            grp.attrs['firstName'] = 'John'
-            grp.iri.predicate['firstName'] = FOAF.firstName
-            self.assertEqual(grp.attrs['firstName'], 'John')
-            self.assertEqual(grp.iri.predicate['firstName'], FOAF.firstName)
-            self.assertIsInstance(grp.iri.predicate['firstName'], rdflib.URIRef)
-
-            self.assertTrue(grp.iri == FOAF.Person)
-
-        with h5tbx.File() as h5:
-            grp = h5.create_group('contact_person')
-            grp.iri = FOAF.Person
-            grp.attrs['firstName', FOAF.firstName] = 'John'
-            grp.attrs['lastName', FOAF.lastName] = 'Doe'
-
-            self.assertEqual(grp.attrs['firstName'], 'John')
-            self.assertEqual(grp.iri, FOAF.Person)
-            self.assertEqual(grp.iri['firstName'].predicate, FOAF.firstName)
-            self.assertEqual(grp.iri['lastName'].predicate, FOAF.lastName)
-
-            grp.iri = [FOAF.Person,
-                       'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
-            self.assertTrue(FOAF.Person in grp.iri)
-            self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.iri)
-
-        # with h5tbx.File() as h5:
-        #     grp = h5.create_group('contact_person')
-        #     h5.attrs['creator'] = 'John Doe'
-        #     with self.assertRaises(NotImplementedError):
-        #         h5.iri['creator'] = 'John Doe'
-        #     self.assertEqual(None, h5.iri['creator'].name)
-        #     self.assertEqual(None, h5.iri['creator'][iri.DATA_KW])
-        #     self.assertEqual(None, h5.iri.get('creator')[iri.DATA_KW])
-        #     self.assertEqual(None, h5.iri.get('creator').get(iri.NAME_KW, None))
-        #     self.assertEqual(None, h5.iri.get('creator').get(iri.DATA_KW, None))
-        #
-        #     self.assertEqual({}, h5.attrs.get(consts.IRI_PREDICATE_ATTR_NAME, {}))
-        #     self.assertEqual({}, h5.attrs.get(consts.IRI_OBJECT_ATTR_NAME, {}))
-        #     h5.attrs.create('creator', data='John Doe',
-        #                     iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-        #                     iri_individual=None
-        #                     )
-        #
-        #     self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
-        #                      h5.attrs.get(consts.IRI_PREDICATE_ATTR_NAME, {}))
-        #     self.assertEqual({}, h5.attrs.get(consts.IRI_OBJECT_ATTR_NAME, {}))
-        #
-        #     h5.attrs.create('creator', data='John Doe',
-        #                     iri_cls='http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-        #                     iri_individual='test'
-        #                     )
-        #     self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-        #                      h5.iri.get('creator').get(iri.NAME_KW, None))
-        #     self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
-        #     self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-        #                      h5.iri.get('creator').get(iri.NAME_KW, None))
-        #     self.assertEqual('test', h5.iri.get('creator').get(iri.DATA_KW, None))
-        #
-        #     self.assertEqual({'creator': 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'},
-        #                      h5.attrs.get(consts.IRI_PREDICATE_ATTR_NAME, {}))
-        #     self.assertEqual({'creator': 'test'},
-        #                      h5.attrs.get(consts.IRI_OBJECT_ATTR_NAME, {}))
-        #
-        #     h5.iri['creator'][iri.NAME_KW] = '4'
-        #     self.assertEqual('4', h5.iri['creator'].name)
-        #
-        #     h5.iri['creator'][iri.DATA_KW] = '5'
-        #     self.assertEqual('5', h5.iri['creator'].data)
-        #
-        #     del h5.iri['creator']
-        #     self.assertEqual(None, h5.iri['creator'].name)
-        #     self.assertEqual(None, h5.iri['creator'].data)
-        #
-        #     h5.create_dataset('test', data=[1, 2, 3], attrs={'contact_person': 'John Doe'})
-        #     h5['test'].iri['contact_person'].name = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
-        #     data = h5['test'][()]
-        #     self.assertEqual('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson',
-        #                      data.attrs[consts.IRI_PREDICATE_ATTR_NAME]['contact_person'])

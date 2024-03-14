@@ -440,7 +440,7 @@ class StandardNameTable:
 
     @staticmethod
     def from_dict(snt_dict: Dict):
-        """Initialize a StandardNameTable from a YAML file"""
+        """Initialize a StandardNameTable from a dictionary"""
 
         DEFAULT_KEYS = ['standard_names',
                         'name',
@@ -708,6 +708,7 @@ class StandardNameTable:
         filenames = z.download_files(target_folder=UserDir['standard_name_tables'])
         assert len(filenames) == 1
         filename = filenames[0]
+        assert filename.exists()
         assert filename.suffix == '.yaml'
         new_filename = UserDir['standard_name_tables'] / f'{rec_id}.yaml'
         if new_filename.exists():

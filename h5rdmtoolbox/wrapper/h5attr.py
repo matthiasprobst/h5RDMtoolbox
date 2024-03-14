@@ -6,7 +6,7 @@ import pint
 import rdflib
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
-from typing import Dict, Union
+from typing import Dict, Union, Tuple
 
 from . import logger
 from .h5utils import get_rootparent
@@ -151,7 +151,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return r
 
     @with_phil
-    def __setitem__(self, name, value, attrs=None):
+    def __setitem__(self,
+                    name: Union[str, Tuple[str, str]],
+                    value, attrs=None):
         """ Set a new attribute, overwriting any existing attribute.
 
         The type and shape of the attribute are determined from the data.  To
@@ -160,8 +162,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
         Parameters
         ----------
-        name : str
-            Name of the attribute.
+        name : Union[str, Tuple[str, str]]
+            Name of the attribute. If it is a tuple, the second element is the IRI of the attribute.
         value : any
             Attribute value.
         """
@@ -173,8 +175,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 raise ValueError('Tuple must have length 2 in order to interpret it as an'
                                  'attribute name and its IRI')
             _name, _iri = name
-            self.create(_name, value)
-            self._parent.iri.predicate[_name] = _iri
+            self.create(_name, value, predicate=_iri)
+            # self._parent.iri.predicate[_name] = _iri
             return
 
         if not isinstance(name, str):
@@ -292,23 +294,3 @@ class WrapperAttributeManager(h5py.AttributeManager):
         from h5py._objects import phil
         with phil:
             return attrs.AttributeManager(self._parent)
-
-# class IRIAttr:
-#     """Helper class to write attributes together with an IRI
-#
-#     Examples
-#     --------
-#     >>> import h5rdmtoolbox as h5tbx
-#     >>> hasKQ = namespace.M4I.hasKindOfQuantity
-#     >>> Velocity = 'https://qudt.org/vocab/quantitykind/Velocity'
-#     >>>
-#     >>> with h5tbx('test.h5') as h5:
-#     ...     h5.u.attrs['qK', hasKQ] = h5tbx.IRIAttr(value='Velocity', iri=Velocity)
-#     """
-#
-#     def __init__(self, value, iri):
-#         self.value = value
-#         self.iri = iri
-#
-#     def __repr__(self):
-#         return f'{self.__class__.__name__}({self.value} iri={self.iri})'

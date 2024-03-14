@@ -209,16 +209,18 @@ class Core:
         """Return IRI Manager"""
         return iri.IRIManager(self.attrs)
 
-    @iri.setter
-    def iri(self, value):
-        """Sets an IRI to the group or dataset"""
-        iri.IRIManager(self.attrs).set_subject(value)
+    # @iri.setter
+    # def iri(self, value):
+    #     """Sets an IRI to the group or dataset"""
+    #     if value is None:
+    #         raise ValueError(f'None is not allowed!')
+    #     iri.IRIManager(self.attrs).set_subject(value)
 
 
 class SpecialAttributeWriter:
     """Accessor class, which provides methods to write special attributes to a dataset or group."""
 
-    def write_uuid(self, uuid: str = None, name='uuid', overwrite: bool = False) -> str:
+    def write_uuid(self, uuid: str = None, overwrite: bool = False, **kwargs) -> str:
         """Write a uuid to the attribute of the object.
 
         Parameters
@@ -233,6 +235,11 @@ class SpecialAttributeWriter:
         str
             The uuid as string.
         """
+        if 'name' in kwargs:
+            warnings.warn('Parameter "name" is deprecated. The attribute '
+                          'name for uuid is defined globally via the config',
+                          DeprecationWarning)
+        name = kwargs.get('name', get_config('uuid_name'))
         if name in self.attrs and not overwrite:
             raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
                              '"overwrite" is set to False')
@@ -242,6 +249,11 @@ class SpecialAttributeWriter:
         suuid = str(uuid)
         self.attrs[name] = suuid
         return suuid
+
+    def get_uuid(self, name=None, default=None):
+        """Get UUID if exists."""
+        _name = name or get_config('uuid_name')
+        return self.attrs.get(_name, default)
 
     def write_iso_timestamp(self, name='timestamp', dt: datetime = None, overwrite: bool = False, **kwargs):
         """Write the iso timestamp to the attribute of the object.
@@ -554,7 +566,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         for ak, av in attrs.items():
             ds.attrs[ak] = av
-        # TODO: H5StingDataset
         return self._h5ds(ds.id)
 
     def create_dataset(self,
@@ -1018,7 +1029,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
 
         if axis not in (0, -1):
-            raise ValueError(f'Value for parameter axis can only be 0 or 1 but not {axis}')
+            raise ValueError(f'Parameter for parameter axis can only be 0 or 1 but not {axis}')
 
         is_list_tuple_or_numpy = isinstance(imgdata, (list, tuple, np.ndarray))
         if not is_list_tuple_or_numpy:
@@ -1993,8 +2004,8 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
                 # file does not exist and mode is not given--> write!
                 elif not fname.exists():
-                    mode = 'w'
-                    logger.debug('Mode is set to "w" because file does not exist and mode was not given.')
+                    raise FileNotFoundError(f'File "{fname}" does not exist and mode is not given.')
+
             elif mode == 'w' and fname.exists():
                 fname.unlink()
                 logger.debug('File exists and mode is set to "w". Deleting file first.')
@@ -2011,7 +2022,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             if mode == 'r+':
                 if not Path(name).exists():
                     _tmp_init = True
-                    mode = 'r+'
+                    # mode = 'r+'
                     # "touch" the file, so it exists
                     _h5pykwargs = kwargs.copy()
                     for k in list(kwargs.keys()):
