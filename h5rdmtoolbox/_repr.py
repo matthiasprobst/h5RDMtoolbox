@@ -201,22 +201,37 @@ class _HDF5StructureRepr:
         """dataset representation"""
 
 
+from . import consts
+
+
 class HDF5StructureStrRepr(_HDF5StructureRepr):
 
     def __call__(self, group, indent=0, preamble=None):
         if preamble:
             print(preamble)
+        spaces = self.base_intent * indent
+        predicate = group.iri.predicate.get('SELF', None)
+        if predicate:
+            print(spaces + f'@predicate: {predicate}')
         for attr_name in group.attrs.raw.keys():
-            if not attr_name.isupper():
-                print(self.base_intent * indent + self.__attrs__(attr_name, group.attrs[attr_name]))
+            if attr_name == consts.IRI_SUBJECT_ATTR_NAME:
+                print(spaces + f'@type: {group.attrs[attr_name]}')
+            else:
+                if not attr_name.isupper():
+                    pred = group.iri[attr_name]['predicate']
+                    if pred:
+                        use_attr_name = f'{attr_name} ({pred})'
+                    else:
+                        use_attr_name = attr_name
+                    print(spaces + self.__attrs__(use_attr_name, group.attrs[attr_name]))
         for key, item in group.items():
             if isinstance(item, h5py.Dataset):
-                print(self.base_intent * indent + self.__dataset__(key, item))
+                print(spaces + self.__dataset__(key, item))
                 for attr_name in item.attrs.raw.keys():
                     if not attr_name.isupper() and attr_name not in self.ignore_attrs:
                         print(self.base_intent * (indent + 2) + self.__attrs__(attr_name, item))
             elif isinstance(item, h5py.Group):
-                print(self.base_intent * indent + self.__group__(key, item))
+                print(spaces + self.__group__(key, item))
                 self(item, indent + 1)
                 # for attr_name, attr_value in item.attrs.items():
                 #     if not attr_name.isupper() and attr_name not in self.ignore_attrs:
@@ -461,7 +476,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     <ul class="h5tb-attr-list">"""
         # write attributes:
         for k in h5obj.attrs.keys():
-            if not k.isupper():
+            if not k.isupper() and k != '@type':
                 _html += self.__attrs__(k, h5obj)
         # close attribute section
         _html += """

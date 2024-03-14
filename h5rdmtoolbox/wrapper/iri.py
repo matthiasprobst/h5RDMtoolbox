@@ -1,6 +1,8 @@
 import abc
 import h5py
-from rdflib import URIRef
+import pydantic
+import warnings
+from pydantic import HttpUrl
 from typing import Dict, Union
 from typing import List
 
@@ -26,6 +28,12 @@ def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> No
     -------
     None
     """
+    try:
+        HttpUrl(value)
+    except pydantic.ValidationError as e:
+        warnings.warn(f'Invalid IRI. Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}',
+                      UserWarning)
+
     iri_name_data = attr.get(consts.IRI_PREDICATE_ATTR_NAME, None)
     if iri_name_data is None:
         iri_name_data = {}
@@ -91,7 +99,7 @@ class IRIDict(Dict):
     def predicate(self):
         p = self[PREDICATE_KW]
         if p is not None:
-            return URIRef(p)
+            return p
         return p
 
     @predicate.setter
@@ -104,12 +112,13 @@ class IRIDict(Dict):
 
     @property
     def object(self):
+        """Returns the object of an attribute"""
         o = self[OBJECT_KW]
         if o is None:
             return o
-        if isinstance(o, list):
-            return [URIRef(i) for i in o]
-        return URIRef(o)
+        # if isinstance(o, list):
+        #     return [i for i in o]
+        return o
 
     @object.setter
     def object(self, value):
@@ -149,23 +158,43 @@ class IRIManager:
     #     self._attr['@type'] = str(type)
 
     @property
-    def subject(self) -> Union[URIRef, None]:
+    def subject(self) -> Union[str, None]:
+        """Returns the subject of the group or dataset"""
         s = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
-        if isinstance(s, list):
-            return [URIRef(i) for i in s]
         if s is None:
             return
-        return URIRef(s)
+        # if isinstance(s, list):
+        #     return [i for i in s]
+        return s
+
+    def add_subject(self, subject: Union[str, List[str]]):
+        if isinstance(subject, list):
+            data = [str(i) for i in subject]
+        else:
+            data = str(subject)
+        iri_sbj_data = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
+        if iri_sbj_data is None:
+            self._attr[consts.IRI_SUBJECT_ATTR_NAME] = data
+            return
+        if isinstance(iri_sbj_data, list):
+            iri_sbj_data.extend(data)
+        else:
+            iri_sbj_data = [iri_sbj_data, ]
+            iri_sbj_data.append(data)
+        self._attr[consts.IRI_SUBJECT_ATTR_NAME] = list(set(iri_sbj_data))
 
     @subject.setter
-    def subject(self, iri_type: Union[URIRef, str]):
-        self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri_type)
-        # self._attr[consts.IRI_SUBJECT_ATTR_NAME] = str(iri)
+    def subject(self, iri_type: Union[str, List[str]]):
+        """Sets the subject of the group or dataset. Will overwrite existing subjects.
+        If you want to add (append), use add_subject() instead."""
+        if isinstance(iri_type, list):
+            data = [str(i) for i in iri_type]
+        else:
+            data = str(iri_type)
 
-    # @property
-    # def subject(self):
-    #     return self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
-    def append_subject(self, subject: Union[URIRef, str]):
+        self._attr[consts.IRI_SUBJECT_ATTR_NAME] = data
+
+    def append_subject(self, subject: str):
         """Append the subject"""
         curr_subjects = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, [])
         if isinstance(curr_subjects, list):
@@ -185,8 +214,8 @@ class IRIManager:
         return IRI_Predicate(self._attr)
 
     @predicate.setter
-    def predicate(self, predicate: Union[URIRef, str]):
-        iri_sbj_data = self._attr.get(consts.IRI_SUBJECT_ATTR_NAME, None)
+    def predicate(self, predicate: str):
+        iri_sbj_data = self._attr.get(consts.IRI_PREDICATE_ATTR_NAME, None)
         if iri_sbj_data is None:
             iri_sbj_data = {}
         iri_sbj_data.update({'SELF': predicate})
@@ -245,8 +274,8 @@ class _IRIPO(abc.ABC):
             return default
         return attrs.get(item, default)
 
-    def __getitem__(self, item) -> Union[URIRef, None]:
-        return URIRef(self._attr[self.IRI_ATTR_NAME].get(item, None))
+    def __getitem__(self, item) -> Union[str, None]:
+        return self._attr[self.IRI_ATTR_NAME].get(item, None)
 
     def __setitem__(self, key, value: str):
         if key not in self._attr:

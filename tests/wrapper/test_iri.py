@@ -1,8 +1,7 @@
-import rdflib
 import unittest
-from rdflib import URIRef
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import consts
 from h5rdmtoolbox import use
 from ontolutils.namespacelib import M4I, OBO
 
@@ -34,34 +33,48 @@ class TestIRI(unittest.TestCase):
             )
         )
 
+    def test_none_value(self):
+        with h5tbx.File() as h5:
+            h5.attrs['title', 'hasTitle'] = 'test'
+            self.assertEqual(h5.iri['title'].predicate, 'hasTitle')
+
+        with h5tbx.File() as h5:
+            h5.attrs['title'] = 'test'
+            self.assertEqual(h5.iri['title'].predicate, None)
+            h5.attrs['title', None] = 'test2'
+            self.assertEqual(len(h5.attrs[consts.IRI_PREDICATE_ATTR_NAME]), 1)
+            h5.attrs['title', 'hasTitle'] = 'test2'
+            self.assertEqual(len(h5.attrs[consts.IRI_PREDICATE_ATTR_NAME]), 2)
+            self.assertEqual(h5.iri['title'].predicate, 'hasTitle')
+
     def test_multiple_subjects_or_objects(self):
         with h5tbx.File() as h5:
             h5.attrs['title', 'hasTitle'] = 'test'
 
             h5.iri['title'].object = 'first object'
             self.assertEqual(h5.attrs['title'], 'test')
-            self.assertEqual(h5.iri['title'].object, URIRef('first object'))
+            self.assertEqual(h5.iri['title'].object, 'first object')
             h5.iri['title'].object = 'overwritten object'
             self.assertEqual(h5.attrs['title'], 'test')
-            self.assertEqual(h5.iri['title'].object, URIRef('overwritten object'))
+            self.assertEqual(h5.iri['title'].object, 'overwritten object')
 
             h5.iri['title'].object = ['one', 'two']
             self.assertEqual(h5.attrs['title'], 'test')
-            self.assertEqual(h5.iri['title'].object, [URIRef('one'), URIRef('two')])
+            self.assertEqual(h5.iri['title'].object, ['one', 'two'])
             h5.iri['title'].append_object('three')
-            self.assertEqual(h5.iri['title'].object, [URIRef('one'), URIRef('two'), URIRef('three')])
+            self.assertEqual(h5.iri['title'].object, ['one', 'two', 'three'])
 
             h5['/'].iri.subject = 'is group'
-            self.assertEqual(h5.iri.subject, URIRef('is group'))
+            self.assertEqual(h5.iri.subject, 'is group')
 
             h5['/'].iri.subject = 'is root group'
-            self.assertEqual(h5.iri.subject, URIRef('is root group'))
+            self.assertEqual(h5.iri.subject, 'is root group')
 
             h5['/'].iri.append_subject('is group')
-            self.assertEqual(h5.iri.subject, [URIRef('is root group'), URIRef('is group')])
+            self.assertEqual(h5.iri.subject, ['is root group', 'is group'])
 
             h5['/'].iri.subject = ['root', 'group']
-            self.assertEqual(h5.iri.subject, [URIRef('root'), URIRef('group')])
+            self.assertEqual(h5.iri.subject, ['root', 'group'])
 
     def test_set_single_PSO(self):
         """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
@@ -74,7 +87,7 @@ class TestIRI(unittest.TestCase):
                                object='https://qudt.org/vocab/quantitykind/Velocity')
             # self.assertIsInstance(h5.ds.iri.predicate, rdflib.URIRef)
             self.assertEqual(str(h5.ds.iri.predicate['quantity_kind']), str(M4I.hasKindOfQuantity))
-            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], rdflib.URIRef)
+            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], str)
             self.assertEqual(str(h5.ds.iri.object['quantity_kind']), 'https://qudt.org/vocab/quantitykind/Velocity')
 
             h5.ds.attrs['units'] = 'm/s'
@@ -84,9 +97,9 @@ class TestIRI(unittest.TestCase):
             self.assertEqual(str(h5.ds.iri.object['units']), 'https://qudt.org/vocab/unit/M-PER-SEC')
 
         with h5tbx.File(h5.hdf_filename) as h5:
-            self.assertIsInstance(h5.ds.iri.predicate['quantity_kind'], rdflib.URIRef)
+            self.assertIsInstance(h5.ds.iri.predicate['quantity_kind'], str)
             self.assertEqual(str(h5.ds.iri.predicate['quantity_kind']), str(M4I.hasKindOfQuantity))
-            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], rdflib.URIRef)
+            self.assertIsInstance(h5.ds.iri.object['quantity_kind'], str)
             self.assertEqual(str(h5.ds.iri.object['quantity_kind']), 'https://qudt.org/vocab/quantitykind/Velocity')
 
         with h5tbx.File() as h5:
@@ -111,10 +124,11 @@ class TestIRI(unittest.TestCase):
             grp.attrs['firstName'] = 'John'
             grp.iri.predicate['firstName'] = FOAF.firstName
             self.assertEqual(grp.attrs['firstName'], 'John')
-            self.assertEqual(grp.iri.predicate['firstName'], FOAF.firstName)
-            self.assertIsInstance(grp.iri.predicate['firstName'], rdflib.URIRef)
+            self.assertEqual(grp.iri.predicate['firstName'], str(FOAF.firstName))
+            self.assertIsInstance(grp.iri.predicate['firstName'], str)
 
             self.assertTrue(grp.iri == FOAF.Person)
+            self.assertTrue(grp.iri.subject == str(FOAF.Person))
 
         with h5tbx.File() as h5:
             grp = h5.create_group('contact_person')
@@ -124,10 +138,10 @@ class TestIRI(unittest.TestCase):
 
             self.assertEqual(grp.attrs['firstName'], 'John')
             self.assertEqual(grp.iri, FOAF.Person)
-            self.assertEqual(grp.iri['firstName'].predicate, FOAF.firstName)
-            self.assertEqual(grp.iri['lastName'].predicate, FOAF.lastName)
+            self.assertEqual(grp.iri['firstName'].predicate, str(FOAF.firstName))
+            self.assertEqual(grp.iri['lastName'].predicate, str(FOAF.lastName))
 
             grp.iri.subject = [FOAF.Person,
                                'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
-            self.assertTrue(FOAF.Person in grp.iri.subject)
+            self.assertTrue(str(FOAF.Person) in grp.iri.subject)
             self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.iri.subject)
