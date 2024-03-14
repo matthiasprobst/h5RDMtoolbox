@@ -531,29 +531,6 @@ def validate_f1(a, b, c=3, d=2):
                     self.assertFalse('-' in sa)
                 self.assertNotEqual(h5.standard_attributes['comment'].description,
                                     h5['test'].standard_attributes['comment'].description)
-            if False:
-                self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
-                self.assertEqual(
-                    h5tbx.convention.standard_attributes.DefaultValue.EMPTY,
-                    cv.properties[h5tbx.File]['data_type'].default_value
-                )
-                cv.properties[h5tbx.File]['data_type'].make_optional()
-                self.assertEqual(
-                    h5tbx.convention.standard_attributes.DefaultValue.NONE,
-                    cv.properties[h5tbx.File]['data_type'].default_value
-                )
-
-                # we can download from zenodo by passing the short or full DOI or the URL:
-
-                dois = ('10428822', '10.5281/zenodo.10428822', 'https://zenodo.org/record/10428822',
-                        'https://doi.org/10.5281/zenodo.10428822')
-                h5tbx.UserDir.clear_cache()
-                with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
-                    cv = h5tbx.convention.from_zenodo(doi=10428795)
-
-                for doi in dois:
-                    cv = h5tbx.convention.from_zenodo(doi=doi)
-                    self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
 
     def test_default_value(self):
         from h5rdmtoolbox.convention.consts import DefaultValue
