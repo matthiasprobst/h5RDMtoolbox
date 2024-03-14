@@ -98,7 +98,6 @@ class TestStandardAttributes(unittest.TestCase):
 
         table['x_velocity_in_stationary_frame']
 
-
     def test_StandardNameTableFromWeb(self):
         try:
             import xmltodict
@@ -224,7 +223,7 @@ class TestStandardAttributes(unittest.TestCase):
             self.assertIsInstance(snt, StandardNameTable)
             filename = h5tbx.UserDir['standard_name_tables'] / f'10428795.yaml'
             self.assertTrue(filename.exists())
-            filename.unlink(missing_ok=True)
+            # filename.unlink(missing_ok=True)
 
     def test_from_yaml(self):
         cv = h5tbx.convention.from_yaml(tutorial.get_standard_attribute_yaml_filename(), overwrite=True)
