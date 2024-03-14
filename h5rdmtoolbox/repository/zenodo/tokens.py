@@ -25,12 +25,20 @@ def get_api_token(sandbox: bool,
     """Read the Zenodo API token from the config file."""
     if sandbox:
         env_token = os.environ.get('ZENODO_SANDBOX_API_TOKEN', None)
+        logger.debug('Took token from environment variable ZENODO_SANDBOX_API_TOKEN: %s', env_token)
     else:
         env_token = os.environ.get('ZENODO_API_TOKEN', None)
+        logger.debug('Took token from environment variable ZENODO_API_TOKEN: %s', env_token)
+
     if env_token is not None:
+        logger.debug('Took zenodo token from environment variable:: %s', env_token)
         env_token = env_token.strip()
         logger.debug('Took token from environment variable ZENODO_SANDBOX_API_TOKEN.')
         return env_token
+
+    logger.debug('No environment variable found for the zenodo token. Trying to read it from the config file '
+                 '%s .' % zenodo_ini_filename)
+
     zenodo_ini_filename = _parse_ini_file(zenodo_ini_filename)
     config = configparser.ConfigParser()
     config.read(zenodo_ini_filename)
