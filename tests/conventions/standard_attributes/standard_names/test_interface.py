@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import unittest
 import xarray as xr
-from h5rdmtoolbox.repository import zenodo
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention.standard_names import HDF5StandardNameInterface
+from h5rdmtoolbox.repository import zenodo
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -14,8 +14,8 @@ class TestStandardAttributes(unittest.TestCase):
         # cv = h5tbx.convention.from_zenodo(doi_or_recid=10156750, overwrite=True)
         repo = zenodo.ZenodoRecord(10156750)
         cv = h5tbx.convention.from_repo(repo,
-                                         name='tutorial_convention.yaml',
-                                         take_existing=True)
+                                        name='tutorial_convention.yaml',
+                                        take_existing=True)
         cv.properties[h5tbx.File]['data_type'].make_optional()
         cv.properties[h5tbx.File]['contact'].make_optional()
         h5tbx.use(cv)
