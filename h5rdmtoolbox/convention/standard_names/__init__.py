@@ -31,8 +31,9 @@ def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
         if snt in cache.snt:
             return cache.snt[snt]
         # maybe that's the name in the local dir:
-        if UserDir['standard_name_tables'] / f'{fname}.yaml':
-            return StandardNameTable.from_yaml(UserDir['standard_name_tables'] / f'{fname}.yaml')
+        _fname = UserDir['standard_name_tables'] / fname.with_suffix('.yaml')
+        if _fname.exists():
+            return StandardNameTable.from_yaml(_fname)
         raise FileNotFoundError(f'File {fname} not found or not a yaml file')
     if isinstance(snt, StandardNameTable):
         return snt
