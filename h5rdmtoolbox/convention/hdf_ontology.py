@@ -1,6 +1,8 @@
 from rdflib.namespace import DefinedNamespace, Namespace
 from rdflib.term import URIRef
 
+from typing import Literal
+
 
 class HDF5(DefinedNamespace):
     # uri = "http://purl.allotrope.org/ontologies/hdf5/1.8#"
@@ -45,12 +47,12 @@ from typing import List, Union
 
 
 @namespaces(hdf5=HDF5._NS)
-@urirefs(Attribute='hdf5:Atribute',
+@urirefs(Attribute='hdf5:Attribute',
          name='hdf5:name',
          value='hdf5:value')
 class Attribute(Thing):
     name: str
-    value: Union[str, int, float, bool]
+    value: Union[int, float, List, str, bool]
 
 
 @namespaces(hdf5=HDF5._NS)
@@ -60,16 +62,25 @@ class _HDF5Thing(Thing):
     attribute: List[Attribute] = None
 
 
+Datatype = Literal[
+    'H5T_INTEGER',
+    'H5T_FLOAT',
+    'H5T_STRING',
+]
+
+
 @namespaces(hdf5=HDF5._NS)
 @urirefs(Dataset='hdf5:Dataset',
          size='hdf5:size',
          name='hdf5:name',
-         value='hdf5:value')
+         value='hdf5:value',
+         datatype='hdf5:datatype')
 class Dataset(_HDF5Thing):
     """A multi-dimensional array"""
     name: str
-    value: Union[str, int, float, bool] = None
     size: int
+    datatype: Datatype = None
+    value: Union[int, float, List, str, bool] = None
 
 
 @namespaces(hdf5=HDF5._NS)

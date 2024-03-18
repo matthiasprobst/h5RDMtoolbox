@@ -12,7 +12,7 @@ HDF5 file are very popular due their hierarchical structure and the possibility 
 large amounts of data and, more importantly, metadata together with data. **However, the management of
 the key-value pairs (HDF attributes) is not standardized and their correctness is left to the user**.
 
-Software and users, who want to reuse the data, have to know the meaning of the attributes and and
+Software and users, who want to reuse the data, have to know the meaning of the attributes and
 dependent on the correctness and adherence to a common standard. **The h5rdmtoolbox provides a
 mechanism to define and use standardized attributes for HDF5 files**.
 
@@ -91,7 +91,7 @@ within a data project, you may be interested in different aspects of the convent
     :maxdepth: 2
     :hidden:
 
-    activating_a_convention.ipynb
+    activate_a_convention.ipynb
     working_with_conventions.ipynb
     creating_a_new_convention.ipynb
     ontologies.ipynb

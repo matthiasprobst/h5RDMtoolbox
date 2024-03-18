@@ -13,6 +13,16 @@ __this_dir__ = pathlib.Path(__file__).parent
 
 class TestCore(unittest.TestCase):
 
+    def test_dump_hdf_to_json(self):
+        """similar yet different to https://hdf5-json.readthedocs.io/en/latest/index.html"""
+        import h5py
+        with h5py.File('test.hdf', 'w') as h5:
+            h5.attrs['version'] = __version__
+
+        # def dump_hdf_to_json(h5_filename):
+        with h5py.File('test.hdf', 'r') as h5:
+            print(jsonld.dumps(h5))
+
     def test_to_hdf(self):
         test_data = """{"@context": {"foaf": "http://xmlns.com/foaf/0.1/", "prov": "http://www.w3.org/ns/prov#",
 "schema": "http://www.w3.org/2000/01/rdf-schema#",

@@ -95,6 +95,12 @@ def dumps(src: Union[str, File, pathlib.Path]):
         return h5.dumps()
 
 
+def dump_jsonld(filename: Union[str, pathlib.Path], skipND: int=1) -> str:
+    """Dump the JSON-LD representation of the file to a file"""
+    from .wrapper.jsonld import dump_file
+    return dump_file(filename, skipND=skipND)
+
+
 def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):
     """A decoder function takes a xarray.DataArray and a dataset as input and returns a xarray.DataArray
     It is called after the dataset is loaded into memory and before being returned to the user. Be careful:

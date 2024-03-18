@@ -5,7 +5,10 @@ import rdflib
 from rdflib import Graph, URIRef, Literal, BNode
 from rdflib.namespace import RDF
 from typing import Dict, Optional, Union, List
+from typing import Iterable, Tuple, Any
 
+import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.convention import hdf_ontology
 from h5rdmtoolbox.convention.hdf_ontology import HDF5
 
 
@@ -227,7 +230,7 @@ def serialize(grp,
         if isinstance(obj, h5py.Dataset):
             # node is Parameter
             g.add((node, RDF.type, URIRef("http://www.molmod.info/semantics/pims-ii.ttl#Variable")))
-            g.add((node, RDF.type, URIRef("hdf:Dataset")))
+            # g.add((node, RDF.type, URIRef("hdf:Dataset")))
             # parent gets "hasParameter"
             # parent_node = f'_:{obj.parent.name}'# _get_id(obj.parent, local)
             parent_node = _get_id(obj.parent, local)
@@ -447,4 +450,110 @@ def dump(grp,
 
 h5dump = dump  # alias, use this in future
 
-# def create_from_jsonld
+
+def dump_file(filename: Union[str, pathlib.Path], skipND) -> None:
+    """Dump a file to a JSON-LD file."""
+    data = {}
+    if skipND is None:
+        skipND = 10000
+
+    def _build_attributes(attrs: Iterable[Tuple[str, Any]]):
+        attrs = [hdf_ontology.Attribute(name=k, value=v) for k, v in attrs.items() if not k.isupper()]
+        return attrs
+
+    def _build_dataset_onto_class(ds):
+        attrs = _build_attributes(ds.attrs)
+        params = dict(name=ds.name, size=ds.size, attribute=attrs)
+        ndim = ds.ndim
+        if ndim < skipND:
+            if ndim > 0:
+                value = ds.values[()].tolist()
+            else:
+                value = ds.values[()]
+            params['value'] = value
+
+        if not attrs:
+            params.pop('attribute')
+        _id = ds.attrs.get('@id', None)
+        if _id:
+            params['id'] = _id
+
+        dtype_dict = {'u': 'H5T_INTEGER',
+                      'i': 'H5T_INTEGER',
+                      'f': 'H5T_FLOAT',
+                      'S': 'H5T_STRING',
+                      }
+
+        # dtype_dict = {'u<8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U8LE'},
+        #               'u<16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U16LE'},
+        #               'u<32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U32LE'},
+        #               'u<64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U64LE'},
+        #               'u>8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U8BE'},
+        #               'u>16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U16BE'},
+        #               'u>32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U32BE'},
+        #               'u>64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U64BE'},
+        #               'i<8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I8LE'},
+        #               'i<16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I16LE'},
+        #               'i<32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I32LE'},
+        #               'i<64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I64LE'},
+        #               'i>8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I8BE'},
+        #               'i>16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I16BE'},
+        #               'i>32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I32BE'},
+        #               'i>64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I64BE'},
+        #               'f<32': {'class': 'H5T_FLOAT', 'base': 'H5T_IEEE_F32LE'},
+        #               'f<64': {'class': 'H5T_FLOAT', 'base': 'H5T_IEEE_F64LE'},
+        #               }
+
+        # datatype = dtype_dict.get(f'{ds.dtype.kind}{ds.dtype.byteorder}{ds.dtype.alignment}', None)
+        datatype = dtype_dict.get(ds.dtype.kind, None)
+        if datatype:
+            params['datatype'] = datatype
+
+        ontods = hdf_ontology.Dataset(**params)
+
+        if ds.parent.name not in data:
+            data[ds.parent.name] = [ontods, ]
+        else:
+            data[ds.parent.name].append(ontods)
+
+    def _build_group_onto_class(grp):
+        attrs = _build_attributes(grp.attrs)
+        params = dict(name=grp.name, attribute=attrs)
+        if not attrs:
+            params.pop('attribute')
+        _id = grp.attrs.get('@id', None)
+        if _id:
+            params['id'] = _id
+        ontogrp = hdf_ontology.Group(**params)
+        if grp.parent.name not in data:
+            data[grp.parent.name] = [ontogrp, ]
+        else:
+            data[grp.parent.name].append(ontogrp)
+
+    def _build_onto_classes(name, node):
+        if isinstance(node, h5tbx.Dataset):
+            return _build_dataset_onto_class(node)
+        return _build_group_onto_class(node)
+
+    with h5tbx.File(filename, mode='r') as h5:
+        root = hdf_ontology.Group(name='/', attribute=_build_attributes(h5.attrs))
+        data['/'] = []
+
+        h5.visititems(_build_onto_classes)
+
+    latest_grp = root
+    for k, v in data.items():
+        if k != latest_grp.name:
+            for m in latest_grp.member:
+                if m.name == k:
+                    latest_grp = m
+                    break
+        for obj in v:
+            if latest_grp.member is None:
+                latest_grp.member = [obj, ]
+            else:
+                latest_grp.member.append(obj)
+
+    file = hdf_ontology.File(rootGroup=root)
+
+    return file.model_dump_jsonld()

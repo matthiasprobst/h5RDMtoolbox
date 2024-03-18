@@ -236,9 +236,15 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     hdf_filepath = generate_temporary_filename(suffix='.hdf')
     if touch:
         with File(hdf_filepath, "w") as h5touch:
-            h5touch.attrs['__h5rdmtoolbox_version__'] = __version__
-            h5touch.attrs[
-                consts.IRI_PREDICATE_ATTR_NAME] = json.dumps({'__h5rdmtoolbox_version__': consts.VERSION_IRI})
+            g = h5touch.create_group('h5rdmtoolbox')
+            # g.iri.object = 'https://schema.org/SoftwareSourceCode'
+            g.attrs['__h5rdmtoolbox_version__'] = __version__
+            g.attrs[consts.IRI_PREDICATE_ATTR_NAME] = json.dumps(
+                {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
+            )
+            h5touch.attrs[consts.IRI_SUBJECT_ATTR_NAME] = json.dumps(
+                {'h5rdmtoolbox': 'https://schema.org/SoftwareSourceCode'}
+            )
             if attrs is not None:
                 for ak, av in attrs.items():
                     create_special_attribute(h5touch.attrs, ak, av)

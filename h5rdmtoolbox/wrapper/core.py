@@ -2071,8 +2071,10 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
         if self.mode != 'r':
             # update file toolbox version, wrapper version
-            if '__h5rdmtoolbox_version__' not in self.attrs:
-                self.attrs['__h5rdmtoolbox_version__', consts.VERSION_IRI] = __version__
+            if 'h5rdmtoolbox' not in self:
+                _tbx_grp = self.create_group('__h5rdmtoolbox__')
+                _tbx_grp.iri.subject = 'https://schema.org/SoftwareSourceCode'
+                _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
             for k, v in attrs.items():
                 self.attrs[k] = v
 
