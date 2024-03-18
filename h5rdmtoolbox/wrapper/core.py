@@ -843,8 +843,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
                  recursive: bool = True,
                  ignore_attribute_error: bool = False):
-        """See find()"""
-        raise NotImplementedError('Move to database subpackage')
+        """See ObjDB.find_one()"""
+        return ObjDB(self).find_one(flt, objfilter, recursive, ignore_attribute_error)
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
@@ -1883,7 +1883,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         -------
         h5obj: h5py.Dataset or h5py.Group
         """
-        raise NotImplementedError('Move to database subpackage')
+        return ObjDB(self).find(flt, objfilter, ignore_attribute_error)
 
 
 class File(h5py.File, Group, SpecialAttributeWriter, Core):
