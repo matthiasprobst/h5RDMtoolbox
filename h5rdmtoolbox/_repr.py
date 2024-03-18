@@ -414,25 +414,33 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
 
-        iri = h5obj.iri.predicate.get('SELF', None)
-        if iri is not None:
-            name += get_iri_icon_href(iri)
+        # iri = h5obj.iri.predicate.get('SELF', None)
+        self_predicate = h5obj.iri.predicate.get('SELF', None)
+        self_subject = h5obj.iri.subject
+        _dsname = name
+        if self_predicate is not None:
+            _dsname += get_iri_icon_href(self_predicate)
+
+        if self_subject is not None:
+            _dsname += get_iri_icon_href(
+                self_subject,
+                tooltiptext=f'@type: {self_subject}')
 
         is_string_dataset = h5obj.dtype.char == 'S'
         if is_string_dataset:
-            _html_pre = self.__stringdataset__(name, h5obj)
+            _html_pre = self.__stringdataset__(_dsname, h5obj)
         else:
             if h5obj.ndim == 0:
-                _html_pre = self.__0Ddataset__(name, h5obj)
+                _html_pre = self.__0Ddataset__(_dsname, h5obj)
             else:
-                _html_pre = self.__NDdataset__(name, h5obj)
+                _html_pre = self.__NDdataset__(_dsname, h5obj)
 
         # now all attributes of the dataset:
         # open attribute section:
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
 
         for k in h5obj.attrs.keys():
-            if k not in self.ignore_attrs and not k.isupper():
+            if k not in self.ignore_attrs and not k.isupper() and k != '@type':
                 _html_ds_attrs += self.__attrs__(k, h5obj)
 
         # close attribute section

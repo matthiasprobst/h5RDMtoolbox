@@ -2,13 +2,11 @@ import h5py
 import json
 import pathlib
 import rdflib
-from rdflib import Graph, URIRef, Literal
+from rdflib import Graph, URIRef, Literal, BNode
 from rdflib.namespace import RDF
-from typing import Dict
-from typing import Optional
-from typing import Union, List
+from typing import Dict, Optional, Union, List
 
-from h5rdmtoolbox import get_config
+from h5rdmtoolbox.convention.hdf_ontology import HDF5
 
 
 def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
@@ -44,14 +42,16 @@ def _get_id_from_attr_value(_av, file_url):
         return Literal(_av)
 
 
-def _get_id(_node, local) -> URIRef:
+def _get_id(_node, local=None) -> URIRef:
     """if an attribute in the node is called "@id", use that, otherwise use the node name"""
     _id = _node.attrs.get('@id', None)
-    if not local:
+    if local is not None:
         local = rf'file://{_node.hdf_filename.resolve().absolute()}'
+        return URIRef(local + _node.name[1:])
     if _id is None:
-        _id = _node.attrs.get(get_config('uuid_name'),
-                              local + ':' + _node.name)
+        return BNode()
+        # _id = _node.attrs.get(get_config('uuid_name'),
+        #                       local + _node.name[1:])  # [1:] because the name starts with a "/"
     return URIRef(_id)
 
 
@@ -62,6 +62,7 @@ def is_list_of_dict(data) -> bool:
     if len(data) == 0:
         return False
     return all([isinstance(i, dict) for i in data])
+
 
 def to_hdf(grp,
            *,
@@ -118,7 +119,7 @@ def to_hdf(grp,
         elif isinstance(v, list):
             if is_list_of_dict(v):
                 for i, entry in enumerate(v):
-                    sub_grp_name = f'{k}{i+1}'
+                    sub_grp_name = f'{k}{i + 1}'
                     if sub_grp_name in grp:
                         sub_grp = grp[sub_grp_name]
                     else:
@@ -186,7 +187,7 @@ def to_hdf(grp,
 
 def serialize(grp,
               iri_only=False,
-              local="https://www.example.org/",
+              local=None,
               recursive: bool = True,
               compact: bool = False,
               context: Dict = None
@@ -205,17 +206,30 @@ def serialize(grp,
     hasParameter = URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasParameter')
 
     # global _context
-    _context = context or {}
+    _context = {'hdf': str(HDF5._NS)}
+    context = context or {}
+    _context.update(context)  # = context or {}
 
     def add_node(name, obj):
         node = rdflib.URIRef(_get_id(obj, local=local))
-        node_type = obj.iri.subject
-        if node_type:
-            g.add((node, RDF.type, rdflib.URIRef(obj.iri.subject)))
+        # node = rdflib.URIRef(f'_:{obj.name}')
+        if isinstance(obj, h5py.File):
+            g.add(
+                (node,
+                 RDF.type,
+                 HDF5.rootGroup  # this is a root group!
+                 )
+            )
+        else:
+            node_type = obj.iri.subject
+            if node_type:
+                g.add((node, RDF.type, rdflib.URIRef(obj.iri.subject)))
         if isinstance(obj, h5py.Dataset):
             # node is Parameter
             g.add((node, RDF.type, URIRef("http://www.molmod.info/semantics/pims-ii.ttl#Variable")))
+            g.add((node, RDF.type, URIRef("hdf:Dataset")))
             # parent gets "hasParameter"
+            # parent_node = f'_:{obj.parent.name}'# _get_id(obj.parent, local)
             parent_node = _get_id(obj.parent, local)
             g.add((parent_node, hasParameter, node))
 
@@ -252,6 +266,13 @@ def serialize(grp,
         #     graph.add((node, hasParameter, node))
 
     g = Graph()
+
+    g.add(
+        (URIRef(f'file://{grp.filename}'),
+         RDF.type,
+         HDF5.File)
+    )
+
     add_node(grp.name, grp)
 
     if recursive:
@@ -266,7 +287,7 @@ def serialize(grp,
 
 def dumpd(grp,
           iri_only=False,
-          local="https://www.example.org/",
+          local=None,
           recursive: bool = True,
           compact: bool = False,
           context: Dict = None
@@ -382,7 +403,7 @@ def dumpd(grp,
 
 def dumps(grp,
           iri_only=False,
-          local="https://www.example.org/",
+          local=None,
           recursive: bool = True,
           compact: bool = False,
           context: Optional[Dict] = None,
@@ -405,7 +426,7 @@ h5dumps = dumps  # alias, use this in future
 def dump(grp,
          fp,
          iri_only=False,
-         local="https://www.example.org/",
+         local=None,
          recursive: bool = True,
          compact: bool = False,
          context: Optional[Dict] = None,
