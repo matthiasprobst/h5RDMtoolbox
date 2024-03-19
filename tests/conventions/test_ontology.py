@@ -128,31 +128,25 @@ class TestOntology(unittest.TestCase):
         print(json.dumps(jsonld_dict, indent=2))
 
         self.maxDiff = None
+        print(jsonld_dict)
         self.assertDictEqual(jsonld_dict,
-                             {
-                                 "@context": {
-                                     "owl": "http://www.w3.org/2002/07/owl#",
-                                     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
-                                     "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
-                                 },
+                             {"@context": {
+                                 "owl": "http://www.w3.org/2002/07/owl#",
+                                 "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+                                 "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+                             },
                                  "@type": "hdf5:File",
                                  "hdf5:rootGroup": {
                                      "@type": "hdf5:Group",
-                                     "hdf5:attribute": [
-                                         {
-                                             "@type": "hdf5:Attribute",
-                                             "hdf5:name": "__h5rdmtoolbox_version__",
-                                             "hdf5:value": "1.2.3a1"
-                                         }
-                                     ],
+                                     "hdf5:attribute": [],
                                      "hdf5:name": "/",
                                      "hdf5:member": [
                                          {
                                              "@type": "hdf5:Dataset",
-                                             "hdf5:datatype": "H5T_FLOAT",
                                              "hdf5:name": "/ds",
-                                             "hdf5:value": "3.4",
-                                             "hdf5:size": "1"
+                                             "hdf5:size": "1",
+                                             "hdf5:datatype": "H5T_FLOAT",
+                                             "hdf5:value": "3.4"
                                          },
                                          {
                                              "@type": "hdf5:Group",
@@ -164,7 +158,6 @@ class TestOntology(unittest.TestCase):
                                                      "hdf5:member": [
                                                          {
                                                              "@type": "hdf5:Dataset",
-                                                             "hdf5:datatype": "H5T_INTEGER",
                                                              "hdf5:attribute": [
                                                                  {
                                                                      "@type": "hdf5:Attribute",
@@ -173,12 +166,29 @@ class TestOntology(unittest.TestCase):
                                                                  }
                                                              ],
                                                              "hdf5:name": "/grp/sub_grp/ds",
-                                                             "hdf5:value": "3.0",
-                                                             "hdf5:size": "1"
+                                                             "hdf5:size": "1",
+                                                             "hdf5:datatype": "H5T_INTEGER",
+                                                             "hdf5:value": "3.0"
                                                          }
                                                      ]
                                                  }
                                              ]
+                                         },
+                                         {
+                                             "@type": "hdf5:Group",
+                                             "hdf5:attribute": [
+                                                 {
+                                                     "@type": "hdf5:Attribute",
+                                                     "hdf5:name": "@type",
+                                                     "hdf5:value": "https://schema.org/SoftwareSourceCode"
+                                                 },
+                                                 {
+                                                     "@type": "hdf5:Attribute",
+                                                     "hdf5:name": "__h5rdmtoolbox_version__",
+                                                     "hdf5:value": "1.2.3a1"
+                                                 }
+                                             ],
+                                             "hdf5:name": "/h5rdmtoolbox"
                                          }
                                      ]
                                  }

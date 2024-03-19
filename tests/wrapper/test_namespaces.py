@@ -43,7 +43,7 @@ class TestNamespaces(unittest.TestCase):
         self.assertIsInstance(code_meta_context, dict)
         self.assertEqual(code_meta_context['type'], "@type")
         self.assertEqual(code_meta_context['id'], "@id")
-        self.assertEqual(code_meta_context['schema'], "https://schema.org/")
+        self.assertEqual(code_meta_context['schema'], "http://schema.org/")
         self.assertEqual(code_meta_context['codemeta'], "https://codemeta.github.io/terms/")
 
     def test_codemeta(self):
@@ -84,7 +84,7 @@ class TestNamespaces(unittest.TestCase):
         with h5tbx.File() as h5:
             del h5.attrs['__h5rdmtoolbox_version__']
             grp = h5.create_group('h5dmtoolbox')
-            grp.iri = namespacelib.CODEMETA.SoftwareSourceCode
+            grp.rdf = namespacelib.CODEMETA.SoftwareSourceCode
 
             grp.attrs['license', namespacelib.CODEMETA.license] = "https://spdx.org/licenses/MIT"
             grp.attrs['codeRepository', namespacelib.CODEMETA.codeRepository] = "git+" \
@@ -104,13 +104,13 @@ class TestNamespaces(unittest.TestCase):
                 "https://orcid.org/0000-0002-4116-0065"
             ]
 
-            author1.iri = namespacelib.SCHEMA.Person
+            author1.rdf = namespacelib.SCHEMA.Person
             author1.attrs['givenName', namespacelib.SCHEMA.givenName] = "Matthias"
             author1.attrs['familyName', namespacelib.SCHEMA.familyName] = "Probst"
             author1.attrs['orcidid', M4I.orcidId] = "https://orcid.org/0000-0001-8729-0482"
             author1.attrs['@id'] = "https://orcid.org/0000-0001-8729-0482"
 
-            author2.iri = namespacelib.SCHEMA.Person
+            author2.rdf = namespacelib.SCHEMA.Person
             author2.attrs['givenName', namespacelib.SCHEMA.givenName] = "Lucas"
             author2.attrs['familyName', namespacelib.SCHEMA.familyName] = "Büttner"
             author2.attrs['orcidid', M4I.orcidId] = "https://orcid.org/0000-0002-4116-0065"
@@ -123,12 +123,12 @@ class TestNamespaces(unittest.TestCase):
             ).to_dict()
             context = {
                 # 'orcidid': 'http://w3id.org/nfdi4ing/metadata4ing#orcidId',
-                # 'version': 'https://schema.org/version',
-                # 'codeRepository': 'https://schema.org/codeRepository',
-                # 'license': 'https://schema.org/license',
-                # 'name': 'https://schema.org/name',
-                # 'schema': 'https://schema.org/',
-                # 'SoftwareSourceCode': 'https://schema.org/SoftwareSourceCode',
+                # 'version': 'http://schema.org/version',
+                # 'codeRepository': 'http://schema.org/codeRepository',
+                # 'license': 'http://schema.org/license',
+                # 'name': 'http://schema.org/name',
+                # 'schema': 'http://schema.org/',
+                # 'SoftwareSourceCode': 'http://schema.org/SoftwareSourceCode',
                 # "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
                 'local': '_:'
             }

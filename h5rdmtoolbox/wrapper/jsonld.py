@@ -8,6 +8,7 @@ from typing import Dict, Optional, Union, List
 from typing import Iterable, Tuple, Any
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import consts
 from h5rdmtoolbox.convention import hdf_ontology
 from ontolutils.classes.utils import split_URIRef
 
@@ -106,7 +107,7 @@ def to_hdf(grp,
         assert isinstance(data, dict), f'Expecting dict, got {type(data)}'
 
     if predicate:
-        grp.iri.predicate = predicate
+        grp.rdf.predicate = predicate
 
     data_context = data.pop('@context', None)
     if data_context is None:
@@ -149,7 +150,7 @@ def to_hdf(grp,
                         sub_grp = grp[sub_grp_name]
                     else:
                         sub_grp = grp.create_group(sub_grp_name)
-                        sub_grp.iri.predicate = data_context.get(k, None)
+                        sub_grp.rdf.predicate = data_context.get(k, None)
                     to_hdf(sub_grp, data=entry, context=data_context)
             else:
                 grp.attrs[k, data_context.get(k, None)] = v
@@ -263,12 +264,12 @@ def serialize(grp,
         if isinstance(obj, h5py.File):
             return
 
-        node_type = obj.iri.subject
+        node_type = obj.rdf.subject
         # if the node_type is None, attributes could still have RDF types. In this case, consider the node as a
         # NumericalVariable or TextVariable
 
         if node_type is None:
-            rdf_predicate_dict = obj.attrs.get('IRI_PREDICATE', None)
+            rdf_predicate_dict = obj.attrs.get(consts.RDF_PREDICATE_ATTR_NAME, None)
             if rdf_predicate_dict and len(rdf_predicate_dict) > 0:
                 if isinstance(obj, h5py.Dataset):
                     if obj.dtype.kind == 'S':
@@ -278,7 +279,7 @@ def serialize(grp,
                     else:
                         node_type = "http://www.molmod.info/semantics/pims-ii.ttl#Variable"
                 else:
-                    node_type = "https://schema.org/Thing"  # schema:Thing (The most generic type of item.)
+                    node_type = "http://schema.org/Thing"  # schema:Thing (The most generic type of item.)
         if node_type:
             g.add((node, RDF.type, rdflib.URIRef(node_type)))
             # if isinstance(obj, h5py.Dataset):
@@ -299,11 +300,11 @@ def serialize(grp,
                         value = _get_id_from_attr_value(av, local)
 
                     # g.add((node, URIRef(ak), Literal(av)))
-                    predicate = obj.iri.predicate.get(ak, None)
+                    predicate = obj.rdf.predicate.get(ak, None)
 
                     # only add if not defined in context:
                     if predicate and predicate not in _context:
-                        # irikey = str(obj.iri.predicate[ak])
+                        # irikey = str(obj.rdf.predicate[ak])
                         if isinstance(value, (list, tuple)):
                             for v in value:
                                 g.add((node, URIRef(predicate), v))
@@ -317,7 +318,7 @@ def serialize(grp,
         if isinstance(obj, h5py.Group):
             for grp_name, grp in obj.items():
                 if isinstance(grp, h5py.Group):
-                    predicate = grp.iri.predicate['SELF']
+                    predicate = grp.rdf.predicate['SELF']
                     if predicate:
                         new_node = iri_dict.get(grp.name, None)
                         if new_node is None:

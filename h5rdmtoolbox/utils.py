@@ -237,12 +237,12 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     if touch:
         with File(hdf_filepath, "w") as h5touch:
             g = h5touch.create_group('h5rdmtoolbox')
-            # g.iri.object = 'https://schema.org/SoftwareSourceCode'
+            # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
             g.attrs['__h5rdmtoolbox_version__'] = __version__
-            g.attrs[consts.IRI_PREDICATE_ATTR_NAME] = json.dumps(
+            g.attrs[consts.RDF_PREDICATE_ATTR_NAME] = json.dumps(
                 {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
             )
-            h5touch.attrs[consts.IRI_SUBJECT_ATTR_NAME] = json.dumps(
+            h5touch.attrs[consts.RDF_SUBJECT_ATTR_NAME] = json.dumps(
                 {'h5rdmtoolbox': 'https://schema.org/SoftwareSourceCode'}
             )
             if attrs is not None:
@@ -304,7 +304,7 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         fragment = name.fragment
         if not fragment:
             raise ValueError(f'Name {name} has no fragment')
-        from h5rdmtoolbox.wrapper.iri import set_predicate
+        from h5rdmtoolbox.wrapper.rdf import set_predicate
         set_predicate(h5obj, fragment, name)
         name = fragment
 

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
 
 from h5rdmtoolbox.database import ObjDB
-from . import logger, iri
+from . import logger, rdf
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
@@ -205,16 +205,9 @@ class Core:
         return self.convention.properties.get(self.__class__, {})
 
     @property
-    def iri(self):
-        """Return IRI Manager"""
-        return iri.IRIManager(self.attrs)
-
-    # @iri.setter
-    # def iri(self, value):
-    #     """Sets an IRI to the group or dataset"""
-    #     if value is None:
-    #         raise ValueError(f'None is not allowed!')
-    #     iri.IRIManager(self.attrs).set_subject(value)
+    def rdf(self):
+        """Return RDF Manager"""
+        return rdf.RDFManager(self.attrs)
 
 
 class SpecialAttributeWriter:
@@ -291,7 +284,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
     The following properties are added (or overwritten):
     * attrs - returns the *h5tbx* attribute manager, which is a subclass of the *h5py* attribute manager
-    * iri - returns the IRI Manager
+    * rdf - returns the RDF Manager
     * rootparent - returns the root group instance
     * basename - returns the basename of the group
     """
@@ -1918,7 +1911,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
     The following attributes are added to the h5py.File object:
 
-    * iri: IRI Manager
+    * rdf: RDF Manager
     * hdf_filename: (pathlib.Path) The name of the file, accessible even if the file is closed.
     * version: (str) The version of the package used to create the file.
     * modification_time: (datetime) The modification time of the file.
@@ -1938,7 +1931,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     def version(self) -> str:
         """Return version stored in file, which is the package version used at the time of creation.
         Not necessarily the current version of the package."""
-        return self.attrs.get('__h5rdmtoolbox_version__')
+        return self.get('h5rdmtoolbox', {}).attrs.get('__h5rdmtoolbox_version__')
 
     @property
     def modification_time(self) -> datetime:
@@ -2073,7 +2066,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             # update file toolbox version, wrapper version
             if 'h5rdmtoolbox' not in self:
                 _tbx_grp = self.create_group('h5rdmtoolbox')
-                _tbx_grp.iri.subject = 'https://schema.org/SoftwareSourceCode'
+                _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
                 _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
             for k, v in attrs.items():
                 self.attrs[k] = v

@@ -37,7 +37,7 @@ class TestMetadataMapper(unittest.TestCase):
         with open(json_filename, 'r') as f:
             json_data = json.load(f)
         self.assertEqual(json_data['attrs']['title'], 'test')
-        self.assertEqual(json_data['attrs']['__h5rdmtoolbox_version__'], h5tbx.__version__)
+        self.assertEqual(json_data['h5rdmtoolbox']['attrs']['__h5rdmtoolbox_version__'], h5tbx.__version__)
         self.assertEqual(json_data['test']['attrs']['objtype'], 'dataset')
         self.assertEqual(json_data['test']['props']['shape'], [])
         self.assertEqual(json_data['test']['props']['dtype'], 'int32')

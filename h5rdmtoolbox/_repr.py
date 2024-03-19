@@ -210,15 +210,15 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
         if preamble:
             print(preamble)
         spaces = self.base_intent * indent
-        predicate = group.iri.predicate.get('SELF', None)
+        predicate = group.rdf.predicate.get('SELF', None)
         if predicate:
             print(spaces + f'@predicate: {predicate}')
         for attr_name in group.attrs.raw.keys():
-            if attr_name == consts.IRI_SUBJECT_ATTR_NAME:
+            if attr_name == consts.RDF_SUBJECT_ATTR_NAME:
                 print(spaces + f'@type: {group.attrs[attr_name]}')
             else:
                 if not attr_name.isupper():
-                    pred = group.iri[attr_name]['predicate']
+                    pred = group.rdf[attr_name]['predicate']
                     if pred:
                         use_attr_name = f'{attr_name} ({pred})'
                     else:
@@ -414,9 +414,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
 
-        # iri = h5obj.iri.predicate.get('SELF', None)
-        self_predicate = h5obj.iri.predicate.get('SELF', None)
-        self_subject = h5obj.iri.subject
+        # iri = h5obj.rdf.predicate.get('SELF', None)
+        self_predicate = h5obj.rdf.predicate.get('SELF', None)
+        self_subject = h5obj.rdf.subject
         _dsname = name
         if self_predicate is not None:
             _dsname += get_iri_icon_href(self_predicate)
@@ -462,10 +462,10 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         else:
             checkbox_state = self.checkbox_state
 
-        self_predicate = h5obj.iri.predicate.get('SELF', None)
+        self_predicate = h5obj.rdf.predicate.get('SELF', None)
         if self_predicate:
             print(self_predicate)
-        self_subject = h5obj.iri.subject
+        self_subject = h5obj.rdf.subject
 
         if self_predicate is not None:
             _groupname += get_iri_icon_href(self_predicate)
@@ -512,13 +512,13 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 attr_value = attr_value.decode('utf-8')
             except UnicodeDecodeError:
                 warnings.warn(f'Cannot decode attribute value for {name}', RuntimeWarning)
-        iri = h5obj.iri.get(name)
+        rdf = h5obj.rdf.get(name)
 
-        iri_predicate = iri.predicate
-        if iri_predicate is not None:
-            name += get_iri_icon_href(iri_predicate)
+        rdf_predicate = rdf.predicate
+        if rdf_predicate is not None:
+            name += get_iri_icon_href(rdf_predicate)
 
-        iri_object = iri.object
+        rdf_object = rdf.object
 
         if isinstance(attr_value, ndarray):
 
@@ -532,8 +532,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _string_value_list.append(item)
                 _value_str = ", ".join(_string_value_list)
 
-                if iri_object is not None:
-                    _value_str += get_iri_icon_href(iri_object)
+                if rdf_object is not None:
+                    _value_str += get_iri_icon_href(rdf_object)
                 return '<li style="list-style-type: none; ' \
                        f'font-style: italic">{name} : {_value_str}</li>'
             else:
@@ -542,8 +542,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if len(_value) > self.max_attr_length:
                     _value = f'{_value[0:self.max_attr_length]}...'
 
-                if iri_object is not None:
-                    _value += get_iri_icon_href(iri_predicate)
+                if rdf_object is not None:
+                    _value += get_iri_icon_href(rdf_predicate)
 
                 return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
 
@@ -562,9 +562,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 _value_html, is_url = process_string_for_link(_value_str)
                 # if is_url and not _value_html.startswith('{'):
 
-            # add iri icon if available:
-            if iri_object is not None:
-                _value_html += get_iri_icon_href(iri_object)
+            # add rdf icon if available:
+            if rdf_object is not None:
+                _value_html += get_iri_icon_href(rdf_object)
 
             if is_url and not _value_html.startswith('{'):  # TODO: why the second condition?
                 return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_html}</li>'
@@ -576,8 +576,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         _value_str = attr_value
                 else:
                     _value_str = attr_value
-            if iri_object is not None:
-                _value_str += get_iri_icon_href(iri_object)
+            if rdf_object is not None:
+                _value_str += get_iri_icon_href(rdf_object)
             return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
         if not isinstance(attr_value, ndarray):
@@ -595,8 +595,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 else:
                     _value_str = attr_value
 
-        if iri_object is not None:
-            _value_str += get_iri_icon_href(iri_object)  # make_href(iri_object, ' [IRI]')
+        if rdf_object is not None:
+            _value_str += get_iri_icon_href(rdf_object)
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 

@@ -163,9 +163,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
                            utils.parse_object_for_attribute_setting(data),
                            shape, dtype)
         if rdf_predicate is not None:
-            self._parent.iri.predicate[name] = rdf_predicate
+            self._parent.rdf.predicate[name] = rdf_predicate
         if rdf_object is not None:
-            self._parent.iri.object[name] = rdf_object
+            self._parent.rdf.object[name] = rdf_object
         return r
 
     @with_phil
@@ -194,7 +194,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                                  'attribute name and its IRI')
             _name, _iri = name
             self.create(_name, value, rdf_predicate=_iri)
-            # self._parent.iri.predicate[_name] = _iri
+            # self._parent.rdf.predicate[_name] = _iri
             return
 
         if not isinstance(name, str):

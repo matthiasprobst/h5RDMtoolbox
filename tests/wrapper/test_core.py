@@ -418,7 +418,7 @@ class TestCore(unittest.TestCase):
             now = datetime.now().astimezone()
             file_now = h5.creation_time
             self.assertTrue(abs((file_now - now).total_seconds()) < 1)
-            self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
+            self.assertTrue('__h5rdmtoolbox_version__' in h5['h5rdmtoolbox'].attrs)
             self.assertEqual(h5.version, __version__)
             self.assertEqual(h5.filesize.units, h5tbx.get_ureg().byte)
             self.assertIsInstance(h5.hdf_filename, pathlib.Path)

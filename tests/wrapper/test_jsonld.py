@@ -32,7 +32,7 @@ class TestCore(unittest.TestCase):
             sub_grp = grp.create_group('Fan')
             sub_grp.create_dataset('D3', data=300)
             sub_grp['D3'].attrs['units', 'http://w3id.org/nfdi4ing/metadata4ing#hasUnits'] = 'mm'
-            sub_grp['D3'].iri['units'].object = 'https://qudt.org/vocab/unit/MilliM'
+            sub_grp['D3'].rdf['units'].object = 'https://qudt.org/vocab/unit/MilliM'
             sub_grp['D3'].attrs['standard_name', sn_iri] = 'blade_diameter3'
             h5.dumps()
         from pprint import pprint
@@ -93,7 +93,7 @@ class TestCore(unittest.TestCase):
 
         data = ontolutils.dquery('schema:SoftwareSourceCode',
                                  codemeta_filename,
-                                 context={'schema': 'https://schema.org/'})
+                                 context={'schema': 'http://schema.org/'})
 
         self.assertIsInstance(data, list)
         self.assertTrue(len(data) == 1)
@@ -103,8 +103,8 @@ class TestCore(unittest.TestCase):
         with h5tbx.File('test.hdf', 'w') as h5:
             jsonld.to_hdf(grp=h5.create_group('person'), data=data[0])
             from h5rdmtoolbox import consts
-            self.assertEqual(h5['person']['author1'].attrs[consts.IRI_PREDICATE_ATTR_NAME]['SELF'],
-                             'https://schema.org/author')
+            self.assertEqual(h5['person']['author1'].attrs[consts.RDF_PREDICATE_ATTR_NAME]['SELF'],
+                             'http://schema.org/author')
 
         h5tbx.dumps('test.hdf')
 
