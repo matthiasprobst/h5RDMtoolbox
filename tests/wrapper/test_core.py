@@ -24,10 +24,6 @@ class TestCore(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
-    def test_logger(self):
-        from h5rdmtoolbox.utils import ToolboxLogger
-        self.assertIsInstance(logger, ToolboxLogger)
-
     def test_lower(self):
         self.assertEqual(h5tbx.Lower('Hello'), 'hello')
         self.assertIsInstance(h5tbx.lower('Hello'), h5tbx.Lower)

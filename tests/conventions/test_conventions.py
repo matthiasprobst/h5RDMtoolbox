@@ -1,5 +1,6 @@
 import appdirs
 import h5py
+import logging
 import pathlib
 import pint
 import requests
@@ -20,6 +21,9 @@ from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
 
+logger = logging.getLogger('h5rdmtoolbox')
+# setting logger to debug:
+logger.setLevel('DEBUG')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -33,10 +37,6 @@ class TestConventions(unittest.TestCase):
                 requests.Timeout) as e:
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
-
-        # setting logger to debug:
-        from h5rdmtoolbox.convention import logger
-        logger.setLevel('DEBUG')
 
     def test_list_of_validators(self):
         lov = convention.get_list_of_validators()

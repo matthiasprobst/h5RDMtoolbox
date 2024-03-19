@@ -18,21 +18,6 @@ logger = logging.getLogger(__name__)
 
 class TestConfig(unittest.TestCase):
 
-    # def test_max_requests(self):
-    #     """The number of requests per minute is limited to X (~100) per minute and Y (~5000) per hour.
-    #     It the number is exceeded, a 429 error is returned."""
-    #     from h5rdmtoolbox.repository.zenodo.core import logger
-    #     logger.setLevel(logging.DEBUG)
-    #     z = zenodo.ZenodoSandboxDeposit(8561)
-    #     for i in range(200):
-    #         r = z.get()
-    #         print(i+1, r.status_code)
-    #         filenames = z.download_files()
-    #         assert len(filenames) == 1
-    #         h5tbx.convention.from_yaml(filenames[0])
-    #         for f in filenames:
-    #             f.unlink()
-
     def test_creator(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Creator
         with self.assertRaises(ValueError):
@@ -254,10 +239,15 @@ class TestConfig(unittest.TestCase):
         with open(json_filename) as f:
             json_dict = json.loads(f.read())
 
-        self.assertEqual(json_dict['h5rdmtoolbox']['attrs'],
-                         {
-                             consts.RDF_PREDICATE_ATTR_NAME: '{"__h5rdmtoolbox_version__": "https://schema.org/softwareVersion"}',
-                             '__h5rdmtoolbox_version__': h5tbx.__version__})
+        print(json_dict['h5rdmtoolbox']['attrs'])
+        self.assertDictEqual(
+            json_dict['h5rdmtoolbox']['attrs'],
+            {
+                '@type': 'https://schema.org/SoftwareSourceCode',
+                consts.RDF_PREDICATE_ATTR_NAME: '{"__h5rdmtoolbox_version__": "https://schema.org/softwareVersion"}',
+                '__h5rdmtoolbox_version__': h5tbx.__version__
+            }
+        )
         z.delete()
 
     def test_ZenodoSandboxDeposit(self):

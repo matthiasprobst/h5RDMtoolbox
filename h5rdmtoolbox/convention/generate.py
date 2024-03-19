@@ -210,14 +210,12 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         f.write('\nvalidator_dict = {\n' + INDENT)
         f.write(f'\n{INDENT}'.join(f"\n'{k}': {k[1:]}," for k, v in class_definitions.items()))
         f.write(f'\n{INDENT}'.join(f"'{k}': {v}," for k, v in used_toolbox_validators.items()))
-        # f.write(f"\n{INDENT}'$int': IntValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
-        # f.write(f"\n{INDENT}'$str': StringValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
-        # f.write(f"\n{INDENT}'$float': FloatValidator,  # see h5rdmtoolbox.convention.toolbox_validators")
         f.write("\n}\n")
-        # f.writelines(f'standard_attributes_dict = {standard_attributes}\n')
 
         f.write('\n')
-        f.write(f'from h5rdmtoolbox.convention import Convention, standard_attributes, logger\n\n')
+        f.write('from h5rdmtoolbox.convention import Convention, standard_attributes\n')
+        f.write('import logging\n')
+        f.write('logger = logging.getLogger("h5rdmtoolbox")\n\n')
         f.write('generated_standard_attributes = {\n')
 
     with open(py_filename, 'a') as f:

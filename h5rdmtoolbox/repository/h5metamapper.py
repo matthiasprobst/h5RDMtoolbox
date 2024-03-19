@@ -1,12 +1,11 @@
 import h5py
 import json
+import logging
 import numpy as np
 import pathlib
 from typing import Union
 
-from h5rdmtoolbox.utils import create_tbx_logger
-
-logger = create_tbx_logger('h5metamapper')
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def _parse_dtype(v):

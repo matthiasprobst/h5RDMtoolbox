@@ -20,12 +20,6 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(h5tbx.utils.get_filesize(tmp_hdf5file).magnitude, 6144)
             self.assertEqual(h5tbx.utils.get_filesize(tmp_hdf5file).units, h5tbx.get_ureg().Unit('byte'))
 
-    def test_create_tbx_logger(self):
-        logger = h5tbx.utils.create_tbx_logger('test')
-        self.assertEqual(pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox')), logger._directory)
-        self.assertEqual(pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox')) / 'test.log',
-                         pathlib.Path(logger.handlers[0].baseFilename))
-
     def test_remove_special_chars(self):
         self.assertEqual('test123_', h5tbx.utils.remove_special_chars('test123&%$#_'))
         self.assertEqual('test123', h5tbx.utils.remove_special_chars('test123&%$#_', keep_special=''))

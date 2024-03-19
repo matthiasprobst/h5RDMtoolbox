@@ -37,7 +37,7 @@ class TestCore(unittest.TestCase):
             h5.dumps()
         from pprint import pprint
         out = h5tbx.jsonld.dumpd(h5.hdf_filename,
-                                 context={'schema': 'https://schema.org/',
+                                 context={'schema': 'http://schema.org/',
                                           "ssno": "https://matthiasprobst.github.io/ssno/#",
                                           "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"})
         pprint(out)
@@ -52,7 +52,7 @@ class TestCore(unittest.TestCase):
     def test_to_hdf(self):
         test_data = """{"@context": {"foaf": "http://xmlns.com/foaf/0.1/", "prov": "http://www.w3.org/ns/prov#",
 "schema": "http://www.w3.org/2000/01/rdf-schema#",
- "schema": "https://schema.org/",
+ "schema": "http://schema.org/",
  "local": "http://example.org/"},
 "@id": "local:testperson",
 "@type": "prov:Person",
@@ -91,9 +91,10 @@ class TestCore(unittest.TestCase):
     def test_codemeta_to_hdf(self):
         codemeta_filename = __this_dir__ / '../../codemeta.json'
 
-        data = ontolutils.dquery('schema:SoftwareSourceCode',
-                                 codemeta_filename,
-                                 context={'schema': 'http://schema.org/'})
+        data = ontolutils.dquery(
+            'schema:SoftwareSourceCode',
+            codemeta_filename,
+            context={'schema': 'http://schema.org/'})
 
         self.assertIsInstance(data, list)
         self.assertTrue(len(data) == 1)

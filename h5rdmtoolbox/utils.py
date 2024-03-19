@@ -25,19 +25,6 @@ logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
 
 
-class ToolboxLogger(logging.Logger):
-    """Wrapper class for logging.Logger to add a setLevel method"""
-
-    def __init__(self, name, level=logging.NOTSET, directory=None):
-        super().__init__(name, level)
-        self._directory = directory
-
-    def setLevel(self, level):
-        """change the log level which displays on the console"""
-        old_level = self.handlers[1].level
-        self.handlers[1].setLevel(level)
-
-
 def get_filesize(path: Union[str, pathlib.Path]) -> int:
     """Get the size of a file in bytes"""
     return os.path.getsize(path) * get_ureg().byte
@@ -188,6 +175,19 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     return _dir
 
 
+def create_h5tbx_version_grp(root: h5py.Group) -> h5py.Group:
+    """Creates a group in an HDF5 file with the h5rdmtoolbox version as an attribute"""
+    logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
+    version_group = root.create_group('h5rdmtoolbox')
+    # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
+    version_group.attrs['__h5rdmtoolbox_version__'] = __version__
+    version_group.attrs[consts.RDF_PREDICATE_ATTR_NAME] = json.dumps(
+        {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
+    )
+    version_group.attrs[consts.RDF_SUBJECT_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'
+    return version_group
+
+
 def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     """
     Generates a file path in directory h5rdmtoolbox/.tmp
@@ -207,16 +207,7 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     if touch:
         with File(hdf_filepath, "w") as h5touch:
             if get_config('auto_create_h5tbx_version'):
-                logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
-                g = h5touch.create_group('h5rdmtoolbox')
-                # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
-                g.attrs['__h5rdmtoolbox_version__'] = __version__
-                g.attrs[consts.RDF_PREDICATE_ATTR_NAME] = json.dumps(
-                    {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
-                )
-                h5touch.attrs[consts.RDF_SUBJECT_ATTR_NAME] = json.dumps(
-                    {'h5rdmtoolbox': 'https://schema.org/SoftwareSourceCode'}
-                )
+                create_h5tbx_version_grp(h5touch)
             if attrs is not None:
                 for ak, av in attrs.items():
                     create_special_attribute(h5touch.attrs, ak, av)
