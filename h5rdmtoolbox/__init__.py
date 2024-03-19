@@ -1,6 +1,31 @@
 """h5rdtoolbox repository"""
-import atexit
+
+import appdirs
+import logging
 import pathlib
+from logging.handlers import RotatingFileHandler
+
+_logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
+_logdir.mkdir(parents=True, exist_ok=True)
+
+DEFAULT_LOGGING_LEVEL = logging.WARNING
+_formatter = logging.Formatter(
+    '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d_%H:%M:%S')
+
+_stream_handler = logging.StreamHandler()
+_stream_handler.setLevel(DEFAULT_LOGGING_LEVEL)
+_stream_handler.setFormatter(_formatter)
+
+_file_handler = RotatingFileHandler(_logdir / 'h5rdmtoolbox.log')
+_file_handler.setLevel(logging.DEBUG)  # log everything to file!
+_file_handler.setFormatter(_formatter)
+
+logger = logging.getLogger(__package__)
+logger.addHandler(_stream_handler)
+logger.addHandler(_file_handler)
+
+import atexit
 # noinspection PyUnresolvedReferences
 import pint_xarray
 import shutil
@@ -35,10 +60,6 @@ def get_package_meta():
         codemeta = json.loads(f.read())
     return codemeta
 
-
-logger = utils.create_tbx_logger('h5rdmtoolbox')
-
-logger.setLevel(get_config()['init_logger_level'])
 
 cv_h5py = convention.Convention(name='h5py',
                                 contact=__author_orcid__)
@@ -95,7 +116,7 @@ def dumps(src: Union[str, File, pathlib.Path]):
         return h5.dumps()
 
 
-def dump_jsonld(filename: Union[str, pathlib.Path], skipND: int=1) -> str:
+def dump_jsonld(filename: Union[str, pathlib.Path], skipND: int = 1) -> str:
     """Dump the JSON-LD representation of the file to a file"""
     from .wrapper.jsonld import dump_file
     return dump_file(filename, skipND=skipND)

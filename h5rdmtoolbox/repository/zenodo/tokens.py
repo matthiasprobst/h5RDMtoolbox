@@ -1,13 +1,12 @@
 import appdirs
 import configparser
+import logging
 import os
 import pathlib
 import warnings
 from typing import Union
 
-from h5rdmtoolbox.utils import create_tbx_logger
-
-logger = create_tbx_logger('zenodo')
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def _parse_ini_file(zenodo_ini_filename: Union[str, pathlib.Path]):

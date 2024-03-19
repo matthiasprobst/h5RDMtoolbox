@@ -1,5 +1,4 @@
 """utilities of the h5rdmtoolbox"""
-import appdirs
 import datetime
 import h5py
 import hashlib
@@ -13,7 +12,6 @@ import re
 import requests
 import warnings
 from h5py import File
-from logging.handlers import RotatingFileHandler
 from pydantic import HttpUrl, validate_call
 from rdflib.plugins.shared.jsonld.context import Context, CONTEXT
 from re import sub as re_sub
@@ -23,6 +21,7 @@ from typing import Union, Callable, List, Tuple
 from . import _user, get_config, get_ureg, consts
 from ._version import __version__
 
+logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
 
 
@@ -37,35 +36,6 @@ class ToolboxLogger(logging.Logger):
         """change the log level which displays on the console"""
         old_level = self.handlers[1].level
         self.handlers[1].setLevel(level)
-
-
-def create_tbx_logger(name, logdir=None) -> ToolboxLogger:
-    """Create logger based on name"""
-    if logdir is None:
-        _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
-    else:
-        _logdir = pathlib.Path(logdir)
-
-    _logdir.mkdir(parents=True, exist_ok=True)
-
-    _logger = ToolboxLogger(logging.getLogger(name), directory=_logdir)
-
-    _formatter = logging.Formatter(
-        '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-        datefmt='%Y-%m-%d_%H:%M:%S')
-
-    _file_handler = RotatingFileHandler(_logdir / f'{name}.log')
-    _file_handler.setLevel(logging.DEBUG)  # log everything to file!
-    _file_handler.setFormatter(_formatter)
-
-    _stream_handler = logging.StreamHandler()
-    _stream_handler.setLevel(DEFAULT_LOGGING_LEVEL)
-    _stream_handler.setFormatter(_formatter)
-
-    _logger.addHandler(_file_handler)
-    _logger.addHandler(_stream_handler)
-
-    return _logger
 
 
 def get_filesize(path: Union[str, pathlib.Path]) -> int:
@@ -236,15 +206,17 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     hdf_filepath = generate_temporary_filename(suffix='.hdf')
     if touch:
         with File(hdf_filepath, "w") as h5touch:
-            g = h5touch.create_group('h5rdmtoolbox')
-            # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
-            g.attrs['__h5rdmtoolbox_version__'] = __version__
-            g.attrs[consts.RDF_PREDICATE_ATTR_NAME] = json.dumps(
-                {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
-            )
-            h5touch.attrs[consts.RDF_SUBJECT_ATTR_NAME] = json.dumps(
-                {'h5rdmtoolbox': 'https://schema.org/SoftwareSourceCode'}
-            )
+            if get_config('auto_create_h5tbx_version'):
+                logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
+                g = h5touch.create_group('h5rdmtoolbox')
+                # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
+                g.attrs['__h5rdmtoolbox_version__'] = __version__
+                g.attrs[consts.RDF_PREDICATE_ATTR_NAME] = json.dumps(
+                    {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
+                )
+                h5touch.attrs[consts.RDF_SUBJECT_ATTR_NAME] = json.dumps(
+                    {'h5rdmtoolbox': 'https://schema.org/SoftwareSourceCode'}
+                )
             if attrs is not None:
                 for ak, av in attrs.items():
                     create_special_attribute(h5touch.attrs, ak, av)

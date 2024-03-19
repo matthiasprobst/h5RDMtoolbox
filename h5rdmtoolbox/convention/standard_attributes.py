@@ -1,17 +1,19 @@
 """standard attribute module"""
-import enum
-import json
-import pydantic
 import typing_extensions
+
+import json
+import logging
+import pydantic
 import warnings
 from typing import Dict, List, Union
 
-from . import errors, logger
 from . import warnings as convention_warnings
 from .consts import DefaultValue
 from .. import get_config
 from ..utils import DocStringParser, parse_object_for_attribute_setting
 from ..wrapper.core import File, Group, Dataset
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 __doc_string_parser__ = {File: {'__init__': DocStringParser(File)},
                          Group: {'create_group': DocStringParser(Group.create_group),

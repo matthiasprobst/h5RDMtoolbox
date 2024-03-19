@@ -2,6 +2,7 @@
 """
 import datetime
 import h5py
+import logging
 import numpy as np
 import os
 import pathlib
@@ -18,7 +19,7 @@ from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
 
 from h5rdmtoolbox.database import ObjDB
-from . import logger, rdf
+from . import rdf
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
@@ -29,6 +30,8 @@ from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from .._version import __version__
 from ..convention.consts import DefaultValue
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
@@ -741,9 +744,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         _maxshape = kwargs.get('maxshape', shape)
 
-        logger.debug(
-            f'Creating dataset "{name}" in "{self.name}" with maxshape {_maxshape} " '
-            f'and using compression "{compression}" with opt "{compression_opts}"')
+        logger.debug(f'Creating dataset "{name}" in "{self.name}" with maxshape "{_maxshape}" '
+                     f'and using compression "{compression}" with opt "{compression_opts}"')
 
         # if possible, create dataset with shape first:
         if _data is not None:
@@ -2064,10 +2066,12 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
         if self.mode != 'r':
             # update file toolbox version, wrapper version
-            if 'h5rdmtoolbox' not in self:
-                _tbx_grp = self.create_group('h5rdmtoolbox')
-                _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
-                _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
+            if get_config('auto_create_h5tbx_version'):
+                if 'h5rdmtoolbox' not in self:
+                    logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
+                    _tbx_grp = self.create_group('h5rdmtoolbox')
+                    _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
+                    _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
             for k, v in attrs.items():
                 self.attrs[k] = v
 

@@ -1,4 +1,5 @@
 import h5py
+import logging
 import pathlib
 import types
 import uuid
@@ -7,7 +8,7 @@ from typing import Callable, Dict, Union, List
 
 import h5rdmtoolbox
 
-logger = h5rdmtoolbox.utils.create_tbx_logger('layout')
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def _replace_callables_with_names(dict_with_callables: Dict) -> Dict:

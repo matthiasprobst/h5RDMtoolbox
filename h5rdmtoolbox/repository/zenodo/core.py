@@ -1,18 +1,18 @@
 import abc
 import appdirs
 import json
+import logging
 import pathlib
 import requests
 import time
 import warnings
 from typing import Union, List, Callable, Iterable, Dict
 
-from h5rdmtoolbox.utils import create_tbx_logger
 from .metadata import Metadata
 from .tokens import get_api_token
 from ..interface import RepositoryInterface
 
-logger = create_tbx_logger('zenodo')
+logger = logging.getLogger('h5rdmtoolbox')
 
 __all__ = ['Metadata']
 

@@ -7,6 +7,7 @@ import unittest
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import consts
 from h5rdmtoolbox.repository import zenodo, upload_file
 from h5rdmtoolbox.repository.h5metamapper import hdf2json
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
@@ -253,11 +254,10 @@ class TestConfig(unittest.TestCase):
         with open(json_filename) as f:
             json_dict = json.loads(f.read())
 
-        self.assertEqual(json_dict['attrs'],
-                         {'__h5rdmtoolbox_version__': h5tbx.__version__,
-                          'long_name': 'root',
-                          'IRI_PREDICATE': json.dumps(
-                              {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}), })
+        self.assertEqual(json_dict['h5rdmtoolbox']['attrs'],
+                         {
+                             consts.RDF_PREDICATE_ATTR_NAME: '{"__h5rdmtoolbox_version__": "https://schema.org/softwareVersion"}',
+                             '__h5rdmtoolbox_version__': h5tbx.__version__})
         z.delete()
 
     def test_ZenodoSandboxDeposit(self):

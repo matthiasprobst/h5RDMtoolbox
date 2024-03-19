@@ -3,6 +3,7 @@ import copy
 import forge
 import h5py
 import inspect
+import logging
 import pathlib
 import re
 import shutil
@@ -18,7 +19,6 @@ from h5rdmtoolbox.wrapper import ds_decoder
 from . import cfg
 from . import consts
 from . import errors
-from . import logger
 from .errors import ConventionNotFound
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
@@ -27,6 +27,7 @@ from .._user import UserDir
 from ..repository import zenodo
 from ..repository.zenodo.utils import recid_from_doi_or_redid
 
+logger = logging.getLogger('h5rdmtoolbox')
 CV_DIR = UserDir['convention']
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'

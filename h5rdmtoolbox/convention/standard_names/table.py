@@ -1,6 +1,7 @@
 """Standard name table module"""
 import h5py
 import json
+import logging
 import pathlib
 import pint
 import warnings
@@ -17,10 +18,10 @@ from . import cache
 from . import consts
 from .affixes import Affix
 from .transformation import *
-from .. import logger
 from ..utils import dict2xml, get_similar_names_ratio
 from ... import errors
 
+logger = logging.getLogger('h5rdmtoolbox')
 __this_dir__ = pathlib.Path(__file__).parent
 
 

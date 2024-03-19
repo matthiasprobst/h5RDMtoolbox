@@ -1,4 +1,5 @@
 import json
+import logging
 import pathlib
 from typing import Union
 
@@ -7,8 +8,9 @@ from . import cache
 from .h5interface import HDF5StandardNameInterface
 from .name import StandardName
 from .table import StandardNameTable
-from .. import logger
 from ..consts import DefaultValue
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:

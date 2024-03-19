@@ -23,6 +23,9 @@ def remove_key_recursive(d, key_to_remove):
 
 class TestOntology(unittest.TestCase):
 
+    def setUp(self):
+        h5tbx.use(None)
+
     def test_Attribute(self):
         attr = hdf_ontology.Attribute(name='standard_name',
                                       value='x_velocity')

@@ -1,5 +1,6 @@
 """Module to generate a convention Python file from a YAML file"""
 import ast
+import logging
 import pathlib
 import re
 import shutil
@@ -11,7 +12,8 @@ from typing import List, Union
 
 from h5rdmtoolbox._user import UserDir
 from h5rdmtoolbox.convention import toolbox_validators
-from . import logger
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 regex_counter = count()
 

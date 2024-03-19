@@ -327,16 +327,17 @@ class TestFile(unittest.TestCase):
             self.assertFalse(ds1 == float(ds2[()]))
 
     def test_get_group_names(self):
-        with File(mode='w') as h5:
-            g = h5.create_group('one', 'one')
-            g.create_group('two', 'two')
+        with h5tbx.set_config(auto_create_h5tbx_version=False):
+            with File(mode='w') as h5:
+                g = h5.create_group('one', 'one')
+                g.create_group('two', 'two')
 
-            g = g.create_group('three', 'three')
-            g.create_group('four', 'four')
-            self.assertEqual(h5['one'].get_group_names(), ['three', 'three/four', 'two'])
-            self.assertEqual(sorted(h5['one'].get_group_names(recursive=False)), sorted(['two', 'three']))
-            self.assertEqual(sorted(h5['/'].get_group_names(recursive=False)), sorted(['one', ]))
-            self.assertEqual(sorted(h5.get_group_names(recursive=False)), sorted(['one', ]))
+                g = g.create_group('three', 'three')
+                g.create_group('four', 'four')
+                self.assertEqual(h5['one'].get_group_names(), ['three', 'three/four', 'two'])
+                self.assertEqual(sorted(h5['one'].get_group_names(recursive=False)), sorted(['two', 'three']))
+                self.assertEqual(sorted(h5['/'].get_group_names(recursive=False)), sorted(['one', ]))
+                self.assertEqual(sorted(h5.get_group_names(recursive=False)), sorted(['one', ]))
 
     def test_get_dataset_names(self):
         with File(mode='w') as h5:
