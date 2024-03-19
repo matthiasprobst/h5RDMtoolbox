@@ -43,7 +43,7 @@ class TestNamespaces(unittest.TestCase):
         self.assertIsInstance(code_meta_context, dict)
         self.assertEqual(code_meta_context['type'], "@type")
         self.assertEqual(code_meta_context['id'], "@id")
-        self.assertEqual(code_meta_context['schema'], "http://schema.org/")
+        self.assertEqual(code_meta_context['schema'], "https://schema.org/")
         self.assertEqual(code_meta_context['codemeta'], "https://codemeta.github.io/terms/")
 
     def test_codemeta(self):
@@ -123,12 +123,12 @@ class TestNamespaces(unittest.TestCase):
             ).to_dict()
             context = {
                 # 'orcidid': 'http://w3id.org/nfdi4ing/metadata4ing#orcidId',
-                # 'version': 'http://schema.org/version',
-                # 'codeRepository': 'http://schema.org/codeRepository',
-                # 'license': 'http://schema.org/license',
-                # 'name': 'http://schema.org/name',
-                # 'schema': 'http://schema.org/',
-                # 'SoftwareSourceCode': 'http://schema.org/SoftwareSourceCode',
+                # 'version': 'https://schema.org/version',
+                # 'codeRepository': 'https://schema.org/codeRepository',
+                # 'license': 'https://schema.org/license',
+                # 'name': 'https://schema.org/name',
+                # 'schema': 'https://schema.org/',
+                # 'SoftwareSourceCode': 'https://schema.org/SoftwareSourceCode',
                 # "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
                 'local': '_:'
             }

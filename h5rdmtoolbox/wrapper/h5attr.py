@@ -139,8 +139,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                name,
                data,
                shape=None, dtype=None,
-               iri_predicate: Union[str, rdflib.URIRef] = None,
-               iri_obj: Union[str, rdflib.URIRef] = None):
+               rdf_predicate: Union[str, rdflib.URIRef] = None,
+               rdf_object: Union[str, rdflib.URIRef] = None):
         """
         Create a new attribute.
 
@@ -154,18 +154,18 @@ class WrapperAttributeManager(h5py.AttributeManager):
             Shape of the attribute. If None, the shape is determined from the data.
         dtype:
             Data type of the attribute. If None, the data type is determined from the data.
-        iri_predicate: Union[str, rdflib.URIRef], optional
+        rdf_predicate: Union[str, rdflib.URIRef], optional
             IRI of the predicate
-        iri_obj: Union[str, rdflib.URIRef], optional
+        rdf_object: Union[str, rdflib.URIRef], optional
             IRI of the object
         """
         r = super().create(name,
                            utils.parse_object_for_attribute_setting(data),
                            shape, dtype)
-        if iri_predicate is not None:
-            self._parent.iri.predicate[name] = iri_predicate
-        if iri_obj is not None:
-            self._parent.iri.object[name] = iri_obj
+        if rdf_predicate is not None:
+            self._parent.iri.predicate[name] = rdf_predicate
+        if rdf_object is not None:
+            self._parent.iri.object[name] = rdf_object
         return r
 
     @with_phil
@@ -193,7 +193,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 raise ValueError('Tuple must have length 2 in order to interpret it as an'
                                  'attribute name and its IRI')
             _name, _iri = name
-            self.create(_name, value, iri_predicate=_iri)
+            self.create(_name, value, rdf_predicate=_iri)
             # self._parent.iri.predicate[_name] = _iri
             return
 

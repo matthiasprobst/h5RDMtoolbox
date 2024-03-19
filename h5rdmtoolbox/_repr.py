@@ -463,6 +463,8 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             checkbox_state = self.checkbox_state
 
         self_predicate = h5obj.iri.predicate.get('SELF', None)
+        if self_predicate:
+            print(self_predicate)
         self_subject = h5obj.iri.subject
 
         if self_predicate is not None:

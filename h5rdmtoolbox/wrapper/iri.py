@@ -275,7 +275,10 @@ class _IRIPO(abc.ABC):
         return attrs.get(item, default)
 
     def __getitem__(self, item) -> Union[str, None]:
-        return self._attr[self.IRI_ATTR_NAME].get(item, None)
+        iri_attr_dict = self._attr.get(self.IRI_ATTR_NAME, None)
+        if iri_attr_dict is None:
+            return None
+        return iri_attr_dict.get(item, None)
 
     def __setitem__(self, key, value: str):
         if key not in self._attr:

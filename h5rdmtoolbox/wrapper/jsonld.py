@@ -9,7 +9,7 @@ from typing import Iterable, Tuple, Any
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention import hdf_ontology
-from h5rdmtoolbox.convention.hdf_ontology import HDF5
+from ontolutils.classes.utils import split_URIRef
 
 
 def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
@@ -107,18 +107,40 @@ def to_hdf(grp,
 
     if predicate:
         grp.iri.predicate = predicate
+
     data_context = data.pop('@context', None)
     if data_context is None:
         data_context = {}
     if context is not None:
         data_context.update(context)
+    data_context['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#'
+    data_context['schema'] = 'https://schema.org/'
 
     for k, v in data.items():
+
+        if k == '@id':
+            rdf_predicate = None
+            value_predicate = k
+        else:
+            # spit predicate:
+            ns_predicate, value_predicate = split_URIRef(k)
+
+            # ns_predicate can be something like None, "schema" or "https://schema.org/"
+            if ns_predicate is None:
+                rdf_predicate = data_context.get(k, None)
+            elif ns_predicate.startswith('http'):
+                rdf_predicate = k
+            else:
+                _ns = data_context.get(ns_predicate, None)
+                if _ns is not None:
+                    rdf_predicate = f'{_ns}{value_predicate}'
+                else:
+                    rdf_predicate = value_predicate
+
         if isinstance(v, dict):
-            predicate = data_context.get(k, None)
             print(f'create group {k} in {grp.name}')
             if k not in grp:
-                to_hdf(grp.create_group(k), data=v, predicate=predicate, context=data_context)
+                to_hdf(grp.create_group(value_predicate), data=v, predicate=rdf_predicate, context=data_context)
         elif isinstance(v, list):
             if is_list_of_dict(v):
                 for i, entry in enumerate(v):
@@ -132,13 +154,25 @@ def to_hdf(grp,
             else:
                 grp.attrs[k, data_context.get(k, None)] = v
         else:
-            if isinstance(v, str) and not v.startswith('http'):
-                v_split = v.split(':', 1)
-                if len(v_split) == 2:
-                    v_prefix, v_value = v_split
-                    if v_prefix in data_context:
-                        v = data_context[v_prefix] + v_value
-            grp.attrs[k, data_context.get(k, None)] = v
+            # maybe value_object is a IRI?!
+            ns_object, value_object = split_URIRef(v)
+
+            if ns_object is None:
+                rdf_object = data_context.get(k, None)
+            elif value_object.startswith('http'):
+                rdf_object = k
+            else:
+                _ns = data_context.get(ns_object, None)
+                if _ns is not None:
+                    rdf_object = f'{_ns}{value_object}'
+                else:
+                    rdf_object = value_object
+            if k == '@type':
+                grp.attrs.create(name=k, data=rdf_object)
+            elif k == '@id':
+                grp.attrs.create(name=k, data=v)
+            else:
+                grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate)
 
 
 # def to_hdf(jsonld_filename, grp: h5py.Group) -> None:
@@ -209,72 +243,96 @@ def serialize(grp,
     hasParameter = URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasParameter')
 
     # global _context
-    _context = {'hdf': str(HDF5._NS)}
+    _context = {}
     context = context or {}
     _context.update(context)  # = context or {}
+    _context['foaf'] = 'http://xmlns.com/foaf/0.1/'
+    _context['prov'] = 'http://www.w3.org/ns/prov#'
+    _context['schema'] = 'https://schema.org/'
+    _context['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#'
+
+    iri_dict = {}
 
     def add_node(name, obj):
-        node = rdflib.URIRef(_get_id(obj, local=local))
+        node = iri_dict.get(obj.name, None)
+        if node is None:
+            node = rdflib.URIRef(_get_id(obj, local=local))
+            iri_dict[obj.name] = node
+
         # node = rdflib.URIRef(f'_:{obj.name}')
         if isinstance(obj, h5py.File):
-            g.add(
-                (node,
-                 RDF.type,
-                 HDF5.rootGroup  # this is a root group!
-                 )
-            )
-        else:
-            node_type = obj.iri.subject
-            if node_type:
-                g.add((node, RDF.type, rdflib.URIRef(obj.iri.subject)))
-        if isinstance(obj, h5py.Dataset):
-            # node is Parameter
-            g.add((node, RDF.type, URIRef("http://www.molmod.info/semantics/pims-ii.ttl#Variable")))
-            # g.add((node, RDF.type, URIRef("hdf:Dataset")))
-            # parent gets "hasParameter"
-            # parent_node = f'_:{obj.parent.name}'# _get_id(obj.parent, local)
-            parent_node = _get_id(obj.parent, local)
-            g.add((parent_node, hasParameter, node))
+            return
 
-        for ak, av in obj.attrs.items():
-            if not ak.isupper() and not ak.startswith('@'):
-                if isinstance(av, (list, tuple)):
-                    value = [_get_id_from_attr_value(_av, local) for _av in av]
-                else:
-                    value = _get_id_from_attr_value(av, local)
+        node_type = obj.iri.subject
+        # if the node_type is None, attributes could still have RDF types. In this case, consider the node as a
+        # NumericalVariable or TextVariable
 
-                # g.add((node, URIRef(ak), Literal(av)))
-                predicate = obj.iri.predicate.get(ak, None)
-
-                # only add if not defined in context:
-                if predicate and predicate not in _context:
-                    # irikey = str(obj.iri.predicate[ak])
-                    if isinstance(value, (list, tuple)):
-                        for v in value:
-                            g.add((node, URIRef(predicate), v))
+        if node_type is None:
+            rdf_predicate_dict = obj.attrs.get('IRI_PREDICATE', None)
+            if rdf_predicate_dict and len(rdf_predicate_dict) > 0:
+                if isinstance(obj, h5py.Dataset):
+                    if obj.dtype.kind == 'S':
+                        node_type = "http://w3id.org/nfdi4ing/metadata4ing#TextVariable"
+                    elif obj.dtype.kind in ('i', 'u', 'f'):
+                        node_type = "http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable"
                     else:
-                        g.add((node, URIRef(predicate), value))
+                        node_type = "http://www.molmod.info/semantics/pims-ii.ttl#Variable"
+                else:
+                    node_type = "https://schema.org/Thing"  # schema:Thing (The most generic type of item.)
+        if node_type:
+            g.add((node, RDF.type, rdflib.URIRef(node_type)))
+            # if isinstance(obj, h5py.Dataset):
+            #     # node is Parameter
+            #     g.add((node, RDF.type, URIRef("http://www.molmod.info/semantics/pims-ii.ttl#Variable")))
+            #     # g.add((node, RDF.type, URIRef("hdf:Dataset")))
+            #     # parent gets "hasParameter"
+            #     # parent_node = f'_:{obj.parent.name}'# _get_id(obj.parent, local)
+            #     parent_node = _get_id(obj.parent, local)
+            #     g.add((parent_node, hasParameter, node))
 
-                # context_iri = context.get(ak, None)
-                # if context_iri:
-                #     g.add((node, URIRef(context_iri), value))
+            # only go through attributes if the parent object is a RDF type
+            for ak, av in obj.attrs.items():
+                if not ak.isupper() and not ak.startswith('@'):
+                    if isinstance(av, (list, tuple)):
+                        value = [_get_id_from_attr_value(_av, local) for _av in av]
+                    else:
+                        value = _get_id_from_attr_value(av, local)
 
-                if predicate is None and not iri_only:
-                    g.add((node, URIRef(ak), value))
-        # if isinstance(obj, h5py.Group):
-        #     for name, sub_obj in obj.items():
-        #         add_node(sub_obj, graph)
-        # else:
-        #     # has parameter
-        #     graph.add((node, hasParameter, node))
+                    # g.add((node, URIRef(ak), Literal(av)))
+                    predicate = obj.iri.predicate.get(ak, None)
+
+                    # only add if not defined in context:
+                    if predicate and predicate not in _context:
+                        # irikey = str(obj.iri.predicate[ak])
+                        if isinstance(value, (list, tuple)):
+                            for v in value:
+                                g.add((node, URIRef(predicate), v))
+                        else:
+                            g.add((node, URIRef(predicate), value))
+
+                    if predicate is None and not iri_only:
+                        g.add((node, URIRef(ak), value))
+
+        # now check if any of the groups in obj is associated with a predicate
+        if isinstance(obj, h5py.Group):
+            for grp_name, grp in obj.items():
+                if isinstance(grp, h5py.Group):
+                    predicate = grp.iri.predicate['SELF']
+                    if predicate:
+                        new_node = iri_dict.get(grp.name, None)
+                        if new_node is None:
+                            new_node = rdflib.URIRef(_get_id(grp, local=local))
+                            iri_dict[obj.name] = new_node
+
+                        g.add((node, URIRef(predicate), new_node))
 
     g = Graph()
 
-    g.add(
-        (URIRef(f'file://{grp.filename}'),
-         RDF.type,
-         HDF5.File)
-    )
+    # g.add(
+    #     (URIRef(f'file://{grp.filename}'),
+    #      RDF.type,
+    #      HDF5.File)
+    # )
 
     add_node(grp.name, grp)
 
@@ -303,105 +361,6 @@ def dumpd(grp,
                   compact=compact,
                   context=context)
     return json.loads(s)
-
-
-# def depr_dumpd(grp,
-#                iri_only=False,
-#                local="https://www.example.org/",
-#                recursive: bool = True,
-#                compact: bool = False) -> Dict:
-#     """Dump a group or a dataset to to dict."""
-#
-#     if isinstance(grp, (str, pathlib.Path)):
-#         from .core import File
-#         with File(grp) as h5:
-#             return dumpd(h5, iri_only, local, recursive=recursive, compact=compact)
-#
-#     assert isinstance(grp, (h5py.Group, h5py.Dataset))
-#
-#     def _get_id(_grp):
-#         return local + 'grp:' + _grp.name
-#
-#     entries = {}
-#
-#     def _get_dict(_name: str, node):
-#         _id = node.attrs.get('@id', None)
-#         if _id is None:
-#             _id = _get_id(node)
-#         j = {"@id": _id}
-#         s = node.iri.subject
-#         if s is not None:
-#             j["@type"] = str(s)
-#
-#         if isinstance(node, h5py.Dataset):
-#             if node.ndim == 0:
-#                 # only write value if it is a scalar
-#                 if node.dtype.kind == 'S':
-#                     j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = str(node.values[()])
-#                 data = node.values[()]
-#                 if isinstance(data, (int, np.integer)):
-#                     j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = int(data)
-#                 elif data.dtype.kind == 'S':
-#                     j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = str(data)
-#                 else:
-#                     j["http://www.molmod.info/semantics/pims-ii.ttl#Value"] = float(data)
-#
-#         for k in node.attrs.keys():
-#             if not k.isupper():
-#                 v = node.attrs[k]
-#                 if node.iri.predicate.get(k, None) is not None:
-#                     irikey = str(node.iri.predicate[k])
-#                     if node.iri.object.get(k, None) is not None:
-#                         # value = str(node.iri.object[k])
-#                         if isinstance(v, (list, tuple)):
-#                             value = [str(i) for i in v]
-#                         else:
-#                             value = str(v)
-#                         j[irikey] = [str(node.iri.object[k]), value]
-#                     else:
-#                         if isinstance(v, (h5py.Group, h5py.Dataset)):
-#                             if '@id' in v.attrs:
-#                                 iri_value = v.attrs['@id']
-#                             else:
-#                                 iri_value = _get_id(v)
-#                             j[irikey] = [v.name, iri_value]
-#                         else:
-#                             if isinstance(v, (list, tuple)):
-#                                 value = [str(i) for i in v]
-#                             else:
-#                                 value = str(v)
-#                         j[irikey] = value
-#                 else:
-#                     if not iri_only:
-#                         if isinstance(v, (h5py.Group, h5py.Dataset)):
-#                             j[k] = v.name
-#                         else:
-#                             j[k] = str(v)
-#         entries[_id] = j
-#         # entries.append(j)
-#
-#     _get_dict(grp.name, grp)
-#
-#     if recursive and isinstance(grp, h5py.Group):
-#         grp.visititems(_get_dict)
-#         # return grp.visititems(_get_dict)
-#
-#     # merge entries. e.g. {"@id": "foo", "author": "gro:/123"} and {"@id": "grp:/123", "name": "MP"}
-#     # -> {"@id": "foo", "author": {"name": "MP"}}
-#     entries = _merge_entries(entries, clean=True)
-#
-#     if len(entries) == 1:
-#         keys = list(entries.keys())
-#         jsonld_dict = {"@graph": entries[keys[0]]}
-#     else:
-#         jsonld_dict = {"@graph": list(entries.values())}
-#
-#     if compact:
-#         from rdflib import Graph
-#         g = Graph().parse(data=json.dumps(jsonld_dict), format='json-ld')
-#         return json.loads(g.serialize(format='json-ld', indent=2, compact=True))
-#
-#     return jsonld_dict
 
 
 def dumps(grp,
