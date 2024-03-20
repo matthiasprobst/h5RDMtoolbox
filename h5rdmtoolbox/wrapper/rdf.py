@@ -144,19 +144,6 @@ class RDFManager:
     def __init__(self, attr: h5py.AttributeManager = None):
         self._attr = attr
 
-    # @property
-    # def type(self):
-    #     """Returns the type, the group describes"""
-    #     _type = self._attr.get('@type', None)
-    #     if _type is None:
-    #         return _type
-    #     return URIRef(_type)
-    #
-    # @type.setter
-    # def type(self, type: Union[URIRef, str]) -> None:
-    #     """Sets the type, the group describes"""
-    #     self._attr['@type'] = str(type)
-
     @property
     def subject(self) -> Union[str, None]:
         """Returns the subject of the group or dataset"""
@@ -223,6 +210,7 @@ class RDFManager:
 
     @property
     def object(self):
+        """Return the RDF object manager"""
         return RDF_OBJECT(self._attr)
 
     def __eq__(self, other: str):
@@ -296,7 +284,7 @@ class RDF_Predicate(_RDFPO):
 
 
 class RDF_OBJECT(_RDFPO):
-    """IRI data attribute manager"""
+    """IRI data attribute manager for objects"""
     IRI_ATTR_NAME = consts.RDF_OBJECT_ATTR_NAME
 
     def __setiri__(self, key, value):

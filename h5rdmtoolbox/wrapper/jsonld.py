@@ -1,5 +1,6 @@
 import h5py
 import json
+import numpy as np
 import pathlib
 import rdflib
 from rdflib import Graph, URIRef, Literal, BNode
@@ -411,14 +412,31 @@ def dump(grp,
 h5dump = dump  # alias, use this in future
 
 
-def dump_file(filename: Union[str, pathlib.Path], skipND) -> None:
-    """Dump a file to a JSON-LD file."""
+def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
+    """Dump an HDF5 file to a JSON-LD file."""
     data = {}
     if skipND is None:
         skipND = 10000
 
     def _build_attributes(attrs: Iterable[Tuple[str, Any]]):
-        attrs = [hdf_ontology.Attribute(name=k, value=v) for k, v in attrs.items() if not k.isupper()]
+        def _parse_dtype(v):
+            if isinstance(v, np.int32):
+                return int(v)
+            if isinstance(v, np.int64):
+                return int(v)
+            if isinstance(v, np.float32):
+                return float(v)
+            if isinstance(v, np.float64):
+                return float(v)
+            if isinstance(v, np.ndarray):
+                return [_parse_dtype(value) for value in v.tolist()]
+            if isinstance(v, str):
+                return v
+            if v is None:
+                return None
+            return str(v)
+
+        attrs = [hdf_ontology.Attribute(name=k, value=_parse_dtype(v)) for k, v in attrs.items() if not k.isupper()]
         return attrs
 
     def _build_dataset_onto_class(ds):

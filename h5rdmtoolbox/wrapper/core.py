@@ -28,7 +28,6 @@ from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, convention, utils, consts, protected_attributes
 from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
-from .._version import __version__
 from ..convention.consts import DefaultValue
 
 logger = logging.getLogger('h5rdmtoolbox')
@@ -210,6 +209,12 @@ class Core:
     @property
     def rdf(self):
         """Return RDF Manager"""
+        return rdf.RDFManager(self.attrs)
+
+    @property
+    def iri(self):
+        """Deprecated. Use rdf instead."""
+        warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
         return rdf.RDFManager(self.attrs)
 
 

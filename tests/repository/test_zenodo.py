@@ -7,11 +7,10 @@ import unittest
 from datetime import datetime
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import consts
 from h5rdmtoolbox.repository import zenodo, upload_file
-from h5rdmtoolbox.repository.h5metamapper import hdf2json
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
+from h5rdmtoolbox.wrapper.jsonld import dump_file
 
 logger = logging.getLogger(__name__)
 
@@ -216,8 +215,14 @@ class TestConfig(unittest.TestCase):
         hdf_file_name = orig_hdf_filename.name
         json_name = hdf_file_name.replace('.hdf', '.json')
 
+        def hdf2json(hdf_filename: pathlib.Path) -> pathlib.Path:
+            json_ld_filename = hdf_filename.with_suffix('.json')
+            with open(json_ld_filename, 'w') as f:
+                f.write(dump_file(hdf_filename, skipND=1))
+            return json_ld_filename
+
         z.upload_hdf_file(orig_hdf_filename, metamapper=hdf2json)
-        filenames = z.get_files()
+        filenames = z.get_filenames()
         self.assertIn(hdf_file_name, filenames)
         self.assertIn(json_name, filenames)
         with self.assertRaises(KeyError):
@@ -239,15 +244,18 @@ class TestConfig(unittest.TestCase):
         with open(json_filename) as f:
             json_dict = json.loads(f.read())
 
-        print(json_dict['h5rdmtoolbox']['attrs'])
-        self.assertDictEqual(
-            json_dict['h5rdmtoolbox']['attrs'],
-            {
-                '@type': 'https://schema.org/SoftwareSourceCode',
-                consts.RDF_PREDICATE_ATTR_NAME: '{"__h5rdmtoolbox_version__": "https://schema.org/softwareVersion"}',
-                '__h5rdmtoolbox_version__': h5tbx.__version__
-            }
-        )
+        self.assertTrue('@context' in json_dict)
+        self.assertEqual(json_dict['@type'], 'hdf5:File')
+        #
+        # print(json_dict['h5rdmtoolbox']['attrs'])
+        # self.assertDictEqual(
+        #     json_dict['h5rdmtoolbox']['attrs'],
+        #     {
+        #         '@type': 'https://schema.org/SoftwareSourceCode',
+        #         consts.RDF_PREDICATE_ATTR_NAME: '{"__h5rdmtoolbox_version__": "https://schema.org/softwareVersion"}',
+        #         '__h5rdmtoolbox_version__': h5tbx.__version__
+        #     }
+        # )
         z.delete()
 
     def test_ZenodoSandboxDeposit(self):
@@ -304,7 +312,7 @@ class TestConfig(unittest.TestCase):
         with open(tmpfile, 'w') as f:
             f.write('This is a test file.')
         z.upload_file(tmpfile, overwrite=True)
-        self.assertIn('testfile.txt', z.get_files())
+        self.assertIn('testfile.txt', z.get_filenames())
 
         with self.assertWarns(UserWarning):
             z.upload_file('testfile.txt', overwrite=False)

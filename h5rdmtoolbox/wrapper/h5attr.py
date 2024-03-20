@@ -5,6 +5,7 @@ import logging
 import numpy as np
 import pint
 import rdflib
+import warnings
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID
 from typing import Dict, Union, Tuple
@@ -141,7 +142,8 @@ class WrapperAttributeManager(h5py.AttributeManager):
                data,
                shape=None, dtype=None,
                rdf_predicate: Union[str, rdflib.URIRef] = None,
-               rdf_object: Union[str, rdflib.URIRef] = None):
+               rdf_object: Union[str, rdflib.URIRef] = None,
+               **kwargs):
         """
         Create a new attribute.
 
@@ -163,6 +165,15 @@ class WrapperAttributeManager(h5py.AttributeManager):
         r = super().create(name,
                            utils.parse_object_for_attribute_setting(data),
                            shape, dtype)
+        _predicate = kwargs.get('predicate', None)
+        if _predicate is not None:
+            rdf_predicate = _predicate
+            warnings.warn('The "predicate" argument is deprecated. Use "rdf_predicate" instead.', DeprecationWarning)
+        _object = kwargs.get('predicate', None)
+        if _object is not None:
+            rdf_object = _object
+            warnings.warn('The "object" argument is deprecated. Use "rdf_object" instead.', DeprecationWarning)
+
         if rdf_predicate is not None:
             self._parent.rdf.predicate[name] = rdf_predicate
         if rdf_object is not None:

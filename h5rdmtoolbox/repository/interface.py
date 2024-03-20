@@ -1,5 +1,6 @@
 import abc
-from typing import Callable, Iterable
+import pathlib
+from typing import Callable, Iterable, Union
 
 
 class RepositoryInterface(abc.ABC):
@@ -30,16 +31,22 @@ class RepositoryInterface(abc.ABC):
         """Download all files from the repository."""
 
     @abc.abstractmethod
-    def get_files(self) -> Iterable:
+    def get_filenames(self) -> Iterable:
         """Get a list of all filenames."""
 
     @abc.abstractmethod
     def upload_file(self, filename, overwrite: bool = False):
         """Upload a file to the repository."""
 
-    def upload_hdf_file(self, filename, metamapper: Callable, overwrite: bool = False):
+    def upload_hdf_file(self,
+                        filename,
+                        metamapper: Callable[[Union[str, pathlib.Path]], pathlib.Path],
+                        overwrite: bool = False):
         """Upload an HDF5 file. Additionally a metadata file will be extracted from the
-        HDF5 file using the metamapper function and is uploaded as well."""
+        HDF5 file using the metamapper function and is uploaded as well.
+        The metamapper function takes a filename, extracts the metadata and stores it in
+        a file. The filename of it is returned by the function. It is automatically uploaded
+        with the HDF5 file."""
         if metamapper:
             meta_data_file = metamapper(filename)
         self.upload_file(filename=filename, overwrite=overwrite)

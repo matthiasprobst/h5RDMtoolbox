@@ -148,15 +148,15 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             A list of all downloaded files.
         """
         if suffix is None:
-            return [self.download_file(filename, target_folder=target_folder) for filename in self.get_files()]
+            return [self.download_file(filename, target_folder=target_folder) for filename in self.get_filenames()]
         if isinstance(suffix, str):
             suffix = [suffix]
-        return [self.download_file(filename, target_folder=target_folder) for filename in self.get_files() if
+        return [self.download_file(filename, target_folder=target_folder) for filename in self.get_filenames() if
                 filename.endswith(tuple(suffix))]
 
     def download_file(self,
                       filename: str,
-                      target_folder: Union[str, pathlib.Path] = None):
+                      target_folder: Union[str, pathlib.Path] = None) -> pathlib.Path:
         """Download a single file from Zenodo.
 
         Parameters
@@ -167,6 +167,11 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             The target folder, by default None
             If None, the file will be downloaded to the default folder, which is in
             the user data directory of the h5rdmtoolbox package.
+
+        Returns
+        -------
+        pathlib.Path
+            The path to the downloaded file.
         """
         if target_folder is None:
             target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
@@ -292,7 +297,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         """Return current access token for the Zenodo API."""
         return get_api_token(sandbox=True)
 
-    def get_files(self, suffix=None) -> Iterable[str]:
+    def get_filenames(self, suffix=None) -> Iterable[str]:
         """Get a list of all filenames. If suffix is given, only filenames
         with this suffix are returned."""
         file_dict = {f['filename']: f for f in self.json()['files']}
@@ -312,7 +317,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         if not filename.exists():
             raise FileNotFoundError(f'File "{filename}" does not exist.')
 
-        existing_filenames = self.get_files()
+        existing_filenames = self.get_filenames()
         if not overwrite:
             # we need to check if the file already exists
             if filename.name in existing_filenames:
@@ -389,6 +394,6 @@ class ZenodoRecord(AbstractZenodoInterface):
     def upload_hdf_file(self, filename, metamapper: Callable, overwrite: bool = False):
         raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
 
-    def get_files(self) -> List[str]:
+    def get_filenames(self) -> List[str]:
         """Get a list of all filenames."""
         return [f['key'] for f in self.json()['files']]
