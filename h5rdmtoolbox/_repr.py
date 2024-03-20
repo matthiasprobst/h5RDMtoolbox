@@ -218,12 +218,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
                 print(spaces + f'@type: {group.attrs[attr_name]}')
             else:
                 if not attr_name.isupper():
-                    pred = group.rdf[attr_name]['predicate']
-                    if pred:
-                        use_attr_name = f'{attr_name} ({pred})'
-                    else:
-                        use_attr_name = attr_name
-                    print(spaces + self.__attrs__(use_attr_name, group.attrs[attr_name]))
+                    print(spaces + self.__attrs__(attr_name, group))
         for key, item in group.items():
             if isinstance(item, h5py.Dataset):
                 print(spaces + self.__dataset__(key, item))
@@ -233,9 +228,6 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
             elif isinstance(item, h5py.Group):
                 print(spaces + self.__group__(key, item))
                 self(item, indent + 1)
-                # for attr_name, attr_value in item.attrs.items():
-                #     if not attr_name.isupper() and attr_name not in self.ignore_attrs:
-                #         print(self.base_intent * (indent + 2) + self.__attr_str__(attr_name, attr_value))
 
     def __dataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         if h5obj.dtype.char == 'S':
@@ -272,12 +264,20 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __group__(self, name, item) -> str:
         return f"/\033[1m{name}\033[0m"
 
-    def __attrs__(self, name, value) -> str:
-        if isinstance(value, h5py.Group):
-            value = f'grp:{value.name}'
-        elif isinstance(value, h5py.Dataset):
-            value = f'dset:{value.name}'
-        return f'\033[3ma: {name}\033[0m: {value}'
+    def __attrs__(self, name, h5obj) -> str:
+        attr_value = h5obj.attrs.raw[name]
+
+        pred = h5obj.rdf[name]['predicate']
+        if pred:
+            use_attr_name = f'{name} ({pred})'
+        else:
+            use_attr_name = name
+
+        if isinstance(attr_value, h5py.Group):
+            attr_value = f'grp:{attr_value.name}'
+        elif isinstance(attr_value, h5py.Dataset):
+            attr_value = f'dset:{attr_value.name}'
+        return f'\033[3ma: {use_attr_name}\033[0m: {attr_value}'
 
 
 class HDF5StructureHTMLRepr(_HDF5StructureRepr):
