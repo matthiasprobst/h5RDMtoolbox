@@ -6,10 +6,9 @@ from pydantic import HttpUrl
 from typing import Dict, Union
 from typing import List
 
-from h5rdmtoolbox import consts
-
-PREDICATE_KW = 'predicate'
-OBJECT_KW = 'object'
+RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
+RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
+RDF_SUBJECT_ATTR_NAME = 'RDF_TYPE'
 
 
 def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> None:
@@ -31,37 +30,38 @@ def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> No
     try:
         HttpUrl(value)
     except pydantic.ValidationError as e:
-        warnings.warn(f'Invalid IRI. Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}',
+        warnings.warn(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
+                      f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}',
                       UserWarning)
 
-    iri_name_data = attr.get(consts.RDF_PREDICATE_ATTR_NAME, None)
+    iri_name_data = attr.get(RDF_PREDICATE_ATTR_NAME, None)
     if iri_name_data is None:
         iri_name_data = {}
     iri_name_data.update({attr_name: value})
-    attr[consts.RDF_PREDICATE_ATTR_NAME] = iri_name_data
+    attr[RDF_PREDICATE_ATTR_NAME] = iri_name_data
 
 
 def del_iri_entry(attr: h5py.AttributeManager, attr_name: str) -> None:
     """Delete the attribute name from name and data iri dicts"""
-    iri_name_data = attr.get(consts.RDF_PREDICATE_ATTR_NAME, None)
-    iri_data_data = attr.get(consts.RDF_PREDICATE_ATTR_NAME, None)
+    iri_name_data = attr.get(RDF_PREDICATE_ATTR_NAME, None)
+    iri_data_data = attr.get(RDF_PREDICATE_ATTR_NAME, None)
     if iri_name_data is None:
         iri_name_data = {}
     if iri_data_data is None:
         iri_data_data = {}
     iri_name_data.pop(attr_name, None)
     iri_data_data.pop(attr_name, None)
-    attr[consts.RDF_PREDICATE_ATTR_NAME] = iri_name_data
-    attr[consts.RDF_OBJECT_ATTR_NAME] = iri_data_data
+    attr[RDF_PREDICATE_ATTR_NAME] = iri_name_data
+    attr[RDF_OBJECT_ATTR_NAME] = iri_data_data
 
 
 def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
     """Set the class of an attribute"""
-    iri_data_data = attr.get(consts.RDF_OBJECT_ATTR_NAME, None)
+    iri_data_data = attr.get(RDF_OBJECT_ATTR_NAME, None)
     if iri_data_data is None:
         iri_data_data = {}
     iri_data_data.update({attr_name: data})
-    attr[consts.RDF_OBJECT_ATTR_NAME] = iri_data_data
+    attr[RDF_OBJECT_ATTR_NAME] = iri_data_data
 
 
 def append(attr: h5py.AttributeManager,
@@ -97,7 +97,7 @@ class IRIDict(Dict):
 
     @property
     def predicate(self):
-        p = self[PREDICATE_KW]
+        p = self[RDF_PREDICATE_ATTR_NAME]
         if p is not None:
             return p
         return p
@@ -108,12 +108,12 @@ class IRIDict(Dict):
 
     def append_object(self, value):
         """Append the object of an attribute"""
-        append(self._attr, self._attr_name, value, consts.RDF_OBJECT_ATTR_NAME)
+        append(self._attr, self._attr_name, value, RDF_OBJECT_ATTR_NAME)
 
     @property
     def object(self):
         """Returns the object of an attribute"""
-        o = self[OBJECT_KW]
+        o = self[RDF_OBJECT_ATTR_NAME]
         if o is None:
             return o
         # if isinstance(o, list):
@@ -125,17 +125,17 @@ class IRIDict(Dict):
         if isinstance(value, (list, tuple)):
             set_object(self._attr, self._attr_name, value[0])
             for v in value[1:]:
-                append(self._attr, self._attr_name, v, consts.RDF_OBJECT_ATTR_NAME)
+                append(self._attr, self._attr_name, v, RDF_OBJECT_ATTR_NAME)
         else:
             set_object(self._attr, self._attr_name, value)
 
     def __setitem__(self, key, value):
-        if key == PREDICATE_KW:
+        if key == RDF_PREDICATE_ATTR_NAME:
             set_predicate(self._attr, self._attr_name, value)
-        elif key == OBJECT_KW:
+        elif key == RDF_OBJECT_ATTR_NAME:
             set_object(self._attr, self._attr_name, value)
         else:
-            raise KeyError(f'key must be "{PREDICATE_KW}" or "{OBJECT_KW}"')
+            raise KeyError(f'key must be "{RDF_PREDICATE_ATTR_NAME}" or "{RDF_OBJECT_ATTR_NAME}"')
 
 
 class RDFManager:
@@ -147,7 +147,7 @@ class RDFManager:
     @property
     def subject(self) -> Union[str, None]:
         """Returns the subject of the group or dataset"""
-        s = self._attr.get(consts.RDF_SUBJECT_ATTR_NAME, None)
+        s = self._attr.get(RDF_SUBJECT_ATTR_NAME, None)
         if s is None:
             return
         # if isinstance(s, list):
@@ -159,16 +159,16 @@ class RDFManager:
             data = [str(i) for i in subject]
         else:
             data = str(subject)
-        iri_sbj_data = self._attr.get(consts.RDF_SUBJECT_ATTR_NAME, None)
+        iri_sbj_data = self._attr.get(RDF_SUBJECT_ATTR_NAME, None)
         if iri_sbj_data is None:
-            self._attr[consts.RDF_SUBJECT_ATTR_NAME] = data
+            self._attr[RDF_SUBJECT_ATTR_NAME] = data
             return
         if isinstance(iri_sbj_data, list):
             iri_sbj_data.extend(data)
         else:
             iri_sbj_data = [iri_sbj_data, ]
             iri_sbj_data.append(data)
-        self._attr[consts.RDF_SUBJECT_ATTR_NAME] = list(set(iri_sbj_data))
+        self._attr[RDF_SUBJECT_ATTR_NAME] = list(set(iri_sbj_data))
 
     @subject.setter
     def subject(self, iri_type: Union[str, List[str]]):
@@ -179,22 +179,22 @@ class RDFManager:
         else:
             data = str(iri_type)
 
-        self._attr[consts.RDF_SUBJECT_ATTR_NAME] = data
+        self._attr[RDF_SUBJECT_ATTR_NAME] = data
 
     def append_subject(self, subject: str):
         """Append the subject"""
-        curr_subjects = self._attr.get(consts.RDF_SUBJECT_ATTR_NAME, [])
+        curr_subjects = self._attr.get(RDF_SUBJECT_ATTR_NAME, [])
         if isinstance(curr_subjects, list):
             if isinstance(subject, list):
                 curr_subjects.extend(subject)
             else:
                 curr_subjects.append(subject)
-            self._attr[consts.RDF_SUBJECT_ATTR_NAME] = curr_subjects
+            self._attr[RDF_SUBJECT_ATTR_NAME] = curr_subjects
         else:
             if isinstance(subject, list):
-                self._attr[consts.RDF_SUBJECT_ATTR_NAME] = [curr_subjects, *subject]
+                self._attr[RDF_SUBJECT_ATTR_NAME] = [curr_subjects, *subject]
             else:
-                self._attr[consts.RDF_SUBJECT_ATTR_NAME] = [curr_subjects, subject]
+                self._attr[RDF_SUBJECT_ATTR_NAME] = [curr_subjects, subject]
 
     @property
     def predicate(self):
@@ -202,11 +202,11 @@ class RDFManager:
 
     @predicate.setter
     def predicate(self, predicate: str):
-        iri_sbj_data = self._attr.get(consts.RDF_PREDICATE_ATTR_NAME, None)
+        iri_sbj_data = self._attr.get(RDF_PREDICATE_ATTR_NAME, None)
         if iri_sbj_data is None:
             iri_sbj_data = {}
         iri_sbj_data.update({'SELF': predicate})
-        self._attr[consts.RDF_PREDICATE_ATTR_NAME] = iri_sbj_data
+        self._attr[RDF_PREDICATE_ATTR_NAME] = iri_sbj_data
 
     @property
     def object(self):
@@ -217,12 +217,12 @@ class RDFManager:
         return str(self.subject) == str(other)
 
     def __contains__(self, item):
-        return item in self._attr.get(consts.RDF_SUBJECT_ATTR_NAME, list())
+        return item in self._attr.get(RDF_SUBJECT_ATTR_NAME, list())
 
     def set_subject(self, iri):
         """Assign iri to an HDF5 object (group or dataset)"""
         if iri is not None:
-            self._attr[consts.RDF_SUBJECT_ATTR_NAME] = str(iri)
+            self._attr[RDF_SUBJECT_ATTR_NAME] = str(iri)
 
     def get(self, attr_name: str) -> IRIDict:
         return self.__getitem__(attr_name)
@@ -232,8 +232,8 @@ class RDFManager:
                                   'attribute name or data.')
 
     def __getitem__(self, item) -> IRIDict:
-        return IRIDict({PREDICATE_KW: self._attr.get(consts.RDF_PREDICATE_ATTR_NAME, {}).get(item, None),
-                        OBJECT_KW: self._attr.get(consts.RDF_OBJECT_ATTR_NAME, {}).get(item, None)},
+        return IRIDict({RDF_PREDICATE_ATTR_NAME: self._attr.get(RDF_PREDICATE_ATTR_NAME, {}).get(item, None),
+                        RDF_OBJECT_ATTR_NAME: self._attr.get(RDF_OBJECT_ATTR_NAME, {}).get(item, None)},
                        self._attr, item)
 
     def __delitem__(self, attr_name: str):
@@ -277,7 +277,7 @@ class _RDFPO(abc.ABC):
 class RDF_Predicate(_RDFPO):
     """IRI class attribute manager"""
 
-    IRI_ATTR_NAME = consts.RDF_PREDICATE_ATTR_NAME
+    IRI_ATTR_NAME = RDF_PREDICATE_ATTR_NAME
 
     def __setiri__(self, key, value):
         set_predicate(self._attr, key, value)
@@ -285,7 +285,7 @@ class RDF_Predicate(_RDFPO):
 
 class RDF_OBJECT(_RDFPO):
     """IRI data attribute manager for objects"""
-    IRI_ATTR_NAME = consts.RDF_OBJECT_ATTR_NAME
+    IRI_ATTR_NAME = RDF_OBJECT_ATTR_NAME
 
     def __setiri__(self, key, value):
         set_object(self._attr, key, value)

@@ -1,8 +1,8 @@
 import unittest
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import consts
 from h5rdmtoolbox import use
+from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
 from ontolutils.namespacelib import M4I, OBO
 
 
@@ -42,9 +42,9 @@ class TestIRI(unittest.TestCase):
             h5.attrs['title'] = 'test'
             self.assertEqual(h5.rdf['title'].predicate, None)
             h5.attrs['title', None] = 'test2'
-            self.assertEqual(len(h5.attrs.get(consts.RDF_PREDICATE_ATTR_NAME, {})), 0)
+            self.assertEqual(len(h5.attrs.get(RDF_PREDICATE_ATTR_NAME, {})), 0)
             h5.attrs['title', 'hasTitle'] = 'test2'
-            self.assertEqual(len(h5.attrs.get(consts.RDF_PREDICATE_ATTR_NAME, None)), 1)
+            self.assertEqual(len(h5.attrs.get(RDF_PREDICATE_ATTR_NAME, None)), 1)
             self.assertEqual(h5.rdf['title'].predicate, 'hasTitle')
 
     def test_multiple_subjects_or_objects(self):

@@ -8,10 +8,10 @@ from rdflib.namespace import RDF
 from typing import Dict, Optional, Union, List
 from typing import Iterable, Tuple, Any
 
-import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import consts
 from h5rdmtoolbox.convention import hdf_ontology
 from ontolutils.classes.utils import split_URIRef
+from .core import Dataset, File
+from .rdf import RDF_PREDICATE_ATTR_NAME
 
 
 def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
@@ -122,7 +122,10 @@ def to_hdf(grp,
 
         if k == '@id':
             rdf_predicate = None
-            value_predicate = k
+            if v.startswith('http'):
+                value_predicate = k
+            else:
+                continue
         else:
             # spit predicate:
             ns_predicate, value_predicate = split_URIRef(k)
@@ -140,88 +143,75 @@ def to_hdf(grp,
                     rdf_predicate = value_predicate
 
         if isinstance(v, dict):
-            print(f'create group {k} in {grp.name}')
             if k not in grp:
                 to_hdf(grp.create_group(value_predicate), data=v, predicate=rdf_predicate, context=data_context)
+
         elif isinstance(v, list):
             if is_list_of_dict(v):
                 for i, entry in enumerate(v):
-                    sub_grp_name = f'{k}{i + 1}'
-                    if sub_grp_name in grp:
-                        sub_grp = grp[sub_grp_name]
+                    # figure out how to name the sub group
+                    # best would be to take the label, if it exists
+                    for label_identifier in ('rdfs:label', 'label', 'http://www.w3.org/2000/01/rdf-schema#'):
+                        _label = entry.get(label_identifier, None)
+                        break
+
+                    if _label is None:
+                        if len(v) > 1:
+                            label = f'{k}{i + 1}'
+                        else:
+                            label = k
                     else:
-                        sub_grp = grp.create_group(sub_grp_name)
-                        sub_grp.rdf.predicate = data_context.get(k, None)
+                        ns, label = split_URIRef(_label)
+
+                    if label in grp:
+                        sub_grp = grp[label]
+                    else:
+                        ns_predicate, rdf_predicate = split_URIRef(k)
+                        if ns_predicate is None:
+                            rdf_predicate = data_context.get(k, None)
+                        elif ns_predicate.startswith('http'):
+                            rdf_predicate = k
+                        else:
+                            _ns = data_context.get(ns_predicate, None)
+                            if _ns is not None:
+                                rdf_predicate = f'{_ns}{value_predicate}'
+                            else:
+                                rdf_predicate = value_predicate
+
+                        sub_grp = grp.create_group(label)
+                        sub_grp.rdf.predicate = rdf_predicate
+
                     to_hdf(sub_grp, data=entry, context=data_context)
             else:
                 grp.attrs[k, data_context.get(k, None)] = v
         else:
             # maybe value_object is a IRI?!
-            ns_object, value_object = split_URIRef(v)
-
-            if ns_object is None:
-                rdf_object = data_context.get(k, None)
-            elif value_object.startswith('http'):
-                rdf_object = k
-            else:
-                _ns = data_context.get(ns_object, None)
-                if _ns is not None:
-                    rdf_object = f'{_ns}{value_object}'
+            rdf_object = None
+            if isinstance(v, str):
+                if v.startswith('http'):
+                    value_object = v
                 else:
-                    rdf_object = value_object
-            if k == '@type':
+                    ns_object, value_object = split_URIRef(v)
+
+                    if ns_object is None:
+                        rdf_object = data_context.get(k, None)
+                    elif value_object.startswith('http'):
+                        rdf_object = k
+                    else:
+                        _ns = data_context.get(ns_object, None)
+                        if _ns is not None:
+                            rdf_object = f'{_ns}{value_object}'
+                        else:
+                            rdf_object = None
+            else:
+                value_object = v
+
+            if k == '@type' and rdf_object is not None:
                 grp.attrs.create(name=k, data=rdf_object)
             elif k == '@id':
                 grp.attrs.create(name=k, data=v)
             else:
                 grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate)
-
-
-# def to_hdf(jsonld_filename, grp: h5py.Group) -> None:
-#     """Takes a .jsonld file and writes it into a HDF5 group"""
-#     if not isinstance(grp, h5py.Group):
-#         raise TypeError(f'Expecting h5py.Group, got {type(grp)}')
-#
-#     if not isinstance(jsonld_filename, (str, pathlib.Path)):
-#         raise TypeError(f'Expecting str or pathlib.Path, got {type(jsonld_filename)}')
-#
-#     def _to_hdf(_h5: h5py.Group, jdict: Dict):
-#         """Takes a .jsonld file and writes it into a HDF5 group"""
-#         for k, v in jdict.items():
-#             if isinstance(v, dict):
-#                 if k == 'has parameter':
-#                     label = v.get('label', '@id')
-#                     _h5.attrs[k] = v['@id']
-#                     if v.get('has numerical value', None):
-#                         ds = _h5.create_dataset(label, data=literal_eval(v['has numerical value']), track_order=True)
-#                         for kk, vv in v.items():
-#                             if kk != 'has numerical value':
-#                                 ds.attrs[kk] = vv
-#                     else:
-#                         grp = _h5.create_group(label, track_order=True)
-#                         _to_hdf(grp, v)
-#                 else:
-#                     grp = _h5.create_group(k, track_order=True)
-#                     _to_hdf(grp, v)
-#             elif isinstance(v, list):
-#                 list_grp = _h5.create_group(k, track_order=True)
-#                 for i, item in enumerate(v):
-#                     # _h5[k] =
-#                     obj_name = item.get('@id', str(i))
-#                     if item.get('has numerical value', None):
-#                         obj = list_grp.create_dataset(obj_name, data=literal_eval(item['has numerical value']),
-#                                                       track_order=True)
-#                         for kk, vv in item.items():
-#                             if kk != 'has numerical value':
-#                                 obj.attrs[kk] = vv
-#                     else:
-#                         obj = list_grp.create_group(obj_name, track_order=True)
-#                     _to_hdf(obj, item)
-#             else:
-#                 _h5.attrs[k] = v
-#
-#     with open(jsonld_filename, 'r') as f:
-#         return _to_hdf(grp, json.load(f))
 
 
 def serialize(grp,
@@ -241,9 +231,6 @@ def serialize(grp,
                              recursive=recursive,
                              compact=compact,
                              context=context)
-
-    hasParameter = URIRef('http://w3id.org/nfdi4ing/metadata4ing#hasParameter')
-
     # global _context
     _context = {}
     context = context or {}
@@ -270,7 +257,7 @@ def serialize(grp,
         # NumericalVariable or TextVariable
 
         if node_type is None:
-            rdf_predicate_dict = obj.attrs.get(consts.RDF_PREDICATE_ATTR_NAME, None)
+            rdf_predicate_dict = obj.attrs.get(RDF_PREDICATE_ATTR_NAME, None)
             if rdf_predicate_dict and len(rdf_predicate_dict) > 0:
                 if isinstance(obj, h5py.Dataset):
                     if obj.dtype.kind == 'S':
@@ -509,11 +496,11 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
             data[grp.parent.name].append(ontogrp)
 
     def _build_onto_classes(name, node):
-        if isinstance(node, h5tbx.Dataset):
+        if isinstance(node, Dataset):
             return _build_dataset_onto_class(node)
         return _build_group_onto_class(node)
 
-    with h5tbx.File(filename, mode='r') as h5:
+    with File(filename, mode='r') as h5:
         root = hdf_ontology.Group(name='/', attribute=_build_attributes(h5.attrs))
         data['/'] = []
 

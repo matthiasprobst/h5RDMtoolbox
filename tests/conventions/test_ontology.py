@@ -182,13 +182,8 @@ class TestOntology(unittest.TestCase):
                                              "hdf5:attribute": [
                                                  {
                                                      "@type": "hdf5:Attribute",
-                                                     "hdf5:name": "@type",
-                                                     "hdf5:value": "https://schema.org/SoftwareSourceCode"
-                                                 },
-                                                 {
-                                                     "@type": "hdf5:Attribute",
                                                      "hdf5:name": "__h5rdmtoolbox_version__",
-                                                     "hdf5:value": "1.2.3a1"
+                                                     "hdf5:value": f"{h5tbx.__version__}"
                                                  }
                                              ],
                                              "hdf5:name": "/h5rdmtoolbox"

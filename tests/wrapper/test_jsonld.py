@@ -1,3 +1,5 @@
+import h5py
+import json
 import pathlib
 import unittest
 
@@ -5,6 +7,8 @@ import h5rdmtoolbox as h5tbx
 import ontolutils
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import jsonld
+from h5rdmtoolbox.wrapper import rdf
+from ontolutils import namespaces, urirefs, Thing
 
 logger = h5tbx.logger
 # logger.setLevel('ERROR')
@@ -15,13 +19,31 @@ class TestCore(unittest.TestCase):
 
     def test_dump_hdf_to_json(self):
         """similar yet different to https://hdf5-json.readthedocs.io/en/latest/index.html"""
-        import h5py
         with h5py.File('test.hdf', 'w') as h5:
             h5.attrs['version'] = __version__
 
         # def dump_hdf_to_json(h5_filename):
         with h5py.File('test.hdf', 'r') as h5:
             print(jsonld.dumps(h5))
+
+    def test_dump_hdf_to_json2(self):
+        @namespaces(foaf='http://xmlns.com/foaf/0.1/',
+                    prov='http://www.w3.org/ns/prov#')
+        @urirefs(Person='prov:Person',
+                 name='foaf:firstName',
+                 lastName='foaf:lastName')
+        class Person(Thing):
+            name: str = None
+            lastName: str
+
+        p = Person(name='John', lastName='Doe')
+
+        # def dump_hdf_to_json(h5_filename):
+        with h5tbx.File('test.hdf', 'w') as h5:
+            jsonld.to_hdf(h5.create_group('contact'),
+                          data=json.loads(p.model_dump_jsonld()),
+                          predicate='m4i:contact')
+            h5.dumps()
 
     def test_jsonld_dumps(self):
         sn_iri = 'https://matthiasprobst.github.io/ssno/#standard_name'
@@ -94,7 +116,7 @@ class TestCore(unittest.TestCase):
         data = ontolutils.dquery(
             'schema:SoftwareSourceCode',
             codemeta_filename,
-            context={'schema': 'http://schema.org/'})
+            context={'schema': 'http://schema.org/'})  # Note, that codemeta uses the unsecure http
 
         self.assertIsInstance(data, list)
         self.assertTrue(len(data) == 1)
@@ -103,8 +125,7 @@ class TestCore(unittest.TestCase):
         self.assertIsInstance(data[0]['author'], list)
         with h5tbx.File('test.hdf', 'w') as h5:
             jsonld.to_hdf(grp=h5.create_group('person'), data=data[0])
-            from h5rdmtoolbox import consts
-            self.assertEqual(h5['person']['author1'].attrs[consts.RDF_PREDICATE_ATTR_NAME]['SELF'],
+            self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
                              'http://schema.org/author')
 
         h5tbx.dumps('test.hdf')

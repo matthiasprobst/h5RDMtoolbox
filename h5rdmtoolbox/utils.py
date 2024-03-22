@@ -18,8 +18,9 @@ from re import sub as re_sub
 from typing import Dict
 from typing import Union, Callable, List, Tuple
 
-from . import _user, get_config, get_ureg, consts
+from . import _user, get_config, get_ureg
 from ._version import __version__
+from .wrapper import rdf
 
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
@@ -181,10 +182,10 @@ def create_h5tbx_version_grp(root: h5py.Group) -> h5py.Group:
     version_group = root.create_group('h5rdmtoolbox')
     # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
     version_group.attrs['__h5rdmtoolbox_version__'] = __version__
-    version_group.attrs[consts.RDF_PREDICATE_ATTR_NAME] = json.dumps(
+    version_group.attrs[rdf.RDF_PREDICATE_ATTR_NAME] = json.dumps(
         {'__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
     )
-    version_group.attrs[consts.RDF_SUBJECT_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'
+    version_group.attrs[rdf.RDF_SUBJECT_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'
     return version_group
 
 
@@ -307,7 +308,6 @@ def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, Li
     try:
         return str(value)  # try parsing to string
     except TypeError:
-        print(type(value))
         raise TypeError(f"Cannot parse type {type(value)} to string")
 
 

@@ -252,7 +252,7 @@ class TestConfig(unittest.TestCase):
         #     json_dict['h5rdmtoolbox']['attrs'],
         #     {
         #         '@type': 'https://schema.org/SoftwareSourceCode',
-        #         consts.RDF_PREDICATE_ATTR_NAME: '{"__h5rdmtoolbox_version__": "https://schema.org/softwareVersion"}',
+        #         rdf.RDF_PREDICATE_ATTR_NAME: '{"__h5rdmtoolbox_version__": "https://schema.org/softwareVersion"}',
         #         '__h5rdmtoolbox_version__': h5tbx.__version__
         #     }
         # )

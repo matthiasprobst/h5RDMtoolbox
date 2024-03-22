@@ -2,6 +2,7 @@
 """
 import datetime
 import h5py
+import json
 import logging
 import numpy as np
 import os
@@ -16,7 +17,7 @@ from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
-from typing import List, Dict, Union, Tuple, Callable
+from typing import List, Dict, Union, Tuple, Callable, Optional
 
 from h5rdmtoolbox.database import ObjDB
 from . import rdf
@@ -744,7 +745,6 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 if anc_ds.shape != _data.shape:
                     raise ValueError(f'Associated dataset {anc_name} has shape {anc_ds.shape} '
                                      f'which does not match dataset shape {_data.shape}')
-            import json
             attrs[consts.ANCILLARY_DATASET] = json.dumps({k: v.name for k, v in ancillary_datasets.items()})
 
         _maxshape = kwargs.get('maxshape', shape)
@@ -1206,6 +1206,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         """
         from . import h5yaml
         h5yaml.H5Yaml(yaml_filename).write(self)
+
+    def create_from_jsonld(self, data: str, context: Optional[Dict] = None):
+        """Create groups/datasets from a jsonld string."""
+        from . import jsonld
+        jsonld.to_hdf(self, data=json.loads(data), context=context)
 
     def _get_obj_names(self, obj_type, recursive):
         """Return all names of specified object type

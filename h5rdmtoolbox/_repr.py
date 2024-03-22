@@ -14,6 +14,7 @@ from time import perf_counter_ns
 from . import get_config
 from . import identifiers
 from . import protected_attributes
+from .wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
@@ -201,8 +202,6 @@ class _HDF5StructureRepr:
         """dataset representation"""
 
 
-from . import consts
-
 
 class HDF5StructureStrRepr(_HDF5StructureRepr):
 
@@ -214,7 +213,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
         if predicate:
             print(spaces + f'@predicate: {predicate}')
         for attr_name in group.attrs.raw.keys():
-            if attr_name == consts.RDF_SUBJECT_ATTR_NAME:
+            if attr_name == RDF_SUBJECT_ATTR_NAME:
                 print(spaces + f'@type: {group.attrs[attr_name]}')
             else:
                 if not attr_name.isupper():
@@ -267,7 +266,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __attrs__(self, name, h5obj) -> str:
         attr_value = h5obj.attrs.raw[name]
 
-        pred = h5obj.rdf[name]['predicate']
+        pred = h5obj.rdf[name][RDF_PREDICATE_ATTR_NAME]
         if pred:
             use_attr_name = f'{name} ({pred})'
         else:
@@ -463,8 +462,6 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             checkbox_state = self.checkbox_state
 
         self_predicate = h5obj.rdf.predicate.get('SELF', None)
-        if self_predicate:
-            print(self_predicate)
         self_subject = h5obj.rdf.subject
 
         if self_predicate is not None:
