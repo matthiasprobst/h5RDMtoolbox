@@ -51,6 +51,7 @@ from typing import List, Union
          name='hdf5:name',
          value='hdf5:value')
 class Attribute(Thing):
+    """HDF5 Attribute"""
     name: str
     value: Union[int, float, List, str, bool]
 
@@ -88,6 +89,7 @@ class Dataset(_HDF5Thing):
          member='hdf5:member',
          name='hdf5:name')
 class Group(_HDF5Thing):
+    """HDF5 Group"""
     name: str
     member: List[Union["Group", Dataset]] = None
 
@@ -96,4 +98,5 @@ class Group(_HDF5Thing):
 @urirefs(File='hdf5:File',
          rootGroup='hdf5:rootGroup')
 class File(Thing):
+    """HDF5 File"""
     rootGroup: Group

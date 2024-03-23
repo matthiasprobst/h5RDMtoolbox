@@ -11,6 +11,7 @@ from abc import abstractmethod
 from numpy import ndarray
 from time import perf_counter_ns
 
+from ontolutils import M4I
 from . import get_config
 from . import identifiers
 from . import protected_attributes
@@ -30,7 +31,7 @@ except FileNotFoundError:
 #     IRI_ICON = rf'file:///{IRI_ICON}'
 # else:
 IRI_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
-
+hasUnitIRI = str(M4I.hasUnit)
 """
 disclaimer:
 
@@ -202,7 +203,6 @@ class _HDF5StructureRepr:
         """dataset representation"""
 
 
-
 class HDF5StructureStrRepr(_HDF5StructureRepr):
 
     def __call__(self, group, indent=0, preamble=None):
@@ -266,7 +266,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __attrs__(self, name, h5obj) -> str:
         attr_value = h5obj.attrs.raw[name]
 
-        pred = h5obj.rdf[name][RDF_PREDICATE_ATTR_NAME]
+        pred = h5obj.rdf[name].get(RDF_PREDICATE_ATTR_NAME, None)
         if pred:
             use_attr_name = f'{name} ({pred})'
         else:
@@ -348,9 +348,15 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
     def __0Ddataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         _id1 = f'ds-1-{h5obj.name}-{perf_counter_ns().__str__()}'
         _id2 = f'ds-2-{h5obj.name}-{perf_counter_ns().__str__()}'
+        # figure out unit attribute. It may be unit or defined in IRI
         units = h5obj.attrs.get('units', None)
         if units is None:
-            units = h5obj.attrs.get('hasUnit', '')
+            units = ''
+            pred_dict = h5obj.attrs.get(RDF_PREDICATE_ATTR_NAME, None)
+            if pred_dict:
+                for k, v in pred_dict.items():
+                    if v == hasUnitIRI:
+                        units = h5obj.attrs[k].rsplit('/', 1)[-1]
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
@@ -423,7 +429,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         if self_subject is not None:
             _dsname += get_iri_icon_href(
                 self_subject,
-                tooltiptext=f'@type: {self_subject}')
+                tooltiptext=f'type={self_subject}')
 
         is_string_dataset = h5obj.dtype.char == 'S'
         if is_string_dataset:
@@ -439,7 +445,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html_ds_attrs = """\n                <ul class="h5tb-attr-list">"""
 
         for k in h5obj.attrs.keys():
-            if k not in self.ignore_attrs and not k.isupper() and k != '@type':
+            if k not in self.ignore_attrs and not k.isupper():
                 _html_ds_attrs += self.__attrs__(k, h5obj)
 
         # close attribute section
@@ -483,7 +489,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     <ul class="h5tb-attr-list">"""
         # write attributes:
         for k in h5obj.attrs.keys():
-            if not k.isupper() and k != '@type':
+            if not k.isupper():
                 _html += self.__attrs__(k, h5obj)
         # close attribute section
         _html += """

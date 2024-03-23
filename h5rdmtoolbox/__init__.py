@@ -70,7 +70,7 @@ use(None)
 
 
 def dump(src: Union[str, File, pathlib.Path],
-         **kwargs) -> None:
+         *args, **kwargs) -> None:
     """Call h5.dump() on the provided HDF5 file
 
     Parameters
@@ -82,7 +82,7 @@ def dump(src: Union[str, File, pathlib.Path],
     """
     if isinstance(src, File):
         with File(src.hdf_filename) as h5:
-            return h5.dump(**kwargs)
+            return h5.dump(*args, **kwargs)
 
     if isinstance(src, (str, pathlib.Path)):
         pass

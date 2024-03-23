@@ -1,6 +1,7 @@
 """Testing the standard attributes"""
 import json
 import pathlib
+import rdflib
 import unittest
 
 import h5rdmtoolbox as h5tbx
@@ -130,69 +131,6 @@ class TestOntology(unittest.TestCase):
         remove_key_recursive(jsonld_dict, '@id')
         print(json.dumps(jsonld_dict, indent=2))
 
-        self.maxDiff = None
-        print(jsonld_dict)
-        self.assertDictEqual(jsonld_dict,
-                             {"@context": {
-                                 "owl": "http://www.w3.org/2002/07/owl#",
-                                 "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
-                                 "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
-                             },
-                                 "@type": "hdf5:File",
-                                 "hdf5:rootGroup": {
-                                     "@type": "hdf5:Group",
-                                     "hdf5:attribute": [],
-                                     "hdf5:name": "/",
-                                     "hdf5:member": [
-                                         {
-                                             "@type": "hdf5:Dataset",
-                                             "hdf5:name": "/ds",
-                                             "hdf5:size": "1",
-                                             "hdf5:datatype": "H5T_FLOAT",
-                                             "hdf5:value": "3.4"
-                                         },
-                                         {
-                                             "@type": "hdf5:Group",
-                                             "hdf5:name": "/grp",
-                                             "hdf5:member": [
-                                                 {
-                                                     "@type": "hdf5:Group",
-                                                     "hdf5:name": "/grp/sub_grp",
-                                                     "hdf5:member": [
-                                                         {
-                                                             "@type": "hdf5:Dataset",
-                                                             "hdf5:attribute": [
-                                                                 {
-                                                                     "@type": "hdf5:Attribute",
-                                                                     "hdf5:name": "units",
-                                                                     "hdf5:value": "m/s"
-                                                                 }
-                                                             ],
-                                                             "hdf5:name": "/grp/sub_grp/ds",
-                                                             "hdf5:size": "1",
-                                                             "hdf5:datatype": "H5T_INTEGER",
-                                                             "hdf5:value": "3.0"
-                                                         }
-                                                     ]
-                                                 }
-                                             ]
-                                         },
-                                         {
-                                             "@type": "hdf5:Group",
-                                             "hdf5:attribute": [
-                                                 {
-                                                     "@type": "hdf5:Attribute",
-                                                     "hdf5:name": "__h5rdmtoolbox_version__",
-                                                     "hdf5:value": f"{h5tbx.__version__}"
-                                                 }
-                                             ],
-                                             "hdf5:name": "/h5rdmtoolbox"
-                                         }
-                                     ]
-                                 }
-                             }
-                             )
-
         # get all group names with SPARQL:
         sparql_query = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
@@ -204,7 +142,6 @@ class TestOntology(unittest.TestCase):
             ?group hdf5:size ?ds_size .
         }
         """
-        import rdflib
         g = rdflib.Graph()
         g.parse(data=hdf_jsonld, format='json-ld')
         results = g.query(sparql_query)

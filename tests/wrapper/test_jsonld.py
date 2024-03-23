@@ -1,6 +1,6 @@
-import h5py
 import json
 import pathlib
+import rdflib
 import unittest
 
 import h5rdmtoolbox as h5tbx
@@ -11,22 +11,61 @@ from h5rdmtoolbox.wrapper import rdf
 from ontolutils import namespaces, urirefs, Thing
 
 logger = h5tbx.logger
-# logger.setLevel('ERROR')
+
 __this_dir__ = pathlib.Path(__file__).parent
 
 
 class TestCore(unittest.TestCase):
 
+    def setUp(self):
+        LEVEL = 'WARNING'
+        logger.setLevel(LEVEL)
+        for h in logger.handlers:
+            h.setLevel(LEVEL)
+
+    def tearDown(self):
+        pathlib.Path('test.hdf').unlink(missing_ok=True)
+
     def test_dump_hdf_to_json(self):
         """similar yet different to https://hdf5-json.readthedocs.io/en/latest/index.html"""
-        with h5py.File('test.hdf', 'w') as h5:
-            h5.attrs['version'] = __version__
+        with h5tbx.File(name=None, mode='w') as h5:
+            # h5.attrs['test_attr'] = 123
+            del h5['h5rdmtoolbox']
+            ds = h5.create_dataset('grp/test_dataset',
+                                   data=[1, 2, 3],
+                                   attrs={'standard_name': 'x_velocity',
+                                          'standard_name_non_iri': 'x_velocity',
+                                          'unit': 'm/s'})
+            from ontolutils import M4I
+            ds.rdf.subject = str(M4I.NumericalVariable)
+            ds.rdf.predicate['standard_name'] = 'https://matthiasprobst.github.io/ssno#standard_name'
+            ds.rdf.object['standard_name'] = 'https://matthiasprobst.github.io/pivmeta#x_velocity'
+            ds.rdf.object['standard_name_non_iri'] = 'https://matthiasprobst.github.io/pivmeta#x_velocity'
+
+            ds.attrs['a list'] = [1, 2, 3]
+            ds.attrs['a 1D list'] = (1,)
 
         # def dump_hdf_to_json(h5_filename):
-        with h5py.File('test.hdf', 'r') as h5:
-            print(jsonld.dumps(h5))
+        with h5tbx.File(h5.hdf_filename, 'r') as h5:
+            json_str = jsonld.dumps(h5, indent=2, compact=False)
 
-    def test_dump_hdf_to_json2(self):
+        get_all_datasets_with_standard_name = """PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
+        
+        SELECT  ?name ?sn
+        {
+            ?obj a hdf5:Dataset .
+            ?obj hdf5:name ?name .
+            ?obj ssno:standard_name ?sn .
+        }"""
+        g = rdflib.Graph().parse(data=json_str, format='json-ld')
+        qres = g.query(get_all_datasets_with_standard_name)
+        self.assertEqual(len(qres), 1)
+        for name, sn in qres:
+            self.assertEqual(str(name), '/grp/test_dataset')
+            self.assertEqual(str(sn), 'https://matthiasprobst.github.io/pivmeta#x_velocity')
+
+    def test_json_to_hdf(self):
         @namespaces(foaf='http://xmlns.com/foaf/0.1/',
                     prov='http://www.w3.org/ns/prov#')
         @urirefs(Person='prov:Person',
@@ -46,7 +85,7 @@ class TestCore(unittest.TestCase):
             h5.dumps()
 
     def test_jsonld_dumps(self):
-        sn_iri = 'https://matthiasprobst.github.io/ssno/#standard_name'
+        sn_iri = 'https://matthiasprobst.github.io/ssno#standard_name'
         with h5tbx.File(mode='w') as h5:
             h5.create_dataset('test_dataset', shape=(3,))
             grp = h5.create_group('grp')
@@ -58,16 +97,16 @@ class TestCore(unittest.TestCase):
             sub_grp['D3'].attrs['standard_name', sn_iri] = 'blade_diameter3'
             h5.dumps()
         from pprint import pprint
-        out = h5tbx.jsonld.dumpd(h5.hdf_filename,
-                                 context={'schema': 'http://schema.org/',
-                                          "ssno": "https://matthiasprobst.github.io/ssno/#",
-                                          "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"})
-        pprint(out)
+        out_dict = h5tbx.jsonld.dumpd(h5.hdf_filename,
+                                      context={'schema': 'http://schema.org/',
+                                               "ssno": "https://matthiasprobst.github.io/ssno#",
+                                               "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"})
+        pprint(out_dict)
         found_m4iNumericalVariable = False
-        for graph in out['@graph']:
-            if graph['@type'] == 'm4i:NumericalVariable':
-                self.assertEqual(graph['m4i:hasUnits'], 'mm')
-                self.assertEqual(graph['ssno:standard_name'], 'blade_diameter3')
+        for g in out_dict['@graph']:
+            if g['@type'] == 'm4i:NumericalVariable':
+                self.assertDictEqual(g['m4i:hasUnits'], {'@id': 'https://qudt.org/vocab/unit/MilliM'})
+                self.assertEqual(g['ssno:standard_name'], 'blade_diameter3')
                 found_m4iNumericalVariable = True
         self.assertTrue(found_m4iNumericalVariable)
 
@@ -100,15 +139,15 @@ class TestCore(unittest.TestCase):
 
         h5tbx.dumps('test.hdf')
 
-        print(
-            h5tbx.jsonld.dumps(
-                h5.hdf_filename, indent=2,
-                context={"m4i": "http://w3id.org/nfdi4ing/metadata4ing#"}
-            )
-        )
-
-        pathlib.Path('test.json').unlink(missing_ok=True)
-        h5.hdf_filename.unlink(missing_ok=True)
+        # print(
+        #     h5tbx.jsonld.dumps(
+        #         h5.hdf_filename, indent=2,
+        #         context={"m4i": "http://w3id.org/nfdi4ing/metadata4ing#"}
+        #     )
+        # )
+        #
+        # pathlib.Path('test.json').unlink(missing_ok=True)
+        # h5.hdf_filename.unlink(missing_ok=True)
 
     def test_codemeta_to_hdf(self):
         codemeta_filename = __this_dir__ / '../../codemeta.json'

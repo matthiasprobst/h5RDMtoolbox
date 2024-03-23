@@ -273,6 +273,21 @@ class _RDFPO(abc.ABC):
             raise KeyError(f'No attribute "{key}" found. Cannot assign an IRI to a non-existing attribute.')
         self.__setiri__(key, str(value))
 
+    def keys(self):
+        """Return all attribute names assigned to the IRIs"""
+        return self._attr.get(self.IRI_ATTR_NAME, {}).keys()
+
+    def values(self):
+        """Return all IRIs assigned to the attributes"""
+        return self._attr.get(self.IRI_ATTR_NAME, {}).values()
+
+    def items(self):
+        """Return all attribute names and IRIs"""
+        return self._attr.get(self.IRI_ATTR_NAME, {}).items()
+
+    def __iter__(self):
+        return iter(self.keys())
+
 
 class RDF_Predicate(_RDFPO):
     """IRI class attribute manager"""
