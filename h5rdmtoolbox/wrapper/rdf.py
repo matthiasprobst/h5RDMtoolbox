@@ -1,7 +1,6 @@
 import abc
 import h5py
 import pydantic
-import warnings
 from pydantic import HttpUrl
 from typing import Dict, Union
 from typing import List
@@ -9,6 +8,11 @@ from typing import List
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = 'RDF_TYPE'
+
+
+class RDFError(Exception):
+    """Generic RDF error"""
+    pass
 
 
 def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> None:
@@ -30,9 +34,11 @@ def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> No
     try:
         HttpUrl(value)
     except pydantic.ValidationError as e:
-        warnings.warn(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
-                      f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}',
-                      UserWarning)
+        raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
+                       f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+        # warnings.warn(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
+        #               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}',
+        #               UserWarning)
 
     iri_name_data = attr.get(RDF_PREDICATE_ATTR_NAME, None)
     if iri_name_data is None:
