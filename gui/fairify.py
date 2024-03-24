@@ -70,7 +70,8 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
 
         for name, ns in (('M4I', M4I), ('PIVMETA', PIVMETA), ('SCHEMA', SCHEMA), ('OBO', OBO),
                          ('CODEMETA', CODEMETA), ('QUDT_UNIT', QUDT_UNIT), ('QUDT_KIND', QUDT_KIND), ('SSNO', SSNO),
-                         ('FOAF', rdflib.FOAF), ('RDFS', rdflib.RDFS), ('RDF', rdflib.RDF), ('OWL', rdflib.OWL)):
+                         ('FOAF', rdflib.FOAF), ('RDFS', rdflib.RDFS), ('RDF', rdflib.RDF), ('OWL', rdflib.OWL),
+                         ('SKOS', rdflib.SKOS), ('PROV', rdflib.PROV)):
             self.namespacelib[name.lower()] = ns
             self.comboBoxPrefix1.addItem(name.lower())
             self.comboBoxPrefix2.addItem(name.lower())
@@ -218,10 +219,12 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
             pred = self.lineEditIRI2.text()
         self.log_message(f'updating prefix and suffix from text: {pred}')
         ns, key = split_URIRef(pred)
+        self.log_message(f'Try to update combo boxes with ns={ns} and key={key}')
         if ns is not None:
             if ns.startswith('http'):
                 for name, n in self.namespacelib.items():
                     if str(n._NS) == ns:
+                        self.log_message(f'Found ns={ns} in {name}')
                         self.comboBoxPrefix2.setCurrentText(name)
                         self.comboBoxSuffix2.setCurrentText(key)
                         break
@@ -310,6 +313,11 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
             self.lineEditIRI1.setText(pred)
             if pred != '':
                 self.update_presuf1_from_text(pred=pred)
+
+            rdf_object = obj.rdf.object.get(attr_name, '')
+            self.lineEditIRI2.setText(rdf_object)
+            if rdf_object != '':
+                self.update_presuf2_from_text(pred=rdf_object)
 
     def populate_tree(self):
         """Populate the tree widget with data from the HDF5 file"""
