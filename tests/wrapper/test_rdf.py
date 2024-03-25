@@ -1,16 +1,43 @@
 import unittest
+from ontolutils.namespacelib import M4I, OBO
+from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
+from h5rdmtoolbox.wrapper.rdf import RDFError
 from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
-from ontolutils.namespacelib import M4I, OBO
 
 
-class TestIRI(unittest.TestCase):
+class TestRDF(unittest.TestCase):
 
     def setUp(self) -> None:
         """setup"""
         use(None)
+
+    def test_rdf_error(self):
+        with h5tbx.File() as h5:
+            with self.assertRaises(RDFError):
+                h5.attrs['title', 'hasTitle'] = 'test'
+            h5.attrs['title', FOAF.title] = 'test'
+            self.assertIsInstance(h5.rdf['title'].predicate, str)
+            self.assertEqual(h5.rdf['title'].predicate, str(FOAF.title))
+            h5.attrs['title'] = 'test'
+            with self.assertRaises(RDFError):
+                h5.rdf['title'].object = 'first object'
+
+            with self.assertRaises(RDFError):
+                h5.rdf.subject = 'invalid URI'
+
+            with self.assertRaises(RDFError):
+                h5.rdf.subject = ['invalid URI', 'invalid URI 2']
+
+            with self.assertRaises(RDFError):
+                h5.rdf.subject = ['invalid URI', 'https://example.org/validURI']
+            h5.rdf.subject = 'https://example.org/validURI'
+            self.assertEqual(h5.rdf.subject, 'https://example.org/validURI')
+
+            h5.rdf.subject = ['https://example.org/validURI', 'https://example.org/validURI2']
+            self.assertEqual(h5.rdf.subject, ['https://example.org/validURI', 'https://example.org/validURI2'])
 
     def test_group_predicate(self):
         with h5tbx.File() as h5:
@@ -35,46 +62,58 @@ class TestIRI(unittest.TestCase):
 
     def test_none_value(self):
         with h5tbx.File() as h5:
-            h5.attrs['title', 'hasTitle'] = 'test'
-            self.assertEqual(h5.rdf['title'].predicate, 'hasTitle')
+            h5.attrs['title', 'https://example.org/hasTitle'] = 'test'
+            self.assertEqual(h5.rdf['title'].predicate, 'https://example.org/hasTitle')
+            # self.assertEqual(h5.rdf['title'].predicate, 'https://example.org/hasTitle')
 
         with h5tbx.File() as h5:
             h5.attrs['title'] = 'test'
             self.assertEqual(h5.rdf['title'].predicate, None)
             h5.attrs['title', None] = 'test2'
             self.assertEqual(len(h5.attrs.get(RDF_PREDICATE_ATTR_NAME, {})), 0)
-            h5.attrs['title', 'hasTitle'] = 'test2'
+            h5.attrs['title', 'https://example.org/hasTitle'] = 'test2'
             self.assertEqual(len(h5.attrs.get(RDF_PREDICATE_ATTR_NAME, None)), 1)
-            self.assertEqual(h5.rdf['title'].predicate, 'hasTitle')
+            self.assertEqual(h5.rdf['title'].predicate, 'https://example.org/hasTitle')
 
     def test_multiple_subjects_or_objects(self):
         with h5tbx.File() as h5:
-            h5.attrs['title', 'hasTitle'] = 'test'
+            h5.attrs['title', 'https://example.org/hasTitle'] = 'test'
 
-            h5.rdf['title'].object = 'first object'
+            h5.rdf['title'].object = 'https://example.org/object'
             self.assertEqual(h5.attrs['title'], 'test')
-            self.assertEqual(h5.rdf['title'].object, 'first object')
-            h5.rdf['title'].object = 'overwritten object'
+            self.assertEqual(h5.rdf['title'].object, 'https://example.org/object')
+
+            h5.rdf['title'].object = 'https://example.org/object2'
+            self.assertEqual(h5.rdf['title'].object, 'https://example.org/object2')
+
             self.assertEqual(h5.attrs['title'], 'test')
-            self.assertEqual(h5.rdf['title'].object, 'overwritten object')
+            self.assertEqual(h5.rdf['title'].object, 'https://example.org/object2')
 
-            h5.rdf['title'].object = ['one', 'two']
+            h5.rdf['title'].object = ['https://example.org/objectURI1', 'https://example.org/objectURI2']
             self.assertEqual(h5.attrs['title'], 'test')
-            self.assertEqual(h5.rdf['title'].object, ['one', 'two'])
-            h5.rdf['title'].append_object('three')
-            self.assertEqual(h5.rdf['title'].object, ['one', 'two', 'three'])
 
-            h5['/'].rdf.subject = 'is group'
-            self.assertEqual(h5.rdf.subject, 'is group')
+            self.assertEqual(h5.rdf['title'].object,
+                             ['https://example.org/objectURI1', 'https://example.org/objectURI2'])
+            h5.rdf['title'].append_object('https://example.org/objectURI3')
+            self.assertListEqual(h5.rdf['title'].object,
+                                 ['https://example.org/objectURI1',
+                                  'https://example.org/objectURI2',
+                                  'https://example.org/objectURI3'])
 
-            h5['/'].rdf.subject = 'is root group'
-            self.assertEqual(h5.rdf.subject, 'is root group')
+            h5['/'].rdf.subject = 'https://example.org/is group'
+            self.assertEqual(h5.rdf.subject, 'https://example.org/is group')
 
-            h5['/'].rdf.append_subject('is group')
-            self.assertEqual(h5.rdf.subject, ['is root group', 'is group'])
+            h5['/'].rdf.subject = 'https://example.org/is root group'
+            self.assertEqual(h5.rdf.subject, 'https://example.org/is root group')
 
-            h5['/'].rdf.subject = ['root', 'group']
-            self.assertEqual(h5.rdf.subject, ['root', 'group'])
+            h5['/'].rdf.append_subject('https://example.org/is group')
+            self.assertEqual(h5.rdf.subject, ['https://example.org/is root group',
+                                              'https://example.org/is group'])
+
+            h5['/'].rdf.subject = ['https://example.org/is root group 1',
+                                   'https://example.org/is group 2']
+            self.assertEqual(h5.rdf.subject, ['https://example.org/is root group 1',
+                                              'https://example.org/is group 2'])
 
     def test_set_single_PSO(self):
         """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""

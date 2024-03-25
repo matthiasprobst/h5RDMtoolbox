@@ -1,14 +1,15 @@
 import json
+import ontolutils
 import pathlib
 import rdflib
 import unittest
+from ontolutils import M4I
+from ontolutils import namespaces, urirefs, Thing
 
 import h5rdmtoolbox as h5tbx
-import ontolutils
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import jsonld
 from h5rdmtoolbox.wrapper import rdf
-from ontolutils import namespaces, urirefs, Thing
 
 logger = h5tbx.logger
 
@@ -36,7 +37,6 @@ class TestCore(unittest.TestCase):
                                    attrs={'standard_name': 'x_velocity',
                                           'standard_name_non_iri': 'x_velocity',
                                           'unit': 'm/s'})
-            from ontolutils import M4I
             ds.rdf.subject = str(M4I.NumericalVariable)
             ds.rdf.predicate['standard_name'] = 'https://matthiasprobst.github.io/ssno#standard_name'
             ds.rdf.object['standard_name'] = 'https://matthiasprobst.github.io/pivmeta#x_velocity'
@@ -91,10 +91,15 @@ class TestCore(unittest.TestCase):
             grp = h5.create_group('grp')
             grp.attrs['test', sn_iri] = 'test'
             sub_grp = grp.create_group('Fan')
-            sub_grp.create_dataset('D3', data=300)
+            ds = sub_grp.create_dataset('D3', data=300)
             sub_grp['D3'].attrs['units', 'http://w3id.org/nfdi4ing/metadata4ing#hasUnits'] = 'mm'
             sub_grp['D3'].rdf['units'].object = 'https://qudt.org/vocab/unit/MilliM'
             sub_grp['D3'].attrs['standard_name', sn_iri] = 'blade_diameter3'
+            ds.rdf.subject = 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable'
+            self.assertEqual(ds.rdf.subject, 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
+            from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME
+            self.assertEqual(ds.attrs[RDF_SUBJECT_ATTR_NAME],
+                             'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
             h5.dumps()
         from pprint import pprint
         out_dict = h5tbx.jsonld.dumpd(h5.hdf_filename,
@@ -104,7 +109,7 @@ class TestCore(unittest.TestCase):
         pprint(out_dict)
         found_m4iNumericalVariable = False
         for g in out_dict['@graph']:
-            if g['@type'] == 'm4i:NumericalVariable':
+            if 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable' in g['@type']:
                 self.assertDictEqual(g['m4i:hasUnits'], {'@id': 'https://qudt.org/vocab/unit/MilliM'})
                 self.assertEqual(g['ssno:standard_name'], 'blade_diameter3')
                 found_m4iNumericalVariable = True
