@@ -3,6 +3,7 @@ from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper.rdf import RDFError
 from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
@@ -46,8 +47,6 @@ class TestRDF(unittest.TestCase):
             grp.rdf.predicate = 'https://schema.org/author'
             grp.rdf.subject = 'http://xmlns.com/foaf/0.1/Person'
             print(grp.rdf.subject)
-
-            from h5rdmtoolbox import jsonld
 
         print(
             jsonld.dumps(

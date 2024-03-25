@@ -5,12 +5,12 @@ import numpy as np
 import pathlib
 import rdflib
 import warnings
+from ontolutils.classes.thing import resolve_iri
+from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 from typing import Dict, Optional, Union, List, Iterable, Tuple, Any
 
 from h5rdmtoolbox.convention import hdf_ontology
-from ontolutils.classes.thing import resolve_iri
-from ontolutils.classes.utils import split_URIRef
 from .core import Dataset, File
 from ..convention.hdf_ontology import HDF5
 
@@ -123,12 +123,14 @@ def to_hdf(grp,
 
     for k, v in data.items():
 
-        if k == '@id':
-            rdf_predicate = None
-            if v.startswith('http'):
-                value_predicate = k
-            else:
-                continue
+        if k in ('@id', 'id'):
+            grp.attrs.create(name="@id", data=v)
+            continue
+            # rdf_predicate = None
+            # if v.startswith('http'):
+            #     value_predicate = k
+            # else:
+            #     continue
         elif k == '@type':
             grp.rdf.subject = resolve_iri(v, data_context)
             continue
@@ -326,8 +328,15 @@ def serialize(grp,
                     # unknown type --> dump it with json
                     if isinstance(av, np.ndarray):
                         attr_literal = rdflib.Literal(json.dumps(av.tolist()))
+                    # elif isinstance(av, (h5py.Group, h5py.Dataset)):
+                    #     attr_literal = rdflib.Literal(av.name)
                     else:
-                        attr_literal = rdflib.Literal(json.dumps(av))
+                        try:
+                            attr_literal = rdflib.Literal(json.dumps(av))
+                        except TypeError as e:
+                            warnings.warn(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
+                            attr_literal = rdflib.Literal(str(av))
+
                 # add node for attr value
                 if attr_literal:
                     _add_node(g, (attr_node, HDF5.value, attr_literal))
