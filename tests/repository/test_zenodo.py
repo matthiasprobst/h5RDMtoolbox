@@ -334,11 +334,26 @@ class TestConfig(unittest.TestCase):
         filename.unlink()
 
         filenames = z.download_files(target_folder='.')
+
         self.assertIsInstance(filenames, list)
         self.assertIsInstance(filenames[0], pathlib.Path)
         for filename in filenames:
             self.assertTrue(filename.exists())
             filename.unlink()
+
+        hdf5_filenames = z.download_files(target_folder='.', suffix='.hdf')
+        self.assertIsInstance(hdf5_filenames, list)
+        self.assertEqual(len(hdf5_filenames), 0)
+
+        txt_filenames = z.download_files(target_folder='.', suffix='.txt')
+        self.assertIsInstance(txt_filenames, list)
+        self.assertEqual(len(txt_filenames), 1)
+        self.assertEqual(txt_filenames[0].suffix, '.txt')
+
+        hdf_and_txt_filenames = z.download_files(target_folder='.', suffix=['.txt', '.hdf'])
+        self.assertIsInstance(hdf_and_txt_filenames, list)
+        self.assertEqual(len(hdf_and_txt_filenames), 1)
+        self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
         z.delete()
         self.assertFalse(z.exists())

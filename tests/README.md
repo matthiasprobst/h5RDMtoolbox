@@ -6,7 +6,7 @@ Go to the repository directory. For running all tests call
 
 To get a coverage report run (you need the package `pytest-cov`):
 
-    pytest --cov --cov-report html
+    pytest --cov=h5rdmtoolbox --cov-report html
 
 This will create a folder `covhtml/` with an `index.html` file in it.
 

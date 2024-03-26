@@ -22,6 +22,10 @@ class TestRDF(unittest.TestCase):
             h5.attrs['title', FOAF.title] = 'test'
             self.assertIsInstance(h5.rdf['title'].predicate, str)
             self.assertEqual(h5.rdf['title'].predicate, str(FOAF.title))
+
+            with self.assertRaises(RDFError):
+                h5.attrs['titles', [FOAF.title, FOAF.member]] = 'titles'
+
             h5.attrs['title'] = 'test'
             with self.assertRaises(RDFError):
                 h5.rdf['title'].object = 'first object'

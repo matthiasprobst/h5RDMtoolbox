@@ -19,6 +19,8 @@ class TestOrcid(unittest.TestCase):
         self.assertEqual(str(identifiers.RORID('04wxnsj81')), 'https://ror.org/04wxnsj81')
         self.assertFalse(identifiers.RORID('https://orcid.org/0000-0002-1825-0097').validate())
 
+        identifiers.RORID('04wxnsj81').check_checksum()
+
     def test_from_url(self):
         self.assertIsInstance(identifiers.from_url('https://orcid.org/0000-0002-1825-0097'),
                               identifiers.ORCID)
@@ -33,25 +35,36 @@ class TestOrcid(unittest.TestCase):
         self.assertTrue(identifiers.ISBN10('80-85892-15-4').validate())
         self.assertFalse(identifiers.ISBN10('80/85892-15-4').validate())
         self.assertFalse(identifiers.ISBN10('80-85892-15-8').validate())
+        self.assertFalse(identifiers.ISBN10('80-85892-15-X').validate())
         self.assertTrue(identifiers.ISBN13('978-80-85892-15-4').validate())
         self.assertFalse(identifiers.ISBN13('978-80-85892-15-8').validate())
         self.assertFalse(identifiers.ISBN13('978/80-85892-15-4').validate())
 
     def test_orcid(self):
+        self.assertTrue(identifiers.ORCID('https://orcid.org/0000-0002-1825-0097').exists())
+        self.assertFalse(identifiers.ORCID('https://orcid.org/1111-0002-1825-0097').exists())
         self.assertTrue(identifiers.ORCID('https://orcid.org/0000-0002-1825-0097').validate())
         self.assertFalse(identifiers.ORCID('https://orcid.org/0000-0002-1825-0096').validate())
         self.assertTrue(identifiers.ORCID('0000-0002-1825-0097').validate())
         self.assertTrue(identifiers.ORCID('https://orcid.org/0000-0001-5109-3700').validate())
         self.assertTrue(identifiers.ORCID('https://orcid.org/0000-0002-1694-233X').validate())
 
-    # def test_orcid(self):
-    #     o = h5tbx.orcid.KnownOrcids()
-    #     o._filename = h5tbx.utils.generate_temporary_filename()
-    #     o.load()
-    #     self.assertEqual([], o._orcids)
-    #     o._orcids = ['1', '2']
-    #     o.save()
-    #     self.assertTrue(o.filename.exists())
+    def test_orcid_cache(self):
+        identifiers.KNOWN_ORCID_FILENAME.unlink(missing_ok=True)
+        self.assertEqual(len(identifiers.ORCID.get_existing_orcids()), 0)
+        identifiers.ORCID('https://orcid.org/0000-0002-1825-0097').exists()
+        print(identifiers.ORCID.get_existing_orcids())
+        self.assertEqual(len(identifiers.ORCID.get_existing_orcids()), 1)
+        self.assertEqual(identifiers.ORCID.get_existing_orcids()[0], 'https://orcid.org/0000-0002-1825-0097')
+
+    # def test_orcid_exists(self):
+    # o = h5tbx.orcid.KnownOrcids()
+    # o._filename = h5tbx.utils.generate_temporary_filename()
+    # o.load()
+    # self.assertEqual([], o._orcids)
+    # o._orcids = ['1', '2']
+    # o.save()
+    # self.assertTrue(o.filename.exists())
     #
     #     o.add('3')
     #     self.assertEqual(['1', '2', '3'], o.orcids)

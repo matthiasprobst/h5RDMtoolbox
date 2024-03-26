@@ -2,6 +2,7 @@ import h5py
 import json
 import logging
 import numpy as np
+import ontolutils
 import pathlib
 import rdflib
 import warnings
@@ -74,7 +75,7 @@ def is_list_of_dict(data) -> bool:
 
 def to_hdf(grp,
            *,
-           data: Dict = None,
+           data: Union[Dict, str] = None,
            source: Union[str, pathlib.Path] = None,
            predicate=None,
            context: Dict = None) -> None:
@@ -82,16 +83,16 @@ def to_hdf(grp,
 
     .. note::
 
-        Either data (as dict) or source (as filename) must be given.
+        Either data (as dict or json string) or source (as filename or ontolutils.Thing) must be given.
 
     Parameters
     ----------
     grp : h5py.Group
         The group to write to
-    data : Dict = None
-        The data to write
-    source : Union[str, pathlib.Path] = None
-        The source file to read from
+    data : Union[Dict, str] = None
+        The data to write either as dictionary or json string
+    source : Union[str, pathlib.Path, ontolutils.Thing] = None
+        The source file to read from or a Thing object from ontolutils.
     predicate : None
         The predicate to use for the group
     context : Dict = None
@@ -104,11 +105,18 @@ def to_hdf(grp,
     """
     if data is None and source is None:
         raise ValueError('Either data or source must be given')
+
     if data is None:
-        with open(source, 'r') as f:
-            data = json.load(f)
+        if isinstance(source, ontolutils.Thing):
+            data = json.loads(source.model_dump_jsonld())
+        else:
+            with open(source, 'r') as f:
+                data = json.load(f)
     else:
-        assert isinstance(data, dict), f'Expecting dict, got {type(data)}'
+        if isinstance(data, str):
+            data = json.loads(data)
+        else:
+            assert isinstance(data, dict), f'Expecting dict, got {type(data)}'
 
     if predicate:
         grp.rdf.predicate = predicate

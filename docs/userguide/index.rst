@@ -52,7 +52,7 @@ User Guide
 
     .. grid-item-card:: Misc
         :img-top: ../_static/icon_misc.svg
-        :link: layout/index
+        :link: misc/index
         :link-type: doc
 
         Discover what else there is beyond the core functionalities packed

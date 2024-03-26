@@ -40,6 +40,3 @@ generation, processing, and analysis. The following sections will guide you thro
     DumpFile.ipynb
     NaturalNaming.ipynb
     SpecialIO.ipynb
-    Visualization.ipynb
-    Extensions.ipynb
-    Misc.ipynb

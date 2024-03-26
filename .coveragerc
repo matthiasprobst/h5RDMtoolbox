@@ -1,9 +1,15 @@
 [run]
 omit =
+    h5rdmtoolbox/cli.py
+    gui.py
     tests/*
     h5rdmtoolbox/tutorial.py
     h5rdmtoolbox/errors.py
 relative_files = true
+
+[paths]
+source =
+    tests
 
 [report]
 exclude_lines =
@@ -16,6 +22,7 @@ exclude_lines =
     @atexit.register
     except AttributeError
     raise NotImplementedError
+    raise requests.HTTPError
     except TypeError
     except ImportError
     except FileNotFoundError

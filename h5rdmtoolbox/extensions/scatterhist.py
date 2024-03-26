@@ -8,17 +8,18 @@ where most code is taken from
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
+from typing import Tuple, Union
 
 from ..plotting import build_label_unit_str
 
 
-def scatter_hist(x, y, binwidth=1.0, **kwargs):
+def scatter_hist(x, y, binwidth: Union[float, Tuple[float, float]] = 1.0, **kwargs):
     """Code taken from https://matplotlib.org/3.1.0/gallery/lines_bars_and_markers/scatter_hist.html"""
     # definitions for the axes
     left, width = 0.1, 0.65
     bottom, height = 0.1, 0.65
     spacing = 0.005
-
+    density = kwargs.pop('density', True)
     color = kwargs.pop('color', 'k')
 
     rect_scatter = [left, bottom, width, height]
@@ -43,14 +44,22 @@ def scatter_hist(x, y, binwidth=1.0, **kwargs):
     ax_scatter.set_xlim((-lim, lim))
     ax_scatter.set_ylim((-lim, lim))
 
-    bins = np.arange(-lim, lim + binwidth, binwidth)
-    ax_histx.hist(x, bins=bins, color=color, density=True)
-    ax_histy.hist(y, bins=bins, orientation='horizontal', color=color, density=True)
+    if isinstance(binwidth, (int, float)):
+        xbins = ybins = np.arange(-lim, lim + binwidth, binwidth)
+    else:
+        xbins = np.arange(-lim, lim + binwidth[0], binwidth[0])
+        ybins = np.arange(-lim, lim + binwidth[1], binwidth[1])
+    ax_histx.hist(x, bins=xbins, color=color, density=density)
+    ax_histy.hist(y, bins=ybins, orientation='horizontal', color=color, density=density)
 
     # ax_histx.set_xlim(ax_scatter.get_xlim())
     # ax_histy.set_ylim(ax_scatter.get_ylim())
-    ax_histx.set_ylim([0, 1])
-    ax_histy.set_xlim([0, 1])
+    if density:
+        ax_histx.set_ylim([0, 1])
+        ax_histy.set_xlim([0, 1])
+    else:
+        ax_histx.set_ylim([0, None])
+        ax_histy.set_xlim([0, None])
 
     return ax_scatter, ax_histx, ax_histy
 

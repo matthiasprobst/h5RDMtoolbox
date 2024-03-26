@@ -82,6 +82,35 @@ class TestCore(unittest.TestCase):
             jsonld.to_hdf(h5.create_group('contact'),
                           data=json.loads(p.model_dump_jsonld()),
                           predicate='m4i:contact')
+            self.assertTrue('contact' in h5)
+            self.assertEqual(h5['contact'].attrs['name'], 'John')
+            self.assertEqual(h5['contact'].attrs['lastName'], 'Doe')
+            self.assertEqual(h5['contact'].rdf['name'].predicate, 'http://xmlns.com/foaf/0.1/firstName')
+            self.assertEqual(h5['contact'].rdf['lastName'].predicate, 'http://xmlns.com/foaf/0.1/lastName')
+            h5.dumps()
+
+        # def dump_hdf_to_json(h5_filename):
+        with h5tbx.File('test.hdf', 'w') as h5:
+            jsonld.to_hdf(h5.create_group('contact'),
+                          data=p.model_dump_jsonld(),
+                          predicate='m4i:contact')
+            self.assertTrue('contact' in h5)
+            self.assertEqual(h5['contact'].attrs['name'], 'John')
+            self.assertEqual(h5['contact'].attrs['lastName'], 'Doe')
+            self.assertEqual(h5['contact'].rdf['name'].predicate, 'http://xmlns.com/foaf/0.1/firstName')
+            self.assertEqual(h5['contact'].rdf['lastName'].predicate, 'http://xmlns.com/foaf/0.1/lastName')
+            h5.dumps()
+
+        # def dump_hdf_to_json(h5_filename):
+        with h5tbx.File('test.hdf', 'w') as h5:
+            jsonld.to_hdf(h5.create_group('contact'),
+                          source=p,
+                          predicate='m4i:contact')
+            self.assertTrue('contact' in h5)
+            self.assertEqual(h5['contact'].attrs['name'], 'John')
+            self.assertEqual(h5['contact'].attrs['lastName'], 'Doe')
+            self.assertEqual(h5['contact'].rdf['name'].predicate, 'http://xmlns.com/foaf/0.1/firstName')
+            self.assertEqual(h5['contact'].rdf['lastName'].predicate, 'http://xmlns.com/foaf/0.1/lastName')
             h5.dumps()
 
     def test_jsonld_dumps(self):

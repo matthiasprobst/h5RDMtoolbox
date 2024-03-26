@@ -5,7 +5,7 @@ import xarray as xr
 
 import h5rdmtoolbox as h5tbx
 # noinspection PyUnresolvedReferences
-from h5rdmtoolbox.extensions import normalize, vector, magnitude
+from h5rdmtoolbox.extensions import normalize, vector, magnitude, units
 
 
 class TestExtension(unittest.TestCase):
@@ -208,3 +208,9 @@ class TestExtension(unittest.TestCase):
             self.assertEqual('', u_xynorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
             self.assertEqual('mm', u_xynorm['y'].attrs.get('units', ''))
             self.assertEqual(u_xynorm.y[0], h5['u'][:].y[0] / 10)
+
+    def test_units_to(self):
+        with h5tbx.File(mode='w') as h5:
+            ds = h5.create_dataset('x', data=[1, 2, 3], make_scale=True, attrs={'units': 'm'})
+            ds_cm = ds[()].to('cm')
+            self.assertEqual('cm', ds_cm.attrs['units'])

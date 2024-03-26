@@ -3,7 +3,6 @@ import appdirs
 import pathlib
 import re
 import requests
-import warnings
 from typing import Union, List
 
 
@@ -37,9 +36,11 @@ class ObjectIdentifier(abc.ABC):
         return re.match(cls.pattern, identifier) is not None
 
 
+KNOWN_ORCID_FILENAME = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'known_and_validated_orcids.txt'
+
+
 class ORCID(ObjectIdentifier):
     """https://www.wikidata.org/wiki/Property:P496"""
-    known_orcid_filename = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'known_and_validated_orcids.txt'
     pattern = r'^(https:\/\/orcid\.org\/)?(\d{4}-){3}\d{3}(\d|X)$'
 
     def __init__(self, orcid: str):
@@ -47,13 +48,14 @@ class ORCID(ObjectIdentifier):
             orcid = f'https://orcid.org/{orcid}'
         self.id = str(orcid)
 
-    def get_validated_orcids(self) -> List[str]:
+    @classmethod
+    def get_existing_orcids(cls) -> List[str]:
         """Return list of validated ORCIDs. They have been saved
         in a file when they were validated the first time."""
 
-        if not self.known_orcid_filename.exists():
+        if not KNOWN_ORCID_FILENAME.exists():
             return []
-        with open(self.known_orcid_filename) as f:
+        with open(KNOWN_ORCID_FILENAME) as f:
             return [l.strip() for l in f.readlines()]
 
     def check_checksum(self) -> bool:
@@ -88,7 +90,7 @@ class ORCID(ObjectIdentifier):
         """Check if it can be found online or in known ORCIDs file"""
         # small hack: we saved already validated orcids in a file,
         # so we don't have to check them again
-        if str(self) in self.get_validated_orcids():
+        if str(self) in self.get_existing_orcids():
             return True
         headers = {'Accept': 'application/vnd.orcid+json'}
         try:
@@ -98,9 +100,9 @@ class ORCID(ObjectIdentifier):
                 raise Exception(e) from e
             return False
         if response.status_code == 200:  # 200=OK
-            orcids = self.get_validated_orcids()
+            orcids = self.get_existing_orcids()
             orcids.append(str(self))
-            with open(self.known_orcid_filename, 'w') as f:
+            with open(KNOWN_ORCID_FILENAME, 'w') as f:
                 f.write('\n'.join(orcids))
             return True
         return False
@@ -215,8 +217,8 @@ class RORID(ObjectIdentifier):
         return str(self.id)
 
     def check_checksum(self) -> bool:
-        warnings.warn('Checksum not implemented yet')
-        return True
+        """Checking the checksum not implemented yet"""
+        raise NotImplementedError('Checksum not implemented yet')
 
     def _repr_html_(self):
         return f'<a href="{self.id}"><img alt="ROR logo" ' \
@@ -224,6 +226,7 @@ class RORID(ObjectIdentifier):
                f'width="16" height="16" />{self.id}</a>'
 
     def validate(self):
+        """Check if it fulfills the pattern"""
         return self.check_pattern(self.id)
 
 
@@ -236,8 +239,8 @@ class URN(ObjectIdentifier):
     def __str__(self):
         return self.id
 
-    def check_checksum(self) -> bool:
-        return True
+    # def check_checksum(self) -> bool:
+    #     return True
 
     def _repr_html_(self):
         return f'<a href="{self.id}">{self.id}</a>'
