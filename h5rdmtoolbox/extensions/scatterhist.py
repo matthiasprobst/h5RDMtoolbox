@@ -13,7 +13,7 @@ from typing import Tuple, Union
 from ..plotting import build_label_unit_str
 
 
-def scatter_hist(x, y, binwidth: Union[float, Tuple[float, float]] = 1.0, **kwargs):
+def scatter_hist(x, y, binwidth: Union[float, Tuple[float, float]] = 1.0, figsize=None, **kwargs):
     """Code taken from https://matplotlib.org/3.1.0/gallery/lines_bars_and_markers/scatter_hist.html"""
     # definitions for the axes
     left, width = 0.1, 0.65
@@ -27,7 +27,7 @@ def scatter_hist(x, y, binwidth: Union[float, Tuple[float, float]] = 1.0, **kwar
     rect_histy = [left + width + spacing, bottom, 0.2, height]
 
     # start with a rectangular Figure
-    plt.figure(figsize=(8, 8))
+    plt.figure(figsize=figsize)
 
     ax_scatter = plt.axes(rect_scatter)
     ax_scatter.tick_params(direction='in', top=True, right=True)
@@ -40,15 +40,17 @@ def scatter_hist(x, y, binwidth: Union[float, Tuple[float, float]] = 1.0, **kwar
     ax_scatter.scatter(x, y, color=color, **kwargs)
 
     # now determine nice limits by hand:
-    lim = np.ceil(np.abs([x, y]).max() / binwidth) * binwidth
-    ax_scatter.set_xlim((-lim, lim))
-    ax_scatter.set_ylim((-lim, lim))
-
     if isinstance(binwidth, (int, float)):
-        xbins = ybins = np.arange(-lim, lim + binwidth, binwidth)
+        xlim = ylim = np.ceil(np.abs([x, y]).max() / binwidth) * binwidth
+        xbins = ybins = np.arange(-xlim, xlim + binwidth, binwidth)
     else:
-        xbins = np.arange(-lim, lim + binwidth[0], binwidth[0])
-        ybins = np.arange(-lim, lim + binwidth[1], binwidth[1])
+        xlim = np.ceil(np.abs(x).max() / binwidth[0]) * binwidth[0]
+        ylim = np.ceil(np.abs(y).max() / binwidth[1]) * binwidth[1]
+        xbins = np.arange(-xlim, xlim + binwidth[0], binwidth[0])
+        ybins = np.arange(-ylim, ylim + binwidth[1], binwidth[1])
+    ax_scatter.set_xlim((-xlim, xlim))
+    ax_scatter.set_ylim((-ylim, ylim))
+
     ax_histx.hist(x, bins=xbins, color=color, density=density)
     ax_histy.hist(y, bins=ybins, orientation='horizontal', color=color, density=density)
 
