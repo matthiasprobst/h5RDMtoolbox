@@ -20,6 +20,58 @@ class TestHDFDB(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 gdb.insert_group(None)
 
+    def test_value_find(self):
+        with h5tbx.File(mode='w') as h5:
+            ds_random = h5.create_dataset('random', data=np.array([1, 2, 3]))
+            ds_half = h5.create_dataset('half', data=0.5)
+            gdb = hdfdb.ObjDB(h5['/'])
+            res = gdb.find_one({'$eq': 0.5}, recursive=True)
+            self.assertEqual(res.name, ds_half.name)
+            res = gdb.find_one({'$gte': 0.5}, recursive=True)
+            self.assertEqual(res.name, ds_half.name)
+            res = gdb.find_one({'$lte': 0.5}, recursive=True)
+            self.assertEqual(res.name, ds_half.name)
+            res = gdb.find_one({'$gt': 0.5}, recursive=True)
+            self.assertTrue(res is None)
+            res = gdb.find_one({'$lt': 0.5}, recursive=True)
+            self.assertTrue(res is None)
+            res = gdb.find_one({'$eq': np.array([1, 2, 3])}, recursive=True)
+            self.assertEqual(res.name, ds_random.name)
+
+    def test_find_shape(self):
+        with h5tbx.File(mode='w') as h5:
+            ds_random = h5.create_dataset('random', data=np.array([1, 2, 3]))
+            ds_half = h5.create_dataset('half', data=0.5)
+
+            gdb = hdfdb.ObjDB(h5['/'])
+
+            res = gdb.find_one({'$shape': (3,)}, recursive=True)
+            self.assertEqual(res.name, ds_random.name)
+            res = gdb.find({'$ndim': 1}, recursive=True)
+            self.assertListEqual([r.name for r in res], [ds_random.name])
+
+            res = gdb.find({'$ndim': {'$gt': 0}}, recursive=True)
+            self.assertListEqual([r.name for r in res], [ds_random.name, ])
+
+            res = gdb.find({'$ndim': {'$gte': 1}}, recursive=True)
+            self.assertListEqual([r.name for r in res], [ds_random.name, ])
+
+            res = gdb.find({'$ndim': {'$gte': 0}}, recursive=True)
+            self.assertListEqual(sorted([r.name for r in res]), sorted([ds_random.name, ds_half.name]))
+
+    def test_distint_props(self):
+        with h5tbx.File(mode='w') as h5:
+            ds_random = h5.create_dataset('random', data=np.array([1, 2, 3]))
+            ds_half = h5.create_dataset('half', data=0.5)
+
+            gdb = hdfdb.ObjDB(h5['/'])
+            res = gdb.distinct('$shape')
+            self.assertListEqual(sorted(res), [(), (3,)])
+
+            gdb = hdfdb.ObjDB(h5['/'])
+            res = gdb.distinct('$ndim')
+            self.assertListEqual(sorted(res), [0, 1])
+
     def test_find_one(self):
         with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
                        'w') as h5:
@@ -100,6 +152,38 @@ class TestHDFDB(unittest.TestCase):
 
             single_res = gdb_root.find_one({'a': {'$gte': 0}}, recursive=True)
             self.assertTrue(single_res.attrs['a'] >= 0)
+
+    def test_find_dict_attr(self):
+        with h5tbx.File(mode='w') as h5:
+            grp = h5.create_group('grp')
+            ds = h5.create_dataset('dataset', shape=(2, 3))
+            ds.attrs['a'] = 1
+            grp.attrs['a'] = 1
+            grp.attrs['b'] = {'c': 2}
+            gb = hdfdb.ObjDB(h5['/'])
+            res = gb.find_one({'b.c': 2}, recursive=True)
+            self.assertEqual(res.name, grp.name)
+            res = gb.find({'a': 1}, recursive=True)
+            self.assertListEqual(sorted([r.name for r in res]),
+                                 sorted([grp.name, ds.name]))
+            res = gb.find({'a': 1}, objfilter='dataset', recursive=True)
+            self.assertListEqual(sorted([r.name for r in res]),
+                                 sorted([ds.name, ]))
+
+    def test_distinct(self):
+        with h5tbx.File(mode='w') as h5:
+            h5.attrs['tag'] = 'root'
+            h5.create_dataset('dataset', data=np.array([1, 2, 3]),
+                              attrs={'tag': 'dataset', 'units': 'm'})
+            h5.create_dataset('dataset2', data=np.array([1, 2, 3]),
+                              attrs={'tag': 'dataset', 'units': 'm/s'})
+            grp = h5.create_group('grp')
+            grp.attrs['tag'] = 'group'
+            gb = hdfdb.ObjDB(h5['/'])
+            res = gb.distinct('tag')
+            self.assertListEqual(sorted(res), sorted(['root', 'dataset', 'group']))
+            res = gb.distinct('units')
+            self.assertListEqual(sorted(res), sorted(['m', 'm/s']))
 
     def test_regex(self):
         from h5rdmtoolbox.database.hdfdb.query import _regex

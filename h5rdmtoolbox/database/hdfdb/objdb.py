@@ -1,6 +1,6 @@
 import h5py
 import numpy as np
-from typing import Union, Dict, List, Callable, Generator
+from typing import Union, Dict, List, Callable, Generator, Optional
 
 from . import query, utils
 from .nonsearchable import NonInsertableDatabaseInterface
@@ -35,10 +35,10 @@ class RecFind:
                 self.found_objects.append(h5obj)
         except AttributeError as e:
             return
-            if not self.ignore_attribute_error:
-                raise AttributeError(f'HDF object {h5obj} has no attribute "{self._attribute}". You may add '
-                                     'an objfilter, because dataset and groups dont share all attributes. '
-                                     'One example is "dtype", which is only available with datasets') from e
+            # if not self.ignore_attribute_error:
+            #     raise AttributeError(f'HDF object {h5obj} has no attribute "{self._attribute}". You may add '
+            #                          'an objfilter, because dataset and groups dont share all attributes. '
+            #                          'One example is "dtype", which is only available with datasets') from e
 
 
 class RecValueFind:
@@ -77,17 +77,21 @@ class RecAttrFind:
         if '.' in self._attribute:
             # dict comparison:
             attr_name, dict_path = self._attribute.split('.', 1)
-            if attr_name in obj.attrs:
-                _attr_dict = dict(obj.attrs[attr_name])
-                for _item in dict_path.split('.'):
-                    try:
-                        _attr_value = _attr_dict[_item]
-                    except KeyError:
-                        _attr_value = None
-                        break
-                if _attr_value:
-                    if self._func(_attr_value, self._value):
-                        self.found_objects.append(obj)
+            attr_value = obj.attrs.get(attr_name, None)
+            if attr_value is not None:
+                if isinstance(attr_value, str) and attr_value.startswith('{') and attr_value.endswith('}'):
+                    import json
+                    _attr_dict = json.loads(attr_value)
+
+                    for _item in dict_path.split('.'):
+                        try:
+                            _attr_value = _attr_dict[_item]
+                        except KeyError:
+                            _attr_value = None
+                            break
+                    if _attr_value:
+                        if self._func(_attr_value, self._value):
+                            self.found_objects.append(obj)
         if self._func(obj.attrs.get(self._attribute, None), self._value):
             self.found_objects.append(obj)
 
@@ -329,7 +333,8 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
     return common_results
 
 
-def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
+def distinct(h5obj: Union[h5py.Group, h5py.Dataset],
+             key: str,
              objfilter: Union[h5py.Group, h5py.Dataset, None]) -> List[str]:
     """Return a distinct list of all found targets. A target generally is
     understood to be an attribute name. However, by adding a $ in front, class
@@ -357,18 +362,18 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
         return list(set(rpc.found_objects))
 
     rac = RecAttrCollect(key, objfilter)
-    for k, v in h5obj.attrs.raw.items():
+    for k, v in h5obj.attrs.items():
         if k == key:
             rac.found_objects.append(v)
     if isinstance(h5obj, h5py.Group):
         h5obj.visititems(rac)
         if objfilter:
             if isinstance(h5obj, objfilter):
-                if key in h5obj.attrs.raw:
-                    rac.found_objects.append(h5obj.attrs.raw[key])
+                if key in h5obj.attrs:
+                    rac.found_objects.append(h5obj.attrs[key])
         else:
-            if key in h5obj.attrs.raw:
-                rac.found_objects.append(h5obj.attrs.raw[key])
+            if key in h5obj.attrs:
+                rac.found_objects.append(h5obj.attrs[key])
 
     return list(set(rac.found_objects))
 
@@ -433,7 +438,7 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
             yield r
 
     def distinct(self, key: str,
-                 objfilter: Union[h5py.Group, h5py.Dataset, None]):
+                 objfilter: Optional[Union[h5py.Group, h5py.Dataset]] = None):
         """Return a distinct list of all found targets. A target generally is
         understood to be an attribute name. However, by adding a $ in front, class
         properties can be found, too, e.g. $shape will return all distinct shapes of the
