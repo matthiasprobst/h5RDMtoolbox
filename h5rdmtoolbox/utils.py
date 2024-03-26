@@ -520,7 +520,7 @@ def download_context(url: HttpUrl, force_download: bool = False) -> Context:
 
     Examples
     --------
-    >>> from h5rdmtoolbox.namespace import download_context
+    >>> from h5rdmtoolbox.utils import download_context
     >>> context = download_context('https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
     """
     _url = str(url)

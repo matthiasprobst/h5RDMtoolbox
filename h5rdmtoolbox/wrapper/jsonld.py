@@ -129,6 +129,40 @@ def to_hdf(grp,
     data_context['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#'
     data_context['schema'] = 'https://schema.org/'
 
+    at_import = data_context.pop("@import", None)
+    if at_import is not None:
+        from ..utils import download_context
+        if isinstance(at_import, str):
+            at_import = [at_import]
+        for c in at_import:
+            for k, v in download_context(c)._context_cache.items():
+                data_context.update(v['@context'])
+            # with open(context_filename, 'r') as f:
+            #     data_context.update(json.load(f)['@context'])
+
+    if '@graph' in data:
+        for graph_entry in data.pop('@graph'):
+            # figure out if there's a label:
+            label = graph_entry.get('label', None)
+            if label is None:
+                for k in graph_entry:
+                    if k.endswith(':label'):
+                        label = graph_entry[k]
+                        break
+
+                if label is None:  # still None...
+                    _type = graph_entry.get('@type', None)
+                    ns, label = split_URIRef(_type)
+
+            i = 1
+            while label in grp:
+                i += 1
+                label = f'{label}{i}'
+
+            _grp = grp.create_group(label)
+
+            to_hdf(_grp, data=graph_entry, context=data_context)
+
     for k, v in data.items():
 
         if k in ('@id', 'id'):
@@ -148,7 +182,7 @@ def to_hdf(grp,
 
             # ns_predicate can be something like None, "schema" or "https://schema.org/"
             if ns_predicate is None:
-                rdf_predicate = data_context.get(k, None)
+                rdf_predicate = resolve_iri(k, data_context)#data_context.get(k, None)
             elif ns_predicate.startswith('http'):
                 rdf_predicate = k
             else:
@@ -271,7 +305,7 @@ def serialize(grp,
                              recursive=recursive,
                              compact=compact,
                              context=context)
-    # global _context
+
     _context = {}
     context = context or {}
     _context.update(context)  # = context or {}

@@ -19,7 +19,8 @@ class TestOrcid(unittest.TestCase):
         self.assertEqual(str(identifiers.RORID('04wxnsj81')), 'https://ror.org/04wxnsj81')
         self.assertFalse(identifiers.RORID('https://orcid.org/0000-0002-1825-0097').validate())
 
-        identifiers.RORID('04wxnsj81').check_checksum()
+        with self.assertRaises(NotImplementedError):
+            identifiers.RORID('04wxnsj81').check_checksum()
 
     def test_from_url(self):
         self.assertIsInstance(identifiers.from_url('https://orcid.org/0000-0002-1825-0097'),

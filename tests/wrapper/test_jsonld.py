@@ -144,9 +144,120 @@ class TestCore(unittest.TestCase):
                 found_m4iNumericalVariable = True
         self.assertTrue(found_m4iNumericalVariable)
 
+    def test_to_hdf_with_graph(self):
+        test_data = """{
+  "@context": {
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "schema": "http://schema.org/",
+    "local": "http://example.org/"
+  },
+  "@graph": [
+    {
+      "@id": "local:testperson1",
+      "@type": "prov:Person",
+      "foaf:firstName": "John",
+      "foaf:lastName": "Doe",
+      "age": 21,
+      "schema:affiliation": {
+        "@id": "Nef657ff40e464dd09580db3f32de2cf1",
+        "@type": "schema:Organization",
+        "rdfs:label": "MyAffiliation"
+      }
+    },
+    {
+      "@id": "local:testperson2",
+      "@type": "prov:Person",
+      "foaf:firstName": "Jane",
+      "foaf:lastName": "Doe",
+      "age": 20,
+      "schema:affiliation": {
+        "@type": "schema:Organization",
+        "rdfs:label": "MyAffiliation"
+      }
+    }
+  ]
+}"""
+        with open('graph.json', 'w') as f:
+            f.write(test_data)
+        jsondict = json.loads(test_data)
+        self.assertTrue(jsondict['@graph'][0]['@id'].startswith('local:testperson'))
+        with h5tbx.File('graph.hdf', 'w') as h5:
+            grp = h5.create_group('person')
+            jsonld.to_hdf(grp=grp, source='graph.json')
+            self.assertTrue('@graph' not in grp)
+            self.assertTrue('Person' in grp)
+            self.assertTrue('Person2' in grp)
+            h5.dumps()
+        # cleanup:
+        pathlib.Path('graph.json').unlink(missing_ok=True)
+        h5.hdf_filename.unlink(missing_ok=True)
+
+    def test_to_hdf_with_graph2(self):
+        test_data = """{
+  "@context": {
+    "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "schema": "http://schema.org/",
+    "local": "http://example.org/"
+  },
+  "@graph": [
+    {
+      "@id": "local:preparation_0001",
+      "@type": "processing step",
+      "label": "Sample preparation and parameter definition",
+      "has participant": "local:testperson1",
+      "start time": "2022-09-22T10:31:22"
+    },
+    {
+      "@id": "local:testperson1",
+      "@type": "prov:Person",
+      "foaf:firstName": "John",
+      "foaf:lastName": "Doe",
+      "age": 21,
+      "schema:affiliation": {
+        "@id": "Nef657ff40e464dd09580db3f32de2cf1",
+        "@type": "schema:Organization",
+        "rdfs:label": "MyAffiliation"
+      }
+    },
+    {
+      "@id": "local:testperson2",
+      "@type": "prov:Person",
+      "rdfs:label": "Jane Doe",
+      "foaf:firstName": "Jane",
+      "foaf:lastName": "Doe",
+      "age": 20,
+      "schema:affiliation": {
+        "@type": "schema:Organization",
+        "rdfs:label": "MyAffiliation"
+      }
+    }
+  ]
+}"""
+        with open('graph.json', 'w') as f:
+            f.write(test_data)
+        jsondict = json.loads(test_data)
+        assert isinstance(jsondict, dict)
+
+        with h5tbx.File('graph.hdf', 'w') as h5:
+            grp = h5.create_group('person')
+            jsonld.to_hdf(grp=grp, source='graph.json')
+            self.assertTrue('@graph' not in grp)
+            self.assertTrue('Person' in grp)
+            self.assertTrue('Jane Doe' in grp)
+            self.assertEqual(grp['Jane Doe'].attrs['age'], 20)
+            h5.dumps()
+        # cleanup:
+        pathlib.Path('graph.json').unlink(missing_ok=True)
+        h5.hdf_filename.unlink(missing_ok=True)
+
     def test_to_hdf(self):
         test_data = """{"@context": {"foaf": "http://xmlns.com/foaf/0.1/", "prov": "http://www.w3.org/ns/prov#",
-"schema": "http://www.w3.org/2000/01/rdf-schema#",
+"rdfs": "http://www.w3.org/2000/01/rdf-schema#",
  "schema": "http://schema.org/",
  "local": "http://example.org/"},
 "@id": "local:testperson",
@@ -172,16 +283,8 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5['person'].attrs['age'], 21)
 
         h5tbx.dumps('test.hdf')
-
-        # print(
-        #     h5tbx.jsonld.dumps(
-        #         h5.hdf_filename, indent=2,
-        #         context={"m4i": "http://w3id.org/nfdi4ing/metadata4ing#"}
-        #     )
-        # )
-        #
-        # pathlib.Path('test.json').unlink(missing_ok=True)
-        # h5.hdf_filename.unlink(missing_ok=True)
+        pathlib.Path('test.json').unlink(missing_ok=True)
+        h5.hdf_filename.unlink(missing_ok=True)
 
     def test_codemeta_to_hdf(self):
         codemeta_filename = __this_dir__ / '../../codemeta.json'

@@ -239,8 +239,8 @@ class URN(ObjectIdentifier):
     def __str__(self):
         return self.id
 
-    # def check_checksum(self) -> bool:
-    #     return True
+    def check_checksum(self) -> bool:
+        return True
 
     def _repr_html_(self):
         return f'<a href="{self.id}">{self.id}</a>'
