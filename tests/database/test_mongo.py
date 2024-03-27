@@ -74,7 +74,8 @@ class TestH5Mongo(unittest.TestCase):
         self.assertEqual(type2mongo(np.array(1, dtype=np.int32)), 1)
         self.assertEqual(type2mongo(np.array(1, dtype=np.float32)), 1.0)
         self.assertEqual(type2mongo(np.array(1, dtype='S1')), b'1')
-        self.assertEqual(type2mongo(datetime.now()), datetime.now())
+        now = datetime.now()
+        self.assertEqual(type2mongo(now), now)
 
         class MyClass:
             """MyClass"""
