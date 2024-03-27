@@ -1263,9 +1263,9 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     def _repr_html_(self):
         return self.hdfrepr.__html__(self)
 
-    def sdump(self):
+    def sdump(self, hide_uri: bool = False):
         """string representation of group"""
-        return self.hdfrepr.str_repr(self)
+        return self.hdfrepr.str_repr(self, hide_uri=hide_uri)
 
     dumps = sdump
 

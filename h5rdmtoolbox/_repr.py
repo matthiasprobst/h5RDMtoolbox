@@ -158,10 +158,11 @@ def get_iri_icon_href(iri: str, tooltiptext=None) -> str:
 
 class _HDF5StructureRepr:
 
-    def __init__(self, ignore_attrs=None):
+    def __init__(self, ignore_attrs=None, hide_uri: bool = False):
         self.base_intent = '  '
         self.max_attr_length = 100
         self.collapsed = None
+        self.hide_uri = hide_uri
 
         self._obj_cfg = {}
         if ignore_attrs is None:
@@ -171,6 +172,7 @@ class _HDF5StructureRepr:
 
     @property
     def checkbox_state(self) -> str:
+        """return 'checked' if the group is collapsed, else ''"""
         return '' if self.collapsed else 'checked'
 
     def __dataset__(self, name, h5obj) -> str:
@@ -205,7 +207,8 @@ class _HDF5StructureRepr:
 
 class HDF5StructureStrRepr(_HDF5StructureRepr):
 
-    def __call__(self, group, indent=0, preamble=None):
+    def __call__(self, group, indent=0, preamble=None, hide_uri: bool = False):
+        self.hide_uri = hide_uri
         if preamble:
             print(preamble)
         spaces = self.base_intent * indent
@@ -226,7 +229,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
                         print(self.base_intent * (indent + 2) + self.__attrs__(attr_name, item))
             elif isinstance(item, h5py.Group):
                 print(spaces + self.__group__(key, item))
-                self(item, indent + 1)
+                self(item, indent + 1, hide_uri=hide_uri)
 
     def __dataset__(self, name: str, h5obj: h5py.Dataset) -> str:
         if h5obj.dtype.char == 'S':
@@ -266,11 +269,14 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
     def __attrs__(self, name, h5obj) -> str:
         attr_value = h5obj.attrs.raw[name]
 
-        pred = h5obj.rdf[name].get(RDF_PREDICATE_ATTR_NAME, None)
-        if pred:
-            use_attr_name = f'{name} ({pred})'
-        else:
+        if self.hide_uri:
             use_attr_name = name
+        else:
+            pred = h5obj.rdf[name].get(RDF_PREDICATE_ATTR_NAME, None)
+            if pred:
+                use_attr_name = f'{name} ({pred})'
+            else:
+                use_attr_name = name
 
         if isinstance(attr_value, h5py.Group):
             attr_value = f'grp:{attr_value.name}'
@@ -287,7 +293,9 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                  preamble: str = None,
                  indent: int = 0,
                  chunks: bool = False,
-                 maxshape: bool = False):
+                 maxshape: bool = False,
+                 hide_uri: bool = False):
+        self.hide_uri = hide_uri
         if isinstance(group, h5py.Group):
             h5group = group
         else:
@@ -606,14 +614,15 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 class H5Repr:
     """Class managing the sting/html output of HDF5 content"""
 
-    def __init__(self, str_repr: _HDF5StructureRepr = None, html_repr: _HDF5StructureRepr = None):
+    def __init__(self, str_repr: _HDF5StructureRepr = None, html_repr: _HDF5StructureRepr = None,
+                 **kwargs):
         if str_repr is None:
-            self.str_repr = HDF5StructureStrRepr()
+            self.str_repr = HDF5StructureStrRepr(**kwargs)
         else:
             self.str_repr = str_repr
 
         if html_repr is None:
-            self.html_repr = HDF5StructureHTMLRepr()
+            self.html_repr = HDF5StructureHTMLRepr(**kwargs)
         else:
             self.html_repr = html_repr
 

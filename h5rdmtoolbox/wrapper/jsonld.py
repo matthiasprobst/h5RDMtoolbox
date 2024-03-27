@@ -2,16 +2,16 @@ import h5py
 import json
 import logging
 import numpy as np
-import ontolutils
 import pathlib
 import rdflib
 import warnings
-from ontolutils.classes.thing import resolve_iri
-from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 from typing import Dict, Optional, Union, List, Iterable, Tuple, Any
 
+import ontolutils
 from h5rdmtoolbox.convention import hdf_ontology
+from ontolutils.classes.thing import resolve_iri
+from ontolutils.classes.utils import split_URIRef
 from .core import Dataset, File
 from ..convention.hdf_ontology import HDF5
 
@@ -76,9 +76,10 @@ def is_list_of_dict(data) -> bool:
 def to_hdf(grp,
            *,
            data: Union[Dict, str] = None,
-           source: Union[str, pathlib.Path] = None,
-           predicate=None,
-           context: Dict = None) -> None:
+           source: Union[str, pathlib.Path, ontolutils.Thing] = None,
+           predicate: Optional[str] = None,
+           context: Dict = None,
+           resolve_keys: bool = False) -> None:
     """write json-ld data to group
 
     .. note::
@@ -108,7 +109,7 @@ def to_hdf(grp,
 
     if data is None:
         if isinstance(source, ontolutils.Thing):
-            data = json.loads(source.model_dump_jsonld())
+            data = json.loads(source.model_dump_jsonld(resolve_keys=resolve_keys))
         else:
             with open(source, 'r') as f:
                 data = json.load(f)
@@ -166,7 +167,8 @@ def to_hdf(grp,
     for k, v in data.items():
 
         if k in ('@id', 'id'):
-            grp.attrs.create(name="@id", data=v)
+            if v.startswith('http'):  # blank nodes should not be written to an HDF5 file!
+                grp.attrs.create(name="@id", data=v)
             continue
             # rdf_predicate = None
             # if v.startswith('http'):
@@ -182,7 +184,7 @@ def to_hdf(grp,
 
             # ns_predicate can be something like None, "schema" or "https://schema.org/"
             if ns_predicate is None:
-                rdf_predicate = resolve_iri(k, data_context)#data_context.get(k, None)
+                rdf_predicate = resolve_iri(k, data_context)  # data_context.get(k, None)
             elif ns_predicate.startswith('http'):
                 rdf_predicate = k
             else:
@@ -234,7 +236,6 @@ def to_hdf(grp,
                         def _is_m4i_num_var(_type: str) -> bool:
                             ns, key = split_URIRef(_type)
                             if ns is None:
-                                print(_type, 'is not a m4i:NumericalVariable')
                                 return False
                             return 'm4i' in ns and key == 'NumericalVariable'
 
@@ -242,11 +243,28 @@ def to_hdf(grp,
                             sub_h5obj = grp.create_group(label)
                         else:
                             if _is_m4i_num_var(sub_h5obj_type):
-                                value = entry['value']
+                                # get value with sparql query
+                                g = rdflib.Graph().parse(data={'@context': data_context, **entry},
+                                                         format='json-ld')
+                                q = f"""
+                                PREFIX m4i: <http://w3id.org/nfdi4ing/metadata4ing#>
+                                SELECT ?value
+                                WHERE {{
+                                    ?s m4i:hasNumericalValue ?value
+                                }}
+                                """
+                                entry.pop('@context', None)
+                                qres = g.query(q)
+                                assert len(qres) == 1, f'Expecting one result, got {len(qres)}'
+                                value_key: str = str(list(qres.bindings[0])[0])
+                                value = qres.bindings[0][value_key].value
+                                entry.pop(value_key, None)
+
                                 if isinstance(value, str):
                                     warnings.warn(
-                                        'Found 4i:NumericalVariable with string value. ' \
-                                        'Converting it to float by default. Better check the creation of you JSON-LD data',
+                                        'Found 4i:NumericalVariable with string value. '
+                                        'Converting it to float by default. Better check the creation of you '
+                                        'JSON-LD data',
                                         UserWarning)
                                     value = float(value)
                                 sub_h5obj = grp.create_dataset(label, data=value)
@@ -293,7 +311,9 @@ def serialize(grp,
               local=None,
               recursive: bool = True,
               compact: bool = False,
-              context: Dict = None
+              context: Dict = None,
+              structural: bool = True,
+              resolve_keys: bool = True
               ) -> Dict:
     """using rdflib graph"""
     if isinstance(grp, (str, pathlib.Path)):
@@ -329,33 +349,47 @@ def serialize(grp,
             iri_dict[obj.name] = obj_node
 
         # node = rdflib.URIRef(f'_:{obj.name}')
-        if isinstance(obj, h5py.File):
+        if isinstance(obj, h5py.File) and structural:
             _add_node(g, (obj_node, RDF.type, HDF5.Group))
-            # rootGroupNode = rdflib.URIRef(_get_id(obj, local=local))
-            # _add_node(g, (node, HDF5.rootGroup, rootGroupNode))
-        elif isinstance(obj, h5py.Group):
-            _add_node(g, (obj_node, RDF.type, HDF5.Group))
+            return
+
+        if isinstance(obj, h5py.Group):
+            if structural:
+                _add_node(g, (obj_node, RDF.type, HDF5.Group))
+            group_subject = obj.rdf.subject
+            if isinstance(group_subject, list):
+                for gs in group_subject:
+                    _add_node(g, (obj_node, RDF.type, rdflib.URIRef(gs)))
+            elif group_subject is not None:
+                _add_node(g, (obj_node, RDF.type, rdflib.URIRef(group_subject)))
+
         elif isinstance(obj, h5py.Dataset):
-            _add_node(g, (obj_node, RDF.type, HDF5.Dataset))
+            if structural:
+                _add_node(g, (obj_node, RDF.type, HDF5.Dataset))
+                _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
+                _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
+
+                if obj.dtype.kind == 'S':
+                    _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_STRING')))
+                elif obj.dtype.kind in ('i', 'u', 'f'):
+                    _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_INTEGER')))
+                else:
+                    _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_FLOAT')))
+
             obj_type = obj.rdf.subject
             if obj_type is not None:
                 _add_node(g, (obj_node, RDF.type, rdflib.URIRef(obj_type)))
+
+        if structural:
             _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
-            _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
-            if obj.dtype.kind == 'S':
-                _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_STRING')))
-            elif obj.dtype.kind in ('i', 'u', 'f'):
-                _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_INTEGER')))
-            else:
-                _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_FLOAT')))
-        _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
 
         for ak, av in obj.attrs.items():
             if not ak.isupper() and not ak.startswith('@'):
                 attr_node = rdflib.BNode()
 
-                _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
-                _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
+                if structural:
+                    _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
+                    _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
 
                 if isinstance(av, str):
                     if av.startswith('http'):
@@ -380,36 +414,45 @@ def serialize(grp,
                             attr_literal = rdflib.Literal(str(av))
 
                 # add node for attr value
-                if attr_literal:
+                if attr_literal and structural:
                     _add_node(g, (attr_node, HDF5.value, attr_literal))
 
                 # attr type:
-                _add_node(g, (obj_node, HDF5.attribute, attr_node))
+                if structural:
+                    _add_node(g, (obj_node, HDF5.attribute, attr_node))
 
                 attr_predicate = obj.rdf.predicate.get(ak, None)
+                if attr_predicate is not None:
+                    ns, key = split_URIRef(attr_predicate)
+                    if ak != key and not resolve_keys:
+                        _context[ak] = attr_predicate
+                        attr_predicate_uri = rdflib.URIRef(ak)
+                    else:
+                        attr_predicate_uri = rdflib.URIRef(attr_predicate)
+
                 attr_object = obj.rdf.object.get(ak, None)
                 if attr_predicate is not None and attr_object is not None:
                     # predicate and object given
-                    _add_node(g, (obj_node, rdflib.URIRef(attr_predicate), rdflib.URIRef(attr_object)))
-                elif attr_predicate is None and attr_object is not None:
+                    _add_node(g, (obj_node, attr_predicate_uri, rdflib.URIRef(attr_object)))
+                elif attr_predicate is None and attr_object is not None and structural:
                     # only object given
                     _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
                 elif attr_predicate is not None and attr_object is None:
                     # only predicate given
-                    _add_node(g, (obj_node, rdflib.URIRef(attr_predicate), attr_literal))
+                    _add_node(g, (obj_node, attr_predicate_uri, attr_literal))
 
-        # now check if any of the groups in obj is associated with a predicate
-        if isinstance(obj, h5py.Group):
-            for grp_name, grp in obj.items():
-                if isinstance(grp, h5py.Group):
-                    predicate = grp.rdf.predicate['SELF']
-                    if predicate:
-                        new_node = iri_dict.get(grp.name, None)
-                        if new_node is None:
-                            new_node = rdflib.URIRef(_get_id(grp, local=local))
-                            iri_dict[obj.name] = new_node
-
-                        g.add((obj_node, URIRef(predicate), new_node))
+        # # now check if any of the groups in obj is associated with a predicate
+        # if isinstance(obj, h5py.Group):
+        #     for grp_name, sub_grp in obj.items():
+        #         if isinstance(sub_grp, h5py.Group):
+        #             predicate = sub_grp.rdf.predicate['SELF']
+        #             if predicate:
+        #                 new_node = iri_dict.get(sub_grp.name, None)
+        #                 if new_node is None:
+        #                     new_node = rdflib.URIRef(_get_id(sub_grp, local=local))
+        #                     iri_dict[obj.name] = new_node
+        #
+        #                 g.add((obj_node, URIRef(predicate), new_node))
 
     g = Graph()
 
@@ -430,7 +473,9 @@ def dumpd(grp,
           local=None,
           recursive: bool = True,
           compact: bool = False,
-          context: Dict = None
+          context: Dict = None,
+          structural: bool = True,
+          resolve_keys: bool = False
           ) -> Union[List, Dict]:
     """If context is missing, return will be a List"""
     s = serialize(grp,
@@ -438,7 +483,9 @@ def dumpd(grp,
                   local,
                   recursive=recursive,
                   compact=compact,
-                  context=context)
+                  context=context,
+                  structural=structural,
+                  resolve_keys=resolve_keys)
     return json.loads(s)
 
 
@@ -448,6 +495,8 @@ def dumps(grp,
           recursive: bool = True,
           compact: bool = False,
           context: Optional[Dict] = None,
+          structural: bool = True,
+          resolve_keys: bool = False,
           **kwargs) -> str:
     """Dump a group or a dataset to to string."""
     return json.dumps(dumpd(
@@ -456,7 +505,9 @@ def dumps(grp,
         local=local,
         recursive=recursive,
         compact=compact,
-        context=context),
+        context=context,
+        structural=structural,
+        resolve_keys=resolve_keys),
         **kwargs
     )
 

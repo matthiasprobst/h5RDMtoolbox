@@ -116,10 +116,41 @@ def dumps(src: Union[str, File, pathlib.Path]):
         return h5.dumps()
 
 
-def dump_jsonld(filename: Union[str, pathlib.Path], skipND: int = 1) -> str:
-    """Dump the JSON-LD representation of the file to a file"""
-    from .wrapper.jsonld import dump_file
-    return dump_file(filename, skipND=skipND)
+def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
+                skipND: int = 1,
+                structural: bool = True,
+                semantic: bool = True,
+                resolve_keys: bool = False) -> str:
+    """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
+    represents the semantic content only. To get a pure structural representation, set semantic=False, which
+    will ignore any RDF content. If both are set to True, the JSON-LD will contain both structural and semantic.
+
+    Parameters
+    ----------
+    hdf_filename : str, pathlib.Path
+        the HDF5 file to dump.
+    skipND : int=1
+        Skip writing data of datasets with more then skipND dimensions. Only
+        considered if structural=True.
+    structural : bool=True
+        Include structural information in the JSON-LD output.
+    semantic : bool=True
+        Include semantic information in the JSON-LD output.
+    resolve_keys : bool=False
+        Resolve keys in the JSON-LD output. This is used when semantic=True.
+        If resolve_keys is False and an attribute name in the HDF5 file, which has
+        a predicate is different in its name from the predicate, the attribute name is used.
+        Example: an attribute "name" is associated with "foaf:lastName", then "name" is used
+        and "name": "https://xmlns.com/foaf/0.1/lastName" is added to the context.
+
+    """
+    from .wrapper import jsonld
+    if not structural and not semantic:
+        raise ValueError('At least one of structural or semantic must be True.')
+    if structural and not semantic:
+        return jsonld.dump_file(hdf_filename, skipND=skipND)
+    with File(hdf_filename) as h5:
+        return jsonld.dumps(h5, indent=2, structural=structural, resolve_keys=resolve_keys)
 
 
 def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):
