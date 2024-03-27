@@ -65,7 +65,9 @@ def type2mongo(value: Any) -> Any:
     try:
         if isinstance(value, np.integer):
             return int(value)
-        return float(value)
+        if isinstance(value, np.floating):
+            return float(value)
+        return str(value)
     except Exception as e:
         warnings.warn(f'Could not determine/convert {value}. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')

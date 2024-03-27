@@ -2,4 +2,6 @@
 -r requirements.txt
 pytest>=7.1.2
 pytest-cov
+scikit-image
+scikit-learn
 scipy
