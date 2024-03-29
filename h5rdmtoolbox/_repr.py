@@ -151,8 +151,12 @@ def get_iri_icon_href(iri: typing.Union[str, typing.Dict], tooltiptext=None) -> 
     """get html representation of an IRI with icon. The URL is shown as a tooltip"""
     if isinstance(iri, dict):
         thing = Thing.from_jsonld(data=iri, limit=1)
+        _type = iri.get('@type', None)
         thing.pop_blank_node_id()
-        thing_str = thing.__str__(limit=20)
+        thing_str = thing.__str__(limit=50)
+        if _type:
+            _thing_str = thing.__str__(limit=50).split('(', 1)[1]
+            thing_str = f'{_type}({_thing_str}'
         return f'<div class="tooltip">' \
                f'<img class="size_of_img" src="{IRI_ICON}" alt="IRI_ICON" width="16" height="16" />' \
                f'<span class="tooltiptext">{thing_str}</span></div>'
