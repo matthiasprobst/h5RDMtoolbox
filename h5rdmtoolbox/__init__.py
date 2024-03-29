@@ -47,6 +47,7 @@ from . import warnings, errors
 from .wrapper import jsonld
 from .wrapper.accessory import register_special_dataset
 import json
+from .wrapper.rdf import RDF
 
 name = 'h5rdmtoolbox'
 __this_dir__ = pathlib.Path(__file__).parent
@@ -120,7 +121,8 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
                 skipND: int = 1,
                 structural: bool = True,
                 semantic: bool = True,
-                resolve_keys: bool = False) -> str:
+                resolve_keys: bool = False,
+                **kwargs) -> str:
     """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
     represents the semantic content only. To get a pure structural representation, set semantic=False, which
     will ignore any RDF content. If both are set to True, the JSON-LD will contain both structural and semantic.
@@ -150,7 +152,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     if structural and not semantic:
         return jsonld.dump_file(hdf_filename, skipND=skipND)
     with File(hdf_filename) as h5:
-        return jsonld.dumps(h5, indent=2, structural=structural, resolve_keys=resolve_keys)
+        return jsonld.dumps(h5, indent=2, structural=structural, resolve_keys=resolve_keys, **kwargs)
 
 
 def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):

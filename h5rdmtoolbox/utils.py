@@ -183,9 +183,9 @@ def create_h5tbx_version_grp(root: h5py.Group) -> h5py.Group:
     # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
     version_group.attrs['__h5rdmtoolbox_version__'] = __version__
     # version_group.attrs['name'] = "h5rdmtoolbox"
-    version_group.attrs['codeRepository'] = "https://github.com/matthiasprobst/h5RDMtoolbox"
+    version_group.attrs['code_repository'] = "https://github.com/matthiasprobst/h5RDMtoolbox"
     version_group.attrs[rdf.RDF_PREDICATE_ATTR_NAME] = json.dumps(
-        {'codeRepository': 'https://schema.org/codeRepository',
+        {'code_repository': 'https://schema.org/codeRepository',
          '__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
     )
     version_group.attrs[rdf.RDF_SUBJECT_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'

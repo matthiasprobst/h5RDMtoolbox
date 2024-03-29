@@ -422,6 +422,7 @@ def serialize(grp,
                     _add_node(g, (obj_node, HDF5.attribute, attr_node))
 
                 attr_predicate = obj.rdf.predicate.get(ak, None)
+
                 if attr_predicate is not None:
                     ns, key = split_URIRef(attr_predicate)
                     if ak != key and not resolve_keys:
@@ -431,6 +432,44 @@ def serialize(grp,
                         attr_predicate_uri = rdflib.URIRef(attr_predicate)
 
                 attr_object = obj.rdf.object.get(ak, None)
+
+                if isinstance(attr_object, dict):
+
+                    def _create_obj_node(_node, _pred, _val):
+                        """RDF obj is a thing. create and assign nodes"""
+                        _type = _val.pop('@type', None)
+                        _id = _val.pop('@id', None)
+
+                        # init new node:
+                        _sub_obj_node = rdflib.BNode()
+
+                        _add_node(g, (_sub_obj_node, RDF.type, rdflib.URIRef(resolve_iri(_type, context=attr_context))))
+                        # the new node is a member of the object node
+                        _add_node(g, (_node, _pred, _sub_obj_node))
+
+                        # there might be graph...better not... not covered at the moment...
+                        def _parse_val(_k, _v):
+                            if isinstance(_v, dict):
+                                _create_obj_node(_sub_obj_node, rdflib.URIRef(resolve_iri(_k, context=attr_context)), _v)
+                            else:
+                                _k_pred = resolve_iri(_k, context=attr_context)
+                                if _k_pred:
+                                    _add_node(g, (_sub_obj_node, rdflib.URIRef(_k_pred), rdflib.Literal(_v)))
+
+                        for k, v in _val.items():
+                            if isinstance(v, list):
+                                for __v in v:
+                                    _parse_val(k, __v)
+                            else:
+                                _parse_val(k, v)
+
+                    attr_context = attr_object.pop('@context', None)
+                    _context.update(attr_context)
+
+                    _create_obj_node(obj_node, attr_predicate_uri, attr_object)
+
+                    attr_object = None
+
                 if attr_predicate is not None and attr_object is not None:
                     # predicate and object given
                     _add_node(g, (obj_node, attr_predicate_uri, rdflib.URIRef(attr_object)))
@@ -440,19 +479,6 @@ def serialize(grp,
                 elif attr_predicate is not None and attr_object is None:
                     # only predicate given
                     _add_node(g, (obj_node, attr_predicate_uri, attr_literal))
-
-        # # now check if any of the groups in obj is associated with a predicate
-        # if isinstance(obj, h5py.Group):
-        #     for grp_name, sub_grp in obj.items():
-        #         if isinstance(sub_grp, h5py.Group):
-        #             predicate = sub_grp.rdf.predicate['SELF']
-        #             if predicate:
-        #                 new_node = iri_dict.get(sub_grp.name, None)
-        #                 if new_node is None:
-        #                     new_node = rdflib.URIRef(_get_id(sub_grp, local=local))
-        #                     iri_dict[obj.name] = new_node
-        #
-        #                 g.add((obj_node, URIRef(predicate), new_node))
 
     g = Graph()
 

@@ -1,12 +1,14 @@
 import unittest
-from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
+import ontolutils
+from h5rdmtoolbox import RDF
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper.rdf import RDFError
 from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
+from ontolutils.namespacelib import M4I, OBO
 
 
 class TestRDF(unittest.TestCase):
@@ -14,6 +16,34 @@ class TestRDF(unittest.TestCase):
     def setUp(self) -> None:
         """setup"""
         use(None)
+
+    def test_RDF(self):
+        rdfobj = RDF('0000-0001-8729-0482', 'https://orcid.org/0000-0001-8729-0482')
+        self.assertEqual(rdfobj.value, '0000-0001-8729-0482')
+        self.assertEqual(rdfobj.iri, 'https://orcid.org/0000-0001-8729-0482')
+        with self.assertRaises(RDFError):
+            RDF('0000-0001-8729-0482', '000-0001-8729-0482')
+
+        with h5tbx.File(mode='w') as h5:
+            h5.attrs['orcid', M4I.orcidId] = rdfobj
+            self.assertEqual(h5.rdf.object['orcid'], 'https://orcid.org/0000-0001-8729-0482')
+
+        self.assertEqual(rdfobj.__repr__(), 'RDF(0000-0001-8729-0482, https://orcid.org/0000-0001-8729-0482)')
+
+    def test_rdf_object_thing(self):
+        """A RDF object can be an URI or RDF object or a ontolutils.Thing object.
+        Idea behind it is to assign complex object through a single attribute, like a standard names that
+        are defined in a standard name table and have no distinct IRI themselves
+        """
+
+        with h5tbx.File(mode='w') as h5:
+            from ontolutils import SSNO
+            ds = h5.create_dataset('u', data=4.5)
+            # ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'
+            ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'#RDF(value='x_velocity',
+            ds.rdf.object['standard_name'] = ontolutils.Thing(label='x_velocity')
+            print(ds.rdf.object['standard_name'])
+            h5.dumps()
 
     def test_rdf_error(self):
         with h5tbx.File() as h5:

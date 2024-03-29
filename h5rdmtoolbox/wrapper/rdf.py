@@ -1,6 +1,7 @@
 import abc
 import h5py
 import pydantic
+import rdflib
 from pydantic import HttpUrl
 from typing import Dict, Union
 from typing import List
@@ -13,6 +14,38 @@ RDF_SUBJECT_ATTR_NAME = 'RDF_TYPE'
 class RDFError(Exception):
     """Generic RDF error"""
     pass
+
+
+class RDF:
+    """RDF assignment class to be used when attribute is written to the HDF5 file.
+
+    Example
+    -------
+    >>> import h5rdmtoolbox as h5tbx
+    >>> from ontolutils import M4I
+    >>> with h5tbx.File('test.h5', 'w') as h5:
+    ...     grp = h5.create_group('person')
+    ...     grp.attrs['orcid', M4I.orcidId] = h5tbx.RDF('0000-0001-8729-0482', 'https://orcid.org/0000-0001-8729-0482')
+
+    Raises
+    ------
+    RDFError
+        If the IRI is not a valid URL
+    """
+
+    def __init__(self, value, iri: Union[str, HttpUrl, rdflib.URIRef]):
+        self.value = value
+        try:
+            self.iri = str(HttpUrl(iri))
+        except pydantic.ValidationError as e:
+            raise RDFError(f'Invalid IRI: "{iri}". '
+                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.value}, {self.iri})'
+
+    def __str__(self):
+        return f'{self.__class__.__name__}({self.value}, {self.iri})'
 
 
 def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> None:
@@ -46,14 +79,22 @@ def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> No
 
 def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
     """Set the class of an attribute"""
-    try:
-        HttpUrl(data)
-    except pydantic.ValidationError as e:
-        raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
-                       f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+
     iri_data_data = attr.get(RDF_OBJECT_ATTR_NAME, None)
+
     if iri_data_data is None:
         iri_data_data = {}
+
+    from ontolutils import Thing
+    if isinstance(data, Thing):
+        data = data.get_jsonld_dict(assign_bnode=False)
+    else:
+        try:
+            data = str(HttpUrl(data))
+        except pydantic.ValidationError as e:
+            raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
+                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+
     iri_data_data.update({attr_name: data})
     attr[RDF_OBJECT_ATTR_NAME] = iri_data_data
 
@@ -169,15 +210,12 @@ class _RDFPO(abc.ABC):
         return attrs.get(item, default)
 
     def __getitem__(self, item) -> Union[str, None]:
-        iri_attr_dict = self._attr.get(self.IRI_ATTR_NAME, None)
-        if iri_attr_dict is None:
-            return None
-        return iri_attr_dict.get(item, None)
+        return self.get(item, default=None)
 
     def __setitem__(self, key, value: str):
         if key not in self._attr:
             raise KeyError(f'No attribute "{key}" found. Cannot assign an IRI to a non-existing attribute.')
-        self.__setiri__(key, str(value))
+        self.__setiri__(key, value)
 
     def keys(self):
         """Return all attribute names assigned to the IRIs"""

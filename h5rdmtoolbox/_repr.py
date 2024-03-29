@@ -11,10 +11,8 @@ from abc import abstractmethod
 from numpy import ndarray
 from time import perf_counter_ns
 
-from ontolutils import M4I
-from . import get_config
-from . import identifiers
-from . import protected_attributes
+from ontolutils import M4I, Thing
+from . import get_config, identifiers, protected_attributes
 from .wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
@@ -149,10 +147,18 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
     return string, False
 
 
-def get_iri_icon_href(iri: str, tooltiptext=None) -> str:
+def get_iri_icon_href(iri: typing.Union[str, typing.Dict], tooltiptext=None) -> str:
     """get html representation of an IRI with icon. The URL is shown as a tooltip"""
+    if isinstance(iri, dict):
+        thing = Thing.from_jsonld(data=iri, limit=1)
+        thing.pop_blank_node_id()
+        thing_str = thing.__str__(limit=20)
+        return f'<div class="tooltip">' \
+               f'<img class="size_of_img" src="{IRI_ICON}" alt="IRI_ICON" width="16" height="16" />' \
+               f'<span class="tooltiptext">{thing_str}</span></div>'
+
     return f'<a href="{iri}" target="_blank" class="tooltip"> ' \
-           f'<img class="size_of_img" src="{IRI_ICON}" alt="Image 1" width="16" height="16" />' \
+           f'<img class="size_of_img" src="{IRI_ICON}" alt="IRI_ICON" width="16" height="16" />' \
            f' <span class="tooltiptext">{tooltiptext or iri}</span></a>'
 
 
