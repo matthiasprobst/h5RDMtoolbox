@@ -1,25 +1,26 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
-import h5py
 import json
 import logging
-import numpy as np
 import os
 import pathlib
-# noinspection PyUnresolvedReferences
-import pint
 import shutil
 import warnings
-import xarray as xr
 from collections.abc import Iterable
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import List, Dict, Union, Tuple, Protocol, Optional
+
+import h5py
+import numpy as np
+# noinspection PyUnresolvedReferences
+import pint
+import xarray as xr
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
-from pathlib import Path
-from typing import List, Dict, Union, Tuple, Callable, Optional
-
 from h5rdmtoolbox.database import ObjDB
+
 from . import rdf
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
@@ -40,6 +41,11 @@ H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
             'fs_strategy', 'fs_persist', 'fs_threshold', 'fs_page_size',
             'page_buf_size', 'min_meta_keep', 'min_raw_keep', 'locking',
             'alignment_threshold', 'alignment_interval', 'meta_block_size')
+
+
+class StandardAttributeProtocol:
+
+    def get(self, parent) -> str: ...
 
 
 def convert_strings_to_datetimes(array):
@@ -175,7 +181,16 @@ def process_attributes(cls,
     return attrs, skwargs, kwargs
 
 
-class Core:
+class APC(Protocol):
+    """Protocol class for additional classes"""
+
+    @property
+    def attrs(self) -> h5py.AttributeManager: ...
+
+    def __delitem__(self, key): ...
+
+
+class Core(APC):
     """Class inherited by File, Dataset and Group containing common methods."""
 
     def __delattr__(self, item):
@@ -190,12 +205,6 @@ class Core:
             del self[item]
             return
         super().__delattr__(item)
-
-    @property
-    def hdf_filename(self) -> pathlib.Path:
-        """The filename of the file, even if the HDF5 file is closed. Note, that
-        is not checked, if the file still exists!"""
-        return self._hdf_filename
 
     @property
     def convention(self):
@@ -219,29 +228,31 @@ class Core:
         return rdf.RDFManager(self.attrs)
 
 
-class SpecialAttributeWriter:
+class SpecialAttributeWriter(APC):
     """Accessor class, which provides methods to write special attributes to a dataset or group."""
 
-    def write_uuid(self, uuid: str = None, overwrite: bool = False, **kwargs) -> str:
+    def write_uuid(self, uuid: Optional[str] = None,
+                   name: Optional[str] = None,
+                   overwrite: bool = False) -> str:
         """Write a uuid to the attribute of the object.
 
         Parameters
         ----------
         uuid : str=None
             The uuid to write. If None, a new uuid is generated.
-        name : str='uuid'
-            The name of the attribute. Default is "uuid".
+        name: str=None
+            Name of the attribute. If None, the default name is taken from the configuration.
+        overwrite: bool=False
+            If the attribute already exists, it is not overwritten if overwrite is False.
 
         Returns
         -------
         str
             The uuid as string.
         """
-        if 'name' in kwargs:
-            warnings.warn('Parameter "name" is deprecated. The attribute '
-                          'name for uuid is defined globally via the config',
-                          DeprecationWarning)
-        name = kwargs.get('name', get_config('uuid_name'))
+        if name is None:
+            name = get_config('uuid_name')
+
         if name in self.attrs and not overwrite:
             raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
                              '"overwrite" is set to False')
@@ -298,6 +309,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     * basename - returns the basename of the group
     """
     hdfrepr = H5Repr()
+
+    @property
+    def hdf_filename(self) -> pathlib.Path:
+        """The filename of the file, even if the HDF5 file is closed. Note, that
+        is not checked, if the file still exists!"""
+        return self._hdf_filename
 
     @property
     def attrs(self):
@@ -387,10 +404,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if isinstance(ret, h5py.Group):
             return self._h5grp(ret.id)
 
-    def __getattr__(self, item):
-        standard_attributes = self.standard_attributes
+    def __getattr__(self, item: str):
+        standard_attributes: Dict = self.standard_attributes
         if standard_attributes:  # are there standard attributes registered?
-            standard_attribute = standard_attributes.get(item, None)
+            standard_attribute: Optional[StandardAttributeProtocol] = standard_attributes.get(item, None)
             if standard_attribute:  # is there an attribute requested with name=item available?
                 return standard_attribute.get(self)
 
@@ -788,19 +805,19 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
-            try:
-                for k, v in attrs.items():
+            for k, v in attrs.items():
+                try:
                     # call __setitem__ because then we can pass attrs which is needed by the potential validators of
                     # standard attributes
                     if isinstance(v, h5py.Dataset):
                         ds.attrs.__setitem__(k, v.name, attrs)
                     else:
                         ds.attrs.__setitem__(k, v, attrs)
-            except convention.standard_attributes.errors.StandardAttributeError as e:
-                logger.debug(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
-                             f'{self.convention.name}. Orig err: "{e}"')
-                del self[name]
-                raise e
+                except convention.standard_attributes.errors.StandardAttributeError as e:
+                    logger.debug(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
+                                 f'{self.convention.name}. Orig err: "{e}"')
+                    del self[name]
+                    raise e
 
         # what is this for? uncommented it in version v1.0.1
         # if isinstance(data, np.ndarray):
@@ -851,7 +868,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
 
     def create_datasets_from_csv(self,
-                                 csv_filenames: Union[str, pathlib.Path],
+                                 csv_filenames: Union[str, pathlib.Path, List[str], List[pathlib.Path]],
                                  dimension: Union[int, str] = 0,
                                  shape=None,
                                  overwrite=False,
@@ -991,7 +1008,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                                 chunks=chunks)
 
     def create_dataset_from_image(self,
-                                  imgdata: Union[Callable, np.ndarray, List[np.ndarray]],
+                                  img_data: Union[Iterable, np.ndarray, List[np.ndarray]],
                                   name,
                                   chunks=None,
                                   dtype=None,
@@ -1003,7 +1020,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         Parameters
         ----------
-        imgdata : np.ndarray or list of np.ndarray
+        img_data : np.ndarray or list of np.ndarray
             Image filename or list of image file names. See also axis in case of multiple files
         name : str
             Name of create dataset
@@ -1031,38 +1048,27 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if axis not in (0, -1):
             raise ValueError(f'Parameter for parameter axis can only be 0 or 1 but not {axis}')
 
-        is_list_tuple_or_numpy = isinstance(imgdata, (list, tuple, np.ndarray))
-        if not is_list_tuple_or_numpy:
-            if not isinstance(imgdata, Iterable):
-                raise ValueError('imgdata must be iterable')
-            # check if imgdata has method __len__():
-            if not hasattr(imgdata, '__len__'):
-                raise ValueError('imgdata must have method __len__()')
-            # get first element of imgdata:
-            first_image = next(imgdata)
+        iterable: bool = isinstance(img_data, Iterable)
+        if iterable:
+            # check if img_data has method __len__():
+            if not hasattr(img_data, '__len__'):
+                raise ValueError('img_data must have method __len__()')
+            n = len(img_data)
+
+            img_data = iter(img_data)
+
+            # get first element of img_data:
+            first_image = next(img_data)
             single_img_shape = first_image.shape
             if axis == 0:
-                shape = (len(imgdata), *single_img_shape)
+                shape = (n, *single_img_shape)
                 chunks = (1, *single_img_shape)
             else:
-                shape = (*single_img_shape, len(imgdata))
+                shape = (*single_img_shape, n)
                 chunks = (*single_img_shape, 1)
         else:
-            is_np_ndarray = isinstance(imgdata, np.ndarray)
-            if is_np_ndarray:
-                shape = imgdata.shape
-            else:
-                single_img_shape = imgdata[0].shape
-                if not all([img.shape == single_img_shape for img in imgdata]):
-                    raise ValueError('All images must have the same shape to fit into the same dataset!')
-                if axis == 0:
-                    shape = (len(imgdata), *single_img_shape)
-                    if chunks is None:
-                        chunks = (1, *single_img_shape)
-                else:
-                    shape = (*single_img_shape, len(imgdata))
-                    if chunks is None:
-                        chunks = (*single_img_shape, 1)
+            if isinstance(img_data, np.ndarray):
+                shape = img_data.shape
 
         ds = self.create_dataset(name=name,
                                  shape=shape,
@@ -1071,59 +1077,20 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                                  chunks=chunks,
                                  dtype=dtype,
                                  **kwargs)
-        if not is_list_tuple_or_numpy:
-            if axis == 0:
-                ds[0, ...] = first_image
-            else:
-                ds[..., 0] = first_image
-            for i, img in enumerate(imgdata):
-                if axis == 0:
-                    ds[i, ...] = img
-                else:
-                    ds[..., i] = img
+        if isinstance(img_data, np.ndarray):
+            ds[()] = img_data
             return ds
 
-        if is_np_ndarray:
-            ds[:] = imgdata
+        if axis == 0:
+            ds[0, ...] = first_image
         else:
-            ds[:] = np.stack(imgdata, axis=axis)
+            ds[..., 0] = first_image
+        for i in range(1, n):
+            if axis == 0:
+                ds[i, ...] = next(img_data)
+            else:
+                ds[..., i] = next(img_data)
         return ds
-
-    # unused, but leave it for a while:
-    # def create_dataset_from_xarray_dataarray(self,
-    #                                          dataarr: xr.DataArray,
-    #                                          name: str = None,
-    #                                          overwrite: bool = False,
-    #                                          overwrite_coords: bool = False) -> None:
-    #     """create hdf dataset from xarray DataArray. All attributes are written to the
-    #     hdf dataset. If coordinates are present, they are written as dimension scales.
-    #     If only dimensions are present, the dim names are written as attributes using
-    #     `DIMS` as key."""
-    #     ds_coords = {}
-    #     attach_scales = [None] * dataarr.ndim
-    #     for idim, dim in enumerate(dataarr.dims):
-    #         if dim not in self or overwrite_coords:
-    #             ds = self.create_dataset(dim,
-    #                                      data=dataarr.coords[dim].values,
-    #                                      attrs=dataarr.coords[dim].attrs,
-    #                                      overwrite=overwrite_coords)
-    #             ds.make_scale()
-    #             ds_coords[dim] = ds
-    #         if dim in self:
-    #             attach_scales[idim] = dim
-    #     if name is None:
-    #         name = dataarr.name
-    #     if len(ds_coords) == 0:
-    #         dim_attr = {'DIMS': dataarr.dims}
-    #     else:
-    #         dim_attr = {}
-    #     dataarr.attrs.update(dim_attr)
-    #     ds = self.create_dataset(name,
-    #                              shape=dataarr.shape,
-    #                              attrs=dataarr.attrs,
-    #                              overwrite=overwrite,
-    #                              attach_scales=attach_scales)
-    #     ds[()] = dataarr.values
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
@@ -1379,6 +1346,12 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     @with_phil
     def __hash__(self):
         return hash(self.id)
+
+    @property
+    def hdf_filename(self) -> pathlib.Path:
+        """The filename of the file, even if the HDF5 file is closed. Note, that
+        is not checked, if the file still exists!"""
+        return self._hdf_filename
 
     @property
     def attrs(self):
