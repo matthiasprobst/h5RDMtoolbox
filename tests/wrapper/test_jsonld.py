@@ -1,15 +1,15 @@
 import json
-import ontolutils
 import pathlib
-import rdflib
 import unittest
-from ontolutils import M4I
-from ontolutils import namespaces, urirefs, Thing
 
 import h5rdmtoolbox as h5tbx
+import ontolutils
+import rdflib
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import jsonld
 from h5rdmtoolbox.wrapper import rdf
+from ontolutils import M4I
+from ontolutils import namespaces, urirefs, Thing
 
 logger = h5tbx.logger
 
@@ -138,8 +138,6 @@ class TestCore(unittest.TestCase):
                                                "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
                                       resolve_keys=True)
 
-
-
         pprint(out_dict)
         found_m4iNumericalVariable = False
         for g in out_dict['@graph']:
@@ -198,6 +196,19 @@ class TestCore(unittest.TestCase):
         # cleanup:
         pathlib.Path('graph.json').unlink(missing_ok=True)
         h5.hdf_filename.unlink(missing_ok=True)
+
+    def test_download_context(self):
+        from h5rdmtoolbox.utils import download_context
+        from h5rdmtoolbox import UserDir
+        url = "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"
+        cache_dir = UserDir['cache']
+        UserDir.clear_cache(delta_days=0)
+        self.assertEqual(len(list(cache_dir.glob('*'))), 0)
+        ctx = download_context(url)
+        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
+        self.assertEqual(len(list(cache_dir.glob('*'))), 1)
+        ctx = download_context(url)
+        self.assertEqual(ctx.vocab, "http://w3id.org/nfdi4ing/metadata4ing#")
 
     def test_to_hdf_with_graph2(self):
         test_data = """{

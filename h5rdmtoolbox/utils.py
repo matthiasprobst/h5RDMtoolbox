@@ -17,7 +17,7 @@ import pint
 import requests
 from h5py import File
 from pydantic import HttpUrl, validate_call
-from rdflib.plugins.shared.jsonld.context import Context, CONTEXT
+from rdflib.plugins.shared.jsonld.context import Context
 
 from . import _user, get_config, get_ureg
 from ._version import __version__
@@ -532,6 +532,12 @@ def download_context(url: HttpUrl, force_download: bool = False) -> Context:
     _fname = _url.rsplit('/', 1)[-1]
     context_file = _user.UserDir['cache'] / _fname
     if not context_file.exists() or force_download:
-        return Context(_url)
-    with open(context_file, 'r') as f:
-        return Context(json.load(f)[CONTEXT])
+        logger.debug(f'Downloading context file from {_url} to {context_file}')
+        try:
+            with open(context_file, 'wb') as f:
+                f.write(requests.get(_url).content)
+        except requests.RequestException:
+            logger.error(f'Failed to download context file from {_url}. Will pass url to rdflib.Context class '
+                         'and let it handle the error.')
+            return Context(url)
+    return Context(str(context_file))

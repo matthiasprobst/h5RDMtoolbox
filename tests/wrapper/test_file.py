@@ -1,14 +1,15 @@
-import h5py
-import numpy as np
+"""test_file.py"""
 import pathlib
 import time
 import unittest
 import uuid
-import yaml
 from datetime import datetime
 from pathlib import Path
 
+import h5py
 import h5rdmtoolbox as h5tbx
+import numpy as np
+import yaml
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
@@ -126,7 +127,7 @@ class TestFile(unittest.TestCase):
             h5.write_iso_timestamp(name='now', dt=dtnow)
             self.assertEqual(h5.attrs['now'], dtnow_iso)
 
-    def test_attrs(self):
+    def test_attrs1(self):
         with File(mode='w') as h5:
             h5.create_dataset('ds', shape=(), attrs={'mean': 1.2})
 
@@ -147,7 +148,8 @@ class TestFile(unittest.TestCase):
                                      attrs={
                                          'long_name': 'a long name',
                                          'a1': 1, 'a2': 'str', 'a3': {'a': 2}
-                                     })
+                                     },
+                                     overwrite=True)
             self.assertEqual(dset.attrs.get('a1'), 1)
             self.assertEqual(dset.attrs.get('a2'), 'str')
 
@@ -156,6 +158,61 @@ class TestFile(unittest.TestCase):
 
             dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}}
             self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2, 'subdict': {'subkey': 99}})
+
+    def test_attrs2(self):
+        """test attrs manager"""
+        with File(mode='w') as h5:
+            h5tbx.set_config(natural_naming=False)
+
+            with self.assertRaises(AttributeError):
+                self.assertEqual(h5.attrs.mean, 1.2)
+
+            h5tbx.set_config(natural_naming=True)
+
+            h5.attrs.title = 'title of file'
+
+            self.assertEqual(h5.attrs['title'], 'title of file')
+            #
+            # h5.attrs['gr'] = h5['/']
+            # self.assertEqual(h5.attrs['gr'].name, '/')
+
+            # h5.attrs.gr2 = h5['/']
+            # self.assertEqual(h5.attrs['gr2'].name, '/')
+
+            dset = h5.create_dataset('ds', data=1,
+                                     attrs={'a1': 1, 'a2': 'str',
+                                            'a3': {'a': 2}})
+            self.assertEqual(dset.attrs.get('a1'), 1)
+            self.assertEqual(dset.attrs.get('a2'), 'str')
+
+            h5.attrs['dsref'] = dset
+            self.assertEqual(h5.attrs.raw['dsref'], dset.name)
+            self.assertEqual(h5.attrs['dsref'], dset)
+
+            h5.attrs['dsref2'] = dset.name
+            self.assertEqual(h5.attrs.raw['dsref'], dset.name)
+            self.assertEqual(h5.attrs['dsref2'], dset)
+
+            h5.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
+            self.assertDictEqual(h5.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
+
+            dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
+            self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
+
+    def test_hdf_filename(self):
+        with File() as h5:
+            self.assertIsInstance(h5.hdf_filename, pathlib.Path)
+            self.assertTrue(h5.hdf_filename.exists())
+            self.assertIsInstance(h5.hdf_filename, pathlib.Path)
+
+            h5.create_group('grp')
+            h5.create_dataset('ds', shape=(2, 3))
+
+            self.assertEqual(h5.grp.hdf_filename, h5.hdf_filename)
+            self.assertEqual(h5.ds.hdf_filename, h5.hdf_filename)
+
+            self.assertEqual(h5.grp.hdf_filename, h5['grp'].hdf_filename)
+            self.assertEqual(h5.ds.hdf_filename, h5['ds'].hdf_filename)
 
     def test_open(self):
         with File(mode='w') as h5:
@@ -237,45 +294,6 @@ class TestFile(unittest.TestCase):
 
         with File() as h5:
             h5.create_dataset_from_xarray_dataset(ds)
-
-    def test_attrs(self):
-        with File(mode='w') as h5:
-            h5tbx.set_config(natural_naming=False)
-
-            with self.assertRaises(AttributeError):
-                self.assertEqual(h5.attrs.mean, 1.2)
-
-            h5tbx.set_config(natural_naming=True)
-
-            h5.attrs.title = 'title of file'
-
-            self.assertEqual(h5.attrs['title'], 'title of file')
-            #
-            # h5.attrs['gr'] = h5['/']
-            # self.assertEqual(h5.attrs['gr'].name, '/')
-
-            # h5.attrs.gr2 = h5['/']
-            # self.assertEqual(h5.attrs['gr2'].name, '/')
-
-            dset = h5.create_dataset('ds', data=1,
-                                     attrs={'a1': 1, 'a2': 'str',
-                                            'a3': {'a': 2}})
-            self.assertEqual(dset.attrs.get('a1'), 1)
-            self.assertEqual(dset.attrs.get('a2'), 'str')
-
-            h5.attrs['dsref'] = dset
-            self.assertEqual(h5.attrs.raw['dsref'], dset.name)
-            self.assertEqual(h5.attrs['dsref'], dset)
-
-            h5.attrs['dsref2'] = dset.name
-            self.assertEqual(h5.attrs.raw['dsref'], dset.name)
-            self.assertEqual(h5.attrs['dsref2'], dset)
-
-            h5.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
-            self.assertDictEqual(h5.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
-
-            dset.attrs['a dict'] = {'key1': 'value1', 'key2': 1239.2}
-            self.assertDictEqual(dset.attrs['a dict'], {'key1': 'value1', 'key2': 1239.2})
 
     def test_data_scale_and_offset(self):
         with h5tbx.use('h5tbx') as cv5:
@@ -372,4 +390,3 @@ class TestFile(unittest.TestCase):
             x = h5['x'][:]
             ix = h5['ix'][:]
             s = h5['signal'][:, :]
-

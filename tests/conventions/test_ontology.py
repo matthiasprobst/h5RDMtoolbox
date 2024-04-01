@@ -5,7 +5,7 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 import rdflib
-from h5rdmtoolbox.convention import hdf_ontology
+from h5rdmtoolbox.convention.ontology import HDF5, Attribute, Dataset, Group, File
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -28,86 +28,86 @@ class TestOntology(unittest.TestCase):
         h5tbx.use(None)
 
     def test_Attribute(self):
-        attr = hdf_ontology.Attribute(name='standard_name',
+        attr = Attribute(name='standard_name',
                                       value='x_velocity')
         print(attr.model_dump_jsonld())
 
     def test_Dataset(self):
-        ds = hdf_ontology.Dataset(
+        ds = Dataset(
             name='/grp1/grp2/ds1',
             attribute=[
-                hdf_ontology.Attribute(name='standard_name',
+                Attribute(name='standard_name',
                                        value='x_velocity')],
             size=100)
         print(ds.model_dump_jsonld())
 
     def test_Group(self):
-        grp = hdf_ontology.Group(
+        grp = Group(
             name='/grp1/grp2',
             attribute=[
-                hdf_ontology.Attribute(name='standard_name',
+                Attribute(name='standard_name',
                                        value='x_velocity')],
             member=[
-                hdf_ontology.Dataset(
+                Dataset(
                     name='/grp1/grp2/ds1',
                     attribute=[
-                        hdf_ontology.Attribute(name='standard_name',
+                        Attribute(name='standard_name',
                                                value='x_velocity')],
                     size=100),
-                hdf_ontology.Group(
+                Group(
                     name='/grp1/grp2/grp3',
                     attribute=[
-                        hdf_ontology.Attribute(name='standard_name',
+                        Attribute(name='standard_name',
                                                value='x_velocity')],
                     member=[
-                        hdf_ontology.Dataset(
+                        Dataset(
                             name='/grp1/grp2/grp3/ds2',
                             attribute=[
-                                hdf_ontology.Attribute(name='standard_name',
+                                Attribute(name='standard_name',
                                                        value='x_velocity')],
                             size=100)])])
         print(grp.model_dump_jsonld())
 
     def test_RootGroup(self):
-        grp = hdf_ontology.Group(
+        grp = Group(
             name='/',
             attribute=[
-                hdf_ontology.Attribute(name='standard_name',
+                Attribute(name='standard_name',
                                        value='x_velocity')],
             member=[
-                hdf_ontology.Dataset(
+                Dataset(
                     name='/ds1',
                     attribute=[
-                        hdf_ontology.Attribute(name='standard_name',
+                        Attribute(name='standard_name',
                                                value='x_velocity')],
                     size=100),
-                hdf_ontology.Group(
+                Group(
                     name='/grp1',
                     attribute=[
-                        hdf_ontology.Attribute(name='standard_name',
+                        Attribute(name='standard_name',
                                                value='x_velocity')],
                     member=[
-                        hdf_ontology.Dataset(
+                        Dataset(
                             name='/grp1/ds2',
                             attribute=[
-                                hdf_ontology.Attribute(name='standard_name',
+                                Attribute(name='standard_name',
                                                        value='x_velocity')],
                             size=100)])])
         print(grp.model_dump_jsonld())
 
     def test_File(self):
-        rootGroup = hdf_ontology.Group(
+        rootGroup = Group(
             name='/grp1'
         )
 
-        grp = hdf_ontology.Group(
+        grp = Group(
             name='/',
             attribute=[
-                hdf_ontology.Attribute(name='version',
+                Attribute(name='version',
                                        value='1.0.0')]
         )
 
-        file = hdf_ontology.File(
+        file = File(
             rootGroup=rootGroup,
             member=[
                 grp

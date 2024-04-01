@@ -118,15 +118,6 @@ class TestCore(unittest.TestCase):
 
             self.assertEqual(dset.rootparent, h5)
 
-    # def test_basename(self):
-    #     with h5tbx.File() as h5:
-    #         h5.create_dataset('ds', data=np.arange(10))
-    #         self.assertEqual(h5['ds'].basename, 'ds')
-    #         h5.create_dataset('a/b/ds', data=np.arange(10))
-    #         self.assertEqual(h5['a/b/ds'].basename, 'ds')
-    #         self.assertEqual(h5['a'].basename, 'a')
-    #         self.assertEqual(h5['a/b'].basename, 'b')
-
     def test_write_iso_timestamp(self):
         with h5tbx.File() as h5:
             now = datetime.now()
@@ -373,13 +364,18 @@ class TestCore(unittest.TestCase):
 
         # Iterable class:
         class ImgReader:
+            """DummyReader"""
+
             def __init__(self, imgdir):
                 self._imgdir = imgdir
                 self._index = 0
                 self._size = 5
-
-            def read_img(self):
-                return np.random.random((20, 10))
+                self._dummy_array = np.ones(shape=(5, 20, 10))
+                self._dummy_array[0, ...] = 10
+                self._dummy_array[1, ...] = 20
+                self._dummy_array[2, ...] = 30
+                self._dummy_array[3, ...] = 40
+                self._dummy_array[4, ...] = 50
 
             def __iter__(self):
                 return self
@@ -389,8 +385,9 @@ class TestCore(unittest.TestCase):
 
             def __next__(self):
                 if self._index < self._size:
+                    arr = self._dummy_array[self._index]
                     self._index += 1
-                    return self.read_img()
+                    return arr
                 raise StopIteration
 
         imgreader = ImgReader('testdir')
@@ -398,18 +395,27 @@ class TestCore(unittest.TestCase):
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0)
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
+            for i in range(5):
+                np.testing.assert_equal(ds.values[i, ...],
+                                        np.ones(shape=(20, 10)) * (i + 1) * 10)
             # reset imgreader
             imgreader._index = 0
             ds = h5.create_dataset_from_image(imgreader, 'testimg2', axis=-1)
             self.assertEqual(ds.shape, (20, 10, 5))
             self.assertEqual(ds.chunks, (20, 10, 1))
+            for i in range(5):
+                np.testing.assert_equal(ds.values[..., i],
+                                        np.ones(shape=(20, 10)) * (i + 1) * 10)
 
         # write more tests for create_dataset_from_image:
         with h5tbx.File() as h5:
-            ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
+            arr_list = [np.random.random((20, 10)).astype('float32')] * 5
+            ds = h5.create_dataset_from_image(arr_list,
                                               'testimg', axis=0)
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
+            for i in range(5):
+                np.testing.assert_array_almost_equal(ds.values[i, ...], arr_list[i], decimal=5)
 
         imgreader._index = 0
         h5tbx.use('h5py')
@@ -428,9 +434,13 @@ class TestCore(unittest.TestCase):
         # write more tests for create_dataset_from_image:
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
-                                              'testimg', axis=0, attrs=dict(units='', long_name='test'))
+                                              'testimg', axis=0,
+                                              attrs=dict(units='', long_name='test'))
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
+            self.assertEqual(ds.attrs['units'], '')
+            self.assertEqual(ds.attrs['long_name'], 'test')
+            self.assertEqual(ds.name, '/testimg')
 
     def test_properties(self):
         with h5tbx.File() as h5:

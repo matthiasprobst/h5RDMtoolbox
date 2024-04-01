@@ -14,7 +14,7 @@ from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 
 from .core import Dataset, File
-from ..convention.hdf_ontology import HDF5
+from ..convention.ontology import HDF5
 
 logger = logging.getLogger('h5rdmtoolbox')
 

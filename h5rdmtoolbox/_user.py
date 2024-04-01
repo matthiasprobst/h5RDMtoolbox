@@ -1,3 +1,6 @@
+import datetime
+import time
+
 import appdirs
 import importlib_resources
 import pathlib
@@ -9,7 +12,7 @@ _filecounter = count()
 _dircounter = count()
 
 _user_root_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
-
+_now = time.time()
 
 class DirManger:
     """Directory Manager class"""
@@ -35,6 +38,7 @@ class DirManger:
                           'layouts': _user_root_dir / 'layouts',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'cache': _user_root_dir / 'cache'}
+        self.clear_cache(6)
 
     def __getitem__(self, item):
         return self._get_dir(item)
@@ -85,9 +89,17 @@ class DirManger:
 
         return self.user_dirs[name]
 
-    def clear_cache(self):
-        """Clear the cache directory."""
+    def clear_cache(self, delta_days: int):
+        """Clear the cache directory. The delta_days arguments will be used
+        to delete files older than delta_days days. This is only applied to files"""
         if self.user_dirs['cache'].exists():
+            for f in self.user_dirs['cache'].iterdir():
+                # get the file creation time
+                fct = f.stat().st_ctime
+                dt = _now - fct
+                if dt > delta_days * 86400:
+                    f.unlink()
+
             shutil.rmtree(self.user_dirs['cache'])
 
     def reset(self):
