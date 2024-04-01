@@ -18,7 +18,7 @@ class TestUser(unittest.TestCase):
         self.assertTrue('root' in h5tbx.UserDir)
 
         cache_dir = h5tbx.UserDir['cache']
-        h5tbx.UserDir.clear_cache()
+        h5tbx.UserDir.clear_cache(delta_days=0)
         self.assertFalse(cache_dir.exists())
 
         self.assertTrue(h5tbx.UserDir['cache'].exists())

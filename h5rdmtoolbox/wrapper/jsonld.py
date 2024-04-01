@@ -9,9 +9,10 @@ import numpy as np
 import ontolutils
 import rdflib
 from h5rdmtoolbox.convention import hdf_ontology
-from ontolutils.classes.thing import resolve_iri
+# from ontolutils.classes.thing import resolve_iri
 from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
+from rdflib.plugins.shared.jsonld.context import Context
 
 from .core import Dataset, File
 from ..convention.ontology import HDF5
@@ -62,6 +63,18 @@ CONTEXT_PREFIXES = {
 
 CONTEXT_PREFIXES_INV = {v: k for k, v in CONTEXT_PREFIXES.items()}
 
+
+def resolve_iri(key_or_iri: str, context: Context) -> str:
+    """Resolve a key or IRI to a full IRI using the context."""
+    if key_or_iri.startswith('http'):
+        return str(key_or_iri)
+    if ':' in key_or_iri:
+        return context.resolve(key_or_iri)
+    try:
+        return context.terms.get(key_or_iri).id
+    except AttributeError:
+        if key_or_iri == 'label':
+            return 'http://www.w3.org/2000/01/rdf-schema#label'
 
 def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
     _entries = entries.copy()
@@ -291,18 +304,9 @@ def to_hdf(grp,
     if context is not None:
         data_context.update(context)
     data_context['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#'
-    data_context['schema'] = 'https://schema.org/'
+    # data_context['schema'] = 'https://schema.org/'
 
-    at_import = data_context.get("@import", None)
-    if at_import is not None:
-        from ..utils import download_context
-        if isinstance(at_import, str):
-            at_import = [at_import]
-        for c in at_import:
-            for k, v in download_context(c)._context_cache.items():
-                data_context.update(v['@context'])
-            # with open(context_filename, 'r') as f:
-            #     data_context.update(json.load(f)['@context'])
+    ctx = Context(source=data_context)
 
     if '@graph' in data:
         for graph_entry in data.pop('@graph'):
@@ -333,13 +337,8 @@ def to_hdf(grp,
             if v.startswith('http'):  # blank nodes should not be written to an HDF5 file!
                 grp.attrs.create(name="@id", data=v)
             continue
-            # rdf_predicate = None
-            # if v.startswith('http'):
-            #     value_predicate = k
-            # else:
-            #     continue
         elif k == '@type':
-            grp.rdf.subject = resolve_iri(v, data_context)
+            grp.rdf.subject = resolve_iri(v, ctx)
             continue
         else:
             # spit predicate:
@@ -347,13 +346,16 @@ def to_hdf(grp,
 
             # ns_predicate can be something like None, "schema" or "https://schema.org/"
             if ns_predicate is None:
-                rdf_predicate = resolve_iri(k, data_context)  # data_context.get(k, None)
+                _iri = ctx.expand(k)
+                if _iri and _iri.startswith('http'):
+                    rdf_predicate = _iri
+                # rdf_predicate = resolve_iri(k, data_context)  # data_context.get(k, None)
             elif ns_predicate.startswith('http'):
                 rdf_predicate = k
             else:
-                _ns = data_context.get(ns_predicate, None)
-                if _ns is not None:
-                    rdf_predicate = f'{_ns}{value_predicate}'
+                _iri = ctx.expand(k)
+                if _iri and _iri.startswith('http'):
+                    rdf_predicate = _iri
                 else:
                     rdf_predicate = value_predicate
 
@@ -449,7 +451,10 @@ def to_hdf(grp,
                     ns_object, value_object = split_URIRef(v)
 
                     if ns_object is None:
-                        rdf_object = data_context.get(k, None)
+                        term = ctx.find_term(ctx.expand(v))
+                        if term:
+                            rdf_object = term.id
+                        # rdf_object = data_context.get(k, None)
                     elif value_object.startswith('http'):
                         rdf_object = k
                     else:

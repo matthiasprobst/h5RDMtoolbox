@@ -520,24 +520,29 @@ class DocStringParser:
 
 
 @validate_call
-def download_context(url: HttpUrl, force_download: bool = False) -> Context:
-    """Download a context file from a url
+def download_context(url_source: Union[HttpUrl, List[HttpUrl]], force_download: bool = False) -> Context:
+    """Download a context file from one URL or list of URLs
+    Will check if a context file is already downloaded and use that one.
 
     Examples
     --------
     >>> from h5rdmtoolbox.utils import download_context
     >>> context = download_context('https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
     """
-    _url = str(url)
-    _fname = _url.rsplit('/', 1)[-1]
-    context_file = _user.UserDir['cache'] / _fname
-    if not context_file.exists() or force_download:
-        logger.debug(f'Downloading context file from {_url} to {context_file}')
-        try:
-            with open(context_file, 'wb') as f:
-                f.write(requests.get(_url).content)
-        except requests.RequestException:
-            logger.error(f'Failed to download context file from {_url}. Will pass url to rdflib.Context class '
-                         'and let it handle the error.')
-            return Context(url)
-    return Context(str(context_file))
+    if not isinstance(url_source, list):
+        url_source = [url_source]
+
+    filenames = []
+    for url in url_source:
+        _url = str(url)
+        _fname = _url.rsplit('/', 1)[-1]
+        context_file = _user.UserDir['cache'] / _fname
+        if not context_file.exists() or force_download:
+            logger.debug(f'Downloading context file from {_url} to {context_file}')
+            try:
+                with open(context_file, 'wb') as f:
+                    f.write(requests.get(_url).content)
+            except requests.RequestException:
+                raise RuntimeError(f'Failed to download context file from {_url}')
+        filenames.append(str(context_file))
+    return Context(filenames)
