@@ -88,8 +88,7 @@ class TestRDF(unittest.TestCase):
                 indent=2,
                 context={'m4i': 'http://w3id.org/nfdi4ing/metadata4ing#',
                          'foaf': 'http://xmlns.com/foaf/0.1/',
-                         'local': 'http://example.com/',
-                         }
+                         'local': 'http://example.com/'}
             )
         )
 

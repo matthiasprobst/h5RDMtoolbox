@@ -2077,7 +2077,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         if self.mode != 'r':
             # update file toolbox version, wrapper version
             if get_config('auto_create_h5tbx_version'):
-                if 'h5rdmtoolbox' not in self:
+                if 'h5rdmtoolbox' not in self and get_config('auto_create_h5tbx_version'):
                     utils.create_h5tbx_version_grp(self)
                     # logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
                     # _tbx_grp = self.create_group('h5rdmtoolbox')

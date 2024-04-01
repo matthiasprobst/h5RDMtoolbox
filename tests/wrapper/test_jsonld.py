@@ -38,7 +38,7 @@ class TestCore(unittest.TestCase):
                                           'standard_name_non_iri': 'x_velocity',
                                           'unit': 'm/s'})
             ds.rdf.subject = str(M4I.NumericalVariable)
-            ds.rdf.predicate['standard_name'] = 'https://matthiasprobst.github.io/ssno#standard_name'
+            ds.rdf.predicate['standard_name'] = 'https://matthiasprobst.github.io/ssno#standardName'
             ds.rdf.object['standard_name'] = 'https://matthiasprobst.github.io/pivmeta#x_velocity'
             ds.rdf.object['standard_name_non_iri'] = 'https://matthiasprobst.github.io/pivmeta#x_velocity'
 
@@ -115,7 +115,7 @@ class TestCore(unittest.TestCase):
             h5.dumps()
 
     def test_jsonld_dumps(self):
-        sn_iri = 'https://matthiasprobst.github.io/ssno#standard_name'
+        sn_iri = 'https://matthiasprobst.github.io/ssno#standardName'
         with h5tbx.File(mode='w') as h5:
             h5.create_dataset('test_dataset', shape=(3,))
             grp = h5.create_group('grp')
@@ -135,13 +135,17 @@ class TestCore(unittest.TestCase):
         out_dict = h5tbx.jsonld.dumpd(h5.hdf_filename,
                                       context={'schema': 'http://schema.org/',
                                                "ssno": "https://matthiasprobst.github.io/ssno#",
-                                               "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"})
+                                               "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
+                                      resolve_keys=True)
+
+
+
         pprint(out_dict)
         found_m4iNumericalVariable = False
         for g in out_dict['@graph']:
             if 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable' in g['@type']:
                 self.assertDictEqual(g['m4i:hasUnits'], {'@id': 'https://qudt.org/vocab/unit/MilliM'})
-                self.assertEqual(g['ssno:standard_name'], 'blade_diameter3')
+                self.assertEqual(g['ssno:standardName'], 'blade_diameter3')
                 found_m4iNumericalVariable = True
         self.assertTrue(found_m4iNumericalVariable)
 

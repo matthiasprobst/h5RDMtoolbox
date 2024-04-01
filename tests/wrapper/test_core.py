@@ -1,18 +1,18 @@
 import datetime
-import h5py
 import json
-import numpy as np
-import pandas as pd
 import pathlib
 import unittest
-import xarray as xr
 from datetime import datetime, timedelta
-from numpy import linspace as ls
 
+import h5py
 import h5rdmtoolbox as h5tbx
+import numpy as np
+import pandas as pd
+import xarray as xr
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
+from numpy import linspace as ls
 
 logger = h5tbx.logger
 # logger.setLevel('ERROR')
@@ -30,7 +30,25 @@ class TestCore(unittest.TestCase):
 
     def test_File(self):
         self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.core.File'>")
+        h5tbx.set_config(auto_create_h5tbx_version=False)
+        self.assertEqual(h5tbx.get_config('auto_create_h5tbx_version'), False)
         with h5tbx.File() as h5:
+            self.assertTrue('h5rdmtoolbox' not in h5)
+            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+
+        h5tbx.set_config(auto_create_h5tbx_version=True)
+        self.assertEqual(h5tbx.get_config('auto_create_h5tbx_version'), True)
+        with h5tbx.File() as h5:
+            self.assertFalse('h5rdmtoolbox' not in h5)
+            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+
+        with h5tbx.set_config(auto_create_h5tbx_version=False):
+            with h5tbx.File() as h5:
+                self.assertTrue('h5rdmtoolbox' not in h5)
+                self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+
+        with h5tbx.File() as h5:
+            self.assertFalse('h5rdmtoolbox' not in h5)
             self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
 
     def test_dump(self):
@@ -137,7 +155,13 @@ class TestCore(unittest.TestCase):
 
     def test_create_datasets_from_csv(self):
         df = pd.DataFrame({'x': [1, 5, 10, 0], 'y': [-3, 20, 0, 11.5]})
-        csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
+        csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv', touch=False)
+        self.assertEqual(csv_filename1.suffix, '.csv')
+        self.assertFalse(csv_filename1.exists())
+        csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv', touch=True)
+        self.assertEqual(csv_filename1.suffix, '.csv')
+        self.assertTrue(csv_filename1.exists())
+
         df.to_csv(csv_filename1, index=None)
 
         with h5tbx.File() as h5:

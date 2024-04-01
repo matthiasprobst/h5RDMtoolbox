@@ -1,21 +1,66 @@
-import h5py
 import json
 import logging
-import numpy as np
 import pathlib
-import rdflib
 import warnings
-from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 from typing import Dict, Optional, Union, List, Iterable, Tuple, Any
 
+import h5py
+import numpy as np
 import ontolutils
+import rdflib
 from h5rdmtoolbox.convention import hdf_ontology
 from ontolutils.classes.thing import resolve_iri
 from ontolutils.classes.utils import split_URIRef
+from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
+
 from .core import Dataset, File
 from ..convention.hdf_ontology import HDF5
 
 logger = logging.getLogger('h5rdmtoolbox')
+
+CONTEXT_PREFIXES = {
+    'schema': 'https://schema.org/',
+    'prov': 'http://www.w3.org/ns/prov#',
+    'foaf': 'http://xmlns.com/foaf/0.1/',
+    'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+    'hdf5': str(HDF5._NS),
+    "brick": "https://brickschema.org/schema/Brick#",
+    "csvw": "http://www.w3.org/ns/csvw#",
+    "dc": "http://purl.org/dc/elements/1.1/",
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dcmitype": "http://purl.org/dc/dcmitype/",
+    "dcterms": "http://purl.org/dc/terms/",
+    "dcam": "http://purl.org/dc/dcam/",
+    "doap": "http://usefulinc.com/ns/doap#",
+    "geo": "http://www.opengis.net/ont/geosparql#",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "org": "http://www.w3.org/ns/org#",
+    "prof": "http://www.w3.org/ns/dx/prof/",
+    "qb": "http://purl.org/linked-data/cube#",
+    "sh": "http://www.w3.org/ns/shacl#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "sosa": "http://www.w3.org/ns/sosa/",
+    "ssn": "http://www.w3.org/ns/ssn/",
+    "time": "http://www.w3.org/2006/time#",
+    "vann": "http://purl.org/vocab/vann/",
+    "void": "http://rdfs.org/ns/void#",
+    "wgs": "https://www.w3.org/2003/01/geo/wgs84_pos#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "xml": "http://www.w3.org/XML/1998/namespace",
+    "m4i": "http://w3id.org/nfdi4ing/metadata4ing#",
+    "bibo": "http://purl.org/ontology/bibo/",
+    "biro": "http://purl.org/spar/biro/",
+    "dcc": "https://ptb.de/dcc/",
+    "emmo": "http://emmo.info/emmo#",
+    "obo": "http://purl.obolibrary.org/obo/",
+    "pims-ii": "http://www.molmod.info/semantics/pims-ii.ttl#",
+    "qudt": "http://qudt.org/schema/qudt/",
+    "si": "https://ptb.de/si/",
+}
+
+CONTEXT_PREFIXES_INV = {v: k for k, v in CONTEXT_PREFIXES.items()}
 
 
 def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
@@ -71,6 +116,124 @@ def is_list_of_dict(data) -> bool:
     if len(data) == 0:
         return False
     return all([isinstance(i, dict) for i in data])
+
+
+def _get_iri_from_prefix(ns: str, context: Union[Dict, Tuple[Dict]]) -> Tuple[Optional[str], Optional[str]]:
+    """searches for the IRI of a certain prefix in a context dictionary"""
+    if isinstance(context, dict):
+        context = [context, ]
+    for ctx in context:
+        assert isinstance(ctx, dict), f'Expecting dict, got {type(ctx)}'
+        if ns.startswith('http'):
+            for p, iri in ctx.items():
+                if iri == ns:
+                    return p, iri
+        else:
+            iri = ctx.get(ns, None)
+            if iri is not None:
+                return ns, iri
+
+    # check in known prefix dict:
+    if ns.startswith('http'):
+        prefix = CONTEXT_PREFIXES_INV.get(ns, None)
+    else:
+        nsiri = CONTEXT_PREFIXES.get(ns, None)
+        if nsiri is None:
+            return None, None
+        else:
+            return ns, nsiri
+
+    if prefix is None:
+        return None, None
+    return prefix, ns
+
+
+def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef, Dict]:
+    """
+
+    Parameters
+    ----------
+    rdf_name: str
+        The name of the object
+    rdf_value: str
+        subject, predicate or object key
+    context: Dict
+        The context
+    resolve_keys: bool
+        If True, the key will be resolved to a full IRI and the prefix is
+        added to the context. If False, no context is added.
+    """
+    # if there is @import in the context, the key might be defined in there, which make resolving the
+    # key unnecessary.
+    import_context = context.get('@import', None)
+    if import_context is not None:
+        import_context = {}
+
+    def _process_attr_predicate(_attr_predicate) -> Tuple[URIRef, Dict]:
+        ns, _key = split_URIRef(_attr_predicate)
+
+        if rdf_name != _key:
+            if resolve_keys:
+                _prefix, _prefix_iri = _get_iri_from_prefix(ns, context)
+                if prefix:
+                    context[_prefix] = _prefix_iri
+                    predicate_uri = rdflib.URIRef(f'{prefix_iri}{_key}')
+                else:
+                    # maybe the implemented context prefix dict can help
+                    known_prefix = CONTEXT_PREFIXES_INV.get(ns, None)
+                    if known_prefix:
+                        context[known_prefix] = ns
+                        predicate_uri = rdflib.URIRef(f'{ns}{_key}')
+                    else:
+                        context[rdf_name] = _attr_predicate
+                        predicate_uri = rdflib.URIRef(rdf_name)
+            else:
+                # use the attr name as jsonld key and put its key with the uri
+                # in the context
+                context[rdf_name] = _attr_predicate
+                predicate_uri = rdflib.URIRef(rdf_name)
+        else:
+            predicate_uri = rdflib.URIRef(_attr_predicate)
+        return predicate_uri, context
+
+    if not import_context:
+        return _process_attr_predicate(rdf_value)
+
+    for idata in import_context.values():
+        # check if the attribute name is defined in the import context
+        iri_candidate = idata.get(rdf_name, None)
+        if iri_candidate is None:
+            break  # check the next import dict
+
+        # the attr name IS DEFINED in the external import file
+        # now, resolve the iri:
+
+        if isinstance(iri_candidate, dict):
+            iri_candidate = iri_candidate['@id']
+        else:
+            assert isinstance(iri_candidate, str), f'Expecting str, got {type(iri_candidate)}'
+
+        # the candidate may already be a full IRI
+        # we need to guess the prefix:
+        ns_prefix, key = split_URIRef(iri_candidate)
+        # search for ns_prefix in context
+        # attr_predicate_uri = _get_iri_from_prefix(ns_prefix, context)  # prefix, prefix_iri
+        prefix, prefix_iri = _get_iri_from_prefix(ns_prefix, context)  # prefix, prefix_iri
+
+        if prefix is None:
+            attr_predicate_uri = rdflib.URIRef(rdf_value)
+        else:
+            if resolve_keys:
+                context[prefix] = prefix_iri
+                attr_predicate_uri = rdflib.URIRef(f'{prefix_iri}{key}')
+            else:
+                context[rdf_name] = f'{prefix_iri}{key}'
+                attr_predicate_uri = rdflib.URIRef(rdf_name)
+
+        return attr_predicate_uri, context
+
+    # the attr name is not defined in the external import file
+    return _process_attr_predicate(rdf_value)
 
 
 def to_hdf(grp,
@@ -130,7 +293,7 @@ def to_hdf(grp,
     data_context['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#'
     data_context['schema'] = 'https://schema.org/'
 
-    at_import = data_context.pop("@import", None)
+    at_import = data_context.get("@import", None)
     if at_import is not None:
         from ..utils import download_context
         if isinstance(at_import, str):
@@ -327,13 +490,26 @@ def serialize(grp,
                              context=context)
 
     _context = {}
-    context = context or {}
-    _context.update(context)  # = context or {}
-    _context['foaf'] = 'http://xmlns.com/foaf/0.1/'
-    _context['prov'] = 'http://www.w3.org/ns/prov#'
-    _context['schema'] = 'https://schema.org/'
-    _context['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#'
-    _context['hdf5'] = str(HDF5._NS)
+    if structural:
+        _context['hdf5'] = str(HDF5._NS)
+    _context.update(context or {})  # = context or {}
+
+    assert isinstance(_context, dict)
+
+    # download jsonld files provided via "@import" in the context:
+    at_import = _context.get("@import", None)
+    _import_context_dat = {}  # here, context data from "@import" entries is stored
+    if at_import is not None:
+        from ..utils import download_context
+        if isinstance(at_import, str):
+            at_import = [at_import]
+        for c in at_import:
+            for k, v in download_context(c)._context_cache.items():
+                _import_context_dat[c] = v['@context']
+                # _context.update(v['@context'])
+            # with open(context_filename, 'r') as f:
+            #     data_context.update(json.load(f)['@context'])
+        _context["@import"] = _import_context_dat
 
     iri_dict = {}
 
@@ -342,7 +518,7 @@ def serialize(grp,
         graph.add(triple)
         return graph
 
-    def _add_hdf_node(name, obj):
+    def _add_hdf_node(name, obj, ctx):
         obj_node = iri_dict.get(obj.name, None)
         if obj_node is None:
             obj_node = _get_id(obj, local=local)
@@ -359,8 +535,16 @@ def serialize(grp,
             group_subject = obj.rdf.subject
             if isinstance(group_subject, list):
                 for gs in group_subject:
+                    nsp, key = split_URIRef(gs)
+                    ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
+                    if ns_iri is not None:
+                        _context.update({ns_prefix: ns_iri})
                     _add_node(g, (obj_node, RDF.type, rdflib.URIRef(gs)))
             elif group_subject is not None:
+                nsp, key = split_URIRef(group_subject)
+                ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
+                if ns_iri is not None:
+                    _context.update({ns_prefix: ns_iri})
                 _add_node(g, (obj_node, RDF.type, rdflib.URIRef(group_subject)))
 
         elif isinstance(obj, h5py.Dataset):
@@ -384,109 +568,134 @@ def serialize(grp,
             _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
 
         for ak, av in obj.attrs.items():
-            if not ak.isupper() and not ak.startswith('@'):
-                attr_node = rdflib.BNode()
+            logger.debug(f'Processing attribute "{ak}" with value "{av}"')
+            if ak.isupper() or ak.startswith('@'):
+                logger.debug(f'Skip attribute "{ak}" because it is upper or starts with "@"')
+                continue
 
-                if structural:
-                    _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
-                    _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
+            # create a new node for the attribute
+            attr_node = rdflib.BNode()
+            logger.debug(f'Create new node for attribute "{ak}": {attr_node}')
 
-                if isinstance(av, str):
-                    if av.startswith('http'):
-                        attr_literal = rdflib.Literal(av, datatype=XSD.anyURI)
-                    else:
-                        attr_literal = rdflib.Literal(av, datatype=XSD.string)
-                elif isinstance(av, (int, np.integer)):
-                    attr_literal = rdflib.Literal(av, datatype=XSD.integer)
-                elif isinstance(av, (float, np.floating)):
-                    attr_literal = rdflib.Literal(av, datatype=XSD.float)
+            if structural:  # add hdf type and name nodes
+                _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
+                _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
+
+            # determine the attribute type and select respective RDF literal type
+            if isinstance(av, str):
+                if av.startswith('http'):
+                    attr_literal = rdflib.Literal(av, datatype=XSD.anyURI)
                 else:
-                    # unknown type --> dump it with json
-                    if isinstance(av, np.ndarray):
-                        attr_literal = rdflib.Literal(json.dumps(av.tolist()))
-                    # elif isinstance(av, (h5py.Group, h5py.Dataset)):
-                    #     attr_literal = rdflib.Literal(av.name)
-                    else:
-                        try:
-                            attr_literal = rdflib.Literal(json.dumps(av))
-                        except TypeError as e:
-                            warnings.warn(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
-                            attr_literal = rdflib.Literal(str(av))
+                    attr_literal = rdflib.Literal(av, datatype=XSD.string)
+            elif isinstance(av, (int, np.integer)):
+                attr_literal = rdflib.Literal(av, datatype=XSD.integer)
+            elif isinstance(av, (float, np.floating)):
+                attr_literal = rdflib.Literal(av, datatype=XSD.float)
+            else:
+                # unknown type --> dump it with json
+                if isinstance(av, np.ndarray):
+                    attr_literal = rdflib.Literal(json.dumps(av.tolist()))
+                # elif isinstance(av, (h5py.Group, h5py.Dataset)):
+                #     attr_literal = rdflib.Literal(av.name)
+                else:
+                    try:
+                        attr_literal = rdflib.Literal(json.dumps(av))
+                    except TypeError as e:
+                        warnings.warn(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
+                        attr_literal = rdflib.Literal(str(av))
+            logger.debug(f'Literal for attribute "{ak}": {attr_literal}')
 
-                # add node for attr value
-                if attr_literal and structural:
-                    _add_node(g, (attr_node, HDF5.value, attr_literal))
+            # add node for attr value
+            if attr_literal and structural:
+                _add_node(g, (attr_node, HDF5.value, attr_literal))
 
-                # attr type:
-                if structural:
-                    _add_node(g, (obj_node, HDF5.attribute, attr_node))
+            # attr type:
+            if structural:
+                _add_node(g, (obj_node, HDF5.attribute, attr_node))
 
-                attr_predicate = obj.rdf.predicate.get(ak, None)
+            # no process the predicate:
+            attr_predicate = obj.rdf.predicate.get(ak, None)
+            logger.debug(f'Predicate for attribute "{ak}": "{attr_predicate}"')
 
-                if attr_predicate is not None:
-                    ns, key = split_URIRef(attr_predicate)
-                    if ak != key and not resolve_keys:
-                        _context[ak] = attr_predicate
-                        attr_predicate_uri = rdflib.URIRef(ak)
-                    else:
-                        attr_predicate_uri = rdflib.URIRef(attr_predicate)
+            if attr_predicate is not None:
+                predicate_uri, ctx = process_rdf_key(
+                    rdf_name=ak,
+                    rdf_value=attr_predicate,
+                    resolve_keys=resolve_keys,
+                    context=ctx)
+                assert isinstance(ctx, dict)
 
-                attr_object = obj.rdf.object.get(ak, None)
+            attr_object = obj.rdf.object.get(ak, None)
 
-                if isinstance(attr_object, dict):
+            if isinstance(attr_object, dict):
 
-                    def _create_obj_node(_node, _pred, _val):
-                        """RDF obj is a thing. create and assign nodes"""
-                        _type = _val.pop('@type', None)
-                        _id = _val.pop('@id', None)
+                def _create_obj_node(_node, _pred, _val):
+                    """RDF obj is a thing. create and assign nodes"""
+                    _type = _val.pop('@type', None)
+                    _id = _val.pop('@id', None)
 
-                        # init new node:
-                        _sub_obj_node = rdflib.BNode()
+                    # init new node:
+                    _sub_obj_node = rdflib.BNode()
 
-                        _add_node(g, (_sub_obj_node, RDF.type, rdflib.URIRef(resolve_iri(_type, context=attr_context))))
-                        # the new node is a member of the object node
-                        _add_node(g, (_node, _pred, _sub_obj_node))
+                    _add_node(g, (_sub_obj_node, RDF.type, rdflib.URIRef(resolve_iri(_type, context=attr_context))))
+                    # the new node is a member of the object node
+                    _add_node(g, (_node, _pred, _sub_obj_node))
 
-                        # there might be graph...better not... not covered at the moment...
-                        def _parse_val(_k, _v):
-                            if isinstance(_v, dict):
-                                _create_obj_node(_sub_obj_node, rdflib.URIRef(resolve_iri(_k, context=attr_context)), _v)
-                            else:
-                                _k_pred = resolve_iri(_k, context=attr_context)
-                                if _k_pred:
-                                    _add_node(g, (_sub_obj_node, rdflib.URIRef(_k_pred), rdflib.Literal(_v)))
+                    # there might be graph...better not... not covered at the moment...
+                    def _parse_val(_k, _v):
+                        if isinstance(_v, dict):
+                            _create_obj_node(_sub_obj_node, rdflib.URIRef(resolve_iri(_k, context=attr_context)),
+                                             _v)
+                        else:
+                            _k_pred = resolve_iri(_k, context=attr_context)
+                            if _k_pred:
+                                _add_node(g, (_sub_obj_node, rdflib.URIRef(_k_pred), rdflib.Literal(_v)))
 
-                        for k, v in _val.items():
-                            if isinstance(v, list):
-                                for __v in v:
-                                    _parse_val(k, __v)
-                            else:
-                                _parse_val(k, v)
+                    for k, v in _val.items():
+                        if isinstance(v, list):
+                            for __v in v:
+                                _parse_val(k, __v)
+                        else:
+                            _parse_val(k, v)
 
-                    attr_context = attr_object.pop('@context', None)
-                    _context.update(attr_context)
+                attr_context = attr_object.pop('@context', None)
+                _context.update(attr_context)
 
-                    _create_obj_node(obj_node, attr_predicate_uri, attr_object)
+                _create_obj_node(obj_node, predicate_uri, attr_object)
 
-                    attr_object = None
+                attr_object = None
 
-                if attr_predicate is not None and attr_object is not None:
-                    # predicate and object given
-                    _add_node(g, (obj_node, attr_predicate_uri, rdflib.URIRef(attr_object)))
-                elif attr_predicate is None and attr_object is not None and structural:
-                    # only object given
-                    _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
-                elif attr_predicate is not None and attr_object is None:
-                    # only predicate given
-                    _add_node(g, (obj_node, attr_predicate_uri, attr_literal))
+            if attr_predicate is not None and attr_object is not None:
+                # predicate and object given
+                _add_node(g, (obj_node, predicate_uri, rdflib.URIRef(attr_object)))
+            elif attr_predicate is None and attr_object is not None and structural:
+                # only object given
+                _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
+            elif attr_predicate is not None and attr_object is None:
+                # only predicate given
+                _add_node(g, (obj_node, predicate_uri, attr_literal))
+        return _context
 
     g = Graph()
 
-    _add_hdf_node(grp.name, grp)
+    _add_hdf_node(grp.name, grp, _context)
+
+    class HDFVisitor:
+
+        def __init__(self, ctx):
+            self.ctx = ctx
+
+        def __call__(self, name, obj):
+            logger.debug(f'Visiting {name} ({obj})')
+            self.ctx = _add_hdf_node(name, obj, self.ctx)
+
+    visitor = HDFVisitor(_context)
 
     if recursive:
-        grp.visititems(_add_hdf_node)
+        grp.visititems(visitor)
 
+    _context = visitor.ctx
+    _context.pop('@import', None)
     return g.serialize(
         format='json-ld',
         context=_context,

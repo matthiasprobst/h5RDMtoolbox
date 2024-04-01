@@ -1,10 +1,10 @@
 """Testing the standard attributes"""
 import json
 import pathlib
-import rdflib
 import unittest
 
 import h5rdmtoolbox as h5tbx
+import rdflib
 from h5rdmtoolbox.convention import hdf_ontology
 
 __this_dir__ = pathlib.Path(__file__).parent
@@ -150,3 +150,72 @@ class TestOntology(unittest.TestCase):
         import pandas as pd
         df = pd.DataFrame(results.bindings)
         print(df)
+
+    def test_jsonld_to_hdf(self):
+        jsonld = """
+{
+    "@context": 
+        {
+            "@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld",
+            "local": "https://local-domain.org/"
+        },
+    "@graph": [
+        {
+            "@id": "local:alex",
+            "@type": "person",
+            "has ORCID ID": "0000-0000-0123-4567",
+            "first name": "Alexandra",
+            "last name": "Test"
+        }
+    ]
+}
+"""
+        with h5tbx.File() as h5:
+            h5.create_group('metadata')
+            h5tbx.jsonld.to_hdf(h5.metadata, data=jsonld)
+            self.assertEqual(h5.metadata.person.attrs['first name'], 'Alexandra')
+            self.assertEqual(h5.metadata.person.rdf.predicate['has ORCID ID'],
+                             "http://w3id.org/nfdi4ing/metadata4ing#orcidId")
+            self.assertEqual(h5.metadata.person.attrs['has ORCID ID'], '0000-0000-0123-4567')
+
+        jsonld_str = h5tbx.dump_jsonld(
+            h5.hdf_filename,
+            context={"@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"},
+            resolve_keys=True
+        )
+        json_dict = json.loads(jsonld_str)
+        print(jsonld_str)
+        i = 0
+        for g in json_dict['@graph']:
+            if isinstance(g['@type'], list) and 'prov:Person' in g['@type']:
+                i += 1
+                self.assertEqual(g["foaf:firstName"], 'Alexandra')
+                self.assertEqual(g["foaf:lastName"], 'Test')
+                self.assertEqual(g["m4i:orcidId"], '0000-0000-0123-4567')
+            elif isinstance(g['@type'], list) and 'schema:SoftwareSourceCode' in g['@type']:
+                i += 1
+                self.assertEqual(g['schema:softwareVersion'], "1.2.3a2")
+        self.assertEqual(i, 2)
+
+        jsonld_str = h5tbx.dump_jsonld(
+            h5.hdf_filename,
+            context={"@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"},
+            resolve_keys=False
+        )
+        json_dict = json.loads(jsonld_str)
+        i = 0
+        for g in json_dict['@graph']:
+            if isinstance(g['@type'], list) and 'prov:Person' in g['@type']:
+                i += 1
+                self.assertEqual(g["first name"], 'Alexandra')
+                self.assertEqual(g["last name"], 'Test')
+                self.assertEqual(g["has ORCID ID"], '0000-0000-0123-4567')
+                self.assertEqual(json_dict['@context']['first name'], str(rdflib.FOAF.firstName))
+                self.assertEqual(json_dict['@context']['last name'], str(rdflib.FOAF.lastName))
+                self.assertEqual(json_dict['@context']['has ORCID ID'], "http://w3id.org/nfdi4ing/metadata4ing#orcidId")
+            elif isinstance(g['@type'], list) and 'schema:SoftwareSourceCode' in g['@type']:
+                i += 1
+                self.assertEqual(g['__h5rdmtoolbox_version__'], "1.2.3a2")
+                self.assertEqual(json_dict['@context']['__h5rdmtoolbox_version__'],
+                                 "https://schema.org/softwareVersion")
+        self.assertEqual(i, 2)

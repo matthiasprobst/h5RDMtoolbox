@@ -1,22 +1,23 @@
 """utilities of the h5rdmtoolbox"""
 import datetime
-import h5py
 import hashlib
 import json
 import logging
-import numpy as np
 import os
 import pathlib
-import pint
 import re
-import requests
 import warnings
-from h5py import File
-from pydantic import HttpUrl, validate_call
-from rdflib.plugins.shared.jsonld.context import Context, CONTEXT
 from re import sub as re_sub
 from typing import Dict
 from typing import Union, Callable, List, Tuple
+
+import h5py
+import numpy as np
+import pint
+import requests
+from h5py import File
+from pydantic import HttpUrl, validate_call
+from rdflib.plugins.shared.jsonld.context import Context, CONTEXT
 
 from . import _user, get_config, get_ureg
 from ._version import __version__
@@ -151,8 +152,12 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = Fa
     while _filename.exists():
         _filename = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
     if touch:
-        with h5py.File(_filename, 'w'):
-            pass
+        if _filename.suffix in ('.h5', '.hdf', '.hdf5'):
+            with h5py.File(_filename, 'w'):
+                pass
+        else:
+            with open(_filename, 'w'):
+                pass
     return _filename
 
 
