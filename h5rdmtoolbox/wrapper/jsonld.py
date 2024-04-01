@@ -175,9 +175,9 @@ def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef,
         if rdf_name != _key:
             if resolve_keys:
                 _prefix, _prefix_iri = _get_iri_from_prefix(ns, context)
-                if prefix:
+                if _prefix:
                     context[_prefix] = _prefix_iri
-                    predicate_uri = rdflib.URIRef(f'{prefix_iri}{_key}')
+                    predicate_uri = rdflib.URIRef(f'{_prefix_iri}{_key}')
                 else:
                     # maybe the implemented context prefix dict can help
                     known_prefix = CONTEXT_PREFIXES_INV.get(ns, None)

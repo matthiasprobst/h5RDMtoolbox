@@ -1,8 +1,8 @@
-import requests
 import unittest
 import warnings
 
 import h5rdmtoolbox as h5tbx
+import requests
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention.errors import StandardNameError
 from h5rdmtoolbox.convention.standard_names import parse_snt
@@ -15,7 +15,7 @@ class TestStandardAttributes(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
         try:
-            requests.get('https://git.scc.kit.edu', timeout=5)
+            requests.get('https://www.google.com/', timeout=5)
             self.connected = True
         except (requests.ConnectionError,
                 requests.Timeout) as e:

@@ -56,7 +56,7 @@ class TestCore(unittest.TestCase):
         {
             ?obj a hdf5:Dataset .
             ?obj hdf5:name ?name .
-            ?obj ssno:standard_name ?sn .
+            ?obj ssno:standardName ?sn .
         }"""
         g = rdflib.Graph().parse(data=json_str, format='json-ld')
         qres = g.query(get_all_datasets_with_standard_name)
