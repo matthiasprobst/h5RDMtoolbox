@@ -1,5 +1,4 @@
 import unittest
-from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
 import ontolutils
@@ -9,6 +8,7 @@ from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper.rdf import RDFError
 from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
 from ontolutils.namespacelib import M4I, OBO
+from rdflib import FOAF
 
 
 class TestRDF(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestRDF(unittest.TestCase):
             from ontolutils import SSNO
             ds = h5.create_dataset('u', data=4.5)
             # ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'
-            ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'#RDF(value='x_velocity',
+            ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'  # RDF(value='x_velocity',
             ds.rdf.object['standard_name'] = ontolutils.Thing(label='x_velocity')
             print(ds.rdf.object['standard_name'])
             h5.dumps()
@@ -216,3 +216,42 @@ class TestRDF(unittest.TestCase):
                                'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
             self.assertTrue(str(FOAF.Person) in grp.rdf.subject)
             self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.rdf.subject)
+
+    def test_rdf_find(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', data=1)
+            h5.ds.attrs['quantity_kind', M4I.hasKindOfQuantity] = 'x_velocity'
+            h5.ds.rdf.object['quantity_kind'] = 'https://qudt.org/vocab/quantitykind/Velocity'
+            h5.ds.attrs['units', M4I.hasUnit] = 'm/s'
+
+            ds = h5.create_dataset('sub_grp/another_dataset', data=2)
+            ds.attrs['quantity_kind', M4I.hasKindOfQuantity] = 'y_velocity'
+            h5.sub_grp.attrs['random', M4I.hasKindOfQuantity] = 'y_velocity'
+
+            grp = h5.create_group('contact_person')
+            grp.rdf.subject = FOAF.Person
+            grp.attrs['firstName', FOAF.firstName] = 'John'
+
+            grp = h5.create_group('sub_grp/another_sub/another_person')
+            grp.rdf.subject = FOAF.Person
+
+            person_res = sorted(h5.sub_grp.another_sub.rdf.find(subject=FOAF.Person))
+            self.assertEqual(person_res[0].name, '/sub_grp/another_sub/another_person')
+
+            person_res = sorted(h5.rdf.find(predicate=FOAF.firstName))
+            self.assertEqual(person_res[0].name, '/contact_person')
+
+            person_res = sorted(h5.rdf.find(subject=FOAF.Person))
+            self.assertEqual(person_res[0].name, '/contact_person')
+            self.assertEqual(person_res[1].name, '/sub_grp/another_sub/another_person')
+
+            person_res = sorted(h5.rdf.find(subject=FOAF.Person, recursive=False))
+            self.assertEqual(len(person_res), 0)
+            person_res = sorted(h5.contact_person.rdf.find(subject=FOAF.Person, recursive=False))
+            self.assertEqual(person_res[0].name, '/contact_person')
+
+            person_res = sorted(h5.rdf.find(predicate=FOAF.firstName, subject=FOAF.Person))
+            self.assertEqual(person_res[0].name, '/contact_person')
+
+            person_res = sorted(h5.rdf.find(predicate=FOAF.firstName, subject=FOAF.Person, recursive=False))
+            self.assertEqual(len(person_res), 0)

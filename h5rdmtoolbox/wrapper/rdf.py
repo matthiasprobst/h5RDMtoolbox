@@ -1,10 +1,10 @@
 import abc
+from typing import Dict, Union, Optional, List
+
 import h5py
 import pydantic
 import rdflib
 from pydantic import HttpUrl
-from typing import Dict, Union
-from typing import List
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
@@ -203,6 +203,11 @@ class _RDFPO(abc.ABC):
     def __setiri__(self, key, value):
         """Set IRI to an attribute"""
 
+    @property
+    def parent(self):
+        """Return the parent object"""
+        return self._attr._parent
+
     def get(self, item, default=None):
         attrs = self._attr.get(self.IRI_ATTR_NAME, None)
         if attrs is None:
@@ -257,13 +262,94 @@ class RDFManager:
         self._attr = attr
 
     @property
+    def parent(self):
+        """Return the parent object"""
+        return self._attr._parent
+
+    def find(self, subject: Optional[str] = None, predicate: Optional[str] = None, object: Optional[str] = None,
+             recursive: bool = True) -> List:
+        """Find the common objects that have the subject, predicate and object
+
+        Parameters
+        ----------
+        subject : str
+            The subject to search for
+        predicate : str
+            The predicate to search for
+        object : str
+            The object to search for
+        recursive : bool
+            If True, search recursively in the parent group
+
+        Returns
+        -------
+        List
+            A list of objects (h5tbx.Dataset or h5tbx.Group) that have the subject, predicate and object
+        """
+        res_subject = []
+        res_predicate = []
+        res_object = []
+
+        def _find_subject(name, node):
+            rdfm = RDFManager(node.attrs)
+            if not isinstance(rdfm.subject, list):
+                subjects = [rdfm.subject]
+            else:
+                subjects = rdfm.subject
+            if str(subject) in subjects:
+                res_subject.append(node)
+
+        def _find_predicate(name, node):
+            rdfm = RDFManager(node.attrs)
+            for k in rdfm.predicate.values():
+                if k == str(predicate):
+                    res_predicate.append(node)
+
+        def _find_object(name, node):
+            rdfm = RDFManager(node.attrs)
+            for k in rdfm.object.values():
+                if k == str(object):
+                    res_object.append(node)
+
+        if object:
+            if recursive:
+                if isinstance(self.parent, h5py.Group):
+                    self.parent.visititems(_find_object)
+            else:
+                _find_object(self.parent.name, self.parent)
+        if predicate:
+            if recursive:
+                if isinstance(self.parent, h5py.Group):
+                    self.parent.visititems(_find_predicate)
+            else:
+                _find_predicate(self.parent.name, self.parent)
+
+        if subject:
+            if recursive:
+                if isinstance(self.parent, h5py.Group):
+                    self.parent.visititems(_find_subject)
+            else:
+                _find_subject(self.parent.name, self.parent)
+
+        common_objects = []
+        res = [res_subject, res_predicate, res_object]
+
+        for flag, item in zip([subject, predicate, object], res):
+            if flag is not None:
+                item_set = set(item)
+                if not common_objects:
+                    common_objects = item_set
+                else:
+                    common_objects = common_objects.intersection(item_set)
+        return list(common_objects)
+        # return list(set(res_subject).intersection(set(res_predicate), set(res_object)))
+
+    @property
     def subject(self) -> Union[str, None]:
         """Returns the subject of the group or dataset"""
         s = self._attr.get(RDF_SUBJECT_ATTR_NAME, None)
         if s is None:
             return
-        # if isinstance(s, list):
-        #     return [i for i in s]
         return s
 
     def add_subject(self, subject: Union[str, List[str]]):
