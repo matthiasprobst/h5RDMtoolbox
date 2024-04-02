@@ -76,6 +76,7 @@ def resolve_iri(key_or_iri: str, context: Context) -> str:
         if key_or_iri == 'label':
             return 'http://www.w3.org/2000/01/rdf-schema#label'
 
+
 def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
     _entries = entries.copy()
 
@@ -275,6 +276,8 @@ def to_hdf(grp,
     context : Dict = None
         The context to use. It may be given in the data or source file.
         The context dictionary translate the keys in the data to IRIs.
+    resolve_keys : bool = False
+        If True, the keys in the data are resolved to IRIs using the context.
 
     Returns
     -------
@@ -332,6 +335,7 @@ def to_hdf(grp,
             to_hdf(_grp, data=graph_entry, context=data_context)
 
     for k, v in data.items():
+        rdf_predicate = None
 
         if k in ('@id', 'id'):
             if v.startswith('http'):  # blank nodes should not be written to an HDF5 file!
