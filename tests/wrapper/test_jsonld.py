@@ -1,13 +1,14 @@
 import json
 import pathlib
+import rdflib
 import unittest
 
 import h5rdmtoolbox as h5tbx
 import ontolutils
-import rdflib
 from h5rdmtoolbox import __version__
+from h5rdmtoolbox.convention import rdf
+from h5rdmtoolbox.convention.rdf import RDF_SUBJECT_ATTR_NAME
 from h5rdmtoolbox.wrapper import jsonld
-from h5rdmtoolbox.wrapper import rdf
 from ontolutils import M4I
 from ontolutils import namespaces, urirefs, Thing
 
@@ -42,8 +43,8 @@ class TestCore(unittest.TestCase):
             ds.rdf.object['standard_name'] = 'https://matthiasprobst.github.io/pivmeta#x_velocity'
             ds.rdf.object['standard_name_non_iri'] = 'https://matthiasprobst.github.io/pivmeta#x_velocity'
 
-            ds.attrs['a list'] = [1, 2, 3]
-            ds.attrs['a 1D list'] = (1,)
+            ds.attrs['a list'] = [0, 1, 2, 3]
+            ds.attrs['a 1D list'] = (-2.3,)
 
         # def dump_hdf_to_json(h5_filename):
         with h5tbx.File(h5.hdf_filename, 'r') as h5:
@@ -64,6 +65,38 @@ class TestCore(unittest.TestCase):
         for name, sn in qres:
             self.assertEqual(str(name), '/grp/test_dataset')
             self.assertEqual(str(sn), 'https://matthiasprobst.github.io/pivmeta#x_velocity')
+
+        # get list 1
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX pivmeta: <https://matthiasprobst.github.io/pivmeta#>
+PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?item
+WHERE {
+  ?id a hdf5:Attribute .
+  ?id hdf5:value ?list .
+  ?id hdf5:name "a list" .
+  ?list rdf:rest*/rdf:first ?item
+}"""
+        qres = g.query(sparql_str)
+        for i, row in enumerate(qres):
+            self.assertEqual(int(row[0]), i)
+
+        # get list 2
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX pivmeta: <https://matthiasprobst.github.io/pivmeta#>
+PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?item
+WHERE {
+  ?id a hdf5:Attribute .
+  ?id hdf5:value ?list .
+  ?id hdf5:name "a 1D list" .
+  ?list rdf:rest*/rdf:first ?item
+}"""
+        qres = g.query(sparql_str)
+        for i, row in enumerate(qres):
+            self.assertEqual(float(row[0]), -2.3)
 
     def test_json_to_hdf(self):
         @namespaces(foaf='http://xmlns.com/foaf/0.1/',
@@ -127,7 +160,6 @@ class TestCore(unittest.TestCase):
             sub_grp['D3'].attrs['standard_name', sn_iri] = 'blade_diameter3'
             ds.rdf.subject = 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable'
             self.assertEqual(ds.rdf.subject, 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
-            from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME
             self.assertEqual(ds.attrs[RDF_SUBJECT_ATTR_NAME],
                              'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
             h5.dumps()

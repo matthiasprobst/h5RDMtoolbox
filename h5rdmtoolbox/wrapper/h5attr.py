@@ -11,12 +11,12 @@ from h5py._objects import ObjectID
 from typing import Dict, Union, Tuple
 
 from .h5utils import get_rootparent
-from .rdf import RDFAttribute
 from .. import errors
 from .. import get_config, convention, utils
 from .. import get_ureg
 from .. import protected_attributes
 from ..convention import consts
+from ..convention.rdf import RDFAttribute
 
 logger = logging.getLogger('h5rdmtoolbox')
 H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox

@@ -1,27 +1,25 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
+import h5py
 import json
 import logging
+import numpy as np
 import os
 import pathlib
+# noinspection PyUnresolvedReferences
+import pint
 import shutil
 import warnings
+import xarray as xr
 from collections.abc import Iterable
 from datetime import datetime, timezone
+from h5py._hl.base import phil, with_phil
+from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Protocol, Optional
 
-import h5py
-import numpy as np
-# noinspection PyUnresolvedReferences
-import pint
-import xarray as xr
-from h5py._hl.base import phil, with_phil
-from h5py._objects import ObjectID
 from h5rdmtoolbox.database import ObjDB
-
-from . import rdf
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
@@ -30,6 +28,7 @@ from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, convention, utils, consts, protected_attributes
 from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
+from ..convention import rdf
 from ..convention.consts import DefaultValue
 
 logger = logging.getLogger('h5rdmtoolbox')

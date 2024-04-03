@@ -66,7 +66,7 @@ def build_node_list(g: Graph, name, data: List):
     # Create an RDF List for flag values
     # initial_node = rdflib.BNode()
     n = len(data)
-    assert n > 1, 'Expecting at least two element in the list'
+    # assert n > 1, 'Expecting at least two element in the list'
 
     initial_node = rdflib.BNode()
 
@@ -75,7 +75,7 @@ def build_node_list(g: Graph, name, data: List):
     g.add((flag_list, RDF.type, RDF.List))
 
     # Add flag values to the RDF List
-    for i in range(1, n):
+    for i in range(0, n):
         if isinstance(data[i], int):
             flag_node = rdflib.Literal(data[i], datatype=XSD.integer)
         elif isinstance(data[i], str):
@@ -710,18 +710,25 @@ def serialize(grp,
 
                 attr_object = None
 
+            if structural:
+                if attr_object:
+                    _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
+                if list_node:
+                    _add_node(g, (attr_node, HDF5.value, list_node))
+
             if attr_predicate is not None and attr_object is not None:
                 # predicate and object given
                 _add_node(g, (obj_node, predicate_uri, rdflib.URIRef(attr_object)))
-            elif attr_predicate is None and attr_object is not None and structural:
-                # only object given
-                _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
+            # elif attr_predicate is None and attr_object is not None and structural:
+            #     # only object given
+            #     _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
             elif attr_predicate is not None and attr_object is None:
                 # only predicate given
                 if attr_literal:
                     _add_node(g, (obj_node, predicate_uri, attr_literal))
                 elif list_node:
                     _add_node(g, (obj_node, predicate_uri, list_node))
+
         return _context
 
     g = Graph()

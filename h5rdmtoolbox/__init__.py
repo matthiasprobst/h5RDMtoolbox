@@ -38,6 +38,7 @@ pint_xarray.unit_registry = get_ureg()
 
 from . import convention
 from .convention.core import Convention
+from .convention.rdf import RDFAttribute
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
@@ -47,7 +48,6 @@ from . import warnings, errors
 from .wrapper import jsonld
 from .wrapper.accessory import register_special_dataset
 import json
-from .wrapper.rdf import RDFAttribute
 
 name = 'h5rdmtoolbox'
 __this_dir__ = pathlib.Path(__file__).parent

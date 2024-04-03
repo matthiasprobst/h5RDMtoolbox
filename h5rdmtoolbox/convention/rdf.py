@@ -1,3 +1,4 @@
+"""RDF (Resource Description Framework) module for use with HDF5 files"""
 import abc
 import h5py
 import pydantic
