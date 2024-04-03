@@ -11,7 +11,7 @@ from h5py._objects import ObjectID
 from typing import Dict, Union, Tuple
 
 from .h5utils import get_rootparent
-from .rdf import RDF
+from .rdf import RDFAttribute
 from .. import errors
 from .. import get_config, convention, utils
 from .. import get_ureg
@@ -196,23 +196,33 @@ class WrapperAttributeManager(h5py.AttributeManager):
         name : Union[str, Tuple[str, str]]
             Name of the attribute. If it is a tuple, the second element is the IRI of the attribute.
         value : any
-            Attribute value. Can also be type `RDF` to set a value and its object IRI.
+            Attribute value. Can also be type `RDFAttribute` to set a value and its object IRI.
         """
         if name == '_parent':
             return
-        if isinstance(value, RDF):
-            object_iri = value.iri
+
+        if isinstance(value, RDFAttribute):
+            object_iri = value.rdf_object
+            predicate_iri = value.rdf_predicate
             value = value.value
+
+            if not isinstance(name, tuple):
+                self.create(name, value, rdf_predicate=predicate_iri, rdf_object=object_iri)
+
         else:
             object_iri = None
+            predicate_iri = None
 
         if isinstance(name, tuple):
             # length must be 2, second element must be a IRI (not checked though)
             if not len(name) == 2:
                 raise ValueError('Tuple must have length 2 in order to interpret it as an'
                                  'attribute name and its IRI')
-            _name, _iri = name
-            self.create(_name, value, rdf_predicate=_iri, rdf_object=object_iri)
+            if predicate_iri is not None:
+                raise ValueError('You cannot set the predicate iri at the same time by RDFAttribute and through '
+                                 'the tuple syntax.')
+            _name, predicate_iri = name
+            self.create(_name, value, rdf_predicate=predicate_iri, rdf_object=object_iri)
             return
 
         if not isinstance(name, str):

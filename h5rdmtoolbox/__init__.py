@@ -47,7 +47,7 @@ from . import warnings, errors
 from .wrapper import jsonld
 from .wrapper.accessory import register_special_dataset
 import json
-from .wrapper.rdf import RDF
+from .wrapper.rdf import RDFAttribute
 
 name = 'h5rdmtoolbox'
 __this_dir__ = pathlib.Path(__file__).parent
@@ -232,8 +232,7 @@ xr.set_options(display_expand_data=False)
 
 __all__ = ('__version__', '__author__', '__author_orcid__',
            'UserDir', 'use',
-           'File', 'Group', 'Dataset',
+           'File', 'Group', 'Dataset', 'RDFAttribute',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
-           'Convention', 'namespace',
-           'jsonld')
+           'Convention', 'jsonld')

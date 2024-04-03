@@ -1,10 +1,8 @@
 import abc
-from typing import Dict, Union, Optional, List
-
 import h5py
 import pydantic
-import rdflib
 from pydantic import HttpUrl
+from typing import Dict, Union, Optional, List
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
@@ -16,36 +14,49 @@ class RDFError(Exception):
     pass
 
 
-class RDF:
-    """RDF assignment class to be used when attribute is written to the HDF5 file.
+class RDFAttribute:
+    """Helper class for quick assignment of RDF attributes to the HDF5 file.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import h5rdmtoolbox as h5tbx
     >>> from ontolutils import M4I
+    >>> rdf_attr = h5tbx.RDFAttribute('0000-0001-8729-0482', rdf_predicate=M4I.orcidId,
+    ...                                rdf_object='https://orcid.org/0000-0001-8729-0482')
     >>> with h5tbx.File('test.h5', 'w') as h5:
     ...     grp = h5.create_group('person')
-    ...     grp.attrs['orcid', M4I.orcidId] = h5tbx.RDF('0000-0001-8729-0482', 'https://orcid.org/0000-0001-8729-0482')
-
-    Raises
-    ------
-    RDFError
-        If the IRI is not a valid URL
+    ...     grp.attrs['orcid'] = rdf_attr
+    ...     # equal to:
+    ...     # grp.attrs['orcid'] = '0000-0001-8729-0482'
+    ...     # grp.rdf.predicate['orcid'] = str(M4I.orcidId)
+    ...     # grp.rdf.object['orcid'] = 'https://orcid.org/0000-0001-8729-0482'
     """
 
-    def __init__(self, value, iri: Union[str, HttpUrl, rdflib.URIRef]):
+    def __init__(self, value, rdf_predicate: str = None, rdf_object: str = None):
         self.value = value
-        try:
-            self.iri = str(HttpUrl(iri))
-        except pydantic.ValidationError as e:
-            raise RDFError(f'Invalid IRI: "{iri}". '
-                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self.value}, {self.iri})'
+        if rdf_predicate:
+            try:
+                str(HttpUrl(rdf_predicate))
+            except pydantic.ValidationError as e:
+                raise RDFError(f'Invalid predicate IRI: "{rdf_predicate}". '
+                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
-    def __str__(self):
-        return f'{self.__class__.__name__}({self.value}, {self.iri})'
+        if rdf_object:
+            try:
+                str(HttpUrl(rdf_object))
+            except pydantic.ValidationError as e:
+                raise RDFError(f'Invalid object IRI: "{rdf_object}". '
+                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+
+        self.rdf_predicate = rdf_predicate
+        self.rdf_object = rdf_object
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({self.value}, rdf_predicate={self.rdf_predicate}, rdf_object={self.rdf_object})'
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
 
 def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> None:
