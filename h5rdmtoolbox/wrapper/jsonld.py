@@ -1,19 +1,17 @@
+import h5py
 import json
 import logging
-import pathlib
-import warnings
-from typing import Dict, Optional, Union, List, Iterable, Tuple, Any
-
-import h5py
 import numpy as np
 import ontolutils
+import pathlib
 import rdflib
-from h5rdmtoolbox.convention import hdf_ontology
-# from ontolutils.classes.thing import resolve_iri
+import warnings
 from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 from rdflib.plugins.shared.jsonld.context import Context
+from typing import Dict, Optional, Union, List, Iterable, Tuple, Any
 
+from h5rdmtoolbox.convention import hdf_ontology
 from .core import Dataset, File
 from ..convention.ontology import HDF5
 
@@ -62,6 +60,41 @@ CONTEXT_PREFIXES = {
 }
 
 CONTEXT_PREFIXES_INV = {v: k for k, v in CONTEXT_PREFIXES.items()}
+
+
+def build_node_list(g: Graph, name, data: List):
+    # Create an RDF List for flag values
+    # initial_node = rdflib.BNode()
+    n = len(data)
+    assert n > 1, 'Expecting at least two element in the list'
+
+    initial_node = rdflib.BNode()
+
+    flag_list = initial_node
+
+    g.add((flag_list, RDF.type, RDF.List))
+
+    # Add flag values to the RDF List
+    for i in range(1, n):
+        if isinstance(data[i], int):
+            flag_node = rdflib.Literal(data[i], datatype=XSD.integer)
+        elif isinstance(data[i], str):
+            flag_node = rdflib.Literal(data[i], datatype=XSD.string)
+        elif isinstance(data[i], float):
+            flag_node = rdflib.Literal(data[i], datatype=XSD.float)
+        else:
+            flag_node = rdflib.Literal(data[i], datatype=XSD.string)
+
+        g.add((flag_list, RDF.first, flag_node))
+        if i == n - 1:
+            flag_list_rest = RDF.nil
+        else:
+            flag_list_rest = rdflib.BNode()
+        g.add((flag_list, RDF.rest, flag_list_rest))
+        flag_list = flag_list_rest
+
+    # Add type information
+    return initial_node
 
 
 def resolve_iri(key_or_iri: str, context: Context) -> str:
@@ -590,6 +623,8 @@ def serialize(grp,
                 _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
                 _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
 
+            list_node = None
+            attr_literal = None
             # determine the attribute type and select respective RDF literal type
             if isinstance(av, str):
                 if av.startswith('http'):
@@ -600,19 +635,20 @@ def serialize(grp,
                 attr_literal = rdflib.Literal(av, datatype=XSD.integer)
             elif isinstance(av, (float, np.floating)):
                 attr_literal = rdflib.Literal(av, datatype=XSD.float)
-            else:
-                # unknown type --> dump it with json
+            elif isinstance(av, list) or isinstance(av, np.ndarray):
                 if isinstance(av, np.ndarray):
-                    attr_literal = rdflib.Literal(json.dumps(av.tolist()))
-                # elif isinstance(av, (h5py.Group, h5py.Dataset)):
-                #     attr_literal = rdflib.Literal(av.name)
+                    list_node = build_node_list(g, ak, av.tolist())
                 else:
-                    try:
-                        attr_literal = rdflib.Literal(json.dumps(av))
-                    except TypeError as e:
-                        warnings.warn(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
-                        attr_literal = rdflib.Literal(str(av))
-            logger.debug(f'Literal for attribute "{ak}": {attr_literal}')
+                    list_node = build_node_list(g, ak, av)
+            else:
+                try:
+                    attr_literal = rdflib.Literal(json.dumps(av))
+                except TypeError as e:
+                    warnings.warn(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
+                    attr_literal = rdflib.Literal(str(av))
+
+            if attr_literal:
+                logger.debug(f'Literal for attribute "{ak}": {attr_literal}')
 
             # add node for attr value
             if attr_literal and structural:
@@ -682,7 +718,10 @@ def serialize(grp,
                 _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
             elif attr_predicate is not None and attr_object is None:
                 # only predicate given
-                _add_node(g, (obj_node, predicate_uri, attr_literal))
+                if attr_literal:
+                    _add_node(g, (obj_node, predicate_uri, attr_literal))
+                elif list_node:
+                    _add_node(g, (obj_node, predicate_uri, list_node))
         return _context
 
     g = Graph()
