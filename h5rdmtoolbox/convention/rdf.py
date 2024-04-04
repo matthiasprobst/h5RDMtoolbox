@@ -351,15 +351,13 @@ class RDFManager:
                     res_object.append(node)
 
         if rdf_object:
-            if recursive:
-                if isinstance(self.parent, h5py.Group):
-                    self.parent.visititems(_find_object)
+            if recursive and isinstance(self.parent, h5py.Group):
+                self.parent.visititems(_find_object)
             else:
                 _find_object(self.parent.name, self.parent)
         if rdf_predicate:
-            if recursive:
-                if isinstance(self.parent, h5py.Group):
-                    self.parent.visititems(_find_predicate)
+            if recursive and isinstance(self.parent, h5py.Group):
+                self.parent.visititems(_find_predicate)
             else:
                 _find_predicate(self.parent.name, self.parent)
 

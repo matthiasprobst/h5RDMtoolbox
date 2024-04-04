@@ -133,7 +133,8 @@ class LayoutSpecification:
                 return self.__call__(_target)
 
         self._n_calls += 1
-        logger.debug(f'calling {self.id}')
+        logger.debug(f'calling spec (id={self.id}) with func={self.func.__module__}.{self.func.__name__} and '
+                     f'kwargs {self.kwargs}')
 
         res = self.func(target, **self.kwargs)
         if self.n is not None and not isinstance(res, (types.GeneratorType, tuple, list)):
@@ -165,6 +166,7 @@ class LayoutSpecification:
                 self._n_fails += 1
             else:
                 for sub_spec in self.specifications:
+                    logger.debug(f'Calling spec {sub_spec} to hdf obj {r}.')
                     sub_spec(r)
 
         if self.n is None:
@@ -235,6 +237,19 @@ class LayoutSpecification:
             return False
         return all(spec.is_valid() for spec in self.specifications)
 
+    def get_valid(self) -> List['LayoutSpecification']:
+        """Return all successful specifications"""
+        if self.failed is False:
+            return [self]
+        valid = []
+        if self.n_calls > 0 and self.failed is False:
+            valid.append(self)
+        if self.specifications:
+            valid.extend(spec.get_valid() for spec in self.specifications)
+            # flatten list:
+            return [item for sublist in valid for item in sublist]
+        return valid
+
     def get_failed(self) -> List['LayoutSpecification']:
         """Return a list of failed specifications"""
         if self.failed is True:
@@ -248,27 +263,63 @@ class LayoutSpecification:
             return [item for sublist in failed for item in sublist]
         return failed
 
-    def print_summary(self, indent=2):
-        print(' ' * indent, '>', f'"{self.comment}"' if self.comment else '"missing comment"',
-              ' | failed: ', self.failed, f'| n_calls={self.n_calls} | ', f'| _n_fails={self._n_fails} | ',
-              self.kwargs, self.id, )
-        indent += 2
+    def get_summary(self) -> List[Dict]:
+        """return a summary as dictionary"""
+        if len(self.specifications) == 0:
+            return [{'id': self.id,
+                     'failed': self.failed,
+                     'n_calls': self.n_calls,
+                     # '_n_fails': self._n_fails,
+                     'func': f'{self.func.__module__}.{self.func.__name__}',
+                     'kwargs': self.kwargs,
+                     'comment': self.comment,
+                     }]
+        data = []
         for spec in self.specifications:
-            spec.print_summary(indent=indent)
+            data.extend(spec.get_summary())
+        return data
 
 
 class LayoutResult:
     """Container for the result of a layout validation. It only contains a list of failed specs."""
 
-    def __init__(self, list_of_failed_specs: List[LayoutSpecification]):
-        self.list_of_failed_specs = list_of_failed_specs
+    def __init__(self, specifications: List[LayoutSpecification]):
+        self.specifications: List[LayoutSpecification] = specifications
 
     def __len__(self):
-        return len(self.list_of_failed_specs)
+        return len(self.specifications)
+
+    def get_failed(self) -> List[LayoutSpecification]:
+        """Return a list of failed specifications"""
+        failed = [spec.get_failed() for spec in self.specifications]
+        # flatten list:
+        return [item for sublist in failed for item in sublist]
+
+    def get_valid(self) -> List[LayoutSpecification]:
+        """Return a list of failed specifications"""
+        failed = [spec.get_valid() for spec in self.specifications]
+        # flatten list:
+        return [item for sublist in failed for item in sublist]
 
     def is_valid(self) -> bool:
         """Return True if the layout is valid, which is the case if no specs failed"""
-        return len(self.list_of_failed_specs) == 0
+        return len(self.get_valid()) == 0
+
+    def get_summary(self) -> Dict:
+        """return a summary as dictionary"""
+        data = []
+        for spec in self.specifications:
+            data.extend(spec.get_summary())
+        return data
+
+    def print_summary(self):
+        """Prints a summary of the specification. Requires the tabulate package."""
+        try:
+            from tabulate import tabulate
+        except ImportError:
+            raise ImportError('Please install tabulate to use this method')
+        print('\nSummary of layout validation')
+        print(tabulate(self.get_summary(), headers='keys', tablefmt='psql'))
 
 
 class Layout(LayoutSpecification):
@@ -302,7 +353,7 @@ class Layout(LayoutSpecification):
     """
 
     def __init__(self):
-        self.specifications = []
+        self.specifications: List[LayoutSpecification] = []
 
     def __eq__(self, other):
         if not isinstance(other, Layout):
@@ -322,7 +373,7 @@ class Layout(LayoutSpecification):
         for spec in self.specifications:
             spec(filename_or_root_group)
 
-        return LayoutResult(self.get_failed())
+        return LayoutResult(self.specifications)
 
     def __call__(self, *args, **kwargs):
         raise RuntimeError('Layout cannot be called. User `.validate()` to validate')
@@ -337,8 +388,3 @@ class Layout(LayoutSpecification):
         failed = [spec.get_failed() for spec in self.specifications]
         # flatten list:
         return [item for sublist in failed for item in sublist]
-
-    def print_summary(self, indent=2):
-        """Print a summary of the layout"""
-        for spec in self.specifications:
-            spec.print_summary(indent=indent)
