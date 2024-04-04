@@ -7,8 +7,10 @@ import h5rdmtoolbox as h5tbx
 import ontolutils
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention import rdf
+from h5rdmtoolbox.convention.hdf_ontology import HDF5
 from h5rdmtoolbox.convention.rdf import RDF_SUBJECT_ATTR_NAME
 from h5rdmtoolbox.wrapper import jsonld
+from h5rdmtoolbox.wrapper.jsonld import build_node_list
 from ontolutils import M4I
 from ontolutils import namespaces, urirefs, Thing
 
@@ -27,6 +29,47 @@ class TestCore(unittest.TestCase):
 
     def tearDown(self):
         pathlib.Path('test.hdf').unlink(missing_ok=True)
+
+    def test_build_node_list(self):
+        g = rdflib.Graph()
+        base_node = rdflib.BNode()
+        g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
+        list_node = build_node_list(g, [1, 2, 3])
+        g.add((base_node, HDF5.value, list_node))
+
+        print(g.serialize(format='json-ld', indent=2))
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX HDF5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?item
+WHERE {
+    ?id a HDF5:Attribute .
+    ?id HDF5:value ?list .
+    ?list rdf:rest*/rdf:first ?item
+}"""
+        qres = g.query(sparql_str)
+        list_values = [int(row[0]) for row in qres]
+        self.assertEqual(list_values, [1, 2, 3])
+
+        g = rdflib.Graph()
+        base_node = rdflib.BNode()
+        g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
+        list_node = build_node_list(g, [1, 'str', 3.4, True])
+        g.add((base_node, HDF5.value, list_node))
+
+        print(g.serialize(format='json-ld', indent=2))
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX HDF5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?item
+WHERE {
+    ?id a HDF5:Attribute .
+    ?id HDF5:value ?list .
+    ?list rdf:rest*/rdf:first ?item
+}"""
+        qres = g.query(sparql_str)
+        list_values = [row[0].value for row in qres]
+        self.assertEqual(list_values, [1, 'str', 3.4, True])
 
     def test_dump_hdf_to_json(self):
         """similar yet different to https://hdf5-json.readthedocs.io/en/latest/index.html"""
@@ -80,6 +123,7 @@ WHERE {
 }"""
         qres = g.query(sparql_str)
         for i, row in enumerate(qres):
+            print(row)
             self.assertEqual(int(row[0]), i)
 
         # get list 2
@@ -96,6 +140,7 @@ WHERE {
 }"""
         qres = g.query(sparql_str)
         for i, row in enumerate(qres):
+            print(row)
             self.assertEqual(float(row[0]), -2.3)
 
     def test_json_to_hdf(self):
