@@ -1,3 +1,5 @@
+"""Layout validation module"""
+import enum
 import h5py
 import logging
 import pathlib
@@ -9,6 +11,15 @@ from typing import Dict, Union, List, Protocol, Optional
 import h5rdmtoolbox as h5tbx
 
 logger = logging.getLogger('h5rdmtoolbox')
+
+
+class VALIDATION_FLAGS(enum.Enum):
+    """Validation flags used in layout validation"""
+    UNCALLED = 0
+    SUCCESSFUL = 1
+    FAILED = 2
+    SUCCESSFUL_ALTERNATIVE = 4  # an alternative spec succeeded
+    INVALID_NUMBER = 8
 
 
 def _replace_callables_with_names(dict_with_callables: Dict) -> Dict:
@@ -30,6 +41,8 @@ class QueryCallable(Protocol):
     """
 
     def find(self, target: Union[str, pathlib.Path, h5tbx.Group], **kwargs): ...
+
+    def __call__(self, *args, **kwargs) -> List: ...
 
 
 class LayoutSpecification:
@@ -58,17 +71,19 @@ class LayoutSpecification:
     def __init__(self,
                  func: QueryCallable,
                  kwargs,
-                 n=None,
-                 comment: str = None,
-                 parent=None):
+                 n: Optional[int] = None,
+                 comment: Optional[str] = None,
+                 parent: Optional["LayoutSpecification"] = None):
         self.func = func
         self.kwargs = kwargs
         self.n = n
         self.id = uuid.uuid4()
-        self.specifications = []
-        self.parent = parent
+        self.specifications: List[LayoutSpecification] = []
+        self.alt_specifications: List[LayoutSpecification] = []
+        self.parent: Optional["LayoutSpecification"] = parent
         self.comment = comment
         self.failed = None
+        self.validation_flag = VALIDATION_FLAGS.UNCALLED.value
         self._n_calls = 0
         self._n_fails = 0
 
@@ -140,17 +155,43 @@ class LayoutSpecification:
         if self.n is not None and not isinstance(res, (types.GeneratorType, tuple, list)):
             raise ValueError('"n" is specified but the return value is neither a generator nor a list or a tuple')
 
-        if res is None:
-            self.failed = True
-            self._n_fails += 1
-            logger.error(f'Applying spec. "{self}" on "{target}" failed.')
+        if res:
+            self.validation_flag = 1
+        else:
+            # If alternative specifications exist, try them
+            alt_spec_successes = []
+            res = []
+            for alt_spec in self.alt_specifications:
+                alt_res = alt_spec.func(target, **alt_spec.kwargs)
+                if alt_res:
+                    alt_spec_successes.append(True)
+                else:
+                    alt_spec_successes.append(False)
+
+                res.extend(alt_res)
+
+            self.failed = not any(alt_spec_successes)
+            if any(alt_spec_successes):
+                self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.SUCCESSFUL_ALTERNATIVE.value
+            else:
+                self.validation_flag = VALIDATION_FLAGS.FAILED
+
+            if not self.failed:
+                print('An alternative succeeded!')
+
+            if self.failed:
+                self._n_fails += 1
+                logger.error(f'Applying spec. "{self}" on "{target}" failed.')
 
         if not isinstance(res, (types.GeneratorType, tuple, list)):
             # single result
-            if res is None:
+            if not res:
                 self.failed = True
+                self.validation_flag = VALIDATION_FLAGS.FAILED
             else:
                 self.failed = False
+                if not self.validation_flag & VALIDATION_FLAGS.SUCCESSFUL.value:
+                    self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
 
             if not self.failed:
                 for sub_spec in self.specifications:
@@ -162,6 +203,7 @@ class LayoutSpecification:
             n_res += 1
             failed = r is None
             if failed:
+                self.validation_flag = 0
                 logger.error(f'Applying spec. "{self}" on "{target}" failed.')
                 self._n_fails += 1
             else:
@@ -173,10 +215,11 @@ class LayoutSpecification:
             if self.failed is None:
                 self.failed = False
         if self.n is not None:
-            if self.n == n_res:
+            if self.n == n_res:  # Note, this may fail if more than n alternatives were successful...
                 self.failed = False
             else:  # if self.n != n_res:
                 self.failed = True
+                self.validation_flag = VALIDATION_FLAGS.FAILED.value + VALIDATION_FLAGS.INVALID_NUMBER.value
                 logger.error(f'Applying spec. "{self}" failed due to not '
                              f'matching the number of results: {self.n} != {n_res}')
 
@@ -227,6 +270,29 @@ class LayoutSpecification:
         self.specifications.append(new_spec)
         return new_spec
 
+    def add_alternative(self,
+                        func: QueryCallable,
+                        *,
+                        n: Optional[int] = None,
+                        comment: Optional[str] = None,
+                        **kwargs):
+        """Add an alternative specification by providing a callable query obj. Optionally, the
+        number of exact matches can be provided as well as the a comment string.
+        The kwargs are passed to the callable
+        Either the parent or the alternative specification must be successful."""
+        new_spec = LayoutSpecification(func=func,
+                                       kwargs=kwargs,
+                                       n=n,
+                                       comment=comment,
+                                       parent=self)
+        for spec in self.alt_specifications:
+            if spec == new_spec:
+                warnings.warn(f'Specification "{new_spec}" already exists. Skipping.',
+                              UserWarning)
+                return spec
+        self.alt_specifications.append(new_spec)
+        return new_spec
+
     def is_valid(self):
         """Return True if the specification is valid"""
         if self.n_calls == 0:
@@ -266,9 +332,16 @@ class LayoutSpecification:
     def get_summary(self) -> List[Dict]:
         """return a summary as dictionary"""
         if len(self.specifications) == 0:
+            explanations = []
+            for i in VALIDATION_FLAGS:
+                if self.validation_flag & i.value:
+                    explanations.append(i.name)
+            explained_validation_flag = ', '.join(explanations)
             return [{'id': self.id,
                      'failed': self.failed,
                      'n_calls': self.n_calls,
+                     'flag': self.validation_flag,
+                     'flag description': explained_validation_flag,
                      # '_n_fails': self._n_fails,
                      'func': f'{self.func.__module__}.{self.func.__name__}',
                      'kwargs': self.kwargs,
@@ -303,7 +376,7 @@ class LayoutResult:
 
     def is_valid(self) -> bool:
         """Return True if the layout is valid, which is the case if no specs failed"""
-        return len(self.get_valid()) == 0
+        return len(self.get_failed()) == 0
 
     def get_summary(self) -> Dict:
         """return a summary as dictionary"""
