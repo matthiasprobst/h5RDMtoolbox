@@ -1,14 +1,14 @@
-import ontolutils
 import unittest
-from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
+import ontolutils
 from h5rdmtoolbox import RDFAttribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.convention.rdf import RDFError
 from h5rdmtoolbox.convention.rdf import RDF_PREDICATE_ATTR_NAME
+from ontolutils.namespacelib import M4I, OBO
 
 
 class TestRDF(unittest.TestCase):
@@ -239,23 +239,23 @@ class TestRDF(unittest.TestCase):
             grp = h5.create_group('sub_grp/another_sub/another_person')
             grp.rdf.subject = FOAF.Person
 
-            person_res = sorted(h5.sub_grp.another_sub.rdf.find(subject=FOAF.Person))
+            person_res = sorted(h5.sub_grp.another_sub.rdf.find(rdf_subject=FOAF.Person))
             self.assertEqual(person_res[0].name, '/sub_grp/another_sub/another_person')
 
-            person_res = sorted(h5.rdf.find(predicate=FOAF.firstName))
+            person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName))
             self.assertEqual(person_res[0].name, '/contact_person')
 
-            person_res = sorted(h5.rdf.find(subject=FOAF.Person))
+            person_res = sorted(h5.rdf.find(rdf_subject=FOAF.Person))
             self.assertEqual(person_res[0].name, '/contact_person')
             self.assertEqual(person_res[1].name, '/sub_grp/another_sub/another_person')
 
-            person_res = sorted(h5.rdf.find(subject=FOAF.Person, recursive=False))
+            person_res = sorted(h5.rdf.find(rdf_subject=FOAF.Person, recursive=False))
             self.assertEqual(len(person_res), 0)
-            person_res = sorted(h5.contact_person.rdf.find(subject=FOAF.Person, recursive=False))
+            person_res = sorted(h5.contact_person.rdf.find(rdf_subject=FOAF.Person, recursive=False))
             self.assertEqual(person_res[0].name, '/contact_person')
 
-            person_res = sorted(h5.rdf.find(predicate=FOAF.firstName, subject=FOAF.Person))
+            person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName, rdf_subject=FOAF.Person))
             self.assertEqual(person_res[0].name, '/contact_person')
 
-            person_res = sorted(h5.rdf.find(predicate=FOAF.firstName, subject=FOAF.Person, recursive=False))
+            person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName, rdf_subject=FOAF.Person, recursive=False))
             self.assertEqual(len(person_res), 0)

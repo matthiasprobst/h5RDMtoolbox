@@ -1,9 +1,12 @@
 """RDF (Resource Description Framework) module for use with HDF5 files"""
 import abc
 import h5py
+import pathlib
 import pydantic
 from pydantic import HttpUrl
 from typing import Dict, Union, Optional, List
+
+import h5rdmtoolbox as h5tbx
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
@@ -267,28 +270,52 @@ class RDF_OBJECT(_RDFPO):
         set_object(self._attr, key, value)
 
 
+def find(target, rdf_subject: Optional[str] = None, rdf_predicate: Optional[str] = None, rdf_object: Optional[str] = None,
+         recursive: bool = True):
+    """Find function for RDF triples
+
+    Parameters
+    ----------
+    target: Union[str, pathlib.Path, h5tbx.Group]
+        Filename or hdf group
+    """
+    if isinstance(target, (str, pathlib.Path)):
+        with h5tbx.File(target) as h5:
+            return find(h5, rdf_subject, rdf_predicate, rdf_object)
+    return target.rdf.find(rdf_subject, rdf_predicate, rdf_object)
+
+
 class RDFManager:
     """IRI attribute manager"""
 
     def __init__(self, attr: h5py.AttributeManager = None):
         self._attr = attr
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__} ({self.parent.name})'
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     @property
     def parent(self):
         """Return the parent object"""
         return self._attr._parent
 
-    def find(self, subject: Optional[str] = None, predicate: Optional[str] = None, object: Optional[str] = None,
+    def find(self,
+             rdf_subject: Optional[str] = None,
+             rdf_predicate: Optional[str] = None,
+             rdf_object: Optional[str] = None,
              recursive: bool = True) -> List:
         """Find the common objects that have the subject, predicate and object
 
         Parameters
         ----------
-        subject : str
+        rdf_subject : str
             The subject to search for
-        predicate : str
+        rdf_predicate : str
             The predicate to search for
-        object : str
+        rdf_object : str
             The object to search for
         recursive : bool
             If True, search recursively in the parent group
@@ -308,35 +335,35 @@ class RDFManager:
                 subjects = [rdfm.subject]
             else:
                 subjects = rdfm.subject
-            if str(subject) in subjects:
+            if str(rdf_subject) in subjects:
                 res_subject.append(node)
 
         def _find_predicate(name, node):
             rdfm = RDFManager(node.attrs)
             for k in rdfm.predicate.values():
-                if k == str(predicate):
+                if k == str(rdf_predicate):
                     res_predicate.append(node)
 
         def _find_object(name, node):
             rdfm = RDFManager(node.attrs)
             for k in rdfm.object.values():
-                if k == str(object):
+                if k == str(rdf_object):
                     res_object.append(node)
 
-        if object:
+        if rdf_object:
             if recursive:
                 if isinstance(self.parent, h5py.Group):
                     self.parent.visititems(_find_object)
             else:
                 _find_object(self.parent.name, self.parent)
-        if predicate:
+        if rdf_predicate:
             if recursive:
                 if isinstance(self.parent, h5py.Group):
                     self.parent.visititems(_find_predicate)
             else:
                 _find_predicate(self.parent.name, self.parent)
 
-        if subject:
+        if rdf_subject:
             if recursive:
                 if isinstance(self.parent, h5py.Group):
                     self.parent.visititems(_find_subject)
@@ -346,7 +373,7 @@ class RDFManager:
         common_objects = []
         res = [res_subject, res_predicate, res_object]
 
-        for flag, item in zip([subject, predicate, object], res):
+        for flag, item in zip([rdf_subject, rdf_predicate, rdf_object], res):
             if flag is not None:
                 item_set = set(item)
                 if not common_objects:
@@ -435,6 +462,11 @@ class RDFManager:
     def object(self):
         """Return the RDF object manager"""
         return RDF_OBJECT(self._attr)
+
+    # aliases:
+    rdf_object = object
+    rdf_predicate = predicate
+    rdf_subject = subject
 
     def __eq__(self, other: str):
         return str(self.subject) == str(other)
