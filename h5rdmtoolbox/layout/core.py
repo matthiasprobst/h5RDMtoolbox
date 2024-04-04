@@ -4,9 +4,9 @@ import pathlib
 import types
 import uuid
 import warnings
-from typing import Callable, Dict, Union, List
+from typing import Dict, Union, List, Protocol, Optional
 
-import h5rdmtoolbox
+import h5rdmtoolbox as h5tbx
 
 logger = logging.getLogger('h5rdmtoolbox')
 
@@ -23,14 +23,23 @@ def _replace_callables_with_names(dict_with_callables: Dict) -> Dict:
     return dict_with_callables
 
 
+class QueryCallable(Protocol):
+    """Protocol class for classes passed to the LayoutSpecification class.
+
+    Those classes must implement the method find()
+    """
+
+    def find(self, target: Union[str, pathlib.Path, h5tbx.Group], **kwargs): ...
+
+
 class LayoutSpecification:
     """Specification for a layout
 
     Parameters
     ----------
-    func: Callable
-        Function to be called on the hdf5 file. The first argument of the function will be
-        an opened h5py.File or h5py.Group or h5py.Dataset object.
+    func: QueryCallable
+        Callable query according to protocol class QueryCallable to be called on the hdf5 file.
+        The first argument of the function will be an opened h5py.File or h5py.Group or h5py.Dataset object.
     kwargs: Dict
         Keyword arguments passed to the func.
     n: int
@@ -46,7 +55,12 @@ class LayoutSpecification:
         hdf5 root group.
     """
 
-    def __init__(self, func, kwargs, n=None, comment: str = None, parent=None):
+    def __init__(self,
+                 func: QueryCallable,
+                 kwargs,
+                 n=None,
+                 comment: str = None,
+                 parent=None):
         self.func = func
         self.kwargs = kwargs
         self.n = n
@@ -114,7 +128,7 @@ class LayoutSpecification:
         return f'{self.__class__.__name__} (kwargs={_kwargs})'
 
     def __call__(self, target: Union[h5py.Group, h5py.Dataset]):
-        if isinstance(target, h5rdmtoolbox.database.lazy.LHDFObject):
+        if isinstance(target, h5tbx.database.lazy.LHDFObject):
             with target as _target:
                 return self.__call__(_target)
 
@@ -164,9 +178,16 @@ class LayoutSpecification:
                 logger.error(f'Applying spec. "{self}" failed due to not '
                              f'matching the number of results: {self.n} != {n_res}')
 
-    def add(self, func: Callable, *, n: int = None, comment: str = None, **kwargs):
+    def add(self,
+            func: QueryCallable,
+            *,
+            n: Optional[int] = None,
+            comment: Optional[str] = None,
+            **kwargs):
         """
-
+        Add a specification by providing a callable query obj. Optionally, the
+        number of exact matches can be provided as well as the a comment string.
+        The kwargs are passed to the callable
 
         Parameters
         ----------
