@@ -6,7 +6,6 @@ import pydantic
 import requests
 import unittest
 from datetime import datetime
-from urllib.parse import urlencode
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.repository import zenodo, upload_file

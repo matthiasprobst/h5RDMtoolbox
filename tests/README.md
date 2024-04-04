@@ -54,3 +54,11 @@ api_token = your_token
 api_token = your_token
 ```
 
+## Notes on using mongoDB
+
+In order to use/test the mongoDB modules, you need a running mongoDB instance. It can be
+started locally with the following command:
+
+```bash
+"path\to\MongoDB\Server\6.0\bin\mongod.exe" --bind_ip_all --dbpath="path\to\mongodb\data"
+```
