@@ -2,16 +2,16 @@ import h5py
 import json
 import logging
 import numpy as np
-import ontolutils
 import pathlib
 import rdflib
 import warnings
-from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 from rdflib.plugins.shared.jsonld.context import Context
 from typing import Dict, Optional, Union, List, Iterable, Tuple, Any
 
+import ontolutils
 from h5rdmtoolbox.convention import hdf_ontology
+from ontolutils.classes.utils import split_URIRef
 from .core import Dataset, File
 from ..convention.ontology import HDF5
 
@@ -62,7 +62,8 @@ CONTEXT_PREFIXES = {
 CONTEXT_PREFIXES_INV = {v: k for k, v in CONTEXT_PREFIXES.items()}
 
 
-def build_node_list(g: Graph, name, data: List):
+def build_node_list(g: Graph, data: List) -> BNode:
+    """Build an RDF List from a list of data"""
     # Create an RDF List for flag values
     # initial_node = rdflib.BNode()
     n = len(data)
@@ -637,9 +638,9 @@ def serialize(grp,
                 attr_literal = rdflib.Literal(av, datatype=XSD.float)
             elif isinstance(av, list) or isinstance(av, np.ndarray):
                 if isinstance(av, np.ndarray):
-                    list_node = build_node_list(g, ak, av.tolist())
+                    list_node = build_node_list(g, av.tolist())
                 else:
-                    list_node = build_node_list(g, ak, av)
+                    list_node = build_node_list(g, av)
             else:
                 try:
                     attr_literal = rdflib.Literal(json.dumps(av))
