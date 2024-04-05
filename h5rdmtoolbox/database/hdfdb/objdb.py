@@ -303,6 +303,30 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
          recursive: bool,
          find_one: bool,
          ignore_attribute_error):
+    """Find datasets or groups in an object.
+
+    Parameters
+    ----------
+    h5obj: Group or Dataset
+        obj from where to start searching
+    objfilter: Optional
+        Filter only for dataset or group. if None, consider both types.
+    recursive: bool
+        Whether to recursively search in sub groups, too
+    find_one: bool
+        If True, the first search result is returned
+    ignore_attribute_error: bool
+        If True, attribute errors are ignored.
+
+    Examples
+    --------
+    >>> from h5rdmtoolbox.database import hdfdb
+    >>> with h5tbx.File(filename) as h5:
+    ...     # find the obj with standard_name=='x_velocity':
+    ...     hdfdb.ObjDB(h5).find({'standard_name': 'x_velocity'})
+    ...     # all datasets must be gzip-compressed:
+    ...     hdfdb.ObjDB(h5).find({'$compression': 'gzip'}, objfilter='dataset')
+    """
     if flt == {}:  # just find any!
         flt = {'$name': {'$regex': '.*'}}
     if isinstance(flt, str):  # just find the attribute and don't filter for the value:
