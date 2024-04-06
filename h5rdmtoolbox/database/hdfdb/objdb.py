@@ -20,6 +20,13 @@ class RecFind:
     def __init__(self, func: Callable, attribute, value, objfilter, ignore_attribute_error):
         self._func = func
         self._attribute = attribute
+        if isinstance(value, set):
+            raise TypeError(
+                'It seems that your query has a typo. Expecting a dictionary or base string or number but got '
+                f'a set: {value}'
+            )
+        # if isinstance(value, dict):
+        #     _operators = query.operator.get(k) for k in value.keys()
         self._value = value
         self.found_objects = []
         self.objfilter = objfilter
@@ -268,6 +275,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                 rf = RecFind(query.operator[ok], qk[1:], ov, objfilter=objfilter,
                              ignore_attribute_error=ignore_attribute_error)
                 rf(name='/', h5obj=h5obj)  # visit the root group
+                # rf(name=h5obj.name, h5obj=h5obj)  # visit the root group
                 h5obj.visititems(rf)  # will not visit the root group
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)

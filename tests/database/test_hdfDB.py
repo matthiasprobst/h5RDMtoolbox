@@ -27,6 +27,8 @@ class TestHDFDB(unittest.TestCase):
             gdb = hdfdb.ObjDB(h5['/'])
             res = gdb.find_one({'$eq': 0.5}, recursive=True)
             self.assertEqual(res.name, ds_half.name)
+            with self.assertRaises(TypeError):
+                gdb.find_one({'$gte', 0.5}, recursive=True)
             res = gdb.find_one({'$gte': 0.5}, recursive=True)
             self.assertEqual(res.name, ds_half.name)
             res = gdb.find_one({'$lte': 0.5}, recursive=True)
@@ -44,6 +46,9 @@ class TestHDFDB(unittest.TestCase):
             ds_half = h5.create_dataset('half', data=0.5)
 
             gdb = hdfdb.ObjDB(h5['/'])
+
+            with self.assertRaises(TypeError):
+                gdb.find_one({'$shape', (3,)}, recursive=True)
 
             res = gdb.find_one({'$shape': (3,)}, recursive=True)
             self.assertEqual(res.name, ds_random.name)

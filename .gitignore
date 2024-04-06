@@ -55,6 +55,5 @@ docs/colab/my_file.hdf
 *.nxs
 *.json
 *.jsonld
-docs/userguide/wrapper/test.hdf
-docs/userguide/wrapper/test.json
-gui/test.hdf5
+testfile.*
+test.*

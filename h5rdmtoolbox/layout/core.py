@@ -20,6 +20,7 @@ class VALIDATION_FLAGS(enum.Enum):
     FAILED = 2
     SUCCESSFUL_ALTERNATIVE = 4  # an alternative spec succeeded
     INVALID_NUMBER = 8
+    OPTIONAL = 16  # if a spec is optional, it is successful independent of the number of results
 
 
 def _replace_callables_with_names(dict_with_callables: Dict) -> Dict:
@@ -43,6 +44,13 @@ class QueryCallable(Protocol):
     def find(self, target: Union[str, pathlib.Path, h5tbx.Group], **kwargs): ...
 
     def __call__(self, *args, **kwargs) -> List: ...
+
+
+def is_single_result(res) -> bool:
+    """Return True if the result is a single result. This is the case if the result is not an iterable object."""
+    if res is None:
+        return False
+    return not isinstance(res, (types.GeneratorType, tuple, list))
 
 
 class LayoutSpecification:
@@ -82,8 +90,8 @@ class LayoutSpecification:
         self.alt_specifications: List[LayoutSpecification] = []
         self.parent: Optional["LayoutSpecification"] = parent
         self.comment = comment
-        self.failed = None
         self.validation_flag = VALIDATION_FLAGS.UNCALLED.value
+        self._n_res = None
         self._n_calls = 0
         self._n_fails = 0
 
@@ -106,6 +114,11 @@ class LayoutSpecification:
         return all([same_parent, same_comment, same_kwargs, same_func, same_n])
 
     @property
+    def failed(self) -> bool:
+        """Return True if the specification failed"""
+        return self.validation_flag & VALIDATION_FLAGS.FAILED.value
+
+    @property
     def n_calls(self) -> int:
         """Return number of calls"""
         return self._n_calls
@@ -117,7 +130,6 @@ class LayoutSpecification:
 
     def reset(self) -> None:
         """Reset the specification and all its children"""
-        self.failed = None
         self._n_calls = 0
         self._n_fails = 0
         for spec in self.specifications:
@@ -155,9 +167,10 @@ class LayoutSpecification:
         if self.n is not None and not isinstance(res, (types.GeneratorType, tuple, list)):
             raise ValueError('"n" is specified but the return value is neither a generator nor a list or a tuple')
 
-        if res:
-            self.validation_flag = 1
-        else:
+        if not res:
+            # first assume failure. There might be an alternative spec registered though.
+            # The following will update `res`
+            self.validation_flag = VALIDATION_FLAGS.FAILED.value
             # If alternative specifications exist, try them
             alt_spec_successes = []
             res = []
@@ -170,58 +183,53 @@ class LayoutSpecification:
 
                 res.extend(alt_res)
 
-            self.failed = not any(alt_spec_successes)
+            failed = not any(alt_spec_successes)
             if any(alt_spec_successes):
+                logger.debug('An alternative succeeded!')
                 self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.SUCCESSFUL_ALTERNATIVE.value
             else:
-                self.validation_flag = VALIDATION_FLAGS.FAILED
-
-            if not self.failed:
-                print('An alternative succeeded!')
-
-            if self.failed:
                 self._n_fails += 1
                 logger.error(f'Applying spec. "{self}" on "{target}" failed.')
-
-        if not isinstance(res, (types.GeneratorType, tuple, list)):
-            # single result
-            if not res:
-                self.failed = True
                 self.validation_flag = VALIDATION_FLAGS.FAILED
-            else:
-                self.failed = False
-                if not self.validation_flag & VALIDATION_FLAGS.SUCCESSFUL.value:
-                    self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
 
-            if not self.failed:
-                for sub_spec in self.specifications:
-                    sub_spec(res)
+        # now, for successful results, let's apply the sub-specifications if exist
+        # and check how many results we have and if the number of results is correct (if n is specified)
+        if is_single_result(res):
+            # as there is a result, the specification is successful as n=1 is implicit
+            self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
+
+            # check sub-specifications
+            for sub_spec in self.specifications:
+                sub_spec(res)
             return
 
-        n_res = 0
+        # continue here if res is an iterable object
+        self._n_res = 0  # reset counter. res could be a generator, so, we cannot call len(res)
         for r in res:
-            n_res += 1
-            failed = r is None
-            if failed:
-                self.validation_flag = 0
+            self._n_res += 1
+            if not r:  # first result failed
                 logger.error(f'Applying spec. "{self}" on "{target}" failed.')
                 self._n_fails += 1
             else:
+                # if it was successful, we can check the sub-specifications
                 for sub_spec in self.specifications:
                     logger.debug(f'Calling spec {sub_spec} to hdf obj {r}.')
                     sub_spec(r)
 
+        logger.debug(f'Validation {self} found {self._n_res} results from which {self._n_fails} failed.')
+        # If the number of successful results is not specified, it means, that
+        # the spec is optional. so it is successful in any case!
         if self.n is None:
-            if self.failed is None:
-                self.failed = False
-        if self.n is not None:
-            if self.n == n_res:  # Note, this may fail if more than n alternatives were successful...
-                self.failed = False
+            logger.debug(f'No number of results specified. Independent of the number of results, the spec is '
+                         f'considered successful.')
+            self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.OPTIONAL.value
+        else:
+            if self.n == self._n_res:  # Note, this may fail if more than n alternatives were successful...
+                self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
             else:  # if self.n != n_res:
-                self.failed = True
                 self.validation_flag = VALIDATION_FLAGS.FAILED.value + VALIDATION_FLAGS.INVALID_NUMBER.value
                 logger.error(f'Applying spec. "{self}" failed due to not '
-                             f'matching the number of results: {self.n} != {n_res}')
+                             f'matching the number of results: {self.n} != {self._n_res}')
 
     def add(self,
             func: QueryCallable,
@@ -298,17 +306,17 @@ class LayoutSpecification:
         if self.n_calls == 0:
             print(f'{self} has not been called yet')
             return False
-        if self.failed is True:
+        if self.failed:
             print(f'{self} failed')
             return False
         return all(spec.is_valid() for spec in self.specifications)
 
     def get_valid(self) -> List['LayoutSpecification']:
         """Return all successful specifications"""
-        if self.failed is False:
+        if not self.failed:
             return [self]
         valid = []
-        if self.n_calls > 0 and self.failed is False:
+        if self.n_calls > 0 and not self.failed:
             valid.append(self)
         if self.specifications:
             valid.extend(spec.get_valid() for spec in self.specifications)
@@ -338,14 +346,14 @@ class LayoutSpecification:
                     explanations.append(i.name)
             explained_validation_flag = ', '.join(explanations)
             return [{'id': self.id,
-                     'failed': self.failed,
-                     'n_calls': self.n_calls,
+                     'called': self.called,
+                     'n_res(n_fails)': f'{self._n_res}({self.n_fails})' if self.called else '-(-)',
                      'flag': self.validation_flag,
                      'flag description': explained_validation_flag,
+                     'comment': self.comment,
                      # '_n_fails': self._n_fails,
                      'func': f'{self.func.__module__}.{self.func.__name__}',
                      'kwargs': self.kwargs,
-                     'comment': self.comment,
                      }]
         data = []
         for spec in self.specifications:
