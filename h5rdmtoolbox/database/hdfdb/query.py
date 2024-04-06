@@ -1,6 +1,9 @@
+import logging
 import numpy as np
 import re
 import warnings
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def _eq(a, b):
@@ -33,6 +36,7 @@ def _gte(a, b):
 
 def _lt(a, b):
     """Check if a < b"""
+    logger.debug(f'checking if a < b ({a} < {b})')
     if a is None or b is None:
         return False
     return a < b
@@ -63,10 +67,12 @@ def _regex(value, pattern) -> bool:
         return False
     return True
 
+
 def _userdefined(value, func) -> bool:
     if value is None:
         return False
     return func(value)
+
 
 def _basename(value, basename) -> bool:
     if value is None:

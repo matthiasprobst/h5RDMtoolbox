@@ -63,9 +63,12 @@ class LayoutSpecification:
         The first argument of the function will be an opened h5py.File or h5py.Group or h5py.Dataset object.
     kwargs: Dict
         Keyword arguments passed to the func.
-    n: int
-        Number of matches if function returns an iterable object. Only used, if `func`
-        return an iterable object.
+    n: Optional[Union[int, Dict]]
+        Number of matches or condition. Only applicable if query function (`func`) returns an iterable
+        object. Example: n=1 means that the specification is successful if the query function returns exactly one.
+        If n is a dictionary, the key must be a comparison operator (e.g. '$eq', '$gt', '$lt', '$gte', '$lte'),
+        e.g. {'$eq': 1} means that the query function must return exactly one result.
+        {'$gt': 1} means that the query function must return more than one result.
     comment: Optional[str]
         Optional comment explaining the specification
     parent: Optional[LayoutSpecification]
@@ -79,12 +82,30 @@ class LayoutSpecification:
     def __init__(self,
                  func: QueryCallable,
                  kwargs,
-                 n: Optional[int] = None,
+                 n: Optional[Union[int, Dict]] = None,
                  comment: Optional[str] = None,
                  parent: Optional["LayoutSpecification"] = None):
         self.func = func
         self.kwargs = kwargs
-        self.n = n
+
+        if n is None:
+            self.number_of_result_comparison = lambda x, y: True
+            self.n = None
+        else:
+            if isinstance(n, int):
+                if n < 1:
+                    raise ValueError('n must be greater than 0')
+                n = {'$eq': n}
+            if not isinstance(n, dict):
+                raise TypeError(f'n must be an integer or dictionary, but got {type(n)}')
+
+            from ..database.hdfdb import query
+            assert len(n) == 1, 'n must be a dictionary with exactly one key'
+            for k, v in n.items():
+                self.number_of_result_comparison = query.operator.get(k)
+                assert isinstance(v, int), 'n must be an integer'
+                self.n = v
+
         self.id = uuid.uuid4()
         self.specifications: List[LayoutSpecification] = []
         self.alt_specifications: List[LayoutSpecification] = []
@@ -116,7 +137,7 @@ class LayoutSpecification:
     @property
     def failed(self) -> bool:
         """Return True if the specification failed"""
-        return self.validation_flag & VALIDATION_FLAGS.FAILED.value
+        return self.validation_flag & VALIDATION_FLAGS.FAILED.value == VALIDATION_FLAGS.FAILED.value
 
     @property
     def n_calls(self) -> int:
@@ -167,6 +188,9 @@ class LayoutSpecification:
         if self.n is not None and not isinstance(res, (types.GeneratorType, tuple, list)):
             raise ValueError('"n" is specified but the return value is neither a generator nor a list or a tuple')
 
+        if not is_single_result(res) and res is not None:
+            res = list(res)
+
         if not res:
             # first assume failure. There might be an alternative spec registered though.
             # The following will update `res`
@@ -176,6 +200,10 @@ class LayoutSpecification:
             res = []
             for alt_spec in self.alt_specifications:
                 alt_res = alt_spec.func(target, **alt_spec.kwargs)
+
+                if not is_single_result(alt_res):
+                    alt_res = list(alt_res)
+
                 if alt_res:
                     alt_spec_successes.append(True)
                 else:
@@ -183,7 +211,7 @@ class LayoutSpecification:
 
                 res.extend(alt_res)
 
-            failed = not any(alt_spec_successes)
+            # failed = not any(alt_spec_successes)
             if any(alt_spec_successes):
                 logger.debug('An alternative succeeded!')
                 self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.SUCCESSFUL_ALTERNATIVE.value
@@ -224,9 +252,10 @@ class LayoutSpecification:
                          f'considered successful.')
             self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.OPTIONAL.value
         else:
-            if self.n == self._n_res:  # Note, this may fail if more than n alternatives were successful...
+            if self.number_of_result_comparison(self._n_res, self.n):
                 self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
             else:  # if self.n != n_res:
+                self._n_fails += 1
                 self.validation_flag = VALIDATION_FLAGS.FAILED.value + VALIDATION_FLAGS.INVALID_NUMBER.value
                 logger.error(f'Applying spec. "{self}" failed due to not '
                              f'matching the number of results: {self.n} != {self._n_res}')
@@ -313,15 +342,17 @@ class LayoutSpecification:
 
     def get_valid(self) -> List['LayoutSpecification']:
         """Return all successful specifications"""
-        if not self.failed:
-            return [self]
-        valid = []
-        if self.n_calls > 0 and not self.failed:
+        if self.n_calls == 0:
+            return []  # has not been called yet, thus cannot be valid
+
+        valid: List[LayoutSpecification] = []
+
+        if not self.failed and self.n_calls > 0 and not self.failed:
             valid.append(self)
+
         if self.specifications:
-            valid.extend(spec.get_valid() for spec in self.specifications)
-            # flatten list:
-            return [item for sublist in valid for item in sublist]
+            for spec in self.specifications:
+                valid.extend(spec.get_valid())
         return valid
 
     def get_failed(self) -> List['LayoutSpecification']:
@@ -339,23 +370,21 @@ class LayoutSpecification:
 
     def get_summary(self) -> List[Dict]:
         """return a summary as dictionary"""
-        if len(self.specifications) == 0:
-            explanations = []
-            for i in VALIDATION_FLAGS:
-                if self.validation_flag & i.value:
-                    explanations.append(i.name)
-            explained_validation_flag = ', '.join(explanations)
-            return [{'id': self.id,
-                     'called': self.called,
-                     'n_res(n_fails)': f'{self._n_res}({self.n_fails})' if self.called else '-(-)',
-                     'flag': self.validation_flag,
-                     'flag description': explained_validation_flag,
-                     'comment': self.comment,
-                     # '_n_fails': self._n_fails,
-                     'func': f'{self.func.__module__}.{self.func.__name__}',
-                     'kwargs': self.kwargs,
-                     }]
-        data = []
+        explanations = []
+        for i in VALIDATION_FLAGS:
+            if self.validation_flag & i.value:
+                explanations.append(i.name)
+        explained_validation_flag = ', '.join(explanations)
+        data = [{'id': self.id,
+                 'called': self.called,
+                 'n_res(n_fails)': f'{self._n_res}({self.n_fails})' if self.called else '-(-)',
+                 'flag': self.validation_flag,
+                 'flag description': explained_validation_flag,
+                 'comment': self.comment,
+                 # '_n_fails': self._n_fails,
+                 'func': f'{self.func.__module__}.{self.func.__name__}',
+                 'kwargs': self.kwargs,
+                 }]
         for spec in self.specifications:
             data.extend(spec.get_summary())
         return data
@@ -367,9 +396,6 @@ class LayoutResult:
     def __init__(self, specifications: List[LayoutSpecification]):
         self.specifications: List[LayoutSpecification] = specifications
 
-    def __len__(self):
-        return len(self.specifications)
-
     def get_failed(self) -> List[LayoutSpecification]:
         """Return a list of failed specifications"""
         failed = [spec.get_failed() for spec in self.specifications]
@@ -377,10 +403,10 @@ class LayoutResult:
         return [item for sublist in failed for item in sublist]
 
     def get_valid(self) -> List[LayoutSpecification]:
-        """Return a list of failed specifications"""
-        failed = [spec.get_valid() for spec in self.specifications]
+        """Return a list of valid specifications"""
+        valid_specs = [spec.get_valid() for spec in self.specifications]
         # flatten list:
-        return [item for sublist in failed for item in sublist]
+        return [item for sublist in valid_specs for item in sublist]
 
     def is_valid(self) -> bool:
         """Return True if the layout is valid, which is the case if no specs failed"""
