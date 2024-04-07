@@ -15,6 +15,7 @@ from h5rdmtoolbox.layout.core import is_single_result
 class TestCore(unittest.TestCase):
 
     def test_number_of_results(self):
+        """Testing if the number of required results is handled correctly."""
         with h5tbx.File(mode='w') as h5:
             h5.create_dataset('a', shape=(3, 4), dtype='float32')
             h5.create_dataset('b', shape=(3, 4), dtype='float64')
@@ -61,6 +62,13 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(TypeError):
                 lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=[1, 2, 3], comment='2D datasets')
 
+            # n=None --> query is optional
+            lay = layout.Layout()
+            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 10}, n=None, comment='2D datasets')
+            res = lay.validate(h5)
+            self.assertFalse(spec.failed)
+            self.assertTrue(res.is_valid())
+
     def test_spec_properties(self):
         lay = layout.Layout()
         spec1 = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
@@ -70,11 +78,6 @@ class TestCore(unittest.TestCase):
         self.assertEqual(spec1.called, False)
         with self.assertRaises(ValueError):
             spec1.n_successes
-
-        spec_one = lay.add(hdfdb.FileDB.find_one, flt={'$name': '/u'}, n=1)
-        with h5tbx.File() as h5:
-            with self.assertRaises(ValueError):
-                spec_one(h5)  # n is specified, but find_one returns not a list from which n can be extracted
 
     def test_alternative_specification(self):
         """Expecting exactly one u, but if not found, exactly one v."""
@@ -97,6 +100,11 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('w', shape=(3, 4), dtype='float32')
             res = lay.validate(h5)
             self.assertFalse(res.is_valid())
+
+        lay = layout.Layout()
+        main_spec = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=None)
+        with self.assertRaises(ValueError):
+            main_spec.add_alternative(hdfdb.FileDB.find, flt={'$name': '/v'}, n=1)
 
     def test_is_single_result(self):
         self.assertEqual(is_single_result(None), False)
@@ -225,8 +233,10 @@ class TestCore(unittest.TestCase):
                 lay(h5)
 
             res = lay.validate(h5)
+            self.assertEqual(spec_all_ds.n_calls, 1)
+            self.assertTrue(spec_all_ds.is_valid())
             self.assertEqual(spec_all_ds_are_float32.n_calls, 4)
-            self.assertEqual(spec_all_ds_are_float32.n_fails, 2)
+            self.assertEqual(spec_all_ds_are_float32.n_fails, 2)  # 2 out of 4 failed
             self.assertEqual(spec_all_ds_are_float32.n_successes, 2)
 
             self.assertFalse(res.is_valid())

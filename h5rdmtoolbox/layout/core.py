@@ -172,8 +172,8 @@ class LayoutSpecification:
     def __repr__(self):
         _kwargs = _replace_callables_with_names(self.kwargs)
         if self.comment:
-            return f'{self.__class__.__name__} (comment="{self.comment}", kwargs={_kwargs})'
-        return f'{self.__class__.__name__} (kwargs={_kwargs})'
+            return f'{self.__class__.__name__}(comment="{self.comment}", kwargs={_kwargs})'
+        return f'{self.__class__.__name__}(kwargs={_kwargs})'
 
     def __call__(self, target: Union[h5py.Group, h5py.Dataset]):
         if isinstance(target, h5tbx.database.lazy.LHDFObject):
@@ -185,40 +185,47 @@ class LayoutSpecification:
                      f'kwargs {self.kwargs}')
 
         res = self.func(target, **self.kwargs)
-        if self.n is not None and not isinstance(res, (types.GeneratorType, tuple, list)):
-            raise ValueError('"n" is specified but the return value is neither a generator nor a list or a tuple')
+        if res is None or is_single_result(res):
+            res = [res]
+            if self.n is None:
+                self.n = 1
 
         if not is_single_result(res) and res is not None:
             res = list(res)
 
         if not res:
-            # first assume failure. There might be an alternative spec registered though.
+            # first assume failure unless n=None. There might be an alternative spec registered though.
             # The following will update `res`
-            self.validation_flag = VALIDATION_FLAGS.FAILED.value
-            # If alternative specifications exist, try them
-            alt_spec_successes = []
-            res = []
-            for alt_spec in self.alt_specifications:
-                alt_res = alt_spec.func(target, **alt_spec.kwargs)
-
-                if not is_single_result(alt_res):
-                    alt_res = list(alt_res)
-
-                if alt_res:
-                    alt_spec_successes.append(True)
-                else:
-                    alt_spec_successes.append(False)
-
-                res.extend(alt_res)
-
-            # failed = not any(alt_spec_successes)
-            if any(alt_spec_successes):
-                logger.debug('An alternative succeeded!')
-                self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.SUCCESSFUL_ALTERNATIVE.value
+            if self.n is None:  # query is optional!
+                self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.OPTIONAL.value
             else:
-                self._n_fails += 1
-                logger.error(f'Applying spec. "{self}" on "{target}" failed.')
-                self.validation_flag = VALIDATION_FLAGS.FAILED
+                self.validation_flag = VALIDATION_FLAGS.FAILED.value
+
+            # If alternative specifications exist, try them. This will only be performed if self.n is not None
+            if len(self.alt_specifications) > 0 and self.n is not None:
+                alt_spec_successes = []
+                res = []
+                for alt_spec in self.alt_specifications:
+                    alt_res = alt_spec.func(target, **alt_spec.kwargs)
+
+                    if not is_single_result(alt_res):
+                        alt_res = list(alt_res)
+
+                    if alt_res:
+                        alt_spec_successes.append(True)
+                    else:
+                        alt_spec_successes.append(False)
+
+                    res.extend(alt_res)
+
+                # failed = not any(alt_spec_successes)
+                if any(alt_spec_successes):
+                    logger.debug('An alternative succeeded!')
+                    self.validation_flag += VALIDATION_FLAGS.SUCCESSFUL_ALTERNATIVE.value
+                else:
+                    self._n_fails += 1
+                    logger.error(f'Applying spec. "{self}" on "{target}" failed.')
+                    self.validation_flag = VALIDATION_FLAGS.FAILED
 
         # now, for successful results, let's apply the sub-specifications if exist
         # and check how many results we have and if the number of results is correct (if n is specified)
@@ -231,27 +238,28 @@ class LayoutSpecification:
                 sub_spec(res)
             return
 
-        # continue here if res is an iterable object
-        self._n_res = 0  # reset counter. res could be a generator, so, we cannot call len(res)
-        for r in res:
-            self._n_res += 1
-            if not r:  # first result failed
-                logger.error(f'Applying spec. "{self}" on "{target}" failed.')
-                self._n_fails += 1
-            else:
-                # if it was successful, we can check the sub-specifications
-                for sub_spec in self.specifications:
-                    logger.debug(f'Calling spec {sub_spec} to hdf obj {r}.')
-                    sub_spec(r)
+        if res:  # if no alternative was defined, res may still be None!
+            # continue here if res is an iterable object
+            self._n_res = 0  # reset counter. res could be a generator, so, we cannot call len(res)
+            for r in res:
+                self._n_res += 1
+                if not r:  # first result failed
+                    logger.error(f'Applying spec. "{self}" on "{target}" failed.')
+                    self._n_fails += 1
+                else:
+                    # if it was successful, we can check the sub-specifications
+                    for sub_spec in self.specifications:
+                        logger.debug(f'Calling spec {sub_spec} to hdf obj {r}.')
+                        sub_spec(r)
 
         logger.debug(f'Validation {self} found {self._n_res} results from which {self._n_fails} failed.')
         # If the number of successful results is not specified, it means, that
         # the spec is optional. so it is successful in any case!
-        if self.n is None:
-            logger.debug(f'No number of results specified. Independent of the number of results, the spec is '
-                         f'considered successful.')
-            self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.OPTIONAL.value
-        else:
+        if self.n is not None:
+            #     logger.debug(f'No number of results specified. Independent of the number of results, the spec is '
+            #                  f'considered successful.')
+            #     self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.OPTIONAL.value
+            # else:
             if self.number_of_result_comparison(self._n_res, self.n):
                 self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
             else:  # if self.n != n_res:
@@ -316,7 +324,27 @@ class LayoutSpecification:
         """Add an alternative specification by providing a callable query obj. Optionally, the
         number of exact matches can be provided as well as the a comment string.
         The kwargs are passed to the callable
-        Either the parent or the alternative specification must be successful."""
+        Either the parent or the alternative specification must be successful.
+
+        .. note::
+
+            An alternative query can only added to specifications which have a number of expected results (n!=None).
+
+        Parameters
+        ----------
+        func: Callable
+            Function to be called on the hdf5 file
+        n: int
+            Number of matches if function returns an iterable object
+        comment: Optional[str]
+            Optional comment explaining the specification
+        kwargs: Dict
+            Keyword arguments passed to the func
+
+        """
+        if self.n is None:
+            raise ValueError('Parent specification must not be an optional specification. Please provide a number of '
+                             'expected results.')
         new_spec = LayoutSpecification(func=func,
                                        kwargs=kwargs,
                                        n=n,
