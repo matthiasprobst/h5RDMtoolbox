@@ -23,48 +23,48 @@ class TestCore(unittest.TestCase):
 
             # exactly 2 datasets must be ndim==2:
             lay = layout.Layout()
-            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=2, comment='2D datasets')
+            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=2, description='2D datasets')
             res = lay.validate(h5)
             self.assertFalse(spec.failed)
             self.assertTrue(res.is_valid())
 
             # exactly 2 datasets must be ndim==1:
             lay = layout.Layout()
-            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=1, comment='2D datasets')
+            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=1, description='2D datasets')
             res = lay.validate(h5)
             self.assertTrue(spec.failed)
             self.assertFalse(res.is_valid())
 
             # at least 2 datasets must be ndim==2:
             lay = layout.Layout()
-            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n={'$gt': 1}, comment='2D datasets')
+            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n={'$gt': 1}, description='2D datasets')
             res = lay.validate(h5)
             self.assertFalse(spec.failed)
             self.assertTrue(res.is_valid())
 
             # at least 3 datasets must be ndim==2:
             lay = layout.Layout()
-            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n={'$gt': 2}, comment='2D datasets')
+            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n={'$gt': 2}, description='2D datasets')
             res = lay.validate(h5)
             self.assertTrue(spec.failed)
             self.assertFalse(res.is_valid())
 
             # at least 2 datasets must be ndim==2:
             lay = layout.Layout()
-            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n={'$gte': 2}, comment='2D datasets')
+            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n={'$gte': 2}, description='2D datasets')
             res = lay.validate(h5)
             self.assertFalse(spec.failed)
             self.assertTrue(res.is_valid())
 
             with self.assertRaises(ValueError):
-                lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=-2, comment='2D datasets')
+                lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=-2, description='2D datasets')
 
             with self.assertRaises(TypeError):
-                lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=[1, 2, 3], comment='2D datasets')
+                lay.add(hdfdb.FileDB.find, flt={'$ndim': 2}, n=[1, 2, 3], description='2D datasets')
 
             # n=None --> query is optional
             lay = layout.Layout()
-            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 10}, n=None, comment='2D datasets')
+            spec = lay.add(hdfdb.FileDB.find, flt={'$ndim': 10}, n=None, description='2D datasets')
             res = lay.validate(h5)
             self.assertFalse(spec.failed)
             self.assertTrue(res.is_valid())
@@ -82,8 +82,8 @@ class TestCore(unittest.TestCase):
     def test_alternative_specification(self):
         """Expecting exactly one u, but if not found, exactly one v."""
         lay = layout.Layout()
-        main_spec = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1, comment='u exists')
-        main_spec.add_alternative(hdfdb.FileDB.find, flt={'$name': '/v'}, n=1, comment='v exists if u does not')
+        main_spec = lay.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1, description='u exists')
+        main_spec.add_alternative(hdfdb.FileDB.find, flt={'$name': '/v'}, n=1, description='v exists if u does not')
         # with h5tbx.File() as h5:
         #     h5.create_dataset('u', shape=(3, 4), dtype='float32')
         #     res = lay.validate(h5)
@@ -111,8 +111,8 @@ class TestCore(unittest.TestCase):
         self.assertEqual(is_single_result(None), False)
 
         lay = layout.Layout()
-        spec = lay.add(hdfdb.FileDB.find_one, flt={'$name': '/u'})
-        sub_spec = spec.add(hdfdb.FileDB.find, flt={'$shape': (3, 4)})
+        spec = lay.add(hdfdb.FileDB.find_one, flt={'$name': '/u'}, n=None)
+        sub_spec = spec.add(hdfdb.FileDB.find, flt={'$shape': (3, 4)}, n=None)
 
         self.assertFalse(spec.is_valid())
         self.assertFalse(sub_spec.is_valid())
@@ -148,14 +148,14 @@ class TestCore(unittest.TestCase):
         out = StringIO()
         sys.stdout = out
         lay = layout.Layout()
-        spec = lay.add(hdfdb.FileDB.find_one, flt={'$name': '/u'})
+        spec = lay.add(hdfdb.FileDB.find_one, flt={'$name': '/u'}, n=None)
         with h5tbx.File(name=None, mode='w') as h5:
             ds = h5.create_dataset('u', shape=(3, 4), dtype='float32')
             res = lay.validate(h5)
         res.print_summary()
 
         out_str = tabulate(res.get_summary(), headers='keys', tablefmt='psql')
-        self.assertEqual(out.getvalue(), f'\nSummary of layout validation\n{out_str}\n')
+        self.assertEqual(out.getvalue(), f'\nSummary of layout validation\n{out_str}\n--> Layout is valid\n')
 
     def test_eq(self):
         lay = layout.Layout()
@@ -187,7 +187,7 @@ class TestCore(unittest.TestCase):
             spec_number_of_specific_datasets = lay.add(
                 hdfdb.FileDB.find,
                 flt={'$name': {'$regex': '.*/u$'}}, n=2, recursive=True,
-                comment='/u exists'
+                description='/u exists'
             )
             res = lay.validate(h5)
             self.assertFalse(spec_number_of_specific_datasets.failed)
@@ -197,9 +197,9 @@ class TestCore(unittest.TestCase):
             spec_number_of_specific_datasets = lay.add(
                 hdfdb.FileDB.find,
                 flt={'$name': {'$regex': '.*/u$'}}, n=1, recursive=True,
-                comment='/u exists'
+                description='/u exists'
             )
-            self.assertEqual(spec_number_of_specific_datasets.comment, '/u exists')
+            self.assertEqual(spec_number_of_specific_datasets.description, '/u exists')
             res = lay.validate(h5)
             self.assertTrue(spec_number_of_specific_datasets.failed)
             self.assertEqual(spec_number_of_specific_datasets.n_fails, 1)
@@ -220,31 +220,47 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('a/v', shape=(3, 4), dtype='float32')
             h5.create_dataset('a/b/c/u', shape=(3, 4), dtype='float64')
 
+            # there are 2 datasets with dtype float32 and 2 with float64
+            # thus specification which checks float32 should fail twice
+
             lay = layout.Layout()
             spec_all_ds = lay.add(hdfdb.FileDB.find,
-                                  comment='Any dataset',
+                                  description='Any dataset',
                                   n=None,  # optional
                                   recursive=True,
                                   flt={'$shape': {'$exists': True}},
                                   objfilter='dataset')  # all datasets
             spec_all_ds_are_float32 = spec_all_ds.add(
                 hdfdb.FileDB.find,
-                comment='Is float32',
+                description='Is float32',
                 flt={'$dtype': np.dtype(
                     '<f4')},
-                n=1)  # applies all these on spec_all_ds results
+                n=1)  # applies all these on spec_all_ds results. So must be true per dataset (n=1)
+
             with self.assertRaises(RuntimeError):
                 lay(h5)
 
             res = lay.validate(h5)
             res.print_summary()
-            print(res.get_failed())
+
             self.assertEqual(spec_all_ds.n_calls, 1)
             self.assertTrue(spec_all_ds.is_valid())
+
             self.assertEqual(spec_all_ds_are_float32.n_calls, 4)
             self.assertEqual(spec_all_ds_are_float32.n_fails, 2)  # 2 out of 4 failed
             self.assertEqual(spec_all_ds_are_float32.n_successes, 2)
             res.print_summary()
-            print(res.get_failed())
-            self.assertTrue(res.is_valid())
+            self.assertFalse(res.is_valid())
             self.assertEqual(len(res.specifications), 1)
+
+        # now a valid one
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('u', shape=(3, 4), dtype='float32')
+            h5.create_dataset('a/u', shape=(3, 4), dtype='float32')
+            h5.create_dataset('a/v', shape=(3, 4), dtype='float32')
+            h5.create_dataset('a/b/c/u', shape=(3, 4), dtype='float32')
+
+            res = lay.validate(h5)
+            self.assertTrue(res.is_valid())
+            self.assertTrue(spec_all_ds.is_valid())
+            self.assertTrue(spec_all_ds_are_float32.is_valid())

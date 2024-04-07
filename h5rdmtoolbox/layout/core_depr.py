@@ -6,7 +6,7 @@ import pathlib
 import types
 import uuid
 import warnings
-from typing import Dict, Union, List, Protocol, Optional, Callable, Tuple
+from typing import Dict, Union, List, Protocol, Optional
 
 import h5rdmtoolbox as h5tbx
 
@@ -21,14 +21,6 @@ class VALIDATION_FLAGS(enum.Enum):
     ALTERNATIVE_CALLED = 4  # an alternative spec succeeded
     INVALID_NUMBER = 8
     OPTIONAL = 16  # if a spec is optional, it is successful independent of the number of results
-
-
-def _get_flag_explanations(flag):
-    explanations = []
-    for i in VALIDATION_FLAGS:
-        if flag & i.value:
-            explanations.append(i.name)
-    return ', '.join(explanations)
 
 
 def _replace_callables_with_names(dict_with_callables: Dict) -> Dict:
@@ -61,13 +53,10 @@ def is_single_result(res) -> bool:
     return not isinstance(res, (types.GeneratorType, tuple, list))
 
 
-class SpecificationResult:
+class SpecificationCallResult:
     """Stores the result of a specification call"""
 
-    def __init__(self, target):
-        self.target = target
-        self.target_name = target.name
-        self.target_type = 'Dataset' if isinstance(target, h5py.Dataset) else 'Group'
+    def __init__(self):
         self.validation_flag = VALIDATION_FLAGS.UNCALLED.value
         self.res = []
 
@@ -113,19 +102,34 @@ class LayoutSpecification:
         self.func = func
         self.kwargs = kwargs
 
-        self.n, self.number_of_result_comparison = self._parse_n_def(n)
+        if n is None:
+            self.number_of_result_comparison = lambda x, y: True
+            self.n = None
+        else:
+            if isinstance(n, int):
+                if n < 1:
+                    raise ValueError('n must be greater than 0')
+                n = {'$eq': n}
+            if not isinstance(n, dict):
+                raise TypeError(f'n must be an integer or dictionary, but got {type(n)}')
+
+            from ..database.hdfdb import query
+            assert len(n) == 1, 'n must be a dictionary with exactly one key'
+            for k, v in n.items():
+                self.number_of_result_comparison = query.operator.get(k)
+                assert isinstance(v, int), 'n must be an integer'
+                self.n = v
 
         self.id = uuid.uuid4()
         self.specifications: List[LayoutSpecification] = []
         self.alt_specifications: List[LayoutSpecification] = []
         self.parent: Optional["LayoutSpecification"] = parent
         self.description: str = description or ''
-        self.results: List[Optional[SpecificationResult]] = []
-        self._n_calls = 0
-
-    @property
-    def validation_flag(self) -> int:
-        raise NotImplementedError('validation_flag is moved')
+        # self.validation_flag = VALIDATION_FLAGS.UNCALLED.value
+        # self._n_res = 0
+        # self._n_calls = 0
+        # self._n_fails = 0
+        self.results: List[Optional[SpecificationCallResult]] = []
 
     def __eq__(self, other) -> bool:
         """A specification is equal to another if the ID is identical or the
@@ -148,13 +152,12 @@ class LayoutSpecification:
     @property
     def failed(self) -> bool:
         """Return True if the specification failed"""
-        return any(
-            r.validation_flag & VALIDATION_FLAGS.FAILED.value == VALIDATION_FLAGS.FAILED.value for r in self.results)
+        return self.validation_flag & VALIDATION_FLAGS.FAILED.value == VALIDATION_FLAGS.FAILED.value
 
     @property
     def n_calls(self) -> int:
         """Return number of calls"""
-        return self._n_calls
+        return len(self.results)
 
     @property
     def n_fails(self) -> int:
@@ -165,7 +168,6 @@ class LayoutSpecification:
         """Reset the specification and all its children"""
         self._n_calls = 0
         self._n_fails = 0
-        self.results = []
         for spec in self.specifications:
             spec.reset()
 
@@ -182,31 +184,6 @@ class LayoutSpecification:
             raise ValueError('Not called')
         return self.n_calls - self._n_fails
 
-    @staticmethod
-    def _parse_n_def(n: int) -> Tuple[Union[int, None], Callable]:
-        """Parse the number of expected results"""
-        if n is None:
-            return None, lambda x, y: True
-            # number_of_result_comparison = lambda x, y: True
-            # n = None
-        else:
-            if isinstance(n, int):
-                if n < 1:
-                    raise ValueError('n must be greater than 0')
-                n = {'$eq': n}
-
-            if not isinstance(n, dict):
-                raise TypeError(f'n must be an integer or dictionary, but got {type(n)}')
-
-            from ..database.hdfdb import query
-
-            assert len(n) == 1, 'n must be a dictionary with exactly one key'
-            for k, v in n.items():
-                number_of_result_comparison = query.operator.get(k)
-                assert isinstance(v, int), 'n must be an integer'
-                n = v
-        return n, number_of_result_comparison
-
     def __repr__(self):
         _kwargs = _replace_callables_with_names(self.kwargs)
         if self.description:
@@ -218,26 +195,25 @@ class LayoutSpecification:
             with target as _target:
                 return self.__call__(_target)
 
-        self._n_calls += 1
-        scr = SpecificationResult(target)
+        scr = SpecificationCallResult()
 
         if self.n is None:
             # per definition successful since n is None
             scr.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.OPTIONAL.value
 
-        logger.debug(f'Calling spec {self} on hdf obj {target}.')
+        # self._n_calls += 1
+        # logger.debug(f'calling spec (id={self.id}) with func={self.func.__module__}.{self.func.__name__} and '
+        #              f'kwargs {self.kwargs}')
+
         res = self.func(target, **self.kwargs)
-        if res is None:
-            res = []
-        elif is_single_result(res):
+        if res is None or is_single_result(res):
             res = [res]
             if self.n is None:
-                self.n, self.number_of_result_comparison = self._parse_n_def(1)
+                self.n = 1
 
         if not is_single_result(res) and res is not None:
             res = list(res)
 
-        # assign result to scr
         scr.res = res
 
         if not res:
@@ -255,32 +231,28 @@ class LayoutSpecification:
                 for alt_spec in self.alt_specifications:
                     alt_res = alt_spec.func(target, **alt_spec.kwargs)
 
-                    alt_sr = SpecificationResult(target)
-                    alt_sr.res = alt_res
-
                     if not is_single_result(alt_res):
                         alt_res = list(alt_res)
 
                     if alt_res:
-                        alt_sr.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
+                        alt_spec.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
                         alt_spec_successes.append(True)
                     else:
-                        alt_sr.validation_flag = VALIDATION_FLAGS.FAILED.value
+                        alt_spec.validation_flag = VALIDATION_FLAGS.FAILED.value
                         alt_spec_successes.append(False)
 
                     res.extend(alt_res)
-                    scr.res.extend(alt_res)
 
                 # failed = not any(alt_spec_successes)
                 if any(alt_spec_successes):
                     logger.debug('An alternative succeeded!')
-                    if scr.validation_flag & VALIDATION_FLAGS.FAILED.value:
-                        scr.validation_flag -= VALIDATION_FLAGS.FAILED.value
-                    scr.validation_flag += VALIDATION_FLAGS.ALTERNATIVE_CALLED.value
+                    if self.validation_flag & VALIDATION_FLAGS.FAILED.value:
+                        self.validation_flag -= VALIDATION_FLAGS.FAILED.value
+                    self.validation_flag += VALIDATION_FLAGS.ALTERNATIVE_CALLED.value
                 else:
                     self._n_fails += 1
                     logger.error(f'Applying spec. "{self}" on "{target}" failed.')
-                    scr.validation_flag = VALIDATION_FLAGS.FAILED.value + VALIDATION_FLAGS.ALTERNATIVE_CALLED.value
+                    self.validation_flag = VALIDATION_FLAGS.FAILED.value + VALIDATION_FLAGS.ALTERNATIVE_CALLED.value
 
         # now, for successful results, let's apply the sub-specifications if exist
         # and check how many results we have and if the number of results is correct (if n is specified)
@@ -416,8 +388,6 @@ class LayoutSpecification:
         if self.n_calls == 0:
             print(f'{self} has not been called yet')
             return False
-        if self.n is None:
-            return True
         if self.failed:
             print(f'{self} failed')
             return False
@@ -453,6 +423,14 @@ class LayoutSpecification:
 
     def get_summary(self, exclude_keys: Optional[List] = None) -> List[Dict]:
         """return a summary as dictionary"""
+        explanations = []
+
+        def _get_flag_explanations(flag):
+            explanations = []
+            for i in VALIDATION_FLAGS:
+                if flag & i.value:
+                    explanations.append(i.name)
+            return ', '.join(explanations)
 
         data = []
         for res in self.results:
@@ -462,8 +440,6 @@ class LayoutSpecification:
                          'flag': res.validation_flag,
                          'flag description': _get_flag_explanations(res.validation_flag),
                          'description': self.description,
-                         'target_type': res.target_type,
-                         'target_name': res.target_name,
                          # '_n_fails': self._n_fails,
                          'func': f'{self.func.__module__}.{self.func.__name__}',
                          'kwargs': self.kwargs,
@@ -473,8 +449,7 @@ class LayoutSpecification:
             exclude_keys = []
         for key in exclude_keys:
             # pop keys from dict:
-            for i, d in enumerate(data):
-                data[i].pop(key)
+            data[0].pop(key)
 
         for spec in self.specifications:
             data.extend(spec.get_summary(exclude_keys))
@@ -518,10 +493,6 @@ class LayoutResult:
             raise ImportError('Please install tabulate to use this method')
         print('\nSummary of layout validation')
         print(tabulate(self.get_summary(exclude_keys), headers='keys', tablefmt='psql'))
-        if self.is_valid():
-            print('--> Layout is valid')
-        else:
-            print('--> Layout validation found issues!')
 
 
 class Layout(LayoutSpecification):
@@ -564,8 +535,6 @@ class Layout(LayoutSpecification):
 
     def validate(self, filename_or_root_group: Union[str, pathlib.Path, h5py.Group]) -> LayoutResult:
         """Validate the layout by passing a filename or an opened root group"""
-        self.reset()
-
         if isinstance(filename_or_root_group, h5py.Group):
             if not filename_or_root_group.name == '/':
                 raise ValueError('If passing an HDF5 group, a root group must be passed')
