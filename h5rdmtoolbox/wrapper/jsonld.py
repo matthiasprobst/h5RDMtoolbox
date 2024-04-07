@@ -100,6 +100,7 @@ def build_node_list(g: Graph, data: List) -> BNode:
 
 def resolve_iri(key_or_iri: str, context: Context) -> str:
     """Resolve a key or IRI to a full IRI using the context."""
+    assert isinstance(context, Context), f'Expecting Context, got {type(context)}'
     if key_or_iri.startswith('http'):
         return str(key_or_iri)
     if ':' in key_or_iri:
@@ -704,8 +705,9 @@ def serialize(grp,
                         else:
                             _parse_val(k, v)
 
-                attr_context = attr_object.pop('@context', None)
-                _context.update(attr_context)
+                _attr_context: Optional[dict] = attr_object.pop('@context', None)
+                attr_context: Context = Context(source=_attr_context)
+                _context.update(_attr_context)
 
                 _create_obj_node(obj_node, predicate_uri, attr_object)
 
