@@ -18,7 +18,7 @@ class VALIDATION_FLAGS(enum.Enum):
     UNCALLED = 0
     SUCCESSFUL = 1
     FAILED = 2
-    SUCCESSFUL_ALTERNATIVE = 4  # an alternative spec succeeded
+    ALTERNATIVE_CALLED = 4  # an alternative spec succeeded
     INVALID_NUMBER = 8
     OPTIONAL = 16  # if a spec is optional, it is successful independent of the number of results
 
@@ -110,9 +110,9 @@ class LayoutSpecification:
         self.specifications: List[LayoutSpecification] = []
         self.alt_specifications: List[LayoutSpecification] = []
         self.parent: Optional["LayoutSpecification"] = parent
-        self.comment = comment
+        self.comment: str = comment or ''
         self.validation_flag = VALIDATION_FLAGS.UNCALLED.value
-        self._n_res = None
+        self._n_res = 0
         self._n_calls = 0
         self._n_fails = 0
 
@@ -180,6 +180,10 @@ class LayoutSpecification:
             with target as _target:
                 return self.__call__(_target)
 
+        if self.n is None:
+            # per definition successful since n is None
+            self.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value + VALIDATION_FLAGS.OPTIONAL.value
+
         self._n_calls += 1
         logger.debug(f'calling spec (id={self.id}) with func={self.func.__module__}.{self.func.__name__} and '
                      f'kwargs {self.kwargs}')
@@ -212,8 +216,10 @@ class LayoutSpecification:
                         alt_res = list(alt_res)
 
                     if alt_res:
+                        alt_spec.validation_flag = VALIDATION_FLAGS.SUCCESSFUL.value
                         alt_spec_successes.append(True)
                     else:
+                        alt_spec.validation_flag = VALIDATION_FLAGS.FAILED.value
                         alt_spec_successes.append(False)
 
                     res.extend(alt_res)
@@ -221,11 +227,13 @@ class LayoutSpecification:
                 # failed = not any(alt_spec_successes)
                 if any(alt_spec_successes):
                     logger.debug('An alternative succeeded!')
-                    self.validation_flag += VALIDATION_FLAGS.SUCCESSFUL_ALTERNATIVE.value
+                    if self.validation_flag & VALIDATION_FLAGS.FAILED.value:
+                        self.validation_flag -= VALIDATION_FLAGS.FAILED.value
+                    self.validation_flag += VALIDATION_FLAGS.ALTERNATIVE_CALLED.value
                 else:
                     self._n_fails += 1
                     logger.error(f'Applying spec. "{self}" on "{target}" failed.')
-                    self.validation_flag = VALIDATION_FLAGS.FAILED
+                    self.validation_flag = VALIDATION_FLAGS.FAILED.value + VALIDATION_FLAGS.ALTERNATIVE_CALLED.value
 
         # now, for successful results, let's apply the sub-specifications if exist
         # and check how many results we have and if the number of results is correct (if n is specified)
@@ -388,7 +396,7 @@ class LayoutSpecification:
         if self.failed is True:
             return [self]
         failed = []
-        if self.n_fails > 0:
+        if self.failed:
             failed.append(self)
         if self.specifications:
             failed.extend(spec.get_failed() for spec in self.specifications)
