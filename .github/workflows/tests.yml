@@ -76,9 +76,11 @@ jobs:
   zenodo_cleanup:
     runs-on: ubuntu-latest
     needs: test
-    uses: actions/checkout@v4
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Set up Python
         # This is the version of the action for setting up Python, not the Python version.
         uses: actions/setup-python@v4
