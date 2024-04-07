@@ -271,7 +271,7 @@ class TestConfig(unittest.TestCase):
         #         '__h5rdmtoolbox_version__': h5tbx.__version__
         #     }
         # )
-        z.delete()
+        # z.delete()
 
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoSandboxDeposit(None)
@@ -285,7 +285,7 @@ class TestConfig(unittest.TestCase):
 
         old_rec_id = z.rec_id
 
-        z.delete()
+        # z.delete()
 
         with self.assertRaises(ValueError):
             _ = zenodo.ZenodoSandboxDeposit(old_rec_id)
@@ -370,5 +370,5 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
-        z.delete()
+        # z.delete()
         self.assertFalse(z.exists())
