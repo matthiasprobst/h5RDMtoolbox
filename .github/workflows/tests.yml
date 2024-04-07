@@ -74,21 +74,17 @@ jobs:
             ${{ runner.os }}-pip-
             
   zenodo_cleanup:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
     runs-on: windows-latest
-    python-version: '3.8'
 
     steps:
-
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Cleanup Zenodo Sandbox
-        run: python tests/clean_zenodo_sandbox.py
-
-      - name: Set Up Python python38
-        uses: actions/setup-python@v3
+      - name: Set up Python
+        # This is the version of the action for setting up Python, not the Python version.
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          # Semantic version range syntax or exact version of a Python version
+          python-version: '3.8'
 
       - name: Install dependencies
         run: |
