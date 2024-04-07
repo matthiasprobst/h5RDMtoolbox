@@ -5,26 +5,18 @@ from h5rdmtoolbox.repository.zenodo.tokens import get_api_token
 
 def delete_sandbox_deposits():
     """Delete all deposits in the sandbox account."""
-    r = requests.get(
-        'https://sandbox.zenodo.org/api/deposit/depositions',
-        params={'access_token': get_api_token(sandbox=True)}
-    )
-    r.raise_for_status()
-    for deposit in r.json():
-        try:
-            # if deposit['title'].startswith('[test]'):
-            if not deposit['submitted']:
-                print(f'deleting deposit {deposit["title"]} with id {deposit["id"]}')
-                r = requests.delete(
-                    'https://sandbox.zenodo.org/api/deposit/depositions/{}'.format(deposit['id']),
-                    params={'access_token': get_api_token(sandbox=True)}
-                )
-            else:
-                print(
-                    f'Cannot delete {deposit["title"]} with id {deposit["id"]} because it is already published."'
-                )
-        except Exception as e:
-            pass
+    depositions_url = 'https://sandbox.zenodo.org/api/deposit/depositions?'
+
+    response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
+    n_unsubmitted = sum([not hit['submitted'] for hit in response])
+    while n_unsubmitted > 0:
+        for hit in response:
+            if not hit['submitted']:
+                delete_response = requests.delete(hit['links']['latest_draft'],
+                                                  params={'access_token': get_api_token(sandbox=True)})
+                delete_response.raise_for_status()
+        response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
+        n_unsubmitted = sum([not hit['submitted'] for hit in response])
 
 
 if __name__ == '__main__':

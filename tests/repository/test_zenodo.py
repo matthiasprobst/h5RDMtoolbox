@@ -18,19 +18,19 @@ logger = logging.getLogger(__name__)
 
 class TestConfig(unittest.TestCase):
 
-    def tearDown(self):
-        depositions_url = 'https://sandbox.zenodo.org/api/deposit/depositions?'
-
-        response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
-        n_unsubmitted = sum([not hit['submitted'] for hit in response])
-        while n_unsubmitted > 0:
-            for hit in response:
-                if not hit['submitted']:
-                    delete_response = requests.delete(hit['links']['latest_draft'],
-                                                      params={'access_token': get_api_token(sandbox=True)})
-                    delete_response.raise_for_status()
-            response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
-            n_unsubmitted = sum([not hit['submitted'] for hit in response])
+    # def tearDown(self):
+    #     depositions_url = 'https://sandbox.zenodo.org/api/deposit/depositions?'
+    #
+    #     response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
+    #     n_unsubmitted = sum([not hit['submitted'] for hit in response])
+    #     while n_unsubmitted > 0:
+    #         for hit in response:
+    #             if not hit['submitted']:
+    #                 delete_response = requests.delete(hit['links']['latest_draft'],
+    #                                                   params={'access_token': get_api_token(sandbox=True)})
+    #                 delete_response.raise_for_status()
+    #         response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
+    #         n_unsubmitted = sum([not hit['submitted'] for hit in response])
 
     def test_creator(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Creator
