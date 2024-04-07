@@ -26,15 +26,15 @@
                 "has file distribution": [
                     {
                         "media type": "image/tiff",
-                        "download url": "file://path/to/xcrt_0001.tiff"
+                        "download URL": "file://path/to/xcrt_0001.tiff"
                     },
                     {
                         "media type": "image/tiff",
-                        "download url": "file://path/to/xcrt_0002.tiff"
+                        "download URL": "file://path/to/xcrt_0002.tiff"
                     },
                     {
                         "media type": "image/tiff",
-                        "download url": "file://path/to/xcrt_0003.tiff"
+                        "download URL": "file://path/to/xcrt_0003.tiff"
                     }
                 ]
             }
@@ -54,7 +54,7 @@
         {
             "@id": "local:alex",
             "@type": "person",
-            "ORCID Id": "0000-0000-0123-4567",
+            "has ORCID ID": "0000-0000-0123-4567",
             "first name": "Alexandra",
             "last name": "Test"
         },
