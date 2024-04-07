@@ -95,4 +95,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Cleanup Zenodo Sandbox
+        env:
+          ZENODO_SANDBOX_API_TOKEN: ${{ secrets.ZENODO_SANDBOX_API_TOKEN }}
+          ZENODO_API_TOKEN: ${{ secrets.ZENODO_API_TOKEN }}
         run: python tests/clean_zenodo_sandbox.py
