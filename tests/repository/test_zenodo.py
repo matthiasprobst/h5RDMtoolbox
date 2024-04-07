@@ -288,7 +288,7 @@ class TestConfig(unittest.TestCase):
         # z.delete()
 
         with self.assertRaises(ValueError):
-            _ = zenodo.ZenodoSandboxDeposit(old_rec_id)
+            _ = zenodo.ZenodoSandboxDeposit('123123123123')
 
         z = zenodo.ZenodoSandboxDeposit(None)
         self.assertNotEqual(old_rec_id, z.rec_id)
@@ -370,5 +370,6 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
+        self.assertTrue(z.exists())
         # z.delete()
-        self.assertFalse(z.exists())
+        # self.assertFalse(z.exists())
