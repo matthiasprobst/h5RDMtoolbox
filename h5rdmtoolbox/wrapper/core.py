@@ -583,9 +583,15 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         compression = kwargs.pop('compression', get_config('hdf_compression'))
         compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+        make_scale = kwargs.pop('make_scale', False)
         ds = super().create_dataset(name, dtype=dtype, data=data,
                                     compression=compression,
                                     compression_opts=compression_opts, **kwargs)
+        if make_scale:
+            if isinstance(data, str):
+                ds.make_scale(make_scale)
+            else:
+                ds.make_scale()
 
         for ak, av in attrs.items():
             ds.attrs[ak] = av
