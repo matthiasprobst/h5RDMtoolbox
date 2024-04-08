@@ -580,7 +580,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             if overwrite is True:
                 del self[name]  # delete existing dataset
             # else let h5py return the error
-        ds = super().create_dataset(name, dtype=dtype, data=data)
+
+        compression = kwargs.pop('compression', get_config('hdf_compression'))
+        compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+        ds = super().create_dataset(name, dtype=dtype, data=data,
+                                    compression=compression,
+                                    compression_opts=compression_opts, **kwargs)
 
         for ak, av in attrs.items():
             ds.attrs[ak] = av

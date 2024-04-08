@@ -202,7 +202,10 @@ class LayoutSpecification:
 
             assert len(n) == 1, 'n must be a dictionary with exactly one key'
             for k, v in n.items():
-                number_of_result_comparison = query.operator.get(k)
+                try:
+                    number_of_result_comparison = query.operator[k]
+                except KeyError:
+                    raise KeyError(f'Unexpected operator. Valid ones are: {list(query.operator.keys())}')
                 assert isinstance(v, int), 'n must be an integer'
                 n = v
         return n, number_of_result_comparison
@@ -503,21 +506,27 @@ class LayoutResult:
         """Return True if the layout is valid, which is the case if no specs failed"""
         return len(self.get_failed()) == 0
 
-    def get_summary(self, exclude_keys: Optional[List] = None) -> Dict:
-        """return a summary as dictionary"""
+    def get_summary(self, exclude_keys: Optional[List] = None,
+                    failed_only: bool = False) -> List[Dict]:
+        """return a list of dictionaries containing information about a specification call"""
         data = []
         for spec in self.specifications:
-            data.extend(spec.get_summary(exclude_keys=exclude_keys))
+            s = spec.get_summary(exclude_keys=exclude_keys)
+            if failed_only:
+                data.extend([d for d in s if d['flag'] & 2 == 2])
+            else:
+                data.extend(s)
         return data
 
-    def print_summary(self, exclude_keys: Optional[List[str]] = None):
+    def print_summary(self, exclude_keys: Optional[List[str]] = None,
+                      failed_only: bool = False):
         """Prints a summary of the specification. Requires the tabulate package."""
         try:
             from tabulate import tabulate
         except ImportError:
             raise ImportError('Please install tabulate to use this method')
         print('\nSummary of layout validation')
-        print(tabulate(self.get_summary(exclude_keys), headers='keys', tablefmt='psql'))
+        print(tabulate(self.get_summary(exclude_keys, failed_only), headers='keys', tablefmt='psql'))
         if self.is_valid():
             print('--> Layout is valid')
         else:

@@ -97,8 +97,6 @@ operator = {'$regex': _regex,
             '$userdefined': _userdefined}
 value_operator = {'$eq': _arreq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
 
-AV_SPECIAL_FILTERS = ('$basename', '$name')
-
 
 def _pass(obj, comparison_value):
     if get_ndim(comparison_value) == obj.ndim:

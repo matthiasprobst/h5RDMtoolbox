@@ -13,7 +13,7 @@ from time import perf_counter_ns
 
 from ontolutils import M4I, Thing
 from . import get_config, identifiers, protected_attributes
-from .convention.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME
+from .convention.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME, RDF_OBJECT_ATTR_NAME
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
@@ -287,6 +287,10 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
                 use_attr_name = f'{name} ({pred})'
             else:
                 use_attr_name = name
+
+            obj_iri = h5obj.rdf[name].get(RDF_OBJECT_ATTR_NAME, None)
+            if obj_iri:
+                attr_value = f'{attr_value} ({obj_iri})'
 
         if isinstance(attr_value, h5py.Group):
             attr_value = f'grp:{attr_value.name}'

@@ -702,9 +702,13 @@ class TestCore(unittest.TestCase):
                  (datetime.now() + timedelta(hours=1))]
         tdata_np = np.asarray(tdata, dtype=np.datetime64)
         with h5tbx.File() as h5:
-            h5.create_string_dataset('time', data=[t.isoformat() for t in tdata],
-                                     attrs={'ISTIMEDS': 1,
-                                            'TIMEFORMAT': 'ISO'})
+            with h5tbx.set_config(hdf_compression='gzip', hdf_compression_opts=5):
+                h5.create_string_dataset('time', data=[t.isoformat() for t in tdata],
+                                         attrs={'ISTIMEDS': 1,
+                                                'TIMEFORMAT': 'ISO'})
+                self.assertEqual(h5['time'].compression, 'gzip')
+                self.assertEqual(h5['time'].compression_opts, 5)
+
             tds = h5['time'][()]
 
             h5.create_time_dataset('time2', data=tdata)
