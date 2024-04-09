@@ -2,11 +2,16 @@
 
 Log of changes in the versions
 
-## v1.X.Y
+## v1.3.0
 
-- When a file is opened with a filename which does not exist and mode is None, the file will NOT be created. This was
-  the case in the past, but this may lead to unwanted empty files.
-- Bugfix namespace creation
+- important changes:
+  - improved and consequent support of RDF/JSON-LD. This means, an HDF5 can be created from a JSON-LD file and vice versa. The JSON-LD file
+    contains the structural and contextual metadata of the HDF5 file.
+  - namespaces are outsourced to `ontolutils`
+- minor changes:
+  - When a file is opened with a filename which does not exist and mode is None, the file will NOT be created. This was
+    the case in the past, but this may lead to unwanted empty files.
+  - Bugfix namespace creation
 
 ## v1.2.2
 
