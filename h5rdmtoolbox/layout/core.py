@@ -66,7 +66,7 @@ class SpecificationResult:
 
     def __init__(self, target):
         self.target = target
-        self.target_name = target.name
+        self.target_name = target if isinstance(target, str) else target.name
         self.target_type = 'Dataset' if isinstance(target, h5py.Dataset) else 'Group'
         self.validation_flag = VALIDATION_FLAGS.UNCALLED.value
         self.res = []
@@ -575,13 +575,13 @@ class Layout(LayoutSpecification):
         """Validate the layout by passing a filename or an opened root group"""
         self.reset()
 
-        if isinstance(filename_or_root_group, (str, pathlib.Path)):
-            with h5tbx.File(filename_or_root_group, mode='r') as h5:
-                return self.validate(h5)
+        # if isinstance(filename_or_root_group, (str, pathlib.Path)):
+        #     with h5tbx.File(filename_or_root_group, mode='r') as h5:
+        #         return self.validate(h5)
 
-        if isinstance(filename_or_root_group, h5py.Group):
-            if not filename_or_root_group.name == '/':
-                raise ValueError('If passing an HDF5 group, a root group must be passed')
+        # if isinstance(filename_or_root_group, h5py.Group):
+        #     if not filename_or_root_group.name == '/':
+        #         raise ValueError('If passing an HDF5 group, a root group must be passed')
 
         # first reset all specs (n_calls = 0, _n_fails = 0, failed = None)
         for spec in self.specifications:

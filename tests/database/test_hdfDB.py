@@ -20,6 +20,65 @@ class TestHDFDB(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 gdb.insert_group(None)
 
+    def test_dtype_char(self):
+        # find a string dataset
+        with h5tbx.File() as h5:
+            ds = h5.create_string_dataset('a string ds', data=['one', 'two', 'three'])
+            gdb = hdfdb.ObjDB(h5['/'])
+            res = gdb.find_one({'$dtype': {'$regex': 'S*'}},
+                               objfilter='dataset',
+                               recursive=False)
+            self.assertEqual(res, ds)
+            ds_name = ds.name
+        fdb = hdfdb.FileDB(h5.hdf_filename)
+        fdb.find_one({'$dtype': {'$regex': 'S*'}},
+                     objfilter='dataset',
+                     recursive=False)
+        self.assertIsInstance(res, h5tbx.database.lazy.LDataset)
+        self.assertEqual(res.name, ds_name)
+
+        with self.assertRaises(FileNotFoundError):
+            hdfdb.FileDB.find_one('invalid_filename.filename',
+                                  {'$dtype': {'$regex': 'S*'}},
+                                  objfilter='dataset',
+                                  recursive=False)
+
+        res = hdfdb.FileDB.find_one(h5.hdf_filename,
+                                    {'$dtype': {'$regex': 'S*'}},
+                                    objfilter='dataset',
+                                    recursive=False)
+        self.assertIsInstance(res, h5tbx.database.lazy.LDataset)
+        self.assertEqual(res.name, ds_name)
+
+        res = hdfdb.FileDB.find(h5.hdf_filename,
+                                {'$dtype': {'$regex': 'S*'}},
+                                objfilter='dataset',
+                                recursive=False)
+        # res is a generator
+        self.assertIsInstance(res, types.GeneratorType)
+        res = list(res)
+        self.assertIsInstance(res, list)
+        self.assertIsInstance(res[0], h5tbx.database.lazy.LDataset)
+        self.assertEqual(res[0].name, ds_name)
+
+        res = hdfdb.FileDB(h5.hdf_filename).find({'$dtype': {'$regex': 'S*'}},
+                                                 objfilter='dataset',
+                                                 recursive=False)
+        self.assertIsInstance(res, list)
+        self.assertIsInstance(res[0], h5tbx.database.lazy.LDataset)
+        self.assertEqual(res[0].name, ds_name)
+
+        # find a string dataset
+        with h5tbx.File() as h5:
+            h5.create_string_dataset('a string ds', data=['one', 'two', 'three'])
+            ds = h5.create_dataset('num', data=2.4)
+            print(str(ds.dtype))
+            gdb = hdfdb.ObjDB(h5['/'])
+            res = gdb.find({'$dtype': {'$regex': '^(?!\|S|\|).*'}},  # does not starts with "|S" or "|"
+                           objfilter='dataset',
+                           recursive=False)
+            self.assertEqual(list(res), [ds, ])
+
     def test_value_find(self):
         with h5tbx.File(mode='w') as h5:
             ds_random = h5.create_dataset('random', data=np.array([1, 2, 3]))
@@ -64,7 +123,7 @@ class TestHDFDB(unittest.TestCase):
             res = gdb.find({'$ndim': {'$gte': 0}}, recursive=True)
             self.assertListEqual(sorted([r.name for r in res]), sorted([ds_random.name, ds_half.name]))
 
-    def test_distint_props(self):
+    def test_distinct_props(self):
         with h5tbx.File(mode='w') as h5:
             ds_random = h5.create_dataset('random', data=np.array([1, 2, 3]))
             ds_half = h5.create_dataset('half', data=0.5)
@@ -78,85 +137,86 @@ class TestHDFDB(unittest.TestCase):
             self.assertListEqual(sorted(res), [0, 1])
 
     def test_find_one(self):
-        with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
-                       'w') as h5:
-            h5.attrs['long_name'] = 'root group'
-            grp = h5.create_group('grp')
-            grp.attrs['a'] = 1
-            grp.attrs['long_name'] = 'a group'
-            ds = h5.create_dataset('dataset', shape=(2, 3), dtype='float64')
-            ds.attrs['a'] = 1
-            ds.attrs['b'] = 2
-            grp.create_dataset('sub_grp_dataset', shape=(4,))
+        with h5tbx.set_config(auto_create_h5tbx_version=False):
+            with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
+                           'w') as h5:
+                h5.attrs['long_name'] = 'root group'
+                grp = h5.create_group('grp')
+                grp.attrs['a'] = 1
+                grp.attrs['long_name'] = 'a group'
+                ds = h5.create_dataset('dataset', shape=(2, 3), dtype='float64')
+                ds.attrs['a'] = 1
+                ds.attrs['b'] = 2
+                grp.create_dataset('sub_grp_dataset', shape=(4,))
 
-            dsdb = hdfdb.ObjDB(h5)
+                dsdb = hdfdb.ObjDB(h5)
 
-            res_only_dataset = dsdb.find({'$dtype': {'$exists': True}})
-            self.assertEqual(len(list(res_only_dataset)), 2)
+                res_only_dataset = dsdb.find({'$dtype': {'$exists': True}})
+                self.assertEqual(len(list(res_only_dataset)), 2)
 
-            del grp['sub_grp_dataset']
+                del grp['sub_grp_dataset']
 
-            grpdb = hdfdb.ObjDB(h5['grp'])
-            res_is_dataset = grpdb.find_one({'$dtype': {'$exists': True}}, recursive=False)
-            self.assertTrue(res_is_dataset is None)
+                grpdb = hdfdb.ObjDB(h5['grp'])
+                res_is_dataset = grpdb.find_one({'$dtype': {'$exists': True}}, recursive=False)
+                self.assertTrue(res_is_dataset is None)
 
-            dsdb = hdfdb.ObjDB(h5['dataset'])
-            res_is_dataset = dsdb.find_one({'$dtype': {'$exists': True}})
-            self.assertTrue(res_is_dataset is not None)
+                dsdb = hdfdb.ObjDB(h5['dataset'])
+                res_is_dataset = dsdb.find_one({'$dtype': {'$exists': True}})
+                self.assertTrue(res_is_dataset is not None)
 
-            res = dsdb.find_one({'$dtype': np.dtype('<f8')}, objfilter='dataset')  # is float64
-            self.assertEqual(res, ds)
-            res = dsdb.find_one({'$dtype': np.dtype('<f4')}, objfilter='dataset')  # is float64
-            self.assertEqual(res, None)
+                res = dsdb.find_one({'$dtype': np.dtype('<f8')}, objfilter='dataset')  # is float64
+                self.assertEqual(res, ds)
+                res = dsdb.find_one({'$dtype': np.dtype('<f4')}, objfilter='dataset')  # is float64
+                self.assertEqual(res, None)
 
-            gdb_grp = hdfdb.ObjDB(h5['grp'])
-            res = dsdb.find_one({'$name': '/dataset'}, recursive=False)
-            with res as res_ds:
-                self.assertEqual(res_ds, ds)
+                gdb_grp = hdfdb.ObjDB(h5['grp'])
+                res = dsdb.find_one({'$name': '/dataset'}, recursive=False)
+                with res as res_ds:
+                    self.assertEqual(res_ds, ds)
 
-            res = dsdb.find_one({'units': {'$exists': True}}, recursive=False)
-            self.assertTrue(res is None)
+                res = dsdb.find_one({'units': {'$exists': True}}, recursive=False)
+                self.assertTrue(res is None)
 
-            ds.attrs['units'] = 'invalid units'
+                ds.attrs['units'] = 'invalid units'
 
-            res = dsdb.find_one({'units': {'$exists': True}}, recursive=False)
-            self.assertFalse(res is None)
+                res = dsdb.find_one({'units': {'$exists': True}}, recursive=False)
+                self.assertFalse(res is None)
 
-            single_res = gdb_grp.find_one({'a': 1}, recursive=False)
-            self.assertIsInstance(single_res, database.lazy.LGroup)
-            self.assertEqual(single_res.basename, 'grp')
+                single_res = gdb_grp.find_one({'a': 1}, recursive=False)
+                self.assertIsInstance(single_res, database.lazy.LGroup)
+                self.assertEqual(single_res.basename, 'grp')
 
-            gdb_root = hdfdb.ObjDB(h5['/'])
-            single_res = gdb_root.find_one({'a': 1}, objfilter=h5py.Dataset)
-            self.assertIsInstance(single_res, database.lazy.LDataset)
-            self.assertEqual(single_res.basename, 'dataset')
+                gdb_root = hdfdb.ObjDB(h5['/'])
+                single_res = gdb_root.find_one({'a': 1}, objfilter=h5py.Dataset)
+                self.assertIsInstance(single_res, database.lazy.LDataset)
+                self.assertEqual(single_res.basename, 'dataset')
 
-            gdb_root = hdfdb.ObjDB(h5['/'])
-            single_res = gdb_root.find_one({'a': 1}, objfilter='dataset')
-            self.assertIsInstance(single_res, database.lazy.LDataset)
-            self.assertEqual(single_res.basename, 'dataset')
+                gdb_root = hdfdb.ObjDB(h5['/'])
+                single_res = gdb_root.find_one({'a': 1}, objfilter='dataset')
+                self.assertIsInstance(single_res, database.lazy.LDataset)
+                self.assertEqual(single_res.basename, 'dataset')
 
-            single_res = gdb_root.find_one({'b': 2}, recursive=True)
-            self.assertIsInstance(single_res, database.lazy.LDataset)
-            self.assertEqual(single_res.basename, 'dataset')
+                single_res = gdb_root.find_one({'b': 2}, recursive=True)
+                self.assertIsInstance(single_res, database.lazy.LDataset)
+                self.assertEqual(single_res.basename, 'dataset')
 
-            # check $exists operator:
-            single_res = gdb_root.find_one({'long_name': {'$exists': True}},
-                                           recursive=True)
-            self.assertIsInstance(single_res, database.lazy.LGroup)
-            self.assertTrue(single_res.basename in ('grp', ''))
+                # check $exists operator:
+                single_res = gdb_root.find_one({'long_name': {'$exists': True}},
+                                               recursive=True)
+                self.assertIsInstance(single_res, database.lazy.LGroup)
+                self.assertTrue(single_res.basename in ('grp', ''))
 
-            single_res = gdb_root.find_one({'long_name': {'$exists': False}},
-                                           recursive=True)
-            self.assertIsInstance(single_res, database.lazy.LDataset)
-            self.assertEqual(single_res.basename, 'dataset')
+                single_res = gdb_root.find_one({'long_name': {'$exists': False}},
+                                               recursive=True)
+                self.assertIsInstance(single_res, database.lazy.LHDFObject)
+                self.assertEqual(single_res.basename, 'dataset')
 
-            # check $gt, ... operators:
-            single_res = gdb_root.find_one({'a': {'$gt': 0}}, recursive=True)
-            self.assertTrue(single_res.attrs['a'] > 0)
+                # check $gt, ... operators:
+                single_res = gdb_root.find_one({'a': {'$gt': 0}}, recursive=True)
+                self.assertTrue(single_res.attrs['a'] > 0)
 
-            single_res = gdb_root.find_one({'a': {'$gte': 0}}, recursive=True)
-            self.assertTrue(single_res.attrs['a'] >= 0)
+                single_res = gdb_root.find_one({'a': {'$gte': 0}}, recursive=True)
+                self.assertTrue(single_res.attrs['a'] >= 0)
 
     def test_find_dict_attr(self):
         with h5tbx.File(mode='w') as h5:
@@ -321,6 +381,13 @@ class TestHDFDB(unittest.TestCase):
         single_res = filesdb.find_one({'d': 4}, recursive=True)
         self.assertIsInstance(single_res, database.lazy.LDataset)
         self.assertEqual(single_res.filename, filename2)
+
+        multi_res = filesdb.find({'d': 4}, recursive=True)
+        self.assertIsInstance(multi_res, types.GeneratorType)
+        multi_res = list(multi_res)
+        self.assertEqual(len(multi_res), 1)
+        self.assertIsInstance(multi_res[0], database.lazy.LDataset)
+        self.assertEqual(multi_res[0].filename, filename2)
 
     def test_filesDB_insert_filename(self):
         filename1 = h5tbx.utils.generate_temporary_filename(suffix='.hdf')

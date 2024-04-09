@@ -32,7 +32,7 @@ CONFIG = {
     'expose_user_prop_to_attrs': True,
     'add_provenance': False,
     'ignore_set_std_attr_err': False,
-    'auto_create_h5tbx_version': True,  # automatically creates the group h5rdmtoolbox with the version attribute
+    'auto_create_h5tbx_version': False,  # automatically creates the group h5rdmtoolbox with the version attribute
     'uuid_name': 'uuid',  # attribute name used for UUIDs
     # if a standard attribute is defined and cannot be retrieved because the value is invalid, ignore it:
     'ignore_get_std_attr_err': False,

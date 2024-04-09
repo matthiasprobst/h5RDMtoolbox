@@ -111,8 +111,8 @@ class TestCore(unittest.TestCase):
         self.assertEqual(is_single_result(None), False)
 
         lay = layout.Layout()
-        spec = lay.add(hdfdb.FileDB.find_one, flt={'$name': '/u'}, n=None)
-        sub_spec = spec.add(hdfdb.FileDB.find, flt={'$shape': (3, 4)}, n=None)
+        spec = lay.add(hdfdb.ObjDB.find_one, flt={'$name': '/u'}, n=None)
+        sub_spec = spec.add(hdfdb.ObjDB.find, flt={'$shape': (3, 4)}, n=None)
 
         self.assertFalse(spec.is_valid())
         self.assertFalse(sub_spec.is_valid())
@@ -148,7 +148,7 @@ class TestCore(unittest.TestCase):
         out = StringIO()
         sys.stdout = out
         lay = layout.Layout()
-        spec = lay.add(hdfdb.FileDB.find_one, flt={'$name': '/u'}, n=None)
+        spec = lay.add(hdfdb.ObjDB.find_one, flt={'$name': '/u'}, n=None)
         with h5tbx.File(name=None, mode='w') as h5:
             ds = h5.create_dataset('u', shape=(3, 4), dtype='float32')
             res = lay.validate(h5)

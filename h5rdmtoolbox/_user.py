@@ -1,11 +1,10 @@
+import appdirs
+import importlib_resources
 import pathlib
 import shutil
 import time
 from itertools import count
 from typing import Tuple
-
-import appdirs
-import importlib_resources
 
 _filecounter = count()
 _dircounter = count()
@@ -89,16 +88,28 @@ class DirManger:
 
         return self.user_dirs[name]
 
-    def clear_cache(self, delta_days: int):
+    def clear_cache(self, delta_days: int, utime: bool = False):
         """Clear the cache directory. The delta_days arguments will be used
-        to delete files older than delta_days days. This is only applied to files"""
+        to delete files older than delta_days days. This is only applied to files
+
+        Parameters
+        ----------
+        delta_days : int
+            The number of days to keep the files in the cache.
+        utime : bool
+            If True, the file access time will be used to determine the age of the file.
+            Otherwise, the file creation time will be used.
+        """
         if delta_days == 0:
             shutil.rmtree(self.user_dirs['cache'])
             return
         if self.user_dirs['cache'].exists():
             for f in self.user_dirs['cache'].iterdir():
                 # get the file creation time
-                fct = f.stat().st_ctime
+                if utime:
+                    fct = f.stat().st_atime
+                else:
+                    fct = f.stat().st_ctime
                 dt = _now - fct
                 if dt > delta_days * 86400:
                     f.unlink()

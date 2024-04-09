@@ -158,7 +158,6 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
 
     """
     found_objs = []
-
     if qk in query.value_operator:
         # user wants to compare qv to the value of the object
 
@@ -301,7 +300,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                         if query.operator[ok](objattr, ov):
                             found_objs.append(hv)
                     except Exception as e:
-                        raise Exception(f'Error while filtering for "{qk}" with "{ok}" and "{ov}"') from e
+                        raise Exception(f'Error while filtering for "{qk}" with "{ok}" and "{ov}": {e}')
     return found_objs
 
 
@@ -420,8 +419,20 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
             self.src_obj = h5py.Dataset(obj.id)
         else:
             raise TypeError(f'Unexpected type: {type(obj)}')
+        self.find = self._instance_find  # allow `find` to be a static method and instance method
+        self.find_one = self._instance_find_one  # allow `find_one` to be a static method and instance method
 
-    def find_one(self,
+    @staticmethod
+    def find_one(obj: Union[h5py.Dataset, h5py.Group], *args, **kwargs) -> lazy.LHDFObject:
+        """Please refer to the docstring of the find_one method of the ObjDB class"""
+        return ObjDB(obj).find_one(*args, **kwargs)
+
+    @staticmethod
+    def find(obj: Union[h5py.Dataset, h5py.Group], *args, **kwargs) -> lazy.LHDFObject:
+        """Please refer to the docstring of the find_one method of the ObjDB class"""
+        return ObjDB(obj).find(*args, **kwargs)
+
+    def _instance_find_one(self,
                  flt: Union[Dict, str],
                  objfilter=None,
                  recursive: bool = True,
@@ -452,7 +463,7 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
                 ignore_attribute_error=ignore_attribute_error)
         )
 
-    def find(self,
+    def _instance_find(self,
              flt: Union[Dict, str],
              objfilter=None,
              recursive: bool = True,

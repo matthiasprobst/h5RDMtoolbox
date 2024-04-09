@@ -2,8 +2,8 @@ import h5py
 import pathlib
 from typing import Union, Generator, List
 
-from .objdb import ObjDB
 from .nonsearchable import NonInsertableDatabaseInterface
+from .objdb import ObjDB
 from .. import lazy
 from ..template import HDF5DBInterface
 
@@ -12,16 +12,14 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
     """A database interface for an HDF5 file, where the filename is given."""
 
     def __init__(self, filename: Union[str, pathlib.Path]):
-        self.filename = pathlib.Path(filename)
+        self.filename: str = str(filename)
         self.find = self._instance_find  # allow `find` to be a static method and instance method
         self.find_one = self._instance_find_one  # allow `find_one` to be a static method and instance method
 
     @staticmethod
-    def find_one(file_or_filename, *args, **kwargs) -> lazy.LHDFObject:
+    def find_one(filename: Union[str, pathlib.Path], *args, **kwargs) -> lazy.LHDFObject:
         """Please refer to the docstring of the find_one method of the ObjDB class"""
-        if isinstance(file_or_filename, (h5py.Group, h5py.Dataset)):
-            return ObjDB(file_or_filename).find_one(*args, **kwargs)
-        with h5py.File(file_or_filename, 'r') as h5:
+        with h5py.File(str(filename), 'r') as h5:
             return ObjDB(h5).find_one(*args, **kwargs)
 
     def _instance_find(self, *args, **kwargs):
@@ -81,16 +79,15 @@ class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         contains the object, the first one is returned. If you want to find one per file,
         call find_one_per_file instead."""
         for filename in self.filenames:
-            with h5py.File(filename, 'r') as h5:
+            with h5py.File(filename, mode='r') as h5:
                 ret = ObjDB(h5).find_one(*args, **kwargs)
                 if ret:
                     return ret
-        return
 
     def find(self, *args, **kwargs) -> Generator[lazy.LHDFObject, None, None]:
-        all_results = []
+        """Call find on all the files"""
         for filename in self.filenames:
             with h5py.File(filename, 'r') as h5:
                 ret = ObjDB(h5).find(*args, **kwargs)
-                all_results.extend(ret)
-        return all_results
+                for r in ret:
+                    yield r

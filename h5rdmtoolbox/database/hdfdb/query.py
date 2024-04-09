@@ -1,3 +1,4 @@
+"""query module"""
 import logging
 import numpy as np
 import re
@@ -59,8 +60,11 @@ def _regex(value, pattern) -> bool:
         except UnicodeDecodeError:
             warnings.warn(f'could not decode {value}', UserWarning)
             return False
+
     if isinstance(value, bytes):
         value = value.decode()
+
+    value = str(value)
 
     match = re.search(pattern, value)
     if match is None:

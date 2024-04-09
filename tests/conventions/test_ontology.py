@@ -1,11 +1,11 @@
 """Testing the standard attributes"""
 import json
 import pathlib
+import rdflib
 import unittest
 
 import h5rdmtoolbox as h5tbx
-import rdflib
-from h5rdmtoolbox.convention.ontology import HDF5, Attribute, Dataset, Group, File
+from h5rdmtoolbox.convention.ontology import Attribute, Dataset, Group, File
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -27,9 +27,15 @@ class TestOntology(unittest.TestCase):
     def setUp(self):
         h5tbx.use(None)
 
+        self.curr_auto_create_h5tbx_version = h5tbx.get_config('auto_create_h5tbx_version')
+        h5tbx.set_config(auto_create_h5tbx_version=True)
+
+    def tearDown(self):
+        h5tbx.set_config(auto_create_h5tbx_version=self.curr_auto_create_h5tbx_version)
+
     def test_Attribute(self):
         attr = Attribute(name='standard_name',
-                                      value='x_velocity')
+                         value='x_velocity')
         print(attr.model_dump_jsonld())
 
     def test_Dataset(self):
@@ -37,7 +43,7 @@ class TestOntology(unittest.TestCase):
             name='/grp1/grp2/ds1',
             attribute=[
                 Attribute(name='standard_name',
-                                       value='x_velocity')],
+                          value='x_velocity')],
             size=100)
         print(ds.model_dump_jsonld())
 
@@ -46,25 +52,25 @@ class TestOntology(unittest.TestCase):
             name='/grp1/grp2',
             attribute=[
                 Attribute(name='standard_name',
-                                       value='x_velocity')],
+                          value='x_velocity')],
             member=[
                 Dataset(
                     name='/grp1/grp2/ds1',
                     attribute=[
                         Attribute(name='standard_name',
-                                               value='x_velocity')],
+                                  value='x_velocity')],
                     size=100),
                 Group(
                     name='/grp1/grp2/grp3',
                     attribute=[
                         Attribute(name='standard_name',
-                                               value='x_velocity')],
+                                  value='x_velocity')],
                     member=[
                         Dataset(
                             name='/grp1/grp2/grp3/ds2',
                             attribute=[
                                 Attribute(name='standard_name',
-                                                       value='x_velocity')],
+                                          value='x_velocity')],
                             size=100)])])
         print(grp.model_dump_jsonld())
 
@@ -73,25 +79,25 @@ class TestOntology(unittest.TestCase):
             name='/',
             attribute=[
                 Attribute(name='standard_name',
-                                       value='x_velocity')],
+                          value='x_velocity')],
             member=[
                 Dataset(
                     name='/ds1',
                     attribute=[
                         Attribute(name='standard_name',
-                                               value='x_velocity')],
+                                  value='x_velocity')],
                     size=100),
                 Group(
                     name='/grp1',
                     attribute=[
                         Attribute(name='standard_name',
-                                               value='x_velocity')],
+                                  value='x_velocity')],
                     member=[
                         Dataset(
                             name='/grp1/ds2',
                             attribute=[
                                 Attribute(name='standard_name',
-                                                       value='x_velocity')],
+                                          value='x_velocity')],
                             size=100)])])
         print(grp.model_dump_jsonld())
 
@@ -104,7 +110,7 @@ class TestOntology(unittest.TestCase):
             name='/',
             attribute=[
                 Attribute(name='version',
-                                       value='1.0.0')]
+                          value='1.0.0')]
         )
 
         file = File(
@@ -184,7 +190,7 @@ class TestOntology(unittest.TestCase):
             resolve_keys=True
         )
         json_dict = json.loads(jsonld_str)
-        print(jsonld_str)
+
         i = 0
         for g in json_dict['@graph']:
             if isinstance(g['@type'], list) and 'prov:Person' in g['@type']:
