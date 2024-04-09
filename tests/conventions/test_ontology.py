@@ -5,6 +5,7 @@ import rdflib
 import unittest
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention.ontology import Attribute, Dataset, Group, File
 
 __this_dir__ = pathlib.Path(__file__).parent
@@ -200,7 +201,7 @@ class TestOntology(unittest.TestCase):
                 self.assertEqual(g["m4i:orcidId"], '0000-0000-0123-4567')
             elif isinstance(g['@type'], list) and 'schema:SoftwareSourceCode' in g['@type']:
                 i += 1
-                self.assertEqual(g['schema:softwareVersion'], "1.2.3a2")
+                self.assertEqual(g['schema:softwareVersion'], __version__)
         self.assertEqual(i, 2)
 
         jsonld_str = h5tbx.dump_jsonld(
@@ -221,7 +222,7 @@ class TestOntology(unittest.TestCase):
                 self.assertEqual(json_dict['@context']['has ORCID ID'], "http://w3id.org/nfdi4ing/metadata4ing#orcidId")
             elif isinstance(g['@type'], list) and 'schema:SoftwareSourceCode' in g['@type']:
                 i += 1
-                self.assertEqual(g['__h5rdmtoolbox_version__'], "1.2.3a2")
+                self.assertEqual(g['__h5rdmtoolbox_version__'], __version__)
                 self.assertEqual(json_dict['@context']['__h5rdmtoolbox_version__'],
                                  "https://schema.org/softwareVersion")
         self.assertEqual(i, 2)
