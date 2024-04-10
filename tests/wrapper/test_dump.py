@@ -14,9 +14,9 @@ class TestCommon(unittest.TestCase):
             grp.rdf.subject = PROV.Person
             grp.attrs['fname', FOAF.firstName] = 'John'
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
-            del h5.h5rdmtoolbox
+            h5.dumps()
 
-        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=True)
+        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=True, compact=False)
         jsondict = json.loads(ret)
         self.assertEqual(jsondict['foaf:firstName'], 'John')
         self.assertEqual(jsondict['@type'], 'prov:Person')
@@ -26,7 +26,7 @@ class TestCommon(unittest.TestCase):
         self.assertEqual(jsondict['fname'], 'John')
         self.assertEqual(jsondict['@type'], 'prov:Person')
 
-        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, resolve_keys=False)
+        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, resolve_keys=False, compact=False)
         jsondict = json.loads(ret)
         verified_types = False
         for g in jsondict['@graph']:

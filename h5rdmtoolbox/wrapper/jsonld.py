@@ -2,16 +2,17 @@ import h5py
 import json
 import logging
 import numpy as np
+import ontolutils
 import pathlib
 import rdflib
 import warnings
+from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 from rdflib.plugins.shared.jsonld.context import Context
-from typing import Dict, Optional, Union, List, Iterable, Tuple, Any
+from typing import Dict, List
+from typing import Optional, Union, Iterable, Tuple, Any
 
-import ontolutils
 from h5rdmtoolbox.convention import hdf_ontology
-from ontolutils.classes.utils import split_URIRef
 from .core import Dataset, File
 from ..convention.ontology import HDF5
 
@@ -78,11 +79,11 @@ def build_node_list(g: Graph, data: List) -> BNode:
     # Add flag values to the RDF List
     for i in range(0, n):
         if isinstance(data[i], int):
-            flag_node = rdflib.Literal(data[i], datatype=XSD.integer)
+            flag_node = rdflib.Literal(int(data[i]), datatype=XSD.integer)
         elif isinstance(data[i], str):
-            flag_node = rdflib.Literal(data[i], datatype=XSD.string)
+            flag_node = rdflib.Literal(str(data[i]), datatype=XSD.string)
         elif isinstance(data[i], float):
-            flag_node = rdflib.Literal(data[i], datatype=XSD.float)
+            flag_node = rdflib.Literal(float(data[i]), datatype=XSD.float)
         else:
             flag_node = rdflib.Literal(data[i], datatype=XSD.string)
 
@@ -517,12 +518,13 @@ def serialize(grp,
               iri_only=False,
               local=None,
               recursive: bool = True,
-              compact: bool = False,
+              compact: bool = True,
               context: Dict = None,
               structural: bool = True,
               resolve_keys: bool = True
               ) -> Dict:
-    """using rdflib graph"""
+    """using rdflib graph. This will not write HDF5 dataset data to the graph. Impossible and
+     not reasonable as potentially multi-dimensional"""
     if isinstance(grp, (str, pathlib.Path)):
         from .core import File
         with File(grp) as h5:
@@ -563,19 +565,38 @@ def serialize(grp,
         return graph
 
     def _add_hdf_node(name, obj, ctx):
+
+        # node = rdflib.URIRef(f'_:{obj.name}')
+        if isinstance(obj, h5py.File):
+            root_group = rdflib.BNode()
+            iri_dict[name] = root_group
+            if structural:
+                file_node = rdflib.BNode()
+                _add_node(g, (file_node, RDF.type, HDF5.File))
+                # root_group = rdflib.BNode()
+                _add_node(g, (file_node, HDF5.rootGroup, root_group))
+                # _add_node(g, (root_group, RDF.type, HDF5.Group))
+                # _add_node(g, (root_group, HDF5.name, rdflib.Literal(name)))
+
+            # return
+        # else:
+        #     root_group = rdflib.BNode()
+
         obj_node = iri_dict.get(obj.name, None)
         if obj_node is None:
             obj_node = _get_id(obj, local=local)
             iri_dict[obj.name] = obj_node
 
-        # node = rdflib.URIRef(f'_:{obj.name}')
-        if isinstance(obj, h5py.File) and structural:
-            _add_node(g, (obj_node, RDF.type, HDF5.Group))
-            return
+        if structural and name != '/':
+            parent_name = obj.parent.name
+            parent_node = iri_dict.get(parent_name, None)
+            if parent_node is not None:
+                _add_node(g, (parent_node, HDF5.member, obj_node))
 
         if isinstance(obj, h5py.Group):
             if structural:
                 _add_node(g, (obj_node, RDF.type, HDF5.Group))
+                _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
             group_subject = obj.rdf.subject
             if isinstance(group_subject, list):
                 for gs in group_subject:
@@ -596,10 +617,11 @@ def serialize(grp,
                 _add_node(g, (obj_node, RDF.type, HDF5.Dataset))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
                 _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
+                _add_node(g, (obj_node, HDF5.dimension, rdflib.Literal(obj.ndim, datatype=XSD.integer)))
 
                 if obj.dtype.kind == 'S':
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_STRING')))
-                elif obj.dtype.kind in ('i', 'u', 'f'):
+                elif obj.dtype.kind in ('i', 'u'):
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_INTEGER')))
                 else:
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_FLOAT')))
@@ -607,9 +629,6 @@ def serialize(grp,
             obj_type = obj.rdf.subject
             if obj_type is not None:
                 _add_node(g, (obj_node, RDF.type, rdflib.URIRef(obj_type)))
-
-        if structural:
-            _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
 
         for ak, av in obj.attrs.items():
             logger.debug(f'Processing attribute "{ak}" with value "{av}"')
@@ -634,9 +653,9 @@ def serialize(grp,
                 else:
                     attr_literal = rdflib.Literal(av, datatype=XSD.string)
             elif isinstance(av, (int, np.integer)):
-                attr_literal = rdflib.Literal(av, datatype=XSD.integer)
+                attr_literal = rdflib.Literal(int(av), datatype=XSD.integer)
             elif isinstance(av, (float, np.floating)):
-                attr_literal = rdflib.Literal(av, datatype=XSD.float)
+                attr_literal = rdflib.Literal(float(av), datatype=XSD.float)
             elif isinstance(av, list) or isinstance(av, np.ndarray):
                 if isinstance(av, np.ndarray):
                     list_node = build_node_list(g, av.tolist())
@@ -754,6 +773,7 @@ def serialize(grp,
 
     _context = visitor.ctx
     _context.pop('@import', None)
+
     return g.serialize(
         format='json-ld',
         context=_context,
@@ -765,7 +785,7 @@ def dumpd(grp,
           iri_only=False,
           local=None,
           recursive: bool = True,
-          compact: bool = False,
+          compact: bool = True,
           context: Dict = None,
           structural: bool = True,
           resolve_keys: bool = False
@@ -779,14 +799,18 @@ def dumpd(grp,
                   context=context,
                   structural=structural,
                   resolve_keys=resolve_keys)
-    return json.loads(s)
+    jsonld_dict = json.loads(s)
+    if compact and '@graph' in jsonld_dict:
+        compact_graph = make_graph_compact(jsonld_dict['@graph'])
+        return {'@context': jsonld_dict.get('@context', {}), '@graph': compact_graph}
+    return jsonld_dict
 
 
 def dumps(grp,
           iri_only=False,
           local=None,
           recursive: bool = True,
-          compact: bool = False,
+          compact: bool = True,
           context: Optional[Dict] = None,
           structural: bool = True,
           resolve_keys: bool = False,
@@ -813,7 +837,7 @@ def dump(grp,
          iri_only=False,
          local=None,
          recursive: bool = True,
-         compact: bool = False,
+         compact: bool = True,
          context: Optional[Dict] = None,
          **kwargs):
     """Dump a group or a dataset to to file."""
@@ -880,8 +904,7 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
         dtype_dict = {'u': 'H5T_INTEGER',
                       'i': 'H5T_INTEGER',
                       'f': 'H5T_FLOAT',
-                      'S': 'H5T_STRING',
-                      }
+                      'S': 'H5T_STRING'}
 
         # dtype_dict = {'u<8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U8LE'},
         #               'u<16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U16LE'},
@@ -956,3 +979,38 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
     file = hdf_ontology.File(rootGroup=root)
 
     return file.model_dump_jsonld()
+
+
+def make_graph_compact(graph: List[Dict]) -> List[Dict]:
+    """make a graph compact, which makes readability better"""
+
+    def resolve_references(item):
+        if isinstance(item, dict):
+            for key, value in item.items():
+                if isinstance(value, dict) and '@id' in value:
+                    reference_id = value['@id']
+                    for sub_item in graph:
+                        if sub_item.get('@id') == reference_id:
+                            item[key] = sub_item
+                            graph.remove(sub_item)
+                            resolve_references(sub_item)
+                            break
+                elif isinstance(value, list):
+                    for i, v in enumerate(value):
+                        if isinstance(v, dict) and '@id' in v:
+                            reference_id = v['@id']
+                            for sub_item in graph:
+                                if sub_item.get('@id') == reference_id:
+                                    value[i] = sub_item
+                                    graph.remove(sub_item)
+                                    resolve_references(sub_item)
+                                    break
+        elif isinstance(item, list):
+            for i, value in enumerate(item):
+                if isinstance(value, dict):
+                    resolve_references(value)
+
+    # Resolve references in each item of the graph
+    for item in graph:
+        resolve_references(item)
+    return graph

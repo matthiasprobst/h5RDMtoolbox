@@ -1,18 +1,19 @@
 import json
+import numpy as np
+import ontolutils
 import pathlib
 import rdflib
 import unittest
+from ontolutils import M4I
+from ontolutils import namespaces, urirefs, Thing
 
 import h5rdmtoolbox as h5tbx
-import ontolutils
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention import rdf
 from h5rdmtoolbox.convention.hdf_ontology import HDF5
 from h5rdmtoolbox.convention.rdf import RDF_SUBJECT_ATTR_NAME
 from h5rdmtoolbox.wrapper import jsonld
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
-from ontolutils import M4I
-from ontolutils import namespaces, urirefs, Thing
 
 logger = h5tbx.logger
 
@@ -74,8 +75,6 @@ WHERE {
     def test_dump_hdf_to_json(self):
         """similar yet different to https://hdf5-json.readthedocs.io/en/latest/index.html"""
         with h5tbx.File(name=None, mode='w') as h5:
-            # h5.attrs['test_attr'] = 123
-            del h5['h5rdmtoolbox']
             ds = h5.create_dataset('grp/test_dataset',
                                    data=[1, 2, 3],
                                    attrs={'standard_name': 'x_velocity',
@@ -198,6 +197,9 @@ WHERE {
             h5.create_dataset('test_dataset', shape=(3,))
             grp = h5.create_group('grp')
             grp.attrs['test', sn_iri] = 'test'
+            grp.attrs['description', ontolutils.SCHEMA.commentCount] = 5.3
+            self.assertIsInstance(grp.attrs['description'], np.floating)
+
             sub_grp = grp.create_group('Fan')
             ds = sub_grp.create_dataset('D3', data=300)
             sub_grp['D3'].attrs['units', 'http://w3id.org/nfdi4ing/metadata4ing#hasUnits'] = 'mm'
@@ -213,7 +215,8 @@ WHERE {
                                       context={'schema': 'http://schema.org/',
                                                "ssno": "https://matthiasprobst.github.io/ssno#",
                                                "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
-                                      resolve_keys=True)
+                                      resolve_keys=True,
+                                      compact=False)
 
         pprint(out_dict)
         found_m4iNumericalVariable = False
@@ -223,6 +226,15 @@ WHERE {
                 self.assertEqual(g['ssno:standardName'], 'blade_diameter3')
                 found_m4iNumericalVariable = True
         self.assertTrue(found_m4iNumericalVariable)
+
+    def test_jsonld_dumps_NDdataset(self):
+        with h5tbx.File(mode='w') as h5:
+            _ = h5.create_dataset('test_dataset', data=np.array([[1, 2], [3, 4], [5.4, 1.9]]))
+            h5.attrs['name'] = 'test attr'
+            # _ = h5.create_dataset('test_dataset', data=5.4)
+            jd = jsonld.dumpd(h5, structural=True)
+        from pprint import pprint
+        pprint(jd)
 
     def test_to_hdf_with_graph(self):
         test_data = """{

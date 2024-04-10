@@ -188,7 +188,8 @@ class TestOntology(unittest.TestCase):
         jsonld_str = h5tbx.dump_jsonld(
             h5.hdf_filename,
             context={"@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"},
-            resolve_keys=True
+            resolve_keys=True,
+            compact=False
         )
         json_dict = json.loads(jsonld_str)
 
@@ -207,7 +208,8 @@ class TestOntology(unittest.TestCase):
         jsonld_str = h5tbx.dump_jsonld(
             h5.hdf_filename,
             context={"@import": "https://w3id.org/nfdi4ing/metadata4ing/m4i_context.jsonld"},
-            resolve_keys=False
+            resolve_keys=False,
+            compact=False
         )
         json_dict = json.loads(jsonld_str)
         i = 0

@@ -28,6 +28,9 @@ class TestCore(unittest.TestCase):
         self.assertEqual(h5tbx.Lower('Hello'), 'hello')
         self.assertIsInstance(h5tbx.lower('Hello'), h5tbx.Lower)
 
+    def tearDownClass():
+        h5tbx.set_config(auto_create_h5tbx_version=False)
+
     def test_File(self):
         self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.core.File'>")
         h5tbx.set_config(auto_create_h5tbx_version=False)
