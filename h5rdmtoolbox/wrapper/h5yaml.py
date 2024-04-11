@@ -1,7 +1,8 @@
-import h5py
 import pathlib
-import yaml
 from typing import Dict
+
+import h5py
+import yaml
 
 
 class H5Yaml:
@@ -35,8 +36,22 @@ class H5Yaml:
                     v.pop('type', None)
                     if 'name' not in v:
                         v['name'] = k
-
-                    h5.create_dataset(**v)
+                    # units = v.pop('units', None)
+                    # standard_name = v.pop('standard_name', None)
+                    print(v)
+                    # TODO remove the following hotfix
+                    name = v.pop('name')
+                    data = v.pop('data')
+                    if isinstance(data, str):
+                        ds = h5.create_string_dataset(name, data=data)
+                    else:
+                        ds = h5.create_dataset(name=name, data=data)
+                    for ak, av in v.items():
+                        ds.attrs[ak] = av
+                    # if units:
+                    #     ds.attrs['units'] = units
+                    # if standard_name:
+                    #     ds.attrs['standard_name'] = standard_name
                 elif H5Yaml.is_group(v):
                     v.pop('type', None)
 

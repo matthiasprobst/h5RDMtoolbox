@@ -581,12 +581,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 del self[name]  # delete existing dataset
             # else let h5py return the error
 
-        compression = kwargs.pop('compression', get_config('hdf_compression'))
-        compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+        # compression = kwargs.pop('compression', get_config('hdf_compression'))
+        # compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
         make_scale = kwargs.pop('make_scale', False)
-        ds = super().create_dataset(name, dtype=dtype, data=data,
-                                    compression=compression,
-                                    compression_opts=compression_opts, **kwargs)
+        ds = super().create_dataset(name, dtype=dtype, data=data, **kwargs)
         if make_scale:
             if isinstance(data, str):
                 ds.make_scale(make_scale)

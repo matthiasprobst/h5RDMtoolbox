@@ -143,16 +143,28 @@ WHERE {
             self.assertEqual(float(row[0]), -2.3)
 
     def test_json_to_hdf(self):
+
+        @namespaces(foaf='http://xmlns.com/foaf/0.1/',
+                    prov='http://www.w3.org/ns/prov#',
+                    schema='http://www.schema.org/')
+        @urirefs(Affiliation='prov:Affiliation',
+                 name='schema:name')
+        class Affiliation(Thing):
+            name: str
+
         @namespaces(foaf='http://xmlns.com/foaf/0.1/',
                     prov='http://www.w3.org/ns/prov#')
         @urirefs(Person='prov:Person',
                  name='foaf:firstName',
-                 lastName='foaf:lastName')
+                 lastName='foaf:lastName',
+                 affiliation='prov:affiliation')
         class Person(Thing):
             name: str = None
             lastName: str
+            affiliation: Affiliation
 
-        p = Person(name='John', lastName='Doe')
+        p = Person(name='John', lastName='Doe',
+                   affiliation=dict(name='MyCompany'))
 
         # def dump_hdf_to_json(h5_filename):
         with h5tbx.File('test.hdf', 'w') as h5:
@@ -164,6 +176,7 @@ WHERE {
             self.assertEqual(h5['contact'].attrs['lastName'], 'Doe')
             self.assertEqual(h5['contact'].rdf['name'].predicate, 'http://xmlns.com/foaf/0.1/firstName')
             self.assertEqual(h5['contact'].rdf['lastName'].predicate, 'http://xmlns.com/foaf/0.1/lastName')
+            self.assertEqual(h5['contact/affiliation'].attrs['name'], 'MyCompany')
             h5.dumps()
 
         # def dump_hdf_to_json(h5_filename):
