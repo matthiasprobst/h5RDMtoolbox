@@ -1,18 +1,18 @@
 import datetime
-import json
-import pathlib
-import unittest
-from datetime import datetime, timedelta
-
 import h5py
-import h5rdmtoolbox as h5tbx
+import json
 import numpy as np
 import pandas as pd
+import pathlib
+import unittest
 import xarray as xr
+from datetime import datetime, timedelta
+from numpy import linspace as ls
+
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
-from numpy import linspace as ls
 
 logger = h5tbx.logger
 # logger.setLevel('ERROR')
@@ -106,6 +106,13 @@ class TestCore(unittest.TestCase):
                 h5.smth = 10
             h5._smth = 10
             self.assertEqual(10, h5._smth)
+
+            h5tbx.set_config(ignore_none=True)
+            h5.attrs['none_attr'] = None
+            self.assertFalse('none_attr' in h5)
+            h5tbx.set_config(ignore_none=False)
+            h5.attrs['none_attr'] = None
+            self.assertEqual(h5.attrs['none_attr'], 'None')
 
     def test_rootparent(self):
         with h5tbx.File() as h5:
@@ -711,6 +718,11 @@ class TestCore(unittest.TestCase):
                                                 'TIMEFORMAT': 'ISO'})
                 self.assertEqual(h5['time'].compression, 'gzip')
                 self.assertEqual(h5['time'].compression_opts, 5)
+                h5.create_string_dataset('single_time', data=tdata[0].isoformat(),
+                                         attrs={'ISTIMEDS': 1,
+                                                'TIMEFORMAT': 'ISO'})
+                self.assertEqual(h5['single_time'].compression, None)
+                self.assertEqual(h5['single_time'].compression_opts, None)
 
             tds = h5['time'][()]
 

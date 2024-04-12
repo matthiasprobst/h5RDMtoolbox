@@ -37,6 +37,7 @@ CONFIG = {
     # if a standard attribute is defined and cannot be retrieved because the value is invalid, ignore it:
     'ignore_get_std_attr_err': False,
     'allow_deleting_standard_attributes': False,
+    'ignore_none': False
 }
 
 _VALIDATORS = {
@@ -55,8 +56,8 @@ _VALIDATORS = {
     'expose_user_prop_to_attrs': lambda x: isinstance(x, bool),
     'add_provenance': lambda x: isinstance(x, bool),
     'ignore_set_std_attr_err': lambda x: isinstance(x, bool),
-
     'ignore_get_std_attr_err': lambda x: isinstance(x, bool),
+    'ignore_none': lambda x: isinstance(x, bool)
 }
 
 

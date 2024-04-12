@@ -157,6 +157,12 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
     -------
 
     """
+
+    if qk == '$basename':
+        qk = '$name'
+        assert isinstance(qv, str), 'Expected {$basename: "search value"} but value is not a string'
+        qv = {'$basename': qv}
+
     found_objs = []
     if qk in query.value_operator:
         # user wants to compare qv to the value of the object
@@ -428,15 +434,15 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         return ObjDB(obj).find_one(*args, **kwargs)
 
     @staticmethod
-    def find(obj: Union[h5py.Dataset, h5py.Group], *args, **kwargs) -> lazy.LHDFObject:
+    def find(obj: Union[h5py.Dataset, h5py.Group], *args, **kwargs) -> Generator[lazy.LHDFObject, None, None]:
         """Please refer to the docstring of the find_one method of the ObjDB class"""
         return ObjDB(obj).find(*args, **kwargs)
 
     def _instance_find_one(self,
-                 flt: Union[Dict, str],
-                 objfilter=None,
-                 recursive: bool = True,
-                 ignore_attribute_error: bool = False) -> lazy.LHDFObject:
+                           flt: Union[Dict, str],
+                           objfilter=None,
+                           recursive: bool = True,
+                           ignore_attribute_error: bool = False) -> lazy.LHDFObject:
         """Find one object in the obj
 
         Parameters
@@ -464,10 +470,10 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         )
 
     def _instance_find(self,
-             flt: Union[Dict, str],
-             objfilter=None,
-             recursive: bool = True,
-             ignore_attribute_error: bool = False) -> Generator[lazy.LHDFObject, None, None]:
+                       flt: Union[Dict, str],
+                       objfilter=None,
+                       recursive: bool = True,
+                       ignore_attribute_error: bool = False) -> Generator[lazy.LHDFObject, None, None]:
         if isinstance(self.src_obj, h5py.Dataset) and recursive:
             recursive = False
         results = find(self.src_obj,

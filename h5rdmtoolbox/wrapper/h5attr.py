@@ -1,3 +1,4 @@
+"""Attribute module"""
 import ast
 import h5py
 import json
@@ -6,8 +7,9 @@ import numpy as np
 import pint
 import rdflib
 import warnings
+from h5py._hl.attrs import AttributeManager
 from h5py._hl.base import with_phil
-from h5py._objects import ObjectID
+from h5py._objects import ObjectID, phil
 from typing import Dict, Union, Tuple
 
 from .h5utils import get_rootparent
@@ -57,7 +59,7 @@ class AttributeString(str):
         return get_ureg()(self)
 
 
-class WrapperAttributeManager(h5py.AttributeManager):
+class WrapperAttributeManager(AttributeManager):
     """
     Subclass of h5py's Attribute Manager.
     Allows storing dictionaries as json strings and to store a dataset or a group as an
@@ -148,6 +150,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         """
         Create a new attribute.
 
+        .. note:: Via the config setting "ignore_none" (`h5tbx.set_config(ignore_none=True)`) attribute values, that are None are not written.
+
+
         Parameters
         ----------
         name: str
@@ -163,6 +168,9 @@ class WrapperAttributeManager(h5py.AttributeManager):
         rdf_object: Union[str, rdflib.URIRef], optional
             IRI of the object
         """
+        if data is None and get_config('ignore_none'):
+            logger.debug(f'Attribute "{name}" is None and "ignore_none" in config is True. Attribute is not created.')
+            return
         r = super().create(name,
                            utils.parse_object_for_attribute_setting(data),
                            shape, dtype)
@@ -334,9 +342,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
             print(f'{k:{keylen}}:  {v}')
 
     @property
-    def raw(self) -> "h5py.AttributeManager":
+    def raw(self) -> AttributeManager:
         """Return the original h5py attribute object manager"""
-        from h5py._hl import attrs
-        from h5py._objects import phil
         with phil:
-            return attrs.AttributeManager(self._parent)
+            return AttributeManager(self._parent)

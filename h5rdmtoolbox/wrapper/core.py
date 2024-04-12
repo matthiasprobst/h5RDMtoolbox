@@ -17,9 +17,10 @@ from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 from pathlib import Path
-from typing import List, Dict, Union, Tuple, Protocol, Optional
+from typing import List, Dict, Union, Tuple, Protocol, Optional, Generator
 
 from h5rdmtoolbox.database import ObjDB
+from h5rdmtoolbox.database.lazy import LHDFObject
 # noinspection PyUnresolvedReferences
 from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
@@ -581,10 +582,16 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 del self[name]  # delete existing dataset
             # else let h5py return the error
 
-        # compression = kwargs.pop('compression', get_config('hdf_compression'))
-        # compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+        if isinstance(data, str):
+            compression = None
+            compression_opts = None
+        else:
+            compression = kwargs.pop('compression', get_config('hdf_compression'))
+            compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+
         make_scale = kwargs.pop('make_scale', False)
-        ds = super().create_dataset(name, dtype=dtype, data=data, **kwargs)
+        ds = super().create_dataset(name, dtype=dtype, data=data, **kwargs,
+                                    compression=compression, compression_opts=compression_opts)
         if make_scale:
             if isinstance(data, str):
                 ds.make_scale(make_scale)
@@ -870,6 +877,34 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                  ignore_attribute_error: bool = False):
         """See ObjDB.find_one()"""
         return ObjDB(self).find_one(flt, objfilter, recursive, ignore_attribute_error)
+
+    def find(self, flt: Union[Dict, str],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             recursive: bool = True,
+             ignore_attribute_error: bool = False) -> Generator[LHDFObject, None, None]:
+        """
+        Examples for filter parameters:
+        filter = {'long_name': 'any objects long name'} --> searches in attributes only
+        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
+        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
+
+        Parameters
+        ----------
+        flt: Dict
+            Filter request
+        objfilter: str | h5py.Dataset | h5py.Group | None
+            Filter. Default is None. Otherwise, only dataset or group types are returned.
+        recursive: bool, optional
+            Recursive search. Default is True
+        ignore_attribute_error: bool, optional=False
+            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
+            Otherwise, the KeyError is raised.
+
+        Returns
+        -------
+        h5obj: h5py.Dataset or h5py.Group
+        """
+        return ObjDB(self).find(flt, objfilter, recursive=recursive, ignore_attribute_error=ignore_attribute_error)
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
@@ -1181,6 +1216,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         """
         from . import h5yaml
         h5yaml.H5Yaml(yaml_filename).write(self)
+
+    def create_from_dict(self, dictionary: Dict):
+        """Create groups and datasets based on a dictionary"""
+        from . import h5yaml
+        h5yaml.H5Dict(dictionary).write(self)
 
     def create_from_jsonld(self, data: str, context: Optional[Dict] = None):
         """Create groups/datasets from a jsonld string."""
@@ -1843,33 +1883,6 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         for i in ils:
             self.dims[axis].attach_scale(backup_scales[i][1])
         logger.debug('new primary scale: %s', self.dims[axis][0])
-
-    def find(self, flt: Union[Dict, str],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             ignore_attribute_error: bool = False) -> List:
-        """
-        Examples for filter parameters:
-        filter = {'long_name': 'any objects long name'} --> searches in attributes only
-        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
-        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
-
-        Parameters
-        ----------
-        flt: Dict
-            Filter request
-        objfilter: str | h5py.Dataset | h5py.Group | None
-            Filter. Default is None. Otherwise, only dataset or group types are returned.
-        recursive: bool, optional
-            Recursive search. Default is True
-        ignore_attribute_error: bool, optional=False
-            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
-            Otherwise, the KeyError is raised.
-
-        Returns
-        -------
-        h5obj: h5py.Dataset or h5py.Group
-        """
-        return ObjDB(self).find(flt, objfilter, ignore_attribute_error)
 
 
 class File(h5py.File, Group, SpecialAttributeWriter, Core):

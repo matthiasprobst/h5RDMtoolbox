@@ -7,6 +7,7 @@ import unittest
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import database
 from h5rdmtoolbox.database import hdfdb
+from h5rdmtoolbox.database.hdfdb.query import _basename
 
 
 class TestHDFDB(unittest.TestCase):
@@ -297,7 +298,6 @@ class TestHDFDB(unittest.TestCase):
         self.assertFalse(_gt(1, 2))
 
     def test_basename(self):
-        from h5rdmtoolbox.database.hdfdb.query import _basename
         self.assertFalse(_basename(None, 'b'))
         self.assertFalse(_basename('a', None))
         self.assertTrue(_basename('/a', 'a'))
@@ -307,6 +307,13 @@ class TestHDFDB(unittest.TestCase):
         self.assertFalse(_basename('/a/b/c', 'b'))
         self.assertFalse(_basename('/a/b/c', 'a'))
         self.assertFalse(_basename('/a/b/c', '/a/b/c'))
+
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset('T1', data=4)
+            res = h5.find_one({'$name': {'$basename': 'T1'}})
+            self.assertEqual(res, ds)
+            res = h5.find_one({'$basename': 'T1'})
+            self.assertEqual(res, ds)
 
     def test_get_ndim(self):
         from h5rdmtoolbox.database.hdfdb.query import get_ndim
