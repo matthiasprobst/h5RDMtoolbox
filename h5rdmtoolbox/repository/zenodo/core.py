@@ -57,8 +57,9 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} (id={self.rec_id}, url={self.depositions_url})"
 
-    def get_metadata(self):
-        return self.json()['metadata']
+    @abc.abstractmethod
+    def get_metadata(self) -> Dict:
+        """Return metadata"""
 
     @abc.abstractmethod
     def get(self, raise_for_status: bool):
@@ -73,8 +74,6 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     def exists(self) -> bool:
         """Check if the deposit exists on Zenodo."""
-        if self.rec_id is None:
-            return False
         r = self.get(raise_for_status=False)
         if r.status_code == 404:
             return False
@@ -373,6 +372,9 @@ class ZenodoRecord(AbstractZenodoInterface):
     def access_token(self):
         """Get the access token for the Zenodo API. This is needed to upload files."""
         return get_api_token(sandbox=False)
+
+    def get_metadata(self) -> Dict:
+        return self.json()['metadata']
 
     def set_metadata(self, metadata: Metadata):
         """update the metadata of the deposit"""

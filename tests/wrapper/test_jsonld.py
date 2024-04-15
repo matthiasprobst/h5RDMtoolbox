@@ -142,6 +142,52 @@ WHERE {
             print(row)
             self.assertEqual(float(row[0]), -2.3)
 
+    def test_model_dump_jsonld_resolve_keys(self):
+        @namespaces(prov='http://www.w3.org/ns/prov#',
+                    schema='http://www.schema.org/')
+        @urirefs(Affiliation='prov:Affiliation',
+                 name='schema:name')
+        class Affiliation(Thing):
+            name: str
+
+        @namespaces(foaf='http://xmlns.com/foaf/0.1/',
+                    prov='http://www.w3.org/ns/prov#')
+        @urirefs(Person='prov:Person',
+                 name='foaf:firstName',
+                 lastName='foaf:lastName',
+                 affiliation='prov:affiliation')
+        class Person(Thing):
+            name: str = None
+            lastName: str
+            affiliation: Affiliation
+
+        p = Person(name='John', lastName='Doe',
+                   affiliation=dict(name='MyCompany'))
+        jdict = json.loads(p.model_dump_jsonld(resolve_keys=False))
+        self.assertEqual(jdict['@type'], 'prov:Person')
+        self.assertEqual(jdict['name'], 'John')
+        self.assertIsInstance(jdict['prov:affiliation'], dict)
+        affiliation = jdict['prov:affiliation']
+        self.assertEqual(affiliation['@type'], 'prov:Affiliation')
+        self.assertEqual(affiliation['schema:name'], 'MyCompany')
+
+        with h5tbx.File() as h5:
+            jsonld.to_hdf(h5, data=jdict)
+            self.assertTrue(h5.attrs['name'], 'John')
+            self.assertEqual(h5.rdf.predicate['name'], 'http://xmlns.com/foaf/0.1/firstName')
+            self.assertTrue(h5['affiliation'].attrs['name'], 'MyCompany')
+            self.assertEqual(h5['affiliation'].rdf.predicate['name'], 'http://www.schema.org/name')
+
+        jdict_resolved = json.loads(p.model_dump_jsonld(resolve_keys=True))
+        self.assertEqual(jdict_resolved['foaf:firstName'], 'John')
+
+        with h5tbx.File() as h5:
+            jsonld.to_hdf(h5, data=jdict_resolved)
+            self.assertTrue(h5.attrs['firstName'], 'John')
+            self.assertEqual(h5.rdf.predicate['firstName'], 'http://xmlns.com/foaf/0.1/firstName')
+            self.assertTrue(h5['affiliation'].attrs['name'], 'MyCompany')
+            self.assertEqual(h5['affiliation'].rdf.predicate['name'], 'http://www.schema.org/name')
+
     def test_json_to_hdf(self):
 
         @namespaces(foaf='http://xmlns.com/foaf/0.1/',
@@ -176,7 +222,7 @@ WHERE {
             self.assertEqual(h5['contact'].attrs['lastName'], 'Doe')
             self.assertEqual(h5['contact'].rdf['name'].predicate, 'http://xmlns.com/foaf/0.1/firstName')
             self.assertEqual(h5['contact'].rdf['lastName'].predicate, 'http://xmlns.com/foaf/0.1/lastName')
-            # self.assertEqual(h5['contact/affiliation'].attrs['name'], 'MyCompany')  # TODO: fix this bug!!!
+            self.assertEqual(h5['contact/affiliation'].attrs['name'], 'MyCompany')
             h5.dumps()
 
         # def dump_hdf_to_json(h5_filename):

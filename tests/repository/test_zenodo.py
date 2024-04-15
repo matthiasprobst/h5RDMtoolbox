@@ -3,7 +3,6 @@ import logging
 import os
 import pathlib
 import pydantic
-import requests
 import unittest
 from datetime import datetime
 
@@ -261,6 +260,7 @@ class TestConfig(unittest.TestCase):
 
         self.assertTrue('@context' in json_dict)
         self.assertEqual(json_dict['@type'], 'hdf5:File')
+
         #
         # print(json_dict['h5rdmtoolbox']['attrs'])
         # self.assertDictEqual(
@@ -282,6 +282,7 @@ class TestConfig(unittest.TestCase):
         self.assertEqual('open', z.get_metadata()['access_right'])
         self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
         self.assertTrue(z.exists())
+        self.assertFalse(z.is_published())
 
         old_rec_id = z.rec_id
 
@@ -315,6 +316,10 @@ class TestConfig(unittest.TestCase):
             embargo_date='2020'
         )
 
+        with self.assertRaises(TypeError):
+            z.set_metadata(12)
+
+        z.set_metadata(meta.model_dump())
         z.set_metadata(meta)
         ret_metadata = z.get_metadata()
         self.assertEqual(ret_metadata['upload_type'],
@@ -326,6 +331,9 @@ class TestConfig(unittest.TestCase):
         tmpfile = pathlib.Path('testfile.txt')
         with open(tmpfile, 'w') as f:
             f.write('This is a test file.')
+
+        with self.assertRaises(FileNotFoundError):
+            z.upload_file('doesNotExist.txt', overwrite=True)
         z.upload_file(tmpfile, overwrite=True)
         self.assertIn('testfile.txt', z.get_filenames())
 
