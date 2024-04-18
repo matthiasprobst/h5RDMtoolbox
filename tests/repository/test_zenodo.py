@@ -2,11 +2,13 @@ import json
 import logging
 import os
 import pathlib
-import pydantic
 import unittest
 from datetime import datetime
 
+import pydantic
+
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import zenodo, upload_file
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
@@ -145,14 +147,17 @@ class TestConfig(unittest.TestCase):
         else:
             bak_fname = None
 
+        zenodo_ini_filename = UserDir['repository'] / 'zenodo.ini'
+        if zenodo_ini_filename.exists():
+            tmp_zenodo_ini_filename = zenodo_ini_filename.rename(zenodo_ini_filename.with_suffix('.ini_bak'))
+        else:
+            tmp_zenodo_ini_filename = None
+
         with self.assertRaises(FileNotFoundError):
             _parse_ini_file(None)
 
         with self.assertRaises(FileNotFoundError):
             _parse_ini_file('invalid.ini')
-
-        with self.assertRaises(FileNotFoundError):
-            _parse_ini_file(None)
 
         if bak_fname:
             bak_fname.rename(fname)
@@ -162,6 +167,9 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(ini_filename, tmp_ini_file)
         self.assertTrue(ini_filename.exists())
         ini_filename.unlink()
+
+        if tmp_zenodo_ini_filename:
+            tmp_zenodo_ini_filename.rename(tmp_zenodo_ini_filename.with_suffix('.ini'))
 
     def test_get_api_token(self):
         env_token_sb = os.environ.pop('ZENODO_SANDBOX_API_TOKEN', None)
@@ -181,9 +189,14 @@ class TestConfig(unittest.TestCase):
         # reset environment variable
         if env_token_sb is not None:
             os.environ['ZENODO_SANDBOX_API_TOKEN'] = env_token_sb
-        self.assertEqual(env_token_sb, os.environ.get('ZENODO_SANDBOX_API_TOKEN', None))
+            self.assertEqual(env_token_sb, os.environ.get('ZENODO_SANDBOX_API_TOKEN', None))
+        else:
+            os.environ.pop('ZENODO_SANDBOX_API_TOKEN')
+
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
+        else:
+            os.environ.pop('ZENODO_API_TOKEN', None)
         self.assertEqual(env_token, os.environ.get('ZENODO_API_TOKEN', None))
 
     def test_set_api_token(self):

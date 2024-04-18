@@ -7,7 +7,7 @@
 
 *Note, that the project is still under development!*
 
-The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a python package supporting everybody who is working with
+The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a Python package supporting everybody who is working with
 HDF5 to achieve a sustainable data lifecycle which follows
 the [FAIR (Findable, Accessible, Interoperable, Reusable)](https://www.nature.com/articles/sdata201618)
 principles. It specifically supports the five main steps of *planning*, *collecting*, *analyzing*, *sharing* and
@@ -18,7 +18,7 @@ information of try the [quickstart using colab](#quickstart).
 
 - Combining HDF5 and [xarray](https://docs.xarray.dev/en/stable/) to allow easy access to metadata and data during
   analysis and processing (
-  see [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface).
+  see [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface)).
 - Assigning [metadata with "globally unique and persistent identifiers"]() as required
   by [F1 of the FAIR principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/)
   . This "remove[s] ambiguity in the meaning of your published data...".

@@ -35,9 +35,17 @@ class DirManger:
                           'tmp': tmp_dir,
                           'convention': _user_root_dir / 'convention',
                           'layouts': _user_root_dir / 'layouts',
+                          'repository': _user_root_dir / 'repository',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'cache': _user_root_dir / 'cache'}
         self.clear_cache(6)
+
+    def __str__(self):
+        dirs = ', '.join(f'{k}' for k in self.user_dirs.keys())
+        return f'{self.__class__.__name__}({dirs})'
+
+    def __repr__(self):
+        return self.__str__()
 
     def __getitem__(self, item):
         return self._get_dir(item)
