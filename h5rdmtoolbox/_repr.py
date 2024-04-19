@@ -29,7 +29,7 @@ except FileNotFoundError:
 # if IRI_ICON.exists():
 #     IRI_ICON = rf'file:///{IRI_ICON}'
 # else:
-DEF_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-FAIRattrs/h5rdmtoolbox/data/def_icon.png?raw=true"
+DEF_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/def_icon.png?raw=true"
 IRI_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
 hasUnitIRI = str(M4I.hasUnit)
 """
