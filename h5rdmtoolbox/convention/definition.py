@@ -21,10 +21,9 @@ class DefinitionManager:
         return self.get(item)
 
     def __setitem__(self, key, value):
-        if DEFINITION_ATTR_NAME not in self._attr:
-            attrdef = self._attr.get(DEFINITION_ATTR_NAME, {})
-        attrdef.update({key: value})
-        self._attr[DEFINITION_ATTR_NAME] = attrdef
+        attr_def = self._attr.get(DEFINITION_ATTR_NAME, {})
+        attr_def.update({key: value})
+        self._attr[DEFINITION_ATTR_NAME] = attr_def
 
     def get(self, item, default=None) -> Optional[str]:
         if DEFINITION_ATTR_NAME not in self._attr:

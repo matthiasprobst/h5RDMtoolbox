@@ -1,17 +1,18 @@
-import h5py
-import importlib_resources
-import numpy as np
 import os
 import re
 import typing
 import warnings
-import xarray as xr
-from IPython.display import HTML, display
 from abc import abstractmethod
-from numpy import ndarray
 from time import perf_counter_ns
 
+import h5py
+import importlib_resources
+import numpy as np
+import xarray as xr
+from IPython.display import HTML, display
+from numpy import ndarray
 from ontolutils import M4I, Thing
+
 from . import get_config, identifiers, protected_attributes
 from .convention.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME, RDF_OBJECT_ATTR_NAME
 
@@ -28,6 +29,7 @@ except FileNotFoundError:
 # if IRI_ICON.exists():
 #     IRI_ICON = rf'file:///{IRI_ICON}'
 # else:
+DEF_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-FAIRattrs/h5rdmtoolbox/data/def_icon.png?raw=true"
 IRI_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
 hasUnitIRI = str(M4I.hasUnit)
 """
@@ -165,6 +167,12 @@ def get_iri_icon_href(iri: typing.Union[str, typing.Dict], tooltiptext=None) -> 
            f'<img class="size_of_img" src="{IRI_ICON}" alt="IRI_ICON" width="16" height="16" />' \
            f' <span class="tooltiptext">{tooltiptext or iri}</span></a>'
 
+def get_def_icon_href(def_text: str) -> str:
+    """get html representation of an attribute definition with icon"""
+    return f'<div class="tooltip">' \
+           f'<img class="size_of_img" src="{DEF_ICON}" alt="D" width="16" height="16" />' \
+           f'<span class="tooltiptext">{def_text}</span></div>'
+
 
 class _HDF5StructureRepr:
 
@@ -283,18 +291,19 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
             use_attr_name = name
         else:
             pred = h5obj.rdf[name].get(RDF_PREDICATE_ATTR_NAME, None)
-            if pred:
+            attrsdef = h5obj.attrsdef.get(name, None)
+            if pred and attrsdef:
+                use_attr_name = f'{name} (p={pred}, def={attrsdef})'
+            elif pred:
                 use_attr_name = f'{name} (p={pred})'
+            elif attrsdef:
+                use_attr_name = f'{name} (def={attrsdef})'
             else:
                 use_attr_name = name
 
             obj_iri = h5obj.rdf[name].get(RDF_OBJECT_ATTR_NAME, None)
             if obj_iri:
                 attr_value = f'{attr_value} (o={obj_iri})'
-
-            attrsdef = h5obj.attrsdef.get(name, None)
-            if attrsdef:
-                attr_value = f'{attr_value} (def={attrsdef})'
 
         # if isinstance(attr_value, h5py.Group):
         #     attr_value = f'grp:{attr_value.name}'
@@ -546,6 +555,10 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         rdf_predicate = rdf.predicate
         if rdf_predicate is not None:
             name += get_iri_icon_href(rdf_predicate)
+
+        attrs_def = h5obj.attrsdef.get(name, None)
+        if attrs_def is not None:
+            name += get_def_icon_href(attrs_def)
 
         rdf_object = rdf.object
 

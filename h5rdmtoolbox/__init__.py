@@ -1,9 +1,10 @@
 """h5rdtoolbox repository"""
 
-import appdirs
 import logging
 import pathlib
 from logging.handlers import RotatingFileHandler
+
+import appdirs
 
 _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
 _logdir.mkdir(parents=True, exist_ok=True)
@@ -38,7 +39,6 @@ pint_xarray.unit_registry = get_ureg()
 
 from . import convention
 from .convention.core import Convention
-from .convention.rdf import RDFAttribute
 from . import wrapper
 from ._user import UserDir
 from ._version import __version__
@@ -46,6 +46,7 @@ from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import warnings, errors
 from .wrapper import jsonld
+from .wrapper.h5attr import Attribute
 from .wrapper.accessory import register_special_dataset
 import json
 
@@ -232,7 +233,7 @@ xr.set_options(display_expand_data=False)
 
 __all__ = ('__version__', '__author__', '__author_orcid__',
            'UserDir', 'use',
-           'File', 'Group', 'Dataset', 'RDFAttribute',
+           'File', 'Group', 'Dataset', 'Attribute',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
            'Convention', 'jsonld')

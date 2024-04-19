@@ -5,11 +5,12 @@ from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import RDFAttribute
+from h5rdmtoolbox import Attribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.convention.rdf import RDFError
 from h5rdmtoolbox.convention.rdf import RDF_PREDICATE_ATTR_NAME
+from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 
 
 class TestRDF(unittest.TestCase):
@@ -19,20 +20,20 @@ class TestRDF(unittest.TestCase):
         use(None)
 
     def test_RDF(self):
-        rdfobj = RDFAttribute('0000-0001-8729-0482', rdf_object='https://orcid.org/0000-0001-8729-0482')
+        rdfobj = Attribute('0000-0001-8729-0482', rdf_object='https://orcid.org/0000-0001-8729-0482')
         self.assertEqual(rdfobj.value, '0000-0001-8729-0482')
         self.assertEqual(rdfobj.rdf_predicate, None)
         self.assertEqual(rdfobj.rdf_object, 'https://orcid.org/0000-0001-8729-0482')
 
-        with self.assertRaises(RDFError):
-            RDFAttribute('0000-0001-8729-0482', rdf_predicate='000-0001-8729-0482')
+        with self.assertRaises(AttrDescriptionError):
+            Attribute('0000-0001-8729-0482', rdf_predicate='000-0001-8729-0482')
 
         with h5tbx.File(mode='w') as h5:
             h5.attrs['orcid', M4I.orcidId] = rdfobj
             self.assertEqual(h5.rdf.object['orcid'], 'https://orcid.org/0000-0001-8729-0482')
 
         self.assertEqual(rdfobj.__repr__(),
-                         'RDFAttribute(0000-0001-8729-0482, rdf_predicate=None, ' \
+                         'Attribute(0000-0001-8729-0482, ' \
                          'rdf_object=https://orcid.org/0000-0001-8729-0482)')
 
     def test_rdf_object_thing(self):
@@ -266,5 +267,8 @@ class TestRDF(unittest.TestCase):
             h5.attrs['title'] = 'test'
             h5.attrsdef['title'] = 'This is the title of the dataset'
             self.assertEqual(h5.attrsdef['title'], 'This is the title of the dataset')
+
+            h5.attrs['name'] = h5tbx.Attribute('Matthias', definition='This is the name of the person to contact')
+            self.assertEqual(h5.attrsdef['name'], 'This is the name of the person to contact')
+
             h5.dumps()
-            # self.assertEqual(h5.attrs.definition['title'], 'This is the title of the dataset')

@@ -1,16 +1,19 @@
 """Attribute module"""
 import ast
-import h5py
 import json
 import logging
+import warnings
+from typing import Dict, Union, Tuple, Optional
+
+import h5py
 import numpy as np
 import pint
+import pydantic
 import rdflib
-import warnings
 from h5py._hl.attrs import AttributeManager
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID, phil
-from typing import Dict, Union, Tuple, Optional
+from pydantic import HttpUrl
 
 from .h5utils import get_rootparent
 from .. import errors
@@ -18,10 +21,82 @@ from .. import get_config, convention, utils
 from .. import get_ureg
 from .. import protected_attributes
 from ..convention import consts
-from ..convention.rdf import RDFAttribute
 
 logger = logging.getLogger('h5rdmtoolbox')
 H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox
+
+
+class AttrDescriptionError(Exception):
+    """Generic attribute description error"""
+    pass
+
+
+class Attribute:
+    """Helper class for quick assignment of RDF attributes to the HDF5 file.
+
+    Examples
+    --------
+    >>> import h5rdmtoolbox as h5tbx
+    >>> from ontolutils import M4I
+    >>> rdf_attr = h5tbx.Attribute('0000-0001-8729-0482', rdf_predicate=M4I.orcidId,
+    ...                            rdf_object='https://orcid.org/0000-0001-8729-0482')
+    >>> with h5tbx.File('test.h5', 'w') as h5:
+    ...     grp = h5.create_group('person')
+    ...     grp.attrs['orcid'] = rdf_attr
+    ...     # equal to:
+    ...     # grp.attrs['orcid'] = '0000-0001-8729-0482'
+    ...     # grp.rdf.predicate['orcid'] = str(M4I.orcidId)
+    ...     # grp.rdf.object['orcid'] = 'https://orcid.org/0000-0001-8729-0482'
+    """
+
+    def __init__(self,
+                 value, *,
+                 definition: Optional[str] = None,
+                 rdf_predicate=None,
+                 rdf_object=None):
+        self.value = value
+        if not isinstance(value, str):
+            raise TypeError(f'Attribute value must be a string but got {type(value)}')
+        self.definition = definition  # skos:definition
+        self.rdf_predicate = self._validate_rdf(rdf_predicate)
+        self.rdf_object = self._validate_rdf(rdf_object)
+
+    @staticmethod
+    def _validate_rdf(value):
+        if value is None:
+            return
+        try:
+            str(HttpUrl(value))
+        except pydantic.ValidationError as e:
+            raise AttrDescriptionError(
+                f'Invalid URL: "{value}". This was validated with pydantic. Pydantic error: {e}'
+            )
+        return value
+
+    def __repr__(self) -> str:
+        out = f'{self.__class__.__name__}({self.value}'
+        if self.rdf_predicate is not None:
+            out += f', rdf_predicate={self.rdf_predicate}'
+        if self.rdf_object is not None:
+            out += f', rdf_object={self.rdf_object}'
+        if self.definition is not None:
+            out += f', definition={self.definition}'
+        out += ')'
+        return out
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
+# def Attribute(value, definition: Optional[str] = None,
+#               rdf_predicate=None, rdf_object=None) -> AttributeValue:
+#     """attribute interface function"""
+#     return AttributeValue(
+#         value,
+#         definition,
+#         rdf_predicate,
+#         rdf_object
+#     )
 
 
 def pop_hdf_attributes(attrs: Dict) -> Dict:
@@ -189,7 +264,7 @@ class WrapperAttributeManager(AttributeManager):
         if rdf_object is not None:
             self._parent.rdf.object[name] = rdf_object
         if definition is not None:
-            self._parent.definition[name] = definition
+            self._parent.attrsdef[name] = definition
         return r
 
     @with_phil
@@ -207,22 +282,28 @@ class WrapperAttributeManager(AttributeManager):
         name : Union[str, Tuple[str, str]]
             Name of the attribute. If it is a tuple, the second element is the IRI of the attribute.
         value : any
-            Attribute value. Can also be type `RDFAttribute` to set a value and its object IRI.
+            Attribute value. Can also be type `AttributeValue` to set a value and its object IRI.
         """
         if name == '_parent':
             return
 
-        if isinstance(value, RDFAttribute):
+        if isinstance(value, Attribute):
             object_iri = value.rdf_object
             predicate_iri = value.rdf_predicate
+            attr_def = value.definition
             value = value.value
 
             if not isinstance(name, tuple):
-                self.create(name, value, rdf_predicate=predicate_iri, rdf_object=object_iri)
+                self.create(name,
+                            value,
+                            rdf_predicate=predicate_iri,
+                            rdf_object=object_iri,
+                            definition=attr_def)
 
         else:
             object_iri = None
             predicate_iri = None
+            attr_def = None
 
         if isinstance(name, tuple):
             # length must be 2, second element must be a IRI (not checked though)
@@ -233,7 +314,10 @@ class WrapperAttributeManager(AttributeManager):
                 raise ValueError('You cannot set the predicate iri at the same time by RDFAttribute and through '
                                  'the tuple syntax.')
             _name, predicate_iri = name
-            self.create(_name, value, rdf_predicate=predicate_iri, rdf_object=object_iri)
+            self.create(_name, value,
+                        rdf_predicate=predicate_iri,
+                        rdf_object=object_iri,
+                        definition=attr_def)
             return
 
         if not isinstance(name, str):
