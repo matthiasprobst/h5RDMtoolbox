@@ -552,13 +552,15 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 warnings.warn(f'Cannot decode attribute value for {name}', RuntimeWarning)
         rdf = h5obj.rdf.get(name)
 
+        disp_name = name
+
         rdf_predicate = rdf.predicate
         if rdf_predicate is not None:
-            name += get_iri_icon_href(rdf_predicate)
+            disp_name += get_iri_icon_href(rdf_predicate)
 
         attrs_def = h5obj.attrsdef.get(name, None)
         if attrs_def is not None:
-            name += get_def_icon_href(attrs_def)
+            disp_name += get_def_icon_href(attrs_def)
 
         rdf_object = rdf.object
 
@@ -577,7 +579,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if rdf_object is not None:
                     _value_str += get_iri_icon_href(rdf_object)
                 return '<li style="list-style-type: none; ' \
-                       f'font-style: italic">{name} : {_value_str}</li>'
+                       f'font-style: italic">{disp_name} : {_value_str}</li>'
             else:
                 _value = attr_value.__repr__()
 
@@ -587,7 +589,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if rdf_object is not None:
                     _value += get_iri_icon_href(rdf_predicate)
 
-                return f'<li style="list-style-type: none; font-style: italic">{name} : {_value}</li>'
+                return f'<li style="list-style-type: none; font-style: italic">{disp_name} : {_value}</li>'
 
         if isinstance(attr_value, str):
             _value_str = f'{attr_value}'
@@ -609,7 +611,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 _value_html += get_iri_icon_href(rdf_object)
 
             if is_url and not _value_html.startswith('{'):  # TODO: why the second condition?
-                return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_html}</li>'
+                return f'<li style="list-style-type: none; font-style: italic">{disp_name} : {_value_html}</li>'
             else:
                 if self.max_attr_length:
                     if len(_value_str) > self.max_attr_length:
@@ -620,7 +622,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     _value_str = attr_value
             if rdf_object is not None:
                 _value_str += get_iri_icon_href(rdf_object)
-            return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
+            return f'<li style="list-style-type: none; font-style: italic">{disp_name} : {_value_str}</li>'
 
         if not isinstance(attr_value, ndarray):
             if getattr(attr_value, '_repr_html_', None):
