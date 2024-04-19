@@ -1668,12 +1668,18 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             super().__setitem__(key, value)
 
     @dataset_value_decoder
-    def __getitem__(self, args, new_dtype=None, nparray=False) -> Union[xr.DataArray, np.ndarray]:
+    def __getitem__(self, args, new_dtype=None, nparray=False, links_as_strings:bool=False) -> Union[xr.DataArray, np.ndarray]:
         """Return sliced HDF dataset. If global setting `return_xarray`
         is set to True, a `xr.DataArray` is returned, otherwise the default
         behaviour of the h5p-package is used and a np.ndarray is returned.
         Note, that even if `return_xarray` is True, there is another way to
-        receive  numpy array. This is by calling .values[:] on the dataset."""
+        receive  numpy array. This is by calling .values[:] on the dataset.
+
+        Parameters
+        ----------
+        links_as_strings: bool
+            Attributes, that are links to other datasets or groups are returned as strings.
+        """
 
         args = args if isinstance(args, tuple) else (args,)
 
@@ -1691,7 +1697,16 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             args = tuple(args)
 
         arr = super().__getitem__(args, new_dtype=new_dtype)
-        ds_attrs = self.attrs
+
+        if links_as_strings:
+            attrs = dict(self.attrs)
+            for k, v in attrs.copy().items():
+                if isinstance(v, (h5py.Group, h5py.Dataset)):
+                    attrs[k] = v.name
+            ds_attrs = attrs
+        else:
+            ds_attrs = self.attrs
+
         attrs = pop_hdf_attributes(ds_attrs)
 
         if 'DIMENSION_LIST' in ds_attrs:

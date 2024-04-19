@@ -68,6 +68,7 @@ def dataset_value_decoder(func):
         """wrapper that decodes the xarray.DataArray object"""
         ds = args[0]
         assert isinstance(ds, h5py.Dataset)
+        kwargs.update(links_as_strings=True)
         xarr = func(*args, **kwargs)
 
         parent_slice = args[1]

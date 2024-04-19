@@ -1,12 +1,13 @@
 import datetime
-import h5py
 import json
-import numpy as np
-import pandas as pd
 import pathlib
 import unittest
-import xarray as xr
 from datetime import datetime, timedelta
+
+import h5py
+import numpy as np
+import pandas as pd
+import xarray as xr
 from numpy import linspace as ls
 
 import h5rdmtoolbox as h5tbx
@@ -28,7 +29,8 @@ class TestCore(unittest.TestCase):
         self.assertEqual(h5tbx.Lower('Hello'), 'hello')
         self.assertIsInstance(h5tbx.lower('Hello'), h5tbx.Lower)
 
-    def tearDownClass():
+    @classmethod
+    def tearDownClass(cls) -> None:
         h5tbx.set_config(auto_create_h5tbx_version=False)
 
     def test_File(self):
@@ -771,3 +773,17 @@ class TestCore(unittest.TestCase):
             self.assertIsInstance(t, xr.DataArray)
             self.assertEqual(t.shape, (2, 3))
             self.assertIsInstance(t[0, 0].values, np.datetime64)
+
+    def test_attr_group_link_and_xarray(self):
+        with h5tbx.File() as h5:
+            grp = h5.create_group('my_grp')
+            ds = h5.create_dataset(name='ds', data=4)
+
+            ds.attrs['link to grp'] = grp
+
+            self.assertIsInstance(ds.attrs['link to grp'], h5py.Group)
+
+            da = ds[()]
+            self.assertIsInstance(da, xr.DataArray)
+            self.assertIsInstance(da.attrs['link to grp'], str)
+            print(da)
