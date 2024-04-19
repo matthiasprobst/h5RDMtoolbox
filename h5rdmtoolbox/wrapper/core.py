@@ -30,6 +30,7 @@ from .. import _repr, get_config, convention, utils, consts, protected_attribute
 from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from ..convention import rdf
+from ..convention import definition
 from ..convention.consts import DefaultValue
 
 logger = logging.getLogger('h5rdmtoolbox')
@@ -226,6 +227,11 @@ class Core(APC):
         """Deprecated. Use rdf instead."""
         warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
         return rdf.RDFManager(self.attrs)
+
+    @property
+    def attrsdef(self) -> definition.DefinitionManager:
+        """Return DefinitionManager"""
+        return definition.DefinitionManager(self.attrs)
 
 
 class SpecialAttributeWriter(APC):

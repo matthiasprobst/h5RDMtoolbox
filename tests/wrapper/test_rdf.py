@@ -1,14 +1,15 @@
 import unittest
+
+import ontolutils
+from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
-import ontolutils
 from h5rdmtoolbox import RDFAttribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.convention.rdf import RDFError
 from h5rdmtoolbox.convention.rdf import RDF_PREDICATE_ATTR_NAME
-from ontolutils.namespacelib import M4I, OBO
 
 
 class TestRDF(unittest.TestCase):
@@ -259,3 +260,11 @@ class TestRDF(unittest.TestCase):
 
             person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName, rdf_subject=FOAF.Person, recursive=False))
             self.assertEqual(len(person_res), 0)
+
+    def test_definition(self):
+        with h5tbx.File() as h5:
+            h5.attrs['title'] = 'test'
+            h5.attrsdef['title'] = 'This is the title of the dataset'
+            self.assertEqual(h5.attrsdef['title'], 'This is the title of the dataset')
+            h5.dumps()
+            # self.assertEqual(h5.attrs.definition['title'], 'This is the title of the dataset')

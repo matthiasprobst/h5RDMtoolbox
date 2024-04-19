@@ -10,7 +10,7 @@ import warnings
 from h5py._hl.attrs import AttributeManager
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID, phil
-from typing import Dict, Union, Tuple
+from typing import Dict, Union, Tuple, Optional
 
 from .h5utils import get_rootparent
 from .. import errors
@@ -145,7 +145,8 @@ class WrapperAttributeManager(AttributeManager):
                data,
                shape=None, dtype=None,
                rdf_predicate: Union[str, rdflib.URIRef] = None,
-               rdf_object: Union[str, rdflib.URIRef] = None,
+               rdf_object: Optional[Union[str, rdflib.URIRef]] = None,
+               definition: Optional[str] = None,
                **kwargs):
         """
         Create a new attribute.
@@ -187,6 +188,8 @@ class WrapperAttributeManager(AttributeManager):
             self._parent.rdf.predicate[name] = rdf_predicate
         if rdf_object is not None:
             self._parent.rdf.object[name] = rdf_object
+        if definition is not None:
+            self._parent.definition[name] = definition
         return r
 
     @with_phil

@@ -284,18 +284,22 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
         else:
             pred = h5obj.rdf[name].get(RDF_PREDICATE_ATTR_NAME, None)
             if pred:
-                use_attr_name = f'{name} ({pred})'
+                use_attr_name = f'{name} (p={pred})'
             else:
                 use_attr_name = name
 
             obj_iri = h5obj.rdf[name].get(RDF_OBJECT_ATTR_NAME, None)
             if obj_iri:
-                attr_value = f'{attr_value} ({obj_iri})'
+                attr_value = f'{attr_value} (o={obj_iri})'
 
-        if isinstance(attr_value, h5py.Group):
-            attr_value = f'grp:{attr_value.name}'
-        elif isinstance(attr_value, h5py.Dataset):
-            attr_value = f'dset:{attr_value.name}'
+            attrsdef = h5obj.attrsdef.get(name, None)
+            if attrsdef:
+                attr_value = f'{attr_value} (def={attrsdef})'
+
+        # if isinstance(attr_value, h5py.Group):
+        #     attr_value = f'grp:{attr_value.name}'
+        # elif isinstance(attr_value, h5py.Dataset):
+        #     attr_value = f'dset:{attr_value.name}'
         return f'\033[3ma: {use_attr_name}\033[0m: {attr_value}'
 
 
