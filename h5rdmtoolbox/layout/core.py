@@ -1,12 +1,13 @@
 """Layout validation module"""
 import enum
-import h5py
 import logging
 import pathlib
 import types
 import uuid
 import warnings
 from typing import Dict, Union, List, Protocol, Optional, Callable, Tuple
+
+import h5py
 
 import h5rdmtoolbox as h5tbx
 
@@ -106,7 +107,7 @@ class LayoutSpecification:
 
     def __init__(self,
                  func: QueryCallable,
-                 kwargs,
+                 kwargs: Dict,
                  n: Union[int, None, Dict],
                  description: Optional[str] = None,
                  parent: Optional["LayoutSpecification"] = None):
@@ -327,7 +328,7 @@ class LayoutSpecification:
     def add(self,
             func: QueryCallable,
             *,
-            n: Union[int, None, Dict],
+            n: Optional[Union[int, None, Dict]] = None,
             description: Optional[str] = None,
             **kwargs):
         """
@@ -565,6 +566,9 @@ class Layout(LayoutSpecification):
 
     def __init__(self):
         self.specifications: List[LayoutSpecification] = []
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}'
 
     def __eq__(self, other):
         if not isinstance(other, Layout):

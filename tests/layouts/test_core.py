@@ -110,9 +110,14 @@ class TestCore(unittest.TestCase):
     def test_is_single_result(self):
         self.assertEqual(is_single_result(None), False)
 
-        lay = layout.Layout()
-        spec = lay.add(hdfdb.ObjDB.find_one, flt={'$name': '/u'}, n=None)
+        lay1 = layout.Layout()
+        lay2 = layout.Layout()
+        spec = lay1.add(hdfdb.ObjDB.find_one, flt={'$name': '/u'}, n=None)
         sub_spec = spec.add(hdfdb.ObjDB.find, flt={'$shape': (3, 4)}, n=None)
+
+        # note, in the following find_one is used also for the sub_spec:
+        spec2 = lay2.add(hdfdb.FileDB.find, flt={'$name': '/u'}, n=1)
+        sub_spec2 = spec2.add(hdfdb.ObjDB.find_one, flt={'$shape': (3, 4)}, n=1)
 
         self.assertFalse(spec.is_valid())
         self.assertFalse(sub_spec.is_valid())
@@ -121,8 +126,11 @@ class TestCore(unittest.TestCase):
         with h5tbx.File() as h5:
             h5.create_dataset('u', shape=(3, 4), dtype='float32')
 
-            res = lay.validate(h5)
+            res = lay1.validate(h5)
             self.assertTrue(res.is_valid())
+            res2 = lay2.validate(h5)
+            self.assertTrue(res2.is_valid())
+
             self.assertTrue(spec.is_valid())
             self.assertTrue(sub_spec.is_valid())
             self.assertEqual([spec, sub_spec], spec.get_valid())

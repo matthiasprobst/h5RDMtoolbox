@@ -17,3 +17,4 @@ of the sub-package implementations. This section outlines them.
     Extensions.ipynb
     Visualization.ipynb
     Time.ipynb
+    UserDirectories.ipynb

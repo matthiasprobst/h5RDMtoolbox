@@ -1,16 +1,17 @@
-import h5py
 import json
 import logging
+import pathlib
+import warnings
+from typing import Dict, List
+from typing import Optional, Union, Iterable, Tuple, Any
+
+import h5py
 import numpy as np
 import ontolutils
-import pathlib
 import rdflib
-import warnings
 from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
 from rdflib.plugins.shared.jsonld.context import Context
-from typing import Dict, List
-from typing import Optional, Union, Iterable, Tuple, Any
 
 from h5rdmtoolbox.convention import hdf_ontology
 from .core import Dataset, File
@@ -661,6 +662,8 @@ def serialize(grp,
                     list_node = build_node_list(g, av.tolist())
                 else:
                     list_node = build_node_list(g, av)
+            elif isinstance(av, (h5py.Dataset, h5py.Group)):
+                attr_literal = rdflib.Literal(av.name)
             else:
                 try:
                     attr_literal = rdflib.Literal(json.dumps(av))
