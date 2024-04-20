@@ -9,6 +9,9 @@
    id="svg1"
    inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
    sodipodi:docname="id_icon.svg"
+   inkscape:export-filename="id_icon.png"
+   inkscape:export-xdpi="254"
+   inkscape:export-ydpi="254"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -67,14 +70,14 @@
     <text
        xml:space="preserve"
        style="font-size:2.65073px;line-height:1.25;font-family:sans-serif;stroke-width:0.248505"
-       x="39.843758"
+       x="41.53397"
        y="72.763535"
        id="text2"
        transform="scale(0.93923312,1.0646984)"><tspan
          sodipodi:role="line"
          id="tspan2"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.65073px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.248505"
-         x="39.843758"
-         y="72.763535">@id</tspan></text>
+         x="41.53397"
+         y="72.763535">id</tspan></text>
   </g>
 </svg>
