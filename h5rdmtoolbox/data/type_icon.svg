@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="6mm"
+   height="6mm"
+   viewBox="0 0 6 6"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   sodipodi:docname="type_icon.svg"
+   inkscape:export-filename="type_icon.png"
+   inkscape:export-xdpi="254"
+   inkscape:export-ydpi="254"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="14.815911"
+     inkscape:cx="9.2130683"
+     inkscape:cy="6.8507431"
+     inkscape:window-width="1920"
+     inkscape:window-height="991"
+     inkscape:window-x="-9"
+     inkscape:window-y="1341"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="-138.74896"
+       originy="-278.74896"
+       spacingx="0.26458333"
+       spacingy="0.26458334"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-36.710665,-73.752329)">
+    <ellipse
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.129169;stroke-linecap:square;stroke-linejoin:round;stroke-opacity:1"
+       id="path2"
+       cx="39.994541"
+       cy="76.445274"
+       rx="2.5812492"
+       ry="2.581249" />
+    <text
+       xml:space="preserve"
+       style="font-size:2.03683px;line-height:1.25;font-family:sans-serif;stroke-width:0.190954"
+       x="52.133873"
+       y="55.912178"
+       id="text2"
+       transform="scale(0.72171531,1.3855879)"><tspan
+         sodipodi:role="line"
+         id="tspan2"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.03683px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.190954"
+         x="52.133873"
+         y="55.912178">@type</tspan></text>
+  </g>
+</svg>
