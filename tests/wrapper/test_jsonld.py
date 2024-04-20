@@ -1,9 +1,10 @@
 import json
+import pathlib
+import unittest
+
 import numpy as np
 import ontolutils
-import pathlib
 import rdflib
-import unittest
 from ontolutils import M4I
 from ontolutils import namespaces, urirefs, Thing
 
@@ -472,3 +473,22 @@ WHERE {
         h5tbx.dumps('test.hdf')
 
         h5.hdf_filename.unlink(missing_ok=True)
+
+    def test_jsonld_with_attrs_definition(self):
+        with h5tbx.File() as h5:
+            h5.attrs['name'] = h5tbx.Attribute('Matthias', definition='My first name')
+            jstr = h5.dump_jsonld()
+
+        sparql_str = """SELECT ?n ?v ?d
+{
+    ?id <http://purl.allotrope.org/ontologies/hdf5/1.8#attribute> ?a .
+    ?a <http://purl.allotrope.org/ontologies/hdf5/1.8#name> ?n .
+    ?a <http://purl.allotrope.org/ontologies/hdf5/1.8#value> ?v .
+    ?a <http://www.w3.org/2004/02/skos/core#definition> ?d .
+}"""
+        g = rdflib.Graph().parse(data=jstr, format='json-ld')
+        qres = g.query(sparql_str)
+        for row in qres:
+            self.assertEqual(str(row[0]), 'name')
+            self.assertEqual(str(row[1]), 'Matthias')
+            self.assertEqual(str(row[2]), 'My first name')

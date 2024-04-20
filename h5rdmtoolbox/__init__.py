@@ -153,13 +153,13 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     if structural and not semantic:
         return jsonld.dump_file(hdf_filename, skipND=skipND)
     with File(hdf_filename) as h5:
-        return jsonld.dumps(h5, indent=2, structural=structural, resolve_keys=resolve_keys, **kwargs)
+        return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, **kwargs)
 
 
 def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):
     """A decoder function takes a xarray.DataArray and a dataset as input and returns a xarray.DataArray
     It is called after the dataset is loaded into memory and before being returned to the user. Be careful:
-    Multiple decoders can be registered and they are called in the order of registration. Hence, your decoder
+    Multiple decoders can be registered, and they are called in the order of registration. Hence, your decoder
     may behave unexpectedly!
     """
     from .wrapper import ds_decoder

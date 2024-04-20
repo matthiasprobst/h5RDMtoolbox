@@ -1,23 +1,24 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 import datetime
-import h5py
 import json
 import logging
-import numpy as np
 import os
 import pathlib
-# noinspection PyUnresolvedReferences
-import pint
 import shutil
 import warnings
-import xarray as xr
 from collections.abc import Iterable
 from datetime import datetime, timezone
-from h5py._hl.base import phil, with_phil
-from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Protocol, Optional, Generator
+
+import h5py
+import numpy as np
+# noinspection PyUnresolvedReferences
+import pint
+import xarray as xr
+from h5py._hl.base import phil, with_phil
+from h5py._objects import ObjectID
 
 from h5rdmtoolbox.database import ObjDB
 from h5rdmtoolbox.database.lazy import LHDFObject
@@ -29,8 +30,8 @@ from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, convention, utils, consts, protected_attributes
 from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
-from ..convention import rdf
 from ..convention import definition
+from ..convention import rdf
 from ..convention.consts import DefaultValue
 
 logger = logging.getLogger('h5rdmtoolbox')
@@ -1674,7 +1675,8 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             super().__setitem__(key, value)
 
     @dataset_value_decoder
-    def __getitem__(self, args, new_dtype=None, nparray=False, links_as_strings:bool=False) -> Union[xr.DataArray, np.ndarray]:
+    def __getitem__(self, args, new_dtype=None, nparray=False, links_as_strings: bool = False) -> Union[
+        xr.DataArray, np.ndarray]:
         """Return sliced HDF dataset. If global setting `return_xarray`
         is set to True, a `xr.DataArray` is returned, otherwise the default
         behaviour of the h5p-package is used and a np.ndarray is returned.
@@ -2211,6 +2213,21 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         Subclass of File
         """
         return File(filename, mode)
+
+    def dump_jsonld(self,
+                    skipND: int = 1,
+                    structural: bool = True,
+                    semantic: bool = True,
+                    resolve_keys: bool = False,
+                    **kwargs):
+        """Dump the file content as JSON-LD"""
+        from .. import dump_jsonld
+        return dump_jsonld(self.hdf_filename,
+                           skipND=skipND,
+                           structural=structural,
+                           semantic=semantic,
+                           resolve_keys=resolve_keys,
+                           **kwargs)
 
 
 Dataset._h5grp = Group

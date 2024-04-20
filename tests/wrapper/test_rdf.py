@@ -272,3 +272,6 @@ class TestRDF(unittest.TestCase):
             self.assertEqual(h5.attrsdef['name'], 'This is the name of the person to contact')
 
             h5.dumps()
+
+            with self.assertRaises(KeyError):
+                h5.attrsdef['test'] = 'This should not work!'

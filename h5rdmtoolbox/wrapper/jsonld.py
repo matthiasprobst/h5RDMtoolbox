@@ -10,7 +10,7 @@ import numpy as np
 import ontolutils
 import rdflib
 from ontolutils.classes.utils import split_URIRef
-from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF
+from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF, SKOS
 from rdflib.plugins.shared.jsonld.context import Context
 
 from h5rdmtoolbox.convention import hdf_ontology
@@ -579,10 +579,6 @@ def serialize(grp,
                 # _add_node(g, (root_group, RDF.type, HDF5.Group))
                 # _add_node(g, (root_group, HDF5.name, rdflib.Literal(name)))
 
-            # return
-        # else:
-        #     root_group = rdflib.BNode()
-
         obj_node = iri_dict.get(obj.name, None)
         if obj_node is None:
             obj_node = _get_id(obj, local=local)
@@ -643,7 +639,17 @@ def serialize(grp,
 
             if structural:  # add hdf type and name nodes
                 _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
-                _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
+                attr_def: str = obj.attrsdef.get(ak, None)
+                if attr_def:
+                    _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
+                    _add_node(g, (attr_node, SKOS.definition, rdflib.Literal(attr_def)))
+                    if 'skos' not in ctx:
+                        ctx['skos'] = 'http://www.w3.org/2004/02/skos/core#'
+                    # def_node = rdflib.BNode()
+                    # _add_node(g, (def_node, SCHEMA.comment, rdflib.Literal(attr_def)))
+                    # _add_node(g, (attr_node, HDF5.name, def_node))
+                else:
+                    _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
 
             list_node = None
             attr_literal = None
@@ -818,7 +824,7 @@ def dumps(grp,
           structural: bool = True,
           resolve_keys: bool = False,
           **kwargs) -> str:
-    """Dump a group or a dataset to to string."""
+    """Dump a group or a dataset to string."""
     return json.dumps(dumpd(
         grp=grp,
         iri_only=iri_only,

@@ -21,6 +21,8 @@ class DefinitionManager:
         return self.get(item)
 
     def __setitem__(self, key, value):
+        if key not in self._attr:
+            raise KeyError(f"Attribute {key} does not exist")
         attr_def = self._attr.get(DEFINITION_ATTR_NAME, {})
         attr_def.update({key: value})
         self._attr[DEFINITION_ATTR_NAME] = attr_def
