@@ -193,7 +193,7 @@ def create_h5tbx_version_grp(root: h5py.Group) -> h5py.Group:
         {'code_repository': 'https://schema.org/codeRepository',
          '__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
     )
-    version_group.attrs[rdf.RDF_SUBJECT_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'
+    version_group.attrs[rdf.RDF_TYPE_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'
     return version_group
 
 

@@ -1,4 +1,4 @@
-"""Testing common funcitonality across all wrapper classs"""
+"""Testing common functionality across all wrapper classes"""
 import json
 import unittest
 from rdflib import PROV, FOAF
@@ -11,7 +11,7 @@ class TestCommon(unittest.TestCase):
     def test_dump_jsonld(self):
         with h5tbx.File(mode='w') as h5:
             grp = h5.create_group('Person')
-            grp.rdf.subject = PROV.Person
+            grp.rdf.type = PROV.Person
             grp.attrs['fname', FOAF.firstName] = 'John'
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
             h5.dumps()

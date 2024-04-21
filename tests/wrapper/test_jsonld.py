@@ -287,6 +287,15 @@ WHERE {
                 found_m4iNumericalVariable = True
         self.assertTrue(found_m4iNumericalVariable)
 
+    def test_person(self):
+        with h5tbx.File() as h5:
+            h5.create_group('person')
+            h5['person'].attrs['name'] = 'John'
+            h5['person'].attrs['age'] = 21
+            h5.person.rdf.type = 'https://w3id.org/nfdi4ing/metadata4ing#Person'
+            h5.person.rdf.subject = 'https://orcid.org/XXXX-XXXX-XXXX-XXXX'
+            print(h5.dump_jsonld(indent=2))
+
     def test_jsonld_dumps_NDdataset(self):
         with h5tbx.File(mode='w') as h5:
             _ = h5.create_dataset('test_dataset', data=np.array([[1, 2], [3, 4], [5.4, 1.9]]))

@@ -151,7 +151,7 @@ def _get_id_from_attr_value(_av, file_url):
 
 def _get_id(_node, local=None, use_simple_bnode_value:bool=True) -> Union[URIRef, BNode]:
     """if an attribute in the node is called "@id", use that, otherwise use the node name"""
-    _id = _node.attrs.get('@id', None)
+    _id = _node.rdf.subject  # _node.attrs.get('@id', None)
     if local is not None:
         local = rf'file://{_node.hdf_filename.resolve().absolute()}'
         return URIRef(local + _node.name[1:])
@@ -378,10 +378,11 @@ def to_hdf(grp,
 
         if k in ('@id', 'id'):
             if v.startswith('http'):  # blank nodes should not be written to an HDF5 file!
-                grp.attrs.create(name="@id", data=v)
+                grp.rdf.subject = resolve_iri(v, ctx)
+                # grp.attrs.create(name="@id", data=v)
             continue
         elif k == '@type':
-            grp.rdf.subject = resolve_iri(v, ctx)
+            grp.rdf.type = resolve_iri(v, ctx)
             continue
         else:
             # spit predicate:
@@ -510,9 +511,11 @@ def to_hdf(grp,
                 value_object = v
 
             if k == '@type' and rdf_object is not None:
-                grp.attrs.create(name=k, data=rdf_object)
+                grp.rdf.type = rdf_object
+                # grp.attrs.create(name=k, data=rdf_object)
             elif k == '@id':
-                grp.attrs.create(name=k, data=v)
+                grp.rdf.subject = v
+                # grp.attrs.create(name=k, data=v)
             else:
                 grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate)
 
@@ -596,20 +599,20 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             if structural:
                 _add_node(g, (obj_node, RDF.type, HDF5.Group))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
-            group_subject = obj.rdf.subject
-            if isinstance(group_subject, list):
-                for gs in group_subject:
+            group_type = obj.rdf.type
+            if isinstance(group_type, list):
+                for gs in group_type:
                     nsp, key = split_URIRef(gs)
                     ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
                     if ns_iri is not None:
                         _context.update({ns_prefix: ns_iri})
                     _add_node(g, (obj_node, RDF.type, rdflib.URIRef(gs)))
-            elif group_subject is not None:
-                nsp, key = split_URIRef(group_subject)
+            elif group_type is not None:
+                nsp, key = split_URIRef(group_type)
                 ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
                 if ns_iri is not None:
                     _context.update({ns_prefix: ns_iri})
-                _add_node(g, (obj_node, RDF.type, rdflib.URIRef(group_subject)))
+                _add_node(g, (obj_node, RDF.type, rdflib.URIRef(group_type)))
 
         elif isinstance(obj, h5py.Dataset):
             if structural:
@@ -743,6 +746,11 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 _create_obj_node(obj_node, predicate_uri, attr_object)
 
                 attr_object = None
+
+
+            attr_def = obj.attrsdef.get(ak, None)
+            if attr_def:
+                _add_node(g, (attr_node, SKOS.definition, rdflib.Literal(attr_def)))
 
             if structural:
                 if attr_object:

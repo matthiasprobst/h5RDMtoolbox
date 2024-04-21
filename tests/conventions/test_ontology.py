@@ -195,14 +195,15 @@ class TestOntology(unittest.TestCase):
 
         i = 0
         for g in json_dict['@graph']:
-            if isinstance(g['@type'], list) and 'prov:Person' in g['@type']:
-                i += 1
-                self.assertEqual(g["foaf:firstName"], 'Alexandra')
-                self.assertEqual(g["foaf:lastName"], 'Test')
-                self.assertEqual(g["m4i:orcidId"], '0000-0000-0123-4567')
-            elif isinstance(g['@type'], list) and 'schema:SoftwareSourceCode' in g['@type']:
-                i += 1
-                self.assertEqual(g['schema:softwareVersion'], __version__)
+            if isinstance(g['@type'], list):
+                if 'prov:Person' in g['@type']:
+                    i += 1
+                    self.assertEqual(g["foaf:firstName"], 'Alexandra')
+                    self.assertEqual(g["foaf:lastName"], 'Test')
+                    self.assertEqual(g["m4i:orcidId"], '0000-0000-0123-4567')
+                elif 'schema:SoftwareSourceCode' in g['@type']:
+                    i += 1
+                    self.assertEqual(g['schema:softwareVersion'], __version__)
         self.assertEqual(i, 2)
 
         jsonld_str = h5tbx.dump_jsonld(
