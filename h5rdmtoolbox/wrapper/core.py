@@ -23,7 +23,7 @@ from h5py._objects import ObjectID
 from h5rdmtoolbox.database import ObjDB
 from h5rdmtoolbox.database.lazy import LHDFObject
 # noinspection PyUnresolvedReferences
-from . import xr2hdf
+from . import xr2hdf, rdf
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
@@ -31,7 +31,6 @@ from .. import _repr, get_config, convention, utils, consts, protected_attribute
 from .. import get_ureg
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from ..convention import definition
-from ..convention import rdf
 from ..convention.consts import DefaultValue
 
 logger = logging.getLogger('h5rdmtoolbox')

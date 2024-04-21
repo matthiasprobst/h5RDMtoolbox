@@ -14,7 +14,7 @@ from numpy import ndarray
 from ontolutils import M4I, Thing
 
 from . import get_config, identifiers, protected_attributes
-from .convention.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME, RDF_OBJECT_ATTR_NAME
+from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME, RDF_OBJECT_ATTR_NAME
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:

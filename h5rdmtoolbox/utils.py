@@ -21,7 +21,7 @@ from rdflib.plugins.shared.jsonld.context import Context
 
 from . import _user, get_config, get_ureg
 from ._version import __version__
-from .convention import rdf
+from .wrapper import rdf
 
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO

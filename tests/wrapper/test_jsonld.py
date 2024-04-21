@@ -10,10 +10,9 @@ from ontolutils import namespaces, urirefs, Thing
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.convention import rdf
 from h5rdmtoolbox.convention.hdf_ontology import HDF5
-from h5rdmtoolbox.convention.rdf import RDF_SUBJECT_ATTR_NAME
-from h5rdmtoolbox.wrapper import jsonld
+from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME
+from h5rdmtoolbox.wrapper import jsonld, rdf
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
 
 logger = h5tbx.logger
