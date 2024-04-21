@@ -67,26 +67,59 @@ class TestRDF(unittest.TestCase):
                 h5.rdf['title'].object = 'first object'
 
             with self.assertRaises(RDFError):
+                # not a valid URI
                 h5.rdf.subject = 'invalid URI'
 
-            with self.assertRaises(RDFError):
+            with self.assertRaises(TypeError):
+                # a list is not allowed
                 h5.rdf.subject = ['invalid URI', 'invalid URI 2']
 
             with self.assertRaises(RDFError):
-                h5.rdf.subject = ['invalid URI', 'https://example.org/validURI']
+                h5.rdf.type = ['invalid URI', 'invalid URI 2']
+
+            with self.assertRaises(RDFError):
+                h5.rdf.type = ['invalid URI', 'https://example.org/validURI']
+
             h5.rdf.subject = 'https://example.org/validURI'
             self.assertEqual(h5.rdf.subject, 'https://example.org/validURI')
 
-            h5.rdf.subject = ['https://example.org/validURI', 'https://example.org/validURI2']
-            self.assertEqual(h5.rdf.subject, ['https://example.org/validURI', 'https://example.org/validURI2'])
+            h5.rdf.type = ['https://example.org/validURI', 'https://example.org/validURI2']
+            self.assertEqual(h5.rdf.type, ['https://example.org/validURI', 'https://example.org/validURI2'])
+
+            # note, that the following will not overwrite, but append the value:
+            h5.rdf.type = 'https://example.org/validURI3'
+            self.assertEqual(sorted(h5.rdf.type),
+                             sorted(['https://example.org/validURI',
+                                     'https://example.org/validURI2',
+                                     'https://example.org/validURI3']))
+
+            # the list of values are unique, so adding the same URI will not change the list
+            h5.rdf.type = 'https://example.org/validURI3'
+            self.assertEqual(sorted(h5.rdf.type),
+                             sorted(['https://example.org/validURI',
+                                     'https://example.org/validURI2',
+                                     'https://example.org/validURI3']))
 
     def test_group_predicate(self):
         with h5tbx.File() as h5:
             grp = h5.create_group('has_contact')
             # assign parent group
+            with self.assertRaises(TypeError):
+                grp.rdf.predicate = ['1.4', ]
+
             grp.rdf.predicate = 'https://schema.org/author'
+            self.assertEqual(grp.rdf.predicate[None], 'https://schema.org/author')
+
+            del grp.rdf.predicate
+            self.assertEqual(grp.rdf.predicate[None], None)
+
+            del grp.rdf.predicate
+            self.assertEqual(grp.rdf.predicate[None], None)
+
+            grp.rdf.predicate = 'https://schema.org/author'
+            self.assertEqual(grp.rdf.predicate[None], 'https://schema.org/author')
+
             grp.rdf.subject = 'http://xmlns.com/foaf/0.1/Person'
-            print(grp.rdf.subject)
 
         print(
             jsonld.dumps(
@@ -113,9 +146,16 @@ class TestRDF(unittest.TestCase):
             self.assertEqual(len(h5.attrs.get(RDF_PREDICATE_ATTR_NAME, None)), 1)
             self.assertEqual(h5.rdf['title'].predicate, 'https://example.org/hasTitle')
 
-    def test_multiple_subjects_or_objects(self):
+    def test_multiple_types_or_objects(self):
         with h5tbx.File() as h5:
             h5.attrs['title', 'https://example.org/hasTitle'] = 'test'
+
+            self.assertEqual(h5.rdf['title'].object, None)
+
+            with self.assertRaises(RDFError):
+                h5.rdf['title'].object = 1.34
+
+            self.assertEqual(h5.rdf.parent, h5)
 
             h5.rdf['title'].object = 'https://example.org/object'
             self.assertEqual(h5.attrs['title'], 'test')
@@ -144,14 +184,25 @@ class TestRDF(unittest.TestCase):
             h5['/'].rdf.subject = 'https://example.org/is root group'
             self.assertEqual(h5.rdf.subject, 'https://example.org/is root group')
 
-            h5['/'].rdf.append_subject('https://example.org/is group')
-            self.assertEqual(h5.rdf.subject, ['https://example.org/is root group',
-                                              'https://example.org/is group'])
+    def test_delete_rdf_properties(self):
+        with h5tbx.File() as h5:
+            h5['/'].rdf.subject = 'https://example.org/is root group'
+            del h5['/'].rdf.subject
+            self.assertEqual(h5.rdf.subject, None)
 
-            h5['/'].rdf.subject = ['https://example.org/is root group 1',
-                                   'https://example.org/is group 2']
-            self.assertEqual(h5.rdf.subject, ['https://example.org/is root group 1',
-                                              'https://example.org/is group 2'])
+            h5['/'].rdf.type = 'https://example.org/is root group'
+            del h5['/'].rdf.type
+            self.assertEqual(h5.rdf.type, None)
+
+            h5['/'].rdf.type = 'https://example.org/is root group'
+            h5['/'].rdf.pop_type('https://example.org/is root group')
+            self.assertEqual(h5.rdf.type, None)
+
+            h5['/'].rdf.type = ['https://example.org/1', 'https://example.org/2', 'https://example.org/3']
+            h5['/'].rdf.pop_type('https://example.org/1')
+            self.assertEqual(h5.rdf.type, ['https://example.org/2', 'https://example.org/3'])
+            h5['/'].rdf.pop_type('https://example.org/3')
+            self.assertEqual(h5.rdf.type, 'https://example.org/2')
 
     def test_set_single_PSO(self):
         """IRI can be assigned to attributes. A protected attribute IRI is created for each dataset or groups"""
@@ -218,10 +269,37 @@ class TestRDF(unittest.TestCase):
             self.assertEqual(grp.rdf['firstName'].predicate, str(FOAF.firstName))
             self.assertEqual(grp.rdf['lastName'].predicate, str(FOAF.lastName))
 
-            grp.rdf.subject = [FOAF.Person,
-                               'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
-            self.assertTrue(str(FOAF.Person) in grp.rdf.subject)
-            self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.rdf.subject)
+            grp.rdf.type = [FOAF.Person,
+                            'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
+            self.assertTrue(str(FOAF.Person) in grp.rdf.type)
+            self.assertTrue('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson' in grp.rdf.type)
+
+    def test_set_type(self):
+        with h5tbx.File() as h5:
+            h5.create_group('contact_person')
+            h5.contact_person.rdf.type = FOAF.Person
+            self.assertEqual(h5.contact_person.rdf.type, str(FOAF.Person))
+            h5.contact_person.rdf.type = 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson'
+            self.assertListEqual(sorted(h5.contact_person.rdf.type),
+                                 sorted([str(FOAF.Person), 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']))
+
+            h5.contact_person.rdf.type = [str(FOAF.Person), 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
+            self.assertListEqual(sorted(h5.contact_person.rdf.type),
+                                 sorted([str(FOAF.Person), 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']))
+
+        with h5tbx.File() as h5:
+            h5.create_group('contact_person')
+            h5.contact_person.rdf.type = FOAF.Person
+
+            h5.contact_person.rdf.type = [str(FOAF.Person), 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']
+            self.assertListEqual(sorted(h5.contact_person.rdf.type),
+                                 sorted([str(FOAF.Person), 'http://w3id.org/nfdi4ing/metadata4ing#ContactPerson']))
+
+            h5.contact_person.rdf.pop_type('http://w3id.org/nfdi4ing/metadata4ing#ContactPerson')
+            self.assertEqual(h5.contact_person.rdf.type, str(FOAF.Person))
+
+            h5.contact_person.rdf.pop_type(str(FOAF.Person))
+            self.assertEqual(h5.contact_person.rdf.type, None)
 
     def test_rdf_find(self):
         with h5tbx.File() as h5:
@@ -230,37 +308,64 @@ class TestRDF(unittest.TestCase):
             h5.ds.rdf.object['quantity_kind'] = 'https://qudt.org/vocab/quantitykind/Velocity'
             h5.ds.attrs['units', M4I.hasUnit] = 'm/s'
 
+            self.assertEqual(sorted(h5.ds.rdf.predicate.keys()),
+                             sorted(['quantity_kind', 'units']))
+            self.assertDictEqual(dict(h5.ds.rdf.predicate.items()),
+                                 {'quantity_kind': str(M4I.hasKindOfQuantity),
+                                  'units': str(M4I.hasUnit)})
+            for k in h5.ds.rdf.predicate:
+                self.assertIsInstance(k, str)
+                self.assertIn(k, ['quantity_kind', 'units'])
+
             ds = h5.create_dataset('sub_grp/another_dataset', data=2)
             ds.attrs['quantity_kind', M4I.hasKindOfQuantity] = 'y_velocity'
             h5.sub_grp.attrs['random', M4I.hasKindOfQuantity] = 'y_velocity'
 
             grp = h5.create_group('contact_person')
-            grp.rdf.subject = FOAF.Person
+            grp.rdf.subject = 'http://orcid.org/XXXX-XXXX-XXXX-XXXX'
+            grp.rdf.type = FOAF.Person
             grp.attrs['firstName', FOAF.firstName] = 'John'
 
             grp = h5.create_group('sub_grp/another_sub/another_person')
-            grp.rdf.subject = FOAF.Person
+            grp.rdf.type = FOAF.Person
 
-            person_res = sorted(h5.sub_grp.another_sub.rdf.find(rdf_subject=FOAF.Person))
+            person_res = sorted(h5.sub_grp.another_sub.rdf.find(rdf_type=FOAF.Person))
             self.assertEqual(person_res[0].name, '/sub_grp/another_sub/another_person')
 
             person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName))
             self.assertEqual(person_res[0].name, '/contact_person')
 
-            person_res = sorted(h5.rdf.find(rdf_subject=FOAF.Person))
+            person_res = sorted(h5.rdf.find(rdf_type=FOAF.Person))
             self.assertEqual(person_res[0].name, '/contact_person')
             self.assertEqual(person_res[1].name, '/sub_grp/another_sub/another_person')
 
-            person_res = sorted(h5.rdf.find(rdf_subject=FOAF.Person, recursive=False))
+            person_res = sorted(h5.rdf.find(rdf_type=FOAF.Person, recursive=False))
             self.assertEqual(len(person_res), 0)
-            person_res = sorted(h5.contact_person.rdf.find(rdf_subject=FOAF.Person, recursive=False))
+            person_res = sorted(h5.contact_person.rdf.find(rdf_type=FOAF.Person, recursive=False))
             self.assertEqual(person_res[0].name, '/contact_person')
 
-            person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName, rdf_subject=FOAF.Person))
+            person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName, rdf_type=FOAF.Person))
             self.assertEqual(person_res[0].name, '/contact_person')
 
-            person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName, rdf_subject=FOAF.Person, recursive=False))
+            person_res = sorted(h5.rdf.find(rdf_predicate=FOAF.firstName, rdf_type=FOAF.Person, recursive=False))
             self.assertEqual(len(person_res), 0)
+
+            person_res = h5.rdf.find(rdf_subject='http://orcid.org/XXXX-XXXX-XXXX-XXXX', recursive=False)
+            self.assertEqual(len(person_res), 0)
+
+            person_res = h5.rdf.find(rdf_subject='http://orcid.org/XXXX-XXXX-XXXX-XXXX', recursive=True)
+            self.assertEqual(len(person_res), 1)
+            self.assertEqual(person_res[0].name, '/contact_person')
+
+    def test_find_object(self):
+        with h5tbx.File() as h5:
+            h5.rdf['title'].object = 'https://example.org/object'
+
+            res = h5.rdf.find(rdf_object='https://example.org/object')
+
+            self.assertEqual(len(res), 1)
+
+
 
     def test_definition(self):
         with h5tbx.File() as h5:

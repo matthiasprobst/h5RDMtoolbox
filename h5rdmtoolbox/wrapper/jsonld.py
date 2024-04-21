@@ -2,6 +2,7 @@ import json
 import logging
 import pathlib
 import warnings
+from itertools import count
 from typing import Dict, List
 from typing import Optional, Union, Iterable, Tuple, Any
 
@@ -17,6 +18,7 @@ from h5rdmtoolbox.convention import hdf_ontology
 from .core import Dataset, File
 from ..convention.ontology import HDF5
 
+_bnode_counter = count()
 logger = logging.getLogger('h5rdmtoolbox')
 
 CONTEXT_PREFIXES = {
@@ -64,14 +66,14 @@ CONTEXT_PREFIXES = {
 CONTEXT_PREFIXES_INV = {v: k for k, v in CONTEXT_PREFIXES.items()}
 
 
-def build_node_list(g: Graph, data: List) -> BNode:
+def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool = True) -> BNode:
     """Build an RDF List from a list of data"""
     # Create an RDF List for flag values
     # initial_node = rdflib.BNode()
     n = len(data)
     # assert n > 1, 'Expecting at least two element in the list'
 
-    initial_node = rdflib.BNode()
+    initial_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
 
     flag_list = initial_node
 
@@ -92,7 +94,7 @@ def build_node_list(g: Graph, data: List) -> BNode:
         if i == n - 1:
             flag_list_rest = RDF.nil
         else:
-            flag_list_rest = rdflib.BNode()
+            flag_list_rest = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
         g.add((flag_list, RDF.rest, flag_list_rest))
         flag_list = flag_list_rest
 
@@ -147,14 +149,14 @@ def _get_id_from_attr_value(_av, file_url):
         return Literal(_av)
 
 
-def _get_id(_node, local=None) -> Union[URIRef, BNode]:
+def _get_id(_node, local=None, use_simple_bnode_value:bool=True) -> Union[URIRef, BNode]:
     """if an attribute in the node is called "@id", use that, otherwise use the node name"""
     _id = _node.attrs.get('@id', None)
     if local is not None:
         local = rf'file://{_node.hdf_filename.resolve().absolute()}'
         return URIRef(local + _node.name[1:])
     if _id is None:
-        return BNode()
+        return rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
         # _id = _node.attrs.get(get_config('uuid_name'),
         #                       local + _node.name[1:])  # [1:] because the name starts with a "/"
     return URIRef(_id)
@@ -515,26 +517,28 @@ def to_hdf(grp,
                 grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate)
 
 
-def serialize(grp,
-              iri_only=False,
-              local=None,
-              recursive: bool = True,
-              compact: bool = True,
-              context: Dict = None,
-              structural: bool = True,
-              resolve_keys: bool = True
-              ) -> Dict:
+def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
+                     iri_only=False,
+                     local=None,
+                     recursive: bool = True,
+                     compact: bool = True,
+                     context: Dict = None,
+                     structural: bool = True,
+                     resolve_keys: bool = True,
+                     use_simple_bnode_value: bool = True) -> Tuple[Graph, Dict]:
     """using rdflib graph. This will not write HDF5 dataset data to the graph. Impossible and
-     not reasonable as potentially multi-dimensional"""
-    if isinstance(grp, (str, pathlib.Path)):
+     not reasonable as potentially multidimensional"""
+    if isinstance(source, (str, pathlib.Path)):
         from .core import File
-        with File(grp) as h5:
-            return serialize(h5,
-                             iri_only,
-                             local,
-                             recursive=recursive,
-                             compact=compact,
-                             context=context)
+        with File(source) as h5:
+            return get_rdflib_graph(h5,
+                                    iri_only,
+                                    local,
+                                    recursive=recursive,
+                                    compact=compact,
+                                    context=context)
+
+    grp = source
 
     _context = {}
     if structural:
@@ -565,16 +569,14 @@ def serialize(grp,
         graph.add(triple)
         return graph
 
-    def _add_hdf_node(name, obj, ctx):
-
+    def _add_hdf_node(name, obj, ctx) -> Dict:
         # node = rdflib.URIRef(f'_:{obj.name}')
         if isinstance(obj, h5py.File):
-            root_group = rdflib.BNode()
+            root_group = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
             iri_dict[name] = root_group
             if structural:
-                file_node = rdflib.BNode()
+                file_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
                 _add_node(g, (file_node, RDF.type, HDF5.File))
-                # root_group = rdflib.BNode()
                 _add_node(g, (file_node, HDF5.rootGroup, root_group))
                 # _add_node(g, (root_group, RDF.type, HDF5.Group))
                 # _add_node(g, (root_group, HDF5.name, rdflib.Literal(name)))
@@ -634,7 +636,7 @@ def serialize(grp,
                 continue
 
             # create a new node for the attribute
-            attr_node = rdflib.BNode()
+            attr_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
             logger.debug(f'Create new node for attribute "{ak}": {attr_node}')
 
             if structural:  # add hdf type and name nodes
@@ -710,7 +712,8 @@ def serialize(grp,
                     _id = _val.pop('@id', None)
 
                     # init new node:
-                    _sub_obj_node = rdflib.BNode()
+                    _sub_obj_node = rdflib.BNode(
+                        value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
 
                     _add_node(g, (_sub_obj_node, RDF.type, rdflib.URIRef(resolve_iri(_type, context=attr_context))))
                     # the new node is a member of the object node
@@ -783,9 +786,21 @@ def serialize(grp,
     _context = visitor.ctx
     _context.pop('@import', None)
 
+    return g, _context
+
+
+def serialize(source: Union[str, pathlib.Path, h5py.File],
+              iri_only=False,
+              local=None,
+              recursive: bool = True,
+              compact: bool = True,
+              context: Dict = None,
+              structural: bool = True,
+              resolve_keys: bool = True) -> str:
+    g, ctx = get_rdflib_graph(source, iri_only, local, recursive, compact, context, structural, resolve_keys)
     return g.serialize(
         format='json-ld',
-        context=_context,
+        context=ctx,
         compact=compact
     )
 

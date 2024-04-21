@@ -1,16 +1,15 @@
 """RDF (Resource Description Framework) module for use with HDF5 files"""
 import abc
-import h5py
-import pathlib
-import pydantic
-from pydantic import HttpUrl
 from typing import Dict, Union, Optional, List
 
-import h5rdmtoolbox as h5tbx
+import h5py
+import pydantic
+from pydantic import HttpUrl
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
-RDF_SUBJECT_ATTR_NAME = 'RDF_TYPE'
+RDF_SUBJECT_ATTR_NAME = '@ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
+RDF_TYPE_ATTR_NAME = '@TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 
 
 class RDFError(Exception):
@@ -18,49 +17,25 @@ class RDFError(Exception):
     pass
 
 
-# class RDFAttribute:
-#     """Helper class for quick assignment of RDF attributes to the HDF5 file.
-#
-#     Examples
-#     --------
-#     >>> import h5rdmtoolbox as h5tbx
-#     >>> from ontolutils import M4I
-#     >>> rdf_attr = h5tbx.RDFAttribute('0000-0001-8729-0482', rdf_predicate=M4I.orcidId,
-#     ...                                rdf_object='https://orcid.org/0000-0001-8729-0482')
-#     >>> with h5tbx.File('test.h5', 'w') as h5:
-#     ...     grp = h5.create_group('person')
-#     ...     grp.attrs['orcid'] = rdf_attr
-#     ...     # equal to:
-#     ...     # grp.attrs['orcid'] = '0000-0001-8729-0482'
-#     ...     # grp.rdf.predicate['orcid'] = str(M4I.orcidId)
-#     ...     # grp.rdf.object['orcid'] = 'https://orcid.org/0000-0001-8729-0482'
-#     """
-#
-#     def __init__(self, value, rdf_predicate: str = None, rdf_object: str = None):
-#         self.value = value
-#
-#         if rdf_predicate:
-#             try:
-#                 str(HttpUrl(rdf_predicate))
-#             except pydantic.ValidationError as e:
-#                 raise RDFError(f'Invalid predicate IRI: "{rdf_predicate}". '
-#                                f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
-#
-#         if rdf_object:
-#             try:
-#                 str(HttpUrl(rdf_object))
-#             except pydantic.ValidationError as e:
-#                 raise RDFError(f'Invalid object IRI: "{rdf_object}". '
-#                                f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
-#
-#         self.rdf_predicate = rdf_predicate
-#         self.rdf_object = rdf_object
-#
-#     def __repr__(self) -> str:
-#         return f'{self.__class__.__name__}({self.value}, rdf_predicate={self.rdf_predicate}, rdf_object={self.rdf_object})'
-#
-#     def __str__(self) -> str:
-#         return self.__repr__()
+def valdate_url(url: str) -> str:
+    """validate the url with pydantic
+    Raises
+    ------
+    RDFError
+        If the URL is invalid, triggered by pydantic.ValidationError
+
+    Returns
+    -------
+    str
+        Returns the original string if the URL is valid. Thus white spaces are not replaced
+        by %20.
+    """
+    try:
+        HttpUrl(url)  # validate the URL, will raise an error if invalid
+        return str(url)  # return the original string
+    except pydantic.ValidationError as e:
+        raise RDFError(f'Invalid URL: "{url}". Expecting a valid URL. This was validated with pydantic. '
+                       f'Tested with pydantic: {e}')
 
 
 def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> None:
@@ -111,20 +86,6 @@ def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
                            f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
     iri_data_data.update({attr_name: data})
-    attr[RDF_OBJECT_ATTR_NAME] = iri_data_data
-
-
-def del_iri_entry(attr: h5py.AttributeManager, attr_name: str) -> None:
-    """Delete the attribute name from name and data iri dicts"""
-    iri_name_data = attr.get(RDF_PREDICATE_ATTR_NAME, None)
-    iri_data_data = attr.get(RDF_PREDICATE_ATTR_NAME, None)
-    if iri_name_data is None:
-        iri_name_data = {}
-    if iri_data_data is None:
-        iri_data_data = {}
-    iri_name_data.pop(attr_name, None)
-    iri_data_data.pop(attr_name, None)
-    attr[RDF_PREDICATE_ATTR_NAME] = iri_name_data
     attr[RDF_OBJECT_ATTR_NAME] = iri_data_data
 
 
@@ -193,14 +154,6 @@ class IRIDict(Dict):
         else:
             set_object(self._attr, self._attr_name, value)
 
-    def __setitem__(self, key, value):
-        if key == RDF_PREDICATE_ATTR_NAME:
-            set_predicate(self._attr, self._attr_name, value)
-        elif key == RDF_OBJECT_ATTR_NAME:
-            set_object(self._attr, self._attr_name, value)
-        else:
-            raise KeyError(f'key must be "{RDF_PREDICATE_ATTR_NAME}" or "{RDF_OBJECT_ATTR_NAME}"')
-
 
 class _RDFPO(abc.ABC):
     """Abstract class for predicate (P) and object (O)"""
@@ -209,28 +162,32 @@ class _RDFPO(abc.ABC):
     def __init__(self, attr):
         self._attr = attr
 
-    # def __new__(cls, attr):
-    #     instance = super().__new__(cls, '')
-    #     instance._attr = attr
-    #     return instance
-
     @abc.abstractmethod
     def __setiri__(self, key, value):
         """Set IRI to an attribute"""
 
-    @property
-    def parent(self):
-        """Return the parent object"""
-        return self._attr._parent
+    # @property
+    # def parent(self):
+    #     """Return the parent object"""
+    #     return self._attr._parent
 
     def get(self, item, default=None):
         attrs = self._attr.get(self.IRI_ATTR_NAME, None)
         if attrs is None:
             return default
+        if item is None:
+            return attrs.get('SELF', default)
         return attrs.get(item, default)
 
     def __getitem__(self, item) -> Union[str, None]:
         return self.get(item, default=None)
+
+    # def __delitem__(self, key):
+    #     iri_data_data = self._attr.get(self.IRI_ATTR_NAME, None)
+    #     if iri_data_data is None:
+    #         iri_data_data = {}
+    #     iri_data_data.pop(key, None)
+    #     self._attr[self.IRI_ATTR_NAME] = iri_data_data
 
     def __setitem__(self, key, value: str):
         if key not in self._attr:
@@ -270,21 +227,6 @@ class RDF_OBJECT(_RDFPO):
         set_object(self._attr, key, value)
 
 
-def find(target, rdf_subject: Optional[str] = None, rdf_predicate: Optional[str] = None, rdf_object: Optional[str] = None,
-         recursive: bool = True):
-    """Find function for RDF triples
-
-    Parameters
-    ----------
-    target: Union[str, pathlib.Path, h5tbx.Group]
-        Filename or hdf group
-    """
-    if isinstance(target, (str, pathlib.Path)):
-        with h5tbx.File(target) as h5:
-            return find(h5, rdf_subject, rdf_predicate, rdf_object)
-    return target.rdf.find(rdf_subject, rdf_predicate, rdf_object)
-
-
 class RDFManager:
     """IRI attribute manager"""
 
@@ -303,7 +245,9 @@ class RDFManager:
         return self._attr._parent
 
     def find(self,
+             *,
              rdf_subject: Optional[str] = None,
+             rdf_type: Optional[str] = None,
              rdf_predicate: Optional[str] = None,
              rdf_object: Optional[str] = None,
              recursive: bool = True) -> List:
@@ -312,7 +256,9 @@ class RDFManager:
         Parameters
         ----------
         rdf_subject : str
-            The subject to search for
+            The subject to search for (@id in JSON-LD syntax)
+        rdf_type : str
+            The type to search for (@type in JSON-LD syntax)
         rdf_predicate : str
             The predicate to search for
         rdf_object : str
@@ -326,17 +272,24 @@ class RDFManager:
             A list of objects (h5tbx.Dataset or h5tbx.Group) that have the subject, predicate and object
         """
         res_subject = []
+        res_types = []
         res_predicate = []
         res_object = []
 
         def _find_subject(name, node):
             rdfm = RDFManager(node.attrs)
-            if not isinstance(rdfm.subject, list):
-                subjects = [rdfm.subject]
-            else:
-                subjects = rdfm.subject
-            if str(rdf_subject) in subjects:
+            _subject: str = rdfm.subject
+            if _subject == str(rdf_subject):
                 res_subject.append(node)
+
+        def _find_type(name, node):
+            rdfm = RDFManager(node.attrs)
+            if not isinstance(rdfm.type, list):
+                types = [rdfm.type]
+            else:
+                types = rdfm.type
+            if str(rdf_type) in types:
+                res_types.append(node)
 
         def _find_predicate(name, node):
             rdfm = RDFManager(node.attrs)
@@ -346,33 +299,40 @@ class RDFManager:
 
         def _find_object(name, node):
             rdfm = RDFManager(node.attrs)
-            for k in rdfm.object.values():
-                if k == str(rdf_object):
-                    res_object.append(node)
+            if str(rdf_object) in rdfm.object.values():
+                res_object.append(node)
+            # for k in rdfm.object.values():
+            #     if k == str(rdf_object):
+            #         res_object.append(node)
 
         if rdf_object:
+            _find_object(self.parent.name, self.parent)
             if recursive and isinstance(self.parent, h5py.Group):
                 self.parent.visititems(_find_object)
-            else:
-                _find_object(self.parent.name, self.parent)
+            # else:
+            #     _find_object(self.parent.name, self.parent)
+
+        if rdf_type:
+            _find_type(self.parent.name, self.parent)
+            if recursive and isinstance(self.parent, h5py.Group):
+                self.parent.visititems(_find_type)
+
         if rdf_predicate:
+            _find_predicate(self.parent.name, self.parent)
             if recursive and isinstance(self.parent, h5py.Group):
                 self.parent.visititems(_find_predicate)
-            else:
-                _find_predicate(self.parent.name, self.parent)
 
         if rdf_subject:
+            _find_subject(self.parent.name, self.parent)
             if recursive:
                 if isinstance(self.parent, h5py.Group):
                     self.parent.visititems(_find_subject)
-            else:
-                _find_subject(self.parent.name, self.parent)
 
         common_objects = []
-        res = [res_subject, res_predicate, res_object]
+        res = [res_subject, res_types, res_predicate, res_object]
 
-        for flag, item in zip([rdf_subject, rdf_predicate, rdf_object], res):
-            if flag is not None:
+        for flag, item in zip([rdf_subject, res_types, rdf_predicate, rdf_object], res):
+            if flag:
                 item_set = set(item)
                 if not common_objects:
                     common_objects = item_set
@@ -382,66 +342,71 @@ class RDFManager:
         # return list(set(res_subject).intersection(set(res_predicate), set(res_object)))
 
     @property
-    def subject(self) -> Union[str, None]:
-        """Returns the subject of the group or dataset"""
-        s = self._attr.get(RDF_SUBJECT_ATTR_NAME, None)
+    def type(self) -> Union[str, List[str], None]:
+        """Returns the RDF subject (@type in JSON-LD syntax) of the group or dataset.
+        Note, that it can be None, if no type is set and a list if multiple types are set.
+        Else it will return a string.
+
+        Returns
+        -------
+        Union[str, List[str], None]
+        """
+        s = self._attr.get(RDF_TYPE_ATTR_NAME, None)
         if s is None:
             return
         return s
 
-    def add_subject(self, subject: Union[str, List[str]]):
-        """Add a subject to the group or dataset. If the subject already exists, it will not be added again."""
-        if isinstance(subject, list):
-            data = [str(i) for i in subject]
+    @type.setter
+    def type(self, rdf_type: Union[str, List[str]]):
+        """Add a rdf type (@type in JSON-LD syntax) to the group or dataset.
+        If the subject already exists, it will not be added again."""
+        if isinstance(rdf_type, list):
+            data = [valdate_url(str(i)) for i in rdf_type]
         else:
-            data = str(subject)
-        iri_sbj_data = self._attr.get(RDF_SUBJECT_ATTR_NAME, None)
+            data = valdate_url(str(rdf_type))
+
+        # get the attribute
+        iri_sbj_data = self._attr.get(RDF_TYPE_ATTR_NAME, None)
         if iri_sbj_data is None:
-            self._attr[RDF_SUBJECT_ATTR_NAME] = data
+            self._attr[RDF_TYPE_ATTR_NAME] = data
             return
+
         if isinstance(iri_sbj_data, list):
-            iri_sbj_data.extend(data)
+            if isinstance(data, list):
+                iri_sbj_data.extend(data)
+            else:
+                iri_sbj_data.append(data)
         else:
             iri_sbj_data = [iri_sbj_data, ]
-            iri_sbj_data.append(data)
-        self._attr[RDF_SUBJECT_ATTR_NAME] = list(set(iri_sbj_data))
-
-    @subject.setter
-    def subject(self, rdf_type: Union[str, List[str]]):
-        """Sets the subject of the group or dataset. Will overwrite existing subjects.
-        If you want to add (append), use add_subject() instead."""
-        if isinstance(rdf_type, list):
-            rdf_type = [str(i) for i in rdf_type]
-            for iri in rdf_type:
-                try:
-                    HttpUrl(iri)
-                except pydantic.ValidationError as e:
-                    raise RDFError(f'Invalid IRI: "{iri}" for subject "{self._attr._parent.name}". '
-                                   f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
-        else:
-            rdf_type = str(rdf_type)
-            try:
-                HttpUrl(rdf_type)
-            except pydantic.ValidationError as e:
-                raise RDFError(f'Invalid IRI: "{rdf_type}" for subject "{self._attr._parent.name}". '
-                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
-
-        self._attr[RDF_SUBJECT_ATTR_NAME] = rdf_type
-
-    def append_subject(self, subject: str):
-        """Append the subject"""
-        curr_subjects = self._attr.get(RDF_SUBJECT_ATTR_NAME, [])
-        if isinstance(curr_subjects, list):
-            if isinstance(subject, list):
-                curr_subjects.extend(subject)
+            if isinstance(data, list):
+                iri_sbj_data.extend(data)
             else:
-                curr_subjects.append(subject)
-            self._attr[RDF_SUBJECT_ATTR_NAME] = curr_subjects
+                iri_sbj_data.append(data)
+
+        # ensure, that the list contains unique values:
+        self._attr[RDF_TYPE_ATTR_NAME] = list(set(iri_sbj_data))
+
+    @type.deleter
+    def type(self):
+        """Delete all (!) types of the group or dataset"""
+        del self._attr[RDF_TYPE_ATTR_NAME]
+
+    def pop_type(self, rdf_type: str):
+        """Remove a type from the list of types"""
+        rdf_type = str(rdf_type)
+        iri_type_data = self._attr.get(RDF_TYPE_ATTR_NAME, None)
+        if iri_type_data is None:
+            return
+        if isinstance(iri_type_data, list):
+            iri_type_data.remove(rdf_type)
         else:
-            if isinstance(subject, list):
-                self._attr[RDF_SUBJECT_ATTR_NAME] = [curr_subjects, *subject]
-            else:
-                self._attr[RDF_SUBJECT_ATTR_NAME] = [curr_subjects, subject]
+            if iri_type_data == rdf_type:
+                del self._attr[RDF_TYPE_ATTR_NAME]
+                return
+        if len(iri_type_data) == 1:
+            self._attr[RDF_TYPE_ATTR_NAME] = iri_type_data[0]
+        else:
+            self._attr[RDF_TYPE_ATTR_NAME] = iri_type_data
 
     @property
     def predicate(self) -> RDF_Predicate:
@@ -450,16 +415,57 @@ class RDFManager:
 
     @predicate.setter
     def predicate(self, predicate: str):
-        iri_sbj_data = self._attr.get(RDF_PREDICATE_ATTR_NAME, None)
-        if iri_sbj_data is None:
-            iri_sbj_data = {}
-        iri_sbj_data.update({'SELF': predicate})
-        self._attr[RDF_PREDICATE_ATTR_NAME] = iri_sbj_data
+        """Setting the predicate for a group or dataset, not for an attribute."""
+        if not isinstance(predicate, str):
+            raise TypeError(f'Expecting a string or URL. Got {type(predicate)}. Note, that a predicate of '
+                            'a group or dataset can only be one value. If you meant to set one or multiple RDF types, '
+                            'use .type instead.')
+        iri_predicate_data = self._attr.get(RDF_PREDICATE_ATTR_NAME, None)
+        if iri_predicate_data is None:
+            iri_predicate_data = {}
+        iri_predicate_data.update({'SELF': predicate})
+        self._attr[RDF_PREDICATE_ATTR_NAME] = iri_predicate_data
+
+    @predicate.deleter
+    def predicate(self):
+        """Delete the predicate of the group or dataset. It does not delete the predicate of the attributes.
+        Use `del h5.rdf.predicate[<attr_name>]` instead."""
+        iri_predicate_data = self._attr.get(RDF_PREDICATE_ATTR_NAME, None)
+        if 'SELF' in iri_predicate_data:
+            del iri_predicate_data['SELF']
+        self._attr[RDF_PREDICATE_ATTR_NAME] = iri_predicate_data
 
     @property
     def object(self):
         """Return the RDF object manager"""
         return RDF_OBJECT(self._attr)
+
+    @property
+    def subject(self) -> Optional[str]:
+        """Return the RDF subject, which is the @ID in JSON-LD syntax"""
+        if RDF_SUBJECT_ATTR_NAME not in self._attr:
+            return
+        return self._attr[RDF_SUBJECT_ATTR_NAME]
+
+    @subject.deleter
+    def subject(self):
+        """Delete the subject (the @ID in JSON-LD syntax)"""
+        del self._attr[RDF_SUBJECT_ATTR_NAME]
+
+    @subject.setter
+    def subject(self, jsonld_id: Union[str, HttpUrl]):
+        """Set the RDF subject, which is the @ID in JSON-LD syntax.
+
+        Raises
+        ------
+        TypeError
+            If the subject is not a string or URL
+        """
+        if not isinstance(jsonld_id, str):
+            raise TypeError(f'Expecting a string or URL. Got {type(jsonld_id)}. Note, that a subject '
+                            'can only be one value. If you meant to set one or multiple RDF types, '
+                            'use .type instead.')
+        self._attr[RDF_SUBJECT_ATTR_NAME] = valdate_url(jsonld_id)
 
     # aliases:
     rdf_object = object
@@ -483,6 +489,3 @@ class RDFManager:
         return IRIDict({RDF_PREDICATE_ATTR_NAME: self._attr.get(RDF_PREDICATE_ATTR_NAME, {}).get(item, None),
                         RDF_OBJECT_ATTR_NAME: self._attr.get(RDF_OBJECT_ATTR_NAME, {}).get(item, None)},
                        self._attr, item)
-
-    def __delitem__(self, attr_name: str):
-        del_iri_entry(self._attr, attr_name)

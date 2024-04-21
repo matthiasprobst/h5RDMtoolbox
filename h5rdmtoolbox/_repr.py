@@ -31,6 +31,8 @@ except FileNotFoundError:
 # else:
 DEF_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/def_icon.png?raw=true"
 IRI_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
+ID_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-FAIRattrs/h5rdmtoolbox/data/id_icon.png?raw=true"
+TYPE_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-FAIRattrs/h5rdmtoolbox/data/type_icon.png?raw=true"
 hasUnitIRI = str(M4I.hasUnit)
 """
 disclaimer:
@@ -149,7 +151,9 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
     return string, False
 
 
-def get_iri_icon_href(iri: typing.Union[str, typing.Dict], tooltiptext=None) -> str:
+def get_iri_icon_href(iri: typing.Union[str, typing.Dict],
+                      icon_url: str,
+                      tooltiptext=None) -> str:
     """get html representation of an IRI with icon. The URL is shown as a tooltip"""
     if isinstance(iri, dict):
         thing = Thing.from_jsonld(data=iri, limit=1)
@@ -160,12 +164,13 @@ def get_iri_icon_href(iri: typing.Union[str, typing.Dict], tooltiptext=None) -> 
             _thing_str = thing.__str__(limit=50).split('(', 1)[1]
             thing_str = f'{_type}({_thing_str}'
         return f'<div class="tooltip">' \
-               f'<img class="size_of_img" src="{IRI_ICON}" alt="IRI_ICON" width="16" height="16" />' \
+               f'<img class="size_of_img" src="{icon_url}" alt="IRI_ICON" width="16" height="16" />' \
                f'<span class="tooltiptext">{thing_str}</span></div>'
 
     return f'<a href="{iri}" target="_blank" class="tooltip"> ' \
-           f'<img class="size_of_img" src="{IRI_ICON}" alt="IRI_ICON" width="16" height="16" />' \
+           f'<img class="size_of_img" src="{icon_url}" alt="IRI_ICON" width="16" height="16" />' \
            f' <span class="tooltiptext">{tooltiptext or iri}</span></a>'
+
 
 def get_def_icon_href(def_text: str) -> str:
     """get html representation of an attribute definition with icon"""
@@ -456,15 +461,22 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         # iri = h5obj.rdf.predicate.get('SELF', None)
         self_predicate = h5obj.rdf.predicate.get('SELF', None)
-        self_subject = h5obj.rdf.subject
+        self_type = h5obj.rdf.type
+        self_ID = h5obj.rdf.subject
         _dsname = name
-        if self_predicate is not None:
-            _dsname += get_iri_icon_href(self_predicate)
 
-        if self_subject is not None:
+        if self_type is not None:
             _dsname += get_iri_icon_href(
-                self_subject,
-                tooltiptext=f'type={self_subject}')
+                self_type, icon_url=TYPE_ICON,
+                tooltiptext=f'@type={self_type}')
+
+        if self_ID is not None:
+            _dsname += get_iri_icon_href(
+                self_ID, icon_url=ID_ICON,
+                tooltiptext=f'@id={self_ID}')
+
+        if self_predicate is not None:
+            _dsname += get_iri_icon_href(self_predicate, icon_url=IRI_ICON)
 
         is_string_dataset = h5obj.dtype.char == 'S'
         if is_string_dataset:
@@ -491,7 +503,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         _html_ds = _html_pre + _html_ds_attrs + _html_post
         return _html_ds
 
-    def __group__(self, name, h5obj: h5py.Group):
+    def __group__(self, name, h5obj: "h5tbx.Group") -> str:
         nkeys = len(h5obj.keys())
         _id = f'ds-{name}-{perf_counter_ns().__str__()}'
         _groupname = os.path.basename(h5obj.name)
@@ -503,14 +515,19 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
             checkbox_state = self.checkbox_state
 
         self_predicate = h5obj.rdf.predicate.get('SELF', None)
-        self_subject = h5obj.rdf.subject
+        self_type = h5obj.rdf.type
+        self_ID = h5obj.rdf.subject
+
+        if self_type is not None:
+            _groupname += get_iri_icon_href(self_type, icon_url=TYPE_ICON,
+                                            tooltiptext=f'@type: {self_type}')
+
+        if self_ID is not None:
+            _groupname += get_iri_icon_href(self_ID, icon_url=ID_ICON,
+                                            tooltiptext=f'@id: {self_ID}')
 
         if self_predicate is not None:
-            _groupname += get_iri_icon_href(self_predicate)
-
-        if self_subject is not None:
-            _groupname += get_iri_icon_href(self_subject,
-                                            tooltiptext=f'@type: {self_subject}')
+            _groupname += get_iri_icon_href(self_predicate, icon_url=IRI_ICON)
 
         _html = f"""\n
               <ul style="list-style-type: none;" class="h5grp-sections">
@@ -520,8 +537,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                         {_groupname}<span>({nkeys})</span></label>
                   """
 
-        _html += """\n
-                    <ul class="h5tb-attr-list">"""
+        _html += """\n<ul class="h5tb-attr-list">"""
         # write attributes:
         for k in h5obj.attrs.keys():
             if not k.isupper():
@@ -556,7 +572,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
         rdf_predicate = rdf.predicate
         if rdf_predicate is not None:
-            disp_name += get_iri_icon_href(rdf_predicate)
+            disp_name += get_iri_icon_href(rdf_predicate, icon_url=IRI_ICON)
 
         attrs_def = h5obj.attrsdef.get(name, None)
         if attrs_def is not None:
@@ -577,7 +593,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 _value_str = ", ".join(_string_value_list)
 
                 if rdf_object is not None:
-                    _value_str += get_iri_icon_href(rdf_object)
+                    _value_str += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
                 return '<li style="list-style-type: none; ' \
                        f'font-style: italic">{disp_name} : {_value_str}</li>'
             else:
@@ -587,7 +603,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     _value = f'{_value[0:self.max_attr_length]}...'
 
                 if rdf_object is not None:
-                    _value += get_iri_icon_href(rdf_predicate)
+                    _value += get_iri_icon_href(rdf_predicate, icon_url=IRI_ICON)
 
                 return f'<li style="list-style-type: none; font-style: italic">{disp_name} : {_value}</li>'
 
@@ -608,7 +624,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
             # add rdf icon if available:
             if rdf_object is not None:
-                _value_html += get_iri_icon_href(rdf_object)
+                _value_html += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
 
             if is_url and not _value_html.startswith('{'):  # TODO: why the second condition?
                 return f'<li style="list-style-type: none; font-style: italic">{disp_name} : {_value_html}</li>'
@@ -621,7 +637,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 else:
                     _value_str = attr_value
             if rdf_object is not None:
-                _value_str += get_iri_icon_href(rdf_object)
+                _value_str += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
             return f'<li style="list-style-type: none; font-style: italic">{disp_name} : {_value_str}</li>'
 
         if not isinstance(attr_value, ndarray):
@@ -640,7 +656,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                     _value_str = attr_value
 
         if rdf_object is not None:
-            _value_str += get_iri_icon_href(rdf_object)
+            _value_str += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
         return f'<li style="list-style-type: none; font-style: italic">{name} : {_value_str}</li>'
 
 
