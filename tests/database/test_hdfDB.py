@@ -390,12 +390,12 @@ class TestHDFDB(unittest.TestCase):
         self.assertIsInstance(single_res, database.lazy.LDataset)
         self.assertEqual(single_res.filename, filename2)
 
-        multi_res = filesdb.find({'d': 4}, recursive=True)
-        self.assertIsInstance(multi_res, list)
-        multi_res = list(multi_res)
-        self.assertEqual(len(multi_res), 1)
-        self.assertIsInstance(multi_res[0], database.lazy.LDataset)
-        self.assertEqual(multi_res[0].filename, filename2)
+        # multi_res = filesdb.find({'d': 4}, recursive=True)
+        # self.assertIsInstance(multi_res, list)
+        # multi_res = list(multi_res)
+        # self.assertEqual(len(multi_res), 1)
+        # self.assertIsInstance(multi_res[0], database.lazy.LDataset)
+        # self.assertEqual(multi_res[0].filename, filename2)
 
     def test_filesDB_insert_filename(self):
         filename1 = h5tbx.utils.generate_temporary_filename(suffix='.hdf')

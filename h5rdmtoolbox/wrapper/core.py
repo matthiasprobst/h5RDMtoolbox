@@ -10,7 +10,7 @@ import warnings
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Dict, Union, Tuple, Protocol, Optional, Generator
+from typing import List, Dict, Union, Tuple, Protocol, Optional
 
 import h5py
 import numpy as np
@@ -877,10 +877,11 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                         ds.dims[i].attach_scale(ds_to_attach)
         return ds
 
-    def find_one(self, flt: Union[Dict, str],
+    def find_one(self,
+                 flt: Union[Dict, str],
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
                  recursive: bool = True,
-                 ignore_attribute_error: bool = False):
+                 ignore_attribute_error: bool = False) -> LHDFObject:
         """See ObjDB.find_one()"""
         return ObjDB(self).find_one(flt, objfilter, recursive, ignore_attribute_error)
 
@@ -888,7 +889,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
              flt: Union[Dict, str],
              objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
              recursive: bool = True,
-             ignore_attribute_error: bool = False) -> Generator[LHDFObject, None, None]:
+             ignore_attribute_error: bool = False) -> List[LHDFObject]:
         """
         Examples for filter parameters:
         filter = {'long_name': 'any objects long name'} --> searches in attributes only
@@ -904,12 +905,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         recursive: bool, optional
             Recursive search. Default is True
         ignore_attribute_error: bool, optional=False
-            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
+            If True, the KeyError normally raised when accessing hdf5 object attributes is ignored.
             Otherwise, the KeyError is raised.
 
         Returns
         -------
-        h5obj: h5py.Dataset or h5py.Group
+        h5obj: List[LHDFObject]
         """
         return ObjDB(self).find(flt, objfilter, recursive=recursive, ignore_attribute_error=ignore_attribute_error)
 

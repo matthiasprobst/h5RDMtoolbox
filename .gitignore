@@ -57,3 +57,4 @@ docs/colab/my_file.hdf
 *.jsonld
 testfile.*
 test.*
+docs/practical_examples/lib/vis-9.1.2/vis-network.min.js
