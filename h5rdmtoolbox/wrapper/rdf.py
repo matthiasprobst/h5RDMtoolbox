@@ -301,16 +301,11 @@ class RDFManager:
             rdfm = RDFManager(node.attrs)
             if str(rdf_object) in rdfm.object.values():
                 res_object.append(node)
-            # for k in rdfm.object.values():
-            #     if k == str(rdf_object):
-            #         res_object.append(node)
 
         if rdf_object:
             _find_object(self.parent.name, self.parent)
             if recursive and isinstance(self.parent, h5py.Group):
                 self.parent.visititems(_find_object)
-            # else:
-            #     _find_object(self.parent.name, self.parent)
 
         if rdf_type:
             _find_type(self.parent.name, self.parent)
@@ -339,7 +334,6 @@ class RDFManager:
                 else:
                     common_objects = common_objects.intersection(item_set)
         return list(common_objects)
-        # return list(set(res_subject).intersection(set(res_predicate), set(res_object)))
 
     @property
     def type(self) -> Union[str, List[str], None]:

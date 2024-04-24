@@ -1,8 +1,9 @@
 """query module"""
 import logging
-import numpy as np
 import re
 import warnings
+
+import numpy as np
 
 logger = logging.getLogger('h5rdmtoolbox')
 

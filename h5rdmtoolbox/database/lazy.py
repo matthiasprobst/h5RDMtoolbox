@@ -176,7 +176,7 @@ def _get_dataset_properties(h5obj, keys):
 
 
 def lazy(h5obj: Union[List[Union[h5py.Group, h5py.Dataset, LHDFObject]],
-                      h5py.Dataset, h5py.Group, LHDFObject]) -> Union[None, LDataset, LGroup]:
+                      h5py.Dataset, h5py.Group, LHDFObject]) -> Union[None, List[LHDFObject], LHDFObject]:
     """Make a lazy object from a h5py object"""
     if isinstance(h5obj, LHDFObject):
         return h5obj

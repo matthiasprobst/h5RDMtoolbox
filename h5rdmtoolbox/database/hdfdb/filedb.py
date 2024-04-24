@@ -1,11 +1,11 @@
-import h5py
 import pathlib
-from typing import Union, Generator, List
+from typing import Union, Generator, List, Optional
 
-from .nonsearchable import NonInsertableDatabaseInterface
+import h5py
+
 from .objdb import ObjDB
 from .. import lazy
-from ..template import HDF5DBInterface
+from ..interface import HDF5DBInterface, NonInsertableDatabaseInterface
 
 
 class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
@@ -15,6 +15,7 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         self.filename: str = str(filename)
         self.find = self._instance_find  # allow `find` to be a static method and instance method
         self.find_one = self._instance_find_one  # allow `find_one` to be a static method and instance method
+        self.rdf_find = self._instance_rdf_find
 
     @staticmethod
     def find_one(filename: Union[str, pathlib.Path], *args, **kwargs) -> lazy.LHDFObject:
@@ -26,6 +27,19 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         with h5py.File(self.filename, 'r') as h5:
             return list(ObjDB(h5).find(*args, **kwargs))
 
+    def _instance_rdf_find(self, *,
+             rdf_subject: Optional[str] = None,
+             rdf_type: Optional[str] = None,
+             rdf_predicate: Optional[str] = None,
+             rdf_object: Optional[str] = None,
+             recursive: bool = True):
+        with h5py.File(self.filename, 'r') as h5:
+            return list(ObjDB(h5).rdf_find(rdf_subject=rdf_subject,
+                        rdf_type=rdf_type,
+                        rdf_predicate=rdf_predicate,
+                        rdf_object=rdf_object,
+                        recursive=recursive))
+
     def _instance_find_one(self, *args, **kwargs):
         with h5py.File(self.filename, 'r') as h5:
             return ObjDB(h5).find_one(*args, **kwargs)
@@ -34,14 +48,15 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
     def find(file_or_filename, *args, **kwargs) -> Generator[lazy.LHDFObject, None, None]:
         """Please refer to the docstring of the find method of the ObjDB class"""
         if isinstance(file_or_filename, (h5py.Group, h5py.Dataset)):
-            results = list(ObjDB(file_or_filename).find(*args, **kwargs))
-            for r in results:
-                yield r
+            return list(ObjDB(file_or_filename).find(*args, **kwargs))
+            # for r in results:
+            #     yield r
         else:
             with h5py.File(file_or_filename, 'r') as h5:
                 results = list(ObjDB(h5).find(*args, **kwargs))
-            for r in results:
-                yield r
+            return results
+            # for r in results:
+            #     yield r
 
 
 class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
@@ -88,6 +103,6 @@ class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         """Call find on all the files"""
         for filename in self.filenames:
             with h5py.File(filename, 'r') as h5:
-                ret = ObjDB(h5).find(*args, **kwargs)
-                for r in ret:
-                    yield r
+                return ObjDB(h5).find(*args, **kwargs)
+                # for r in ret:
+                #     yield r

@@ -1,11 +1,13 @@
 """
 Tutorial module providing easy access to particular data.
 """
-import numpy as np
 import os
 import pathlib
-import xarray as xr
 from typing import List
+
+import numpy as np
+import xarray as xr
+from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
@@ -326,7 +328,10 @@ def generate_fluid_hdf_file() -> pathlib.Path:
     with h5tbx.File() as h5:
         h5.write_iso_timestamp(name='timestamp', dt=None)  # writes the current date time in iso format to the attribute
         h5.attrs['project'] = 'tutorial'
-        h5.attrs['contact'] = {'name': 'John Doe', 'surname': 'Doe'}
+        contact_grp = h5.create_group('contact')
+        contact_grp.attrs['name', FOAF.firstName] = 'John'
+        contact_grp.attrs['surname', FOAF.lastName] = 'Doe'
+
         h5.attrs['check_value'] = 0
         h5.create_dataset('pressure1', data=np.random.random(size=10) * 800,
                           attrs=dict(units='Pa', standard_name='pressure',

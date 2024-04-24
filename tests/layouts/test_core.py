@@ -272,3 +272,25 @@ class TestCore(unittest.TestCase):
             self.assertTrue(res.is_valid())
             self.assertTrue(spec_all_ds.is_valid())
             self.assertTrue(spec_all_ds_are_float32.is_valid())
+
+
+    def test_layout_with_rdf_find(self):
+        from h5rdmtoolbox import database
+        lay = layout.Layout()
+        spec = lay.add(database.rdf_find, rdf_predicate="https://schema.org/name", n=1)
+
+        with h5tbx.File() as h5:
+            h5.attrs['name', 'https://schema.org/name'] = 'test'
+
+        res = lay.validate(h5.hdf_filename)
+        self.assertTrue(res.is_valid())
+
+
+        lay = layout.Layout()
+        spec = lay.add(database.rdf_find, rdf_predicate="https://schema.org/firstName", n=1)
+
+        with h5tbx.File() as h5:
+            h5.attrs['name', 'https://schema.org/name'] = 'test'
+
+        res = lay.validate(h5.hdf_filename)
+        self.assertFalse(res.is_valid())

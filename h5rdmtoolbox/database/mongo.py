@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Union, Generator
 
 from . import lazy
-from .template import HDF5DBInterface
+from .interface import HDF5DBInterface
 from .. import protected_attributes
 
 

@@ -1,8 +1,9 @@
 """Test the mongoDB interface"""
-import h5py
-import numpy as np
 import types
 import unittest
+
+import h5py
+import numpy as np
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import database
@@ -56,7 +57,7 @@ class TestHDFDB(unittest.TestCase):
                                 objfilter='dataset',
                                 recursive=False)
         # res is a generator
-        self.assertIsInstance(res, types.GeneratorType)
+        self.assertIsInstance(res, list)
         res = list(res)
         self.assertIsInstance(res, list)
         self.assertIsInstance(res[0], h5tbx.database.lazy.LDataset)
@@ -334,18 +335,18 @@ class TestHDFDB(unittest.TestCase):
 
             gdb_root = hdfdb.ObjDB(h5)
             multiple_results = gdb_root.find({'a': 1}, recursive=True)
-            self.assertIsInstance(multiple_results, types.GeneratorType)
+            self.assertIsInstance(multiple_results, list)
 
             multiple_results = list(multiple_results)
             self.assertEqual(len(multiple_results), 2)
             self.assertIsInstance(multiple_results[0], h5tbx.database.lazy.LHDFObject)
 
             multiple_results = gdb_root.find({'b': 1}, recursive=True)
-            self.assertIsInstance(multiple_results, types.GeneratorType)
+            self.assertIsInstance(multiple_results, list)
             self.assertEqual(len(list(multiple_results)), 0)
 
             multiple_results = gdb_root.find({'b': 2}, recursive=True)
-            self.assertIsInstance(multiple_results, types.GeneratorType)
+            self.assertIsInstance(multiple_results, list)
             self.assertEqual(len(list(multiple_results)), 1)
 
     def test_filesDB_find_one(self):
@@ -390,7 +391,7 @@ class TestHDFDB(unittest.TestCase):
         self.assertEqual(single_res.filename, filename2)
 
         multi_res = filesdb.find({'d': 4}, recursive=True)
-        self.assertIsInstance(multi_res, types.GeneratorType)
+        self.assertIsInstance(multi_res, list)
         multi_res = list(multi_res)
         self.assertEqual(len(multi_res), 1)
         self.assertIsInstance(multi_res[0], database.lazy.LDataset)
@@ -444,3 +445,58 @@ class TestHDFDB(unittest.TestCase):
         fdb = hdfdb.FilesDB.from_folder(folder, hdf_suffixes=['.h5', ], recursive=True)
         self.assertEqual(len(fdb.filenames), 2)
         self.assertListEqual(sorted(fdb.filenames), sorted([filename3, filename6]))
+
+    def test_find_rdf(self):
+        from rdflib import FOAF
+        with h5tbx.File() as h5:
+            grp = h5.create_group('contact')
+            grp.attrs['name', FOAF.firstName] = 'Matthias'
+            grp.rdf.subject = 'https://example.org/Matthias'
+
+            grp = h5.create_group('contact2')
+            grp.attrs['name', FOAF.firstName] = 'John'
+            grp.rdf.subject = 'https://example.org/John'
+
+            h5.attrs['name', 'https://schema.org/name'] = 'test'
+            res = h5.rdf.find(rdf_predicate='https://schema.org/name')
+            self.assertEqual(res[0].name, '/')
+            print(list(res))
+
+        res = h5tbx.database.rdf_find(h5.hdf_filename, rdf_predicate='https://schema.org/name')
+        print(list(res))
+
+        # attribute search:
+        res = h5tbx.database.find(h5.hdf_filename, flt=dict(name='test'))
+        print(list(res))
+
+        res = h5tbx.database.rdf_find(h5.hdf_filename, rdf_predicate=FOAF.firstName)
+        res_list = sorted(list(res), key=lambda x: x.name)
+        self.assertEqual(len(res_list), 2)
+        self.assertEqual(res_list[0].name, '/contact')
+        self.assertEqual(res_list[1].name, '/contact2')
+
+        res = h5tbx.database.rdf_find(h5.hdf_filename,
+                                      rdf_predicate=FOAF.firstName,
+                                      rdf_subject='https://example.org/Matthias')
+        res_list = sorted(list(res), key=lambda x: x.name)
+        self.assertEqual(len(res_list), 1)
+        self.assertEqual(res_list[0].name, '/contact')
+
+        res = h5tbx.database.rdf_find(h5.hdf_filename,
+                                      rdf_subject='https://example.org/Matthias')
+        res_list = sorted(list(res), key=lambda x: x.name)
+        self.assertEqual(len(res_list), 1)
+        self.assertEqual(res_list[0].name, '/contact')
+
+        res = h5tbx.database.rdf_find(h5.hdf_filename,
+                                      rdf_subject='https://example.org/John')
+        res_list = sorted(list(res), key=lambda x: x.name)
+        self.assertEqual(len(res_list), 1)
+        self.assertEqual(res_list[0].name, '/contact2')
+
+        res = h5tbx.database.rdf_find(h5.hdf_filename,
+                                      rdf_predicate=FOAF.firstName,
+                                      rdf_subject='https://example.org/John')
+        res_list = sorted(list(res), key=lambda x: x.name)
+        self.assertEqual(len(res_list), 1)
+        self.assertEqual(res_list[0].name, '/contact2')

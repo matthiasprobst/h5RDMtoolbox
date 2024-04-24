@@ -1,11 +1,11 @@
-import h5py
-import numpy as np
 from typing import Union, Dict, List, Callable, Generator, Optional
 
+import h5py
+import numpy as np
+
 from . import query, utils
-from .nonsearchable import NonInsertableDatabaseInterface
 from .. import lazy
-from ..template import HDF5DBInterface
+from ..interface import HDF5DBInterface, NonInsertableDatabaseInterface
 
 
 def basename(name: str) -> str:
@@ -426,6 +426,7 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         else:
             raise TypeError(f'Unexpected type: {type(obj)}')
         self.find = self._instance_find  # allow `find` to be a static method and instance method
+        self.rdf_find = self._instance_rdf_find  # allow `find` to be a static method and instance method
         self.find_one = self._instance_find_one  # allow `find_one` to be a static method and instance method
 
     @staticmethod
@@ -473,7 +474,7 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
                        flt: Union[Dict, str],
                        objfilter=None,
                        recursive: bool = True,
-                       ignore_attribute_error: bool = False) -> Generator[lazy.LHDFObject, None, None]:
+                       ignore_attribute_error: bool = False) -> List[lazy.LHDFObject]:
         if isinstance(self.src_obj, h5py.Dataset) and recursive:
             recursive = False
         results = find(self.src_obj,
@@ -482,9 +483,25 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
                        recursive=recursive,
                        find_one=False,
                        ignore_attribute_error=ignore_attribute_error)
+        return results
 
-        for r in results:
-            yield r
+    def _instance_rdf_find(self, *,
+                           rdf_subject: Optional[str] = None,
+                           rdf_type: Optional[str] = None,
+                           rdf_predicate: Optional[str] = None,
+                           rdf_object: Optional[str] = None,
+                           recursive: bool = True) -> List[lazy.LHDFObject]:
+        """Find objects based on rdf triples"""
+        import h5rdmtoolbox as h5tbx
+        if isinstance(self.src_obj, h5py.Group):
+            src_obj = h5tbx.Group(self.src_obj)
+        else:
+            src_obj = h5tbx.Dataset(self.src_obj)
+        return lazy.lazy(src_obj.rdf.find(rdf_subject=rdf_subject,
+                                          rdf_type=rdf_type,
+                                          rdf_predicate=rdf_predicate,
+                                          rdf_object=rdf_object,
+                                          recursive=recursive))
 
     def distinct(self, key: str,
                  objfilter: Optional[Union[h5py.Group, h5py.Dataset]] = None):
