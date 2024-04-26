@@ -1,12 +1,13 @@
 import abc
-import appdirs
 import json
 import logging
 import pathlib
-import requests
 import time
 import warnings
 from typing import Union, List, Callable, Iterable, Dict
+
+import appdirs
+import requests
 
 from .metadata import Metadata
 from .tokens import get_api_token
@@ -303,8 +304,8 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         if suffix is not None:
             remove = []
             for f in file_dict:
-                if f['filename'].endswith(suffix):
-                    remove.append(f['filename'])
+                if f.endswith(suffix):
+                    remove.append(f)
             for r in remove:
                 file_dict.pop(r)
         return file_dict

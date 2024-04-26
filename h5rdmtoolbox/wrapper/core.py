@@ -43,6 +43,29 @@ H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
             'alignment_threshold', 'alignment_interval', 'meta_block_size')
 
 
+def assert_filename_existence(filename: pathlib.Path) -> pathlib.Path:
+    """Raises an error if the filename does not exist. Otherwise, the filename is returned.
+
+    Parameters
+    ----------
+    filename : pathlib.Path
+        Filename to check.
+
+    Returns
+    -------
+    pathlib.Path
+        The filename if it exists.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the filename does not exist.
+    """
+    if not filename.exists():
+        raise FileNotFoundError('Filename does not exist. It might be moved or deleted!')
+    return filename
+
+
 def convert_strings_to_datetimes(array):
     assert np.issubdtype(array.dtype, np.str_), 'Unexpected array type'
     return np.array([datetime.fromisoformat(date_str) for date_str in array.flat]).reshape(array.shape)
@@ -220,9 +243,8 @@ class Group(h5py.Group):
 
     @property
     def hdf_filename(self) -> pathlib.Path:
-        """The filename of the file, even if the HDF5 file is closed. Note, that
-        is not checked, if the file still exists!"""
-        return self._hdf_filename
+        """The filename of the file, even if the HDF5 file is closed."""
+        return assert_filename_existence(self._hdf_filename)
 
     @property
     def attrs(self):
@@ -1161,17 +1183,31 @@ class Group(h5py.Group):
         """creates groups, datasets and attributes defined in a yaml file.
         Creation is performed relative to the current group level.
 
-        Note the required yaml file structure, e.g.
-        title='Title of the file'
-        contact='0000-1234-1234-1234'
-        grp/supgrp/y:
-          data: 2
-          overwrite: True
-          attrs:
-            units: 'm/s'
-        grp/supgrp:
-          attrs:
-            comment: This is a group comment
+        An example YAML file content could look like this:
+
+        >>> title: 'Title of the file'
+        >>> contact: '0000-1234-1234-1234'
+        >>> grp:
+        >>>   attrs:
+        >>>     comment: test
+        >>> grp/supgrp/y:
+        >>>   data: 2
+        >>>   overwrite: True
+        >>>   attrs:
+        >>>     units: 'm/s'
+        >>> grp/supgrp:
+        >>>   attrs:
+        >>>     comment: This is a group comment
+        >>>   velocity:
+        >>>     data: [3.4, 1.1]
+        >>>     overwrite: True
+        >>>     attrs:
+        >>>       units: 'm/s'
+
+        Examples
+        --------
+        >>> with h5tbx.File('test.h5', 'w') as h5:
+        >>>     h5.create_from_yaml('test.yaml')
         """
         from . import h5yaml
         h5yaml.H5Yaml(yaml_filename).write(self)
@@ -1385,9 +1421,8 @@ class Dataset(h5py.Dataset):
 
     @property
     def hdf_filename(self) -> pathlib.Path:
-        """The filename of the file, even if the HDF5 file is closed. Note, that
-        is not checked, if the file still exists!"""
-        return self._hdf_filename
+        """The filename of the file, even if the HDF5 file is closed."""
+        return assert_filename_existence(self._hdf_filename)
 
     @property
     def attrs(self) -> protocols.H5TbxAttributeManager:

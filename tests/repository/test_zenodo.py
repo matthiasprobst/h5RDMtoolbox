@@ -230,6 +230,8 @@ class TestConfig(unittest.TestCase):
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
 
+
+
     def test_upload_hdf(self):
         z = zenodo.ZenodoSandboxDeposit(None)
 
@@ -254,6 +256,9 @@ class TestConfig(unittest.TestCase):
         self.assertIn(json_name, filenames)
         with self.assertRaises(KeyError):
             _ = z.download_file('invalid.hdf')
+
+        hdf_filenames = z.get_filenames(suffix='.hdf')
+        self.assertEqual(len(hdf_filenames), 1)
 
         hdf_filename = z.download_file(hdf_file_name)
 

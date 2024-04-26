@@ -57,6 +57,13 @@ class TestCore(unittest.TestCase):
             self.assertFalse('h5rdmtoolbox' not in h5)
             self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
 
+        assert h5.hdf_filename.exists()
+        _h5_filename = h5.hdf_filename
+
+        _h5_filename.rename(_h5_filename.with_suffix('.h5'))
+        with self.assertRaises(FileNotFoundError):
+            h5.hdf_filename
+
     def test_dump(self):
         # all following should not raise an error...
         with h5tbx.File() as h5:
@@ -556,6 +563,7 @@ class TestCore(unittest.TestCase):
         with h5tbx.File() as h5:
             h5y.write(h5)
             self.assertIn('grp', h5)
+            self.assertEqual(h5.grp.attrs['comment'], 'test')
             self.assertIn('grp/supgrp', h5)
             self.assertIn('velocity', h5['grp/supgrp'])
             self.assertEqual('Title of the file', h5.attrs['title'])

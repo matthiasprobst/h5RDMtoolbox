@@ -1,13 +1,14 @@
 title: 'Title of the file'
 contact: '0000-1234-1234-1234'
+grp:
+  attrs:
+    comment: test
 grp/supgrp/y:
   type: dataset
   data: 2
   overwrite: True
   attrs:
     units: 'm/s'
-grp:
-  comment: test
 grp/supgrp:
   type: group
   attrs:

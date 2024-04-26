@@ -52,7 +52,7 @@ class _H5DictDataInterface(Protocol):
 
                     datasets = {_k: group_data.pop(_k) for _k, _v in v.items() if H5Yaml.is_dataset(_v)}
 
-                    group_data['overwrite'] = group_data.get('overwrite', False)
+                    group_data['overwrite'] = group_data.get('overwrite', None)
                     group_data['update_attrs'] = group_data.get('update_attrs', True)
 
                     if 'name' not in group_data:
