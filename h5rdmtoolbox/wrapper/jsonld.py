@@ -116,37 +116,37 @@ def resolve_iri(key_or_iri: str, context: Context) -> str:
             return 'http://www.w3.org/2000/01/rdf-schema#label'
 
 
-def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
-    _entries = entries.copy()
+# def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
+#     _entries = entries.copy()
+#
+#     ids = list(entries.keys())
+#
+#     delete_candidates = []
+#
+#     for _id, entry in entries.items():
+#         for k, v in entry.items():
+#             if clean and len(entry) == 1:
+#                 # remove empty entry, Note, this could be a problem if the entry references elsewhere...
+#                 delete_candidates.append(_id)
+#                 continue
+#             if k not in ('@id', '@type'):
+#                 if isinstance(v, list):
+#                     if all([i in ids for i in v]):
+#                         _entries[_id][k] = [_entries.pop(i) for i in v]
+#
+#                 elif v in ids:
+#                     _entries[_id][k] = _entries.pop(v)
+#     if clean:
+#         for dc in delete_candidates:
+#             _entries.pop(dc, None)
+#     return _entries
 
-    ids = list(entries.keys())
 
-    delete_candidates = []
-
-    for _id, entry in entries.items():
-        for k, v in entry.items():
-            if clean and len(entry) == 1:
-                # remove empty entry, Note, this could be a problem if the entry references elsewhere...
-                delete_candidates.append(_id)
-                continue
-            if k not in ('@id', '@type'):
-                if isinstance(v, list):
-                    if all([i in ids for i in v]):
-                        _entries[_id][k] = [_entries.pop(i) for i in v]
-
-                elif v in ids:
-                    _entries[_id][k] = _entries.pop(v)
-    if clean:
-        for dc in delete_candidates:
-            _entries.pop(dc, None)
-    return _entries
-
-
-def _get_id_from_attr_value(_av, file_url):
-    if isinstance(_av, (h5py.Dataset, h5py.Group)):
-        return _get_id(_av, file_url)
-    else:
-        return Literal(_av)
+# def _get_id_from_attr_value(_av, file_url):
+#     if isinstance(_av, (h5py.Dataset, h5py.Group)):
+#         return _get_id(_av, file_url)
+#     else:
+#         return Literal(_av)
 
 
 def _get_id(_node, local=None, use_simple_bnode_value:bool=True) -> Union[URIRef, BNode]:
