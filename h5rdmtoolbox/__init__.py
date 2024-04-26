@@ -46,6 +46,7 @@ from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import warnings, errors
 from .wrapper import jsonld
+from .wrapper.lazy import lazy
 from .wrapper.h5attr import Attribute
 from .wrapper.accessory import register_special_dataset
 import json
@@ -236,4 +237,4 @@ __all__ = ('__version__', '__author__', '__author_orcid__',
            'File', 'Group', 'Dataset', 'Attribute',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
-           'Convention', 'jsonld')
+           'Convention', 'jsonld', 'lazy')

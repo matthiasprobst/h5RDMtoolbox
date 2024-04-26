@@ -154,18 +154,12 @@ class LDataset(LHDFObject):
     #     return super().find_one(flt, objfilter, rec=False, ignore_attribute_error=ignore_attribute_error)
 
 
-def _get_dataset_properties(h5obj, keys):
-    return {k: getattr(h5obj, k) for k in keys}
-
-
 LazyInput = Union[h5py.Group, h5py.Dataset, LHDFObject, List[Union[h5py.Group, h5py.Dataset, LHDFObject]]]
 
 
 def lazy(h5obj: LazyInput) -> Optional[Union[List[LazyObject], LazyObject]]:
     """Make a lazy object from a h5py object"""
-    if isinstance(h5obj, LDataset):
-        return h5obj
-    if isinstance(h5obj, LGroup):
+    if isinstance(h5obj, (LDataset, LGroup)):
         return h5obj
     if isinstance(h5obj, list):
         return [lazy(i) for i in h5obj]
