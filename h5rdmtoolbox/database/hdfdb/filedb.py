@@ -4,8 +4,8 @@ from typing import Union, Generator, List, Optional
 import h5py
 
 from .objdb import ObjDB
-from ...wrapper import lazy
 from ..interface import HDF5DBInterface, NonInsertableDatabaseInterface
+from ...wrapper import lazy
 
 
 class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
@@ -28,17 +28,17 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
             return list(ObjDB(h5).find(*args, **kwargs))
 
     def _instance_rdf_find(self, *,
-             rdf_subject: Optional[str] = None,
-             rdf_type: Optional[str] = None,
-             rdf_predicate: Optional[str] = None,
-             rdf_object: Optional[str] = None,
-             recursive: bool = True):
+                           rdf_subject: Optional[str] = None,
+                           rdf_type: Optional[str] = None,
+                           rdf_predicate: Optional[str] = None,
+                           rdf_object: Optional[str] = None,
+                           recursive: bool = True):
         with h5py.File(self.filename, 'r') as h5:
             return list(ObjDB(h5).rdf_find(rdf_subject=rdf_subject,
-                        rdf_type=rdf_type,
-                        rdf_predicate=rdf_predicate,
-                        rdf_object=rdf_object,
-                        recursive=recursive))
+                                           rdf_type=rdf_type,
+                                           rdf_predicate=rdf_predicate,
+                                           rdf_object=rdf_object,
+                                           recursive=recursive))
 
     def _instance_find_one(self, *args, **kwargs):
         with h5py.File(self.filename, 'r') as h5:
@@ -103,6 +103,6 @@ class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         """Call find on all the files"""
         for filename in self.filenames:
             with h5py.File(filename, 'r') as h5:
-                return ObjDB(h5).find(*args, **kwargs)
-                # for r in ret:
-                #     yield r
+                ret = ObjDB(h5).find(*args, **kwargs)
+                for r in ret:
+                    yield r

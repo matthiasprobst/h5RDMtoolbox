@@ -13,8 +13,7 @@ def find(source, *args, **kwargs):
         return FileDB(source).find(*args, **kwargs)
     elif isinstance(source, (list, tuple)):
         return FilesDB(source).find(*args, **kwargs)
-    else:
-        return ObjDB(source).find(*args, **kwargs)
+    return ObjDB(source).find(*args, **kwargs)
 
 
 def find_one(source, *args, **kwargs):

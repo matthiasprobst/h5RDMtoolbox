@@ -44,10 +44,10 @@ H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
 
 
 def convert_strings_to_datetimes(array):
-    if np.issubdtype(array.dtype, np.str_):
-        return np.array([datetime.fromisoformat(date_str) for date_str in array.flat]).reshape(array.shape)
-    else:
-        return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
+    assert np.issubdtype(array.dtype, np.str_), 'Unexpected array type'
+    return np.array([datetime.fromisoformat(date_str) for date_str in array.flat]).reshape(array.shape)
+    # else:
+    #     return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -478,7 +478,7 @@ class Group(h5py.Group):
 
     def create_time_dataset(self,
                             name: str,
-                            data: Union[datetime, List[datetime]],
+                            data: Union[datetime, List],
                             overwrite: bool = False,
                             attrs: Dict = None,
                             **kwargs):

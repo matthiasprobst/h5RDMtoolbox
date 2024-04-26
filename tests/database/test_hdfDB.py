@@ -1,5 +1,4 @@
 """Test the mongoDB interface"""
-import types
 import unittest
 
 import h5py
@@ -12,6 +11,35 @@ from h5rdmtoolbox.database.hdfdb.query import _basename
 
 
 class TestHDFDB(unittest.TestCase):
+
+    def test_find_in_files(self):
+        with h5tbx.File(attrs=dict(name='root group')) as h51:
+            h51.create_group('grp')
+            h51.create_dataset('dataset', data=np.array([1, 2, 3]),
+                               attrs=dict(units='m/s'))
+
+        with h5tbx.File() as h52:
+            h52.create_group('grp', attrs=dict(name='grp name'))
+            h52.create_dataset('dataset', data=np.array([3, 2, 1]),
+                               attrs=dict(units='mm/s'))
+
+        res = list(h5tbx.database.find([h51.hdf_filename, h52.hdf_filename],
+                                       {'name': 'root group'}))
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].name, '/')
+
+        res = list(h5tbx.database.find([h51.hdf_filename, h52.hdf_filename],
+                                  {'name': 'grp name'}, recursive=False))
+        self.assertEqual(len(res), 1)
+
+        res = list(h5tbx.database.find([h51.hdf_filename, h52.hdf_filename],
+                                  {'name': 'grp name'}, recursive=True))
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].name, '/grp')
+
+        res = h5tbx.database.find_one([h51.hdf_filename, h52.hdf_filename],
+                                      {'name': 'grp name'}, recursive=True)
+        self.assertEqual(res.name, '/grp')
 
     def test_insert(self):
         with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
@@ -34,6 +62,12 @@ class TestHDFDB(unittest.TestCase):
             ds_name = ds.name
         fdb = hdfdb.FileDB(h5.hdf_filename)
         fdb.find_one({'$dtype': {'$regex': 'S*'}},
+                     objfilter='dataset',
+                     recursive=False)
+        self.assertIsInstance(res, h5tbx.database.lazy.LDataset)
+        self.assertEqual(res.name, ds_name)
+
+        h5tbx.database.find_one(h5.hdf_filename, {'$dtype': {'$regex': 'S*'}},
                      objfilter='dataset',
                      recursive=False)
         self.assertIsInstance(res, h5tbx.database.lazy.LDataset)
@@ -335,6 +369,9 @@ class TestHDFDB(unittest.TestCase):
 
             gdb_root = hdfdb.ObjDB(h5)
             multiple_results = gdb_root.find({'a': 1}, recursive=True)
+            self.assertIsInstance(multiple_results, list)
+
+            multiple_results = h5tbx.database.find(h5, {'a': 1}, recursive=True)
             self.assertIsInstance(multiple_results, list)
 
             multiple_results = list(multiple_results)

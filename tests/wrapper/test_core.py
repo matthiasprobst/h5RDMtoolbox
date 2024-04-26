@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import xarray as xr
+from dateutil.parser import parse
 from numpy import linspace as ls
 
 import h5rdmtoolbox as h5tbx
@@ -122,7 +123,6 @@ class TestCore(unittest.TestCase):
                               attrs={'comment': 'test'})
             with h5tbx.set_config(natural_naming=False):
                 del h5.ds
-
 
     def test_setattr(self):
         with h5tbx.File() as h5:
@@ -786,15 +786,41 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('vel', data=[1, 2, -3], attach_scale='time')
             v = h5.vel[()]
 
+        with h5tbx.File() as h5:
+            t1 = [datetime.now(),
+                  datetime.now() + timedelta(hours=1),
+                  datetime.now() + timedelta(hours=3)]
+            h5.create_time_dataset('time1', data=t1,
+                                   attrs={'ISTIMEDS': 1,
+                                          'TIMEFORMAT': 'ISO'}, make_scale=True)
+            t2 = [datetime.now(),
+                  datetime.now() + timedelta(days=1),
+                  datetime.now() + timedelta(days=3)]
+            h5.create_time_dataset('time2', data=t2,
+                                   attrs={'ISTIMEDS': 1,
+                                          'TIMEFORMAT': 'ISO'}, make_scale=True)
+            h5.create_dataset('vel', data=[[1, 2, -3],
+                                           [1, 2, -3],
+                                           [1, 2, -3]], attach_scale=('time1', 'time2'))
+            v = h5.vel[()]
+            self.assertEqual(v.shape, (3, 3))
+            self.assertEqual(v.dims[0], 'time1')
+            self.assertEqual(v.dims[1], 'time2')
+            self.assertEqual(parse(str(v.time1[0].data).strip('0')),
+                             parse(str(t1[0]).strip('0')))
+            self.assertEqual(parse(str(v.time2[0].data).strip('0')),
+                             parse(str(t2[0]).strip('0')))
+
     def test_multidim_time_ds(self):
         with h5tbx.File() as h5:
-            h5.create_time_dataset('time', data=[[datetime.now(),
-                                                  datetime.now() + timedelta(hours=1),
-                                                  datetime.now() + timedelta(hours=3)],
-                                                 [datetime.now(),
-                                                  datetime.now() + timedelta(hours=6),
-                                                  datetime.now() + timedelta(hours=10)]
-                                                 ],
+            h5.create_time_dataset('time',
+                                   data=[[datetime.now(),
+                                          datetime.now() + timedelta(hours=1),
+                                          datetime.now() + timedelta(hours=3)],
+                                         [datetime.now(),
+                                          datetime.now() + timedelta(hours=6),
+                                          datetime.now() + timedelta(hours=10)]
+                                         ],
                                    attrs={'ISTIMEDS': 1,
                                           'TIMEFORMAT': 'ISO'})
             t = h5.time[()]

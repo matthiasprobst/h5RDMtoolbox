@@ -1,7 +1,8 @@
-import numpy as np
 import pathlib
-import xarray as xr
 from typing import Dict
+
+import numpy as np
+import xarray as xr
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.database import ObjDB
@@ -138,8 +139,8 @@ class HDF5StandardNameInterface:
         standard_datasets = {}
         with h5tbx.File(hdf_filename) as h5:
             std_ds = ObjDB(h5).find({'standard_name': {'$regex': '.*'}},
-                                      recursive=recursive,
-                                      objfilter='$dataset')
+                                    recursive=recursive,
+                                    objfilter='$dataset')
             # std_ds = h5[group].find({'standard_name': {'$regex': '.*'}}, rec=rec, objfilter='$dataset')
             for ds in std_ds:
                 if ds.attrs['standard_name'] not in standard_datasets:
