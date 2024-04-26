@@ -1,15 +1,16 @@
-import h5py
-import numpy as np
 import os
 import pathlib
-import pymongo
 import warnings
 from datetime import datetime
 from typing import List, Dict, Any, Union, Generator
 
-from . import lazy
+import h5py
+import numpy as np
+import pymongo
+
 from .interface import HDF5DBInterface
 from .. import protected_attributes
+from ..wrapper import lazy
 
 
 def get_file_creation_time(filename: Union[str, pathlib.Path], tz=None) -> datetime:

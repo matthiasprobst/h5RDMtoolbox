@@ -1,5 +1,6 @@
+from typing import Type, Optional, Union
+
 import h5py
-from typing import Union
 
 OBJ_FLT_DICT = {'group': h5py.Group,
                 'groups': h5py.Group,
@@ -10,15 +11,19 @@ OBJ_FLT_DICT = {'group': h5py.Group,
                 '$dataset': h5py.Dataset,
                 '$datasets': h5py.Dataset}
 
+AnyH5Like = Optional[Union[str, Type[h5py.Group], Type[h5py.Dataset], h5py.Dataset, h5py.Group]]
 
-def parse_obj_filter_input(objfilter: Union[str, h5py.Dataset, h5py.Group]) -> Union[h5py.Dataset, h5py.Group, None]:
+
+def parse_obj_filter_input(objfilter: AnyH5Like) -> Optional[Union[Type[h5py.Group], Type[h5py.Dataset]]]:
     """Return the object based on the input string
 
     Parameters
     ----------
-    objfilter : str or h5py.Dataset or h5py.Group
-        The object to filter for. If it is a string, it must be one of the following:
+    objfilter : AnyH5Like
+        Any HDF5-like object or class or string indicating the object type/class.
+         If it is a string, it must be one of the following:
         'group', 'groups', 'dataset', 'datasets', '$group', '$groups', '$dataset', '$datasets'
+        None returns None.
 
     Raises
     ------
@@ -29,7 +34,7 @@ def parse_obj_filter_input(objfilter: Union[str, h5py.Dataset, h5py.Group]) -> U
 
     Returns
     -------
-    h5py.Dataset or h5py.Group or None
+    Optional[Union[Type[h5py.Group], Type[h5py.Dataset]]]
         The object to filter for
     """
     if objfilter is None:

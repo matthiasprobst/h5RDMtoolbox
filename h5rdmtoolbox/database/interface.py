@@ -3,7 +3,7 @@ from typing import Generator
 
 import h5py
 
-from .lazy import LHDFObject
+from ..wrapper.lazy import LHDFObject
 
 
 class NonInsertableDatabaseInterface:

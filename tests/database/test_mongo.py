@@ -1,18 +1,19 @@
 """Test the mongoDB interface"""
-import h5py
-import numpy as np
 import pathlib
 import types
 import unittest
 import warnings
 from datetime import datetime
+
+import h5py
+import numpy as np
 from skimage.feature import graycomatrix, graycoprops
 from sklearn.datasets import load_digits  # ! pip install scikit-learn
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
-from h5rdmtoolbox.database.lazy import LDataset
 from h5rdmtoolbox.database.mongo import MongoDB
+from h5rdmtoolbox.wrapper.lazy import LDataset
 
 try:
     import pymongo

@@ -102,6 +102,28 @@ class TestCore(unittest.TestCase):
                 del h5.ds
                 self.assertTrue('ds' not in h5)
 
+    def test_delattr(self):
+        with h5tbx.File() as h5:
+            h5.attrs['test'] = 'test'
+            del h5.attrs['test']
+            h5.create_dataset('ds',
+                              data=np.arange(10),
+                              # units='m/s',
+                              attrs={'comment': 'test'})
+            self.assertIn('ds', h5)
+            del h5.ds
+            self.assertNotIn('ds', h5)
+
+        with h5tbx.File() as h5:
+            h5.attrs['test'] = 'test'
+            h5.create_dataset('ds',
+                              data=np.arange(10),
+                              # units='m/s',
+                              attrs={'comment': 'test'})
+            with h5tbx.set_config(natural_naming=False):
+                del h5.ds
+
+
     def test_setattr(self):
         with h5tbx.File() as h5:
             with self.assertRaises(AttributeError):
@@ -133,11 +155,11 @@ class TestCore(unittest.TestCase):
     def test_write_iso_timestamp(self):
         with h5tbx.File() as h5:
             now = datetime.now()
-            h5.write_iso_timestamp('timestamp', dt=now)
+            h5.attrs.write_iso_timestamp('timestamp', dt=now)
             self.assertIsInstance(h5.attrs['timestamp'], str)
             self.assertEqual(h5.attrs['timestamp'], str(now.isoformat()))
             with self.assertRaises(TypeError):
-                h5.write_iso_timestamp('timestamp', dt='now', overwrite=True)
+                h5.attrs.write_iso_timestamp('timestamp', dt='now', overwrite=True)
 
     def test_create_dataset(self):
         with h5tbx.File() as h5:
@@ -319,8 +341,9 @@ class TestCore(unittest.TestCase):
                 h5tbx.Group(4.3)
             with self.assertRaises(TypeError):
                 h5.grp['New'] = (4.3, int)
-            h5.grp['New'] = dict(data=np.random.rand(10, 20, 30))
 
+            h5.grp['New'] = np.random.rand(10, 20, 30), dict(attrs=dict(name='my_dataset'))
+            self.assertEqual(h5.grp['New'].attrs['name'], 'my_dataset')
             newds = h5.grp['New']
             self.assertEqual(newds.name, '/grp/New')
 
@@ -353,18 +376,23 @@ class TestCore(unittest.TestCase):
             self.assertTrue(h5['str'].name, '/str')
             self.assertEqual(h5['str'][()], 'test')
 
+            h5.create_string_dataset('arr_str', ['word1', 'word2'], attrs={'a': 'b'})
+            self.assertTrue('arr_str' in h5)
+            self.assertEqual(h5['arr_str'][0], 'word1')
+            self.assertEqual(h5['arr_str'][1], 'word2')
+
             h5.create_string_dataset('str2', ('a', 'b', 'c'))
             self.assertTrue(h5['str2'].name, '/str2')
-            self.assertEqual(h5['str2'][()], ('a', 'b', 'c'))
+            self.assertEqual(tuple(h5['str2'][()]), ('a', 'b', 'c'))
 
             h5.create_string_dataset('str2', ('a', 'bb', 'c', 'd'), overwrite=True)
             self.assertTrue(h5['str2'].name, '/str2')
-            self.assertEqual(h5['str2'][()], ('a', 'bb', 'c', 'd'))
+            self.assertEqual(tuple(h5['str2'][()]), ('a', 'bb', 'c', 'd'))
             self.assertTrue(h5['str2'].size, 2)
 
             h5.create_string_dataset('str2', ('a', 'b', 'c', 'dddd'), overwrite=True, attrs={'a': 'b'})
             self.assertTrue(h5['str2'].name, '/str2')
-            self.assertEqual(h5['str2'][()], ('a', 'b', 'c', 'dddd'))
+            self.assertEqual(tuple(h5['str2'][()]), ('a', 'b', 'c', 'dddd'))
             self.assertTrue(h5['str2'].size, 4)
 
             self.assertEqual('/grp', h5['grp'].name)

@@ -14,7 +14,7 @@ def get_rootparent(obj):
             if parent.name == '/':
                 found = parent
             else:
-                _ = search(parent)
+                search(parent)
 
         search(parent)
         return found

@@ -123,6 +123,7 @@ class LayoutSpecification:
         self.description: str = description or ''
         self.results: List[Optional[SpecificationResult]] = []
         self._n_calls = 0
+        self._n_fails = 0
 
     @property
     def validation_flag(self) -> int:

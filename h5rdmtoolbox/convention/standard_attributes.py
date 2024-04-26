@@ -1,4 +1,5 @@
 """standard attribute module"""
+import h5py
 import typing_extensions
 
 import json
@@ -227,12 +228,12 @@ class StandardAttribute:
                     parse_object_for_attribute_setting(validated_value)
                 )
 
-    def get(self, parent):
+    def get(self, parent: Union[h5py.File, h5py.Group, h5py.Dataset]):
         """Read the attribute from `parent`
 
         Parameters
         ----------
-        parent: h5py.File, h5py.Group, h5py.Dataset
+        parent: Union[h5py.File, h5py.Group, h5py.Dataset]
             The parent object from which the attribute is read
 
         Returns

@@ -133,7 +133,7 @@ class HDF5StandardNameInterface:
     @classmethod
     def from_hdf(cls, hdf_filename, group='/', recursive: bool = False):
         """search withing a group. Note, that duplicate standard names are not considered"""
-        from ...database.lazy import lazy
+        from ...wrapper.lazy import lazy
         hdf_filename = pathlib.Path(hdf_filename)
         standard_datasets = {}
         with h5tbx.File(hdf_filename) as h5:

@@ -2,10 +2,10 @@ import pathlib
 from typing import Optional
 from typing import Protocol
 
-from . import lazy
 from .hdfdb import FileDB
 from .hdfdb import FilesDB, ObjDB
 from .interface import HDF5DBInterface
+from ..wrapper import lazy
 
 
 def find(source, *args, **kwargs):

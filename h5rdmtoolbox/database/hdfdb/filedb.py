@@ -4,7 +4,7 @@ from typing import Union, Generator, List, Optional
 import h5py
 
 from .objdb import ObjDB
-from .. import lazy
+from ...wrapper import lazy
 from ..interface import HDF5DBInterface, NonInsertableDatabaseInterface
 
 

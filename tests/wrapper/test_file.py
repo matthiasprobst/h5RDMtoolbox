@@ -92,39 +92,39 @@ class TestFile(unittest.TestCase):
     def test_uuid4(self):
         with File() as h5:
             uuid4 = uuid.uuid4()
-            h5.write_uuid(uuid4)
+            h5.attrs.write_uuid(uuid4)
             self.assertEqual(h5.attrs['uuid'], str(uuid4))
-            h5.write_uuid(uuid4, name='uuid4')
+            h5.attrs.write_uuid(uuid4, name='uuid4')
             self.assertEqual(h5.attrs['uuid4'], str(uuid4))
             with self.assertRaises(ValueError):
-                h5.write_uuid(overwrite=False)
+                h5.attrs.write_uuid(overwrite=False)
             with self.assertRaises(ValueError):
-                h5.write_uuid(uuid4, name='uuid4', overwrite=False)
+                h5.attrs.write_uuid(uuid4, name='uuid4', overwrite=False)
             uuid4new = uuid.uuid4()
-            h5.write_uuid(uuid4new, name='uuid4', overwrite=True)
+            h5.attrs.write_uuid(uuid4new, name='uuid4', overwrite=True)
             self.assertNotEqual(h5.attrs['uuid4'], str(uuid4))
             self.assertEqual(h5.attrs['uuid4'], str(uuid4new))
-            h5.write_uuid(overwrite=True)
+            h5.attrs.write_uuid(overwrite=True)
             self.assertNotEqual(h5.attrs['uuid'], str(uuid4))
             self.assertNotEqual(h5.attrs['uuid'], str(uuid4new))
 
     def test_timestamp(self):
         with File() as h5:
-            h5.write_iso_timestamp()
+            h5.attrs.write_iso_timestamp()
             self.assertIsInstance(h5.attrs['timestamp'], str)
-            h5.write_iso_timestamp(name='timestamp2')
+            h5.attrs.write_iso_timestamp(name='timestamp2')
             dt2 = h5.attrs['timestamp2']
             self.assertIsInstance(dt2, str)
             with self.assertRaises(ValueError):
-                h5.write_iso_timestamp(name='timestamp2', overwrite=False)
+                h5.attrs.write_iso_timestamp(name='timestamp2', overwrite=False)
             time.sleep(0.01)
-            h5.write_iso_timestamp(name='timestamp2', overwrite=True)
+            h5.attrs.write_iso_timestamp(name='timestamp2', overwrite=True)
             self.assertNotEqual(dt2, h5.attrs['timestamp2'])
 
             dtnow = datetime.now()
             dtnow_iso = dtnow.isoformat()
             time.sleep(0.01)
-            h5.write_iso_timestamp(name='now', dt=dtnow)
+            h5.attrs.write_iso_timestamp(name='now', dt=dtnow)
             self.assertEqual(h5.attrs['now'], dtnow_iso)
 
     def test_attrs1(self):

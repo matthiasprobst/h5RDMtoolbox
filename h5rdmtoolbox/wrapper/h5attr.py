@@ -3,7 +3,8 @@ import ast
 import json
 import logging
 import warnings
-from typing import Dict, Union, Tuple, Optional
+from datetime import datetime
+from typing import Dict, Union, Tuple, Optional, Any
 
 import h5py
 import numpy as np
@@ -204,7 +205,7 @@ class WrapperAttributeManager(AttributeManager):
         return ret
 
     @with_phil
-    def __getitem__(self, name):
+    def __getitem__(self, name: str):
 
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
@@ -222,7 +223,7 @@ class WrapperAttributeManager(AttributeManager):
                rdf_predicate: Union[str, rdflib.URIRef] = None,
                rdf_object: Optional[Union[str, rdflib.URIRef]] = None,
                definition: Optional[str] = None,
-               **kwargs):
+               **kwargs) -> Any:
         """
         Create a new attribute.
 
@@ -270,7 +271,7 @@ class WrapperAttributeManager(AttributeManager):
     @with_phil
     def __setitem__(self,
                     name: Union[str, Tuple[str, str]],
-                    value, attrs=None):
+                    value, attrs: Optional[Dict] = None):
         """ Set a new attribute, overwriting any existing attribute.
 
         The type and shape of the attribute are determined from the data.  To
@@ -433,3 +434,54 @@ class WrapperAttributeManager(AttributeManager):
         """Return the original h5py attribute object manager"""
         with phil:
             return AttributeManager(self._parent)
+
+    def write_uuid(self, uuid: Optional[str] = None,
+                   name: Optional[str] = None,
+                   overwrite: bool = False) -> str:
+        """Write an uuid to the attribute of the object.
+
+        Parameters
+        ----------
+        uuid : str=None
+            The uuid to write. If None, a new uuid is generated.
+        name: str=None
+            Name of the attribute. If None, the default name is taken from the configuration.
+        overwrite: bool=False
+            If the attribute already exists, it is not overwritten if overwrite is False.
+
+        Returns
+        -------
+        str
+            The uuid as string.
+        """
+        if name is None:
+            name = get_config('uuid_name')
+
+        if name in self and not overwrite:
+            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
+                             '"overwrite" is set to False')
+        if uuid is None:
+            from uuid import uuid4
+            uuid = uuid4()
+        suuid = str(uuid)
+        self.create(name=name, data=suuid)
+        return suuid
+
+    def write_iso_timestamp(self,
+                            name='timestamp',
+                            dt: Optional[datetime] = None,
+                            overwrite: bool = False, **kwargs):
+        """Write the iso timestamp to the attribute of the object.
+
+        Parameters
+        --
+        """
+        if name in self and not overwrite:
+            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
+                             '"overwrite" is set to False')
+        if dt is None:
+            dt = datetime.now()
+        else:
+            if not isinstance(dt, datetime):
+                raise TypeError(f'Invalid type for parameter "dt". Expected type datetime but got "{type(dt)}"')
+        self.create(name=name, data=dt.isoformat(**kwargs))

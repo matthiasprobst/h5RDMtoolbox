@@ -5,6 +5,7 @@ omit =
     tests/*
     h5rdmtoolbox/tutorial.py
     h5rdmtoolbox/errors.py
+    h5rdmtoolbox/protocols.py
 relative_files = true
 
 [paths]
