@@ -1,5 +1,4 @@
 """Extension to compute normalized xarray datasets and arrays"""
-import pint
 # import pint_xarray  # noqa: F401
 import xarray as xr
 from numpy.core._exceptions import _UFuncBinaryResolutionError
@@ -10,12 +9,12 @@ import h5rdmtoolbox as h5tbx
 NORM_DELIMITER = '/'
 
 
-def to_base_units(da: xr.DataArray) -> xr.DataArray:
-    """Turns the units of an xarray to the base units, e.g. m/mm turns to dimensionless
-    because pint_xarray has no method `to_base_units()`.
-    """
-    final_units = pint.Quantity(da.attrs['units']).to_base_units()
-    return da.pint.quantify(unit_registry=h5tbx.get_ureg()).pint.to(final_units.units).pint.dequantify()
+# def to_base_units(da: xr.DataArray) -> xr.DataArray:
+#     """Turns the units of an xarray to the base units, e.g. m/mm turns to dimensionless
+#     because pint_xarray has no method `to_base_units()`.
+#     """
+#     final_units = pint.Quantity(da.attrs['units']).to_base_units()
+#     return da.pint.quantify(unit_registry=h5tbx.get_ureg()).pint.to(final_units.units).pint.dequantify()
 
 
 @xr.register_dataarray_accessor("normalize")
@@ -69,7 +68,7 @@ class NormalizeAccessor:
                                        'because not every dimension might of of a numeric type. '
                                        'Orig. error: {e}')
         else:
-            raise TypeError(f'Normalization must be either a string or a float, not {type(value)}.')
+            raise TypeError(f'Normalization must be either a string or a number, not {type(value)}.')
 
         if rename:
             norm_obj.name = f'{obj.name}{NORM_DELIMITER}{name}'
@@ -107,9 +106,6 @@ class NormalizeAccessor:
         >>> u_xnorm.plot.contourf()
         >>> plt.show()
         """
-        if not isinstance(rename, bool):
-            raise TypeError(f'rename must be a boolean, not {type(rename)}.')
-
         if isinstance(value_or_coord_dict, (int, float, str)):
             value_or_coord_dict = {k: value_or_coord_dict for k in self._obj.coords}
 

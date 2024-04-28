@@ -1,20 +1,18 @@
 """Test the mongoDB interface"""
+import h5py
+import numpy as np
 import pathlib
 import types
 import unittest
 import warnings
 from datetime import datetime
-
-import numpy as np
-from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
-import h5py
-import numpy as np
 from skimage.feature import graycomatrix, graycoprops
 from sklearn.datasets import load_digits  # ! pip install scikit-learn
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
 from h5rdmtoolbox.database.mongo import MongoDB
+from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
 from h5rdmtoolbox.wrapper.lazy import LDataset
 
 try:
@@ -60,6 +58,10 @@ class TestH5Mongo(unittest.TestCase):
             self.collection = db.hdf_collection_test
 
         use(None)
+
+    @classmethod
+    def tearDownClass(cls):
+        pathlib.Path('test.h5').unlink(missing_ok=True)
 
     def test_type2mongo(self):
         from h5rdmtoolbox.database.mongo import type2mongo
@@ -151,7 +153,7 @@ class TestH5Mongo(unittest.TestCase):
 
             mongoDBInterface.insert_group(h5['grp'], recursive=True)
 
-        self.assertEqual(4,  mongoDBInterface.collection.count_documents({}))
+        self.assertEqual(4, mongoDBInterface.collection.count_documents({}))
 
         self.client.drop_database('hdf_database_test')
         mongoDBInterface = MongoDB(collection=self.collection)
@@ -162,7 +164,7 @@ class TestH5Mongo(unittest.TestCase):
 
             mongoDBInterface.insert_group(h5['grp'], recursive=False)
 
-        self.assertEqual(2,  mongoDBInterface.collection.count_documents({}))
+        self.assertEqual(2, mongoDBInterface.collection.count_documents({}))
 
     @is_testable
     def test_find_one(self):

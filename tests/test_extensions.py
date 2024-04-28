@@ -88,6 +88,13 @@ class TestExtension(unittest.TestCase):
             with self.assertRaises(TypeError):
                 h5['u'][:].normalize(dict(L='3m'), rename=2)
 
+            with self.assertRaises(TypeError):
+                h5['u'][:].normalize(dict(L={'a': 1}), rename=2)
+
+            unorm = h5['u'][:].normalize()
+            self.assertEqual('u', unorm.name)
+            np.testing.assert_array_equal(h5['u'].values[()], unorm.values[()])
+
             unorm = h5['u'][:].normalize({"L": '3m'}, rename=True)
             self.assertEqual(f'u{normalize.NORM_DELIMITER}L', unorm.name)
             self.assertEqual('1/m', unorm.attrs['units'])

@@ -307,21 +307,21 @@ class StandardAttribute:
         # finally:
         #     return ret_val
 
-    def to_dict(self):
-        """return a dict representation of the standard attribute"""
-
-        if self.default_value is DefaultValue.NONE:
-            default_value_str = '$optional'
-        elif self.default_value is DefaultValue.EMPTY:
-            default_value_str = '$obligatory'
-        else:
-            default_value_str = self.default_value
-
-        return dict(description=self.description,
-                    target_method=self.target_method,
-                    validator=f'${self.validator.__name__}',
-                    default_value=default_value_str)
-
+    # def to_dict(self):
+    #     """return a dict representation of the standard attribute"""
+    #
+    #     if self.default_value is DefaultValue.NONE:
+    #         default_value_str = '$optional'
+    #     elif self.default_value is DefaultValue.EMPTY:
+    #         default_value_str = '$obligatory'
+    #     else:
+    #         default_value_str = self.default_value
+    #
+    #     return dict(description=self.description,
+    #                 target_method=self.target_method,
+    #                 validator=f'${self.validator.__name__}',
+    #                 default_value=default_value_str)
+    #
     def validate(self, value, parent=None, attrs=None) -> bool:
         """validate"""
         if value is None:

@@ -157,6 +157,14 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
         return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, **kwargs)
 
 
+def get_filesize(hdf_filename: Union[str, pathlib.Path]) -> int:
+    """Get the size of the HDF5 file in bytes"""
+    return utils.get_filesize(hdf_filename)
+
+def get_checksum(hdf_filename: Union[str, pathlib.Path]) -> str:
+    """Get the checksum of the HDF5 file"""
+    return utils.get_checksum(hdf_filename)
+
 def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):
     """A decoder function takes a xarray.DataArray and a dataset as input and returns a xarray.DataArray
     It is called after the dataset is loaded into memory and before being returned to the user. Be careful:

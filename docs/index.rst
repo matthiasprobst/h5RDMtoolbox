@@ -1,9 +1,11 @@
 HDF5 Research Data Management Toolbox
 =====================================
 
-The "HDF5 Research Data Management Toolbox" (*h5rdmtoolbox*) is a python package supporting everyone who is working
-with HDF5 to achieve a sustainable data lifecycle which follows the
-`FAIR <https://www.nature.com/articles/sdata201618>`_ (Findable, Accessible, Interoperable, Reusable) principles.
+The "HDF5 Research Data Management Toolbox" (*h5rdmtoolbox*) is a Python package
+designed to assist those engaged in the management of HDF5 data,
+enabling the implementation of a sustainable data lifecycle, that adheres to the
+`FAIR <https://www.nature.com/articles/sdata201618>`_ principles (Findable,
+Accessible, Interoperable, Reusable).
 
 
 
@@ -16,17 +18,18 @@ with HDF5 to achieve a sustainable data lifecycle which follows the
 
 Highlights
 ----------
-- Combining HDF5 and `xarray <https://docs.xarray.dev/en/stable/>`_ to allow easy access to metadata and data during
-  analysis and processing (see `here <https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface>`_).
-- Assigning metadata with "globally unique and persistent identifiers" as required by `F1 of the FAIR
+- The combination of HDF5 and `xarray <https://docs.xarray.dev/en/stable/>`_ facilitates convenient access to
+  metadata and data during analysis and processing (`find out more here <https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface>`_).
+- Metadata can be assigned with "globally unique and persistent identifiers" as required by `F1 of the FAIR
   principles <https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/>`_.
-  This "remove[s] ambiguity in the meaning of your published data...".
-- Define standard attributes through
-  `conventions <https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html>`_ and enforce users
-  to use them
-- Upload HDF5 files directly to `repositories <https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/repository/index.html>`_
-  like `Zenodo <https://zenodo.org/>`_ or `use them with noSQL databases <https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/database/index.html>`_ like
-  `mongoDB <https://www.mongodb.com/>`_.
+  This is achieved by introducing RDF syntax to HDF5 and thus avoids "ambiguity in the meaning of your published data...".
+- The definition of standard attributes through so-called
+  `conventions <https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html>`_ enforces users
+  to use specific attributes, which get validated and are essential for the interpretation of the data.
+- HDF5 files can be uploaded directly to `repositories <https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/repository/index.html>`_
+  like `Zenodo <https://zenodo.org/>`_.
+- A database interface allows querying for information in the file or moving metadata to `noSQL databases <https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/database/index.html>`_ like
+  `mongoDB <https://www.mongodb.com/>`_ for dedicated and more complex search queries.
 
 
 .. grid:: 3

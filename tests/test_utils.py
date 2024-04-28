@@ -1,4 +1,3 @@
-import appdirs
 import datetime
 import h5py
 import pathlib
@@ -11,6 +10,13 @@ __this_dir__ = pathlib.Path(__file__).parent
 
 class TestUtils(unittest.TestCase):
 
+    def test_hash(self):
+        with h5tbx.File() as h5:
+            pass
+        self.assertEqual(h5tbx.get_checksum(h5.hdf_filename),
+                         '6781e0baec8d65b9a95a3e879a5098d1')
+
+
     def test_touch_tmp_hdf5_file(self):
         with h5tbx.set_config(auto_create_h5tbx_version=False):
             now = datetime.datetime.now()
@@ -18,6 +24,7 @@ class TestUtils(unittest.TestCase):
                                                            attrs={'dtime': now})
             self.assertTrue(h5tbx.UserDir['tmp'] in tmp_hdf5file.parents)
             self.assertEqual(h5tbx.utils.get_filesize(tmp_hdf5file).magnitude, 6144)
+            self.assertEqual(h5tbx.get_filesize(tmp_hdf5file).magnitude, 6144)
             self.assertEqual(h5tbx.utils.get_filesize(tmp_hdf5file).units, h5tbx.get_ureg().Unit('byte'))
 
     def test_remove_special_chars(self):

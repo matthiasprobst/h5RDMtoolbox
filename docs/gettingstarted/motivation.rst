@@ -17,8 +17,8 @@ HDF5.
 Why HDF5?
 ---------
 The file format is chosen because it is a widely used, open and well-documented format, which allows data
-to be stored in a self-describing way by using so-called attributes in addition to the data itself. HDF5 thus
-will be very suitable for the majority of scientific data.
+to be stored in a self-describing way by using so-called "HDF attributes" in addition to the data itself. HDF5 thus
+is very suitable for the majority of scientific (multi-dimensional) data source.
 
 In short:
 
@@ -34,16 +34,16 @@ More information on HDF5 can be found `on the HDF Group website <https://www.hdf
 Working HDF5
 ------------
 
-The toolbox interfaces is based on the `h5py <https://www.h5py.org/>`_ package, which is a pythonic interface to the
-HDF5 binary data format. However, it returns `numpy <https://numpy.org/>`_ arrays, which are not self-descriptive (just
-data arrays). While efficient to work with, original information from the HDF5 file is lost. The h5rdmtoolbox therefore
-provides a wrapper around h5py, which returns a `xarray <http://xarray.pydata.org/en/stable/>`_ object instead of a
-numpy array. This object is self-descriptive and allows attaching meta information to the data - just like HDF5 datasets.
+The toolbox is based on the `h5py <https://www.h5py.org/>`_ package, which provides a pythonic interface to the HDF5
+binary data format. The first notable difference for the user is the return object when data is requested from the
+file. In contrast to the `h5py` package, which returns `numpy` arrays, the h5rdmtoolbox returns
+`xarray.DataArray <https://docs.xarray.dev/en/stable/user-guide/data-structures.html>`_
+objects instead. This resembles the original content more closely, as it allows the assignment of attributes and
+coordinates (similar to HDF dimension scales).
 
-Using HDF5 in combination with xarray allows keeping track of the meta information also during data processing, as
-both, the file and the data object, allow attaching attributes to the data. This reduces processing errors, enhances
-interpretability and finally makes it easier to share.
+The combination of HDF5 and xarray allows for the retention of meta-information throughout the data processing cycle.
+This reduces the potential occurrence of processing errors, enhances the interpretability of the data, and
+ultimately facilitates the sharing of the data.
 
-This is the very basic feature of the toolbox which already enriches your daily work with HDF5 files. However, there
-are many more aspects implemented in the toolbox, which assist you in making your data FAIRer. Find out more in the
+There are many more aspects implemented in the toolbox, which assist you in making your data FAIRer. Find out more in the
 following sections.

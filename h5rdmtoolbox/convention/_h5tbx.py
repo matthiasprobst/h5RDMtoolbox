@@ -1,3 +1,4 @@
+import importlib
 import pathlib
 import sys
 
@@ -22,8 +23,6 @@ if not (convention_user_dir / f'{convention_user_dir.name}.py').exists():
 
 sys.path.insert(0, str(UserDir['convention'] / convention_name))
 
-import importlib
-
 try:
     imported_module = importlib.import_module(convention_name)
     # Now, you can use the imported module as needed
@@ -33,5 +32,5 @@ except NameError:
     raise ImportConventionError(
         f'The convention "{convention_name}" could not be imported. Please check the convention file content '
         f'(location: {UserDir["convention"] / convention_name}).')
-except ImportError:
-    print(f"Failed to import module {convention_name}")
+except ImportError as e:
+    print(f"Failed to import module {convention_name} (location: {UserDir['convention'] / convention_name}). err: {e}.")

@@ -88,7 +88,7 @@ def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool = True) -
         elif isinstance(data[i], float):
             flag_node = rdflib.Literal(float(data[i]), datatype=XSD.float)
         else:
-            flag_node = rdflib.Literal(data[i], datatype=XSD.string)
+            raise TypeError(f'Unsupported type: {type(data[i])}')
 
         g.add((flag_list, RDF.first, flag_node))
         if i == n - 1:
@@ -149,12 +149,12 @@ def resolve_iri(key_or_iri: str, context: Context) -> str:
 #         return Literal(_av)
 
 
-def _get_id(_node, local=None, use_simple_bnode_value:bool=True) -> Union[URIRef, BNode]:
+def _get_id(_node, use_simple_bnode_value:bool=True) -> Union[URIRef, BNode]:
     """if an attribute in the node is called "@id", use that, otherwise use the node name"""
     _id = _node.rdf.subject  # _node.attrs.get('@id', None)
-    if local is not None:
-        local = rf'file://{_node.hdf_filename.resolve().absolute()}'
-        return URIRef(local + _node.name[1:])
+    # if local is not None:
+    #     local = rf'file://{_node.hdf_filename.resolve().absolute()}'
+    #     return URIRef(local + _node.name[1:])
     if _id is None:
         return rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
         # _id = _node.attrs.get(get_config('uuid_name'),
@@ -164,10 +164,6 @@ def _get_id(_node, local=None, use_simple_bnode_value:bool=True) -> Union[URIRef
 
 def is_list_of_dict(data) -> bool:
     """Check if a list is a list of dictionaries."""
-    if not isinstance(data, list):
-        return False
-    if len(data) == 0:
-        return False
     return all([isinstance(i, dict) for i in data])
 
 
@@ -410,7 +406,7 @@ def to_hdf(grp,
         elif isinstance(v, list):
             if is_list_of_dict(v):
                 for i, entry in enumerate(v):
-                    # figure out how to name the sub group
+                    # figure out how to name the subgroup
                     # best would be to take the label, if it exists
                     for label_identifier in ('rdfs:label', 'label', 'http://www.w3.org/2000/01/rdf-schema#'):
                         _label = entry.get(label_identifier, None)
@@ -522,7 +518,6 @@ def to_hdf(grp,
 
 def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                      iri_only=False,
-                     local=None,
                      recursive: bool = True,
                      compact: bool = True,
                      context: Dict = None,
@@ -536,7 +531,6 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
         with File(source) as h5:
             return get_rdflib_graph(h5,
                                     iri_only,
-                                    local,
                                     recursive=recursive,
                                     compact=compact,
                                     context=context)
@@ -586,7 +580,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
         obj_node = iri_dict.get(obj.name, None)
         if obj_node is None:
-            obj_node = _get_id(obj, local=local)
+            obj_node = _get_id(obj)
             iri_dict[obj.name] = obj_node
 
         if structural and name != '/':
@@ -799,13 +793,12 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
 def serialize(source: Union[str, pathlib.Path, h5py.File],
               iri_only=False,
-              local=None,
               recursive: bool = True,
               compact: bool = True,
               context: Dict = None,
               structural: bool = True,
               resolve_keys: bool = True) -> str:
-    g, ctx = get_rdflib_graph(source, iri_only, local, recursive, compact, context, structural, resolve_keys)
+    g, ctx = get_rdflib_graph(source, iri_only, recursive, compact, context, structural, resolve_keys)
     return g.serialize(
         format='json-ld',
         context=ctx,
@@ -815,7 +808,6 @@ def serialize(source: Union[str, pathlib.Path, h5py.File],
 
 def dumpd(grp,
           iri_only=False,
-          local=None,
           recursive: bool = True,
           compact: bool = True,
           context: Dict = None,
@@ -825,7 +817,6 @@ def dumpd(grp,
     """If context is missing, return will be a List"""
     s = serialize(grp,
                   iri_only,
-                  local,
                   recursive=recursive,
                   compact=compact,
                   context=context,
@@ -840,7 +831,6 @@ def dumpd(grp,
 
 def dumps(grp,
           iri_only=False,
-          local=None,
           recursive: bool = True,
           compact: bool = True,
           context: Optional[Dict] = None,
@@ -851,7 +841,6 @@ def dumps(grp,
     return json.dumps(dumpd(
         grp=grp,
         iri_only=iri_only,
-        local=local,
         recursive=recursive,
         compact=compact,
         context=context,
@@ -867,7 +856,6 @@ h5dumps = dumps  # alias, use this in future
 def dump(grp,
          fp,
          iri_only=False,
-         local=None,
          recursive: bool = True,
          compact: bool = True,
          context: Optional[Dict] = None,
@@ -876,7 +864,6 @@ def dump(grp,
     return json.dump(
         dumpd(
             grp, iri_only,
-            local,
             recursive=recursive,
             compact=compact,
             context=context

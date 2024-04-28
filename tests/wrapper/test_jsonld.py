@@ -1,19 +1,18 @@
 import json
-import pathlib
-import unittest
-
 import numpy as np
 import ontolutils
+import pathlib
 import rdflib
+import unittest
 from ontolutils import M4I
 from ontolutils import namespaces, urirefs, Thing
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention.hdf_ontology import HDF5
-from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME
 from h5rdmtoolbox.wrapper import jsonld, rdf
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
+from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME
 
 logger = h5tbx.logger
 
@@ -32,11 +31,15 @@ class TestCore(unittest.TestCase):
         pathlib.Path('test.hdf').unlink(missing_ok=True)
 
     def test_build_node_list(self):
+
         g = rdflib.Graph()
         base_node = rdflib.BNode()
         g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
-        list_node = build_node_list(g, [1, 2, 3])
-        g.add((base_node, HDF5.value, list_node))
+        list_node_int = build_node_list(g, [1, 2, 3])
+        g.add((base_node, HDF5.value, list_node_int))
+
+        with self.assertRaises(TypeError):
+            build_node_list(g, [1, dict(a='1'), 3])
 
         print(g.serialize(format='json-ld', indent=2))
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>

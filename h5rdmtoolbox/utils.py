@@ -1,23 +1,22 @@
 """utilities of the h5rdmtoolbox"""
 import datetime
+import h5py
 import hashlib
 import json
 import logging
+import numpy as np
 import os
 import pathlib
-import re
-import warnings
-from re import sub as re_sub
-from typing import Dict
-from typing import Union, Callable, List, Tuple
-
-import h5py
-import numpy as np
 import pint
+import re
 import requests
+import warnings
 from h5py import File
 from pydantic import HttpUrl, validate_call
 from rdflib.plugins.shared.jsonld.context import Context
+from re import sub as re_sub
+from typing import Dict
+from typing import Union, Callable, List, Tuple
 
 from . import _user, get_config, get_ureg
 from ._version import __version__
@@ -27,9 +26,15 @@ logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
 
 
-def get_filesize(path: Union[str, pathlib.Path]) -> int:
+def get_filesize(filename: Union[str, pathlib.Path]) -> int:
     """Get the size of a file in bytes"""
-    return os.path.getsize(path) * get_ureg().byte
+    return os.path.getsize(filename) * get_ureg().byte
+
+
+def get_checksum(filename: Union[str, pathlib.Path], hash_func: Callable = hashlib.md5) -> str:
+    """Get the checksum of a file. Default hash function is hashlib.md5"""
+    with open(str(filename), 'rb') as file:
+        return hash_func(file.read()).hexdigest()
 
 
 def has_internet_connection(timeout: int = 5) -> bool:

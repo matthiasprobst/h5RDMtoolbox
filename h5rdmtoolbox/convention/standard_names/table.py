@@ -18,7 +18,7 @@ from . import cache
 from . import consts
 from .affixes import Affix
 from .transformation import *
-from ..utils import dict2xml, get_similar_names_ratio
+from ..utils import get_similar_names_ratio
 from ... import errors
 
 logger = logging.getLogger('h5rdmtoolbox')
@@ -239,11 +239,11 @@ class StandardNameTable:
                                            f'{similar_names}?')
         raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
 
-    def __to_h5attrs__(self) -> str:
-        """Write standard name table to HDF5 attributes"""
-        if 'zenodo_doi' in self.meta:
-            return self.meta['zenodo_doi']
-        return self.to_sdict()
+    # def __to_h5attrs__(self) -> str:
+    #     """Write standard name table to HDF5 attributes"""
+    #     if 'zenodo_doi' in self.meta:
+    #         return self.meta['zenodo_doi']
+    #     return self.to_sdict()
 
     def _repr_html_(self):
         return f"""<li style="list-style-type: none; font-style: italic">{self.__repr__()[1:-1]}</li>"""
@@ -748,45 +748,6 @@ class StandardNameTable:
             yaml.safe_dump(snt_dict, f, sort_keys=False)
 
         return yaml_filename
-
-    def to_xml(self,
-               xml_filename: pathlib.Path,
-               datetime_str: Union[str, None] = None) -> pathlib.Path:
-        """Export the SNT in a XML file
-
-        Parameters
-        ----------
-        xml_filename: pathlib.Path
-            Path to use for the XML file
-        datetime_str: str, optional
-            Datetime format to use for the last_modified field. If None, then
-            ISO 6801 format is used.
-
-        Returns
-        -------
-        pathlib.Path
-            Path to the XML file
-        """
-        if datetime_str is None:
-            last_modified = datetime.now(datetime.timezone.utc).isoformat()
-        else:
-            last_modified = datetime.now().strftime(datetime_str)
-
-        xml_parent = xml_filename.parent
-        xml_name = xml_filename.name
-        xml_translation_filename = xml_parent / 'translation' / xml_name
-        if not xml_translation_filename.parent.exists():
-            xml_translation_filename.parent.mkdir(parents=True)
-
-        meta = self.meta
-        meta.update(last_modified=last_modified)
-
-        meta.update(dict(version=self.version))
-
-        return dict2xml(filename=xml_filename,
-                        name=self.name,
-                        dictionary=self.standard_names,
-                        **meta)
 
     def to_markdown(self, markdown_filename) -> pathlib.Path:
         """Export the SNT to a markdown file"""

@@ -2315,8 +2315,8 @@ class File(h5py.File, Group):
                     structural: bool = True,
                     semantic: bool = True,
                     resolve_keys: bool = False,
-                    **kwargs):
-        """Dump the file content as JSON-LD"""
+                    **kwargs) -> str:
+        """Dump the file content as JSON-LD string"""
         from .. import dump_jsonld
         return dump_jsonld(self.hdf_filename,
                            skipND=skipND,
