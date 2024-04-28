@@ -1,13 +1,17 @@
+import pydantic
+import requests
 import unittest
 import warnings
+from pydantic import BaseModel
 
 import h5rdmtoolbox as h5tbx
-import requests
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention.errors import StandardNameError
 from h5rdmtoolbox.convention.standard_names import parse_snt
 from h5rdmtoolbox.convention.standard_names.name import StandardName
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
+from h5rdmtoolbox.convention.toolbox_validators import standardNameTableType
+from h5rdmtoolbox.convention.toolbox_validators import standardNameType
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -49,6 +53,14 @@ class TestStandardAttributes(unittest.TestCase):
         snt = parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
         self.assertTrue(sn.check(snt))
 
+        class MyStandardName(BaseModel):
+            sn: standardNameType
+
+        with self.assertRaises(pydantic.ValidationError):
+            my_sn = MyStandardName(sn='x_velocity')
+        with self.assertRaises(TypeError):
+            my_sn = MyStandardName(sn=1.2)
+
     def test_parse_snt(self):
         with self.assertRaises(TypeError):
             parse_snt(None)
@@ -66,8 +78,7 @@ class TestStandardAttributes(unittest.TestCase):
     def test_snt_cache(self):
         """caching of SNTs only works if they are zenodo references"""
         cv = h5tbx.convention.Convention(name='test', contact='me', institution='mine', decoders=())
-        from h5rdmtoolbox.convention.toolbox_validators import standardNameTableType
-        from pydantic import BaseModel
+
         class standard_name_table_validator(BaseModel):
             """The standard name table of the convention."""
             value: standardNameTableType

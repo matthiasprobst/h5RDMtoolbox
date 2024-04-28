@@ -1,14 +1,13 @@
+import h5py
 import json
+import numpy as np
 from typing import Type
 from typing import Union, Dict, List, Callable, Optional
 
-import h5py
-import numpy as np
-
 from . import query, utils
-from ...wrapper import lazy
 from ..interface import HDF5DBInterface, NonInsertableDatabaseInterface
 from ...protocols import LazyDataset, LazyGroup, LazyObject
+from ...wrapper import lazy
 
 
 def basename(name: str) -> str:

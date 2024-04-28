@@ -848,7 +848,7 @@ class Group(h5py.Group):
         return ObjDB(self).find_one(flt, objfilter, recursive, ignore_attribute_error)
 
     def find(self,
-             flt: Union[Dict, str],
+             flt: Union[Dict, str, List[str]],
              objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
              recursive: bool = True,
              ignore_attribute_error: bool = False) -> List[protocols.LazyObject]:

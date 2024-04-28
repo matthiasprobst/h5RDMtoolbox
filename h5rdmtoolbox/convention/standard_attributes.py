@@ -1,10 +1,9 @@
 """standard attribute module"""
 import h5py
-import typing_extensions
-
 import json
 import logging
 import pydantic
+import typing_extensions
 import warnings
 from typing import Dict, List, Union
 
@@ -79,13 +78,11 @@ class StandardAttribute:
                  **kwargs):
         # name of attribute:
         self.name = name.split('-', 1)[0]  # the attrs key
-        if validator is None:
-            raise TypeError(f'validator must not be None.')
 
-        if not isinstance(validator, typing_extensions._AnnotatedAlias):
-            if not issubclass(validator, pydantic.BaseModel):
-                raise TypeError(f'validator must be a pydantic.BaseModel or a typing_extensions._AnnotatedAlias. '
-                                f'Got {type(validator)} instead.')
+        # if not isinstance(validator, typing_extensions._AnnotatedAlias):
+        #     if not issubclass(validator, pydantic.BaseModel):
+        #         raise TypeError(f'validator must be a pydantic.BaseModel or a typing_extensions._AnnotatedAlias. '
+        #                         f'Got {type(validator)} instead.')
         self.validator = validator
         # assert isinstance(self.validator, StandardAttributeValidator)
 

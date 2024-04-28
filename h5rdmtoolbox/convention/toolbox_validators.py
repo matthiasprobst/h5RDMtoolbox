@@ -47,7 +47,7 @@ def __validate_standard_name_table(value, handler, info) -> "StandardNameTable":
     return standard_names.parse_snt(value)
 
 
-def __validate_standard_name(value, handler, info) -> "StandardNameTable":
+def __validate_standard_name(value, handler, info) -> "StandardName":
     from h5rdmtoolbox.convention import standard_names
     if not isinstance(value, (str, standard_names.StandardName)):
         raise TypeError(f'Expected a string or StandardName object, got {type(value)}')
@@ -177,20 +177,11 @@ def __validate_date_format(value, handler, info):
     try:
         warnings.filterwarnings("error")
         dt = dateutil.parser.parse(value)
-    except RuntimeWarning as e:
-        raise ValueError(f'Invalid datetime: {value}. Original error: {e}')
+    except TypeError as e:
+        raise TypeError(f'Invalid datetime: {value}. Original error: {e}')
     finally:
         warnings.filterwarnings("ignore")
     return dt
-
-
-def _get_validate_type(_type):
-    def __validate_type(value, handler, info):
-        if not isinstance(value, _type):
-            raise TypeError(f'Parameter must be a string but got {type(value)}')
-        return value
-
-    return __validate_type
 
 
 unitsType = Annotated[str, WrapValidator(__validate_units)]

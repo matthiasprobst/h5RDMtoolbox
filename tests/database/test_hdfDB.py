@@ -1,8 +1,7 @@
 """Test the mongoDB interface"""
-import unittest
-
 import h5py
 import numpy as np
+import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import database
@@ -11,6 +10,17 @@ from h5rdmtoolbox.database.hdfdb.query import _basename
 
 
 class TestHDFDB(unittest.TestCase):
+
+    def test_find_str(self):
+        with h5tbx.File(attrs=dict(title='my file')) as h5:
+            self.assertEqual(h5.find('title')[0].name, '/')
+            h5.create_dataset('temp', data=np.array([1, 2, 3]),
+                              attrs=dict(standard_name='temperature', units='K'))
+            h5.create_dataset('vel/u', data=np.array([1, 2, 3]),
+                              attrs=dict(standard_name='velocity', units='m/s'))
+            res = sorted(h5.find(['standard_name', 'units']))
+            self.assertEqual(res[0].name, '/temp')
+            self.assertEqual(res[1].name, '/vel/u')
 
     def test_find_in_files(self):
         with h5tbx.File(attrs=dict(name='root group')) as h51:
@@ -29,11 +39,11 @@ class TestHDFDB(unittest.TestCase):
         self.assertEqual(res[0].name, '/')
 
         res = list(h5tbx.database.find([h51.hdf_filename, h52.hdf_filename],
-                                  {'name': 'grp name'}, recursive=False))
+                                       {'name': 'grp name'}, recursive=False))
         self.assertEqual(len(res), 1)
 
         res = list(h5tbx.database.find([h51.hdf_filename, h52.hdf_filename],
-                                  {'name': 'grp name'}, recursive=True))
+                                       {'name': 'grp name'}, recursive=True))
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0].name, '/grp')
 
@@ -68,8 +78,8 @@ class TestHDFDB(unittest.TestCase):
         self.assertEqual(res.name, ds_name)
 
         h5tbx.database.find_one(h5.hdf_filename, {'$dtype': {'$regex': 'S*'}},
-                     objfilter='dataset',
-                     recursive=False)
+                                objfilter='dataset',
+                                recursive=False)
         self.assertIsInstance(res, h5tbx.database.lazy.LDataset)
         self.assertEqual(res.name, ds_name)
 
@@ -276,7 +286,8 @@ class TestHDFDB(unittest.TestCase):
             h5.attrs['tag'] = 'root'
             h5.create_dataset('dataset', data=np.array([1, 2, 3]),
                               attrs={'tag': 'dataset', 'units': 'm'})
-            h5.create_dataset('dataset2', data=np.array([1, 2, 3]),
+            h5.create_dataset('dataset2', data=np.array([[1, 2, 3],
+                                                         [1, 2, 3]]),
                               attrs={'tag': 'dataset', 'units': 'm/s'})
             grp = h5.create_group('grp')
             grp.attrs['tag'] = 'group'
@@ -285,6 +296,15 @@ class TestHDFDB(unittest.TestCase):
             self.assertListEqual(sorted(res), sorted(['root', 'dataset', 'group']))
             res = gb.distinct('units')
             self.assertListEqual(sorted(res), sorted(['m', 'm/s']))
+
+            res = gb.distinct('units', objfilter='dataset')
+            self.assertListEqual(sorted(res), sorted(['m', 'm/s']))
+
+            res = gb.distinct('$ndim')
+            self.assertListEqual(sorted(res), sorted([1, 2]))
+
+            res = gb.distinct('$ndim', objfilter='dataset')
+            self.assertListEqual(sorted(res), sorted([1, 2]))
 
     def test_regex(self):
         from h5rdmtoolbox.database.hdfdb.query import _regex

@@ -1,20 +1,22 @@
+import h5py
+import importlib_resources
+import numpy as np
 import os
 import re
 import typing
 import warnings
-from abc import abstractmethod
-from time import perf_counter_ns
-
-import h5py
-import importlib_resources
-import numpy as np
 import xarray as xr
 from IPython.display import HTML, display
+from abc import abstractmethod
 from numpy import ndarray
 from ontolutils import M4I, Thing
+from time import perf_counter_ns
 
+from h5rdmtoolbox.wrapper.rdf import (RDF_SUBJECT_ATTR_NAME,
+                                      RDF_PREDICATE_ATTR_NAME,
+                                      RDF_OBJECT_ATTR_NAME,
+                                      RDF_TYPE_ATTR_NAME)
 from . import get_config, identifiers, protected_attributes
-from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDF_PREDICATE_ATTR_NAME, RDF_OBJECT_ATTR_NAME
 
 H5PY_SPECIAL_ATTRIBUTES = ('DIMENSION_LIST', 'REFERENCE_LIST', 'NAME', 'CLASS', protected_attributes.COORDINATES)
 try:
@@ -151,21 +153,21 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
     return string, False
 
 
-def get_iri_icon_href(iri: typing.Union[str, typing.Dict],
+def get_iri_icon_href(iri: str,
                       icon_url: str,
                       tooltiptext=None) -> str:
     """get html representation of an IRI with icon. The URL is shown as a tooltip"""
-    if isinstance(iri, dict):
-        thing = Thing.from_jsonld(data=iri, limit=1)
-        _type = iri.get('@type', None)
-        thing.pop_blank_node_id()
-        thing_str = thing.__str__(limit=50)
-        if _type:
-            _thing_str = thing.__str__(limit=50).split('(', 1)[1]
-            thing_str = f'{_type}({_thing_str}'
-        return f'<div class="tooltip">' \
-               f'<img class="size_of_img" src="{icon_url}" alt="IRI_ICON" width="16" height="16" />' \
-               f'<span class="tooltiptext">{thing_str}</span></div>'
+    # if isinstance(iri, dict):
+    #     thing = Thing.from_jsonld(data=iri, limit=1)
+    #     _type = iri.get(RDF_TYPE_ATTR_NAME, None)
+    #     thing.pop_blank_node_id()
+    #     thing_str = thing.__str__(limit=50)
+    #     if _type:
+    #         _thing_str = thing.__str__(limit=50).split('(', 1)[1]
+    #         thing_str = f'{_type}({_thing_str}'
+    #     return f'<div class="tooltip">' \
+    #            f'<img class="size_of_img" src="{icon_url}" alt="IRI_ICON" width="16" height="16" />' \
+    #            f'<span class="tooltiptext">{thing_str}</span></div>'
 
     return f'<a href="{iri}" target="_blank" class="tooltip"> ' \
            f'<img class="size_of_img" src="{icon_url}" alt="IRI_ICON" width="16" height="16" />' \

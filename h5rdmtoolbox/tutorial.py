@@ -326,7 +326,7 @@ class FlowDataset(File):
 def generate_sample_file() -> pathlib.Path:
     """Generate a sample hdf file with a velocity and pressure dataset"""
     with h5tbx.File() as h5:
-        h5.write_iso_timestamp(name='timestamp', dt=None)  # writes the current date time in iso format to the attribute
+        h5.attrs.write_iso_timestamp(name='timestamp', dt=None)  # writes the current date time in iso format to the attribute
         h5.attrs['project'] = 'tutorial'
         contact_grp = h5.create_group('contact')
         contact_grp.attrs['name', FOAF.firstName] = 'John'

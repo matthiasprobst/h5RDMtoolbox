@@ -4,6 +4,7 @@ import unittest
 from typing import Union
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.convention.consts import DefaultValue
 from h5rdmtoolbox.convention.standard_attributes import StandardAttribute
 
 
@@ -25,8 +26,35 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_standard_attribute_basics(self):
         with self.assertRaises(TypeError):
-            test = StandardAttribute('test',
-                                     validator={'$type': 'string'},
-                                     target_method='create_dataset',
-                                     description='A test',
-                                     )
+            StandardAttribute('test',
+                              validator={'$type': 'string'},
+                              target_method=3.4,
+                              description='A test',
+                              )
+
+        with self.assertRaises(ValueError):
+            StandardAttribute('test',
+                              validator={'$type': 'string'},
+                              target_method='create_dataset2',
+                              description='A test',
+                              )
+
+        test = StandardAttribute('test',
+                                 validator={'$type': 'string'},
+                                 target_method='create_dataset',
+                                 description='A test',
+                                 default_value='none'
+                                 )
+        self.assertEqual(test.default_value, None)
+
+        test = StandardAttribute('test',
+                                 validator={'$type': 'string'},
+                                 target_method='create_dataset',
+                                 description='A test',
+                                 alternative_standard_attribute='alternative',
+                                 default_value='$empty'
+                                 )
+        self.assertEqual(test.default_value, DefaultValue.EMPTY)
+        self.assertEqual(test.alternative_standard_attribute, 'alternative')
+
+        self.assertFalse(test.is_obligatory())

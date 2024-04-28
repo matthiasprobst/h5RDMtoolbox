@@ -63,15 +63,17 @@ class TestTbxValidators(unittest.TestCase):
 
     def test_validate_identifier(self):
         class Identifier(BaseModel):
-            ident: toolbox_validators.identifierType
+            identifier: toolbox_validators.identifierType
 
         with self.assertRaises(ValueError):
             Identifier(orcid=3.4)
+        with self.assertRaises(TypeError):
+            Identifier(identifier=3.4)
         with self.assertRaises(pydantic.ValidationError):
-            Identifier(ident='0000-0001-8729-0482')
-        Identifier(ident='https://orcid.org/0000-0002-1825-0097')
+            Identifier(identifier='0000-0001-8729-0482')
+        Identifier(identifier='https://orcid.org/0000-0002-1825-0097')
         with self.assertRaises(pydantic.ValidationError):
-            Identifier(ident='https://orcid.org/0000-0002-1825-0096')  # invalid orcid due to checksum
+            Identifier(identifier='https://orcid.org/0000-0002-1825-0096')  # invalid orcid due to checksum
 
     def test_validate_orcid(self):
         class Validator(BaseModel):
@@ -111,6 +113,9 @@ class TestTbxValidators(unittest.TestCase):
         self.assertIsInstance(Validator(quantity='3.3 m').quantity, pint.Quantity)
         self.assertEqual(Validator(quantity='3.3 m').quantity.magnitude, 3.3)
 
+        with self.assertRaises(ValueError):
+            Validator(quantity='3.4 kilo meter')
+
     def test_validate_units(self):
         class Validator(BaseModel):
             units: toolbox_validators.unitsType
@@ -119,11 +124,15 @@ class TestTbxValidators(unittest.TestCase):
         self.assertIsInstance(Validator(units=pint.Unit('m')).units, pint.Unit)
         self.assertIsInstance(Validator(units='m').units, pint.Unit)
 
+        with self.assertRaises(pydantic.ValidationError):
+            Validator(units={'unit': 'm'})
+
     def test_date_format(self):
         class Validator(BaseModel):
             date: toolbox_validators.dateFormatType
 
         self.assertIsInstance(Validator(date='2021-01-01').date,
                               datetime.datetime)
+
         with self.assertRaises(TypeError):
             Validator(date=3.4)
