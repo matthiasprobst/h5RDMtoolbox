@@ -5,6 +5,8 @@ import unittest
 import warnings
 from datetime import datetime
 
+import numpy as np
+from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
 import h5py
 import numpy as np
 from skimage.feature import graycomatrix, graycoprops
@@ -88,8 +90,6 @@ class TestH5Mongo(unittest.TestCase):
 
     @is_testable
     def test_make_dict_mongo_compatible(self):
-        import numpy as np
-        from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
         self.assertEqual(make_dict_mongo_compatible({'a': 1}), {'a': 1})
         self.assertEqual(make_dict_mongo_compatible({'a': {'b': 4}}), {'a': {'b': 4}})
         self.assertEqual(make_dict_mongo_compatible({'a': None}), {'a': None})
@@ -141,6 +141,28 @@ class TestH5Mongo(unittest.TestCase):
         self.assertEqual(10, mongoDBInterface.collection.count_documents({}))
 
         pathlib.Path('test.h5').unlink()
+
+    def test_insert_group(self):
+        mongoDBInterface = MongoDB(collection=self.collection)
+
+        with h5py.File('test.h5', 'w') as h5:
+            h5.create_dataset('grp/dataset0d', data=1)
+            h5.create_dataset('grp/subgrp/dataset', shape=(10, 20, 4))
+
+            mongoDBInterface.insert_group(h5['grp'], recursive=True)
+
+        self.assertEqual(4,  mongoDBInterface.collection.count_documents({}))
+
+        self.client.drop_database('hdf_database_test')
+        mongoDBInterface = MongoDB(collection=self.collection)
+
+        with h5py.File('test.h5', 'w') as h5:
+            h5.create_dataset('grp/dataset0d', data=1)
+            h5.create_dataset('grp/subgrp/dataset', shape=(10, 20, 4))
+
+            mongoDBInterface.insert_group(h5['grp'], recursive=False)
+
+        self.assertEqual(2,  mongoDBInterface.collection.count_documents({}))
 
     @is_testable
     def test_find_one(self):

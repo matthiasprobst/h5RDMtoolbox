@@ -1,13 +1,12 @@
 import datetime
-import json
-import pathlib
-import unittest
-from datetime import datetime, timedelta
-
 import h5py
+import json
 import numpy as np
 import pandas as pd
+import pathlib
+import unittest
 import xarray as xr
+from datetime import datetime, timedelta
 from dateutil.parser import parse
 from numpy import linspace as ls
 
@@ -691,6 +690,24 @@ class TestCore(unittest.TestCase):
                 h5['vel'].sel(time=1.2, method='invalid')
             self.assertEqual(1.5, float(h5['vel'].sel(time=1.2, method='nearest')))
 
+    def test_unit_conversion_interface(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('time', data=[1, 2, 3], attrs=dict(units='s'), make_scale=True)
+            h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attrs=dict(units='m/s'), attach_scales='time')
+            # print(h5['vel'].to_units('m/s', time='h'))
+            ret = h5['vel'].to_units('mm/s', time='h').sel(time=1.2, method='nearest')
+            self.assertEqual(1.5 * 1000, float(ret))
+            self.assertEqual('mm/s', ret.attrs['units'])
+            self.assertEqual('h', ret.coords['time'].units)
+
+            time_h = h5.time.to_units('h')[()]
+            self.assertEqual(time_h.units, 'h')
+            np.testing.assert_almost_equal(time_h.values, np.array([1, 2, 3]) / 60 / 60)
+
+            time_h = h5.vel.to_units('mm/s').isel(time=1)
+            self.assertEqual(time_h.units, 'mm/s')
+            self.assertEqual(time_h.values, 2.5 * 1000)
+
     def test_multi_isel_and_sel(self):
         with h5tbx.File() as h5:
             time = h5.create_dataset('time', data=ls(0, 1, 10), make_scale=True)
@@ -711,6 +728,13 @@ class TestCore(unittest.TestCase):
                 x=[4.3, 10.9],
                 time=0.2,
                 method='nearest')
+            np.testing.assert_equal(d.x.data, [5, 10])
+
+            d = h5['data'].sel(
+                x=np.linspace(4.3, 10.9, 100),
+                time=0.2,
+                method='nearest')
+            np.testing.assert_array_almost_equal(d.x.data, [5, 6.666667, 8.333333, 10])
 
     def test_create_dataset_with_ancillary_ds(self):
         with h5tbx.File() as h5:

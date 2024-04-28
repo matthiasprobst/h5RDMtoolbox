@@ -18,7 +18,7 @@ Highlights
 ----------
 - Combining HDF5 and `xarray <https://docs.xarray.dev/en/stable/>`_ to allow easy access to metadata and data during
   analysis and processing (see `here <https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface>`_).
-- Assigning [metadata with "globally unique and persistent identifiers"]() as required by `F1 of the FAIR
+- Assigning metadata with "globally unique and persistent identifiers" as required by `F1 of the FAIR
   principles <https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/>`_.
   This "remove[s] ambiguity in the meaning of your published data...".
 - Define standard attributes through

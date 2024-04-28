@@ -273,16 +273,17 @@ def _insert_group(
         for h5obj in grp.values():
             if isinstance(h5obj, h5py.Dataset):
                 if include_dataset:
-                    h5obj.mongo.insert(axis=None,
-                                       collection=collection,
-                                       update=update,
-                                       ignore_attrs=ignore_attrs)
+                    _insert_dataset(h5obj, collection=collection,
+                                    axis=None,
+                                    update=update,
+                                    ignore_attrs=ignore_attrs)
             else:
                 if recursive:
-                    h5obj.mongo.insert(collection, recursive=recursive,
-                                       update=update,
-                                       include_dataset=include_dataset,
-                                       ignore_attrs=ignore_attrs)
+                    _insert_group(h5obj, collection=collection, recursive=recursive,
+                                  update=update,
+                                  include_dataset=include_dataset,
+                                  ignore_attrs=ignore_attrs)
+
     return collection
 
 

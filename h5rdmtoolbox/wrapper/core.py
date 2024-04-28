@@ -1,24 +1,23 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 
+import h5py
 import json
 import logging
+import numpy as np
 import os
 import pathlib
-import shutil
-import warnings
-from collections.abc import Iterable
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import List, Dict, Union, Tuple, Optional
-
-import h5py
-import numpy as np
 # noinspection PyUnresolvedReferences
 import pint
+import shutil
+import warnings
 import xarray as xr
+from collections.abc import Iterable
+from datetime import datetime, timezone
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
+from pathlib import Path
+from typing import List, Dict, Union, Tuple, Optional
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf, rdf
@@ -351,7 +350,7 @@ class Group(h5py.Group):
         except (RuntimeError, AttributeError) as e:
             if not get_config('natural_naming'):
                 # raise an error if natural naming is NOT enabled
-                raise Exception(e)
+                raise AttributeError(e)
 
         # if item in self.__dict__:
         #     return super().__getattribute__(item)
@@ -1190,12 +1189,12 @@ class Group(h5py.Group):
         >>> grp:
         >>>   attrs:
         >>>     comment: test
-        >>> grp/supgrp/y:
+        >>> grp/subgrp/y:
         >>>   data: 2
         >>>   overwrite: True
         >>>   attrs:
         >>>     units: 'm/s'
-        >>> grp/supgrp:
+        >>> grp/subgrp:
         >>>   attrs:
         >>>     comment: This is a group comment
         >>>   velocity:
@@ -1301,6 +1300,32 @@ def only_0d_and_1d(obj):
             raise ValueError('Only applicable to 0D and 1D datasets!')
 
     return obj
+
+
+class UnitConversionInterface:
+    def __init__(self, dataset, dataset_unit, **coord_units):
+        self.dataset = dataset
+        self.dataset_unit = dataset_unit
+        self.coord_units = coord_units
+
+    def _convert_units(self, data: xr.DataArray):
+        assert isinstance(data, xr.DataArray)
+        assert 'units' in data.attrs, 'No units attribute found in the dataset'
+        for c, cn in self.coord_units.items():
+            assert 'units' in data.coords[c].attrs, f'No units attribute found in the coordinate {c}'
+            data.coords[c] = data.coords[c].pint.quantify(unit_registry=get_ureg()).pint.to(
+                self.coord_units[c]).pint.dequantify()
+        # convert units
+        return data.pint.quantify(unit_registry=get_ureg()).pint.to(self.dataset_unit).pint.dequantify()
+
+    def sel(self, method=None, **coords) -> xr.DataArray:
+        return self._convert_units(self.dataset.sel(method=method, **coords))
+
+    def isel(self, **indexers) -> xr.DataArray:
+        return self._convert_units(self.dataset.isel(**indexers))
+
+    def __getitem__(self, *args, **kwargs):
+        return self._convert_units(self.dataset.__getitem__(*args, **kwargs))
 
 
 class Dataset(h5py.Dataset):
@@ -1624,7 +1649,23 @@ class Dataset(h5py.Dataset):
             for cname, item in indexers.items():
                 sl[cname] = item
 
-        return self[tuple([v for v in sl.values()])]
+        def _make_ascending(_data):
+            if isinstance(_data, (np.ndarray, list)):
+                warnings.warn(
+                    'Only ascending order is supported for np.ndarray and list. Reducing the data to unique values'
+                )
+                unique_data = np.unique(_data)
+                _diff = np.diff(unique_data)
+                if np.all(_diff == 1):
+                    # more efficient to use slice
+                    return slice(unique_data[0], unique_data[-1] + 1, 1)
+                if np.all(_diff == 2):
+                    # more efficient to use slice
+                    return slice(unique_data[0], unique_data[-1] + 1, 2)
+                return unique_data
+            return _data
+
+        return self[tuple([_make_ascending(v) for v in sl.values()])]
 
     def sel(self, method=None, **coords):
         """Select data based on coordinates and specific value(s). This is useful if the index
@@ -1888,17 +1929,25 @@ class Dataset(h5py.Dataset):
         super().__init__(_id)
         self._hdf_filename = Path(self.file.filename)
 
-    def to_units(self, new_units: str, inplace: bool = False):
-        """Changes the physical unit of the dataset using pint_xarray.
-        If `inplace`=True, it loads to full dataset into RAM, which may
-        not recommended for very large datasets.
-        TODO: think about RAM check or perform it based on chunks"""
-        if inplace:
-            old_units = self[()].attrs['units']
-            self[()] = self[()].pint.quantify().pint.to(new_units).pint.dequantify()
-            new_units = self[()].attrs['units']
-            logger.debug(f'Changed units of {self.name} from {old_units} to {new_units}.')
-        return self[()].pint.quantify().pint.to(new_units).pint.dequantify()
+    def to_units(self, dataset_unit, **coord_units) -> UnitConversionInterface:
+        """Return interface, which allows to convert the dataset and/or its dimension scales
+        (coordinates) to a new unit. On the return object, the methods isel() and sel() can be
+        used to select data based on named dimension and index or values - just in the new
+        units.
+
+        Parameters
+        ----------
+        dataset_unit : str
+            The new unit for the dataset.
+        coord_units : Dict
+            The new units for the coordinates.
+
+        Examples
+        --------
+        >>> with h5tbx.File('test.h5', 'r') as h5:
+        >>>     h5.vel.to_units('m/s', time='s', z='m')
+        """
+        return UnitConversionInterface(self, dataset_unit, **coord_units)
 
     def set_primary_scale(self, axis, iscale: int):
         """Set the primary scale for a specific axis.

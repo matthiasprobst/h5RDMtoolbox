@@ -1,15 +1,15 @@
 """test_file.py"""
+import h5py
+import numpy as np
 import pathlib
 import time
 import unittest
 import uuid
+import yaml
 from datetime import datetime
 from pathlib import Path
 
-import h5py
 import h5rdmtoolbox as h5tbx
-import numpy as np
-import yaml
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox import use
 from h5rdmtoolbox.utils import generate_temporary_filename
@@ -52,7 +52,9 @@ class TestFile(unittest.TestCase):
         self.assertIsInstance(h5.hdf_filename, pathlib.Path)
         self.assertTrue(h5.hdf_filename.exists())
         h5tbx.clean_temp_data()
-        self.assertFalse(h5.hdf_filename.exists())
+        with self.assertRaises(FileNotFoundError):
+            h5.hdf_filename.exists()
+
         if pathlib.Path('test.hdf').exists():
             # just in case ...
             pathlib.Path('test.hdf').unlink()
