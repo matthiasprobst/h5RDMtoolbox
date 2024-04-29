@@ -38,6 +38,8 @@ class TestConventions(unittest.TestCase):
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
 
+
+
     def test_list_of_validators(self):
         lov = convention.get_list_of_validators()
         self.assertIsInstance(lov, dict)
@@ -157,7 +159,7 @@ def validate_f1(a, b, c=3, d=2):
     def test_h5tbx(self):
         f = h5tbx.UserDir['convention'] / 'h5tbx' / 'h5tbx.py'
         f.unlink(missing_ok=True)
-        from h5rdmtoolbox.convention._h5tbx import build_convention
+        from h5rdmtoolbox.convention import build_convention
         build_convention()
 
         h5tbx.use('h5tbx')

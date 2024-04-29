@@ -3,7 +3,7 @@ from typing import Optional
 
 from h5rdmtoolbox import get_ureg
 from h5rdmtoolbox.protocols import H5TbxDataset
-from ..wrapper.accessory import Accessory, register_special_dataset
+from h5rdmtoolbox.wrapper.accessory import Accessory, register_special_dataset
 
 
 class ToUnitsInterface:

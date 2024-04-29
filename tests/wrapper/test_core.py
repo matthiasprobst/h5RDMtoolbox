@@ -674,6 +674,14 @@ class TestCore(unittest.TestCase):
             self.assertEqual({'time': h5['time']}, h5['vel'].coords())
             self.assertEqual({}, h5['vel_no_scale'].coords())
 
+        # multiple dims:
+        with h5tbx.File() as h5:
+            h5.create_dataset('x1', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('x2', data=[10, 20, 30], make_scale=True)
+            h5.create_dataset('data', data=[-1, 0, 1], attach_scales=('x1',))
+            h5['data'].dims[0].attach_scale(h5['x2'])
+            self.assertEqual({'x1': h5['x1'], 'x2': h5['x2']}, h5['data'].coords())
+
     def test_isel_sel(self):
         with h5tbx.File() as h5:
             h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
@@ -735,6 +743,9 @@ class TestCore(unittest.TestCase):
                 time=0.2,
                 method='nearest')
             np.testing.assert_array_almost_equal(d.x.data, [5, 6.666667, 8.333333, 10])
+
+            d = h5['data'].isel(x=[0, 1])
+            self.assertEqual(float(d.x[0]), float(h5.x[0]))
 
     def test_create_dataset_with_ancillary_ds(self):
         with h5tbx.File() as h5:

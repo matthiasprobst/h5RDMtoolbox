@@ -156,6 +156,8 @@ class H5TbxHLObject(Protocol):
 
     def __delitem__(self, key): ...
 
+    def __getitem__(self, *args, **kwargs):
+        ...
 
 class H5TbxFile(H5TbxHLObject):
     """Protocol for the h5tbx.File class."""
@@ -166,6 +168,11 @@ class H5TbxGroup(H5TbxFile):
 
     def __getitem__(self, name: str):
         ...
+
+    @property
+    def basename(self) -> str:
+        """Return the basename, which is the last part
+        of the HDF5 object path."""
 
 
 class H5TbxDataset(H5TbxHLObject):
@@ -178,6 +185,11 @@ class H5TbxDataset(H5TbxHLObject):
     @property
     def hdf_filename(self) -> pathlib.Path:
         """Return the filename as a pathlib.Path object."""
+
+    @property
+    def basename(self) -> str:
+        """Return the basename, which is the last part
+        of the HDF5 object path."""
 
     def sel(self, method=None, **coords) -> xr.DataArray:
         """Return the Dataset selected by the coordinates"""

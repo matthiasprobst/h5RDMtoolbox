@@ -1578,10 +1578,16 @@ class Dataset(h5py.Dataset):
             return self.rootparent[self.attrs['DATA_OFFSET'].name]
         return None
 
-    def coords(self):
+    def coords(self) -> Dict:
         """Return a dictionary of the dimension scales of the dataset.
         Corresponds to the xarray coordinates."""
-        return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
+        coords = {}
+        for dim in self.dims:
+            if len(dim) > 0:
+                for i, d in enumerate(dim):
+                    coords[dim[i].name.rsplit('/')[-1]] = dim[i]
+        return coords
+        # return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
     def isel(self, **indexers) -> xr.DataArray:
         """Index selection by providing the coordinate name.
@@ -1608,8 +1614,9 @@ class Dataset(h5py.Dataset):
             for cname in indexers.keys():
                 if cname not in ds_coords:
                     raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
-            sl = {cname: slice(None) for cname in ds_coords.keys()}
-            for cname, item in indexers.items():
+
+            sl = {cname: slice(None) for cname, _ in zip(ds_coords.keys(), range(self.ndim))}
+            for (cname, item), _ in zip(indexers.items(), range(self.ndim)):
                 sl[cname] = item
         else:
             # no indexers available. User must provide dim_<i> then!
@@ -1617,8 +1624,8 @@ class Dataset(h5py.Dataset):
                 raise KeyError(f'No coordinates available. Provide dim_<i> as key!')
             dim_dict = {f'dim_{i}': slice(None) for i in range(len(self.shape))}
             # indices = [int(cname.split('_')[1]) for cname in indexers.keys()]
-            sl = {cname: slice(None) for cname in dim_dict.keys()}
-            for cname, item in indexers.items():
+            sl = {cname: slice(None) for cname, _ in zip(dim_dict.keys(), range(self.ndim))}
+            for (cname, item), _ in zip(indexers.items(), range(self.ndim)):
                 sl[cname] = item
 
         def _make_ascending(_data):
