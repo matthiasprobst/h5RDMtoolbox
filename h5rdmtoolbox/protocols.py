@@ -6,11 +6,12 @@ the classes must implement, and the classes that implement the protocols
 must have the same method signatures.
 """
 
-import pathlib
-from typing import Protocol, Optional, Union, Dict, List, Any, Tuple
-
 import h5py
+import numpy as np
+import pathlib
 import rdflib
+import xarray as xr
+from typing import Protocol, Optional, Union, Dict, List, Any, Tuple
 
 
 class NamedObject(Protocol):
@@ -154,7 +155,13 @@ class H5TbxHLObject(Protocol):
         ...
 
     def __delitem__(self, key): ...
-class H5TbxGroup(H5TbxHLObject):
+
+
+class H5TbxFile(H5TbxHLObject):
+    """Protocol for the h5tbx.File class."""
+
+
+class H5TbxGroup(H5TbxFile):
     """Protocol for the h5tbx.Group class."""
 
     def __getitem__(self, name: str):
@@ -171,6 +178,22 @@ class H5TbxDataset(H5TbxHLObject):
     @property
     def hdf_filename(self) -> pathlib.Path:
         """Return the filename as a pathlib.Path object."""
+
+    def sel(self, method=None, **coords) -> xr.DataArray:
+        """Return the Dataset selected by the coordinates"""
+        ...
+
+    def isel(self, **indexers) -> xr.DataArray:
+        """Return the Dataset indexed by the indexers"""
+        ...
+
+    def __getitem__(self,
+                    args,
+                    new_dtype=None,
+                    nparray=False,
+                    links_as_strings: bool = False) -> Union[xr.DataArray, np.ndarray]:
+        """Return the data array by the item name"""
+        ...
 
 
 class StandardAttribute(Protocol):

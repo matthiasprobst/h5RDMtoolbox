@@ -1,10 +1,9 @@
 """h5rdtoolbox repository"""
 
+import appdirs
 import logging
 import pathlib
 from logging.handlers import RotatingFileHandler
-
-import appdirs
 
 _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
 _logdir.mkdir(parents=True, exist_ok=True)
@@ -161,9 +160,11 @@ def get_filesize(hdf_filename: Union[str, pathlib.Path]) -> int:
     """Get the size of the HDF5 file in bytes"""
     return utils.get_filesize(hdf_filename)
 
+
 def get_checksum(hdf_filename: Union[str, pathlib.Path]) -> str:
     """Get the checksum of the HDF5 file"""
     return utils.get_checksum(hdf_filename)
+
 
 def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):
     """A decoder function takes a xarray.DataArray and a dataset as input and returns a xarray.DataArray
@@ -182,6 +183,15 @@ def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwr
 
 
 atexit_verbose = False
+
+
+def set_loglevel(level: Union[int, str]):
+    """Set the logging level of the h5rdmtoolbox logger"""
+    import logging
+    _logger = logging.getLogger('h5rdmtoolbox')
+    _logger.setLevel(level)
+    for h in _logger.handlers:
+        h.setLevel(level)
 
 
 @atexit.register

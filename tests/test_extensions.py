@@ -220,16 +220,16 @@ class TestExtension(unittest.TestCase):
         with h5tbx.File(mode='w') as h5:
             ds = h5.create_dataset('x', data=[1, 2, 3], make_scale=True, attrs={'units': 'm'})
             y = h5.create_dataset('y', data=[1, 0, 1], attach_scale='x', attrs={'units': 'mm'})
-            ds_cm = ds[()].to('cm')
+            ds_cm = ds.to_units('cm')[()]
             self.assertEqual('cm', ds_cm.attrs['units'])
 
-            y_cm = y[()].to('cm')
+            y_cm = y.to_units('cm')[()]
             self.assertEqual('cm', y_cm.attrs['units'])
 
-            y_xcm = y[()].to({'x': 'cm'})
+            y_xcm = y.to_units({'x': 'cm'})[()]
             self.assertEqual('mm', y_xcm.attrs['units'])
             self.assertEqual('cm', y_xcm.x.attrs['units'])
 
-            y_xcm = y[()].to(x='cm')
+            y_xcm = y.to_units(x='cm')[()]
             self.assertEqual('mm', y_xcm.attrs['units'])
             self.assertEqual('cm', y_xcm.x.attrs['units'])

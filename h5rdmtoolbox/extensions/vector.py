@@ -1,9 +1,10 @@
 import h5py
 import xarray as xr
+from typing import List, Tuple
 
 # noinspection PyUnresolvedReferences
 from . import magnitude  # automatically make magnitude available
-from ..wrapper.accessory import Accessor, register_special_dataset
+from ..wrapper.accessory import Accessory, register_special_dataset
 from ..wrapper.core import Group, File
 
 
@@ -19,31 +20,28 @@ class HDFXrDataset:
         self._data_vars = list(self._datasets.keys())
         self._shape = self._datasets[self._data_vars[0]].shape
 
-    def __getitem__(self, item) -> xr.DataArray:
+    def __getitem__(self, item) -> xr.Dataset:
         return xr.merge([da.__getitem__(item).rename(k) for k, da in self._datasets.items()])
 
     def __repr__(self):
         return f'<HDF-XrDataset (shape {self.shape} data_vars: {self.data_vars})>'
 
     @property
-    def data_vars(self):
+    def data_vars(self) -> List[str]:
         """List of data variables in the dataset"""
         return self._data_vars
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[int]:
         """Shape of the dataset (taken from the first dataset)"""
         return self._shape
 
 
 @register_special_dataset("Vector", Group)
 @register_special_dataset("Vector", File)
-class VectorDataset(Accessor):
+class VectorDataset(Accessory):
     """A special dataset for vector data.
      The vector components are stored in the group as datasets."""
-
-    def __init__(self, h5grp: h5py.Group):
-        self._grp = h5grp
 
     def __call__(self, *args, **kwargs) -> HDFXrDataset:
         """Returns a xarray dataset with the vector components as data variables.
@@ -68,7 +66,7 @@ class VectorDataset(Accessor):
         hdf_datasets = {}
         for arg in args:
             if isinstance(arg, str):
-                ds = self._grp[arg]
+                ds = self._obj[arg]
             elif isinstance(arg, h5py.Dataset):
                 ds = arg
             else:
@@ -77,7 +75,7 @@ class VectorDataset(Accessor):
 
         for name, ds in kwargs.items():
             if isinstance(ds, str):
-                ds = self._grp[ds]
+                ds = self._obj[ds]
             elif not isinstance(ds, h5py.Dataset):
                 raise TypeError(f'Invalid type: {type(ds)}')
             hdf_datasets[name.strip('/')] = ds

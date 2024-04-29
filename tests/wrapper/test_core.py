@@ -15,8 +15,8 @@ from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
-logger = h5tbx.logger
-# logger.setLevel('ERROR')
+logger = h5tbx.set_loglevel('ERROR')
+
 __this_dir__ = pathlib.Path(__file__).parent
 
 

@@ -1302,32 +1302,6 @@ def only_0d_and_1d(obj):
     return obj
 
 
-class UnitConversionInterface:
-    def __init__(self, dataset, dataset_unit, **coord_units):
-        self.dataset = dataset
-        self.dataset_unit = dataset_unit
-        self.coord_units = coord_units
-
-    def _convert_units(self, data: xr.DataArray):
-        assert isinstance(data, xr.DataArray)
-        assert 'units' in data.attrs, 'No units attribute found in the dataset'
-        for c, cn in self.coord_units.items():
-            assert 'units' in data.coords[c].attrs, f'No units attribute found in the coordinate {c}'
-            data.coords[c] = data.coords[c].pint.quantify(unit_registry=get_ureg()).pint.to(
-                self.coord_units[c]).pint.dequantify()
-        # convert units
-        return data.pint.quantify(unit_registry=get_ureg()).pint.to(self.dataset_unit).pint.dequantify()
-
-    def sel(self, method=None, **coords) -> xr.DataArray:
-        return self._convert_units(self.dataset.sel(method=method, **coords))
-
-    def isel(self, **indexers) -> xr.DataArray:
-        return self._convert_units(self.dataset.isel(**indexers))
-
-    def __getitem__(self, *args, **kwargs):
-        return self._convert_units(self.dataset.__getitem__(*args, **kwargs))
-
-
 class Dataset(h5py.Dataset):
     """Wrapper around the h5py.Dataset. Some useful methods are added on top of
     the underlying *h5py* package.
@@ -1349,8 +1323,6 @@ class Dataset(h5py.Dataset):
     * dumps(): string representation of group
     * isel(): Select data by named dimension and index, mimics xarray.isel.
     * sel(): Select data by named dimension and values, mimics xarray.sel.
-    * to_units(): Convert the dataset to a new unit.
-    * write_iso_timestamp(): Write an ISO 8601 timestamp to the current dataset attribute.
 
     The following properties are added to the h5py.Dataset object:
 
@@ -1928,26 +1900,6 @@ class Dataset(h5py.Dataset):
 
         super().__init__(_id)
         self._hdf_filename = Path(self.file.filename)
-
-    def to_units(self, dataset_unit, **coord_units) -> UnitConversionInterface:
-        """Return interface, which allows to convert the dataset and/or its dimension scales
-        (coordinates) to a new unit. On the return object, the methods isel() and sel() can be
-        used to select data based on named dimension and index or values - just in the new
-        units.
-
-        Parameters
-        ----------
-        dataset_unit : str
-            The new unit for the dataset.
-        coord_units : Dict
-            The new units for the coordinates.
-
-        Examples
-        --------
-        >>> with h5tbx.File('test.h5', 'r') as h5:
-        >>>     h5.vel.to_units('m/s', time='s', z='m')
-        """
-        return UnitConversionInterface(self, dataset_unit, **coord_units)
 
     def set_primary_scale(self, axis, iscale: int):
         """Set the primary scale for a specific axis.
