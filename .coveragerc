@@ -17,6 +17,10 @@ exclude_lines =
     @abstractmethod
     @abc.abstractmethod
     pragma: no cover
+    class ZenodoRecord
+    class HDF5StructureHTMLRepr
+    def to_html
+    def to_latex
     def __repr__
     def __hash__
     def __str__

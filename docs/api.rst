@@ -19,6 +19,7 @@ Base wrapper class
    h5rdmtoolbox.wrapper.core.File
    h5rdmtoolbox.wrapper.core.Dataset
    h5rdmtoolbox.wrapper.core.Group
+   h5rdmtoolbox.wrapper.core.Group.create_from_yaml
 
 Conventions
 ===========

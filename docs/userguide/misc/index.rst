@@ -18,3 +18,4 @@ of the sub-package implementations. This section outlines them.
     Visualization.ipynb
     Time.ipynb
     UserDirectories.ipynb
+    FileProperties.ipynb
