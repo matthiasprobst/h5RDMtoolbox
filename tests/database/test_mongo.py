@@ -144,6 +144,7 @@ class TestH5Mongo(unittest.TestCase):
 
         pathlib.Path('test.h5').unlink()
 
+    @is_testable
     def test_insert_group(self):
         mongoDBInterface = MongoDB(collection=self.collection)
 
