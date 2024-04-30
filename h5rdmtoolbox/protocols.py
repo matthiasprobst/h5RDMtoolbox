@@ -159,6 +159,7 @@ class H5TbxHLObject(Protocol):
     def __getitem__(self, *args, **kwargs):
         ...
 
+
 class H5TbxFile(H5TbxHLObject):
     """Protocol for the h5tbx.File class."""
 
@@ -197,6 +198,9 @@ class H5TbxDataset(H5TbxHLObject):
 
     def isel(self, **indexers) -> xr.DataArray:
         """Return the Dataset indexed by the indexers"""
+        ...
+
+    def make_scale(self, name: str = ''):
         ...
 
     def __getitem__(self,

@@ -17,7 +17,7 @@ class RDFError(Exception):
     pass
 
 
-def valdate_url(url: str) -> str:
+def validate_url(url: str) -> str:
     """validate the url with pydantic
     Raises
     ------
@@ -355,9 +355,9 @@ class RDFManager:
         """Add a rdf type (@type in JSON-LD syntax) to the group or dataset.
         If the subject already exists, it will not be added again."""
         if isinstance(rdf_type, list):
-            data = [valdate_url(str(i)) for i in rdf_type]
+            data = [validate_url(str(i)) for i in rdf_type]
         else:
-            data = valdate_url(str(rdf_type))
+            data = validate_url(str(rdf_type))
 
         # get the attribute
         iri_sbj_data = self._attr.get(RDF_TYPE_ATTR_NAME, None)
@@ -459,7 +459,7 @@ class RDFManager:
             raise TypeError(f'Expecting a string or URL. Got {type(jsonld_id)}. Note, that a subject '
                             'can only be one value. If you meant to set one or multiple RDF types, '
                             'use .type instead.')
-        self._attr[RDF_SUBJECT_ATTR_NAME] = valdate_url(jsonld_id)
+        self._attr[RDF_SUBJECT_ATTR_NAME] = validate_url(jsonld_id)
 
     # aliases:
     rdf_object = object
