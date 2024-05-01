@@ -7,4 +7,5 @@ sphinx-copybutton
 sphinx-design
 myst-nb
 sphinxcontrib-bibtex
+kglab
 pivmetalib @ git+https://github.com/matthiasprobst/pivmetalib@main
