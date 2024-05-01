@@ -1,15 +1,16 @@
 """RDF (Resource Description Framework) module for use with HDF5 files"""
 import abc
-from typing import Dict, Union, Optional, List
-
 import h5py
 import pydantic
 from pydantic import HttpUrl
+from typing import Dict, Union, Optional, List
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = '@ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
 RDF_TYPE_ATTR_NAME = '@TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
+
+DEFINITION_ATTR_NAME = 'ATTR_DEFINITION'
 
 
 class RDFError(Exception):
@@ -153,6 +154,18 @@ class IRIDict(Dict):
                 append(self._attr, self._attr_name, v, RDF_OBJECT_ATTR_NAME)
         else:
             set_object(self._attr, self._attr_name, value)
+
+    @property
+    def definition(self):
+        """Return the definition of the attribute"""
+        return self._attr.get(DEFINITION_ATTR_NAME, {}).get(self._attr_name, None)
+
+    @definition.setter
+    def definition(self, definition: str):
+        """Define the attribute. JSON-LD export will interpret this as SKOS.definition."""
+        attr_def = self._attr.get(DEFINITION_ATTR_NAME, {})
+        attr_def.update({self._attr_name: definition})
+        self._attr[DEFINITION_ATTR_NAME] = attr_def
 
 
 class _RDFPO(abc.ABC):

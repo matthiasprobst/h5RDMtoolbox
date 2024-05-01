@@ -1,18 +1,17 @@
+import h5py
 import json
 import logging
-import pathlib
-import warnings
-from itertools import count
-from typing import Dict, List
-from typing import Optional, Union, Iterable, Tuple, Any
-
-import h5py
 import numpy as np
 import ontolutils
+import pathlib
 import rdflib
+import warnings
+from itertools import count
 from ontolutils.classes.utils import split_URIRef
-from rdflib import Graph, URIRef, Literal, BNode, XSD, RDF, SKOS
+from rdflib import Graph, URIRef, BNode, XSD, RDF, SKOS
 from rdflib.plugins.shared.jsonld.context import Context
+from typing import Dict, List
+from typing import Optional, Union, Iterable, Tuple, Any
 
 from h5rdmtoolbox.convention import hdf_ontology
 from .core import Dataset, File
@@ -94,7 +93,8 @@ def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool = True) -
         if i == n - 1:
             flag_list_rest = RDF.nil
         else:
-            flag_list_rest = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+            flag_list_rest = rdflib.BNode(
+                value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
         g.add((flag_list, RDF.rest, flag_list_rest))
         flag_list = flag_list_rest
 
@@ -149,7 +149,7 @@ def resolve_iri(key_or_iri: str, context: Context) -> str:
 #         return Literal(_av)
 
 
-def _get_id(_node, use_simple_bnode_value:bool=True) -> Union[URIRef, BNode]:
+def _get_id(_node, use_simple_bnode_value: bool = True) -> Union[URIRef, BNode]:
     """if an attribute in the node is called "@id", use that, otherwise use the node name"""
     _id = _node.rdf.subject  # _node.attrs.get('@id', None)
     # if local is not None:
@@ -638,7 +638,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
             if structural:  # add hdf type and name nodes
                 _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
-                attr_def: str = obj.attrsdef.get(ak, None)
+                # attr_def: str = obj.attrsdef.get(ak, None)
+                attr_def: str = obj.rdf[ak].definition# .get(ak, None)
                 if attr_def:
                     _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
                     _add_node(g, (attr_node, SKOS.definition, rdflib.Literal(attr_def)))
@@ -741,8 +742,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
                 attr_object = None
 
-
-            attr_def = obj.attrsdef.get(ak, None)
+            # attr_def = obj.attrsdef.get(ak, None)
+            attr_def = obj.rdf[ak].definition#.get(ak, None)
             if attr_def:
                 _add_node(g, (attr_node, SKOS.definition, rdflib.Literal(attr_def)))
 

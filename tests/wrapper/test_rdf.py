@@ -365,18 +365,14 @@ class TestRDF(unittest.TestCase):
 
             self.assertEqual(len(res), 1)
 
-
-
     def test_definition(self):
         with h5tbx.File() as h5:
             h5.attrs['title'] = 'test'
-            h5.attrsdef['title'] = 'This is the title of the dataset'
-            self.assertEqual(h5.attrsdef['title'], 'This is the title of the dataset')
+            h5.rdf['title'].definition = 'This is the title of the dataset'
+            # h5.attrsdef['title'] = 'This is the title of the dataset'
+            self.assertEqual(h5.rdf['title'].definition, 'This is the title of the dataset')
 
             h5.attrs['name'] = h5tbx.Attribute('Matthias', definition='This is the name of the person to contact')
-            self.assertEqual(h5.attrsdef['name'], 'This is the name of the person to contact')
+            self.assertEqual(h5.rdf['name'].definition, 'This is the name of the person to contact')
 
             h5.dumps()
-
-            with self.assertRaises(KeyError):
-                h5.attrsdef['test'] = 'This should not work!'

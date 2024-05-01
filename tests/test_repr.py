@@ -68,7 +68,7 @@ class TestRepr(unittest.TestCase):
         def test_repr_def(self):
             with File() as h5:
                 h5.attrs['orcid'] = h5tbx.__author_orcid__
-                h5.attrsdef['orcid'] = 'https://example.com/hasOrcid'
+                h5.rdf['orcid'].definition = 'https://example.com/hasOrcid'
 
                 ssr = _repr.HDF5StructureStrRepr()
                 ssr(h5)

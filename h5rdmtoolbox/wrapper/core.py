@@ -28,7 +28,6 @@ from .. import _repr, get_config, convention, utils, consts, protected_attribute
 from .. import get_ureg
 from .. import protocols
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
-from ..convention import definition
 from ..convention.consts import DefaultValue
 
 logger = logging.getLogger('h5rdmtoolbox')
@@ -406,10 +405,10 @@ class Group(h5py.Group):
         warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
         return rdf.RDFManager(self.attrs)
 
-    @property
-    def attrsdef(self) -> definition.DefinitionManager:
-        """Return DefinitionManager"""
-        return definition.DefinitionManager(self.attrs)
+    # @property
+    # def attrsdef(self) -> definition.DefinitionManager:
+    #     """Return DefinitionManager"""
+    #     return definition.DefinitionManager(self.attrs)
 
     def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
@@ -1412,11 +1411,6 @@ class Dataset(h5py.Dataset):
         return rdf.RDFManager(self.attrs)
 
     @property
-    def attrsdef(self) -> definition.DefinitionManager:
-        """Return DefinitionManager"""
-        return definition.DefinitionManager(self.attrs)
-
-    @property
     def hdf_filename(self) -> pathlib.Path:
         """The filename of the file, even if the HDF5 file is closed."""
         return assert_filename_existence(self._hdf_filename)
@@ -1514,11 +1508,6 @@ class Dataset(h5py.Dataset):
         ancillary_datasets[ancillary_dataset.basename] = ancillary_dataset.name
         self.attrs[consts.ANCILLARY_DATASET] = ancillary_datasets
         return self
-
-    # @property
-    # def has_flag_data(self):
-    #     """Check if the dataset has a flag dataset attached."""
-    #     return ANCILLARY_DATASET in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
 
     def detach_data_scale(self):
         """Remove the attached data scale dataset from this dataset."""
@@ -2171,10 +2160,10 @@ class File(h5py.File, Group):
         warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
         return rdf.RDFManager(self.attrs)
 
-    @property
-    def attrsdef(self) -> definition.DefinitionManager:
-        """Return DefinitionManager"""
-        return definition.DefinitionManager(self.attrs)
+    # @property
+    # def attrsdef(self) -> definition.DefinitionManager:
+    #     """Return DefinitionManager"""
+    #     return definition.DefinitionManager(self.attrs)
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.

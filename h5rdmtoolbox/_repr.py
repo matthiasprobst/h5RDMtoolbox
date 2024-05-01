@@ -298,7 +298,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
             use_attr_name = name
         else:
             pred = h5obj.rdf[name].get(RDF_PREDICATE_ATTR_NAME, None)
-            attrsdef = h5obj.attrsdef.get(name, None)
+            attrsdef = h5obj.rdf[name].definition
             if pred and attrsdef:
                 use_attr_name = f'{name} (p={pred}, def={attrsdef})'
             elif pred:
@@ -576,7 +576,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
         if rdf_predicate is not None:
             disp_name += get_iri_icon_href(rdf_predicate, icon_url=IRI_ICON)
 
-        attrs_def = h5obj.attrsdef.get(name, None)
+        attrs_def = h5obj.rdf[name].definition
         if attrs_def is not None:
             disp_name += get_def_icon_href(attrs_def)
 

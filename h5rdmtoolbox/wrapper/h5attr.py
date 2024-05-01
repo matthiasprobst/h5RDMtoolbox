@@ -1,20 +1,19 @@
 """Attribute module"""
 import ast
+import h5py
 import json
 import logging
-import warnings
-from datetime import datetime
-from typing import Dict, Union, Tuple, Optional, Any
-
-import h5py
 import numpy as np
 import pint
 import pydantic
 import rdflib
+import warnings
+from datetime import datetime
 from h5py._hl.attrs import AttributeManager
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID, phil
 from pydantic import HttpUrl
+from typing import Dict, Union, Tuple, Optional, Any
 
 from .h5utils import get_rootparent
 from .. import errors
@@ -265,7 +264,7 @@ class WrapperAttributeManager(AttributeManager):
         if rdf_object is not None:
             self._parent.rdf.object[name] = rdf_object
         if definition is not None:
-            self._parent.attrsdef[name] = definition
+            self._parent.rdf[name].definition = definition
         return r
 
     @with_phil
