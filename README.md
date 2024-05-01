@@ -134,9 +134,13 @@ specific to the features of the package:
 - `pint_xarray>=0.2.1`: Working with units for usage with xarray
 - `python-forge==18.6.0`: Used to update function signatures when using
   the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+- `pydantic`: Used to validate [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
 - `pyyaml>6.0.0`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions
   collide with python 3.11
 - `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
+- `rdflib`: Used to enable working with RDF
+- `ontolutils`: Required to work with RDF and derive semantic description of HDF5 file content
+
 
 #### Optional dependencies
 

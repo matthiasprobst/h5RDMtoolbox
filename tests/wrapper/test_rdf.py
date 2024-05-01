@@ -369,7 +369,6 @@ class TestRDF(unittest.TestCase):
         with h5tbx.File() as h5:
             h5.attrs['title'] = 'test'
             h5.rdf['title'].definition = 'This is the title of the dataset'
-            # h5.attrsdef['title'] = 'This is the title of the dataset'
             self.assertEqual(h5.rdf['title'].definition, 'This is the title of the dataset')
 
             h5.attrs['name'] = h5tbx.Attribute('Matthias', definition='This is the name of the person to contact')

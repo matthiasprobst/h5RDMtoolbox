@@ -33,8 +33,9 @@ except FileNotFoundError:
 # else:
 DEF_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/def_icon.png?raw=true"
 IRI_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
-ID_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-FAIRattrs/h5rdmtoolbox/data/id_icon.png?raw=true"
-TYPE_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev-FAIRattrs/h5rdmtoolbox/data/type_icon.png?raw=true"
+ID_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/id_icon.png?raw=true"
+TYPE_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/type_icon.png?raw=true"
+
 hasUnitIRI = str(M4I.hasUnit)
 """
 disclaimer:
