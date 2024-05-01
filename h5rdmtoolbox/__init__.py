@@ -47,7 +47,7 @@ from . import warnings, errors
 from .wrapper import jsonld
 from .wrapper.lazy import lazy
 from .wrapper.h5attr import Attribute
-from .wrapper.accessory import register_special_dataset
+from .wrapper.accessor import register_special_dataset
 import json
 
 name = 'h5rdmtoolbox'

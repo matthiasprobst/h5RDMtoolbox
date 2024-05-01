@@ -83,7 +83,7 @@ def register_special_dataset(name, cls: Union[str, Type[H5TbxHLObject]], overwri
     return decorator
 
 
-class Accessory:
+class Accessor:
     """Base class for all special datasets"""
 
     def __init__(self, obj: H5TbxHLObject):

@@ -3,7 +3,7 @@ from typing import Optional
 
 from h5rdmtoolbox import get_ureg
 from h5rdmtoolbox.protocols import H5TbxDataset
-from h5rdmtoolbox.wrapper.accessory import Accessory, register_special_dataset
+from h5rdmtoolbox.wrapper.accessor import Accessor, register_special_dataset
 
 
 class ToUnitsInterface:
@@ -38,7 +38,7 @@ class ToUnitsInterface:
 
 
 @register_special_dataset("to_units", "Dataset")
-class ToUnitsAccessory(Accessory):
+class ToUnitsAccessor(Accessor):
     """Accessor to await selected data to be converted to a new units"""
 
     def __call__(self, dataset_unit: Optional[str] = None, **coord_units) -> ToUnitsInterface:

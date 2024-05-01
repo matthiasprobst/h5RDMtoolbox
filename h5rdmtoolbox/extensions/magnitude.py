@@ -5,7 +5,7 @@ import xarray as xr
 from typing import Dict, Optional
 
 from h5rdmtoolbox.protocols import H5TbxDataset
-from h5rdmtoolbox.wrapper.accessory import Accessory, register_special_dataset
+from h5rdmtoolbox.wrapper.accessor import Accessor, register_special_dataset
 
 
 class MagnitudeInterface:
@@ -50,7 +50,7 @@ class MagnitudeInterface:
 
 @register_special_dataset("Magnitude", "Group")
 @register_special_dataset("Magnitude", "File")
-class Magnitude(Accessory):
+class Magnitude(Accessor):
     def __call__(self, *datasets, name: Optional[str] = None, keep_attrs: bool = False) -> MagnitudeInterface:
         if len(datasets) < 2:
             raise ValueError('Please provide at least two datasets to compute magnitude')
