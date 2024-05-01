@@ -4,8 +4,7 @@ import xarray as xr
 from typing import Dict, Optional
 
 from h5rdmtoolbox.protocols import H5TbxDataset
-from h5rdmtoolbox.wrapper.accessor import Accessor, register_special_dataset
-from . import magnitude  # automatically make magnitude available
+from h5rdmtoolbox.wrapper.accessor import Accessor, register_accessor
 
 
 class VectorInterface:
@@ -23,8 +22,8 @@ class VectorInterface:
             combine_attrs=self.combine_attrs)
 
 
-@register_special_dataset("Vector", "Group")
-@register_special_dataset("Vector", "File")
+@register_accessor("Vector", "Group")
+@register_accessor("Vector", "File")
 class Vector(Accessor):
     def __call__(self,
                  *args,

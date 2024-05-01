@@ -47,8 +47,9 @@ from . import warnings, errors
 from .wrapper import jsonld
 from .wrapper.lazy import lazy
 from .wrapper.h5attr import Attribute
-from .wrapper.accessor import register_special_dataset
+# from h5rdmtoolbox.wrapper.accessor import register_accessor
 import json
+from .wrapper.accessor import register_accessor
 
 name = 'h5rdmtoolbox'
 __this_dir__ = pathlib.Path(__file__).parent

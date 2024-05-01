@@ -4,7 +4,7 @@ from typing import Union, Dict
 
 from h5rdmtoolbox import get_ureg
 from h5rdmtoolbox.protocols import H5TbxDataset
-from h5rdmtoolbox.wrapper.accessor import Accessor, register_special_dataset
+from h5rdmtoolbox.wrapper.accessor import Accessor, register_accessor
 
 NORM_DELIMITER = '/'
 
@@ -90,7 +90,7 @@ class CoordNormalizationInterface:
         return self._ni
 
 
-@register_special_dataset("normalize", "Dataset")
+@register_accessor("normalize", "Dataset")
 class ToUnitsAccessor(Accessor):
     """Accessor to await selected data to be converted to a new units"""
 

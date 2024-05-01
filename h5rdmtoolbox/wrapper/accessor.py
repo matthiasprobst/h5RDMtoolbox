@@ -2,7 +2,7 @@
 import logging
 from typing import Union, Type
 
-from ..protocols import H5TbxHLObject
+from h5rdmtoolbox.protocols import H5TbxHLObject
 
 logger = logging.getLogger('h5rdmtoolbox')
 
@@ -50,7 +50,7 @@ class _CachedHDFAccessor:
 PROPERTY_ACCESSOR_NAMES = []
 
 
-def _register_special_dataset(name, cls, special_dataset, overwrite):
+def _register_accessor(name, cls, special_dataset, overwrite):
     if hasattr(cls, name):
         if not overwrite:
             raise RuntimeError(f'Cannot register the accessor {special_dataset!r} under name {name!r} '
@@ -60,7 +60,7 @@ def _register_special_dataset(name, cls, special_dataset, overwrite):
     return special_dataset
 
 
-def register_special_dataset(name, cls: Union[str, Type[H5TbxHLObject]], overwrite=False):
+def register_accessor(name, cls: Union[str, Type[H5TbxHLObject]], overwrite=False):
     """registers a special dataset to a wrapper class"""
 
     if isinstance(cls, str):
@@ -78,7 +78,7 @@ def register_special_dataset(name, cls: Union[str, Type[H5TbxHLObject]], overwri
 
     def decorator(accessor):
         """decorator"""
-        return _register_special_dataset(name, cls, accessor, overwrite)
+        return _register_accessor(name, cls, accessor, overwrite)
 
     return decorator
 

@@ -674,7 +674,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 try:
                     attr_literal = rdflib.Literal(json.dumps(av))
                 except TypeError as e:
-                    warnings.warn(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
+                    logger.debug(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
                     attr_literal = rdflib.Literal(str(av))
 
             if attr_literal:

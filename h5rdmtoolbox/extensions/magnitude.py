@@ -5,7 +5,7 @@ import xarray as xr
 from typing import Dict, Optional
 
 from h5rdmtoolbox.protocols import H5TbxDataset
-from h5rdmtoolbox.wrapper.accessor import Accessor, register_special_dataset
+from h5rdmtoolbox.wrapper.accessor import Accessor, register_accessor
 
 
 class MagnitudeInterface:
@@ -48,8 +48,8 @@ class MagnitudeInterface:
         )
 
 
-@register_special_dataset("Magnitude", "Group")
-@register_special_dataset("Magnitude", "File")
+@register_accessor("Magnitude", "Group")
+@register_accessor("Magnitude", "File")
 class Magnitude(Accessor):
     def __call__(self, *datasets, name: Optional[str] = None, keep_attrs: bool = False) -> MagnitudeInterface:
         if len(datasets) < 2:
