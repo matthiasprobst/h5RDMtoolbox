@@ -12,6 +12,8 @@ Log of changes in the versions
   - When a file is opened with a filename which does not exist and mode is None, the file will NOT be created. This was
     the case in the past, but this may lead to unwanted empty files.
   - Bugfix namespace creation
+  - some method renaming and refactoring
+  - accessors are refactored and improved (especially shifted away from xarray and fully integrated in hdf)
 
 ## v1.2.2
 
