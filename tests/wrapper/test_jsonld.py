@@ -30,6 +30,12 @@ class TestCore(unittest.TestCase):
     def tearDown(self):
         pathlib.Path('test.hdf').unlink(missing_ok=True)
 
+    def test_dump_type(self):
+        with h5tbx.File() as h5:
+            grp = h5.create_group('grp')
+            grp.rdf.type = 'https://example.org/MyGroup'
+            print(h5.dump_jsonld(indent=2))
+
     def test_build_node_list(self):
 
         g = rdflib.Graph()

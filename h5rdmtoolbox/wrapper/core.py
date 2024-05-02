@@ -1567,6 +1567,7 @@ class Dataset(h5py.Dataset):
             return self.rootparent[self.attrs['DATA_OFFSET'].name]
         return None
 
+    @property
     def coords(self) -> Dict:
         """Return a dictionary of the dimension scales of the dataset.
         Corresponds to the xarray coordinates."""
@@ -1577,6 +1578,32 @@ class Dataset(h5py.Dataset):
                     coords[dim[i].name.rsplit('/')[-1]] = dim[i]
         return coords
         # return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
+
+    def assign_coords(self, coords=None, **coords_kwargs):
+        if coords is not None:
+            if not isinstance(coords, list):
+                coords = [coords]
+            for c in coords:
+                if not isinstance(c, h5py.Dataset):
+                    raise ValueError('Only h5py.Dataset objects can be assigned as coordinates!')
+                coords_kwargs.update({c.name: c})
+
+        for k, v in coords_kwargs.items():
+
+            if not isinstance(v, h5py.Dataset):
+                if not isinstance(v, xr.DataArray):
+                    raise TypeError(f'Only h5py.Dataset or xarray.DataArray objects can be assigned as coordinates, '
+                                    f'but got {type(v)}')
+                raise TypeError('Only h5py.Dataset objects can be assigned as coordinates!')
+
+            if v.ndim not in (0, self.ndim):
+                raise ValueError(f'Coordinate {k} must have the same dimension as the dataset or be a scalar!')
+            elif isinstance(v, xr.DataArray):
+                self.parent.create_dataset_from_xarray_dataset(v)
+
+        curr_coords = self.attrs.get(protected_attributes.COORDINATES, {})
+        curr_coords.update(coords_kwargs)
+        self.attrs[protected_attributes.COORDINATES] = curr_coords
 
     def isel(self, **indexers) -> xr.DataArray:
         """Index selection by providing the coordinate name.
@@ -1598,7 +1625,7 @@ class Dataset(h5py.Dataset):
         """
         if len(indexers) == 0:
             return self[()]
-        ds_coords = self.coords()
+        ds_coords = self.coords
         if ds_coords:
             for cname in indexers.keys():
                 if cname not in ds_coords:
@@ -1638,7 +1665,7 @@ class Dataset(h5py.Dataset):
     def sel(self, method=None, **coords):
         """Select data based on coordinates and specific value(s). This is useful if the index
         is not known. Only works for a single dimension and for method 'exact'."""
-        av_coord_datasets = self.coords()
+        av_coord_datasets = self.coords
         isel = {}
         for coord_name, coord_values in coords.items():
             if coord_name not in av_coord_datasets:
@@ -1844,6 +1871,27 @@ class Dataset(h5py.Dataset):
                     return _arr
             return _arr
 
+        coords = {}
+        coordinates: Optional[Union[str, List[str]]] = ds_attrs.get(protected_attributes.COORDINATES, None)
+        if coordinates is not None:
+            if isinstance(coordinates, str):
+                coordinates = [coordinates, ]
+            else:
+                coordinates = list(coordinates)
+
+            for c in coordinates:
+                if c[0] == '/':
+                    _data = self.rootparent[c]
+                else:
+                    _data = self.parent[c]
+                _name = Path(c).stem
+                coords.update({_name: xr.DataArray(name=_name, dims=(),
+                                                   data=_data,
+                                                   attrs=pop_hdf_attributes(self.parent[c].attrs))})
+            da = xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
+            for k, v in coords.items():
+                da = da.assign_coords({k: v})
+            return da
         return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
     def __repr__(self) -> str:

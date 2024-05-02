@@ -4,6 +4,7 @@ from typing import Union, List, Dict, Optional
 
 import h5py
 
+from h5rdmtoolbox.protected_attributes import COORDINATES
 from h5rdmtoolbox.protocols import LazyObject
 
 
@@ -113,7 +114,10 @@ class LDataset(LHDFObject):
         self.fillvalue = obj.fillvalue
         self.scaleoffset = obj.scaleoffset
         self.external = obj.external
-
+        self._coords = obj.attrs.get(COORDINATES, {})
+        for dim in obj.dims:
+            for i in range(len(dim)):
+                self._coords[dim[i].name] = lazy(dim[i])
         self._file = None
 
     def __repr__(self):
@@ -125,10 +129,9 @@ class LDataset(LHDFObject):
         with File(self.filename, mode='r') as h5:
             return h5[self.name][item]
 
+    @property
     def coords(self):
-        from .. import File
-        with File(self.filename) as h5:
-            return h5[self.name].coords()
+        return self._coords
 
     def isel(self, **indexers):
         from .. import File

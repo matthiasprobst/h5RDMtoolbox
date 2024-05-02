@@ -659,6 +659,30 @@ class TestCore(unittest.TestCase):
             self.assertEqual(1, len(h5['ds3'].dims[0].keys()))
             self.assertEqual('/time', h5['ds3'].dims[0][0].name)
 
+    def test_create_dataset_from_xr2(self):
+        da = xr.DataArray(name='pressure', data=[1, 2, 3])
+        da = da.assign_coords(x=4.3)
+
+        with h5tbx.File() as h5:
+            h5['pressure'] = da
+            # print(h5['pressure'].coords)
+            # h5.pressure.assign_coords(x=h5['x'])
+            # h5.pressure.attrs['COORDINATES'] = 'x'
+            h5.dump()
+            p = h5.pressure[()]
+        self.assertEqual(p.x.data, 4.3)
+        self.assertTrue('x' in p.coords)
+
+        with h5tbx.File() as h5:
+            h5['pressure'] = xr.DataArray(name='pressure', data=[1, 2, 3])
+            with self.assertRaises(TypeError):
+                h5['pressure'].assign_coords(x=4.3)
+            h5['x'] = xr.DataArray(name='x', data=4.3)
+            h5['pressure'].assign_coords(h5['x'])
+            p = h5.pressure[()]
+        self.assertEqual(p.x.data, 4.3)
+        self.assertTrue('x' in p.coords)
+
     def test_create_dataset_scale_issues(self):
         with h5tbx.File() as h5:
             with self.assertRaises(ValueError):
@@ -669,10 +693,10 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
             h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attach_scales='time')
             h5.create_dataset('vel_no_scale', data=[1.5, 2.5, 3.5])
-            self.assertIsInstance(h5['vel'].coords(), dict)
-            self.assertEqual('time', list(h5['vel'].coords().keys())[0])
-            self.assertEqual({'time': h5['time']}, h5['vel'].coords())
-            self.assertEqual({}, h5['vel_no_scale'].coords())
+            self.assertIsInstance(h5['vel'].coords, dict)
+            self.assertEqual('time', list(h5['vel'].coords.keys())[0])
+            self.assertEqual({'time': h5['time']}, h5['vel'].coords)
+            self.assertEqual({}, h5['vel_no_scale'].coords)
 
         # multiple dims:
         with h5tbx.File() as h5:
@@ -680,7 +704,7 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('x2', data=[10, 20, 30], make_scale=True)
             h5.create_dataset('data', data=[-1, 0, 1], attach_scales=('x1',))
             h5['data'].dims[0].attach_scale(h5['x2'])
-            self.assertEqual({'x1': h5['x1'], 'x2': h5['x2']}, h5['data'].coords())
+            self.assertEqual({'x1': h5['x1'], 'x2': h5['x2']}, h5['data'].coords)
 
     def test_isel_sel(self):
         with h5tbx.File() as h5:

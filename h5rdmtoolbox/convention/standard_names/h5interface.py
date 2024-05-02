@@ -77,7 +77,7 @@ class StandardTensor(StandardCoordinate):
         if not create_coords_if_missing:
             return ds
 
-        if all(len(c.coords()) == 0 for c in self.components.values()):
+        if all(len(c.coords) == 0 for c in self.components.values()):
             for i in range(len(self.components)):
                 ds = ds.assign_coords({f'dim_{i}': range(self.components[self.component_names[i]].shape[i])})
         return ds

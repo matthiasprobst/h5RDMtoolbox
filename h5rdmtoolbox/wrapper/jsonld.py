@@ -10,12 +10,12 @@ from itertools import count
 from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, BNode, XSD, RDF, SKOS
 from rdflib.plugins.shared.jsonld.context import Context
-from typing import Dict, List
-from typing import Optional, Union, Iterable, Tuple, Any
+from typing import Dict, List, Optional, Union, Iterable, Tuple, Any
 
 from h5rdmtoolbox.convention import hdf_ontology
 from .core import Dataset, File
 from ..convention.ontology import HDF5
+from .rdf import RDF_TYPE_ATTR_NAME
 
 _bnode_counter = count()
 logger = logging.getLogger('h5rdmtoolbox')
@@ -593,6 +593,9 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             if structural:
                 _add_node(g, (obj_node, RDF.type, HDF5.Group))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
+            h5_rdf_type = obj.attrs.get(RDF_TYPE_ATTR_NAME, None)
+            if h5_rdf_type:
+                _add_node(g, (obj_node, RDF.type, rdflib.URIRef(h5_rdf_type)))
             group_type = obj.rdf.type
             if isinstance(group_type, list):
                 for gs in group_type:
@@ -622,6 +625,10 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 else:
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_FLOAT')))
 
+            h5_rdf_type = obj.attrs.get(RDF_TYPE_ATTR_NAME, None)
+            if h5_rdf_type:
+                _add_node(g, (obj_node, RDF.type, rdflib.URIRef(h5_rdf_type)))
+
             obj_type = obj.rdf.subject
             if obj_type is not None:
                 _add_node(g, (obj_node, RDF.type, rdflib.URIRef(obj_type)))
@@ -638,16 +645,12 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
             if structural:  # add hdf type and name nodes
                 _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
-                # attr_def: str = obj.attrsdef.get(ak, None)
-                attr_def: str = obj.rdf[ak].definition# .get(ak, None)
+                attr_def: str = obj.rdf[ak].definition
                 if attr_def:
                     _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
                     _add_node(g, (attr_node, SKOS.definition, rdflib.Literal(attr_def)))
                     if 'skos' not in ctx:
                         ctx['skos'] = 'http://www.w3.org/2004/02/skos/core#'
-                    # def_node = rdflib.BNode()
-                    # _add_node(g, (def_node, SCHEMA.comment, rdflib.Literal(attr_def)))
-                    # _add_node(g, (attr_node, HDF5.name, def_node))
                 else:
                     _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
 

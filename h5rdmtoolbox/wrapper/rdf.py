@@ -5,6 +5,9 @@ import pydantic
 from pydantic import HttpUrl
 from typing import Dict, Union, Optional, List
 
+from . import lazy
+from ..protocols import H5TbxAttributeManager
+
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = '@ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
@@ -243,7 +246,7 @@ class RDF_OBJECT(_RDFPO):
 class RDFManager:
     """IRI attribute manager"""
 
-    def __init__(self, attr: h5py.AttributeManager = None):
+    def __init__(self, attr: H5TbxAttributeManager = None):
         self._attr = attr
 
     def __str__(self) -> str:
@@ -346,7 +349,7 @@ class RDFManager:
                     common_objects = item_set
                 else:
                     common_objects = common_objects.intersection(item_set)
-        return list(common_objects)
+        return [lazy.lazy(c) for c in list(common_objects)]
 
     @property
     def type(self) -> Union[str, List[str], None]:

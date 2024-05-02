@@ -16,7 +16,7 @@ class NormalizationInterface:
                  norm_data: Dict[str, Union[float, str]],
                  name: bool = False):
         self.dataset = dataset
-        self._coord_names = list(dataset.coords())
+        self._coord_names = list(dataset.coords)
         self.norm_data: Dict = norm_data
         self.cnorm_data: Dict = {}
         self.cnorm_name: Dict = {}

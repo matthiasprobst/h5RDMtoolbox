@@ -55,6 +55,7 @@ class HDFArrayAccessor:
         attach_scales = []
         coordinates_0dim = []
 
+
         for coord in self._obj.coords:
             if coord not in group:
                 _data = self._obj.coords[coord].values
@@ -71,15 +72,17 @@ class HDFArrayAccessor:
                                                attrs=coord_attrs, **kwargs)
                 for k, v in self._obj.coords[coord].attrs.items():
                     cds.attrs[k] = v
-                cds.make_scale()
+                if self._obj.shape != cds.shape and cds.ndim == 0:
+                    coordinates_0dim.append(coord)
+                else:
+                    cds.make_scale()
+                    if 'REFERENCE_LIST' not in group[coord].attrs:
+                        group[coord].make_scale()
 
-            if 'REFERENCE_LIST' not in group[coord].attrs:
-                group[coord].make_scale()
-
-            if self._obj.coords[coord].ndim == 0:
-                coordinates_0dim.append(coord)  # will be written to attribute "COORDINATES"
-            else:
-                attach_scales.append(coord)
+            # if self._obj.coords[coord].ndim == 0:
+            #     coordinates_0dim.append(coord)  # will be written to attribute "COORDINATES"
+            # else:
+            #     attach_scales.append(coord)
 
         dset = group.create_dataset(name, data=self._obj.data, attrs=ds_attrs, **kwargs)
         # for k, v in ds_attrs.items():

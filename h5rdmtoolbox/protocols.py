@@ -106,6 +106,7 @@ class LazyGroup(LazyObject):
 
 class H5TbxAttributeManager(Protocol):
     """Protocol for the AttributeManager class."""
+    _parent: Union[h5py.Group, h5py.Dataset]
 
     @property
     def raw(self) -> h5py.AttributeManager:
@@ -180,6 +181,7 @@ class H5TbxDataset(H5TbxHLObject):
     """Protocol for the h5tbx.Dataset class."""
     name: str
 
+    @property
     def coords(self):
         ...
 
