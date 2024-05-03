@@ -20,7 +20,7 @@ class _H5DictDataInterface(Protocol):
                 h5.attrs[k] = v
             else:
                 # can be dataset or group
-                if H5Yaml.is_dataset(v):
+                if self.is_dataset(v):
                     v.pop('type', None)
                     if 'name' not in v:
                         v['name'] = k
@@ -34,18 +34,7 @@ class _H5DictDataInterface(Protocol):
                     except (TypeError,) as e:
                         raise RuntimeError('Could not create dataset. Please check the yaml file. The orig. '
                                            f'error is "{e}"')
-                    # if isinstance(data, str):
-                    #     ds = h5.create_string_dataset(name, data=data,
-                    #                                   **v)
-                    # else:
-                    #     ds = h5.create_dataset(name=name, data=data)
-                    # for ak, av in v.items():
-                    #     ds.attrs[ak] = av
-                    # if units:
-                    #     ds.attrs['units'] = units
-                    # if standard_name:
-                    #     ds.attrs['standard_name'] = standard_name
-                elif H5Yaml.is_group(v):
+                elif self.is_group(v):
                     v.pop('type', None)
 
                     group_data = v.copy()
@@ -82,7 +71,7 @@ class _H5DictDataInterface(Protocol):
                 if isinstance(v, dict):
                     return True
                 break
-            return not H5Yaml.is_dataset(item)
+            return not self.is_dataset(item)
         return False
 
 

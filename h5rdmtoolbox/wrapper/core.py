@@ -1,23 +1,24 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 
-import h5py
 import json
 import logging
-import numpy as np
 import os
 import pathlib
-# noinspection PyUnresolvedReferences
-import pint
 import shutil
 import warnings
-import xarray as xr
 from collections.abc import Iterable
 from datetime import datetime, timezone
-from h5py._hl.base import phil, with_phil
-from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Optional
+
+import h5py
+import numpy as np
+# noinspection PyUnresolvedReferences
+import pint
+import xarray as xr
+from h5py._hl.base import phil, with_phil
+from h5py._objects import ObjectID
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf, rdf
@@ -999,6 +1000,12 @@ class Group(h5py.Group):
                 for ds, variable_name in zip(datasets, column_names):
                     if variable_name != dimension:
                         ds.dims[0].attach_scale(self[dimension])
+            for ds in datasets:
+                ds.attrs['source_filename'] = csv_filenames
+                if isinstance(csv_filenames, (list, tuple)):
+                    ds.attrs['source_filename_hash_md5'] = [utils.get_checksum(f) for f in csv_filenames]
+                else:
+                    ds.attrs['source_filename_hash_md5'] = utils.get_checksum(csv_filenames)
             return datasets
 
         data = {}
@@ -1015,13 +1022,16 @@ class Group(h5py.Group):
                     data[name].append(value.values.reshape(shape))
 
         for name, value in data.items():
-            self.create_dataset(name=str(name),
-                                data=np.stack(value, axis=axis),
-                                attrs=attrs.get(name, None),
-                                overwrite=overwrite,
-                                compression=compression,
-                                compression_opts=compression_opts,
-                                chunks=chunks)
+            ds = self.create_dataset(name=str(name),
+                                     data=np.stack(value, axis=axis),
+                                     attrs=attrs.get(name, None),
+                                     overwrite=overwrite,
+                                     compression=compression,
+                                     compression_opts=compression_opts,
+                                     chunks=chunks)
+
+            ds.attrs['SOURCE_FILENAME'] = csv_filenames
+            ds.attrs['SOURCE_FILENAME_HASH_MD5'] = [utils.get_checksum(f) for f in csv_filenames]
 
     def create_dataset_from_image(self,
                                   img_data: Union[Iterable, np.ndarray, List[np.ndarray]],
