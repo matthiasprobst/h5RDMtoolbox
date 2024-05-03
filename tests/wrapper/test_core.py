@@ -671,17 +671,14 @@ class TestCore(unittest.TestCase):
             # print(h5['pressure'].coords)
             # h5.pressure.assign_coords(x=h5['x'])
             # h5.pressure.attrs['COORDINATES'] = 'x'
-            h5.dump()
             p = h5.pressure[()]
         self.assertEqual(p.x.data, 4.3)
         self.assertTrue('x' in p.coords)
 
         with h5tbx.File() as h5:
             h5['pressure'] = xr.DataArray(name='pressure', data=[1, 2, 3])
-            with self.assertRaises(TypeError):
-                h5['pressure'].assign_coords(x=4.3)
             h5['x'] = xr.DataArray(name='x', data=4.3)
-            h5['pressure'].assign_coords(h5['x'])
+            h5['pressure'].assign_coord(h5['x'])
             p = h5.pressure[()]
         self.assertEqual(p.x.data, 4.3)
         self.assertTrue('x' in p.coords)
@@ -762,7 +759,6 @@ class TestCore(unittest.TestCase):
                                     h5['data'].values[0, 0, [0, 2]])
             np.testing.assert_equal(h5['data'].isel(time=0, y=0, x=[0, 2]),
                                     h5['data'].values[0, 0, [0, 2]])
-            h5.dump()
 
         filename = h5.hdf_filename
 

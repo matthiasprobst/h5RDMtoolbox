@@ -1579,31 +1579,39 @@ class Dataset(h5py.Dataset):
         return coords
         # return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
-    def assign_coords(self, coords=None, **coords_kwargs):
-        if coords is not None:
-            if not isinstance(coords, list):
-                coords = [coords]
-            for c in coords:
-                if not isinstance(c, h5py.Dataset):
-                    raise ValueError('Only h5py.Dataset objects can be assigned as coordinates!')
-                coords_kwargs.update({c.name: c})
-
-        for k, v in coords_kwargs.items():
-
-            if not isinstance(v, h5py.Dataset):
-                if not isinstance(v, xr.DataArray):
-                    raise TypeError(f'Only h5py.Dataset or xarray.DataArray objects can be assigned as coordinates, '
-                                    f'but got {type(v)}')
-                raise TypeError('Only h5py.Dataset objects can be assigned as coordinates!')
-
-            if v.ndim not in (0, self.ndim):
-                raise ValueError(f'Coordinate {k} must have the same dimension as the dataset or be a scalar!')
-            elif isinstance(v, xr.DataArray):
-                self.parent.create_dataset_from_xarray_dataset(v)
-
-        curr_coords = self.attrs.get(protected_attributes.COORDINATES, {})
-        curr_coords.update(coords_kwargs)
+    def assign_coord(self, coord):
+        if isinstance(coord, str):
+            if coord not in self.rootparent:
+                raise ValueError(f'Coordinate {coord} not found in the file!')
+            coord = self.rootparent[coord]
+        curr_coords = self.attrs.get(protected_attributes.COORDINATES, [])
+        curr_coords.append(coord.name)
         self.attrs[protected_attributes.COORDINATES] = curr_coords
+
+        # if coords is not None:
+        #     if not isinstance(coords, list):
+        #         coords = [coords]
+        #     for c in coords:
+        #         if not isinstance(c, h5py.Dataset):
+        #             raise ValueError('Only h5py.Dataset objects can be assigned as coordinates!')
+        #         coords_kwargs.update({c.name: c})
+        #
+        # for k, v in coords_kwargs.items():
+        #
+        #     if not isinstance(v, h5py.Dataset):
+        #         if not isinstance(v, xr.DataArray):
+        #             raise TypeError(f'Only h5py.Dataset or xarray.DataArray objects can be assigned as coordinates, '
+        #                             f'but got {type(v)}')
+        #         raise TypeError('Only h5py.Dataset objects can be assigned as coordinates!')
+        #
+        #     if v.ndim not in (0, self.ndim):
+        #         raise ValueError(f'Coordinate {k} must have the same dimension as the dataset or be a scalar!')
+        #     elif isinstance(v, xr.DataArray):
+        #         self.parent.create_dataset_from_xarray_dataset(v)
+        #
+        # curr_coords = self.attrs.get(protected_attributes.COORDINATES, {})
+        # curr_coords.update(coords_kwargs)
+        # self.attrs[protected_attributes.COORDINATES] = curr_coords
 
     def isel(self, **indexers) -> xr.DataArray:
         """Index selection by providing the coordinate name.

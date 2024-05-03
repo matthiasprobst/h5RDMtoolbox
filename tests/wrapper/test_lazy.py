@@ -5,6 +5,16 @@ import h5rdmtoolbox as h5tbx
 
 class TestLazy(unittest.TestCase):
 
+    def test_lazy_on_datasets_with_coords(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('x', data=[-1, 0, 1], make_scale=True)
+            h5.create_dataset('y', data=5)
+            h5.create_dataset('time', data=[0, 1, 2], make_scale=True)
+            h5.create_dataset('data', data=[10, 20, 30],
+                              attach_scale=(('x', 'time'),))
+            h5.data.assign_coord(h5.y)
+            h5tbx.lazy(h5.data)
+
     def test_lazyObject(self):
         self.assertEqual(h5tbx.lazy(None), None)
 
