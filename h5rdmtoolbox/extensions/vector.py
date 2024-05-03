@@ -1,7 +1,8 @@
 # noinspection PyUnresolvedReferences
+from typing import Dict, Optional
+
 import h5py
 import xarray as xr
-from typing import Dict, Optional
 
 from h5rdmtoolbox.protocols import H5TbxDataset
 from h5rdmtoolbox.wrapper.accessor import Accessor, register_accessor
@@ -11,15 +12,25 @@ class VectorInterface:
     def __init__(self,
                  datasets: Dict[str, H5TbxDataset],
                  name: Optional[str] = None,
-                 combine_attrs: str = "override"):
+                 **xr_merge_kwargs):
         self.datasets = datasets
         self.name = name
-        self.combine_attrs = combine_attrs
+        self.xr_merge_kwargs = xr_merge_kwargs
 
     def __getitem__(self, item) -> xr.Dataset:
         return xr.merge(
             [da.__getitem__(item).rename(k) for k, da in self.datasets.items()],
-            combine_attrs=self.combine_attrs)
+            **self.xr_merge_kwargs)
+
+    def isel(self, **indexers) -> xr.Dataset:
+        return xr.merge(
+            [da.isel(**indexers).rename(k) for k, da in self.datasets.items()],
+            **self.xr_merge_kwargs)
+
+    def sel(self, method: str = None, **kwargs) -> xr.Dataset:
+        return xr.merge(
+            [da.sel(method=method, **kwargs).rename(k) for k, da in self.datasets.items()],
+            **self.xr_merge_kwargs)
 
 
 @register_accessor("Vector", "Group")

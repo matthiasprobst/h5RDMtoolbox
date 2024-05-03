@@ -1,17 +1,20 @@
 import datetime
-import h5py
 import json
-import numpy as np
-import pandas as pd
 import pathlib
 import unittest
-import xarray as xr
 from datetime import datetime, timedelta
+
+import h5py
+import numpy as np
+import pandas as pd
+import xarray as xr
 from dateutil.parser import parse
 from numpy import linspace as ls
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
+# noinspection PyUnresolvedReferences
+from h5rdmtoolbox.extensions import units
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
@@ -721,6 +724,14 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 h5['vel'].sel(time=1.2, method='invalid')
             self.assertEqual(1.5, float(h5['vel'].sel(time=1.2, method='nearest')))
+
+    def test_isel_multiple_coords_per_axis(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('another_time', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attach_scales=(('time', 'another_time'),))
+            v0 = h5.vel.isel(another_time=0)[()]
+            h5.dumps()
 
     def test_unit_conversion_interface(self):
         with h5tbx.File() as h5:

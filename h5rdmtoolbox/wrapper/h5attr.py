@@ -55,8 +55,6 @@ class Attribute:
                  rdf_predicate=None,
                  rdf_object=None):
         self.value = value
-        if not isinstance(value, str):
-            raise TypeError(f'Attribute value must be a string but got {type(value)}')
         self.definition = definition  # skos:definition
         self.rdf_predicate = self._validate_rdf(rdf_predicate)
         self.rdf_object = self._validate_rdf(rdf_object)

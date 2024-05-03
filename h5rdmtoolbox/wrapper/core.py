@@ -1632,8 +1632,22 @@ class Dataset(h5py.Dataset):
                     raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
 
             sl = {cname: slice(None) for cname, _ in zip(ds_coords.keys(), range(self.ndim))}
+            sl_key_list = list(sl.keys())
             for (cname, item), _ in zip(indexers.items(), range(self.ndim)):
-                sl[cname] = item
+                # if the indexer name is in the same dimension as one of the already registered
+                # coordinates in "sl", then replace
+                _replaced = False
+                for idim, d in enumerate(self.dims):
+                    for i in range(len(d)):
+                        if d[i].name.rsplit('/')[-1] == cname:
+                            sl[sl_key_list[idim]] = item
+                            _replaced = True
+                            break
+                if not _replaced:
+                    sl[cname] = item
+            # for k in sl.copy().keys():
+            #     if k not in indexers:
+            #         sl.pop(k)
         else:
             # no indexers available. User must provide dim_<i> then!
             if not all([cname.startswith('dim_') for cname in indexers.keys()]):

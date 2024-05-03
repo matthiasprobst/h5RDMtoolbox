@@ -1,6 +1,7 @@
 import datetime
-import numpy as np
 import unittest
+
+import numpy as np
 import xarray as xr
 
 import h5rdmtoolbox as h5tbx
@@ -62,6 +63,16 @@ class TestExtension(unittest.TestCase):
             self.assertListEqual(list(vec.data_vars), ['uu', 'vv'])
             self.assertEqual(vec['uu'][0], 1)
             self.assertEqual(vec['vv'][0], 2)
+
+            vec = h5.Vector(u='u', v='v').isel(dim_0=slice(None, None, None), dim_1=slice(None, None, None))
+            self.assertIsInstance(vec, xr.Dataset)
+            self.assertTrue('u' in vec.data_vars)
+            self.assertTrue('v' in vec.data_vars)
+            self.assertEqual(vec['u'][0], 1)
+            self.assertEqual(vec['v'][0], 2)
+
+            with self.assertRaises(KeyError):
+                h5.Vector(u='u', v='v').sel(dim_0=5, dim_1=2)
 
     def test_normalize_issue_with_time_vector(self):
         with h5tbx.File() as h5:

@@ -8,9 +8,9 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Attribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
+from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 from h5rdmtoolbox.wrapper.rdf import RDFError
 from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
-from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 
 
 class TestRDF(unittest.TestCase):
@@ -35,6 +35,18 @@ class TestRDF(unittest.TestCase):
         self.assertEqual(rdfobj.__repr__(),
                          'Attribute(0000-0001-8729-0482, ' \
                          'rdf_object=https://orcid.org/0000-0001-8729-0482)')
+
+    def test_rdf_special_values(self):
+        """e.g. lists, ..."""
+        with h5tbx.File() as h5:
+            h5.attrs['flags'] = Attribute([1, 2, 3], rdf_predicate='https://example.org/hasFlags')
+            self.assertEqual(h5.rdf['flags'].predicate, 'https://example.org/hasFlags')
+            self.assertListEqual(list(h5.attrs['flags']), [1, 2, 3])
+
+        with h5tbx.File() as h5:
+            h5.attrs['flags'] = Attribute({'valid': 1, 'invalid': 2}, rdf_predicate='https://example.org/hasFlags')
+            self.assertEqual(h5.rdf['flags'].predicate, 'https://example.org/hasFlags')
+            self.assertDictEqual(h5.attrs['flags'], {'valid': 1, 'invalid': 2})
 
     def test_rdf_object_thing(self):
         """A RDF object can be an URI or RDF object or a ontolutils.Thing object.
