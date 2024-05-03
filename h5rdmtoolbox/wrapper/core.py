@@ -1668,9 +1668,9 @@ class Dataset(h5py.Dataset):
 
         def _make_ascending(_data):
             if isinstance(_data, (np.ndarray, list)):
-                warnings.warn(
-                    'Only ascending order is supported for np.ndarray and list. Reducing the data to unique values'
-                )
+                # warnings.warn(
+                #     'Only ascending order is supported for np.ndarray and list. Reducing the data to unique values'
+                # )
                 unique_data = np.unique(_data)
                 _diff = np.diff(unique_data)
                 if np.all(_diff == 1):
