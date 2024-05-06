@@ -1015,13 +1015,16 @@ class Group(h5py.Group):
                     data[name].append(value.values.reshape(shape))
 
         for name, value in data.items():
-            self.create_dataset(name=str(name),
-                                data=np.stack(value, axis=axis),
-                                attrs=attrs.get(name, None),
-                                overwrite=overwrite,
-                                compression=compression,
-                                compression_opts=compression_opts,
-                                chunks=chunks)
+            ds = self.create_dataset(name=str(name),
+                                     data=np.stack(value, axis=axis),
+                                     attrs=attrs.get(name, None),
+                                     overwrite=overwrite,
+                                     compression=compression,
+                                     compression_opts=compression_opts,
+                                     chunks=chunks)
+
+            ds.attrs['source_filename'] = csv_filenames
+            ds.attrs['source_filename_has_md5'] = [utils.get_checksum(f) for f in csv_filenames]
 
     def create_dataset_from_image(self,
                                   img_data: Union[Iterable, np.ndarray, List[np.ndarray]],

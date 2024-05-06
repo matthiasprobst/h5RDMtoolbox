@@ -202,6 +202,12 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(ValueError):
                 h5.create_datasets_from_csv(csv_filenames=csv_filename1, combine_opt='invlaid')
             h5.create_datasets_from_csv(csv_filenames=csv_filename1)
+            self.assertEqual(pathlib.Path(h5['x'].attrs['source_filename']).resolve().absolute(),
+                             csv_filename1.resolve().absolute())
+            self.assertEqual(h5['x'].attrs['source_filename_hash_md5'], h5tbx.utils.get_checksum(csv_filename1))
+            self.assertEqual(pathlib.Path(h5['y'].attrs['source_filename']).resolve().absolute(),
+                             csv_filename1.resolve().absolute())
+            self.assertEqual(h5['y'].attrs['source_filename_hash_md5'], h5tbx.utils.get_checksum(csv_filename1))
             self.assertEqual(h5['x'].shape, (4,))
             self.assertEqual(h5['y'].shape, (4,))
             np.testing.assert_equal(h5['x'][:], np.array([1, 5, 10, 0]))
@@ -237,6 +243,11 @@ class TestCore(unittest.TestCase):
             h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
                                         combine_opt='concatenate')
             self.assertEqual(h5['x'].shape, (8,))
+            filenames = sorted([pathlib.Path(f).resolve().absolute() for f in h5['y'].attrs['source_filename']])
+            ref_filenames = sorted([csv_filename1.resolve().absolute(), csv_filename2.resolve().absolute()])
+            self.assertEqual(filenames, ref_filenames)
+            self.assertEqual(h5['y'].attrs['source_filename_hash_md5'],
+                             [h5tbx.utils.get_checksum(csv_filename1), h5tbx.utils.get_checksum(csv_filename2)])
             self.assertEqual(h5['y'].shape, (8,))
 
         # test stack
