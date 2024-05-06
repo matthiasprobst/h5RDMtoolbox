@@ -147,6 +147,16 @@ class TestCore(unittest.TestCase):
             h5.attrs['none_attr'] = None
             self.assertEqual(h5.attrs['none_attr'], 'None')
 
+    def test_filename_attr(self):
+        with h5tbx.File() as h5:
+
+            h5.create_dataset('ds', data=np.arange(10))
+            h5['ds'].attrs['filename'] = '/path/to/file.csv'
+            self.assertEqual(h5['ds'].attrs['filename'], '/path/to/file.csv')
+
+            h5.attrs['filename'] = '/path/to/file.csv'
+            self.assertEqual(h5.attrs['filename'], '/path/to/file.csv')
+
     def test_rootparent(self):
         with h5tbx.File() as h5:
             g = h5.create_group('g')
@@ -541,15 +551,15 @@ class TestCore(unittest.TestCase):
 
                 # testing links:
                 obj.attrs['link_to_group'] = h5['/']
-                self.assertEqual(obj.attrs['link_to_group'], h5['/'])
-                self.assertIsInstance(obj.attrs['link_to_group'], h5py.Group)
+                self.assertEqual(obj.attrs['link_to_group'], '/')
+                self.assertIsInstance(obj.attrs['link_to_group'], str)
                 obj.attrs['link_to_ds'] = ds
                 self.assertEqual(obj.attrs['link_to_ds'], ds)
-                self.assertIsInstance(obj.attrs['link_to_ds'], h5py.Dataset)
+                self.assertIsInstance(obj.attrs['link_to_ds'], str)
                 obj.attrs['attribute_of_links_to_ds'] = {'ds': ds, 'grp': grp, 'astr': 'test', 'afloat': 3.1}
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds'], dict)
-                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['ds'], h5py.Dataset)
-                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['grp'], h5py.Group)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['ds'], str)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['grp'], str)
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['astr'], str)
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['afloat'], float)
 
@@ -920,7 +930,7 @@ class TestCore(unittest.TestCase):
 
             ds.attrs['link to grp'] = grp
 
-            self.assertIsInstance(ds.attrs['link to grp'], h5py.Group)
+            self.assertIsInstance(ds.attrs['link to grp'], str)
 
             da = ds[()]
             self.assertIsInstance(da, xr.DataArray)

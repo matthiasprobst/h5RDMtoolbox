@@ -86,17 +86,6 @@ class Attribute:
         return self.__repr__()
 
 
-# def Attribute(value, definition: Optional[str] = None,
-#               rdf_predicate=None, rdf_object=None) -> AttributeValue:
-#     """attribute interface function"""
-#     return AttributeValue(
-#         value,
-#         definition,
-#         rdf_predicate,
-#         rdf_object
-#     )
-
-
 def pop_hdf_attributes(attrs: Dict) -> Dict:
     """Remove HDF attributes like NAME, CLASS, .... from the input dictionary
 
@@ -156,29 +145,29 @@ class WrapperAttributeManager(AttributeManager):
                     if isinstance(v, str):
                         if not v:
                             dictionary[k] = ''
-                        else:
-                            if v[0] == '/':
-                                if isinstance(_id, h5py.h5g.GroupID):
-                                    rootgrp = get_rootparent(h5py.Group(_id))
-                                    dictionary[k] = rootgrp.get(v)
-                                elif isinstance(_id, h5py.h5d.DatasetID):
-                                    rootgrp = get_rootparent(h5py.Dataset(_id).parent)
-                                    dictionary[k] = rootgrp.get(v)
+                        # else:
+                        #     if v[0] == '/':
+                        #         if isinstance(_id, h5py.h5g.GroupID):
+                        #             rootgrp = get_rootparent(h5py.Group(_id))
+                        #             dictionary[k] = rootgrp.get(v)
+                        #         elif isinstance(_id, h5py.h5d.DatasetID):
+                        #             rootgrp = get_rootparent(h5py.Dataset(_id).parent)
+                        #             dictionary[k] = rootgrp.get(v)
                 return dictionary
-            if ret[0] == '/':
-                # it may be group or dataset path or actually just a filepath stored by the user
-                if isinstance(_id, h5py.h5g.GroupID):
-                    # call like this, otherwise recursive call!
-                    from .core import Group
-                    rootgrp = get_rootparent(Group(_id))
-                    if rootgrp.get(ret) is None:
-                        # not a dataset or group, maybe just a filename that has been stored
-                        return ret
-                    return rootgrp.get(ret)
-                else:
-                    from .core import Dataset
-                    rootgrp = get_rootparent(Dataset(_id).parent)
-                    return rootgrp.get(ret)
+            # if ret[0] == '/':
+            #     # it may be group or dataset path or actually just a filepath stored by the user
+            #     if isinstance(_id, h5py.h5g.GroupID):
+            #         # call like this, otherwise recursive call!
+            #         from .core import Group
+            #         rootgrp = get_rootparent(Group(_id))
+            #         if rootgrp.get(ret) is None:
+            #             # not a dataset or group, maybe just a filename that has been stored
+            #             return ret
+            #         return rootgrp.get(ret)
+            #     else:
+            #         from .core import Dataset
+            #         rootgrp = get_rootparent(Dataset(_id).parent)
+            #         return rootgrp.get(ret)
             if ret[0] == '(':
                 if ret[-1] == ')':
                     # might be a tuple object

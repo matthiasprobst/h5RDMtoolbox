@@ -252,7 +252,7 @@ class TestRDF(unittest.TestCase):
             method_grp.rdf.subject = M4I.Method
             method_grp.attrs['has_participants', OBO.RO_0000057] = h5['contact_person']  # has participants
 
-            self.assertEqual(method_grp.attrs['has_participants'], h5['contact_person'])
+            self.assertEqual(method_grp.attrs['has_participants'], h5['contact_person'].name)
 
             grp.attrs['arbitrary'] = 'arbitrary'
             self.assertEqual(grp.rdf.predicate.get('arbitrary', 'invalid'), 'invalid')

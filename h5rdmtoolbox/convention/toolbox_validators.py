@@ -1,12 +1,12 @@
 """general validation functions of the toolbox usable by convention. If users wish to user
 their own validators, they need to define them separately. The respective python script then
 must be provided during initialization of a Convention"""
+import re
+from typing import Union, Dict
 
 import pint
-import re
 import typing_extensions
 from pydantic.functional_validators import WrapValidator
-from typing import Union, Dict
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg, errors
@@ -70,7 +70,7 @@ def __validate_standard_name(value, handler, info) -> "StandardName":
         data_scale = parent.attrs.get('DATA_SCALE', None)
         if data_scale is not None:
             # scale_ds = parent.rootparent[data_scale]
-            ds_scale_units = data_scale.attrs.raw.get('units', '')
+            ds_scale_units = parent.rootparent[data_scale].attrs.get('units', '')
             ureg = get_ureg()
             units = str(ureg.Unit(ds_scale_units) * units)
 
