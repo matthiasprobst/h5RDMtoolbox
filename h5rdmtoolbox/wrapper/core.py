@@ -885,7 +885,7 @@ class Group(h5py.Group):
         return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
 
     def create_datasets_from_csv(self,
-                                 csv_filenames: Union[str, pathlib.Path, List[str], List[pathlib.Path]],
+                                 csv_filenames: Union[str, pathlib.Path, List[Union[str, pathlib.Path]]],
                                  dimension: Union[int, str] = 0,
                                  shape=None,
                                  overwrite=False,
