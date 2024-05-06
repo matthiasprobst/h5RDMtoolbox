@@ -1,8 +1,9 @@
 """Test the mongoDB interface"""
 
+import unittest
+
 import h5py
 import numpy as np
-import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import database
@@ -26,8 +27,11 @@ class TestHDFDB(unittest.TestCase):
     def test_find_in_files(self):
         with h5tbx.File(attrs=dict(name='root group')) as h51:
             h51.create_group('grp')
+            h51.create_dataset('x', data=[10, 20, 30], make_scale=True)
             h51.create_dataset('dataset', data=np.array([1, 2, 3]),
-                               attrs=dict(units='m/s'))
+                               attrs=dict(units='m/s'),
+                               attach_scale='x')
+            h51.find('units')
 
         with h5tbx.File() as h52:
             h52.create_group('grp', attrs=dict(name='grp name'))

@@ -20,11 +20,12 @@ information of try the [quickstart using colab](#quickstart).
   analysis and processing (
   see [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface)).
 - Assigning [metadata with "globally unique and persistent identifiers"]() as required
-  by [F1 of the FAIR principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/)
-  . This "remove[s] ambiguity in the meaning of your published data...".
+  by [F1 of the FAIR principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/).
+  This can be achieved by using [RDF triples](https://www.w3.org/RDF/), which removes "ambiguity in the meaning of your
+  published data".
 - Define standard attributes through
   [conventions](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html) and enforce users to use
-  them
+  certain attributes in their HDF5 files, such as units and a description, for example.
 - Upload HDF5 files directly
   to [repositories](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/repository/index.html)
   like [Zenodo](https://zenodo.org/)
@@ -35,20 +36,21 @@ information of try the [quickstart using colab](#quickstart).
 
 For everybody, who is...
 
-- ... looking for a management approach for his or her data
-- ... community has not yet established a stable convention
-- ... working with small and big data, that fits into HDF5 files
-- ... looking for an easy way to work with HDF5, especially through Jupyter Notebooks
-- ... looking to integrate HDF5 with repositories and databases
-- ... looking for a way to do all the above whiles not needing to learn a new syntax
-- ... new to HDF5 and wants to learn about it, especially with respect to the FAIR principles and data management
+- ... looking for a management approach for his or her data.
+- ... community has not yet established a stable convention.
+- ... working with small and big data, that fits into HDF5 files.
+- ... looking for an easy way to work with HDF5, especially through Jupyter Notebooks.
+- ... trying to integrate HDF5 with repositories and databases.
+- ... wishing to enrich data semantically with the RDF standard.
+- ... looking for a way to do all the above whiles not needing to learn a new syntax.
+- ... new to HDF5 and wants to learn about it, especially with respect to the FAIR principles and data management.
 
 ## Who is it not for?
 
 For everybody, who ...
 
 - ... is looking for a management approach which at the same time allows high-performance and/or parallel work with HDF5
-- ... has established conventions and managements approaches in his or her community
+- ... has already well-established conventions and managements approaches in his or her community
 
 ## Package Architecture/structure
 
@@ -61,8 +63,9 @@ of each other.
 Current implementation highlights in the modules:
 
 - The **wrapper** module adds functionality on top of the `h5py` package. It allows to include so-called standard names,
-  which are defined in conventions. And it implements an interface with the package `xarray`, which allows to carry
-  metadata from HDF5 to the user.
+  which are defined in conventions. And it implements interfaces, such as to the package `xarray`, which allows to carry
+  metadata from HDF5 to the user. Other high-level interfaces like `.rdf` allows assigning semantic information to the
+  HDF5 file.
 - For the **database** module, `hdfDB` and `mongoDB` are implemented. The `hdfDB` module allows to use HDF5 files as a
   database. The `mongoDB` module allows to use mongoDB as a database by mapping the metadata of HDF5 files to the
   database.
@@ -134,13 +137,13 @@ specific to the features of the package:
 - `pint_xarray>=0.2.1`: Working with units for usage with xarray
 - `python-forge==18.6.0`: Used to update function signatures when using
   the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
-- `pydantic`: Used to validate [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
+- `pydantic`: Used to
+  validate [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
 - `pyyaml>6.0.0`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions
   collide with python 3.11
 - `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
 - `rdflib`: Used to enable working with RDF
 - `ontolutils`: Required to work with RDF and derive semantic description of HDF5 file content
-
 
 #### Optional dependencies
 
@@ -164,7 +167,6 @@ Install optional dependencies by specifying them in square brackets after the pa
 - `tabulate>=0.8.10`: Pretty printing of tables
 - `python-gitlab`: Access to gitlab repositories
 - `pypandoc>=2.3`: Conversion of markdown files to html
-
 
 ## Citing the package
 

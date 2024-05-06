@@ -1,9 +1,10 @@
 """Test the mongoDB interface"""
-import h5py
-import numpy as np
 import sys
 import unittest
 from io import StringIO
+
+import h5py
+import numpy as np
 from tabulate import tabulate
 
 import h5rdmtoolbox as h5tbx
@@ -78,6 +79,24 @@ class TestCore(unittest.TestCase):
         self.assertEqual(spec1.called, False)
         with self.assertRaises(ValueError):
             spec1.n_successes
+
+    # def test_units_exists(self):
+    #     with h5tbx.File() as h5:
+    #         ds = h5.create_dataset('a', shape=(3, 4), dtype='float32')
+    #         ds.attrs['units'] = 'm/s'
+    #     lay = layout.Layout()
+    #     spec_all_dataset = lay.add(
+    #         hdfdb.FileDB.find,
+    #         flt={},
+    #         objfilter='dataset',
+    #         n={'$gte': 1},
+    #         description='At least one dataset exists'
+    #     )
+    #     spec_all_dataset.add(hdfdb.FileDB.find,
+    #                          flt={'units': {'$exists': True}},
+    #                          n=1,
+    #                          description='units exists')
+    #     res = lay.validate(h5.hdf_filename)
 
     def test_alternative_specification(self):
         """Expecting exactly one u, but if not found, exactly one v."""
@@ -273,7 +292,6 @@ class TestCore(unittest.TestCase):
             self.assertTrue(spec_all_ds.is_valid())
             self.assertTrue(spec_all_ds_are_float32.is_valid())
 
-
     def test_layout_with_rdf_find(self):
         from h5rdmtoolbox import database
         lay = layout.Layout()
@@ -284,7 +302,6 @@ class TestCore(unittest.TestCase):
 
         res = lay.validate(h5.hdf_filename)
         self.assertTrue(res.is_valid())
-
 
         lay = layout.Layout()
         spec = lay.add(database.rdf_find, rdf_predicate="https://schema.org/firstName", n=1)

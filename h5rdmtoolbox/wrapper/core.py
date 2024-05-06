@@ -1,23 +1,24 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
 
-import h5py
 import json
 import logging
-import numpy as np
 import os
 import pathlib
-# noinspection PyUnresolvedReferences
-import pint
 import shutil
 import warnings
-import xarray as xr
 from collections.abc import Iterable
 from datetime import datetime, timezone
-from h5py._hl.base import phil, with_phil
-from h5py._objects import ObjectID
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Optional
+
+import h5py
+import numpy as np
+# noinspection PyUnresolvedReferences
+import pint
+import xarray as xr
+from h5py._hl.base import phil, with_phil
+from h5py._objects import ObjectID
 
 # noinspection PyUnresolvedReferences
 from . import xr2hdf, rdf
@@ -884,7 +885,7 @@ class Group(h5py.Group):
         return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
 
     def create_datasets_from_csv(self,
-                                 csv_filenames: Union[str, pathlib.Path, List[str], List[pathlib.Path]],
+                                 csv_filenames: Union[str, pathlib.Path, List[Union[str, pathlib.Path]]],
                                  dimension: Union[int, str] = 0,
                                  shape=None,
                                  overwrite=False,
@@ -999,6 +1000,12 @@ class Group(h5py.Group):
                 for ds, variable_name in zip(datasets, column_names):
                     if variable_name != dimension:
                         ds.dims[0].attach_scale(self[dimension])
+            for ds in datasets:
+                ds.attrs['source_filename'] = csv_filenames
+                if isinstance(csv_filenames, (list, tuple)):
+                    ds.attrs['source_filename_hash_md5'] = [utils.get_checksum(f) for f in csv_filenames]
+                else:
+                    ds.attrs['source_filename_hash_md5'] = utils.get_checksum(csv_filenames)
             return datasets
 
         data = {}
@@ -1582,31 +1589,39 @@ class Dataset(h5py.Dataset):
         return coords
         # return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
 
-    def assign_coords(self, coords=None, **coords_kwargs):
-        if coords is not None:
-            if not isinstance(coords, list):
-                coords = [coords]
-            for c in coords:
-                if not isinstance(c, h5py.Dataset):
-                    raise ValueError('Only h5py.Dataset objects can be assigned as coordinates!')
-                coords_kwargs.update({c.name: c})
-
-        for k, v in coords_kwargs.items():
-
-            if not isinstance(v, h5py.Dataset):
-                if not isinstance(v, xr.DataArray):
-                    raise TypeError(f'Only h5py.Dataset or xarray.DataArray objects can be assigned as coordinates, '
-                                    f'but got {type(v)}')
-                raise TypeError('Only h5py.Dataset objects can be assigned as coordinates!')
-
-            if v.ndim not in (0, self.ndim):
-                raise ValueError(f'Coordinate {k} must have the same dimension as the dataset or be a scalar!')
-            elif isinstance(v, xr.DataArray):
-                self.parent.create_dataset_from_xarray_dataset(v)
-
-        curr_coords = self.attrs.get(protected_attributes.COORDINATES, {})
-        curr_coords.update(coords_kwargs)
+    def assign_coord(self, coord):
+        if isinstance(coord, str):
+            if coord not in self.rootparent:
+                raise ValueError(f'Coordinate {coord} not found in the file!')
+            coord = self.rootparent[coord]
+        curr_coords = self.attrs.get(protected_attributes.COORDINATES, [])
+        curr_coords.append(coord.name)
         self.attrs[protected_attributes.COORDINATES] = curr_coords
+
+        # if coords is not None:
+        #     if not isinstance(coords, list):
+        #         coords = [coords]
+        #     for c in coords:
+        #         if not isinstance(c, h5py.Dataset):
+        #             raise ValueError('Only h5py.Dataset objects can be assigned as coordinates!')
+        #         coords_kwargs.update({c.name: c})
+        #
+        # for k, v in coords_kwargs.items():
+        #
+        #     if not isinstance(v, h5py.Dataset):
+        #         if not isinstance(v, xr.DataArray):
+        #             raise TypeError(f'Only h5py.Dataset or xarray.DataArray objects can be assigned as coordinates, '
+        #                             f'but got {type(v)}')
+        #         raise TypeError('Only h5py.Dataset objects can be assigned as coordinates!')
+        #
+        #     if v.ndim not in (0, self.ndim):
+        #         raise ValueError(f'Coordinate {k} must have the same dimension as the dataset or be a scalar!')
+        #     elif isinstance(v, xr.DataArray):
+        #         self.parent.create_dataset_from_xarray_dataset(v)
+        #
+        # curr_coords = self.attrs.get(protected_attributes.COORDINATES, {})
+        # curr_coords.update(coords_kwargs)
+        # self.attrs[protected_attributes.COORDINATES] = curr_coords
 
     def isel(self, **indexers) -> xr.DataArray:
         """Index selection by providing the coordinate name.
@@ -1663,9 +1678,9 @@ class Dataset(h5py.Dataset):
 
         def _make_ascending(_data):
             if isinstance(_data, (np.ndarray, list)):
-                warnings.warn(
-                    'Only ascending order is supported for np.ndarray and list. Reducing the data to unique values'
-                )
+                # warnings.warn(
+                #     'Only ascending order is supported for np.ndarray and list. Reducing the data to unique values'
+                # )
                 unique_data = np.unique(_data)
                 _diff = np.diff(unique_data)
                 if np.all(_diff == 1):

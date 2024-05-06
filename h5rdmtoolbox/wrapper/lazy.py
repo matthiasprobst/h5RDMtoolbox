@@ -114,10 +114,14 @@ class LDataset(LHDFObject):
         self.fillvalue = obj.fillvalue
         self.scaleoffset = obj.scaleoffset
         self.external = obj.external
-        self._coords = obj.attrs.get(COORDINATES, {})
+        _coords = obj.attrs.get(COORDINATES, None)
+        if _coords is None:
+            self._coords = []
+        else:
+            self._coords = list(_coords)
         for dim in obj.dims:
             for i in range(len(dim)):
-                self._coords[dim[i].name] = lazy(dim[i])
+                self._coords.append(lazy(dim[i]))
         self._file = None
 
     def __repr__(self):
