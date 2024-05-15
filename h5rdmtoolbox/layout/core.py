@@ -108,10 +108,12 @@ class LayoutSpecification:
                  func: QueryCallable,
                  kwargs: Dict,
                  n: Union[int, None, Dict],
+                 rebase:bool=False,
                  description: Optional[str] = None,
                  parent: Optional["LayoutSpecification"] = None):
         self.func = func
         self.kwargs = kwargs
+        self.rebase = rebase
 
         self.n, self.number_of_result_comparison = self._parse_n_def(n)
 
@@ -218,9 +220,12 @@ class LayoutSpecification:
         return f'{self.__class__.__name__}(kwargs={_kwargs})'
 
     def __call__(self, target: Union[h5py.Group, h5py.Dataset]):
-        if isinstance(target, h5tbx.database.lazy.LHDFObject):
+        if isinstance(target, h5tbx.wrapper.lazy.LHDFObject):
             with target as _target:
                 return self.__call__(_target)
+
+        if self.rebase and isinstance(target, (h5tbx.Dataset, h5tbx.Group)):
+            target = target.rootparent
 
         self._n_calls += 1
         scr = SpecificationResult(target)
@@ -329,6 +334,7 @@ class LayoutSpecification:
             func: QueryCallable,
             *,
             n: Optional[Union[int, None, Dict]] = None,
+            rebase: bool=False,
             description: Optional[str] = None,
             **kwargs):
         """
@@ -362,6 +368,7 @@ class LayoutSpecification:
         new_spec = LayoutSpecification(func=func,
                                        kwargs=kwargs,
                                        n=n,
+                                       rebase=rebase,
                                        description=description,
                                        parent=self)
         for spec in self.specifications:

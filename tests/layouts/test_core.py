@@ -309,3 +309,54 @@ class TestCore(unittest.TestCase):
 
         res = lay.validate(h5.hdf_filename)
         self.assertFalse(res.is_valid())
+
+    def test_rebase(self):
+        with h5tbx.File() as h5:
+            h5.create_group('setup')
+            h5['setup'].attrs['standard_name'] = 'Steady State'
+            h5.create_dataset('TIME', data=[1, 2, 3], attrs={'units': 's'})
+
+        lay = layout.Layout()
+        spec = lay.add(hdfdb.FileDB.find,
+                       flt={'standard_name': {'$in': ['Transient', 'Steady State']}},
+                       n=1)
+        spec.add(hdfdb.FileDB.find,
+                 rebase=True,  # start search from the root
+                 flt={'$name': '/TIME', 'units': 's', '$ndim': 1},
+                 n=1)
+
+        res = lay.validate(h5.hdf_filename)
+        self.assertTrue(res.is_valid())
+        with h5tbx.File() as h5:
+            h5.create_group('setup')
+            h5['setup'].attrs['standard_name'] = 'None of the above'
+            h5.create_dataset('TIME', data=[1, 2, 3], attrs={'units': 's'})
+
+        lay = layout.Layout()
+        spec = lay.add(hdfdb.FileDB.find,
+                       flt={'standard_name': {'$in': ['Transient', 'Steady State']}},
+                       n=None)
+        spec.add(hdfdb.FileDB.find,
+                 rebase=True,  # start search from the root
+                 flt={'$name': '/TIME', 'units': 's', '$ndim': 1},
+                 n=1)
+
+        res = lay.validate(h5.hdf_filename)
+        self.assertTrue(res.is_valid())
+
+        with h5tbx.File() as h5:
+            h5.create_group('setup')
+            h5['setup'].attrs['standard_name'] = 'Steady State'
+            # h5.create_dataset('TIME', data=[1, 2, 3], attrs={'units': 's'})
+
+        lay = layout.Layout()
+        spec = lay.add(hdfdb.FileDB.find,
+                       flt={'standard_name': {'$in': ['Transient', 'Steady State']}},
+                       n=1)
+        spec.add(hdfdb.FileDB.find,
+                 rebase=True,  # start search from the root
+                 flt={'$name': '/TIME', 'units': 's', '$ndim': 1},
+                 n=1)
+
+        res = lay.validate(h5.hdf_filename)
+        self.assertFalse(res.is_valid())
