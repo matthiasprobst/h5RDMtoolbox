@@ -1,10 +1,9 @@
 """Test the mongoDB interface"""
+import h5py
+import numpy as np
 import sys
 import unittest
 from io import StringIO
-
-import h5py
-import numpy as np
 from tabulate import tabulate
 
 import h5rdmtoolbox as h5tbx
@@ -118,7 +117,7 @@ class TestCore(unittest.TestCase):
             # neither u nor v exist, should fail!
             h5.create_dataset('w', shape=(3, 4), dtype='float32')
             res = lay.validate(h5)
-            res.print_summary()
+            res.print_summary(exclude_keys='target_name')
             self.assertFalse(res.is_valid())
 
         lay = layout.Layout()
@@ -242,10 +241,10 @@ class TestCore(unittest.TestCase):
     def test_all_dtypes(self):
         filename = h5tbx.utils.generate_temporary_filename(suffix='.hdf')
         with h5py.File(filename, 'w') as h5:
-            ds = h5.create_dataset('u', shape=(3, 4), dtype='float32')
-            h5.create_dataset('a/u', shape=(3, 4), dtype='float64')
-            h5.create_dataset('a/v', shape=(3, 4), dtype='float32')
-            h5.create_dataset('a/b/c/u', shape=(3, 4), dtype='float64')
+            ds = h5.create_dataset('f32', shape=(3, 4), dtype='float32')
+            h5.create_dataset('a/f64', shape=(3, 4), dtype='float64')
+            h5.create_dataset('a/f32', shape=(3, 4), dtype='float32')
+            h5.create_dataset('a/b/c/f64', shape=(3, 4), dtype='float64')
 
             # there are 2 datasets with dtype float32 and 2 with float64
             # thus specification which checks float32 should fail twice
@@ -260,8 +259,7 @@ class TestCore(unittest.TestCase):
             spec_all_ds_are_float32 = spec_all_ds.add(
                 hdfdb.FileDB.find,
                 description='Is float32',
-                flt={'$dtype': np.dtype(
-                    '<f4')},
+                flt={'$dtype': np.dtype('<f4')},
                 n=1)  # applies all these on spec_all_ds results. So must be true per dataset (n=1)
 
             with self.assertRaises(RuntimeError):

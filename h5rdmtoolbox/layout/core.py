@@ -1,13 +1,12 @@
 """Layout validation module"""
 import enum
+import h5py
 import logging
 import pathlib
 import types
 import uuid
 import warnings
 from typing import Dict, Union, List, Protocol, Optional, Callable, Tuple
-
-import h5py
 
 import h5rdmtoolbox as h5tbx
 
@@ -456,7 +455,7 @@ class LayoutSpecification:
             return [item for sublist in failed for item in sublist]
         return failed
 
-    def get_summary(self, exclude_keys: Optional[List] = None) -> List[Dict]:
+    def get_summary(self, exclude_keys: Optional[Union[str, List[str]]] = None) -> List[Dict]:
         """return a summary as dictionary"""
         if isinstance(exclude_keys, str):
             exclude_keys = [exclude_keys, ]
@@ -477,6 +476,9 @@ class LayoutSpecification:
 
         if exclude_keys is None:
             exclude_keys = []
+        elif isinstance(exclude_keys, str):
+            exclude_keys = [exclude_keys, ]
+
         for key in exclude_keys:
             # pop keys from dict:
             for i, d in enumerate(data):
@@ -509,7 +511,7 @@ class LayoutResult:
         """Return True if the layout is valid, which is the case if no specs failed"""
         return len(self.get_failed()) == 0
 
-    def get_summary(self, exclude_keys: Optional[List] = None,
+    def get_summary(self, exclude_keys: Optional[Union[str, List[str]]] = None,
                     failed_only: bool = False) -> List[Dict]:
         """return a list of dictionaries containing information about a specification call"""
         data = []
@@ -521,7 +523,7 @@ class LayoutResult:
                 data.extend(s)
         return data
 
-    def print_summary(self, exclude_keys: Optional[List[str]] = None,
+    def print_summary(self, exclude_keys: Optional[Union[str, List[str]]] = None,
                       failed_only: bool = False):
         """Prints a summary of the specification. Requires the tabulate package."""
         try:

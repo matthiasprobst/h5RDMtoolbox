@@ -1,10 +1,10 @@
 """Test the mongoDB interface"""
 
-import unittest
-
 import h5py
 import numpy as np
-
+import pint
+import unittest
+from typing import List
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import database
 from h5rdmtoolbox.database import hdfdb
@@ -562,3 +562,48 @@ class TestHDFDB(unittest.TestCase):
         res_list = sorted(list(res), key=lambda x: x.name)
         self.assertEqual(len(res_list), 1)
         self.assertEqual(res_list[0].name, '/contact2')
+
+    def test_dtype_kind(self):
+        with h5tbx.File() as h5:
+            h5.create_string_dataset('strds', data='hallo')
+            h5.create_dataset('f32', shape=(3, 4), dtype='float32')
+            h5.create_dataset('f64', shape=(3, 4), dtype='float64')
+            h5.create_dataset('i32', shape=(3, 4), dtype='int32')
+
+            res = h5.find({'$dtype': lambda x: x.kind == 'S'})
+            for r in res:
+                self.assertEqual(r.name, '/strds')
+            numerical_datasets = h5.find({'$dtype': lambda x: x.kind in ('f', 'i', 'u')})
+            self.assertEqual(len(list(numerical_datasets)), 3)
+
+    def test_custom_find(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('u', data=4.3, attrs={'units': 'm/s', 'standard_name': 'x_velocity'})
+            h5.create_dataset('v', data=4.3, attrs={'units': 'm/s', 'standard_name': 'v_velocity'})  # invalid sn
+            h5.create_dataset('w', data=4.3, attrs={'units': 'invalid',
+                                                    'standard_name': 'z_velocity'})
+
+            ureg = pint.UnitRegistry()
+
+            def _validate_unit(units: str):
+                if units is None:
+                    return False
+
+                if units in ('', ' '):
+                    return True
+                try:
+                    ureg.parse_units(units)
+                    return True
+                except pint.UndefinedUnitError:
+                    return False
+
+            def _valid_standard_name(sn, list_of_sn:List[str]):
+                return sn in list_of_sn
+
+            res = h5.find({'units': lambda x: _validate_unit(x)})
+            self.assertEqual(len(res), 2)
+
+            res = h5.find({'standard_name': lambda x: _valid_standard_name(x, ['x_velocity',
+                                                                               'y_velocity',
+                                                                               'z_velocity'])})
+            self.assertEqual(len(res), 2)

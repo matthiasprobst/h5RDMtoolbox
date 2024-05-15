@@ -77,6 +77,10 @@ class LazyDataset(LazyObject):
     def __init__(self, obj: h5py.Dataset):
         ...
 
+    def __getitem__(self, item):
+        """Return the item by the item name or index"""
+        ...
+
     def coords(self):
         """Return the coordinates associated to the Dataset"""
         ...
