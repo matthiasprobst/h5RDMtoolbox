@@ -607,3 +607,17 @@ class TestHDFDB(unittest.TestCase):
                                                                                'y_velocity',
                                                                                'z_velocity'])})
             self.assertEqual(len(res), 2)
+
+    def test_in(self):
+        with h5tbx.File() as h5:
+            h5.attrs['standard_name'] = 'Steady State'
+            res = h5.find({'standard_name': {'$in': ['Transient', 'Steady State']}})
+            self.assertEqual(len(res), 1)
+        with h5tbx.File() as h5:
+            h5.attrs['standard_name'] = 'Transient'
+            res = h5.find({'standard_name': {'$in': ['Transient', 'Steady State']}})
+            self.assertEqual(len(res), 1)
+        with h5tbx.File() as h5:
+            h5.attrs['standard_name'] = 'Transient2'
+            res = h5.find({'standard_name': {'$in': ['Transient', 'Steady State']}})
+            self.assertEqual(len(res), 0)

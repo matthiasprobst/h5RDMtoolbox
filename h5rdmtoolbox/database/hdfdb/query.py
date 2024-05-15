@@ -43,6 +43,13 @@ def _lt(a, b):
     return a < b
 
 
+def _in(a, b) -> bool:
+    """Check if a is in b"""
+    if a is None or b is None:
+        return False
+    return a in b
+
+
 def _lte(a, b):
     """Check if a <= b"""
     if a is None or b is None:
@@ -96,6 +103,7 @@ operator = {'$regex': _regex,
             '$gt': _gt,
             '$gte': _gte,
             '$lt': _lt,
+            '$in': _in,
             '$lte': _lte,
             '$exists': _exists,
             '$userdefined': _userdefined}
