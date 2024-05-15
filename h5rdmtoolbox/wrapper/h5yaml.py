@@ -1,8 +1,7 @@
 import h5py
 import pathlib
 import yaml
-from typing import Dict
-from typing import Protocol
+from typing import Dict, Optional, Protocol
 
 
 class _H5DictDataInterface(Protocol):
@@ -12,7 +11,7 @@ class _H5DictDataInterface(Protocol):
         """Return data"""
         ...
 
-    def write(self, h5: h5py.Group):
+    def write(self, h5: h5py.Group, num_dtype:Optional[str]=None):
         data = self.data
         for k, v in data.items():
             if not isinstance(v, dict):
@@ -29,8 +28,12 @@ class _H5DictDataInterface(Protocol):
                     # TODO remove the following hotfix
                     name = v.pop('name')
                     data = v.pop('data')
+                    dtype = v.pop('dtype', None)
                     try:
-                        h5.create_dataset(name, data=data, **v)
+                        if dtype is None and num_dtype and not isinstance(data, str):
+                            dtype = num_dtype
+
+                        h5.create_dataset(name, data=data, dtype=dtype, **v)
                     except (TypeError,) as e:
                         raise RuntimeError('Could not create dataset. Please check the yaml file. The orig. '
                                            f'error is "{e}"')
@@ -50,7 +53,10 @@ class _H5DictDataInterface(Protocol):
                     g = h5.create_group(**group_data)
 
                     for ds_name, ds_params in datasets.items():
-                        g.create_dataset(name=ds_name, **ds_params)
+                        dtype = ds_params.pop('dtype', None)
+                        if dtype is None and num_dtype and not isinstance(ds_params['data'], str):
+                            dtype = num_dtype
+                        g.create_dataset(name=ds_name, dtype=dtype, **ds_params)
 
     @staticmethod
     def is_dataset(item) -> bool:

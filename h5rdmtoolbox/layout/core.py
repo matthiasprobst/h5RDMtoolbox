@@ -458,7 +458,8 @@ class LayoutSpecification:
 
     def get_summary(self, exclude_keys: Optional[List] = None) -> List[Dict]:
         """return a summary as dictionary"""
-
+        if isinstance(exclude_keys, str):
+            exclude_keys = [exclude_keys, ]
         data = []
         for res in self.results:
             data.append({'id': self.id,

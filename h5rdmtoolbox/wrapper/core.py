@@ -1187,9 +1187,11 @@ class Group(h5py.Group):
         self[name] = h5py.ExternalLink(filename, path)
         return self[name]
 
-    def create_from_yaml(self, yaml_filename: Path):
+    def create_from_yaml(self, yaml_filename: Path, num_dtype:Optional[str]=None):
         """creates groups, datasets and attributes defined in a yaml file.
         Creation is performed relative to the current group level.
+
+        If a num_dtype is provided, all numerical datasets are created with this dtype.
 
         An example YAML file content could look like this:
 
@@ -1218,7 +1220,7 @@ class Group(h5py.Group):
         >>>     h5.create_from_yaml('test.yaml')
         """
         from . import h5yaml
-        h5yaml.H5Yaml(yaml_filename).write(self)
+        h5yaml.H5Yaml(yaml_filename).write(self, num_dtype=num_dtype)
 
     def create_from_dict(self, dictionary: Dict):
         """Create groups and datasets based on a dictionary"""
