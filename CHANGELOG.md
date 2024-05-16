@@ -2,6 +2,12 @@
 
 Log of changes in the versions
 
+## v1.3.1
+
+- minor fixes
+- add $in operator to query functions
+- add argument `rebase` to layout specifications
+
 ## v1.3.0
 
 - important changes:

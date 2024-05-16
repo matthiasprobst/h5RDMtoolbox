@@ -581,7 +581,7 @@ class Layout(LayoutSpecification):
         self.specifications: List[LayoutSpecification] = []
 
     def __repr__(self):
-        return f'{self.__class__.__name__}'
+        return f'{self.__class__.__name__} (description="{self.description}")'
 
     def __eq__(self, other):
         if not isinstance(other, Layout):
