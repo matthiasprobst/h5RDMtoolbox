@@ -1,12 +1,13 @@
 """Layout validation module"""
 import enum
-import h5py
 import logging
 import pathlib
 import types
 import uuid
 import warnings
 from typing import Dict, Union, List, Protocol, Optional, Callable, Tuple
+
+import h5py
 
 import h5rdmtoolbox as h5tbx
 
@@ -108,7 +109,7 @@ class LayoutSpecification:
                  func: QueryCallable,
                  kwargs: Dict,
                  n: Union[int, None, Dict],
-                 rebase:bool=False,
+                 rebase: bool = False,
                  description: Optional[str] = None,
                  parent: Optional["LayoutSpecification"] = None):
         self.func = func
@@ -334,7 +335,7 @@ class LayoutSpecification:
             func: QueryCallable,
             *,
             n: Optional[Union[int, None, Dict]] = None,
-            rebase: bool=False,
+            rebase: bool = False,
             description: Optional[str] = None,
             **kwargs):
         """
@@ -575,7 +576,8 @@ class Layout(LayoutSpecification):
     >>> lay.validate('path/to/file.h5')
     """
 
-    def __init__(self):
+    def __init__(self, description: str = ''):
+        self.description = description  # description of the layout class
         self.specifications: List[LayoutSpecification] = []
 
     def __repr__(self):
