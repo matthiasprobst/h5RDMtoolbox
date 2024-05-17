@@ -1,9 +1,10 @@
 """RDF (Resource Description Framework) module for use with HDF5 files"""
 import abc
+from typing import Dict, Union, Optional, List
+
 import h5py
 import pydantic
 from pydantic import HttpUrl
-from typing import Dict, Union, Optional, List
 
 from . import lazy
 from ..protocols import H5TbxAttributeManager
@@ -496,6 +497,8 @@ class RDFManager:
                                   'attribute name or data.')
 
     def __getitem__(self, item) -> IRIDict:
+        if item not in self._attr:
+            raise KeyError(f'Attribute "{item}" not found in {self.parent.name}.')
         return IRIDict({RDF_PREDICATE_ATTR_NAME: self._attr.get(RDF_PREDICATE_ATTR_NAME, {}).get(item, None),
                         RDF_OBJECT_ATTR_NAME: self._attr.get(RDF_OBJECT_ATTR_NAME, {}).get(item, None)},
                        self._attr, item)

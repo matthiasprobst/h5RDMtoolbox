@@ -29,6 +29,8 @@ class TestRDF(unittest.TestCase):
             Attribute('0000-0001-8729-0482', rdf_predicate='000-0001-8729-0482')
 
         with h5tbx.File(mode='w') as h5:
+            with self.assertRaises(KeyError):
+                h5.rdf['not_existing'].predicate = 'https://example.org/notExisting'
             h5.attrs['orcid', M4I.orcidId] = rdfobj
             self.assertEqual(h5.rdf.object['orcid'], 'https://orcid.org/0000-0001-8729-0482')
 
@@ -371,6 +373,7 @@ class TestRDF(unittest.TestCase):
 
     def test_find_object(self):
         with h5tbx.File() as h5:
+            h5.attrs['title'] = 'test'
             h5.rdf['title'].object = 'https://example.org/object'
 
             res = h5.rdf.find(rdf_object='https://example.org/object')
