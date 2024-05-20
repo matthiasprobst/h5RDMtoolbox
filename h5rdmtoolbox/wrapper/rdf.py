@@ -211,6 +211,13 @@ class _RDFPO(abc.ABC):
             raise KeyError(f'No attribute "{key}" found. Cannot assign an IRI to a non-existing attribute.')
         self.__setiri__(key, value)
 
+    def __delitem__(self, key):
+        iri_data_data = self._attr.get(self.IRI_ATTR_NAME, None)
+        if iri_data_data is None:
+            iri_data_data = {}
+        iri_data_data.pop(key, None)
+        self._attr[self.IRI_ATTR_NAME] = iri_data_data
+
     def keys(self):
         """Return all attribute names assigned to the IRIs"""
         return self._attr.get(self.IRI_ATTR_NAME, {}).keys()
@@ -502,3 +509,10 @@ class RDFManager:
         return IRIDict({RDF_PREDICATE_ATTR_NAME: self._attr.get(RDF_PREDICATE_ATTR_NAME, {}).get(item, None),
                         RDF_OBJECT_ATTR_NAME: self._attr.get(RDF_OBJECT_ATTR_NAME, {}).get(item, None)},
                        self._attr, item)
+
+    def delete(self, name):
+        """Deleting RDF associated to name"""
+        if name in self.predicate:
+            del self.predicate[name]
+        if name in self.object:
+            del self.object[name]

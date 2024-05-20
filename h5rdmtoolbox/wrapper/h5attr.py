@@ -1,21 +1,20 @@
 """Attribute module"""
 import ast
-import h5py
 import json
 import logging
+import warnings
+from datetime import datetime
+from typing import Dict, Union, Tuple, Optional, Any
+
 import numpy as np
 import pint
 import pydantic
 import rdflib
-import warnings
-from datetime import datetime
 from h5py._hl.attrs import AttributeManager
 from h5py._hl.base import with_phil
 from h5py._objects import ObjectID, phil
 from pydantic import HttpUrl
-from typing import Dict, Union, Tuple, Optional, Any
 
-from .h5utils import get_rootparent
 from .. import errors
 from .. import get_config, convention, utils
 from .. import get_ureg
@@ -201,6 +200,11 @@ class WrapperAttributeManager(AttributeManager):
             if name in convention.get_current_convention().properties[parent.__class__]:
                 return convention.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
+
+    @with_phil
+    def __delitem__(self, name):
+        super().__delitem__(name)
+        self._parent.rdf.delete(name)
 
     def create(self,
                name,

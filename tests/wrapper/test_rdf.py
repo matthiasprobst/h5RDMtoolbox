@@ -1,16 +1,17 @@
+import json
 import unittest
 
-import ontolutils
-from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
+import ontolutils
 from h5rdmtoolbox import Attribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 from h5rdmtoolbox.wrapper.rdf import RDFError
 from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
+from ontolutils.namespacelib import M4I, OBO
 
 
 class TestRDF(unittest.TestCase):
@@ -390,3 +391,13 @@ class TestRDF(unittest.TestCase):
             self.assertEqual(h5.rdf['name'].definition, 'This is the name of the person to contact')
 
             h5.dumps()
+
+    def test_rm_attr_with_rdf(self):
+        with h5tbx.File() as h5:
+            h5.attrs['test', 'https://example.org/test'] = 'test'
+            test_rdf = h5.rdf['test'].predicate
+            self.assertEqual(test_rdf, 'https://example.org/test')
+            self.assertEqual(json.loads(h5.attrs.raw.get(h5.rdf.predicate.IRI_ATTR_NAME, None)),
+                             {'test': 'https://example.org/test'})
+            del h5.attrs['test']
+            self.assertEqual(json.loads(h5.attrs.raw.get(h5.rdf.predicate.IRI_ATTR_NAME, None))pip, {})
