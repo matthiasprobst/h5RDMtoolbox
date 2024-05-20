@@ -400,4 +400,4 @@ class TestRDF(unittest.TestCase):
             self.assertEqual(json.loads(h5.attrs.raw.get(h5.rdf.predicate.IRI_ATTR_NAME, None)),
                              {'test': 'https://example.org/test'})
             del h5.attrs['test']
-            self.assertEqual(json.loads(h5.attrs.raw.get(h5.rdf.predicate.IRI_ATTR_NAME, None))pip, {})
+            self.assertEqual(json.loads(h5.attrs.raw.get(h5.rdf.predicate.IRI_ATTR_NAME, None)), {})
