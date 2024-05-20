@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v1.3.2
+- calling the RDF accessor on an attribute name will only work if the attribute already exists. If not, an error is raised.
+- Likewise, if an attribute is deleted, the entry in the RDF accessor dictionary is deleted
+
 ## v1.3.1
 
 - minor fixes
