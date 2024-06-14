@@ -4,7 +4,7 @@ import logging
 import pathlib
 import time
 import warnings
-from typing import Union, List, Callable, Iterable, Dict
+from typing import Union, List, Iterable, Dict
 
 import appdirs
 import requests
@@ -21,7 +21,7 @@ __all__ = ['Metadata']
 class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
     """Interface for Zenodo.
     """
-    depositions_url = None
+    deposit_url = None
     rec_url = None
 
     def __init__(self,
@@ -35,12 +35,12 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             If a rec_id is passed, the deposit must exist.
 
         """
-        if self.depositions_url is None:
-            raise ValueError('The depositions_url must be set.')
+        if self.deposit_url is None:
+            raise ValueError('The deposit_url must be set.')
         if rec_id is None:
             # create a new deposit (with new rec_id and without metadata!)
             r = requests.post(
-                self.depositions_url,
+                self.deposit_url,
                 json={},
                 params={"access_token": self.access_token},
                 headers={"Content-Type": "application/json"}
@@ -56,15 +56,15 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         assert self.rec_id is not None
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__} (id={self.rec_id}, url={self.depositions_url})"
+        return f"{self.__class__.__name__} (id={self.rec_id}, url={self.deposit_url})"
 
     @abc.abstractmethod
     def get_metadata(self) -> Dict:
         """Return metadata"""
 
     @abc.abstractmethod
-    def get(self, raise_for_status: bool):
-        """Get the deposit (json) data."""
+    def set_metadata(self, metadata: Union[Dict, Metadata]):
+        """Set metadata"""
 
     def get_doi(self) -> str:
         """Get the DOI of the deposit."""
@@ -92,7 +92,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         warnings.warn("get() method is deprecated. Use json() instead.", DeprecationWarning)
 
         def _fetch(token):
-            return requests.get(f"{self.depositions_url}/{self.rec_id}", params={"access_token": token})
+            return requests.get(f"{self.deposit_url}/{self.rec_id}", params={"access_token": token})
 
         r = _fetch(self.access_token)
         while r.status_code == 429:
@@ -113,7 +113,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         """Get the deposit (json) data."""
 
         def _fetch(token):
-            return requests.get(f"{self.depositions_url}/{self.rec_id}", params={"access_token": token})
+            return requests.get(f"{self.deposit_url}/{self.rec_id}", params={"access_token": token})
 
         r = _fetch(self.access_token)
         while r.status_code == 429:
@@ -211,10 +211,44 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     def delete(self) -> requests.Response:
         """Delete the deposit."""
-        r = requests.delete(f"{self.depositions_url}/{self.rec_id}", params={"access_token": self.access_token})
+        r = requests.delete(f"{self.deposit_url}/{self.rec_id}", params={"access_token": self.access_token})
         if r.status_code == 405:
             logger.error(f'Only unpublished records can be deleted. Record "{self.rec_id}" is published.')
         return r
+
+    def new_version(self):
+        self.unlock()
+        jdata = self.json()
+        r = requests.post(jdata['links']['newversion'],
+                          params={'access_token': self.access_token})
+        r.raise_for_status()
+        latest_draft = r.json()['links']['latest_draft']
+        _id = latest_draft.split('/')[-1]
+        self.rec_id = _id
+        return self
+
+    def publish(self) -> requests.Response:
+        """Be careful. The record cannot be deleted afterward!"""
+        r = requests.post(self.json()['links']['publish'],
+                          # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
+                          params={'access_token': self.access_token})
+        r.raise_for_status()
+
+    def discard(self):
+        """Discard the latest action, e.g. creating a new version"""
+        jdata = self.json()
+        r = requests.post(jdata['links']['discard'],
+                          params={'access_token': self.access_token})
+        r.raise_for_status()
+
+    def unlock(self):
+        """unlock the deposit. To lock it call publish()"""
+        r = requests.post(self.json()['links']['edit'],
+                          params={'access_token': self.access_token})
+        if r.status_code == 400:
+            print(f'Cannot publish data. This might be because metadata is missing. Check on the website, which '
+                  f'fields are required!')
+        r.raise_for_status()
 
 
 class ZenodoSandboxDeposit(AbstractZenodoInterface):
@@ -233,7 +267,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
 
 
     """
-    depositions_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
+    deposit_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
     rec_url = "https://sandbox.zenodo.org/api/records"
 
     def get_metadata(self) -> Dict:
@@ -257,41 +291,6 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
             logger.critical(f"Bad request message: {r.json()}")
         r.raise_for_status()
 
-    def unlock(self):
-        """unlock the deposit. To lock it call publish()"""
-        r = requests.post(self.json()['links']['edit'],
-                          params={'access_token': self.access_token})
-        if r.status_code == 400:
-            print(f'Cannot publish data. This might be because metadata is missing. Check on the website, which '
-                  f'fields are required!')
-        r.raise_for_status()
-
-    def new_version(self):
-        self.unlock()
-        jdata = self.json()
-        r = requests.post(jdata['links']['newversion'],
-                          params={'access_token': self.access_token})
-        r.raise_for_status()
-        latest_draft = r.json()['links']['latest_draft']
-        _id = latest_draft.split('/')[-1]
-        self.rec_id = _id
-        return self
-
-    def discard(self):
-        """Discard the latest action, e.g. creating a new version"""
-        jdata = self.json()
-        r = requests.post(jdata['links']['discard'],
-                          params={'access_token': self.access_token})
-        r.raise_for_status()
-
-    def publish(self) -> requests.Response:
-        """Be careful. The record cannot be deleted afterwards!"""
-        print(self.json()['links']['publish'])
-        r = requests.post(self.json()['links']['publish'],
-                          # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
-                          params={'access_token': self.access_token})
-        r.raise_for_status()
-
     @property
     def access_token(self):
         """Return current access token for the Zenodo API."""
@@ -310,7 +309,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
                 file_dict.pop(r)
         return file_dict
 
-    def upload_file(self, filename, overwrite: bool = False):
+    def _upload_file(self, filename, overwrite: bool = False):
         """Add a file to the deposit. If the filename already exists, it can
         be overwritten with overwrite=True"""
         filename = pathlib.Path(filename)
@@ -328,7 +327,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         # get file id
         if filename.name in existing_filenames:
             file_id = existing_filenames[filename.name]['id']
-            url = f"{self.depositions_url}/{self.rec_id}/files/{file_id}"
+            url = f"{self.deposit_url}/{self.rec_id}/files/{file_id}"
             logger.debug(f'requests.delete(url={url}, ...)')
             r = requests.delete(url=url,
                                 params={'access_token': self.access_token})
@@ -343,7 +342,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         # bucket_url = self.json()["links"]["bucket"]
         # if filename.name in existing_filenames:
         #     # delete the file first
-        #     url = f"{self.depositions_url}/{self.rec_id}/files/{file_id}"
+        #     url = f"{self.deposit_url}/{self.rec_id}/files/{file_id}"
         #     logger.debug(f'requests.delete(url={url}, ...)')
         #     r = requests.delete(url=url,
         #                         params={'access_token': self.access_token})
@@ -366,7 +365,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
 class ZenodoRecord(AbstractZenodoInterface):
     """Interface to Zenodo records."""
 
-    depositions_url = 'https://zenodo.org/api/records'
+    deposit_url = 'https://zenodo.org/api/records'
     rec_url = "https://zenodo.org/api/records"
 
     @property
@@ -391,10 +390,7 @@ class ZenodoRecord(AbstractZenodoInterface):
             logger.critical(f"Bad request message: {r.json()}")
         r.raise_for_status()
 
-    def upload_file(self, filename, overwrite: bool = False):
-        raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
-
-    def upload_hdf_file(self, filename, metamapper: Callable, overwrite: bool = False):
+    def _upload_file(self, filename, overwrite: bool = False):
         raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
 
     def get_filenames(self) -> List[str]:

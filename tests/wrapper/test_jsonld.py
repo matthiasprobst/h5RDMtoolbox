@@ -19,7 +19,7 @@ logger = h5tbx.logger
 __this_dir__ = pathlib.Path(__file__).parent
 
 
-class TestCore(unittest.TestCase):
+class TestJSONLD(unittest.TestCase):
 
     def setUp(self):
         LEVEL = 'WARNING'
@@ -509,3 +509,29 @@ WHERE {
             self.assertEqual(str(row[0]), 'name')
             self.assertEqual(str(row[1]), 'Matthias')
             self.assertEqual(str(row[2]), 'My first name')
+
+    def test_hdf2jsonld(self):
+        test_data = """{"@context": {"foaf": "http://xmlns.com/foaf/0.1/", "prov": "http://www.w3.org/ns/prov#",
+"rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+ "schema": "http://schema.org/",
+ "local": "http://example.org/"},
+"@id": "local:testperson",
+"@type": "prov:Person",
+"foaf:firstName": "John",
+"foaf:lastName": "Doe",
+"age": 21,
+"schema:affiliation": {
+    "@id": "Nef657ff40e464dd09580db3f32de2cf1",
+    "@type": "schema:Organization",
+    "rdfs:label": "MyAffiliation"
+    }
+}"""
+        with open('test.json', 'w') as f:
+            f.write(test_data)
+        with h5tbx.File('test.hdf', 'w') as h5:
+            jsonld.to_hdf(grp=h5.create_group('person'), source='test.json')
+
+        jsonld_filename = jsonld.hdf2jsonld('test.hdf', skipND=1)
+        self.assertTrue(jsonld_filename.exists())
+        self.assertTrue(jsonld_filename.suffix == '.json')
+        jsonld_filename.unlink()

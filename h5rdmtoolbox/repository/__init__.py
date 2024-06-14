@@ -6,6 +6,7 @@ from .interface import RepositoryInterface
 
 def upload_file(repo: RepositoryInterface,
                 filename: Union[str, pathlib.Path],
-                overwrite: bool = False) -> None:
+                overwrite: bool = False,
+                **kwargs) -> None:
     """Upload a file to the repository."""
-    repo.upload_file(filename, overwrite=overwrite)
+    repo.upload_file(filename, overwrite=overwrite, **kwargs)

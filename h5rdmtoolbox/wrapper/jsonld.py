@@ -1,21 +1,22 @@
-import h5py
 import json
 import logging
-import numpy as np
-import ontolutils
 import pathlib
-import rdflib
 import warnings
 from itertools import count
+from typing import Dict, List, Optional, Union, Iterable, Tuple, Any
+
+import h5py
+import numpy as np
+import ontolutils
+import rdflib
 from ontolutils.classes.utils import split_URIRef
 from rdflib import Graph, URIRef, BNode, XSD, RDF, SKOS
 from rdflib.plugins.shared.jsonld.context import Context
-from typing import Dict, List, Optional, Union, Iterable, Tuple, Any
 
 from h5rdmtoolbox.convention import hdf_ontology
 from .core import Dataset, File
-from ..convention.ontology import HDF5
 from .rdf import RDF_TYPE_ATTR_NAME
+from ..convention.ontology import HDF5
 
 _bnode_counter = count()
 logger = logging.getLogger('h5rdmtoolbox')
@@ -746,7 +747,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 attr_object = None
 
             # attr_def = obj.attrsdef.get(ak, None)
-            attr_def = obj.rdf[ak].definition#.get(ak, None)
+            attr_def = obj.rdf[ak].definition  # .get(ak, None)
             if attr_def:
                 _add_node(g, (attr_node, SKOS.definition, rdflib.Literal(attr_def)))
 
@@ -881,7 +882,20 @@ h5dump = dump  # alias, use this in future
 
 
 def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
-    """Dump an HDF5 file to a JSON-LD file."""
+    """Dump an HDF5 file to a JSON-LD file.
+
+    Parameter
+    ---------
+    filename: Union[str, pathlib.Path]
+        The HDF5 file to read from.
+    skipND: int
+        The number of dimensions to skip when reading a dataset.
+
+    Returns
+    -------
+    str
+        Dumped json-ld data as string
+    """
     data = {}
     if skipND is None:
         skipND = 10000
@@ -1002,6 +1016,38 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
     file = hdf_ontology.File(rootGroup=root)
 
     return file.model_dump_jsonld()
+
+
+def hdf2jsonld(filename: Union[str, pathlib.Path],
+               skipND: int,
+               metadata_filename: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
+    """Dumps the metadata (not only attributes but also structure and possible RDF tripels...) to
+    a target filename.
+
+    Parameter
+    ---------
+    filename: Union[str, pathlib.Path]
+        The HDF5 file to read from.
+    skipND: int
+        The number of dimensions to skip when reading a dataset.
+    metadata_filename: Optional[Union[str, pathlib.Path]]
+        The target filename to write to. If None, the target filename will be the filename with
+        the suffix ".json".
+
+    Returns
+    -------
+    metadata_filename: pathlib.Path
+        The metadata filename
+    """
+    if metadata_filename is None:
+        metadata_filename = pathlib.Path(filename).with_suffix('.json')
+    else:
+        metadata_filename = pathlib.Path(metadata_filename)
+
+    with open(metadata_filename, 'w', encoding='utf-8') as f:
+        f.write(dump_file(filename, skipND))
+
+    return metadata_filename
 
 
 def make_graph_compact(graph: List[Dict]) -> List[Dict]:

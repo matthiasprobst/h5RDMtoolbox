@@ -12,26 +12,11 @@ from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import zenodo, upload_file
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
-from h5rdmtoolbox.wrapper.jsonld import dump_file
 
 logger = logging.getLogger(__name__)
 
 
-class TestConfig(unittest.TestCase):
-
-    # def tearDown(self):
-    #     depositions_url = 'https://sandbox.zenodo.org/api/deposit/depositions?'
-    #
-    #     response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
-    #     n_unsubmitted = sum([not hit['submitted'] for hit in response])
-    #     while n_unsubmitted > 0:
-    #         for hit in response:
-    #             if not hit['submitted']:
-    #                 delete_response = requests.delete(hit['links']['latest_draft'],
-    #                                                   params={'access_token': get_api_token(sandbox=True)})
-    #                 delete_response.raise_for_status()
-    #         response = requests.get(depositions_url, params={'access_token': get_api_token(sandbox=True)}).json()
-    #         n_unsubmitted = sum([not hit['submitted'] for hit in response])
+class TestZenodo(unittest.TestCase):
 
     def test_creator(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Creator
@@ -230,8 +215,6 @@ class TestConfig(unittest.TestCase):
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
 
-
-
     def test_upload_hdf(self):
         z = zenodo.ZenodoSandboxDeposit(None)
 
@@ -244,13 +227,7 @@ class TestConfig(unittest.TestCase):
         hdf_file_name = orig_hdf_filename.name
         json_name = hdf_file_name.replace('.hdf', '.json')
 
-        def hdf2json(hdf_filename: pathlib.Path) -> pathlib.Path:
-            json_ld_filename = hdf_filename.with_suffix('.json')
-            with open(json_ld_filename, 'w') as f:
-                f.write(dump_file(hdf_filename, skipND=1))
-            return json_ld_filename
-
-        z.upload_hdf_file(orig_hdf_filename, metamapper=hdf2json)
+        z.upload_file(orig_hdf_filename)
         filenames = z.get_filenames()
         self.assertIn(hdf_file_name, filenames)
         self.assertIn(json_name, filenames)
@@ -351,17 +328,21 @@ class TestConfig(unittest.TestCase):
             f.write('This is a test file.')
 
         with self.assertRaises(FileNotFoundError):
-            z.upload_file('doesNotExist.txt', overwrite=True)
-        z.upload_file(tmpfile, overwrite=True)
+            z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
+
+        with self.assertRaises(ValueError):
+            z.upload_file(tmpfile, overwrite=True)
+
+        z.upload_file(tmpfile, overwrite=True, metamapper=None)
         self.assertIn('testfile.txt', z.get_filenames())
 
         with self.assertWarns(UserWarning):
-            z.upload_file('testfile.txt', overwrite=False)
+            z.upload_file('testfile.txt', overwrite=False, metamapper=None)
 
-        upload_file(z, tmpfile, overwrite=True)
+        upload_file(z, tmpfile, overwrite=True, metamapper=None)
 
         with self.assertWarns(UserWarning):
-            upload_file(z, tmpfile, overwrite=False)
+            upload_file(z, tmpfile, overwrite=False, metamapper=None)
 
         # delete file locally:
         tmpfile.unlink()

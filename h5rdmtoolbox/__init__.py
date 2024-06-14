@@ -134,7 +134,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     hdf_filename : str, pathlib.Path
         the HDF5 file to dump.
     skipND : int=1
-        Skip writing data of datasets with more then skipND dimensions. Only
+        Skip writing data of datasets with more than `skipND` dimensions. Only
         considered if structural=True.
     structural : bool=True
         Include structural information in the JSON-LD output.

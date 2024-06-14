@@ -107,7 +107,7 @@ class TestConventions(unittest.TestCase):
         )
         zsr = ZenodoSandboxDeposit(rec_id=None)
         zsr.metadata = meta
-        zsr.upload_file(cv_yaml_filename, overwrite=True)
+        zsr.upload_file(cv_yaml_filename, overwrite=True, metamapper=None)
 
         # zsr.publish()
 
