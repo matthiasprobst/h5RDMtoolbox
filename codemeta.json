@@ -4,7 +4,7 @@
     "license": "https://spdx.org/licenses/MIT",
     "codeRepository": "git+https://github.com/matthiasprobst/h5RDMtoolbox.git",
     "name": "h5RDMtoolbox",
-    "version": "1.3.2",
+    "version": "1.4.0",
     "description": "Supporting a FAIR Research Data lifecycle using Python and HDF5.",
     "applicationCategory": "Engineering",
     "programmingLanguage": [
@@ -29,6 +29,7 @@
             "email": "matthias.probst@kit.edu",
             "affiliation": {
                 "@type": "Organization",
+                "@id": "https://ror.org/04t3en479",
                 "name": "Karlsruhe Institute of Technology, Institute of Thermal Turbomachinery"
             }
         },
@@ -39,6 +40,18 @@
             "familyName": "Büttner",
             "affiliation": {
                 "@type": "Organization",
+                "@id": "https://ror.org/04t3en479",
+                "name": "Karlsruhe Institute of Technology, Institute of Thermal Turbomachinery"
+            }
+        },
+        {
+            "@type": "Person",
+            "@id": "https://orcid.org/0000-0001-9560-500X",
+            "givenName": "Balazs",
+            "familyName": "Pritz",
+            "affiliation": {
+                "@type": "Organization",
+                "@id": "https://ror.org/04t3en479",
                 "name": "Karlsruhe Institute of Technology, Institute of Thermal Turbomachinery"
             }
         }
