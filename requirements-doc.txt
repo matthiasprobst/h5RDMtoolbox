@@ -8,3 +8,4 @@ sphinx-design
 myst-nb
 sphinxcontrib-bibtex
 kglab
+scikit-image
