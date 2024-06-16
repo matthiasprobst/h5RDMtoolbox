@@ -4,6 +4,12 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.8"
+  apt_packages:
+    - mongodb
+  jobs:
+    pre_build:
+      - echo "Starting mongodb"
+      - sudo service mongodb start
 
 python:
   install:
