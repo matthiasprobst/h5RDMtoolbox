@@ -5,11 +5,25 @@ build:
   tools:
     python: "3.8"
   apt_packages:
-    - mongodb
+    - wget
+    - gnupg
+    - curl
   jobs:
     pre_build:
       - echo "Starting mongodb"
-      - sudo service mongodb start
+      # Import the MongoDB public GPG key
+      - curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+      # Create a list file for MongoDB
+      - echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+      # Reload the local package database
+      - sudo apt-get update
+      # Install the MongoDB packages
+      - sudo apt-get install -y mongodb-org
+      # Start the MongoDB service
+      - sudo service mongod start
+    post_build:
+      - echo "Stopping mongodb"
+      - sudo service mongod stop
 
 python:
   install:
