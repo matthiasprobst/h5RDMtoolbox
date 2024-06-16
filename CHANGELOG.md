@@ -2,6 +2,14 @@
 
 Log of changes in the versions
 
+## v1.4.0
+- The repository interface to Zenodo has one single upload method `upload_file` with the parameter `metamapper`. It 
+  is a callable which extracts meta information from the actual file to be uploaded. This is especially useful and specifically 
+  intended for HDF5 files. Unless the value for `metamapper` is `None`, the `upload_file` method will use the built-in 
+  hdf5 extraction function automatically on HDF5 files.
+- fix issue in online documentation: mongomock is used to run the mongodb jupyter notebook in the documentation
+- codemeta.json file is updated with author and institution ROR ID
+
 ## v1.3.2
 - calling the RDF accessor on an attribute name will only work if the attribute already exists. If not, an error is raised.
 - Likewise, if an attribute is deleted, the entry in the RDF accessor dictionary is deleted
