@@ -18,7 +18,7 @@ Why HDF5?
 ---------
 The file format is chosen because it is a widely used, open and well-documented format, which allows data
 to be stored in a self-describing way by using so-called "HDF attributes" in addition to the data itself. HDF5 thus
-is very suitable for the majority of scientific (multi-dimensional) data source.
+is very suitable for the majority of scientific (multidimensional) data source.
 
 In short:
 

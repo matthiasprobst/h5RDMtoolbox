@@ -7,7 +7,7 @@ While processing data, auxiliary data is required to understand the context of t
 about the data itself (e.g. units, data type, etc.) as well as information about the data generation (e.g. instrument
 settings, etc.). This information is often stored in separate files, however, for HDF5 files it is stored in
 attributes right next to the data. This is a powerful feature of HDF5 files. However, `h5py` only returns the data 
-as `numpy` arrays. The attribute data needs to be read separately. Also information about dimension scales is not returned 
+as `numpy` arrays. The attribute data needs to be read separately. Also, information about dimension scales is not returned 
 to the user.
 
 The `h5rdmtoolbox` makes use of `xarray` objects, which wrap a very similar concept around a `numpy` array, such that 
