@@ -1,0 +1,4 @@
+-e .
+-r requirements.txt
+-r requirements-doc.txt
+mongomock
