@@ -4,12 +4,12 @@ from typing import Union, Generator, List, Optional
 import h5py
 
 from .objdb import ObjDB
-from ..interface import HDF5DBInterface, NonInsertableDatabaseInterface
+from ..interface import HDF5DBInterface
 from ...wrapper import lazy
 
 
-class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
-    """A database interface for an HDF5 file, where the filename is given."""
+class FileDB(HDF5DBInterface):
+    """A database interface for a single HDF5 file"""
 
     def __init__(self, filename: Union[str, pathlib.Path]):
         self.filename: str = str(filename)
@@ -59,8 +59,8 @@ class FileDB(NonInsertableDatabaseInterface, HDF5DBInterface):
             #     yield r
 
 
-class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
-    """A database interface for an HDF5 file, where the filename is given."""
+class FilesDB(HDF5DBInterface):
+    """A database interface for multiple HDF5 files."""
 
     def __init__(self, filenames: List[Union[str, pathlib.Path]]):
         self.filenames = list(set(pathlib.Path(filename) for filename in filenames))
@@ -70,7 +70,22 @@ class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
                     folder: Union[str, pathlib.Path],
                     hdf_suffixes: Union[str, List[str]] = '.hdf',
                     recursive: bool = False):
-        """Create a FilesDB from a folder containing HDF5 files"""
+        """Create a FilesDB from a folder containing HDF5 files.
+
+        Parameters
+        ----------
+        folder : Union[str, pathlib.Path]
+            The folder containing the HDF5 files.
+        hdf_suffixes : Union[str, List[str]], optional
+            The suffixes of the HDF5 files to scan for, by default '.hdf'
+        recursive : bool, optional
+            Whether to scan the folder recursively, by default False
+
+        Returns
+        -------
+        FilesDB
+            The FilesDB object
+        """
         if isinstance(hdf_suffixes, str):
             hdf_suffixes = [hdf_suffixes]
 
@@ -90,7 +105,7 @@ class FilesDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         self.filenames = list(set(self.filenames))
 
     def find_one(self, *args, **kwargs) -> lazy.LHDFObject:
-        """Call find_one on all the files registerd. If more than one file
+        """Call find_one on all the files registered. If more than one file
         contains the object, the first one is returned. If you want to find one per file,
         call find_one_per_file instead."""
         for filename in self.filenames:

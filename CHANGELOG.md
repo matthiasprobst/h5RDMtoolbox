@@ -7,6 +7,8 @@ Log of changes in the versions
   is a callable which extracts meta information from the actual file to be uploaded. This is especially useful and specifically 
   intended for HDF5 files. Unless the value for `metamapper` is `None`, the `upload_file` method will use the built-in 
   hdf5 extraction function automatically on HDF5 files.
+- Clearify abstraction for HDF5 database interfaces. `HDF5DBInterface` is the top abstraction from which 
+  `ExtHDF5Interface` inherits. `ExtHDF5Interface` makes use of external databases such as *mongoDB*.
 - fix issue in online documentation: mongomock is used to run the mongodb jupyter notebook in the documentation
 - codemeta.json file is updated with author and institution ROR ID
 

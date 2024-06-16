@@ -56,15 +56,6 @@ class TestHDFDB(unittest.TestCase):
                                       {'name': 'grp name'}, recursive=True)
         self.assertEqual(res.name, '/grp')
 
-    def test_insert(self):
-        with h5py.File(h5tbx.utils.generate_temporary_filename(suffix='.hdf'),
-                       'w') as h5:
-            gdb = hdfdb.ObjDB(h5['/'])
-            with self.assertRaises(NotImplementedError):
-                gdb.insert_dataset(None)
-            with self.assertRaises(NotImplementedError):
-                gdb.insert_group(None)
-
     def test_dtype_char(self):
         # find a string dataset
         with h5tbx.File() as h5:
@@ -597,7 +588,7 @@ class TestHDFDB(unittest.TestCase):
                 except pint.UndefinedUnitError:
                     return False
 
-            def _valid_standard_name(sn, list_of_sn:List[str]):
+            def _valid_standard_name(sn, list_of_sn: List[str]):
                 return sn in list_of_sn
 
             res = h5.find({'units': lambda x: _validate_unit(x)})

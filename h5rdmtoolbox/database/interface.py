@@ -6,44 +6,13 @@ import h5py
 from ..wrapper.lazy import LHDFObject
 
 
-class NonInsertableDatabaseInterface:
-    """A database interface that does not allow inserting datasets"""
-
-    def insert_dataset(self, *args, **kwargs):
-        """Insert a dataset. This is not possible for an HDF5 file."""
-        raise NotImplementedError('By using an HDF5 file as a database, you cannot insert datasets')
-
-    def insert_group(self, *args, **kwargs):
-        """Insert a group. This is not possible for an HDF5 file."""
-        raise NotImplementedError('By using an HDF5 file as a database, you cannot insert groups')
-
-
 class HDF5DBInterface(abc.ABC):
-    """Abstract HDF5 Database interface.
-
-    The init method is not abstract. Each database implementation
-    needs to implement it on its own.
-
-    The `insert` method covers the insertion of a dataset or group
-    into the database. The `find_one` and `find` methods are used to
-    query the database.
+    """Abstract HDF5 Database interface. This intends to use the HDF5 file as a database.
+    Subclasses, like `ExtHDF5DBInterface` implement interfaces to other databases and
+    require other common methods. The most common methods across all implementations are
+    `find_one` and `find` methods. They are abstract and need to be implemented by the
+    concrete implementations.
     """
-
-    @abc.abstractmethod
-    def insert_dataset(
-            self,
-            dataset: h5py.Dataset,
-            *args,
-            **kwargs):
-        """insert dataset to database"""
-
-    @abc.abstractmethod
-    def insert_group(
-            self,
-            group: h5py.Group,
-            *args,
-            **kwargs):
-        """insert group to database"""
 
     @abc.abstractmethod
     def find_one(self, *args, **kwargs) -> LHDFObject:
@@ -63,3 +32,28 @@ class HDF5DBInterface(abc.ABC):
         the meantime. Thus, it is better to return a generator
         instead of a list.
         """
+
+
+class ExtHDF5DBInterface(HDF5DBInterface):
+    """This interface is abstract for those implementations sharing HDF5 data
+    with other (external) databases, e.g. SQL or no SQL databases. One concrete implementation,
+    for which this interface is intended, is the interface with mongoDB.
+
+    Those implementations require `insert_dataset` and `insert_group` methods. Note, that this
+    does open, whether the dataset is inserted with or without data (i.e. only metadata)!"""
+
+    @abc.abstractmethod
+    def insert_dataset(
+            self,
+            dataset: h5py.Dataset,
+            *args,
+            **kwargs):
+        """insert dataset to database (may or may not include raw data)"""
+
+    @abc.abstractmethod
+    def insert_group(
+            self,
+            group: h5py.Group,
+            *args,
+            **kwargs):
+        """insert group to database"""

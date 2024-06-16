@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import pymongo
 
-from .interface import HDF5DBInterface
+from .interface import ExtHDF5DBInterface
 from .. import protected_attributes
 from ..wrapper import lazy
 
@@ -301,7 +301,7 @@ class MongoDBLazyDataset(lazy.LDataset):
         super().__getitem__(item)
 
 
-class MongoDB(HDF5DBInterface):
+class MongoDB(ExtHDF5DBInterface):
     """The database interface between HDF5 and MongoDB.
 
     Call `.insert()` on opened HDF5 files to insert them into the database.
