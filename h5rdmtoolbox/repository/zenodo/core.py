@@ -275,7 +275,8 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         # return Metadata(**self.json()['metadata'])
 
     def set_metadata(self, metadata: Union[Dict, Metadata]):
-        """update the metadata of the deposit"""
+        """update the metadata of the deposit. Please refer to the Zenodo REST API
+        (https://developers.zenodo.org/#representation)"""
         if isinstance(metadata, dict):
             metadata = Metadata(**metadata)
         else:
@@ -296,9 +297,8 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         """Return current access token for the Zenodo API."""
         return get_api_token(sandbox=True)
 
-    def get_filenames(self, suffix=None) -> Iterable[str]:
-        """Get a list of all filenames. If suffix is given, only filenames
-        with this suffix are returned."""
+    def get_file_infos(self, suffix=None) -> Dict[str, Dict]:
+        """Get a dictionary of file information (name, size, checksum, ...)"""
         file_dict = {f['filename']: f for f in self.json()['files']}
         if suffix is not None:
             remove = []
@@ -309,6 +309,24 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
                 file_dict.pop(r)
         return file_dict
 
+    def get_filenames(self, suffix: str = None) -> List[str]:
+        """Get a list of all filenames. If suffix is given, only filenames
+        with this suffix are returned.
+
+        Parameters
+        ----------
+        suffix: str, optional
+            The suffix of the files to return. E.g. '.hdf'
+
+        Returns
+        -------
+        List[str]
+            A list of filenames
+        """
+        if suffix:
+            return [f['filename'] for f in self.json()['files'] if pathlib.Path(f['filename']).suffix == suffix]
+        return [f['filename'] for f in self.json()['files']]
+
     def _upload_file(self, filename, overwrite: bool = False):
         """Add a file to the deposit. If the filename already exists, it can
         be overwritten with overwrite=True"""
@@ -316,17 +334,17 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         if not filename.exists():
             raise FileNotFoundError(f'File "{filename}" does not exist.')
 
-        existing_filenames = self.get_filenames()
+        existing_file_infos = self.get_file_infos()
         if not overwrite:
             # we need to check if the file already exists
-            if filename.name in existing_filenames:
+            if filename.name in existing_file_infos:
                 logger.debug(f'Overwriting file "{filename}" in deposit "{self.rec_id}"')
                 warnings.warn(f'Filename "{filename}" already exists in deposit. Skipping..."', UserWarning)
                 return
 
         # get file id
-        if filename.name in existing_filenames:
-            file_id = existing_filenames[filename.name]['id']
+        if filename.name in existing_file_infos:
+            file_id = existing_file_infos[filename.name]['id']
             url = f"{self.deposit_url}/{self.rec_id}/files/{file_id}"
             logger.debug(f'requests.delete(url={url}, ...)')
             r = requests.delete(url=url,

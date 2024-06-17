@@ -72,7 +72,8 @@ class RepositoryInterface(abc.ABC):
     def upload_file(self,
                     filename: Union[str, pathlib.Path],
                     metamapper: Union[None, Callable[[Union[str, pathlib.Path]], pathlib.Path]] = _HDF2JSON,
-                    overwrite: bool = False):
+                    overwrite: bool = False,
+                    **metamapper_kwargs):
         """Upload a file to the repository. A metamapper function can be provided optionally. It
         extracts metadata from the target file and also uploads it to the repository. This feature is especially
         useful for large files and especially for HDF5 files. Although the method call is very basic and does not
@@ -82,7 +83,7 @@ class RepositoryInterface(abc.ABC):
         large file, which might not be needed.
 
         Implementation details/requirements for the metamapper function:
-        - Takes only one argument, which is the filename (as str or pathlib.Path) of the target file
+        - Takes the filename as first argument. Other kwargs may be provided via metamapper_kwargs
         - Must return the filename of the metadata file
 
         Parameter
@@ -95,13 +96,15 @@ class RepositoryInterface(abc.ABC):
         overwrite: bool=False
             If True, the file will be overwritten if it already exists in the repository. If False, an error
             will be raised if the file already exists.
+        metamapper_kwargs: dict
+            Additional keyword arguments for the metamapper function.
 
         """
         if not pathlib.Path(filename).exists():
             raise FileNotFoundError(f'The file {filename} does not exist.')
 
         if metamapper:
-            meta_data_file = metamapper(filename)
+            meta_data_file = metamapper(filename, **metamapper_kwargs)
         self._upload_file(filename=filename, overwrite=overwrite)
         if metamapper:
             self._upload_file(filename=meta_data_file, overwrite=overwrite)
@@ -114,7 +117,15 @@ class RepositoryInterface(abc.ABC):
         HDF5 file using the metamapper function and is uploaded as well.
         The metamapper function takes a filename, extracts the metadata and stores it in
         a file. The filename of it is returned by the function. It is automatically uploaded
-        with the HDF5 file."""
+        with the HDF5 file.
+
+        .. note::
+
+            This method is deprecated. Use `upload_file` instead and provide the metamapper
+            function there.
+
+
+        """
         warnings.warn('This method is deprecated. Use `upload_file` instead and provide the '
                       'metamapper parameter there', DeprecationWarning)
         return self.upload_file(filename, metamapper, overwrite)

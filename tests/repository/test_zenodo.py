@@ -224,10 +224,11 @@ class TestZenodo(unittest.TestCase):
             h5.create_dataset('grp1/test2', data=2, attrs={'test': 1, 'long_name': 'dataset 2'})
 
             orig_hdf_filename = h5.hdf_filename
+
         hdf_file_name = orig_hdf_filename.name
         json_name = hdf_file_name.replace('.hdf', '.json')
 
-        z.upload_file(orig_hdf_filename)
+        z.upload_file(orig_hdf_filename)  # metamapper per default converts to JSONLD file
         filenames = z.get_filenames()
         self.assertIn(hdf_file_name, filenames)
         self.assertIn(json_name, filenames)
