@@ -4,7 +4,7 @@ import logging
 import pathlib
 import time
 import warnings
-from typing import Union, List, Iterable, Dict
+from typing import Union, List, Dict
 
 import appdirs
 import requests

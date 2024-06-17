@@ -1,10 +1,12 @@
 """Test the mongoDB interface"""
 
+import unittest
+from typing import List
+
 import h5py
 import numpy as np
 import pint
-import unittest
-from typing import List
+
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import database
 from h5rdmtoolbox.database import hdfdb
