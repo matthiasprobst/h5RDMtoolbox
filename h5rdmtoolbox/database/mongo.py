@@ -223,8 +223,6 @@ def _insert_group(
         additional_fields: Dict = None
 ):
     """Insert a group into the collection"""
-    if not isinstance(collection, pymongo.collection.Collection):
-        raise TypeError(f'collection must be of type pymongo.collection.Collection, but is {type(collection)}')
     filename_ctime = get_file_creation_time(group.file.filename)
     if use_relative_filename:
         filename = group.file.filename

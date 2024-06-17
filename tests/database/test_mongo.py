@@ -1,11 +1,14 @@
 """Test the mongoDB interface"""
-import h5py
-import numpy as np
 import pathlib
 import types
 import unittest
 import warnings
 from datetime import datetime
+
+import h5py
+import mongomock
+import numpy as np
+import pymongo
 from skimage.feature import graycomatrix, graycoprops
 from sklearn.datasets import load_digits  # ! pip install scikit-learn
 
@@ -16,46 +19,35 @@ from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
 from h5rdmtoolbox.wrapper.lazy import LDataset
 
 try:
-    import pymongo
-
-    PYMONGO_IS_INSTALLED = True
-except ImportError:
-    PYMONGO_IS_INSTALLED = False
-
-try:
     client = pymongo.MongoClient(serverSelectionTimeoutMS=1.)
     client.server_info()
-    SERVER_IS_RUNNING = True
+
+
+    def get_client():
+        print('Using real mongoDB server over mongomock')
+        return pymongo.MongoClient()
 except pymongo.errors.ServerSelectionTimeoutError as err:
     warnings.warn('Cannot test mongoDB features as no mongodb server is running!')
-    SERVER_IS_RUNNING = False
 
 
-def is_testable(func):
-    """wrapper that checks if the function can be executed, which is only the case
-    if the mongoDB is installed and a server is running"""
-
-    def wrapper(*args, **kwargs):
-        """wrapper"""
-        if PYMONGO_IS_INSTALLED and SERVER_IS_RUNNING:
-            return func(*args, **kwargs)
-        else:
-            return None
-
-    return wrapper
+    def get_client():
+        print('Using mongomock')
+        return mongomock.MongoClient()
 
 
 class TestH5Mongo(unittest.TestCase):
 
     def setUp(self) -> None:
         """Create a database"""
-        self.client = None
-        self.collection = None
+        self.client = get_client()
 
-        if SERVER_IS_RUNNING and PYMONGO_IS_INSTALLED:
-            self.client = pymongo.MongoClient()
-            db = self.client.hdf_database_test
-            self.collection = db.hdf_collection_test
+        db = self.client.hdf_database_test
+        self.collection = db.hdf_collection_test
+
+        # if SERVER_IS_RUNNING and PYMONGO_IS_INSTALLED:
+        #     self.client = pymongo.MongoClient()
+        #     db = self.client.hdf_database_test
+        #     self.collection = db.hdf_collection_test
 
         use(None)
 
@@ -90,7 +82,6 @@ class TestH5Mongo(unittest.TestCase):
 
         self.assertEqual(type2mongo(MyClass()), 'MyClass')
 
-    @is_testable
     def test_make_dict_mongo_compatible(self):
         self.assertEqual(make_dict_mongo_compatible({'a': 1}), {'a': 1})
         self.assertEqual(make_dict_mongo_compatible({'a': {'b': 4}}), {'a': {'b': 4}})
@@ -103,7 +94,6 @@ class TestH5Mongo(unittest.TestCase):
             self.assertEqual(make_dict_mongo_compatible({'a': np.array(5.5)}),
                              {'a': np.array(5.5)})
 
-    @is_testable
     def test_insert(self):
         """Test the MongoDB class"""
         mongoDBInterface = MongoDB(collection=self.collection)
@@ -144,7 +134,6 @@ class TestH5Mongo(unittest.TestCase):
 
         pathlib.Path('test.h5').unlink()
 
-    @is_testable
     def test_insert_group(self):
         mongoDBInterface = MongoDB(collection=self.collection)
 
@@ -167,7 +156,6 @@ class TestH5Mongo(unittest.TestCase):
 
         self.assertEqual(2, mongoDBInterface.collection.count_documents({}))
 
-    @is_testable
     def test_find_one(self):
 
         mongoDBInterface = MongoDB(collection=self.collection)
@@ -182,7 +170,6 @@ class TestH5Mongo(unittest.TestCase):
         res = mongoDBInterface.find_one({'basename': 'dataset'})
         self.assertEqual(res[()].shape, (1, 20, 4))
 
-    @is_testable
     def test_sklearn_digits(self):
         digits = load_digits()
 
