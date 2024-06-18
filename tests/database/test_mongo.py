@@ -2,7 +2,6 @@
 import pathlib
 import types
 import unittest
-import warnings
 from datetime import datetime
 
 import h5py
@@ -27,8 +26,6 @@ try:
         print('Using real mongoDB server over mongomock')
         return pymongo.MongoClient()
 except pymongo.errors.ServerSelectionTimeoutError as err:
-    warnings.warn('Cannot test mongoDB features as no mongodb server is running!')
-
 
     def get_client():
         print('Using mongomock')
