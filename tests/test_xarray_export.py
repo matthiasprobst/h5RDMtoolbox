@@ -26,7 +26,8 @@ class TestXrExport(unittest.TestCase):
 
     def test_export_timeda(self):
         with h5tbx.File() as h5:
-            ds = h5.create_time_dataset('ds', data=datetime.now())
+            ds = h5.create_time_dataset('ds', data=datetime.now(),
+                                        format='iso')
             da = ds[()]
 
         self.assertIsInstance(da, xr.DataArray)

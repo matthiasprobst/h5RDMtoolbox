@@ -31,5 +31,6 @@ class TestQueryRDF(unittest.TestCase):
                                       rdf_predicate=FOAF.firstName,
                                       recursive=True)
         self.assertEqual(len(res), 2)
-        self.assertEqual(res[0].attrs['first_name'], 'Jane')
-        self.assertEqual(res[1].attrs['first_name'], 'John')
+        sorted_res = sorted(res)
+        self.assertEqual(sorted_res[1].attrs['first_name'], 'Jane')
+        self.assertEqual(sorted_res[0].attrs['first_name'], 'John')
