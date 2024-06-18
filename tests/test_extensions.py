@@ -80,6 +80,7 @@ class TestExtension(unittest.TestCase):
             now = datetime.datetime.now()
             h5.create_time_dataset('t',
                                    data=[now, now + datetime.timedelta(seconds=1), now + datetime.timedelta(seconds=2)],
+                                   time_format='iso',
                                    make_scale=True)
             u = h5.create_dataset('u', data=[-4, 10, 0], attach_scales=[('x', 't'), ],
                                   attrs=dict(units='m/s'))

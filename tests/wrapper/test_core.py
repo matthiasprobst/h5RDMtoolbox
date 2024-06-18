@@ -4,7 +4,6 @@ import pathlib
 import unittest
 from datetime import datetime, timedelta
 
-import h5py
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -149,7 +148,6 @@ class TestCore(unittest.TestCase):
 
     def test_filename_attr(self):
         with h5tbx.File() as h5:
-
             h5.create_dataset('ds', data=np.arange(10))
             h5['ds'].attrs['filename'] = '/path/to/file.csv'
             self.assertEqual(h5['ds'].attrs['filename'], '/path/to/file.csv')
@@ -845,23 +843,22 @@ class TestCore(unittest.TestCase):
                 self.assertEqual(h5['time'].compression_opts, 5)
                 h5.create_string_dataset('single_time', data=tdata[0].isoformat(),
                                          attrs={'ISTIMEDS': 1,
-                                                'TIMEFORMAT': 'ISO'})
+                                                'time_format': 'ISO'})
                 self.assertEqual(h5['single_time'].compression, None)
                 self.assertEqual(h5['single_time'].compression_opts, None)
 
             tds = h5['time'][()]
 
-            h5.create_time_dataset('time2', data=tdata)
+            h5.create_time_dataset('time2', data=tdata, time_format='iso')
             tds2 = h5['time2'][()]
 
             h5.create_time_dataset('time3', data=tdata_np,
-                                   attrs={'ISTIMEDS': 1,
-                                          'TIMEFORMAT': 'ISO'})
+                                   time_format='iso',
+                                   attrs={'time_format': 'ISO'})
             tds3 = h5['time3'][()]
 
         for it, t in enumerate(tds):
-            self.assertIsInstance(t.values, np.datetime64)
-            np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
+            self.assertNotIsInstance(t.values, np.datetime64)
 
         for it, t in enumerate(tds2):
             self.assertIsInstance(t.values, np.datetime64)
@@ -871,11 +868,32 @@ class TestCore(unittest.TestCase):
             self.assertIsInstance(t.values, np.datetime64)
             np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
 
+    def test_timedataset(self):
+        abs_time = [datetime.now() + timedelta(minutes=i) for i in range(10)]
+        # print(abs_time)
+        # print(abs_time[0].strftime('%Y-%m-%dT%H:%M:%S.%f'))
+
+        with h5tbx.File() as h5:
+            ds = h5.create_time_dataset('time', data=abs_time, time_format='%Y-%m-%dT%H:%M:%S.%f')
+            # ds.rdf.type = 'https://schema.org/DateTime'
+            # ds.attrs['timeformat'] = Attribute(value='%Y-%m-%dT%H:%M:%S.%f',
+            #                                    rdf_predicate='https://matthiasprobst.github.io/pivmeta#timeFormat')
+            self.assertEqual(ds.attrs['time_format'], '%Y-%m-%dT%H:%M:%S.%f')
+            self.assertEqual(ds.rdf['time_format'].predicate, 'https://matthiasprobst.github.io/pivmeta#timeFormat')
+            self.assertEqual(ds.rdf.type, 'https://schema.org/DateTime')
+
+        with h5tbx.File() as h5:
+            ds = h5.create_time_dataset('time', data=abs_time, time_format='iso')
+            self.assertEqual(ds.attrs['time_format'], '%Y-%m-%dT%H:%M:%S.%f')
+            self.assertEqual(ds.rdf['time_format'].predicate, 'https://matthiasprobst.github.io/pivmeta#timeFormat')
+            self.assertEqual(ds.rdf.type, 'https://schema.org/DateTime')
+
     def test_time_as_coord(self):
         with h5tbx.File() as h5:
             h5.create_time_dataset('time', data=[datetime.now(),
                                                  datetime.now() + timedelta(hours=1),
                                                  datetime.now() + timedelta(hours=3)],
+                                   time_format='iso',
                                    attrs={'ISTIMEDS': 1,
                                           'TIMEFORMAT': 'ISO'}, make_scale=True)
             h5.create_dataset('vel', data=[1, 2, -3], attach_scale='time')
@@ -886,12 +904,14 @@ class TestCore(unittest.TestCase):
                   datetime.now() + timedelta(hours=1),
                   datetime.now() + timedelta(hours=3)]
             h5.create_time_dataset('time1', data=t1,
+                                   time_format='iso',
                                    attrs={'ISTIMEDS': 1,
                                           'TIMEFORMAT': 'ISO'}, make_scale=True)
             t2 = [datetime.now(),
                   datetime.now() + timedelta(days=1),
                   datetime.now() + timedelta(days=3)]
             h5.create_time_dataset('time2', data=t2,
+                                   time_format='iso',
                                    attrs={'ISTIMEDS': 1,
                                           'TIMEFORMAT': 'ISO'}, make_scale=True)
             h5.create_dataset('vel', data=[[1, 2, -3],
@@ -916,6 +936,7 @@ class TestCore(unittest.TestCase):
                                           datetime.now() + timedelta(hours=6),
                                           datetime.now() + timedelta(hours=10)]
                                          ],
+                                   time_format='iso',
                                    attrs={'ISTIMEDS': 1,
                                           'TIMEFORMAT': 'ISO'})
             t = h5.time[()]

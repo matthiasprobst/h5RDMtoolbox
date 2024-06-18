@@ -65,9 +65,9 @@ def assert_filename_existence(filename: pathlib.Path) -> pathlib.Path:
     return filename
 
 
-def convert_strings_to_datetimes(array):
+def convert_strings_to_datetimes(array, time_format='%Y-%m-%dT%H:%M:%S.%f'):
     assert np.issubdtype(array.dtype, np.str_), 'Unexpected array type'
-    return np.array([datetime.fromisoformat(date_str) for date_str in array.flat]).reshape(array.shape)
+    return np.array([datetime.strptime(date_str, time_format) for date_str in array.flat]).reshape(array.shape)
     # else:
     #     return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
 
@@ -500,25 +500,59 @@ class Group(h5py.Group):
     def create_time_dataset(self,
                             name: str,
                             data: Union[datetime, List],
+                            time_format: str,
+                            assign_rdf: bool = True,
                             overwrite: bool = False,
                             attrs: Dict = None,
                             **kwargs):
         """Special creation function to create a time vector. Data is stored as a string dataset
-        where each datetime is converted to a string with ISO format"""
+        where each datetime is converted to a string using the provided time_format
+
+        Parameter
+        ---------
+        name : str
+            Name of the dataset
+        data : Union[datetime, List]
+            Data to be stored. If a list is provided, each element must be a datetime object
+        time_format : str
+            Format of the time string. E.g. '%Y-%m-%dT%H:%M:%S.%f' or 'iso'. If 'iso' is provided
+            the format is set to '%Y-%m-%dT%H:%M:%S.%f'
+        assign_rdf : bool, default=True
+            Automatically assign RDF to dataset. This includes type='https://schema.org/DateTime' and
+            predicate for time_format='https://matthiasprobst.github.io/pivmeta#timeFormat'
+            This is True by default
+        overwrite : bool, default=False
+            If the dataset already exists, it is overwritten if True. If False, the dataset is not created
+        attrs : Dict, default=None
+            Attributes of the dataset
+        **kwargs : dict
+            Additional keyword arguments passed to the h5py create_dataset method
+        """
         if attrs is None:
             attrs = {}
-        attrs.update({'ISTIMEDS': 1,
-                      'TIMEFORMAT': 'ISO'})  # YYYY-MM-DDTHH:MM:SS.ffffff
+        if time_format.lower() == 'iso':
+            time_format = '%Y-%m-%dT%H:%M:%S.%f'
+
+        attrs.update({'time_format': time_format})
+
         if isinstance(data, np.ndarray):
-            return self.create_string_dataset(name, data=[t.astype(datetime).isoformat() for t in data],
-                                              overwrite=overwrite, attrs=attrs, **kwargs)
-        _data = np.asarray(data)
-        _orig_shape = _data.shape
-        _flat_data = _data.flatten()
-        _flat_data = np.asarray([t.isoformat() for t in _flat_data])
-        _reshaped_data = _flat_data.reshape(_orig_shape)
-        return self.create_string_dataset(name, data=_reshaped_data.tolist(),
-                                          overwrite=overwrite, attrs=attrs, **kwargs)
+            ds = self.create_string_dataset(name,
+                                            data=[t.astype(datetime).strftime(time_format) for t in data],
+                                            overwrite=overwrite,
+                                            attrs=attrs,
+                                            **kwargs)
+        else:
+            _data = np.asarray(data)
+            _orig_shape = _data.shape
+            _flat_data = _data.flatten()
+            _flat_data = np.asarray([t.strftime(time_format) for t in _flat_data])
+            _reshaped_data = _flat_data.reshape(_orig_shape)
+            ds = self.create_string_dataset(name, data=_reshaped_data.tolist(),
+                                            overwrite=overwrite, attrs=attrs, **kwargs)
+        if assign_rdf:
+            ds.rdf.type = 'https://schema.org/DateTime'
+            ds.rdf['time_format'].predicate = 'https://matthiasprobst.github.io/pivmeta#timeFormat'
+        return ds
 
     def create_string_dataset(self,
                               name: str,
@@ -1187,7 +1221,7 @@ class Group(h5py.Group):
         self[name] = h5py.ExternalLink(filename, path)
         return self[name]
 
-    def create_from_yaml(self, yaml_filename: Path, num_dtype:Optional[str]=None):
+    def create_from_yaml(self, yaml_filename: Path, num_dtype: Optional[str] = None):
         """creates groups, datasets and attributes defined in a yaml file.
         Creation is performed relative to the current group level.
 
@@ -1830,9 +1864,9 @@ class Dataset(h5py.Dataset):
                     dim_ds_attrs = pop_hdf_attributes(dim_ds.attrs)
                     if dim_ds_data.dtype.kind == 'S':
                         # decode string array
-                        if dim_ds_attrs.get('ISTIMEDS', False):
+                        if dim_ds_attrs.get('time_format', False):
                             if dim_ds_data.ndim == 0:
-                                dim_ds_data = np.array(datetime.fromisoformat(dim_ds_data.astype(str))).astype(datetime)
+                                dim_ds_data = np.array(datetime.strptime(dim_ds_data.astype(str), dim_ds_attrs['time_format'])).astype(datetime)
                             else:
                                 dim_ds_data = convert_strings_to_datetimes(dim_ds_data.astype(str))
                                 # dim_ds_data = np.array(
@@ -1890,19 +1924,23 @@ class Dataset(h5py.Dataset):
                 _arr = arr.astype(str)
             except UnicodeDecodeError:
                 return xr.DataArray(arr, attrs=attrs)
-            if self.attrs.get('ISTIMEDS', False):
+
+            time_format = self.attrs.get('time_format', None)
+            if time_format is not None:
+                if time_format.lower() == 'iso':
+                    time_format = '%Y-%m-%dT%H:%M:%S.%f'
                 if _arr.ndim == 0:
-                    _arr = np.asarray(datetime.fromisoformat(_arr))
+                    _arr = np.asarray(datetime.strptime(_arr, time_format))
                 elif _arr.ndim == 1:
-                    _arr = [datetime.fromisoformat(t) for t in _arr]
+                    _arr = [datetime.strptime(str(t), time_format) for t in _arr]
                 else:  # _arr.ndim > 1:
                     orig_shape = _arr.shape
-                    _flat_arr = np.asarray([datetime.fromisoformat(t) for t in _arr.flatten()])
+                    _flat_arr = np.asarray([datetime.strptime(t, time_format) for t in _arr.flatten()])
                     _arr = _flat_arr.reshape(orig_shape)
                 return xr.DataArray(_arr, attrs=attrs)
-            else:
-                if isinstance(_arr, np.ndarray):
-                    return _arr
+
+            if isinstance(_arr, np.ndarray):
+                return xr.DataArray(_arr, attrs=attrs)
             return _arr
 
         coords = {}
