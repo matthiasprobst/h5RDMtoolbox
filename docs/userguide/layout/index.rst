@@ -18,3 +18,4 @@ So, before working with layouts, you might first want to learn about <https://h5
     :glob:
 
     getting_started.ipynb
+    Examples.ipynb

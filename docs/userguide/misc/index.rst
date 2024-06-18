@@ -19,3 +19,4 @@ of the sub-package implementations. This section outlines them.
     Time.ipynb
     UserDirectories.ipynb
     FileProperties.ipynb
+    QueryHDFWithSPARQL.ipynb
