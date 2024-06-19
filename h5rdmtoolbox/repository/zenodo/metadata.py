@@ -174,7 +174,30 @@ class DateType(BaseModel):
 
 
 class Metadata(BaseModel):
-    """Zeno Metadata class according to Zenodo spec: https://developers.zenodo.org/."""
+    """Zeno Metadata class according to Zenodo spec: https://developers.zenodo.org/.
+
+    Required fields:
+    ----------------
+    version
+    title
+    description
+    creators
+    upload_type
+
+    Optional/Default fields:
+    ----------------
+    additional_description=None
+    dates=[]
+    publication_date=datetime.today
+    publication_type=None
+    image_type=None
+    keywords=None
+    notes=None
+    contributors=[]
+    access_right="open"
+    license="cc-by-4.0"
+    embargo_date=None
+    """
     version: Optional[str]
     title: Optional[str]
     description: str
