@@ -48,7 +48,7 @@ class RepositoryInterface(abc.ABC):
         """Get the metadata of the repository."""
 
     @abc.abstractmethod
-    def set_metadata(self, value):
+    def set_metadata(self, metadata):
         """Set the metadata of the repository."""
 
     @abc.abstractmethod
