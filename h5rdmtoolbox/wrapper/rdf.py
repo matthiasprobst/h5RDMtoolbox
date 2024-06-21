@@ -1,4 +1,6 @@
 """RDF (Resource Description Framework) module for use with HDF5 files"""
+import warnings
+
 import abc
 from typing import Dict, Union, Optional, List
 
@@ -11,8 +13,8 @@ from ..protocols import H5TbxAttributeManager
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
-RDF_SUBJECT_ATTR_NAME = '@ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
-RDF_TYPE_ATTR_NAME = '@TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
+RDF_SUBJECT_ATTR_NAME = 'RDF_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
+RDF_TYPE_ATTR_NAME = 'RDF_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 
 DEFINITION_ATTR_NAME = 'ATTR_DEFINITION'
 
@@ -369,7 +371,11 @@ class RDFManager:
         -------
         Union[str, List[str], None]
         """
-        s = self._attr.get(RDF_TYPE_ATTR_NAME, None)
+        if '@TYPE' in self._attr:
+            warnings.warn('The attribute @TYPE is deprecated. Use RDF_TYPE instead.', DeprecationWarning)
+            s = self._attr.get("@TYPE", None)
+        else:
+            s = self._attr.get(RDF_TYPE_ATTR_NAME, None)
         if s is None:
             return
         return s
@@ -384,7 +390,12 @@ class RDFManager:
             data = validate_url(str(rdf_type))
 
         # get the attribute
-        iri_sbj_data = self._attr.get(RDF_TYPE_ATTR_NAME, None)
+        if '@TYPE' in self._attr:
+            warnings.warn('The attribute @TYPE is deprecated. Use RDF_TYPE instead.', DeprecationWarning)
+            iri_sbj_data = self._attr.get('@TYPE', None)
+        else:
+            iri_sbj_data = self._attr.get(RDF_TYPE_ATTR_NAME, None)
+
         if iri_sbj_data is None:
             self._attr[RDF_TYPE_ATTR_NAME] = data
             return
@@ -407,6 +418,9 @@ class RDFManager:
     @type.deleter
     def type(self):
         """Delete all (!) types of the group or dataset"""
+        if '@TYPE' in self._attr:
+            warnings.warn('The attribute @TYPE is deprecated. Use RDF_TYPE instead.', DeprecationWarning)
+            del self._attr['@TYPE']
         del self._attr[RDF_TYPE_ATTR_NAME]
 
     def pop_type(self, rdf_type: str):

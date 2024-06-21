@@ -38,9 +38,6 @@ class TestXrExport(unittest.TestCase):
             if isinstance(da.attrs[ak], dict):
                 da.attrs[ak] = json.dumps(da.attrs[ak])
 
-        # TODO: DONT use "@" in xarray! conflict with to_netcdf()
-        da.attrs['RDF_TYPE'] = da.attrs.pop('@TYPE')
-
         da.to_netcdf(nc_fname)
         da2 = xr.open_dataarray(nc_fname)
         self.assertIsInstance(da2, xr.DataArray)
