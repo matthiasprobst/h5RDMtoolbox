@@ -474,7 +474,7 @@ class RDFManager:
 
     @property
     def subject(self) -> Optional[str]:
-        """Return the RDF subject, which is the @ID in JSON-LD syntax"""
+        """Return the RDF subject (a URL), which is equivalent to the @ID in JSON-LD syntax"""
         if RDF_SUBJECT_ATTR_NAME not in self._attr:
             return
         return self._attr[RDF_SUBJECT_ATTR_NAME]
@@ -487,11 +487,14 @@ class RDFManager:
     @subject.setter
     def subject(self, jsonld_id: Union[str, HttpUrl]):
         """Set the RDF subject, which is the @ID in JSON-LD syntax.
+        Hence a valdi URL is required. This is validated by pydantic!
 
         Raises
         ------
         TypeError
             If the subject is not a string or URL
+        RDFError
+            If the URL is invalid
         """
         if not isinstance(jsonld_id, str):
             raise TypeError(f'Expecting a string or URL. Got {type(jsonld_id)}. Note, that a subject '

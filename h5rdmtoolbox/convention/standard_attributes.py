@@ -33,7 +33,7 @@ class StandardAttribute:
     validator: Union[pydantic.BaseModel, typing_extensions._AnnotatedAlias]
         The validator for the attribute. If the validator takes a parameter, pass it as dict.
         Examples for no-parameter validator: "$pintunits", "$standard_name", "$orcid", "$url"
-        Examples for validator with parameter: {"$regex": "^[a-z0-9_]*$"}, {"$in": ["a", "b", "c"]}
+        Examples for validator with parameter: {"$regex": r"^[a-z0-9_]*$"}, {"$in": ["a", "b", "c"]}
     description: str
         The description of the attribute
     target_method: str
@@ -352,6 +352,6 @@ class StandardAttribute:
         try:
             _validated_value = self.validator.model_validate({key0: value},
                                                              context={'parent': parent, 'attrs': attrs})
-        except pydantic.ValidationError as err:
+        except pydantic.ValidationError as _:
             return False
         return True
