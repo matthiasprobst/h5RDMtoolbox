@@ -3,11 +3,11 @@
 
 <svg
    width="159mm"
-   height="100mm"
-   viewBox="0 0 159 100"
+   height="80mm"
+   viewBox="0 0 159 80"
    version="1.1"
    id="svg1"
-   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
    sodipodi:docname="database_class_diagram.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -15,7 +15,7 @@
    xmlns:svg="http://www.w3.org/2000/svg">
   <sodipodi:namedview
      id="namedview1"
-     pagecolor="#505050"
+     pagecolor="#ffffff"
      bordercolor="#eeeeee"
      borderopacity="1"
      inkscape:showpageshadow="0"
@@ -23,14 +23,14 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#505050"
      inkscape:document-units="mm"
-     showgrid="false"
-     inkscape:zoom="1.2571447"
-     inkscape:cx="334.09041"
-     inkscape:cy="79.147608"
-     inkscape:window-width="2400"
-     inkscape:window-height="1261"
-     inkscape:window-x="-9"
-     inkscape:window-y="-9"
+     showgrid="true"
+     inkscape:zoom="3.5557422"
+     inkscape:cx="506.08281"
+     inkscape:cy="89.292189"
+     inkscape:window-width="1366"
+     inkscape:window-height="705"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1">
     <inkscape:grid
@@ -48,7 +48,7 @@
        dotted="false"
        gridanglex="30"
        gridanglez="30"
-       visible="false" />
+       visible="true" />
   </sodipodi:namedview>
   <defs
      id="defs1">
@@ -72,6 +72,46 @@
          d="M 5.77,0 -2.88,5 V -5 Z"
          id="path6" />
     </marker>
+    <marker
+       style="overflow:visible"
+       id="ColoredTriangle-4"
+       refX="-0.9830457"
+       refY="5.5226357e-10"
+       orient="auto-start-reverse"
+       inkscape:stockid="Colored triangle"
+       markerWidth="2"
+       markerHeight="2"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid"
+       markerUnits="strokeWidth">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-fill;fill-rule:evenodd;stroke:context-stroke;stroke-width:2"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path6-2" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ColoredTriangle-4-2"
+       refX="-0.9830457"
+       refY="5.5226357e-10"
+       orient="auto-start-reverse"
+       inkscape:stockid="Colored triangle"
+       markerWidth="2"
+       markerHeight="2"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid"
+       markerUnits="strokeWidth">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-fill;fill-rule:evenodd;stroke:context-stroke;stroke-width:2"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path6-2-7" />
+    </marker>
   </defs>
   <g
      inkscape:label="Ebene 1"
@@ -79,247 +119,257 @@
      id="layer1"
      transform="translate(-8.0347881,-42.265371)">
     <rect
-       style="fill:#6f6f6f;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:1.5338;stroke-opacity:1"
+       id="rect2"
+       width="53.352551"
+       height="7.36623"
+       x="60.440247"
+       y="49.315907" />
+    <rect
+       style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:1.92065;stroke-opacity:1"
+       id="rect2-5"
+       width="83.659325"
+       height="7.36623"
+       x="42.565899"
+       y="79.207825" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect1"
-       width="53.54969"
-       height="34.426773"
-       x="59.850513"
-       y="46.112041" />
+       width="53.549694"
+       height="20.9571"
+       x="60.379681"
+       y="49.287037" />
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
-       x="62.666595"
-       y="51.470886"
+       x="63.195763"
+       y="54.645882"
        id="text1"><tspan
          sodipodi:role="line"
          id="tspan1"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.264583"
-         x="62.666595"
-         y="51.470886">HDF5DBInterface(ABC)</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52777px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
-       x="62.486427"
-       y="58.511921"
-       id="text2"><tspan
-         sodipodi:role="line"
-         id="tspan2"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
-         x="62.486427"
-         y="58.511921">+ insert_dataset(dataset)</tspan></text>
+         x="63.195763"
+         y="54.645882">HDF5DBInterface(ABC)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="62.70966"
-       y="64.630913"
-       id="text2-2"><tspan
-         sodipodi:role="line"
-         id="tspan2-2"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
-         x="62.70966"
-         y="64.630913">+ insert_group(group)</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="62.89397"
-       y="70.786072"
+       x="63.423138"
+       y="61.790237"
        id="text2-2-7"><tspan
          sodipodi:role="line"
          id="tspan2-2-8"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
-         x="62.89397"
-         y="70.786072">+ find_one(*args, **kwargs)</tspan></text>
+         x="63.423138"
+         y="61.790237">+ find_one(*args, **kwargs)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="62.89397"
-       y="76.941238"
+       x="63.423138"
+       y="67.945396"
        id="text2-2-7-5"><tspan
          sodipodi:role="line"
          id="tspan2-2-8-6"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
-         x="62.89397"
-         y="76.941238">+ find(*args, **kwargs)</tspan></text>
+         x="63.423138"
+         y="67.945396">+ find(*args, **kwargs)</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 59.850513,53.693332 H 113.40021"
+       d="m 60.37968,56.868328 h 53.5497"
        id="path2"
        sodipodi:nodetypes="cc" />
     <rect
-       style="fill:#6f6f6f;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       style="fill:none;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect1-8"
-       width="69.732681"
-       height="40.621075"
-       x="11.86341"
-       y="97.615746" />
+       width="83.721794"
+       height="34.668266"
+       x="42.555077"
+       y="79.094902" />
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
-       x="14.679492"
-       y="102.97459"
+       x="45.371159"
+       y="84.453743"
        id="text1-7"><tspan
          sodipodi:role="line"
          id="tspan1-3"
          style="stroke-width:0.264583"
-         x="14.679492"
-         y="102.97459">MongoDBInterface</tspan></text>
+         x="45.371159"
+         y="84.453743">ExtHDF5DBInterface</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="14.499324"
-       y="117.42396"
+       x="45.19099"
+       y="92.023949"
        id="text2-5"><tspan
          sodipodi:role="line"
          id="tspan2-3"
          style="stroke-width:0.265;stroke-dasharray:none"
-         x="14.499324"
-         y="117.42396">+ insert_dataset(dataset, **kwargs)</tspan></text>
+         x="45.19099"
+         y="92.023949">+ insert_dataset(dataset, *args, **kwargs)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="14.499324"
-       y="123.54295"
+       x="45.19099"
+       y="98.142998"
        id="text2-2-4"><tspan
          sodipodi:role="line"
          id="tspan2-2-87"
          style="stroke-width:0.265;stroke-dasharray:none"
-         x="14.499324"
-         y="123.54295">+ insert_group(group **kwargs)</tspan></text>
+         x="45.19099"
+         y="98.142998">+ insert_group(group, *args, **kwargs)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="14.499324"
-       y="129.69806"
+       x="45.19099"
+       y="104.29805"
        id="text2-2-7-52"><tspan
          sodipodi:role="line"
          id="tspan2-2-8-3"
          style="stroke-width:0.265;stroke-dasharray:none"
-         x="14.499324"
-         y="129.69806">+ find_one(filter, *args, **kwargs)</tspan></text>
+         x="45.19099"
+         y="104.29805">+ find_one(filter, *args, **kwargs)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="14.499324"
-       y="135.8532"
+       x="45.19099"
+       y="110.45325"
        id="text2-2-7-5-9"><tspan
          sodipodi:role="line"
          id="tspan2-2-8-6-8"
          style="stroke-width:0.265;stroke-dasharray:none"
-         x="14.499324"
-         y="135.8532">+ find(*args, **kwargs)</tspan></text>
+         x="45.19099"
+         y="110.45325">+ find(*args, **kwargs)</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 11.863411,105.19706 h 69.73268"
+       d="M 42.555079,86.676218 H 126.27687"
        id="path2-8"
-       sodipodi:nodetypes="cc" />
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="14.499324"
-       y="110.01559"
-       id="text3"><tspan
-         sodipodi:role="line"
-         id="tspan3"
-         style="stroke-width:0.265;stroke-dasharray:none"
-         x="14.499324"
-         y="110.01559">+ collection</tspan></text>
-    <path
-       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 11.863411,112.60539 h 69.73268"
-       id="path3"
-       sodipodi:nodetypes="cc" />
-    <rect
-       style="fill:#6f6f6f;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-       id="rect1-8-2"
-       width="69.732681"
-       height="40.621075"
-       x="92.464417"
-       y="97.615746" />
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
-       x="95.28051"
-       y="102.97459"
-       id="text1-7-3"><tspan
-         sodipodi:role="line"
-         id="tspan1-3-2"
-         style="stroke-width:0.264583"
-         x="95.28051"
-         y="102.97459">FileDBInterface</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="95.100334"
-       y="117.42396"
-       id="text2-5-7"><tspan
-         sodipodi:role="line"
-         id="tspan2-3-1"
-         style="stroke-width:0.265;stroke-dasharray:none"
-         x="95.100334"
-         y="117.42396">+ insert_dataset(dataset, **kwargs)</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="95.100334"
-       y="123.54295"
-       id="text2-2-4-3"><tspan
-         sodipodi:role="line"
-         id="tspan2-2-87-0"
-         style="stroke-width:0.265;stroke-dasharray:none"
-         x="95.100334"
-         y="123.54295">+ insert_group(group **kwargs)</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="95.100334"
-       y="129.69806"
-       id="text2-2-7-52-7"><tspan
-         sodipodi:role="line"
-         id="tspan2-2-8-3-4"
-         style="stroke-width:0.265;stroke-dasharray:none"
-         x="95.100334"
-         y="129.69806">+ find_one(filter, *args, **kwargs)</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="95.100334"
-       y="135.8532"
-       id="text2-2-7-5-9-0"><tspan
-         sodipodi:role="line"
-         id="tspan2-2-8-6-8-1"
-         style="stroke-width:0.265;stroke-dasharray:none"
-         x="95.100334"
-         y="135.8532">+ find(*args, **kwargs)</tspan></text>
-    <path
-       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 92.464425,105.19706 H 162.19712"
-       id="path2-8-7"
-       sodipodi:nodetypes="cc" />
-    <text
-       xml:space="preserve"
-       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
-       x="95.100334"
-       y="110.01559"
-       id="text3-1"><tspan
-         sodipodi:role="line"
-         id="tspan3-7"
-         style="stroke-width:0.265;stroke-dasharray:none"
-         x="95.100334"
-         y="110.01559">+ filename</tspan></text>
-    <path
-       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 92.464425,112.60539 H 162.19712"
-       id="path3-7"
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#ColoredTriangle)"
-       d="M 47.342371,97.631254 V 88.370837 H 85.706952 V 83.079172"
+       d="M 86.765286,78.845831 V 72.501847"
        id="path5"
-       sodipodi:nodetypes="cccc" />
+       sodipodi:nodetypes="cc" />
     <path
-       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
-       d="M 123.87123,97.631254 V 88.370837 H 85.506638"
-       id="path7"
-       sodipodi:nodetypes="ccc" />
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#ColoredTriangle-4)"
+       d="m 128.70709,53.341741 -12.02651,0"
+       id="path5-7"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#ColoredTriangle-4-2)"
+       d="m 139.43128,82.811834 -10.68713,0"
+       id="path5-7-6"
+       sodipodi:nodetypes="cc" />
+    <g
+       id="g11"
+       transform="translate(-0.3473053)">
+      <rect
+         style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:1.5338;stroke-opacity:1"
+         id="rect3"
+         width="19.46789"
+         height="7.36623"
+         x="139.28931"
+         y="45.187805" />
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="rect4"
+         width="19.454567"
+         height="10.644382"
+         x="139.22874"
+         y="45.053703" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="142.04483"
+         y="50.412548"
+         id="text4"><tspan
+           sodipodi:role="line"
+           id="tspan4"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+           x="142.04483"
+           y="50.412548">FileDB</tspan></text>
+      <path
+         style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 139.22878,52.634996 h 19.44183"
+         id="path7"
+         sodipodi:nodetypes="cc" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
+       x="141.46021"
+       y="70.498268"
+       id="text2-2-7-5-5"><tspan
+         sodipodi:role="line"
+         id="tspan2-2-8-6-2"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
+         x="141.46021"
+         y="70.498268">+ from_folder</tspan></text>
+    <rect
+       style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:1.5338;stroke-opacity:1"
+       id="rect3-4"
+       width="25.466101"
+       height="7.36623"
+       x="138.942"
+       y="58.428242" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4-8"
+       width="25.558014"
+       height="14.662533"
+       x="138.88144"
+       y="58.324963" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="141.69753"
+       y="63.683804"
+       id="text4-2"><tspan
+         sodipodi:role="line"
+         id="tspan4-3"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+         x="141.69753"
+         y="63.683804">FilesDB</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 138.88149,65.906254 h 25.50542"
+       id="path7-1"
+       sodipodi:nodetypes="cc" />
+    <g
+       id="g9">
+      <rect
+         style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:1.5338;stroke-opacity:1"
+         id="rect7"
+         width="21.572533"
+         height="7.36623"
+         x="138.942"
+         y="79.173973" />
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="rect8"
+         width="21.559196"
+         height="10.644382"
+         x="138.88144"
+         y="79.070694" />
+      <text
+         xml:space="preserve"
+         style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+         x="141.69753"
+         y="84.429535"
+         id="text8"><tspan
+           sodipodi:role="line"
+           id="tspan8"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+           x="141.69753"
+           y="84.429535">MongoDB</tspan></text>
+      <path
+         style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="M 138.88147,86.651994 H 160.4407"
+         id="path8"
+         sodipodi:nodetypes="cc" />
+    </g>
+    <path
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.285001;stroke-dasharray:none;stroke-opacity:1"
+       d="m 139.06291,49.209748 h -10.58333 v 13.229167 h 10.58333"
+       id="path9" />
   </g>
 </svg>

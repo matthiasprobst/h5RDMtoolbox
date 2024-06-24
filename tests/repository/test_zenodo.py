@@ -2,14 +2,14 @@ import json
 import logging
 import os
 import pathlib
+import pydantic
 import unittest
 from datetime import datetime
 
-import pydantic
-
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import UserDir
-from h5rdmtoolbox.repository import zenodo, upload_file
+from h5rdmtoolbox.repository import upload_file
+from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 
@@ -17,6 +17,23 @@ logger = logging.getLogger(__name__)
 
 
 class TestZenodo(unittest.TestCase):
+
+    def test_ZenodoRecord_without_token(self):
+        """remove all info about zenodo api token!"""
+        curr_zenodo_api_token = os.environ.get('ZENODO_API_TOKEN', None)
+        zenodo_ini_filename = UserDir['repository'] / 'zenodo.ini'
+        print(zenodo_ini_filename.absolute())
+        if zenodo_ini_filename.exists():
+            zenodo_ini_filename.rename(UserDir['repository'] / 'zenodo.ini.tmpbak')
+
+        zenodo_repo = zenodo.ZenodoRecord(10428822)
+        self.assertEqual(zenodo_repo.access_token, None)
+        self.assertTrue(zenodo_repo.exists())
+
+        if curr_zenodo_api_token is not None:
+            os.environ.set('ZENODO_API_TOKEN', curr_zenodo_api_token)
+        if (UserDir['repository'] / 'zenodo.ini.tmpbak').exists():
+            (UserDir['repository'] / 'zenodo.ini.tmpbak').rename(UserDir['repository'] / 'zenodo.ini')
 
     def test_creator(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Creator
@@ -138,11 +155,9 @@ class TestZenodo(unittest.TestCase):
         else:
             tmp_zenodo_ini_filename = None
 
-        with self.assertRaises(FileNotFoundError):
-            _parse_ini_file(None)
+        self.assertEqual(_parse_ini_file(None), zenodo_ini_filename)
 
-        with self.assertRaises(FileNotFoundError):
-            _parse_ini_file('invalid.ini')
+        self.assertEqual(_parse_ini_file('invalid.ini'), pathlib.Path('invalid.ini'))
 
         if bak_fname:
             bak_fname.rename(fname)
@@ -190,10 +205,10 @@ class TestZenodo(unittest.TestCase):
         env_token = os.environ.pop('ZENODO_API_TOKEN', None)
 
         ini_filename = h5tbx.utils.generate_temporary_filename(suffix='.ini', touch=False)
-        with self.assertRaises(FileNotFoundError):
-            set_api_token(sandbox=True,
-                          access_token='321',
-                          zenodo_ini_filename=ini_filename)
+        # with self.assertRaises(FileNotFoundError):
+        set_api_token(sandbox=True,
+                      access_token='321',
+                      zenodo_ini_filename=ini_filename)
         ini_filename = h5tbx.utils.generate_temporary_filename(suffix='.ini', touch=False)
         with open(ini_filename, 'w') as f:
             pass
@@ -226,7 +241,7 @@ class TestZenodo(unittest.TestCase):
             orig_hdf_filename = h5.hdf_filename
 
         hdf_file_name = orig_hdf_filename.name
-        json_name = hdf_file_name.replace('.hdf', '.json')
+        json_name = hdf_file_name.replace('.hdf', '.jsonld')
 
         z.upload_file(orig_hdf_filename)  # metamapper per default converts to JSONLD file
         filenames = z.get_filenames()

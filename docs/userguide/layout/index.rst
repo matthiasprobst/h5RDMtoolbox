@@ -9,7 +9,7 @@ collect a list of query statements, which are called on HDF5 files. E.g. we coul
 require an HDF5 file to have a dataset with a specific name. We would write a query accordingly. 
 Later, during validation, the query is performed. If such a dataset is found, the layout successfully 
 validated the file content.
-So, before working with layouts, you might first want to learn about <https://h5rdmtoolbox.readthedocs.io/en/latest/database/hdfDB.html>`_.
+So, before working with layouts, you might first want to `learn about <https://h5rdmtoolbox.readthedocs.io/en/latest/database/hdfDB.html>`_.
 
 
 

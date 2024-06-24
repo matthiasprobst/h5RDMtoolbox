@@ -1032,7 +1032,8 @@ def hdf2jsonld(filename: Union[str, pathlib.Path],
         The number of dimensions to skip when reading a dataset.
     metadata_filename: Optional[Union[str, pathlib.Path]]
         The target filename to write to. If None, the target filename will be the filename with
-        the suffix ".json".
+        the suffix ".jsonld" (using this suffix over '.json' due to recommendation:
+        https://www.w3.org/TR/json-ld/#iana-considerations).
 
     Returns
     -------
@@ -1040,7 +1041,7 @@ def hdf2jsonld(filename: Union[str, pathlib.Path],
         The metadata filename
     """
     if metadata_filename is None:
-        metadata_filename = pathlib.Path(filename).with_suffix('.json')
+        metadata_filename = pathlib.Path(filename).with_suffix('.jsonld')  # recommended suffix for JSON-LD is .jsonld!
     else:
         metadata_filename = pathlib.Path(metadata_filename)
 
