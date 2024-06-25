@@ -1,21 +1,22 @@
 """
 Tutorial module providing easy access to particular data.
 """
+import numpy as np
 import os
 import pathlib
-from typing import List
-
-import numpy as np
 import xarray as xr
 from rdflib import FOAF
+from typing import List
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
-from .utils import generate_temporary_directory
-from .wrapper.core import File
+from h5rdmtoolbox.utils import generate_temporary_directory
+from h5rdmtoolbox.wrapper.core import File
 
 __this_dir__ = pathlib.Path(__file__).parent
 testdir = __this_dir__ / '../tests/data'
+
+TutorialConventionZenodoRecordID = 10428822
 
 
 def get_standard_name_table_yaml_file() -> pathlib.Path:
@@ -23,8 +24,8 @@ def get_standard_name_table_yaml_file() -> pathlib.Path:
     return __this_dir__ / 'data/tutorial_standard_name_table.yaml'
 
 
-def get_standard_attribute_yaml_filename() -> pathlib.Path:
-    """Return the path to the standard attribute yaml file"""
+def get_convention_yaml_filename() -> pathlib.Path:
+    """Return the path to the convention yaml file"""
     return __this_dir__ / 'data/tutorial_convention.yaml'
 
 
@@ -326,7 +327,8 @@ class FlowDataset(File):
 def generate_sample_file() -> pathlib.Path:
     """Generate a sample hdf file with a velocity and pressure dataset"""
     with h5tbx.File() as h5:
-        h5.attrs.write_iso_timestamp(name='timestamp', dt=None)  # writes the current date time in iso format to the attribute
+        h5.attrs.write_iso_timestamp(name='timestamp',
+                                     dt=None)  # writes the current date time in iso format to the attribute
         h5.attrs['project'] = 'tutorial'
         contact_grp = h5.create_group('contact')
         contact_grp.attrs['name', FOAF.firstName] = 'John'
@@ -351,3 +353,31 @@ def generate_sample_file() -> pathlib.Path:
                          attrs=dict(units='kPa', standard_name='pressure',
                                     check_value=-10.3))
     return h5.hdf_filename
+
+
+def _upload_tutorial_data_to_zenodo():
+    """Upload the convention yaml file to Zenodo. Should only be called by the developer.
+    A valid Zenodo (not sandbox!) token with write permission is needed!"""
+    from h5rdmtoolbox.repository import zenodo
+
+    repo = zenodo.ZenodoRecord(TutorialConventionZenodoRecordID)
+
+    # convert convention yaml file to json file
+    from h5rdmtoolbox.convention import yaml2jsonld
+
+    jsonld_filename = yaml2jsonld(get_convention_yaml_filename(), file_url=repo.json()['files'][0]['links']['self'].rsplit('/', 1)[0])
+
+    metadata = repo.get_metadata()
+    description = """<p>A YAML file containing definitions of standard attributes used as part of the documentation of the <a href="http://h5rdmtoolbox.readthedocs.io/">h5RDMtoolbox</a>. It serves as a <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html">convention</a> on how attributes are used in HDF5 files.</p>
+    <p>Works with h5RDMtoolbox&gt;v1.0.0.</p>
+    <p>`</p>"""
+    metadata['description'] = description
+    # repo.unlock()
+    new_repo = repo.new_version('3.2.0')
+    new_repo.set_metadata(metadata=metadata)
+    new_repo.upload_file(jsonld_filename, metamapper=None)
+    new_repo.publish()
+
+
+if __name__ == '__main__':
+    _upload_tutorial_data_to_zenodo()

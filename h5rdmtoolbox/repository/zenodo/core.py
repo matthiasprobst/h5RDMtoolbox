@@ -1,13 +1,13 @@
 import abc
+import appdirs
 import json
 import logging
 import pathlib
+import requests
 import time
 import warnings
+from packaging.version import Version
 from typing import Union, List, Dict
-
-import appdirs
-import requests
 
 from .metadata import Metadata
 from .tokens import get_api_token
@@ -18,8 +18,24 @@ logger = logging.getLogger('h5rdmtoolbox')
 __all__ = ['Metadata']
 
 
+class APIError(Exception):
+    """Raised when an API error occurs."""
+
+
 class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
     """Interface for Zenodo.
+
+    Procedure to update metadata (replace `AbstractZenodoInterface` with `ZenodoSandboxDeposit` or `ZenodoRecord`):
+    >>> repo = AbstractZenodoInterface(rec_id=12345)
+    >>> metadata = repo.get_metadata()
+    >>> metadata['title'] = 'New title' # changing metadata
+    >>> repo.unlock()
+    >>> repo.set_metadata(metadata)
+    >>> repo.publish()
+
+    Procedure to create a new version (replace `AbstractZenodoInterface` with `ZenodoSandboxDeposit` or `ZenodoRecord`):
+    >>> repo = AbstractZenodoInterface(rec_id=12345)
+    >>> new_repo = repo.new_version(version='1.2.3')
     """
     deposit_url = None
     rec_url = None
@@ -216,11 +232,44 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             logger.error(f'Only unpublished records can be deleted. Record "{self.rec_id}" is published.')
         return r
 
-    def new_version(self):
+    def new_version(self, new_version_string: str):
+        """Sets the record into edit mode while creating a new version. You need to call `.publish()` after
+        adding new files, metadata etc.
+
+        Parameters
+        ----------
+        new_version_string : str
+            The new version string. It must be higher than the current version. This
+            is checked using the `packaging.version.Version` class.
+
+        Returns
+        -------
+        ZenodoInterface
+            The new ZenodoInterface with the new version.
+
+        Raises
+        ------
+        ValueError
+            If the new version is not higher than the current version.
+        APIError
+            If the new version cannot be created because permission is missing.
+        """
         self.unlock()
         jdata = self.json()
-        r = requests.post(jdata['links']['newversion'],
+
+        curr_version = Version(jdata['metadata']['version'])
+        new_version = Version(new_version_string)
+        if not new_version > curr_version:
+            raise ValueError(f'The new version must be higher than the current version {curr_version}.')
+
+        new_vers_url = jdata['links'].get('newversion', None)
+        if new_vers_url is None:
+            raise APIError("Unable to create a new version. Please check your permission associated with "
+                           "the Zenodo API Token.")
+
+        r = requests.post(new_vers_url,
                           params={'access_token': self.access_token})
+
         r.raise_for_status()
         latest_draft = r.json()['links']['latest_draft']
         _id = latest_draft.split('/')[-1]
@@ -242,8 +291,18 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         r.raise_for_status()
 
     def unlock(self):
-        """unlock the deposit. To lock it call publish()"""
-        r = requests.post(self.json()['links']['edit'],
+        """unlock the deposit. To lock it call publish()
+
+        Raises
+        ------
+        APIError
+            If the record cannot be unlocked because permission is missing.
+        """
+        edit_url = self.json()['links'].get('edit', None)
+        if edit_url is None:
+            raise APIError('Unable to unlock the record. Please check your permission of the Zenodo API Token.')
+
+        r = requests.post(edit_url,
                           params={'access_token': self.access_token})
         if r.status_code == 400:
             print(f'Cannot publish data. This might be because metadata is missing. Check on the website, which '
@@ -383,7 +442,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
 class ZenodoRecord(AbstractZenodoInterface):
     """Interface to Zenodo records."""
 
-    deposit_url = 'https://zenodo.org/api/records'
+    deposit_url = 'https://zenodo.org/api/deposit/depositions'
     rec_url = "https://zenodo.org/api/records"
 
     @property
@@ -394,8 +453,11 @@ class ZenodoRecord(AbstractZenodoInterface):
     def get_metadata(self) -> Dict:
         return self.json()['metadata']
 
-    def set_metadata(self, metadata: Metadata):
+    def set_metadata(self, metadata: Union[Dict, Metadata]):
         """update the metadata of the deposit"""
+        if isinstance(metadata, dict):
+            metadata = Metadata(**metadata)
+
         if not isinstance(metadata, Metadata):
             raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
         r = requests.put(

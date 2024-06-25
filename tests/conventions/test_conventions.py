@@ -16,10 +16,13 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import convention
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention import core
+from h5rdmtoolbox.convention import yaml2jsonld
 from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
+from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
+from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
 
 logger = logging.getLogger('h5rdmtoolbox')
 # setting logger to debug:
@@ -38,7 +41,10 @@ class TestConventions(unittest.TestCase):
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
 
-
+    def test_yaml2jsonld(self):
+        yaml_filename = tutorial.get_convention_yaml_filename()
+        jsonld_filename = yaml2jsonld(yaml_filename)
+        self.assertTrue(jsonld_filename.exists())
 
     def test_list_of_validators(self):
         lov = convention.get_list_of_validators()
@@ -88,7 +94,7 @@ class TestConventions(unittest.TestCase):
         h5tbx.use(None)
 
     def test_upload_convention(self):
-        cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
+        cv_yaml_filename = tutorial.get_convention_yaml_filename()
         self.assertTrue(cv_yaml_filename.exists())
 
         # upload to zenodo sandbox
@@ -202,7 +208,7 @@ def validate_f1(a, b, c=3, d=2):
         self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
 
     def test_overload_standard_attributes(self):
-        yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
+        yaml_filename = h5tbx.tutorial.get_convention_yaml_filename()
         cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
         self.assertIsInstance(cv, h5tbx.convention.Convention)
         self.assertTupleEqual(('scale_and_offset',), cv.decoders)
@@ -212,7 +218,7 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            h5tbx.convention.from_zenodo(doi_or_recid='10428822', overwrite=False)
+            h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, overwrite=False)
             # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
@@ -507,7 +513,7 @@ def validate_f1(a, b, c=3, d=2):
             _ddir = h5tbx.UserDir['convention'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.convention.from_zenodo(doi_or_recid='10428822')
+            h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID)
             # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 

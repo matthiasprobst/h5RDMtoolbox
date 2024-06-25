@@ -8,7 +8,6 @@ import warnings
 from typing import Dict, List, Union
 
 from . import errors
-from . import warnings as convention_warnings
 from .consts import DefaultValue
 from .. import get_config
 from ..utils import DocStringParser, parse_object_for_attribute_setting
@@ -273,7 +272,7 @@ class StandardAttribute:
                 if ignore_get_std_attr_err:
                     warnings.warn(f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'
                                   f'Pydantic error: {err}',
-                                  convention_warnings.StandardAttributeValidationWarning)
+                                  errors.StandardAttributeValidationWarning)
                 else:
                     raise errors.StandardAttributeError(
                         f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'
@@ -291,7 +290,7 @@ class StandardAttribute:
                     warnings.warn(
                         f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'
                         f'Expected fields: {self.validator.model_fields}\nPydantic error: {e}',
-                        convention_warnings.StandardAttributeValidationWarning)
+                        errors.StandardAttributeValidationWarning)
                 else:
                     raise errors.StandardAttributeError(
                         f'Validation of "{ret_val}" for standard attribute "{self.name}" failed.\n'

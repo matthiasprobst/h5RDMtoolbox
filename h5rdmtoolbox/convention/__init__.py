@@ -14,7 +14,8 @@ Helpful functions:
 import pathlib
 
 from . import standard_names
-from .core import Convention, from_yaml, from_repo, get_current_convention, from_zenodo, get_registered_conventions
+from .core import Convention, from_yaml, from_repo, get_current_convention, from_zenodo, get_registered_conventions, \
+    yaml2jsonld
 from .standard_attributes import StandardAttribute
 from .toolbox_validators import get_list_of_validators
 from .._user import UserDir
@@ -37,5 +38,5 @@ if not (convention_user_dir / f'h5tbx.py').exists():
 
 __all__ = ['Convention', 'from_yaml', 'from_zenodo', 'from_repo',
            'get_current_convention', 'get_registered_conventions',
-           'from_zenodo', 'StandardAttribute',
+           'from_zenodo', 'StandardAttribute', 'yaml2jsonld',
            'get_list_of_validators']

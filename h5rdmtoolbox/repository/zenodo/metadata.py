@@ -182,10 +182,10 @@ class Metadata(BaseModel):
     title
     description
     creators
-    upload_type
 
     Optional/Default fields:
     ----------------
+    upload_type=None
     additional_description=None
     dates=[]
     publication_date=datetime.today
@@ -202,7 +202,7 @@ class Metadata(BaseModel):
     title: Optional[str]
     description: str
     creators: List[Creator]
-    upload_type: UploadType
+    upload_type: UploadType = None
     additional_description: Optional[Dict] = None
     dates: List[DateType] = pydantic.Field(default_factory=list)
     publication_date: Optional[Union[str, datetime]] = Field(default_factory=datetime.today)
@@ -212,10 +212,10 @@ class Metadata(BaseModel):
     notes: Optional[str] = None
     contributors: Optional[List[Contributor]] = pydantic.Field(default_factory=list)
     access_right: Optional[Literal["open", "closed", "restricted", "embargoed"]] = "open"
-    license: Optional[str] = "cc-by-4.0"
+    license: Optional[Union[str, Dict]] = "cc-by-4.0"
     embargo_date: Optional[Union[str, datetime]] = None
 
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='allow')
 
     @field_validator('publication_date')
     @classmethod
@@ -238,6 +238,13 @@ class Metadata(BaseModel):
 
         if not any([_check_date(value, format) for format in formats]):
             raise ValueError(f'invalid publication_date: {value}')
+        return value
+
+    @field_validator('license')
+    @classmethod
+    def _license(cls, value):
+        if isinstance(value, dict):
+            return value['id']
         return value
 
     @field_validator('version')

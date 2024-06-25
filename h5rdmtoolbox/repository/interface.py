@@ -1,10 +1,10 @@
 import abc
 import pathlib
 import warnings
-from typing import Callable, Iterable, Union
+from typing import Callable, Iterable, Union, Optional
 
 
-def _HDF2JSON(filename: Union[str, pathlib.Path]) -> pathlib.Path:
+def _HDF2JSON(filename: Union[str, pathlib.Path], **kwargs) -> pathlib.Path:
     """The default metamapper function for HDF5 files. It extracts metadata from the HDF5 file
     and stores it in a JSON-LD file. The filename of the metadata file is returned.
 
@@ -71,7 +71,8 @@ class RepositoryInterface(abc.ABC):
 
     def upload_file(self,
                     filename: Union[str, pathlib.Path],
-                    metamapper: Union[None, Callable[[Union[str, pathlib.Path]], pathlib.Path]] = _HDF2JSON,
+                    metamapper: Optional[Callable[[Union[str, pathlib.Path]], pathlib.Path]] = None,
+                    auto_map_hdf: bool = True,
                     overwrite: bool = False,
                     **metamapper_kwargs):
         """Upload a file to the repository. A metamapper function can be provided optionally. It
@@ -90,9 +91,12 @@ class RepositoryInterface(abc.ABC):
         --------
         filename: Union[str, pathlib.Path]
             The filename of the file to be uploaded.
-        metamapper: Union[None, Callable[[Union[str, pathlib.Path]], pathlib.Path]]
+        metamapper: Optional[None, Callable[[Union[str, pathlib.Path]], pathlib.Path]]
             A function that extracts metadata from the target file and stores it in a file. The filename of the
             metadata file is returned by the function. If None, no metadata is extracted.
+        auto_map_hdf: bool=True
+            Whether to automatically use the default metamapper function for HDF5 files. If True and the filename
+            is scanned for its suffix ('.h5', '.hdf', '.hdf5'), the default metamapper function is used (hdf2jsonld).
         overwrite: bool=False
             If True, the file will be overwritten if it already exists in the repository. If False, an error
             will be raised if the file already exists.
@@ -103,10 +107,17 @@ class RepositoryInterface(abc.ABC):
         if not pathlib.Path(filename).exists():
             raise FileNotFoundError(f'The file {filename} does not exist.')
 
-        if metamapper:
+        if metamapper is None and auto_map_hdf and filename.suffix in ('.hdf', '.hdf5', '.h5'):
+            metamapper = _HDF2JSON
+
+        if metamapper is not None:
             meta_data_file = metamapper(filename, **metamapper_kwargs)
+        else:
+            meta_data_file = None
+
         self._upload_file(filename=filename, overwrite=overwrite)
-        if metamapper:
+
+        if meta_data_file is not None:
             self._upload_file(filename=meta_data_file, overwrite=overwrite)
 
     def upload_hdf_file(self,

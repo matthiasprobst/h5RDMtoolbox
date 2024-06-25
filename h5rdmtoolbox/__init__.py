@@ -43,7 +43,7 @@ from ._user import UserDir
 from ._version import __version__
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
-from . import warnings, errors
+from . import errors
 from .wrapper import jsonld
 from .wrapper.lazy import lazy
 from .wrapper.h5attr import Attribute

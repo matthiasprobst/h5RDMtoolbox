@@ -2,7 +2,6 @@ import configparser
 import logging
 import os
 import pathlib
-import warnings
 from typing import Union, Optional
 
 logger = logging.getLogger('h5rdmtoolbox')

@@ -65,7 +65,7 @@ class TestFile(unittest.TestCase):
             h5.hdf_filename.unlink()
 
     def test_reopen_file(self):
-        cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
+        cv_yaml_filename = tutorial.get_convention_yaml_filename()
         cv = h5tbx.convention.from_yaml(cv_yaml_filename, overwrite=True)
         h5tbx.use(cv)
         with h5tbx.File(data_type='experimental',

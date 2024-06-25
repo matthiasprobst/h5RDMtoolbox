@@ -18,16 +18,21 @@ logger = logging.getLogger(__name__)
 
 class TestZenodo(unittest.TestCase):
 
+    # def test_ZenodoRecord(self):
+    #     z = zenodo.ZenodoRecord(None)
+    #     print(z.json())
+
     def test_ZenodoRecord_without_token(self):
         """remove all info about zenodo api token!"""
-        curr_zenodo_api_token = os.environ.get('ZENODO_API_TOKEN', None)
+        curr_zenodo_api_token = os.environ.pop('ZENODO_API_TOKEN', None)
+
         zenodo_ini_filename = UserDir['repository'] / 'zenodo.ini'
-        print(zenodo_ini_filename.absolute())
+
         if zenodo_ini_filename.exists():
             zenodo_ini_filename.rename(UserDir['repository'] / 'zenodo.ini.tmpbak')
 
         zenodo_repo = zenodo.ZenodoRecord(10428822)
-        self.assertEqual(zenodo_repo.access_token, None)
+        self.assertIsTrue(zenodo_repo.access_token is None)
         self.assertTrue(zenodo_repo.exists())
 
         if curr_zenodo_api_token is not None:
