@@ -412,7 +412,7 @@ class TestZenodo(unittest.TestCase):
 
         hdf5_filenames = z.download_files(target_folder='.', suffix='.hdf')
         self.assertIsInstance(hdf5_filenames, list)
-        self.assertEqual(len(hdf5_filenames), 0)
+        self.assertEqual(len(hdf5_filenames), 1)
 
         txt_filenames = z.download_files(target_folder='.', suffix='.txt')
         self.assertIsInstance(txt_filenames, list)

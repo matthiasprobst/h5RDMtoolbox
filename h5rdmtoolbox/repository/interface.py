@@ -119,7 +119,7 @@ class RepositoryFile(abc.ABC):
         except (AttributeError, requests.exceptions.JSONDecodeError):
             with open(target_filename, 'wb') as file:
                 file.write(r.content)
-            json_data = None
+            links_content = None
 
         if links_content:
             _content_response = requests.get(links_content,
@@ -237,7 +237,7 @@ class RepositoryInterface(abc.ABC):
         if not pathlib.Path(filename).exists():
             raise FileNotFoundError(f'The file {filename} does not exist.')
 
-        if metamapper is None and auto_map_hdf and filename.suffix in ('.hdf', '.hdf5', '.h5'):
+        if metamapper is None and auto_map_hdf and pathlib.Path(filename).suffix in ('.hdf', '.hdf5', '.h5'):
             metamapper = _HDF2JSON
 
         if metamapper is not None:

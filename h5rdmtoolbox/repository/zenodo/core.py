@@ -211,7 +211,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         """
         warnings.warn("This method is deprecated. Please loop over `.files` and call `.download()` on the "
                       "items of the returned list", DeprecationWarning)
-        return [file.download(target_folder=target_folder) for file in self.files()]
+        return [file.download(target_folder=target_folder) for file in self.files]
 
     def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download a file based on URL. The url is validated using pydantic
