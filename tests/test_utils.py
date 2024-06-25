@@ -16,7 +16,6 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(h5tbx.get_checksum(h5.hdf_filename),
                          '6781e0baec8d65b9a95a3e879a5098d1')
 
-
     def test_touch_tmp_hdf5_file(self):
         with h5tbx.set_config(auto_create_h5tbx_version=False):
             now = datetime.datetime.now()
@@ -50,8 +49,12 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(f_predict, fnew)
 
     def test_generate_temporary_directory(self):
+        import shutil
+        from h5rdmtoolbox._user import _dircounter
+
+        shutil.rmtree(str(h5tbx._user.UserDir['tmp']))
+        n = next(_dircounter)+1
         testfolder = h5tbx.utils.generate_temporary_directory(prefix='testfolder')
-        n = int(testfolder.stem[-1])
         folder = h5tbx._user.UserDir['tmp'] / f'testfolder{n + 1}'
         folder.mkdir()
         testfolder = h5tbx.utils.generate_temporary_directory(prefix='testfolder')
