@@ -13,10 +13,10 @@ def download_file(file_url,
                   access_token: Optional[str] = None) -> pathlib.Path:
     if target_folder is None:
         target_folder = generate_temporary_directory()
-        target_folder.mkdir(exist_ok=True, parents=True)
     else:
         logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
         target_folder = pathlib.Path(target_folder)
+    target_folder.mkdir(exist_ok=True, parents=True)
 
     filename = str(file_url).rsplit('/', 1)[-1]
     target_filename = target_folder / filename
