@@ -113,21 +113,37 @@ class RepositoryFile(abc.ABC):
         target_filename = target_folder / filename
         r = requests.get(url, params={'access_token': self.access_token})
         r.raise_for_status()
-        with open(target_filename, 'wb') as file:
-            # file.write(r.content)
-            for chunk in r.iter_content(chunk_size=10 * 1024):
-                file.write(chunk)
+
+        try:
+            links_content = r.json()['links']['content']
+        except (AttributeError, requests.exceptions.JSONDecodeError):
+            with open(target_filename, 'wb') as file:
+                file.write(r.content)
+            json_data = None
+
+        if links_content:
+            _content_response = requests.get(links_content,
+                                             params={'access_token': self.access_token})
+            if _content_response.ok:
+                with open(target_filename, 'wb') as file:
+                    file.write(_content_response.content)
+            else:
+                raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
+                                         f'Status code: {_content_response.status_code}')
+
+            # for chunk in r.iter_content(chunk_size=10 * 1024):
+            #     file.write(chunk)
 
         # if r.ok:
-        #     # r.json()['links']['content']
-        #     _content_response = requests.get(r.json()['links']['content'],
-        #                                      params={'access_token': self.access_token})
-        #     if _content_response.ok:
-        #         with open(target_filename, 'wb') as file:
-        #             file.write(_content_response.content)
-        #     else:
-        #         raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
-        #                                  f'Status code: {_content_response.status_code}')
+            # r.json()['links']['content']
+            # _content_response = requests.get(r.json()['links']['content'],
+            #                                  params={'access_token': self.access_token})
+            # if _content_response.ok:
+            #     with open(target_filename, 'wb') as file:
+            #         file.write(_content_response.content)
+            # else:
+            #     raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
+            #                              f'Status code: {_content_response.status_code}')
         # else:
         #     raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
         #                              f'Status code: {r.status_code}')
@@ -169,6 +185,13 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def files(self) -> List[RepositoryFile]:
         """List of all files in the repository."""
+
+    def file(self, filename: str) -> RepositoryFile:
+        """Return the file matching the filename, e.g. file.pdf"""
+        for file in self.files:
+            if file.filename == filename:
+                return file
+        raise FileNotFoundError(f'The file "{filename}" does not exist in the repository.')
 
     @abc.abstractmethod
     def _upload_file(self, filename: Union[str, pathlib.Path], overwrite: bool = False):

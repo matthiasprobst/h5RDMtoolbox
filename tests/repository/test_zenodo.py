@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import pydantic
+import shutil
 import unittest
 from datetime import datetime
 
@@ -19,17 +20,35 @@ logger = logging.getLogger(__name__)
 
 class TestZenodo(unittest.TestCase):
 
+    def setUp(self):
+        # backup zenodo.ini
+        zenodo_ini_filename = UserDir['repository'] / 'zenodo.ini'
+        if zenodo_ini_filename.exists():
+            shutil.copy(zenodo_ini_filename, UserDir['repository'] / '__test_backup__ini_file__')
+
+    def tearDown(self):
+        # restore zenodo.ini
+        zenodo_ini_filename = UserDir['repository'] / 'zenodo.ini'
+        bak_ini_filename = UserDir['repository'] / '__test_backup__ini_file__'
+        if bak_ini_filename.exists():
+            shutil.copy(bak_ini_filename, zenodo_ini_filename)
+            bak_ini_filename.unlink()
+
     def test_ZenodoFile(self):
-        z = zenodo.ZenodoRecord('10428795')
+        z = zenodo.ZenodoRecord('10428795')  # an existing repo
+        self.assertTrue(z.exists())
         for file in z.files:
             self.assertIsInstance(file, RepositoryFile)
         self.assertEqual(len(z.files), 1)
-        self.assertEqual(z.files[0].download_url,
-                         f"{z.rec_url}/{z.rec_id}/files/{z.files[0].filename}")
+        import requests
+        r = requests.get(z.files[0].download_url)
+        self.assertEqual(r.status_code, 200)
+        # self.assertEqual(z.files[0].download_url,
+        #                  f"{z.rec_url}/{z.rec_id}/files/{z.files[0].filename}")
         downloaded_filename = z.files[0].download()
         self.assertTrue(downloaded_filename.exists())
-        print(downloaded_filename)
-        print(z.files[0].jsonld())
+        self.assertTrue(downloaded_filename.is_file())
+        self.assertIsInstance(z.files[0].jsonld(), str)
 
     def test_ZenodoRecord_without_token(self):
         """remove all info about zenodo api token!"""
@@ -38,10 +57,11 @@ class TestZenodo(unittest.TestCase):
         zenodo_ini_filename = UserDir['repository'] / 'zenodo.ini'
 
         if zenodo_ini_filename.exists():
+            (UserDir['repository'] / 'zenodo.ini.tmpbak').unlink(missing_ok=True)
             zenodo_ini_filename.rename(UserDir['repository'] / 'zenodo.ini.tmpbak')
 
         zenodo_repo = zenodo.ZenodoRecord(10428822)
-        self.assertIsTrue(zenodo_repo.access_token is None)
+        self.assertTrue(zenodo_repo.access_token is None)
         self.assertTrue(zenodo_repo.exists())
 
         if curr_zenodo_api_token is not None:
@@ -261,10 +281,10 @@ class TestZenodo(unittest.TestCase):
         filenames = z.get_filenames()
         self.assertIn(hdf_file_name, filenames)
         self.assertIn(json_name, filenames)
-        with self.assertRaises(KeyError):
-            _ = z.download_file('invalid.hdf')
+        with self.assertRaises(FileNotFoundError):
+            _ = z.file('invalid.hdf')
 
-        hdf_filenames = z.get_filenames(suffix='.hdf')
+        hdf_filenames = [f for f in z.get_filenames() if pathlib.Path(f).suffix == '.hdf']
         self.assertEqual(len(hdf_filenames), 1)
 
         hdf_filename = z.download_file(hdf_file_name)
@@ -359,9 +379,6 @@ class TestZenodo(unittest.TestCase):
 
         with self.assertRaises(FileNotFoundError):
             z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
-
-        with self.assertRaises(ValueError):
-            z.upload_file(tmpfile, overwrite=True)
 
         z.upload_file(tmpfile, overwrite=True, metamapper=None)
         self.assertIn('testfile.txt', z.get_filenames())

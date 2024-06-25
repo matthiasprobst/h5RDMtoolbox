@@ -7,7 +7,6 @@ import requests
 import time
 import warnings
 from packaging.version import Version
-from pydantic import HttpUrl, validate_call
 from typing import Union, List, Dict, Optional
 
 from .metadata import Metadata
@@ -157,10 +156,21 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     @property
     def files(self) -> List[RepositoryFile]:
-        def _parse_download_url(filename):
-            if filename is None:
-                return filename
-            return f"{self.rec_url}/{self.rec_id}/files/{filename}"
+        # def _parse_download_url(filename):
+        #     if filename is None:
+        #         return filename
+        #     return f"{self.rec_url}/{self.rec_id}/files/{filename}"
+
+        is_submitted = self.submitted()
+
+        def _parse_download_url(url, filename):
+            if url is None:
+                return url
+            if is_submitted:
+                return f"{self.rec_url}/{self.rec_id}/files/{filename}"
+            if url.endswith('/content'):
+                return url.rsplit('/', 1)[0]
+            return url
 
         def _get_media_type(filename: Optional[str]):
             if filename is None:
@@ -170,7 +180,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             return IANA_DICT.get(suffix, suffix[1:])
 
         def _parse(data: Dict):
-            return dict(download_url=_parse_download_url(data.get('filename', None)),
+            return dict(download_url=_parse_download_url(data['links']['download'], data['filename']),
                         access_url=f"https://doi.org/{self.get_doi()}",
                         filename=data.get('filename', None),
                         media_type=_get_media_type(data.get('filename', None)),
@@ -203,14 +213,13 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
                       "items of the returned list", DeprecationWarning)
         return [file.download(target_folder=target_folder) for file in self.files()]
 
-    @validate_call
-    def download_file(self, url: HttpUrl, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
+    def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download a file based on URL. The url is validated using pydantic
 
         Parameters
         ----------
-        url : str
-            The URL to the filename to download.
+        filename : str
+            The filename.
         target_folder : Union[str, pathlib.Path], optional
             The target folder, by default None
             If None, the file will be downloaded to the default folder, which is in
@@ -230,23 +239,8 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
             target_folder = pathlib.Path(target_folder)
 
-        filename = str(url).rsplit('/', 1)[-1]
-        target_filename = target_folder / filename
-        r = requests.get(url, params={'access_token': self.access_token})
-        if r.ok:
-            # r.json()['links']['content']
-            _content_response = requests.get(r.json()['links']['content'],
-                                             params={'access_token': self.access_token})
-            if _content_response.ok:
-                with open(target_filename, 'wb') as file:
-                    file.write(_content_response.content)
-            else:
-                raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
-                                         f'Status code: {_content_response.status_code}')
-        else:
-            raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
-                                     f'Status code: {r.status_code}')
-        return target_filename
+        f = self.file(filename)
+        return f.download(target_folder=target_folder)
 
     def delete(self) -> requests.Response:
         """Delete the deposit."""
