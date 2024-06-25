@@ -1,7 +1,12 @@
 import abc
+import appdirs
+import logging
 import pathlib
+import requests
 import warnings
-from typing import Callable, Iterable, Union, Optional
+from typing import Callable, Union, Optional, List, Dict
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def _HDF2JSON(filename: Union[str, pathlib.Path], **kwargs) -> pathlib.Path:
@@ -32,6 +37,103 @@ def _HDF2JSON(filename: Union[str, pathlib.Path], **kwargs) -> pathlib.Path:
     return hdf2jsonld(filename=filename, skipND=1)
 
 
+class RepositoryFile(abc.ABC):
+
+    def __init__(self, identifier,
+                 identifier_url,
+                 download_url,
+                 access_url,
+                 checksum,
+                 filename,
+                 size,
+                 media_type,
+                 access_token=None,
+                 **kwargs):
+        self.download_url = download_url
+        self.access_url = access_url
+        self.checksum = checksum
+        self.filename = filename
+        self.media_type = media_type
+        self.size = size
+        self.identifier = identifier
+        self.identifier_url = identifier_url
+        self.access_token = access_token
+        self.additional_data = kwargs
+
+    def info(self) -> Dict:
+        return dict(identifier=self.identifier,
+                    identifier_url=self.identifier_url,
+                    download_url=self.download_url,
+                    access_url=self.access_url,
+                    media_type=self.media_type,
+                    checksum=self.checksum,
+                    filename=self.filename,
+                    size=self.size)
+
+    def jsonld(self) -> str:
+        """Returns the JSONLD representation of the file"""
+        jsonld_str = f"""{{
+    "@context": {{
+        "schema": "https://schema.org",
+        "dcat": "http://www.w3.org/ns/dcat#",
+        "spdx": "http://spdx.org/rdf/terms#"
+    }},
+    "@id": "{self.identifier_url}",
+    "@type": "dcat:Distribution"
+    "schema:identifier": "{self.identifier}",
+"""
+
+        if self.size:
+            jsonld_str += f',\n    "dcat:byteSize": "{self.size}"'
+        if self.access_url:
+            jsonld_str += f',\n    "dcat:accessURL": "{self.access_url}"'
+        if self.download_url:
+            jsonld_str += f',\n    "dcat:downloadURL": "{self.download_url}"'
+        if self.checksum:
+            jsonld_str += f',\n    "spdx:checksum": "{self.checksum}"'
+        if self.media_type:
+            jsonld_str += f',\n    "dcat:mediaType": "{self.media_type}"'
+        jsonld_str += '\n}'
+        return jsonld_str
+
+    def download(self, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
+        """Download the file to target_folder. If None, local user dir is used.
+        Returns the file location"""
+        url = self.download_url
+        if target_folder is None:
+            target_folder = pathlib.Path(
+                appdirs.user_data_dir('h5rdmtoolbox')
+            ) / 'zenodo_downloads' / str(self.identifier)
+            target_folder.mkdir(exist_ok=True, parents=True)
+        else:
+            logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
+            target_folder = pathlib.Path(target_folder)
+
+        filename = str(url).rsplit('/', 1)[-1]
+        target_filename = target_folder / filename
+        r = requests.get(url, params={'access_token': self.access_token})
+        r.raise_for_status()
+        with open(target_filename, 'wb') as file:
+            # file.write(r.content)
+            for chunk in r.iter_content(chunk_size=10 * 1024):
+                file.write(chunk)
+
+        # if r.ok:
+        #     # r.json()['links']['content']
+        #     _content_response = requests.get(r.json()['links']['content'],
+        #                                      params={'access_token': self.access_token})
+        #     if _content_response.ok:
+        #         with open(target_filename, 'wb') as file:
+        #             file.write(_content_response.content)
+        #     else:
+        #         raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
+        #                                  f'Status code: {_content_response.status_code}')
+        # else:
+        #     raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
+        #                              f'Status code: {r.status_code}')
+        return target_filename
+
+
 class RepositoryInterface(abc.ABC):
     """Abstract base class for repository interfaces."""
 
@@ -59,9 +161,14 @@ class RepositoryInterface(abc.ABC):
     def download_files(self):
         """Download all files from the repository."""
 
-    @abc.abstractmethod
-    def get_filenames(self) -> Iterable:
+    def get_filenames(self) -> List[str]:
         """Get a list of all filenames."""
+        return [file.filename for file in self.files]
+
+    @property
+    @abc.abstractmethod
+    def files(self) -> List[RepositoryFile]:
+        """List of all files in the repository."""
 
     @abc.abstractmethod
     def _upload_file(self, filename: Union[str, pathlib.Path], overwrite: bool = False):

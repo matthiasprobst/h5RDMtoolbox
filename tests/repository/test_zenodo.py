@@ -10,6 +10,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
+from h5rdmtoolbox.repository.interface import RepositoryFile
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 
@@ -18,9 +19,17 @@ logger = logging.getLogger(__name__)
 
 class TestZenodo(unittest.TestCase):
 
-    # def test_ZenodoRecord(self):
-    #     z = zenodo.ZenodoRecord(None)
-    #     print(z.json())
+    def test_ZenodoFile(self):
+        z = zenodo.ZenodoRecord('10428795')
+        for file in z.files:
+            self.assertIsInstance(file, RepositoryFile)
+        self.assertEqual(len(z.files), 1)
+        self.assertEqual(z.files[0].download_url,
+                         f"{z.rec_url}/{z.rec_id}/files/{z.files[0].filename}")
+        downloaded_filename = z.files[0].download()
+        self.assertTrue(downloaded_filename.exists())
+        print(downloaded_filename)
+        print(z.files[0].jsonld())
 
     def test_ZenodoRecord_without_token(self):
         """remove all info about zenodo api token!"""

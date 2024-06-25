@@ -7,15 +7,24 @@ import requests
 import time
 import warnings
 from packaging.version import Version
-from typing import Union, List, Dict
+from pydantic import HttpUrl, validate_call
+from typing import Union, List, Dict, Optional
 
 from .metadata import Metadata
 from .tokens import get_api_token
-from ..interface import RepositoryInterface
+from ..interface import RepositoryInterface, RepositoryFile
 
 logger = logging.getLogger('h5rdmtoolbox')
 
 __all__ = ['Metadata']
+IANA_DICT = {
+    '.json': 'application/json',
+    '.jsonld': 'application/ld+json',
+    '.pdf': 'application/pdf',
+    '.png': 'image/png',
+    '.tiff': 'image/tiff',
+    '.yaml': 'application/x-yaml',
+}
 
 
 class APIError(Exception):
@@ -146,6 +155,33 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             r.raise_for_status()
         return r.json()
 
+    @property
+    def files(self) -> List[RepositoryFile]:
+        def _parse_download_url(filename):
+            if filename is None:
+                return filename
+            return f"{self.rec_url}/{self.rec_id}/files/{filename}"
+
+        def _get_media_type(filename: Optional[str]):
+            if filename is None:
+                return None
+            suffix = pathlib.Path(filename).suffix
+
+            return IANA_DICT.get(suffix, suffix[1:])
+
+        def _parse(data: Dict):
+            return dict(download_url=_parse_download_url(data.get('filename', None)),
+                        access_url=f"https://doi.org/{self.get_doi()}",
+                        filename=data.get('filename', None),
+                        media_type=_get_media_type(data.get('filename', None)),
+                        identifier=data.get('id', None),
+                        identifier_url=data.get('id', None),
+                        size=data.get('filesize', None),
+                        checksum=data.get('checksum', None),
+                        access_token=self.access_token)
+
+        return [RepositoryFile(**_parse(data)) for data in self.json()['files']]
+
     def download_files(self,
                        target_folder: Union[str, pathlib.Path] = None,
                        suffix: Union[str, List[str], None] = None) -> List[pathlib.Path]:
@@ -163,22 +199,18 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         List[pathlib.Path]
             A list of all downloaded files.
         """
-        if suffix is None:
-            return [self.download_file(filename, target_folder=target_folder) for filename in self.get_filenames()]
-        if isinstance(suffix, str):
-            suffix = [suffix]
-        return [self.download_file(filename, target_folder=target_folder) for filename in self.get_filenames() if
-                filename.endswith(tuple(suffix))]
+        warnings.warn("This method is deprecated. Please loop over `.files` and call `.download()` on the "
+                      "items of the returned list", DeprecationWarning)
+        return [file.download(target_folder=target_folder) for file in self.files()]
 
-    def download_file(self,
-                      filename: str,
-                      target_folder: Union[str, pathlib.Path] = None) -> pathlib.Path:
-        """Download a single file from Zenodo.
+    @validate_call
+    def download_file(self, url: HttpUrl, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
+        """Download a file based on URL. The url is validated using pydantic
 
         Parameters
         ----------
-        filename : str
-            The filename to download
+        url : str
+            The URL to the filename to download.
         target_folder : Union[str, pathlib.Path], optional
             The target folder, by default None
             If None, the file will be downloaded to the default folder, which is in
@@ -189,6 +221,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         pathlib.Path
             The path to the downloaded file.
         """
+        warnings.warn("Please use `.files`", DeprecationWarning)
         if target_folder is None:
             target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
                 self.rec_id)
@@ -196,34 +229,24 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         else:
             logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
             target_folder = pathlib.Path(target_folder)
-        data = self.json()
-        for f in data['files']:
-            fname = f.get('filename') or f['key']
-            if fname == filename:
-                target_filename = target_folder / fname
-                logger.debug(f'Downloading file "{fname}" to "{target_filename}"')
 
-                if data['submitted']:
-                    url = f'{self.rec_url}/{data["id"]}/files/{filename}'
-                else:
-                    url = f'{self.rec_url}/{data["id"]}/draft/files/{filename}'
-                r = requests.get(url, params={'access_token': self.access_token})
-                if r.ok:
-                    # r.json()['links']['content']
-                    _content_response = requests.get(r.json()['links']['content'],
-                                                     params={'access_token': self.access_token})
-                    if _content_response.ok:
-                        with open(target_filename, 'wb') as file:
-                            file.write(_content_response.content)
-                    else:
-                        raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo. '
-                                                 f'Status code: {_content_response.status_code}')
-                else:
-                    raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo. '
-                                             f'Status code: {r.status_code}')
-
-                return target_filename
-        raise KeyError(f'File "{filename}" not found in deposit "{self.rec_id}"')
+        filename = str(url).rsplit('/', 1)[-1]
+        target_filename = target_folder / filename
+        r = requests.get(url, params={'access_token': self.access_token})
+        if r.ok:
+            # r.json()['links']['content']
+            _content_response = requests.get(r.json()['links']['content'],
+                                             params={'access_token': self.access_token})
+            if _content_response.ok:
+                with open(target_filename, 'wb') as file:
+                    file.write(_content_response.content)
+            else:
+                raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
+                                         f'Status code: {_content_response.status_code}')
+        else:
+            raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
+                                     f'Status code: {r.status_code}')
+        return target_filename
 
     def delete(self) -> requests.Response:
         """Delete the deposit."""
@@ -309,6 +332,11 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
                   f'fields are required!')
         r.raise_for_status()
 
+    @property
+    @abc.abstractmethod
+    def access_token(self) -> str:
+        """Return the api token for the Zenodo API."""
+
 
 class ZenodoSandboxDeposit(AbstractZenodoInterface):
     """Interface to Zenodo's testing (sandbox) api. API TOKEN needed.
@@ -327,7 +355,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
 
     """
     deposit_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
-    rec_url = "https://sandbox.zenodo.org/api/records"
+    rec_url = "https://sandbox.zenodo.org/records"
 
     def get_metadata(self) -> Dict:
         return self.json()['metadata']
@@ -367,24 +395,6 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
             for r in remove:
                 file_dict.pop(r)
         return file_dict
-
-    def get_filenames(self, suffix: str = None) -> List[str]:
-        """Get a list of all filenames. If suffix is given, only filenames
-        with this suffix are returned.
-
-        Parameters
-        ----------
-        suffix: str, optional
-            The suffix of the files to return. E.g. '.hdf'
-
-        Returns
-        -------
-        List[str]
-            A list of filenames
-        """
-        if suffix:
-            return [f['filename'] for f in self.json()['files'] if pathlib.Path(f['filename']).suffix == suffix]
-        return [f['filename'] for f in self.json()['files']]
 
     def _upload_file(self, filename, overwrite: bool = False):
         """Add a file to the deposit. If the filename already exists, it can
@@ -443,7 +453,7 @@ class ZenodoRecord(AbstractZenodoInterface):
     """Interface to Zenodo records."""
 
     deposit_url = 'https://zenodo.org/api/deposit/depositions'
-    rec_url = "https://zenodo.org/api/records"
+    rec_url = "https://zenodo.org/records"
 
     @property
     def access_token(self):
@@ -472,7 +482,3 @@ class ZenodoRecord(AbstractZenodoInterface):
 
     def _upload_file(self, filename, overwrite: bool = False):
         raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
-
-    def get_filenames(self) -> List[str]:
-        """Get a list of all filenames."""
-        return [f['key'] for f in self.json()['files']]

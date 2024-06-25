@@ -29,7 +29,7 @@ standard_name:
 standard_name_table:
   target_method: __init__
   validator: $standard_name_table
-  default_value: https://zenodo.org/record/10428795
+  default_value: https://zenodo.org/records/10428795/files/fan_standard_name_table.yaml
   requirements:
     - standard_name
     - units
