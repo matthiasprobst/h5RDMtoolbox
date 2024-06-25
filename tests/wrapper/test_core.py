@@ -1,12 +1,11 @@
 import datetime
 import json
-import pathlib
-import unittest
-from datetime import datetime, timedelta
-
 import numpy as np
 import pandas as pd
+import pathlib
+import unittest
 import xarray as xr
+from datetime import datetime, timedelta
 from dateutil.parser import parse
 from numpy import linspace as ls
 

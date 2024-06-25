@@ -19,7 +19,6 @@ from h5rdmtoolbox.convention import core
 from h5rdmtoolbox.convention import yaml2jsonld
 from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
-from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
 from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
@@ -111,7 +110,7 @@ class TestConventions(unittest.TestCase):
             keywords=['h5rdmtoolbox', 'tutorial', 'convention'],
             publication_date=datetime.now(),
         )
-        zsr = ZenodoSandboxDeposit(rec_id=None)
+        zsr = ZenodoSandboxDeposit(source=None)
         zsr.metadata = meta
         zsr.upload_file(cv_yaml_filename, overwrite=True, metamapper=None)
 

@@ -34,8 +34,16 @@ class TestZenodo(unittest.TestCase):
             shutil.copy(bak_ini_filename, zenodo_ini_filename)
             bak_ini_filename.unlink()
 
+    def test_zenodo_from_url(self):
+        z = zenodo.ZenodoRecord("https://zenodo.org/records/10428817")
+        self.assertEqual(str(z.rec_id), "10428817")
+        z = zenodo.ZenodoRecord("https://doi.org/10.5281/zenodo.10428817")
+        self.assertEqual(str(z.rec_id), "10428817")
+        z = zenodo.ZenodoRecord(10428817)
+        self.assertEqual(str(z.rec_id), "10428817")
+
     def test_zenodo_export(self):
-        z = zenodo.ZenodoRecord('10428817')
+        z = zenodo.ZenodoRecord(10428817)
         fname = z.export(fmt='dcat-ap')
         self.assertIsInstance(fname, pathlib.Path)
         self.assertTrue(fname.exists())
@@ -44,7 +52,7 @@ class TestZenodo(unittest.TestCase):
         print(z.jsonld())
 
     def test_ZenodoFile(self):
-        z = zenodo.ZenodoRecord('10428795')  # an existing repo
+        z = zenodo.ZenodoRecord(10428795)  # an existing repo
         self.assertTrue(z.exists())
         for file in z.files:
             self.assertIsInstance(file, RepositoryFile)

@@ -48,21 +48,36 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
     """
     deposit_url = None
     rec_url = None
+    base_url = None
 
     def __init__(self,
-                 rec_id: Union[int, None]):
+                 source: Union[int, str, None]=None,
+                 rec_id=None):
         """Initialize the ZenodoInterface.
 
         Parameters
         ----------
-        rec_id : int or None
-            The rec_id of the deposit. If None, a new deposit will be created.
+        source : int, str, None
+            The rec_id or url of the deposit. If None, a new deposit will be created.
             If a rec_id is passed, the deposit must exist.
 
         """
-        if self.deposit_url is None:
-            raise ValueError('The deposit_url must be set.')
-        if rec_id is None:
+        if rec_id is not None:
+            warnings.warn("The `rec_id` parameter is deprecated. Please use the source parameter instead.",
+                          DeprecationWarning)
+            source = rec_id
+
+        if isinstance(source, int):
+            rec_id = source
+        elif isinstance(source, str):
+            """assuming it is a url"""
+            if source.startswith(self.base_url):
+                rec_id = int(source.split('/')[-1])
+            elif source.startswith('https://doi.org/'):
+                r = requests.get(source, allow_redirects=True)
+                # the redirected url contains the ID:
+                rec_id = int(r.url.split('/')[-1])
+        elif source is None:
             # create a new deposit (with new rec_id and without metadata!)
             r = requests.post(
                 self.deposit_url,
@@ -351,6 +366,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
     """
     deposit_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
     rec_url = "https://sandbox.zenodo.org/records"
+    base_url = 'https://sandbox.zenodo.org/record'
 
     def get_metadata(self) -> Dict:
         return self.json()['metadata']
@@ -449,6 +465,7 @@ class ZenodoRecord(AbstractZenodoInterface):
 
     deposit_url = 'https://zenodo.org/api/deposit/depositions'
     rec_url = "https://zenodo.org/records"
+    base_url = 'https://zenodo.org/record'
 
     @property
     def access_token(self):

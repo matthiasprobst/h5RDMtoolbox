@@ -19,16 +19,9 @@ def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
         # could be web address or local file
         if snt[0] == '{':
             return StandardNameTable.from_dict(json.loads(snt))
-        if snt.startswith('https://zenodo.org') and snt.rsplit('.', 1)[-1] in ('yaml', ):
-            # it is a file from zenodo, download it:
-            from ...repository.utils import download_file
-            cv_filename = download_file(snt)
-            return StandardNameTable.from_yaml(cv_filename)
-        if snt.startswith('10.5281/zenodo.'):
-            doi = snt.split('.')[-1]
-            if (UserDir['standard_name_tables'] / f'{doi}.yaml').exists():
-                return StandardNameTable.from_yaml(UserDir['standard_name_tables'] / f'{doi}.yaml')
-            return StandardNameTable.from_zenodo(doi)
+        if 'zenodo.' in snt:
+            return StandardNameTable.from_zenodo(snt)
+
         fname = pathlib.Path(snt)
         logger.debug(f'Reading standard name table from file {snt}')
         if fname.exists() and fname.suffix in ('.yaml', '.yml'):

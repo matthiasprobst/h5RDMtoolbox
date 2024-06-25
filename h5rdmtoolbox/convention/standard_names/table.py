@@ -670,18 +670,20 @@ class StandardNameTable:
         return snt
 
     @staticmethod
-    def from_zenodo(doi_or_recid: str) -> "StandardNameTable":
+    def from_zenodo(source: str = None, doi_or_recid=None) -> "StandardNameTable":
         """Download a standard name table from Zenodo based on its DOI.
 
 
         Parameters
         ----------
-        doi_or_recid: str
+        source: str
             The DOI or record id. It can have the following formats:
-            - 10428795
             - 10.5281/zenodo.10428795
             - https://doi.org/10.5281/zenodo.10428795
             - https://zenodo.org/record/10428795
+            - https://zenodo.org/record/10428795/files/standard_name_table.yaml
+        doi_or_recid: str
+            Deprecated. Use `source` instead.
 
         Returns
         -------
@@ -697,9 +699,35 @@ class StandardNameTable:
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
+        warnings.warn(f"Using `doi_or_recid` is depreciated. Use `source` instead.", DeprecationWarning)
+        if doi_or_recid is not None:
+            source = doi_or_recid
+
+        if source.startswith('https://zenodo.org') and source.rsplit('.', 1)[-1] in ('yaml',):
+            # it is a file from zenodo, download it:
+            from ...repository.utils import download_file
+            cv_filename = download_file(source)
+            return StandardNameTable.from_yaml(cv_filename)
+        if source.startswith('https://zenodo.org/record/') or source.startswith('https://doi.org/'):
+            from ...repository.zenodo import ZenodoRecord
+            z = ZenodoRecord(source)
+            for file in z.files:
+                if pathlib.Path(file.filename).suffix == '.yaml':
+                    try:
+                        return StandardNameTable.from_yaml(file.download())
+                    except Exception as e:
+                        logger.error(f'Error while reading file {file.filename}: {e}')
+                        continue
+            raise FileNotFoundError(f'No valid standard name found in Zenodo repo {source}')
+
+        if source.startswith('10.5281/zenodo.'):
+            doi = source.split('.')[-1]
+            if (UserDir['standard_name_tables'] / f'{doi}.yaml').exists():
+                return StandardNameTable.from_yaml(UserDir['standard_name_tables'] / f'{doi}.yaml')
+            return StandardNameTable.from_zenodo(doi)
 
         # parse input:
-        rec_id = zenodo.utils.recid_from_doi_or_redid(doi_or_recid)
+        rec_id = zenodo.utils.recid_from_doi_or_redid(source)
         if rec_id in cache.snt:
             return cache.snt[rec_id]
 
@@ -716,7 +744,7 @@ class StandardNameTable:
             new_filename.unlink()
         yaml_filename = filename.rename(UserDir['standard_name_tables'] / f'{rec_id}.yaml')
         snt = StandardNameTable.from_yaml(yaml_filename)
-        snt._meta.update(dict(zenodo_doi=doi_or_recid))
+        snt._meta.update(dict(zenodo_doi=source))
 
         cache.snt[rec_id] = snt
         return snt

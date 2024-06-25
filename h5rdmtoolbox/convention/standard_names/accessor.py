@@ -104,8 +104,12 @@ class StandardNameTableAccessor:
         filename = da.attrs.get('PROVENANCE', None).get('HDF', None).get('filename', None)
         if filename:
             with h5tbx.File(filename, mode='r') as h5:
-                self._snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(
-                    h5.attrs.raw['standard_name_table'])
+                _snt_attr_val = h5.attrs.raw['standard_name_table']
+                if isinstance(_snt_attr_val, str) and _snt_attr_val.startswith('{'):
+                    import json
+                    self._snt = h5tbx.convention.standard_names.StandardNameTable.from_dict(json.loads(_snt_attr_val))
+                else:
+                    self._snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(_snt_attr_val)
 
         if self._snt:
             for t in self._snt.transformations:
