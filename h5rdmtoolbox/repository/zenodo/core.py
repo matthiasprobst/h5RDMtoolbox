@@ -7,6 +7,7 @@ import requests
 import time
 import warnings
 from packaging.version import Version
+from rdflib import Graph
 from typing import Union, List, Dict, Optional
 
 from .metadata import Metadata
@@ -230,7 +231,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         pathlib.Path
             The path to the downloaded file.
         """
-        warnings.warn("Please use `.files`", DeprecationWarning)
+        warnings.warn("Please use `.file(filename).download()`", DeprecationWarning)
         if target_folder is None:
             target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
                 self.rec_id)
@@ -476,3 +477,37 @@ class ZenodoRecord(AbstractZenodoInterface):
 
     def _upload_file(self, filename, overwrite: bool = False):
         raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
+
+    def export(self, fmt, target_filename: Optional[Union[str, pathlib.Path]] = None):
+        """Exports the record (see Export button on record website). Format must be one of the
+        possible options, e.g. dcat.ap, json, ..."""
+        if target_filename is None:
+            from ...utils import generate_temporary_filename
+            target_filename = generate_temporary_filename()
+        else:
+            target_filename = pathlib.Path(target_filename)
+
+        export_url = f"{self.json()['links']['html']}/export/{fmt}"
+        r = requests.get(export_url)
+        r.raise_for_status()
+        with open(target_filename, 'wb') as f:
+            f.write(r.content)
+
+        return target_filename
+
+    def jsonld(self) -> str:
+        tmp_dcat_filename = self.export(fmt='dcat-ap')
+        g = Graph()
+        g.parse(tmp_dcat_filename, format='xml')
+        return g.serialize(format='json-ld',
+                           indent=4,
+                           context={'dcat': 'http://www.w3.org/ns/dcat#',
+                                    'foaf': 'http://xmlns.com/foaf/0.1/',
+                                    'adms': 'http://www.w3.org/ns/adms#',
+                                    'skos': 'http://www.w3.org/2004/02/skos/core#',
+                                    'dcterms': 'http://purl.org/dc/terms/',
+                                    'org': 'http://www.w3.org/ns/org#',
+                                    'xsd': 'http://www.w3.org/2001/XMLSchema#',
+                                    'owl': 'http://www.w3.org/2002/07/owl#',
+                                    'dctype': 'http://purl.org/dc/dcmitype/'
+                                    })

@@ -34,6 +34,15 @@ class TestZenodo(unittest.TestCase):
             shutil.copy(bak_ini_filename, zenodo_ini_filename)
             bak_ini_filename.unlink()
 
+    def test_zenodo_export(self):
+        z = zenodo.ZenodoRecord('10428817')
+        fname = z.export(fmt='dcat-ap')
+        self.assertIsInstance(fname, pathlib.Path)
+        self.assertTrue(fname.exists())
+
+        self.assertIsInstance(z.jsonld(), str)
+        print(z.jsonld())
+
     def test_ZenodoFile(self):
         z = zenodo.ZenodoRecord('10428795')  # an existing repo
         self.assertTrue(z.exists())
@@ -287,7 +296,7 @@ class TestZenodo(unittest.TestCase):
         hdf_filenames = [f for f in z.get_filenames() if pathlib.Path(f).suffix == '.hdf']
         self.assertEqual(len(hdf_filenames), 1)
 
-        hdf_filename = z.download_file(hdf_file_name)
+        hdf_filename = z.file(hdf_file_name).download()
 
         self.assertTrue(hdf_filename.exists())
 
@@ -298,7 +307,7 @@ class TestZenodo(unittest.TestCase):
             self.assertEqual(h5['grp1/test2'].attrs['test'], 1)
             self.assertEqual(h5['grp1/test2'].attrs['long_name'], 'dataset 2')
 
-        json_filename = z.download_file(json_name)
+        json_filename = z.file(json_name).download()
         self.assertTrue(json_filename.exists())
         with open(json_filename) as f:
             json_dict = json.loads(f.read())
