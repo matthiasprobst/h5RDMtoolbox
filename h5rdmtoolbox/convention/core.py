@@ -769,4 +769,54 @@ def from_zenodo(doi_or_recid: str,
     return from_yaml(filename, overwrite=overwrite)
 
 
+def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
+                file_url: str = None,
+                jsonld_filename: Union[str, pathlib.Path] = None) -> pathlib.Path:
+    """Converts a convention stored in a YAML file to JSON-LD"""
+    yaml_filename = pathlib.Path(yaml_filename)
+    if jsonld_filename is None:
+        jsonld_filename = yaml_filename.with_suffix('.jsonld')
+    else:
+        jsonld_filename = pathlib.Path(jsonld_filename)
+
+    cv = Convention.from_yaml(yaml_filename)
+    # print(cv)
+    from rdflib.namespace import DCAT, RDF, DCTERMS, PROV
+    from ontolutils import M4I
+    from rdflib import Graph
+    import rdflib
+    person_orcid_id = cv.contact  # m4i
+
+    g = Graph()
+    # g.bind('dcat', DCAT._NS)
+    if file_url is None:
+        n_ds = rdflib.BNode()
+    else:
+        n_ds = rdflib.URIRef(file_url)
+    g.add((n_ds, RDF.type, DCAT.Dataset))
+
+    n_person = rdflib.URIRef(value=person_orcid_id)
+    n_affiliation = rdflib.URIRef(value=cv.institution)
+
+    g.add((n_person, RDF.type, PROV.Person))
+    g.add((n_affiliation, RDF.type, PROV.Organization))
+
+    g.add((n_person, M4I.orcidId, rdflib.URIRef(person_orcid_id)))
+    g.add((n_person, PROV.hadRole, M4I.Researcher))
+    g.add((n_person, PROV.hadRole, M4I.ContactPerson))
+    g.add((n_person, rdflib.URIRef("https://schema.org/affiliation"), n_affiliation))
+
+    g.add((n_ds, DCTERMS.creator, n_person))
+
+    # as jsonld:
+    with open(jsonld_filename, 'w', encoding='utf-8') as f:
+        f.write(g.serialize(format='json-ld',
+                            indent=4,
+                            context={'dcat': DCAT._NS,
+                                     'dcterms': DCTERMS._NS,
+                                     'm4i': M4I._NS},
+                            compact=False))
+    return jsonld_filename
+
+
 __all__ = ['datetime_str', 'StandardAttribute']
