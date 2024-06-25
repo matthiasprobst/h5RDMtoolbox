@@ -533,5 +533,5 @@ WHERE {
 
         jsonld_filename = jsonld.hdf2jsonld('test.hdf', skipND=1)
         self.assertTrue(jsonld_filename.exists())
-        self.assertTrue(jsonld_filename.suffix == '.json')
+        self.assertTrue(jsonld_filename.suffix == '.jsonld')
         jsonld_filename.unlink()

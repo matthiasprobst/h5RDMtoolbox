@@ -99,55 +99,17 @@ class RepositoryFile(abc.ABC):
     def download(self, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download the file to target_folder. If None, local user dir is used.
         Returns the file location"""
-        url = self.download_url
+        from .utils import download_file
+
         if target_folder is None:
             target_folder = pathlib.Path(
                 appdirs.user_data_dir('h5rdmtoolbox')
             ) / 'zenodo_downloads' / str(self.identifier)
-            target_folder.mkdir(exist_ok=True, parents=True)
-        else:
-            logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
-            target_folder = pathlib.Path(target_folder)
 
-        filename = str(url).rsplit('/', 1)[-1]
-        target_filename = target_folder / filename
-        r = requests.get(url, params={'access_token': self.access_token})
-        r.raise_for_status()
+        return download_file(file_url=self.download_url,
+                             target_folder=target_folder,
+                             access_token=self.access_token)
 
-        try:
-            links_content = r.json()['links']['content']
-        except (AttributeError, requests.exceptions.JSONDecodeError):
-            with open(target_filename, 'wb') as file:
-                file.write(r.content)
-            links_content = None
-
-        if links_content:
-            _content_response = requests.get(links_content,
-                                             params={'access_token': self.access_token})
-            if _content_response.ok:
-                with open(target_filename, 'wb') as file:
-                    file.write(_content_response.content)
-            else:
-                raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
-                                         f'Status code: {_content_response.status_code}')
-
-            # for chunk in r.iter_content(chunk_size=10 * 1024):
-            #     file.write(chunk)
-
-        # if r.ok:
-            # r.json()['links']['content']
-            # _content_response = requests.get(r.json()['links']['content'],
-            #                                  params={'access_token': self.access_token})
-            # if _content_response.ok:
-            #     with open(target_filename, 'wb') as file:
-            #         file.write(_content_response.content)
-            # else:
-            #     raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
-            #                              f'Status code: {_content_response.status_code}')
-        # else:
-        #     raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({url}. '
-        #                              f'Status code: {r.status_code}')
-        return target_filename
 
 
 class RepositoryInterface(abc.ABC):
