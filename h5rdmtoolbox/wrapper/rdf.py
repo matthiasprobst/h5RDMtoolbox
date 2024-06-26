@@ -1,12 +1,10 @@
 """RDF (Resource Description Framework) module for use with HDF5 files"""
-import warnings
-
 import abc
-from typing import Dict, Union, Optional, List
-
 import h5py
 import pydantic
+import warnings
 from pydantic import HttpUrl
+from typing import Dict, Union, Optional, List
 
 from . import lazy
 from ..protocols import H5TbxAttributeManager
@@ -264,6 +262,14 @@ class RDFManager:
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    def __setattr__(self, key, value):
+        if key not in ('_attr',
+                       'subject',
+                       'predicate',
+                       'type'):
+            raise KeyError(f"Cannot set {key}. Only subject, predicate and type can be set!")
+        super().__setattr__(key, value)
 
     @property
     def parent(self):

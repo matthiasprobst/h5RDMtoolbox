@@ -31,6 +31,8 @@ class TestRDF(unittest.TestCase):
 
         with h5tbx.File(mode='w') as h5:
             with self.assertRaises(KeyError):
+                h5.rdf.type123 = 'https://example.org/validURI'
+            with self.assertRaises(KeyError):
                 h5.rdf['not_existing'].predicate = 'https://example.org/notExisting'
             h5.attrs['orcid', M4I.orcidId] = rdfobj
             self.assertEqual(h5.rdf.object['orcid'], 'https://orcid.org/0000-0001-8729-0482')
