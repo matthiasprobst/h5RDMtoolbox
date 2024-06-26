@@ -238,14 +238,8 @@ class Metadata(BaseModel):
 
     @field_validator('publication_date')
     @classmethod
-    def validate_publication_date(cls, value):
-        """See https://developers.zenodo.org/#representation"""
-        return _parse_ymd(value)
-
-    @field_validator('publication_date')
-    @classmethod
     def _publication_date(cls, value):
-        if value == 'today':
+        if isinstance(value, str) and value == 'today':
             return _today()
         return _parse_ymd(value)
 
