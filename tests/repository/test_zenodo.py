@@ -82,7 +82,7 @@ class TestZenodo(unittest.TestCase):
         self.assertTrue(zenodo_repo.exists())
 
         if curr_zenodo_api_token is not None:
-            os.environ.set('ZENODO_API_TOKEN', curr_zenodo_api_token)
+            os.environ['ZENODO_API_TOKEN'] = curr_zenodo_api_token
         if (UserDir['repository'] / 'zenodo.ini.tmpbak').exists():
             (UserDir['repository'] / 'zenodo.ini.tmpbak').rename(UserDir['repository'] / 'zenodo.ini')
 
@@ -127,6 +127,7 @@ class TestZenodo(unittest.TestCase):
                             publication_type='other',
                             access_right='open',
                             publication_date='today')
+        self.assertEqual(metadata, datetime.today().strftime('%Y-%m-%d'))
         self.assertEqual(metadata.publication_date, datetime.today().strftime('%Y-%m-%d'))
 
         with self.assertRaises(ValueError):
