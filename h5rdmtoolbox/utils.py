@@ -318,6 +318,8 @@ def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, Li
         return value
     if isinstance(value, (h5py.Dataset, h5py.Group)):
         return value.name
+    if hasattr(value, '__h5attr_repr__'):
+        return value.__h5attr_repr__()
     try:
         return str(value)  # try parsing to string
     except TypeError:

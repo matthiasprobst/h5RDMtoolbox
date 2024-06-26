@@ -219,6 +219,7 @@ class StandardAttribute:
                             f'Validation of "{value}" for standard attribute "{self.name}" failed.\n'
                             f'Expected fields: {self.validator.model_fields}\nPydantic error: {err}')
                     validated_value = getattr(_validated_value, key0)
+
                 return super(type(parent.attrs), parent.attrs).__setitem__(
                     self.name,
                     parse_object_for_attribute_setting(validated_value)

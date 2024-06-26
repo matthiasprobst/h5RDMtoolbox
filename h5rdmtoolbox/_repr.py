@@ -132,12 +132,20 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
 
     """
     if 'zenodo.' in string:
+        print(string)
         if re.match(r'10\.\d{4,9}/zenodo\.\d{4,9}', string):
             zenodo_url = f'https://doi.org/{string}'
             img_url = f'https://zenodo.org/badge/DOI/{string}.svg'
-        if string.startswith('https://zenodo.org/record/'):
+        elif string.startswith('https://zenodo.org/record/'):
             zenodo_url = string
             img_url = f'https://zenodo.org/badge/DOI/10.5281/zenodo.{string.split("/")[-1]}.svg'
+        elif string.startswith('https://zenodo.org/records/'):
+            rec_id = string.split('/')[4]
+            zenodo_url = f'https://doi.org/10.5281/zenodo.{rec_id}'
+            img_url = f'https://zenodo.org/badge/DOI/10.5281/zenodo.{rec_id}.svg'
+        else:
+            zenodo_url = string
+            img_url = ''
         return make_href(url=zenodo_url, text=f'<img src="{img_url}" alt="DOI">'), True
     for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
         urls = re.findall(p, string)
@@ -242,7 +250,7 @@ class HDF5StructureStrRepr(_HDF5StructureRepr):
         if predicate:
             print(spaces + f'@predicate: {predicate}')
         for attr_name in group.attrs.raw.keys():
-            if attr_name == RDF_SUBJECT_ATTR_NAME:
+            if attr_name == RDF_TYPE_ATTR_NAME:
                 print(spaces + f'@type: {group.attrs[attr_name]}')
             else:
                 if not attr_name.isupper():

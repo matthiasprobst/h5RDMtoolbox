@@ -118,12 +118,11 @@ class TestConventions(unittest.TestCase):
 
         # download file from zenodo deposit:
         self.assertEqual(1, len(zsr.get_filenames()))
-        zsr.download_files()
-        zsr.download_file('tutorial_convention.yaml')
+
+        filename = zsr.file('tutorial_convention.yaml').download()
+        self.assertTrue(filename.exists())
         download_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads'
-        self.assertTrue(
-            (download_dir / f'{zsr.rec_id}' / 'tutorial_convention.yaml').exists()
-        )
+        self.assertEqual(download_dir, filename.parent.parent)
         zsr.delete()
 
     def test_delete(self):
@@ -217,8 +216,8 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, overwrite=False)
-            # h5tbx.convention.from_yaml('test_convention.yaml')
+            cv = h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, overwrite=False)
+            self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             with h5tbx.File(mode='w',

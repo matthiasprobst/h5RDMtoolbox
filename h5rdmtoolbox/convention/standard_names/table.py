@@ -113,7 +113,9 @@ class StandardNameTable:
                  version: str,
                  meta: Dict,
                  standard_names: Dict = None,
-                 affixes: Dict = None):
+                 affixes: Dict = None,
+                 download_url: str=None):
+        self.download_url = download_url
         self._name = name
         if standard_names is None:
             standard_names = {}
@@ -188,6 +190,12 @@ class StandardNameTable:
         zenodo_doi = self._meta.get('zenodo_doi', None)
         if zenodo_doi:
             return str(zenodo_doi)
+        return self.to_json()
+
+    def __h5attr_repr__(self)-> str:
+        """HDF5 Attribute representation"""
+        if self.download_url:
+            return self.download_url
         return self.to_json()
 
     def __contains__(self, standard_name):
@@ -708,24 +716,31 @@ class StandardNameTable:
                 # it is a file from zenodo, download it:
                 from ...repository.utils import download_file
                 cv_filename = download_file(source)
-                return StandardNameTable.from_yaml(cv_filename)
+                snt = StandardNameTable.from_yaml(cv_filename)
+                snt.download_url = source
+                return snt
             if source.startswith('https://zenodo.org/record/') or source.startswith('https://doi.org/'):
                 from ...repository.zenodo import ZenodoRecord
                 z = ZenodoRecord(source)
                 for file in z.files:
                     if pathlib.Path(file.filename).suffix == '.yaml':
                         try:
-                            return StandardNameTable.from_yaml(file.download())
+                            snt = StandardNameTable.from_yaml(file.download())
+                            if source.endswith('/'):
+                                snt.download_url = f"{source}{file.filename}"
+                            else:
+                                snt.download_url = f"{source}/{file.filename}"
+                            return snt
                         except Exception as e:
                             logger.error(f'Error while reading file {file.filename}: {e}')
                             continue
                 raise FileNotFoundError(f'No valid standard name found in Zenodo repo {source}')
 
             if source.startswith('10.5281/zenodo.'):
-                doi = source.split('.')[-1]
-                if (UserDir['standard_name_tables'] / f'{doi}.yaml').exists():
-                    return StandardNameTable.from_yaml(UserDir['standard_name_tables'] / f'{doi}.yaml')
-                return StandardNameTable.from_zenodo(doi)
+                rec_id = source.split('.')[-1]
+                if (UserDir['standard_name_tables'] / f'{rec_id}.yaml').exists():
+                    return StandardNameTable.from_yaml(UserDir['standard_name_tables'] / f'{rec_id}.yaml')
+                return StandardNameTable.from_zenodo(int(rec_id))
 
             # parse input:
             rec_id = zenodo.utils.recid_from_doi_or_redid(source)
