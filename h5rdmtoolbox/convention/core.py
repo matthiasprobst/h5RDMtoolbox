@@ -780,15 +780,14 @@ def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
         jsonld_filename = pathlib.Path(jsonld_filename)
 
     cv = Convention.from_yaml(yaml_filename)
-    # print(cv)
-    from rdflib.namespace import DCAT, RDF, DCTERMS, PROV
+
+    from rdflib.namespace import DCAT, RDF, DCTERMS, PROV, FOAF
     from ontolutils import M4I
     from rdflib import Graph
     import rdflib
     person_orcid_id = cv.contact  # m4i
 
     g = Graph()
-    # g.bind('dcat', DCAT._NS)
     if file_url is None:
         n_ds = rdflib.BNode()
     else:
@@ -798,7 +797,7 @@ def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
     n_person = rdflib.URIRef(value=person_orcid_id)
     n_affiliation = rdflib.URIRef(value=cv.institution)
 
-    g.add((n_person, RDF.type, PROV.Person))
+    g.add((n_person, RDF.type, FOAF.Person))
     g.add((n_affiliation, RDF.type, PROV.Organization))
 
     g.add((n_person, M4I.orcidId, rdflib.URIRef(person_orcid_id)))

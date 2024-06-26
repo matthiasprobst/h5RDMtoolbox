@@ -17,6 +17,7 @@ exclude_lines =
     @abstractmethod
     @abc.abstractmethod
     pragma: no cover
+    def _upload_tutorial_data_to_zenodo
     class ZenodoRecord
     class HDF5StructureHTMLRepr
     def to_html

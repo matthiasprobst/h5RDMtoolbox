@@ -33,7 +33,7 @@ class TestConventions(unittest.TestCase):
 
     def setUp(self) -> None:
         try:
-            requests.get('https://git.scc.kit.edu', timeout=5)
+            requests.get('https://zenodo.org', timeout=5)
             self.connected = True
         except (requests.ConnectionError,
                 requests.Timeout) as e:
@@ -247,7 +247,7 @@ def validate_f1(a, b, c=3, d=2):
                 h5.attrs['data_type'] = 'invalid'
             with h5tbx.File(filename) as h5:
                 with h5tbx.set_config(ignore_get_std_attr_err=True):
-                    with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
+                    with self.assertWarns(h5tbx.errors.StandardAttributeValidationWarning):
                         h5.data_type
                 with h5tbx.set_config(ignore_get_std_attr_err=False):
                     with self.assertRaises(h5tbx.errors.StandardAttributeError):

@@ -430,21 +430,6 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
             r = requests.delete(url=url,
                                 params={'access_token': self.access_token})
             r.raise_for_status()
-        # else:
-        #     url = self.json()['links']['files']
-        #     logger.debug(f'requests.delete(url={url}, ...)')
-        #     r = requests.delete(url=url,
-        #                         params={'access_token': self.access_token})
-        #     r.raise_for_status()
-
-        # bucket_url = self.json()["links"]["bucket"]
-        # if filename.name in existing_filenames:
-        #     # delete the file first
-        #     url = f"{self.deposit_url}/{self.rec_id}/files/{file_id}"
-        #     logger.debug(f'requests.delete(url={url}, ...)')
-        #     r = requests.delete(url=url,
-        #                         params={'access_token': self.access_token})
-        #     r.raise_for_status()
 
         # https://developers.zenodo.org/?python#quickstart-upload
         bucket_url = self.json()["links"]["bucket"]
@@ -482,6 +467,7 @@ class ZenodoRecord(AbstractZenodoInterface):
 
         if not isinstance(metadata, Metadata):
             raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
+        # print(metadata)
         r = requests.put(
             self.json()['links']['latest_draft'],
             data=json.dumps(dict(metadata=metadata.model_dump(exclude_none=True))),
@@ -493,7 +479,41 @@ class ZenodoRecord(AbstractZenodoInterface):
         r.raise_for_status()
 
     def _upload_file(self, filename, overwrite: bool = False):
-        raise RuntimeError(f'The {self.__class__.__name__} does not support file uploads.')
+        """Uploading file to record"""
+        filename = pathlib.Path(filename)
+        if not filename.exists():
+            raise FileNotFoundError(f'File "{filename}" does not exist.')
+
+        existing_filenames = [file.filename for file in self.files]
+        file_exists_in_record = filename.name in existing_filenames
+
+        if not overwrite and file_exists_in_record:
+            logger.debug(f'Overwriting file "{filename}" in record "{self.rec_id}"')
+            warnings.warn(f'Filename "{filename}" already exists in deposit. Skipping..."', UserWarning)
+            return
+
+        # file exists in record. get file id
+        if file_exists_in_record:
+            file_id = self.file(filename.name).identifier
+            url = f"{self.deposit_url}/{self.rec_id}/files/{file_id}"
+            logger.debug(f'requests.delete(url={url}, ...)')
+            r = requests.delete(url=url,
+                                params={'access_token': self.access_token})
+            r.raise_for_status()
+
+        # https://developers.zenodo.org/?python#quickstart-upload
+        bucket_url = self.json()["links"]["bucket"]
+        logger.debug(f'adding file "{filename}" to record "{self.rec_id}"')
+        with open(filename, "rb") as fp:
+            r = requests.put(f"{bucket_url}/{filename.name}",
+                             data=fp,
+                             params={"access_token": self.access_token},
+                             )
+            if r.status_code == 403:
+                logger.critical(
+                    f"Access denied message: {r.json()}. This could be because the record is published. "
+                    f"You can only modify metadata.")
+            r.raise_for_status()
 
     def export(self, fmt, target_filename: Optional[Union[str, pathlib.Path]] = None):
         """Exports the record (see Export button on record website). Format must be one of the

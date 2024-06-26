@@ -645,7 +645,7 @@ class StandardNameTable:
         This method requires the package python-gitlab to be installed.
 
         Equivalent curl statement:
-        curl <url>/api/v4/projects/<project-id>/repository/files/<file-path>/raw?ref\=<ref_name> -o <output-filename>
+        curl <url>/api/v4/projects/<project-id>/repository/files/<file-path>/raw?ref\\=<ref_name> -o <output-filename>
         """
         try:
             import gitlab

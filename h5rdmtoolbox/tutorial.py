@@ -16,7 +16,7 @@ from h5rdmtoolbox.wrapper.core import File
 __this_dir__ = pathlib.Path(__file__).parent
 testdir = __this_dir__ / '../tests/data'
 
-TutorialConventionZenodoRecordID = 10428822
+TutorialConventionZenodoRecordID = 12541214
 
 
 def get_standard_name_table_yaml_file() -> pathlib.Path:
@@ -360,23 +360,32 @@ def _upload_tutorial_data_to_zenodo():
     A valid Zenodo (not sandbox!) token with write permission is needed!"""
     from h5rdmtoolbox.repository import zenodo
 
-    repo = zenodo.ZenodoRecord(TutorialConventionZenodoRecordID)
+    repo = zenodo.ZenodoRecord(12541214)
 
-    # convert convention yaml file to json file
-    from h5rdmtoolbox.convention import yaml2jsonld
-
-    jsonld_filename = yaml2jsonld(get_convention_yaml_filename(), file_url=repo.json()['files'][0]['links']['self'].rsplit('/', 1)[0])
-
-    metadata = repo.get_metadata()
     description = """<p>A YAML file containing definitions of standard attributes used as part of the documentation of the <a href="http://h5rdmtoolbox.readthedocs.io/">h5RDMtoolbox</a>. It serves as a <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html">convention</a> on how attributes are used in HDF5 files.</p>
     <p>Works with h5RDMtoolbox&gt;v1.0.0.</p>
     <p>`</p>"""
-    metadata['description'] = description
-    # repo.unlock()
-    new_repo = repo.new_version('3.2.0')
-    new_repo.set_metadata(metadata=metadata)
-    new_repo.upload_file(jsonld_filename, metamapper=None)
-    new_repo.publish()
+
+    current_metadata = repo.get_metadata()
+    print(current_metadata)
+    current_metadata['description'] = description
+    current_metadata['title'] = 'H5TBX Tutorial Convention'
+    from h5rdmtoolbox import __author_orcid__
+    current_metadata['creators'] = [{'name': 'Probst, Matthias', 'orcid': __author_orcid__}, ]
+    current_metadata['version'] = '1.0.0'
+    current_metadata['upload_type'] = 'other'
+    current_metadata['prereserve_doi'] = None
+
+    repo.set_metadata(metadata=current_metadata)
+
+    # upload the convention yaml file
+    from h5rdmtoolbox.convention import yaml2jsonld
+    convention_filename = get_convention_yaml_filename()
+    # repo.upload_file(convention_filename, metamapper=None)
+    jsonld_filename = yaml2jsonld(get_convention_yaml_filename(),
+                                  file_url=f"{repo.base_url}/record/{repo.rec_id}/files/{convention_filename.name}")
+    repo.upload_file(jsonld_filename, metamapper=None, overwrite=True)
+    repo.publish()
 
 
 if __name__ == '__main__':

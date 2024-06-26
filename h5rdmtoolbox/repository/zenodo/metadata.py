@@ -11,6 +11,7 @@ the implementation of the API.
 
 Also note, that the above mentioned library cannot be used as not all required fields are implemented.
 """
+import dateutil
 import pydantic
 import re
 from datetime import datetime
@@ -28,7 +29,7 @@ def verify_version(version: str) -> str:
 class Creator(BaseModel):
     """Creator Mode class according to Zenodo spec: https://developers.zenodo.org/#representation."""
 
-    name: str
+    name: str  # Format: FamilyName, GivenName
     affiliation: Optional[str] = Field(default=None)
     orcid: Optional[str] = Field(default=None)
     gnd: Optional[str] = Field(default=None)
@@ -173,6 +174,17 @@ class DateType(BaseModel):
     #     return value
 
 
+def _parse_ymd(dtime: Union[str, datetime]) -> str:
+    if isinstance(dtime, datetime):
+        return dtime.strftime('%Y-%m-%d')
+    return dateutil.parser.parse(dtime).strftime('%Y-%m-%d')
+
+
+def _today() -> str:
+    """Return today's date in the format YYYY-MM-DD."""
+    return _parse_ymd(datetime.today())
+
+
 class Metadata(BaseModel):
     """Zeno Metadata class according to Zenodo spec: https://developers.zenodo.org/.
 
@@ -202,10 +214,10 @@ class Metadata(BaseModel):
     title: Optional[str]
     description: str
     creators: List[Creator]
-    upload_type: UploadType = None
+    upload_type: UploadType
     additional_description: Optional[Dict] = None
     dates: List[DateType] = pydantic.Field(default_factory=list)
-    publication_date: Optional[Union[str, datetime]] = Field(default_factory=datetime.today)
+    publication_date: Optional[Union[str, datetime]] = Field(default_factory=_today)
     publication_type: Optional[PublicationType] = None  # if upload_type == publication
     image_type: Optional[ImageType] = None  # if upload_type == image
     keywords: List[str] = None
@@ -217,35 +229,30 @@ class Metadata(BaseModel):
 
     model_config = ConfigDict(extra='allow')
 
-    @field_validator('publication_date')
-    @classmethod
-    def validate_publication_date(cls, value):
-        """See https://developers.zenodo.org/#representation"""
-        if isinstance(value, datetime):
-            return value.strftime('%Y-%m-%d')
-
-        if value is None or value.lower() in ('today', 'now', 'none'):
-            return datetime.today().strftime('%Y-%m-%d')
-
-        formats = ['%Y-%m-%d', '%Y-%m', '%Y']
-
-        def _check_date(value, format):
-            try:
-                datetime.strptime(value, format)
-                return True
-            except ValueError:
-                return False
-
-        if not any([_check_date(value, format) for format in formats]):
-            raise ValueError(f'invalid publication_date: {value}')
-        return value
-
     @field_validator('license')
     @classmethod
     def _license(cls, value):
         if isinstance(value, dict):
             return value['id']
         return value
+
+    @field_validator('publication_date')
+    @classmethod
+    def validate_publication_date(cls, value):
+        """See https://developers.zenodo.org/#representation"""
+        return _parse_ymd(value)
+
+    @field_validator('publication_date')
+    @classmethod
+    def _publication_date(cls, value):
+        if value == 'today':
+            return _today()
+        return _parse_ymd(value)
+
+    @field_validator('embargo_date')
+    @classmethod
+    def _embargo_date(cls, value):
+        return _parse_ymd(value)
 
     @field_validator('version')
     @classmethod
