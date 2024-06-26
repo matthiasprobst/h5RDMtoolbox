@@ -30,6 +30,8 @@ dist/
 .idea
 .idea/
 
+scratch/
+
 # macOS DS indices
 .DS_STORE
 Thumbs.db

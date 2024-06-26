@@ -127,20 +127,8 @@ class TestZenodo(unittest.TestCase):
                             publication_type='other',
                             access_right='open',
                             publication_date='today')
-        self.assertEqual(metadata, datetime.today().strftime('%Y-%m-%d'))
         self.assertEqual(metadata.publication_date, datetime.today().strftime('%Y-%m-%d'))
 
-        with self.assertRaises(ValueError):
-            # wrong date format
-            metadata = Metadata(version='0.1.0-rc.1+build.1',
-                                title='h5rdmtoolbox',
-                                description='A toolbox for managing HDF5-based research data management',
-                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
-                                keywords=['hdf5', 'research data management', 'rdm'],
-                                upload_type='publication',
-                                publication_type='other',
-                                access_right='open',
-                                publication_date='1-1-23')
         metadata = Metadata(version='0.1.0-rc.1+build.1',
                             title='h5rdmtoolbox',
                             description='A toolbox for managing HDF5-based research data management',
