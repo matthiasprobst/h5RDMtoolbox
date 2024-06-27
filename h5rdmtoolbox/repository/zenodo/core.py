@@ -1,14 +1,15 @@
 import abc
-import appdirs
 import json
 import logging
 import pathlib
-import requests
 import time
 import warnings
+from typing import Union, List, Dict, Optional
+
+import appdirs
+import requests
 from packaging.version import Version
 from rdflib import Graph
-from typing import Union, List, Dict, Optional
 
 from .metadata import Metadata
 from .tokens import get_api_token
@@ -46,12 +47,9 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
     >>> repo = AbstractZenodoInterface(rec_id=12345)
     >>> new_repo = repo.new_version(version='1.2.3')
     """
-    deposit_url = None
-    rec_url = None
-    base_url = None
 
     def __init__(self,
-                 source: Union[int, str, None]=None,
+                 source: Union[int, str, None] = None,
                  rec_id=None):
         """Initialize the ZenodoInterface.
 
@@ -62,16 +60,21 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             If a rec_id is passed, the deposit must exist.
 
         """
+        self._cached_json = {}
         if rec_id is not None:
             warnings.warn("The `rec_id` parameter is deprecated. Please use the source parameter instead.",
                           DeprecationWarning)
             source = rec_id
 
+
         if isinstance(source, int):
             rec_id = source
         elif isinstance(source, str):
             """assuming it is a url"""
-            if source.startswith(self.base_url):
+            if not source.startswith('http'):
+                raise ValueError(f"String input should be a valid URL, which {source} seems not to be. If you intend "
+                                 "to provide a record id, please provide an integer.")
+            if source.startswith(f"{self.base_url}/record"):
                 rec_id = int(source.split('/')[-1])
             elif source.startswith('https://doi.org/'):
                 r = requests.get(source, allow_redirects=True)
@@ -80,23 +83,37 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         elif source is None:
             # create a new deposit (with new rec_id and without metadata!)
             r = requests.post(
-                self.deposit_url,
+                self.depositions_url,
                 json={},
                 params={"access_token": self.access_token},
                 headers={"Content-Type": "application/json"}
             )
             r.raise_for_status()
             rec_id = r.json()['id']
-
         self.rec_id = rec_id
-        if not self.exists():
-            raise ValueError(f'The deposit with rec_id {rec_id} does not exist. '
-                             f'To create a new one, please pass rec_id=None.')
-
         assert self.rec_id is not None
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__} (id={self.rec_id}, url={self.deposit_url})"
+        return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
+
+    @property
+    @abc.abstractmethod
+    def base_url(self):
+        """Return the base url, e.g. 'https://sandbox.zenodo.org'"""
+
+    @property
+    def depositions_url(self):
+        return f"{self.base_url}/api/deposit/depositions"
+
+    @property
+    def records_url(self):
+        return f"{self.base_url}/api/deposit/depositions"
+
+    @property
+    def record_url(self):
+        """Return the (published) url. Note, that it must not necessarily exist if you
+        just created a new record and have not published it yet!"""
+        return f"{self.base_url}/records/{self.rec_id}"
 
     @abc.abstractmethod
     def get_metadata(self) -> Dict:
@@ -114,11 +131,8 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         return doi
 
     def exists(self) -> bool:
-        """Check if the deposit exists on Zenodo."""
-        r = self.get(raise_for_status=False)
-        if r.status_code == 404:
-            return False
-        return True
+        """Check if the deposit exists on Zenodo. Note, that only published records are detected!"""
+        return requests.get(self.record_url, params={'access_token': self.access_token}).ok
 
     def is_published(self) -> bool:
         """Check if the deposit is published."""
@@ -126,49 +140,38 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     submitted = is_published  # alias
 
-    def get(self, raise_for_status: bool = False) -> requests.Response:
-        """Get the deposit (json) data."""
-
-        warnings.warn("get() method is deprecated. Use json() instead.", DeprecationWarning)
-
-        def _fetch(token):
-            return requests.get(f"{self.deposit_url}/{self.rec_id}", params={"access_token": token})
-
-        r = _fetch(self.access_token)
-        while r.status_code == 429:
-            logger.info(f"Too many requests message: {r.json()}. Sleep for 60 seconds and try again.")
-            time.sleep(60)
-            r = _fetch()
-
-        while r.status_code == 500:
-            logger.info(f"Internal error: {r.json()}. Sleep for 60 seconds and try again.")
-            time.sleep(60)
-            r = _fetch()
-
-        if raise_for_status:
-            r.raise_for_status()
-        return r
-
     def json(self, raise_for_status: bool = False):
         """Get the deposit (json) data."""
+        if not self._cached_json:
+            url = f"{self.depositions_url}/{self.rec_id}"
+            access_token = self.access_token
+            r = requests.get(url, params={"access_token": access_token})
 
-        def _fetch(token):
-            return requests.get(f"{self.deposit_url}/{self.rec_id}", params={"access_token": token})
+            if r.status_code == '403':
+                logger.critical(
+                    f"You don't have the permission to request {url}. You may need to check your access token.")
+                r.raise_for_status()
 
-        r = _fetch(self.access_token)
-        while r.status_code == 429:
-            logger.info(f"Too many requests message: {r.json()}. Sleep for 60 seconds and try again.")
-            time.sleep(60)
-            r = _fetch()
+            while r.status_code == 429:
+                logger.info(f"Too many requests message: {r.json()}. Sleep for 60 seconds and try again.")
+                time.sleep(60)
+                r = requests.get(url, params={"access_token": access_token})
 
-        while r.status_code == 500:
-            logger.info(f"Internal error: {r.json()}. Sleep for 60 seconds and try again.")
-            time.sleep(60)
-            r = _fetch()
+            while r.status_code == 500:
+                logger.info(f"Internal error: {r.json()}. Sleep for 60 seconds and try again.")
+                time.sleep(60)
+                r = requests.get(url, params={"access_token": access_token})
 
-        if raise_for_status:
-            r.raise_for_status()
-        return r.json()
+            if raise_for_status:
+                r.raise_for_status()
+
+            self._cached_json = r.json()
+        return self._cached_json
+
+    def refresh(self) -> None:
+        """Since the json dict is cached, calling this method will refresh the json dict."""
+        self._cached_json = {}
+        self.json()
 
     @property
     def files(self) -> List[RepositoryFile]:
@@ -183,7 +186,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             if url is None:
                 return url
             if is_submitted:
-                return f"{self.rec_url}/{self.rec_id}/files/{filename}"
+                return f"{self.record_url}/files/{filename}"
             if url.endswith('/content'):
                 return url.rsplit('/', 1)[0]
             return url
@@ -260,7 +263,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     def delete(self) -> requests.Response:
         """Delete the deposit."""
-        r = requests.delete(f"{self.deposit_url}/{self.rec_id}", params={"access_token": self.access_token})
+        r = requests.delete(f"{self.depositions_url}/{self.rec_id}", params={"access_token": self.access_token})
         if r.status_code == 405:
             logger.error(f'Only unpublished records can be deleted. Record "{self.rec_id}" is published.')
         return r
@@ -315,6 +318,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
                           # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
                           params={'access_token': self.access_token})
         r.raise_for_status()
+        self.refresh()
 
     def discard(self):
         """Discard the latest action, e.g. creating a new version"""
@@ -364,9 +368,6 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
 
 
     """
-    deposit_url = 'https://sandbox.zenodo.org/api/deposit/depositions'
-    rec_url = "https://sandbox.zenodo.org/records"
-    base_url = 'https://sandbox.zenodo.org/record'
 
     def get_metadata(self) -> Dict:
         return self.json()['metadata']
@@ -389,6 +390,11 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         if r.status_code == 400:
             logger.critical(f"Bad request message: {r.json()}")
         r.raise_for_status()
+        self.refresh()
+
+    @property
+    def base_url(self):
+        return 'https://sandbox.zenodo.org'
 
     @property
     def access_token(self):
@@ -425,7 +431,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         # get file id
         if filename.name in existing_file_infos:
             file_id = existing_file_infos[filename.name]['id']
-            url = f"{self.deposit_url}/{self.rec_id}/files/{file_id}"
+            url = f"{self.depositions_url}/{self.rec_id}/files/{file_id}"
             logger.debug(f'requests.delete(url={url}, ...)')
             r = requests.delete(url=url,
                                 params={'access_token': self.access_token})
@@ -448,9 +454,9 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
 class ZenodoRecord(AbstractZenodoInterface):
     """Interface to Zenodo records."""
 
-    deposit_url = 'https://zenodo.org/api/deposit/depositions'
-    rec_url = "https://zenodo.org/records"
-    base_url = 'https://zenodo.org/record'
+    @property
+    def base_url(self):
+        return 'https://zenodo.org'
 
     @property
     def access_token(self):
@@ -477,6 +483,7 @@ class ZenodoRecord(AbstractZenodoInterface):
         if r.status_code == 400:
             logger.critical(f"Bad request message: {r.json()}")
         r.raise_for_status()
+        self.refresh()
 
     def _upload_file(self, filename, overwrite: bool = False):
         """Uploading file to record"""
@@ -495,7 +502,7 @@ class ZenodoRecord(AbstractZenodoInterface):
         # file exists in record. get file id
         if file_exists_in_record:
             file_id = self.file(filename.name).identifier
-            url = f"{self.deposit_url}/{self.rec_id}/files/{file_id}"
+            url = f"{self.depositions_url}/{self.rec_id}/files/{file_id}"
             logger.debug(f'requests.delete(url={url}, ...)')
             r = requests.delete(url=url,
                                 params={'access_token': self.access_token})

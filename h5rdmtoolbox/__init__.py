@@ -1,9 +1,11 @@
 """h5rdtoolbox repository"""
 
-import appdirs
 import logging
 import pathlib
 from logging.handlers import RotatingFileHandler
+from typing import Optional, Dict
+
+import appdirs
 
 _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
 _logdir.mkdir(parents=True, exist_ok=True)
@@ -124,6 +126,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
                 structural: bool = True,
                 semantic: bool = True,
                 resolve_keys: bool = False,
+                context: Optional[Dict] = None,
                 **kwargs) -> str:
     """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
     represents the semantic content only. To get a pure structural representation, set semantic=False, which
@@ -146,6 +149,10 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
         a predicate is different in its name from the predicate, the attribute name is used.
         Example: an attribute "name" is associated with "foaf:lastName", then "name" is used
         and "name": "https://xmlns.com/foaf/0.1/lastName" is added to the context.
+    context: Optional[Dict]
+        context in form of {prefix: IRI}, e.g. "ssno": "https://matthiasprobst.github.io/ssno#"
+        If resolve_keys is True, this is added to the built-in look-up table to be used in the
+        context part of JSON-LD
 
     """
     from .wrapper import jsonld
@@ -154,7 +161,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     if structural and not semantic:
         return jsonld.dump_file(hdf_filename, skipND=skipND)
     with File(hdf_filename) as h5:
-        return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, **kwargs)
+        return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, context=context, **kwargs)
 
 
 def get_filesize(hdf_filename: Union[str, pathlib.Path]) -> int:

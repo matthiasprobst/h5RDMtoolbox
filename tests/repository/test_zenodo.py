@@ -2,10 +2,12 @@ import json
 import logging
 import os
 import pathlib
-import pydantic
 import shutil
 import unittest
 from datetime import datetime
+
+import pydantic
+import requests
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import UserDir
@@ -14,6 +16,7 @@ from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.interface import RepositoryFile
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
+from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +55,15 @@ class TestZenodo(unittest.TestCase):
         print(z.jsonld())
 
     def test_ZenodoFile(self):
-        z = zenodo.ZenodoRecord(10428795)  # an existing repo
+        z = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID)  # an existing repo
+        self.assertDictEqual(z._cached_json, {})
+        z.refresh()
+        self.assertNotEqual(z._cached_json, {})
+
         self.assertTrue(z.exists())
         for file in z.files:
             self.assertIsInstance(file, RepositoryFile)
         self.assertEqual(len(z.files), 1)
-        import requests
         r = requests.get(z.files[0].download_url)
         self.assertEqual(r.status_code, 200)
         # self.assertEqual(z.files[0].download_url,
@@ -77,7 +83,7 @@ class TestZenodo(unittest.TestCase):
             (UserDir['repository'] / 'zenodo.ini.tmpbak').unlink(missing_ok=True)
             zenodo_ini_filename.rename(UserDir['repository'] / 'zenodo.ini.tmpbak')
 
-        zenodo_repo = zenodo.ZenodoRecord(10428822)
+        zenodo_repo = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID)
         self.assertTrue(zenodo_repo.access_token is None)
         self.assertTrue(zenodo_repo.exists())
 
@@ -332,7 +338,7 @@ class TestZenodo(unittest.TestCase):
         self.assertIn('prereserve_doi', z.get_metadata())
         self.assertEqual('open', z.get_metadata()['access_right'])
         self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
-        self.assertTrue(z.exists())
+        self.assertFalse(z.exists())  # not yet published!
         self.assertFalse(z.is_published())
 
         old_rec_id = z.rec_id
@@ -430,6 +436,6 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
-        self.assertTrue(z.exists())
+        self.assertFalse(z.exists())
         # z.delete()
         # self.assertFalse(z.exists())

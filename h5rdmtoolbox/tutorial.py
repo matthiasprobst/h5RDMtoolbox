@@ -17,6 +17,7 @@ __this_dir__ = pathlib.Path(__file__).parent
 testdir = __this_dir__ / '../tests/data'
 
 TutorialConventionZenodoRecordID = 12541214
+TutorialSNTZenodoRecordID = 10428795
 
 
 def get_standard_name_table_yaml_file() -> pathlib.Path:

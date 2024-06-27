@@ -132,7 +132,6 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
 
     """
     if 'zenodo.' in string:
-        print(string)
         if re.match(r'10\.\d{4,9}/zenodo\.\d{4,9}', string):
             zenodo_url = f'https://doi.org/{string}'
             img_url = f'https://zenodo.org/badge/DOI/{string}.svg'

@@ -44,6 +44,7 @@ CONTEXT_PREFIXES = {
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "sosa": "http://www.w3.org/ns/sosa/",
     "ssn": "http://www.w3.org/ns/ssn/",
+    # "ssno": "https://matthiasprobst.github.io/ssno#",
     "time": "http://www.w3.org/2006/time#",
     "vann": "http://purl.org/vocab/vann/",
     "void": "http://rdfs.org/ns/void#",
@@ -634,7 +635,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             if obj_type is not None:
                 _add_node(g, (obj_node, RDF.type, rdflib.URIRef(obj_type)))
 
-        for ak, av in obj.attrs.items():
+        for ak, av in obj.attrs.raw.items():
             logger.debug(f'Processing attribute "{ak}" with value "{av}"')
             if ak.isupper() or ak.startswith('@'):
                 logger.debug(f'Skip attribute "{ak}" because it is upper or starts with "@"')
@@ -827,10 +828,19 @@ def dumpd(grp,
                   context=context,
                   structural=structural,
                   resolve_keys=resolve_keys)
+    if context:
+        for k, v in context.items():
+            CONTEXT_PREFIXES_INV[v] = k
     jsonld_dict = json.loads(s)
+
+    if context:
+        for k, v in context.items():
+            CONTEXT_PREFIXES_INV.pop(v)
+
     if compact and '@graph' in jsonld_dict:
         compact_graph = make_graph_compact(jsonld_dict['@graph'])
         return {'@context': jsonld_dict.get('@context', {}), '@graph': compact_graph}
+
     return jsonld_dict
 
 
@@ -864,6 +874,7 @@ def dump(grp,
          recursive: bool = True,
          compact: bool = True,
          context: Optional[Dict] = None,
+         structural: bool = True,
          **kwargs):
     """Dump a group or a dataset to to file."""
     return json.dump(
@@ -871,7 +882,8 @@ def dump(grp,
             grp, iri_only,
             recursive=recursive,
             compact=compact,
-            context=context
+            context=context,
+            structural=structural
         ),
         fp,
         **kwargs

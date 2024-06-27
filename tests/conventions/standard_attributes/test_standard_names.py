@@ -249,3 +249,11 @@ class TestStandardAttributes(unittest.TestCase):
 
             with self.assertRaises(StandardAttributeError):
                 h5.create_dataset('velocity', data=2.3, units='m/s', standard_name='velocity')
+
+    def test_snt_jsonld_dump(self):
+        cv = h5tbx.convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
+        h5tbx.use(cv)
+        with h5tbx.File() as h5:
+            h5.attrs['standard_name_table'] = "https://zenodo.org/records/10428795/file/fan_standard_name_table.yaml"
+            print(h5.dump_jsonld())
+        h5tbx.use(None)

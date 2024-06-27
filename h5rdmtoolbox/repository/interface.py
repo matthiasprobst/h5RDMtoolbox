@@ -1,10 +1,10 @@
 import abc
-import appdirs
 import logging
 import pathlib
-import requests
 import warnings
 from typing import Callable, Union, Optional, List, Dict
+
+import appdirs
 
 logger = logging.getLogger('h5rdmtoolbox')
 
@@ -111,7 +111,6 @@ class RepositoryFile(abc.ABC):
                              access_token=self.access_token)
 
 
-
 class RepositoryInterface(abc.ABC):
     """Abstract base class for repository interfaces."""
 
@@ -211,6 +210,7 @@ class RepositoryInterface(abc.ABC):
 
         if meta_data_file is not None:
             self._upload_file(filename=meta_data_file, overwrite=overwrite)
+        self.refresh()
 
     def upload_hdf_file(self,
                         filename,
