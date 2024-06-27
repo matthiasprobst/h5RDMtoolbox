@@ -1,12 +1,14 @@
-import requests
 import unittest
 import warnings
+
+import requests
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import errors
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention.standard_names import StandardName
 from h5rdmtoolbox.convention.standard_names.transformation import Transformation
+from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
 
 
 def maximum_of(match, snt):
@@ -41,9 +43,9 @@ class TestTransformationsAndAffixes(unittest.TestCase):
         self.snt = h5tbx.tutorial.get_standard_name_table()
 
     def test_adding_transformation(self):
-        snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(doi_or_recid=10428795)
+        snt = h5tbx.convention.standard_names.StandardNameTable.from_zenodo(source=TutorialSNTZenodoRecordID)
         from h5rdmtoolbox.repository.zenodo import ZenodoRecord
-        z = ZenodoRecord(rec_id=10428795)
+        z = ZenodoRecord(source=TutorialSNTZenodoRecordID)
         self.assertTrue(z.exists())
 
         # check if the problem really exists:

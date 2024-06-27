@@ -20,7 +20,7 @@ def parse_snt(snt: Union[str, dict, StandardNameTable]) -> StandardNameTable:
         if snt[0] == '{':
             return StandardNameTable.from_dict(json.loads(snt))
         if 'zenodo.' in snt:
-            return StandardNameTable.from_zenodo(snt)
+            return StandardNameTable.from_zenodo(source=snt)
 
         fname = pathlib.Path(snt)
         logger.debug(f'Reading standard name table from file {snt}')

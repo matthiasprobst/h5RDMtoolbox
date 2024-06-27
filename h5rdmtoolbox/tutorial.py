@@ -1,12 +1,13 @@
 """
 Tutorial module providing easy access to particular data.
 """
-import numpy as np
 import os
 import pathlib
+from typing import List
+
+import numpy as np
 import xarray as xr
 from rdflib import FOAF
-from typing import List
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
@@ -361,7 +362,7 @@ def _upload_tutorial_data_to_zenodo():
     A valid Zenodo (not sandbox!) token with write permission is needed!"""
     from h5rdmtoolbox.repository import zenodo
 
-    repo = zenodo.ZenodoRecord(12541214)
+    repo = zenodo.ZenodoRecord(TutorialConventionZenodoRecordID)
 
     description = """<p>A YAML file containing definitions of standard attributes used as part of the documentation of the <a href="http://h5rdmtoolbox.readthedocs.io/">h5RDMtoolbox</a>. It serves as a <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html">convention</a> on how attributes are used in HDF5 files.</p>
     <p>Works with h5RDMtoolbox&gt;v1.0.0.</p>

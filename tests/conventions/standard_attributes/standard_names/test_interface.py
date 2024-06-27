@@ -1,18 +1,19 @@
+import unittest
+
 import matplotlib.pyplot as plt
 import numpy as np
-import unittest
 import xarray as xr
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention.standard_names import HDF5StandardNameInterface
 from h5rdmtoolbox.repository import zenodo
+from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
 
 
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
-        # cv = h5tbx.convention.from_zenodo(doi_or_recid=10428822, overwrite=True)
-        repo = zenodo.ZenodoRecord(10428822)
+        repo = zenodo.ZenodoRecord(TutorialConventionZenodoRecordID)
         cv = h5tbx.convention.from_repo(repo,
                                         name='tutorial_convention.yaml',
                                         take_existing=True)

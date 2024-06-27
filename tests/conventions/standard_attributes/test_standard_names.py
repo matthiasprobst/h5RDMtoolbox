@@ -1,9 +1,11 @@
-import requests
 import unittest
 import warnings
 
+import requests
+
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
+from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
 from h5rdmtoolbox.convention.errors import StandardNameError, StandardAttributeError
 from h5rdmtoolbox.convention.standard_names import utils
 from h5rdmtoolbox.convention.standard_names.name import StandardName
@@ -219,9 +221,9 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
-            snt = StandardNameTable.from_zenodo(doi_or_recid=10428795)
+            snt = StandardNameTable.from_zenodo(siurce=TutorialSNTZenodoRecordID)
             self.assertIsInstance(snt, StandardNameTable)
-            filename = h5tbx.UserDir['standard_name_tables'] / f'10428795.yaml'
+            filename = h5tbx.UserDir['standard_name_tables'] / f'{TutorialSNTZenodoRecordID}.yaml'
             self.assertTrue(filename.exists())
             # filename.unlink(missing_ok=True)
 
@@ -249,11 +251,3 @@ class TestStandardAttributes(unittest.TestCase):
 
             with self.assertRaises(StandardAttributeError):
                 h5.create_dataset('velocity', data=2.3, units='m/s', standard_name='velocity')
-
-    def test_snt_jsonld_dump(self):
-        cv = h5tbx.convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
-        h5tbx.use(cv)
-        with h5tbx.File() as h5:
-            h5.attrs['standard_name_table'] = "https://zenodo.org/records/10428795/file/fan_standard_name_table.yaml"
-            print(h5.dump_jsonld())
-        h5tbx.use(None)
