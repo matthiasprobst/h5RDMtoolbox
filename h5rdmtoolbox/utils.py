@@ -1,22 +1,23 @@
 """utilities of the h5rdmtoolbox"""
 import datetime
-import h5py
 import hashlib
 import json
 import logging
-import numpy as np
 import os
 import pathlib
-import pint
 import re
-import requests
 import warnings
-from h5py import File
-from pydantic import HttpUrl, validate_call
-from rdflib.plugins.shared.jsonld.context import Context
 from re import sub as re_sub
 from typing import Dict
 from typing import Union, Callable, List, Tuple
+
+import h5py
+import numpy as np
+import pint
+import requests
+from h5py import File
+from pydantic import HttpUrl, validate_call
+from rdflib.plugins.shared.jsonld.context import Context
 
 from . import _user, get_config, get_ureg
 from ._version import __version__
@@ -553,3 +554,20 @@ def download_context(url_source: Union[HttpUrl, List[HttpUrl]], force_download: 
                 raise RuntimeError(f'Failed to download context file from {_url}')
         filenames.append(str(context_file))
     return Context(filenames)
+
+
+def deprecated(version: str, msg: str, removing_in: str = None):
+    """Decorator for deprecated methods or functions"""
+
+    def deprecated_decorator(func):
+        def depr_func(*args, **kwargs):
+            if removing_in:
+                warnings.warn(f"{func.__name__} is deprecated since {version}. Will be removed in {removing_in}."
+                              f" {msg}", DeprecationWarning)
+            else:
+                warnings.warn(f"{func.__name__} is deprecated since {version}. {msg}", DeprecationWarning)
+            return func(*args, **kwargs)
+
+        return depr_func
+
+    return deprecated_decorator

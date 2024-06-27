@@ -6,6 +6,8 @@ from typing import Callable, Union, Optional, List, Dict
 
 import appdirs
 
+from h5rdmtoolbox.utils import deprecated
+
 logger = logging.getLogger('h5rdmtoolbox')
 
 
@@ -37,14 +39,16 @@ def _HDF2JSON(filename: Union[str, pathlib.Path], **kwargs) -> pathlib.Path:
     return hdf2jsonld(filename=filename, skipND=1)
 
 
-class RepositoryFile(abc.ABC):
+class RepositoryFile:
+    """The interface class to files in a repository"""
 
-    def __init__(self, identifier,
+    def __init__(self,
+                 identifier,
                  identifier_url,
                  download_url,
                  access_url,
                  checksum,
-                 filename,
+                 name,
                  size,
                  media_type,
                  access_token=None,
@@ -52,13 +56,16 @@ class RepositoryFile(abc.ABC):
         self.download_url = download_url
         self.access_url = access_url
         self.checksum = checksum
-        self.filename = filename
+        self.name = name
         self.media_type = media_type
         self.size = size
         self.identifier = identifier
         self.identifier_url = identifier_url
         self.access_token = access_token
         self.additional_data = kwargs
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.name})"
 
     def info(self) -> Dict:
         return dict(identifier=self.identifier,
@@ -132,30 +139,31 @@ class RepositoryInterface(abc.ABC):
 
     @abc.abstractmethod
     def download_file(self, filename):
-        """Download a specific file from the repository."""
+        """Download a specific file from the repository.
+
+        ..note: This method is deprecated. Use method `.files.get(filename).download()` method instead.
+        """
 
     @abc.abstractmethod
     def download_files(self):
-        """Download all files from the repository."""
+        """Download all files from the repository.
 
+        ..note: This method is deprecated. Please iterate over `files` and call .download() on the items.
+        """
+
+    @deprecated(version='1.4.0rc1',
+                msg='Please use `list(self.files.keys())` instead')
     def get_filenames(self) -> List[str]:
         """Get a list of all filenames."""
-        return [file.filename for file in self.files]
+        return list(self.files.keys())
 
     @property
     @abc.abstractmethod
-    def files(self) -> List[RepositoryFile]:
+    def files(self) -> Dict[str, RepositoryFile]:
         """List of all files in the repository."""
 
-    def file(self, filename: str) -> RepositoryFile:
-        """Return the file matching the filename, e.g. file.pdf"""
-        for file in self.files:
-            if file.filename == filename:
-                return file
-        raise FileNotFoundError(f'The file "{filename}" does not exist in the repository.')
-
     @abc.abstractmethod
-    def _upload_file(self, filename: Union[str, pathlib.Path], overwrite: bool = False):
+    def __upload_file__(self, filename: Union[str, pathlib.Path], overwrite: bool = False):
         """Upload a file to the repository. This is a regular file uploader, hence the
         file can be of any type. This is a private method, which needs to be implemented
         by every repository interface. Will be called by `upload_file`"""
@@ -206,12 +214,16 @@ class RepositoryInterface(abc.ABC):
         else:
             meta_data_file = None
 
-        self._upload_file(filename=filename, overwrite=overwrite)
+        self.__upload_file__(filename=filename, overwrite=overwrite)
 
         if meta_data_file is not None:
-            self._upload_file(filename=meta_data_file, overwrite=overwrite)
+            self.__upload_file__(filename=meta_data_file, overwrite=overwrite)
         self.refresh()
 
+    @deprecated(version='1.4.0rc1',
+                msg='This method is deprecated. '
+                    'Use `.upload_file(...)` instead and provide the '
+                    'metamapper parameter there')
     def upload_hdf_file(self,
                         filename,
                         metamapper: Callable[[Union[str, pathlib.Path]], pathlib.Path],

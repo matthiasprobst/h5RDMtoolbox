@@ -119,7 +119,7 @@ class TestConventions(unittest.TestCase):
         # download file from zenodo deposit:
         self.assertEqual(1, len(zsr.get_filenames()))
 
-        filename = zsr.file('tutorial_convention.yaml').download()
+        filename = zsr.files.get('tutorial_convention.yaml').download()
         self.assertTrue(filename.exists())
         download_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads'
         self.assertEqual(download_dir, filename.parent.parent)

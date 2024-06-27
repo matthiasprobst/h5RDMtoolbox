@@ -752,7 +752,7 @@ class StandardNameTable:
         z = zenodo.ZenodoRecord(rec_id)
         assert z.exists()
 
-        filenames = [file.download(target_folder=UserDir['standard_name_tables']) for file in z.files]
+        filenames = [file.download(target_folder=UserDir['standard_name_tables']) for file in z.files.values()]
         # filenames = z.download_files(target_folder=UserDir['standard_name_tables'])
         assert len(filenames) == 1
         filename = filenames[0]
