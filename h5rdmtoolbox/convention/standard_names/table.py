@@ -752,7 +752,8 @@ class StandardNameTable:
         z = zenodo.ZenodoRecord(rec_id)
         assert z.exists()
 
-        filenames = z.download_files(target_folder=UserDir['standard_name_tables'])
+        filenames = [file.download(target_folder=UserDir['standard_name_tables']) for file in z.files]
+        # filenames = z.download_files(target_folder=UserDir['standard_name_tables'])
         assert len(filenames) == 1
         filename = filenames[0]
         assert filename.exists()
@@ -884,6 +885,9 @@ class StandardNameTable:
     def to_json(self) -> str:
         """Export a StandardNameTable to a JSON string"""
         return str(self.to_sdict())
+
+    def __jsonld__(self):
+        """Returns the JSON-LD representation"""
 
     # End Export ---------------------------------------------------------------
 

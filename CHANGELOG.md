@@ -3,23 +3,33 @@
 Log of changes in the versions
 
 ## v1.4.0
-- using suffix `.jsonld` instead of `.json` for JSON-LD files, as it is recommended 
+
+- using suffix `.jsonld` instead of `.json` for JSON-LD files, as it is recommended
   (see https://www.w3.org/TR/json-ld/#iana-considerations)
 - bugfixes in documentation (links, figures, ...)
-
+- enhancing zenodo interfaces:
+    - removed depr methods, e.g. `get()` from `AbstractZenodoInterface`
+    - using cached json dict for zenodo records. call `refresh()` to update the json
+    - minor bugfixes
+    - introduced property `files`
+    - improve url handling by using properties instead of class variables
 
 ## v1.4.0rc1
-- The repository interface to Zenodo has one single upload method `upload_file` with the parameter `metamapper`. It 
-  is a callable which extracts meta information from the actual file to be uploaded. This is especially useful and specifically 
-  intended for HDF5 files. Unless the value for `metamapper` is `None`, the `upload_file` method will use the built-in 
+
+- The repository interface to Zenodo has one single upload method `upload_file` with the parameter `metamapper`. It
+  is a callable which extracts meta information from the actual file to be uploaded. This is especially useful and
+  specifically
+  intended for HDF5 files. Unless the value for `metamapper` is `None`, the `upload_file` method will use the built-in
   hdf5 extraction function automatically on HDF5 files.
-- Clarify  abstraction for HDF5 database interfaces. `HDF5DBInterface` is the top abstraction from which 
+- Clarify abstraction for HDF5 database interfaces. `HDF5DBInterface` is the top abstraction from which
   `ExtHDF5Interface` inherits. `ExtHDF5Interface` makes use of external databases such as *mongoDB*.
 - fix issue in online documentation: mongomock is used to run the mongodb jupyter notebook in the documentation
 - codemeta.json file is updated with author and institution ROR ID
 
 ## v1.3.2
-- calling the RDF accessor on an attribute name will only work if the attribute already exists. If not, an error is raised.
+
+- calling the RDF accessor on an attribute name will only work if the attribute already exists. If not, an error is
+  raised.
 - Likewise, if an attribute is deleted, the entry in the RDF accessor dictionary is deleted
 
 ## v1.3.1
@@ -31,15 +41,17 @@ Log of changes in the versions
 ## v1.3.0
 
 - important changes:
-  - improved and consequent support of RDF/JSON-LD. This means, an HDF5 can be created from a JSON-LD file and vice versa. The JSON-LD file
-    contains the structural and contextual metadata of the HDF5 file.
-  - namespaces are outsourced to `ontolutils`
+    - improved and consequent support of RDF/JSON-LD. This means, an HDF5 can be created from a JSON-LD file and vice
+      versa. The JSON-LD file
+      contains the structural and contextual metadata of the HDF5 file.
+    - namespaces are outsourced to `ontolutils`
 - minor changes:
-  - When a file is opened with a filename which does not exist and mode is None, the file will NOT be created. This was
-    the case in the past, but this may lead to unwanted empty files.
-  - Bugfix namespace creation
-  - some method renaming and refactoring
-  - accessors are refactored and improved (especially shifted away from xarray and fully integrated in hdf)
+    - When a file is opened with a filename which does not exist and mode is None, the file will NOT be created. This
+      was
+      the case in the past, but this may lead to unwanted empty files.
+    - Bugfix namespace creation
+    - some method renaming and refactoring
+    - accessors are refactored and improved (especially shifted away from xarray and fully integrated in hdf)
 
 ## v1.2.2
 
