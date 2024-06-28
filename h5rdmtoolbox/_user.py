@@ -2,6 +2,7 @@ import appdirs
 import importlib_resources
 import pathlib
 import shutil
+import time
 from itertools import count
 from typing import Tuple
 
@@ -9,6 +10,7 @@ _filecounter = count()
 _dircounter = count()
 
 _user_root_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
+_now = time.time()
 
 
 class DirManger:
@@ -33,8 +35,17 @@ class DirManger:
                           'tmp': tmp_dir,
                           'convention': _user_root_dir / 'convention',
                           'layouts': _user_root_dir / 'layouts',
+                          'repository': _user_root_dir / 'repository',
                           'standard_name_tables': _user_root_dir / 'standard_name_tables',
                           'cache': _user_root_dir / 'cache'}
+        self.clear_cache(6)
+
+    def __str__(self):
+        dirs = ', '.join(f'{k}' for k in self.user_dirs.keys())
+        return f'{self.__class__.__name__}({dirs})'
+
+    def __repr__(self):
+        return self.__str__()
 
     def __getitem__(self, item):
         return self._get_dir(item)
@@ -85,10 +96,31 @@ class DirManger:
 
         return self.user_dirs[name]
 
-    def clear_cache(self):
-        """Clear the cache directory."""
-        if self.user_dirs['cache'].exists():
+    def clear_cache(self, delta_days: int, utime: bool = False):
+        """Clear the cache directory. The delta_days arguments will be used
+        to delete files older than delta_days days. This is only applied to files
+
+        Parameters
+        ----------
+        delta_days : int
+            The number of days to keep the files in the cache.
+        utime : bool
+            If True, the file access time will be used to determine the age of the file.
+            Otherwise, the file creation time will be used.
+        """
+        if delta_days == 0:
             shutil.rmtree(self.user_dirs['cache'])
+            return
+        if self.user_dirs['cache'].exists():
+            for f in self.user_dirs['cache'].iterdir():
+                # get the file creation time
+                if utime:
+                    fct = f.stat().st_atime
+                else:
+                    fct = f.stat().st_ctime
+                dt = _now - fct
+                if dt > delta_days * 86400:
+                    f.unlink()
 
     def reset(self):
         """Deletes all user data"""

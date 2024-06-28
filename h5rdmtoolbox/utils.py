@@ -1,73 +1,41 @@
 """utilities of the h5rdmtoolbox"""
-import appdirs
 import datetime
-import h5py
 import hashlib
 import json
 import logging
-import numpy as np
 import os
 import pathlib
-import pint
 import re
-import requests
 import warnings
-from h5py import File
-from logging.handlers import RotatingFileHandler
 from re import sub as re_sub
-from typing import Dict, Union, Callable, List, Tuple
+from typing import Dict
+from typing import Union, Callable, List, Tuple
 
-from . import _user, get_config, get_ureg, consts
+import h5py
+import numpy as np
+import pint
+import requests
+from h5py import File
+from pydantic import HttpUrl, validate_call
+from rdflib.plugins.shared.jsonld.context import Context
+
+from . import _user, get_config, get_ureg
 from ._version import __version__
+from .wrapper import rdf
 
+logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
 
 
-class ToolboxLogger(logging.Logger):
-    """Wrapper class for logging.Logger to add a setLevel method"""
-
-    def __init__(self, name, level=logging.NOTSET, directory=None):
-        super().__init__(name, level)
-        self._directory = directory
-
-    def setLevel(self, level):
-        """change the log level which displays on the console"""
-        old_level = self.handlers[1].level
-        self.handlers[1].setLevel(level)
-
-
-def create_tbx_logger(name, logdir=None) -> ToolboxLogger:
-    """Create logger based on name"""
-    if logdir is None:
-        _logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
-    else:
-        _logdir = pathlib.Path(logdir)
-
-    _logdir.mkdir(parents=True, exist_ok=True)
-
-    _logger = ToolboxLogger(logging.getLogger(name), directory=_logdir)
-
-    _formatter = logging.Formatter(
-        '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-        datefmt='%Y-%m-%d_%H:%M:%S')
-
-    _file_handler = RotatingFileHandler(_logdir / f'{name}.log')
-    _file_handler.setLevel(logging.DEBUG)  # log everything to file!
-    _file_handler.setFormatter(_formatter)
-
-    _stream_handler = logging.StreamHandler()
-    _stream_handler.setLevel(DEFAULT_LOGGING_LEVEL)
-    _stream_handler.setFormatter(_formatter)
-
-    _logger.addHandler(_file_handler)
-    _logger.addHandler(_stream_handler)
-
-    return _logger
-
-
-def get_filesize(path: Union[str, pathlib.Path]) -> int:
+def get_filesize(filename: Union[str, pathlib.Path]) -> int:
     """Get the size of a file in bytes"""
-    return os.path.getsize(path) * get_ureg().byte
+    return os.path.getsize(filename) * get_ureg().byte
+
+
+def get_checksum(filename: Union[str, pathlib.Path], hash_func: Callable = hashlib.md5) -> str:
+    """Get the checksum of a file. Default hash function is hashlib.md5"""
+    with open(str(filename), 'rb') as file:
+        return hash_func(file.read()).hexdigest()
 
 
 def has_internet_connection(timeout: int = 5) -> bool:
@@ -92,7 +60,7 @@ def download_file(url, known_hash):
             if not calculated_hash == known_hash:
                 raise ValueError('File does not match the expected has')
         else:
-            warnings.warn('No has given!')
+            warnings.warn('No hash given! This is recommended when downloading files from the web.', UserWarning)
 
         # Save the content to a file
         fname = generate_temporary_filename()
@@ -190,8 +158,12 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = Fa
     while _filename.exists():
         _filename = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
     if touch:
-        with h5py.File(_filename, 'w'):
-            pass
+        if _filename.suffix in ('.h5', '.hdf', '.hdf5'):
+            with h5py.File(_filename, 'w'):
+                pass
+        else:
+            with open(_filename, 'w'):
+                pass
     return _filename
 
 
@@ -215,6 +187,22 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     return _dir
 
 
+def create_h5tbx_version_grp(root: h5py.Group) -> h5py.Group:
+    """Creates a group in an HDF5 file with the h5rdmtoolbox version as an attribute"""
+    logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
+    version_group = root.create_group('h5rdmtoolbox')
+    # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
+    version_group.attrs['__h5rdmtoolbox_version__'] = __version__
+    # version_group.attrs['name'] = "h5rdmtoolbox"
+    version_group.attrs['code_repository'] = "https://github.com/matthiasprobst/h5RDMtoolbox"
+    version_group.attrs[rdf.RDF_PREDICATE_ATTR_NAME] = json.dumps(
+        {'code_repository': 'https://schema.org/codeRepository',
+         '__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
+    )
+    version_group.attrs[rdf.RDF_TYPE_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'
+    return version_group
+
+
 def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     """
     Generates a file path in directory h5rdmtoolbox/.tmp
@@ -233,9 +221,8 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
     hdf_filepath = generate_temporary_filename(suffix='.hdf')
     if touch:
         with File(hdf_filepath, "w") as h5touch:
-            h5touch.attrs['__h5rdmtoolbox_version__'] = __version__
-            h5touch.attrs[
-                consts.IRI_PREDICATE_ATTR_NAME] = json.dumps({'__h5rdmtoolbox_version__': consts.VERSION_IRI})
+            if get_config('auto_create_h5tbx_version'):
+                create_h5tbx_version_grp(h5touch)
             if attrs is not None:
                 for ak, av in attrs.items():
                     create_special_attribute(h5touch.attrs, ak, av)
@@ -295,7 +282,7 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         fragment = name.fragment
         if not fragment:
             raise ValueError(f'Name {name} has no fragment')
-        from h5rdmtoolbox.wrapper.iri import set_predicate
+        from h5rdmtoolbox.wrapper.rdf import set_predicate
         set_predicate(h5obj, fragment, name)
         name = fragment
 
@@ -332,10 +319,11 @@ def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, Li
         return value
     if isinstance(value, (h5py.Dataset, h5py.Group)):
         return value.name
+    if hasattr(value, '__h5attr_repr__'):
+        return value.__h5attr_repr__()
     try:
         return str(value)  # try parsing to string
     except TypeError:
-        print(type(value))
         raise TypeError(f"Cannot parse type {type(value)} to string")
 
 
@@ -537,3 +525,49 @@ class DocStringParser:
                     rkw.append(current_ret_param)
 
         return abstract, kw, rkw, notes_lines
+
+
+@validate_call
+def download_context(url_source: Union[HttpUrl, List[HttpUrl]], force_download: bool = False) -> Context:
+    """Download a context file from one URL or list of URLs
+    Will check if a context file is already downloaded and use that one.
+
+    Examples
+    --------
+    >>> from h5rdmtoolbox.utils import download_context
+    >>> context = download_context('https://raw.githubusercontent.com/codemeta/codemeta/2.0/codemeta.jsonld')
+    """
+    if not isinstance(url_source, list):
+        url_source = [url_source]
+
+    filenames = []
+    for url in url_source:
+        _url = str(url)
+        _fname = _url.rsplit('/', 1)[-1]
+        context_file = _user.UserDir['cache'] / _fname
+        if not context_file.exists() or force_download:
+            logger.debug(f'Downloading context file from {_url} to {context_file}')
+            try:
+                with open(context_file, 'wb') as f:
+                    f.write(requests.get(_url).content)
+            except requests.RequestException:
+                raise RuntimeError(f'Failed to download context file from {_url}')
+        filenames.append(str(context_file))
+    return Context(filenames)
+
+
+def deprecated(version: str, msg: str, removing_in: str = None):
+    """Decorator for deprecated methods or functions"""
+
+    def deprecated_decorator(func):
+        def depr_func(*args, **kwargs):
+            if removing_in:
+                warnings.warn(f"{func.__name__} is deprecated since {version}. Will be removed in {removing_in}."
+                              f" {msg}", DeprecationWarning)
+            else:
+                warnings.warn(f"{func.__name__} is deprecated since {version}. {msg}", DeprecationWarning)
+            return func(*args, **kwargs)
+
+        return depr_func
+
+    return deprecated_decorator

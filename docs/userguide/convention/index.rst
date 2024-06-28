@@ -8,11 +8,11 @@ to improve the reusability and interoperability of data.
 
 Background/Motivation
 ---------------------
-HDF5 file are very popular due their hierarchical structure and the possibility to store
+HDF5 file are very popular due to their hierarchical structure and the possibility to store
 large amounts of data and, more importantly, metadata together with data. **However, the management of
-the key-value pairs (HDF attributes) is not standardized and their correctness is left to the user**.
+the key-value pairs (HDF attributes) are not standardized, and their correctness is left to the user**.
 
-Software and users, who want to reuse the data, have to know the meaning of the attributes and and
+Software and users, who want to reuse the data, have to know the meaning of the attributes and
 dependent on the correctness and adherence to a common standard. **The h5rdmtoolbox provides a
 mechanism to define and use standardized attributes for HDF5 files**.
 
@@ -20,7 +20,7 @@ Who is it for?
 --------------
 Dependent on your role within a data project, you may be interested in different aspects of the conventions:
 
-- A **data manager** defines, creates and shares standardized attributes in form of a convention Start [here]() if you are a data manager.
+- A **data manager** defines, creates and shares standardized attributes in the form of a convention Start [here]() if you are a data manager.
 - A **user** will use the standardized attributes to create or read HDF5 files. Start [here]() if you are a user.
 
 The following sketch illustrates the relevance of a convention in the workflow of using HDF5 files: Data managers define
@@ -91,7 +91,7 @@ within a data project, you may be interested in different aspects of the convent
     :maxdepth: 2
     :hidden:
 
-    activating_a_convention.ipynb
+    activate_a_convention.ipynb
     working_with_conventions.ipynb
     creating_a_new_convention.ipynb
     ontologies.ipynb

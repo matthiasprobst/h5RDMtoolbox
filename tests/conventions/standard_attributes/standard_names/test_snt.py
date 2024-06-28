@@ -1,13 +1,17 @@
+import pydantic
 import requests
 import unittest
 import warnings
+from pydantic import BaseModel
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention.errors import StandardNameError
 from h5rdmtoolbox.convention.standard_names import parse_snt
 from h5rdmtoolbox.convention.standard_names.name import StandardName
-from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
+from h5rdmtoolbox.convention.standard_names.table import StandardNameTable, parse_version
+from h5rdmtoolbox.convention.toolbox_validators import standardNameTableType
+from h5rdmtoolbox.convention.toolbox_validators import standardNameType
 
 
 class TestStandardAttributes(unittest.TestCase):
@@ -15,7 +19,7 @@ class TestStandardAttributes(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
         try:
-            requests.get('https://git.scc.kit.edu', timeout=5)
+            requests.get('https://www.google.com/', timeout=5)
             self.connected = True
         except (requests.ConnectionError,
                 requests.Timeout) as e:
@@ -49,6 +53,20 @@ class TestStandardAttributes(unittest.TestCase):
         snt = parse_snt(h5tbx.tutorial.get_standard_name_table_yaml_file())
         self.assertTrue(sn.check(snt))
 
+        class MyStandardName(BaseModel):
+            sn: standardNameType
+
+        with self.assertRaises(pydantic.ValidationError):
+            my_sn = MyStandardName(sn='x_velocity')
+        with self.assertRaises(TypeError):
+            my_sn = MyStandardName(sn=1.2)
+
+    def test_parse_version(self):
+        self.assertEqual(parse_version('v1.0.0'), 'v1.0.0')
+        self.assertEqual(parse_version('1.0.0'), '1.0.0')
+        self.assertEqual(parse_version('78'), '78.0.0')
+        self.assertEqual(parse_version('invalid'), 'invalid')
+
     def test_parse_snt(self):
         with self.assertRaises(TypeError):
             parse_snt(None)
@@ -66,8 +84,7 @@ class TestStandardAttributes(unittest.TestCase):
     def test_snt_cache(self):
         """caching of SNTs only works if they are zenodo references"""
         cv = h5tbx.convention.Convention(name='test', contact='me', institution='mine', decoders=())
-        from h5rdmtoolbox.convention.toolbox_validators import standardNameTableType
-        from pydantic import BaseModel
+
         class standard_name_table_validator(BaseModel):
             """The standard name table of the convention."""
             value: standardNameTableType
@@ -104,6 +121,7 @@ class TestStandardAttributes(unittest.TestCase):
                                     'units': 'm/s', 'description': 'x velocity.', 'alias': 'u'},
                                     'y_velocity': {'canonical_units': 'm/s', 'description': 'y velocity', 'alias': 'v'}
                                 })
+        self.assertListEqual(snt.names, ['x_velocity', 'y_velocity'])
         self.assertEqual('x velocity.', snt['x_velocity'].description)
         self.assertEqual('y velocity.', snt['y_velocity'].description)
 
@@ -216,6 +234,18 @@ class TestStandardAttributes(unittest.TestCase):
         snt_dict = snt.to_dict()
         self.assertIn('standard_names', snt_dict)
         self.assertIn('affixes', snt_dict)
+
+    def test_to_markdown(self):
+        with open(self.snt.to_markdown(h5tbx.utils.generate_temporary_filename(suffix='.md'))) as f:
+            lines = f.readlines()
+        for line in lines:
+            print(line.strip())
+        self.assertEqual(lines[1].strip(), 'title: Standard Name Table for Fan simulations and measurements')
+        self.assertEqual(lines[6].strip(), '| Standard Name |     units     | Description |')
+        self.assertEqual(lines[8].strip(),
+                         '| time | s | Time refers to the relative time since start of data acquisition. |')
+        for line in lines:
+            (line.strip())
 
     def test_to_from_yaml(self):
         snt = StandardNameTable(name='test_snt',

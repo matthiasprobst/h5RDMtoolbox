@@ -1,9 +1,11 @@
-import requests
 import unittest
 import warnings
 
+import requests
+
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
+from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
 from h5rdmtoolbox.convention.errors import StandardNameError, StandardAttributeError
 from h5rdmtoolbox.convention.standard_names import utils
 from h5rdmtoolbox.convention.standard_names.name import StandardName
@@ -97,7 +99,6 @@ class TestStandardAttributes(unittest.TestCase):
         self.assertIsInstance(table['derivative_of_x_coordinate_wrt_x_velocity'], StandardName)
 
         table['x_velocity_in_stationary_frame']
-
 
     def test_StandardNameTableFromWeb(self):
         try:
@@ -220,14 +221,14 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
-            snt = StandardNameTable.from_zenodo(doi_or_recid=10428795)
+            snt = StandardNameTable.from_zenodo(siurce=TutorialSNTZenodoRecordID)
             self.assertIsInstance(snt, StandardNameTable)
-            filename = h5tbx.UserDir['standard_name_tables'] / f'10428795.yaml'
+            filename = h5tbx.UserDir['standard_name_tables'] / f'{TutorialSNTZenodoRecordID}.yaml'
             self.assertTrue(filename.exists())
-            filename.unlink(missing_ok=True)
+            # filename.unlink(missing_ok=True)
 
     def test_from_yaml(self):
-        cv = h5tbx.convention.from_yaml(tutorial.get_standard_attribute_yaml_filename(), overwrite=True)
+        cv = h5tbx.convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
         h5tbx.use(cv)
 
         with h5tbx.File(contact='https://orcid.org/0000-0001-8729-0482', data_type='numerical') as h5:

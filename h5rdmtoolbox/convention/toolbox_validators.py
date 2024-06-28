@@ -1,12 +1,12 @@
 """general validation functions of the toolbox usable by convention. If users wish to user
 their own validators, they need to define them separately. The respective python script then
 must be provided during initialization of a Convention"""
+import re
+from typing import Union, Dict
 
 import pint
-import re
 import typing_extensions
 from pydantic.functional_validators import WrapValidator
-from typing import Union, Dict
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg, errors
@@ -47,7 +47,7 @@ def __validate_standard_name_table(value, handler, info) -> "StandardNameTable":
     return standard_names.parse_snt(value)
 
 
-def __validate_standard_name(value, handler, info) -> "StandardNameTable":
+def __validate_standard_name(value, handler, info) -> "StandardName":
     from h5rdmtoolbox.convention import standard_names
     if not isinstance(value, (str, standard_names.StandardName)):
         raise TypeError(f'Expected a string or StandardName object, got {type(value)}')
@@ -70,7 +70,7 @@ def __validate_standard_name(value, handler, info) -> "StandardNameTable":
         data_scale = parent.attrs.get('DATA_SCALE', None)
         if data_scale is not None:
             # scale_ds = parent.rootparent[data_scale]
-            ds_scale_units = data_scale.attrs.raw.get('units', '')
+            ds_scale_units = parent.rootparent[data_scale].attrs.get('units', '')
             ureg = get_ureg()
             units = str(ureg.Unit(ds_scale_units) * units)
 
@@ -124,49 +124,49 @@ def __validate_units(value, handler, info):
         raise ValueError(f'Units cannot be understood using ureg package: {value}. Original error: {e}')
 
 
-def __validate_scale(value, handler, info):
-    if not info.context:
-        raise RuntimeError('Require context to validate offset!')
-    parent = info.context.get('parent', None)
-    if parent is None:
-        raise RuntimeError('Require parent dataset to validate offset!')
-    # attrs = info.context.get('attrs', None)
+# def __validate_scale(value, handler, info):
+#     if not info.context:
+#         raise RuntimeError('Require context to validate offset!')
+#     parent = info.context.get('parent', None)
+#     if parent is None:
+#         raise RuntimeError('Require parent dataset to validate offset!')
+#     # attrs = info.context.get('attrs', None)
+#
+#     parent_group = info.context['parent'].parent
+#
+#     if isinstance(value, str) and value in parent_group:
+#         return parent_group[value][()]
+#
+#     raise KeyError(f'No dataset found with name {value}!')
 
-    parent_group = info.context['parent'].parent
 
-    if isinstance(value, str) and value in parent_group:
-        return parent_group[value][()]
-
-    raise KeyError(f'No dataset found with name {value}!')
-
-
-def __validate_offset_or_scale(value, handler, info):
-    if not info.context:
-        raise RuntimeError('Require context to validate offset!')
-    parent = info.context.get('parent', None)
-    if parent is None:
-        raise RuntimeError('Require parent dataset to validate offset!')
-
-    parent_group = info.context['parent'].parent
-
-    if isinstance(value, str):
-        if value.startswith('/'):
-            try:
-                offset_or_scale_ds = parent.rootparent[value]
-            except KeyError:
-                raise KeyError(f'No dataset found with name {value}!')
-        else:
-            try:
-                offset_or_scale_ds = parent_group[value]
-            except KeyError:
-                raise KeyError(f'No dataset found with name {value}!')
-    else:
-        raise TypeError(f'Offset dataset must be dataset name of dataset object, not {type(value)}')
-
-    assert offset_or_scale_ds.ndim == 0
-
-    offset_or_scale_ds_name = offset_or_scale_ds.name
-    return offset_or_scale_ds_name
+# def __validate_offset_or_scale(value, handler, info):
+#     if not info.context:
+#         raise RuntimeError('Require context to validate offset!')
+#     parent = info.context.get('parent', None)
+#     if parent is None:
+#         raise RuntimeError('Require parent dataset to validate offset!')
+#
+#     parent_group = info.context['parent'].parent
+#
+#     if isinstance(value, str):
+#         if value.startswith('/'):
+#             try:
+#                 offset_or_scale_ds = parent.rootparent[value]
+#             except KeyError:
+#                 raise KeyError(f'No dataset found with name {value}!')
+#         else:
+#             try:
+#                 offset_or_scale_ds = parent_group[value]
+#             except KeyError:
+#                 raise KeyError(f'No dataset found with name {value}!')
+#     else:
+#         raise TypeError(f'Offset dataset must be dataset name of dataset object, not {type(value)}')
+#
+#     assert offset_or_scale_ds.ndim == 0
+#
+#     offset_or_scale_ds_name = offset_or_scale_ds.name
+#     return offset_or_scale_ds_name
 
 
 def __validate_date_format(value, handler, info):
@@ -177,20 +177,11 @@ def __validate_date_format(value, handler, info):
     try:
         warnings.filterwarnings("error")
         dt = dateutil.parser.parse(value)
-    except RuntimeWarning as e:
-        raise ValueError(f'Invalid datetime: {value}. Original error: {e}')
+    except TypeError as e:
+        raise TypeError(f'Invalid datetime: {value}. Original error: {e}')
     finally:
         warnings.filterwarnings("ignore")
     return dt
-
-
-def _get_validate_type(_type):
-    def __validate_type(value, handler, info):
-        if not isinstance(value, _type):
-            raise TypeError(f'Value must be a string but got {type(value)}')
-        return value
-
-    return __validate_type
 
 
 unitsType = Annotated[str, WrapValidator(__validate_units)]
@@ -199,9 +190,9 @@ dateFormatType = Annotated[str, WrapValidator(__validate_date_format)]
 
 quantityType = Annotated[str, WrapValidator(__validate_quantity)]
 
-dataOffsetType = Annotated[str, WrapValidator(__validate_offset_or_scale)]
-
-dataScaleType = Annotated[str, WrapValidator(__validate_offset_or_scale)]
+# dataOffsetType = Annotated[str, WrapValidator(__validate_offset_or_scale)]
+#
+# dataScaleType = Annotated[str, WrapValidator(__validate_offset_or_scale)]
 
 orcidType = Annotated[str, WrapValidator(__validate_orcid)]
 
@@ -219,8 +210,8 @@ validators = {
     'units': unitsType,
     'dateFormat': dateFormatType,
     'quantity': quantityType,
-    'data_offset': dataOffsetType,
-    'data_scale': dataScaleType,
+    # 'data_offset': dataOffsetType,
+    # 'data_scale': dataScaleType,
     'orcid': orcidType,
     'identifier': identifierType,
     'standard_name_table': standardNameTableType,

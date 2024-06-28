@@ -1,11 +1,13 @@
 import h5py
+import json
 import numpy as np
-from typing import Union, Dict, List, Callable, Generator
+from typing import Type
+from typing import Union, Dict, List, Callable, Optional
 
 from . import query, utils
-from .nonsearchable import NonInsertableDatabaseInterface
-from .. import lazy
-from ..template import HDF5DBInterface
+from ..interface import HDF5DBInterface
+from ...protocols import LazyDataset, LazyGroup, LazyObject
+from ...wrapper import lazy
 
 
 def basename(name: str) -> str:
@@ -20,6 +22,13 @@ class RecFind:
     def __init__(self, func: Callable, attribute, value, objfilter, ignore_attribute_error):
         self._func = func
         self._attribute = attribute
+        if isinstance(value, set):
+            raise TypeError(
+                'It seems that your query has a typo. Expecting a dictionary or base string or number but got '
+                f'a set: {value}'
+            )
+        # if isinstance(value, dict):
+        #     _operators = query.operator.get(k) for k in value.keys()
         self._value = value
         self.found_objects = []
         self.objfilter = objfilter
@@ -33,12 +42,12 @@ class RecFind:
             objattr = h5obj.__getattribute__(self._attribute)
             if self._func(objattr, self._value):
                 self.found_objects.append(h5obj)
-        except AttributeError as e:
+        except AttributeError:
             return
-            if not self.ignore_attribute_error:
-                raise AttributeError(f'HDF object {h5obj} has no attribute "{self._attribute}". You may add '
-                                     'an objfilter, because dataset and groups dont share all attributes. '
-                                     'One example is "dtype", which is only available with datasets') from e
+            # if not self.ignore_attribute_error:
+            #     raise AttributeError(f'HDF object {h5obj} has no attribute "{self._attribute}". You may add '
+            #                          'an objfilter, because dataset and groups dont share all attributes. '
+            #                          'One example is "dtype", which is only available with datasets') from e
 
 
 class RecValueFind:
@@ -77,17 +86,22 @@ class RecAttrFind:
         if '.' in self._attribute:
             # dict comparison:
             attr_name, dict_path = self._attribute.split('.', 1)
-            if attr_name in obj.attrs:
-                _attr_dict = dict(obj.attrs[attr_name])
-                for _item in dict_path.split('.'):
-                    try:
-                        _attr_value = _attr_dict[_item]
-                    except KeyError:
-                        _attr_value = None
-                        break
-                if _attr_value:
-                    if self._func(_attr_value, self._value):
-                        self.found_objects.append(obj)
+            attr_value = obj.attrs.get(attr_name, None)
+            if attr_value is not None:
+                if isinstance(attr_value, str) and attr_value.startswith('{') and attr_value.endswith('}'):
+                    _attr_dict = json.loads(attr_value)
+
+                    _attr_value = None
+                    for _item in dict_path.split('.'):
+                        try:
+                            _attr_value = _attr_dict[_item]
+                        except KeyError:
+                            break
+
+                    if _attr_value:
+                        if self._func(_attr_value, self._value):
+                            self.found_objects.append(obj)
+
         if self._func(obj.attrs.get(self._attribute, None), self._value):
             self.found_objects.append(obj)
 
@@ -95,23 +109,23 @@ class RecAttrFind:
 class RecPropCollect:
     """Visititems class to collect all class attributes matching a certain string"""
 
-    def __init__(self, attribute_name: str, objfilter: Union[h5py.Group, h5py.Dataset, None]):
+    def __init__(self, attribute_name: str, objfilter: Optional[Union[Type[h5py.Dataset], Type[h5py.Group]]]):
         self._attribute_name = attribute_name
         self._objfilter = objfilter
         self.found_objects = []
 
-    def __call__(self, name, obj):
+    def __call__(self, name: str, obj: Union[h5py.Group, h5py.Dataset]):
         if self._objfilter is None:
             try:
-                propval = obj.__getattribute__(self._attribute_name)
-                self.found_objects.append(propval)
+                property_value = obj.__getattribute__(self._attribute_name)
+                self.found_objects.append(property_value)
             except AttributeError:
                 pass
         else:
             if isinstance(obj, self._objfilter):
                 try:
-                    propval = obj.__getattribute__(self._attribute_name)
-                    self.found_objects.append(propval)
+                    property_value = obj.__getattribute__(self._attribute_name)
+                    self.found_objects.append(property_value)
                 except AttributeError:
                     pass
 
@@ -119,12 +133,12 @@ class RecPropCollect:
 class RecAttrCollect:
     """Visititems class to collect all attributes matching a certain string"""
 
-    def __init__(self, attribute_name: str, objfilter: Union[h5py.Group, h5py.Dataset, None]):
+    def __init__(self, attribute_name: str, objfilter: Optional[Union[Type[h5py.Dataset], Type[h5py.Group]]]):
         self._attribute_name = attribute_name
         self._objfilter = objfilter
         self.found_objects = []
 
-    def __call__(self, name, obj):
+    def __call__(self, name: str, obj: Union[h5py.Group, h5py.Dataset]):
         if self._objfilter is None:
             if self._attribute_name in obj.attrs:
                 self.found_objects.append(obj.attrs[self._attribute_name])
@@ -146,8 +160,13 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
     -------
 
     """
-    found_objs = []
 
+    if qk == '$basename':
+        qk = '$name'
+        assert isinstance(qv, str), 'Expected {$basename: "search value"} but value is not a string'
+        qv = {'$basename': qv}
+
+    found_objs = []
     if qk in query.value_operator:
         # user wants to compare qv to the value of the object
 
@@ -184,13 +203,13 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                                 found_objs.append(target_obj)
             return found_objs
 
+        if isinstance(qv, Dict) and len(qv) != 1:
+            raise ValueError(f'Cannot use query.operator "{qk}" for dict with more than one key')
+
         if isinstance(qv, (float, int)):
             qv_ndim = 0
-        elif isinstance(qv, Dict):
-            if len(qv) != 1:
-                raise ValueError(f'Cannot use query.operator "{qk}" for dict with more than one key')
-
         else:
+            assert isinstance(qv, (str, np.ndarray)), f'Unexpected type: {type(qv)}'
             qv_ndim = np.ndim(qv)
 
         if qv_ndim > 0 and qk != '$eq':
@@ -233,11 +252,11 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                         attr_name, dict_path = qk.split('.', 1)
                         if attr_name in h5obj.attrs:
                             _attr_dict = dict(h5obj.attrs[attr_name])
+                            _attr_value = None
                             for _item in dict_path.split('.'):
                                 try:
                                     _attr_value = _attr_dict[_item]
                                 except KeyError:
-                                    _attr_value = None
                                     break
                             if _attr_value:
                                 if query.operator[ok](_attr_value, ov):
@@ -264,6 +283,7 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                 rf = RecFind(query.operator[ok], qk[1:], ov, objfilter=objfilter,
                              ignore_attribute_error=ignore_attribute_error)
                 rf(name='/', h5obj=h5obj)  # visit the root group
+                # rf(name=h5obj.name, h5obj=h5obj)  # visit the root group
                 h5obj.visititems(rf)  # will not visit the root group
                 for found_obj in rf.found_objects:
                     found_objs.append(found_obj)
@@ -285,20 +305,49 @@ def _h5find(h5obj: Union[h5py.Group, h5py.Dataset], qk, qv, recursive, objfilter
                                 continue
                             raise ValueError(f'No such attribute: {qk[1:]}.')
 
-                    try:
-                        if query.operator[ok](objattr, ov):
-                            found_objs.append(hv)
-                    except Exception as e:
-                        raise Exception(f'Error while filtering for "{qk}" with "{ok}" and "{ov}"') from e
+                        try:
+                            if query.operator[ok](objattr, ov):
+                                found_objs.append(hv)
+                        except Exception as e:
+                            raise Exception(f'Error while filtering for "{qk}" with "{ok}" and "{ov}": {e}')
     return found_objs
 
 
+ListOfLazyObjs = List[Union[LazyDataset, LazyGroup]]
+
+
 def find(h5obj: Union[h5py.Group, h5py.Dataset],
-         flt: [Dict, str, List[str]],
+         flt: Union[Dict, str, List[str]],
          objfilter: Union[h5py.Group, h5py.Dataset, None],
          recursive: bool,
          find_one: bool,
-         ignore_attribute_error):
+         ignore_attribute_error) -> Optional[Union[List[LazyObject], LazyObject]]:
+    """Find datasets or groups in an object.
+
+    Parameters
+    ----------
+    h5obj: Group or Dataset
+        obj from where to start searching
+    flt: Union[Dict, str, List[str]]
+        The filter query similar to the pymongo syntax.
+    objfilter: Optional
+        Filter only for dataset or group. if None, consider both types.
+    recursive: bool
+        Whether to recursively search in subgroups, too
+    find_one: bool
+        If True, the first search result is returned
+    ignore_attribute_error: bool
+        If True, attribute errors are ignored.
+
+    Examples
+    --------
+    >>> from h5rdmtoolbox.database import hdfdb
+    >>> with h5tbx.File(filename) as h5:
+    ...     # find the obj with standard_name=='x_velocity':
+    ...     hdfdb.ObjDB(h5).find({'standard_name': 'x_velocity'})
+    ...     # all datasets must be gzip-compressed:
+    ...     hdfdb.ObjDB(h5).find({'$compression': 'gzip'}, objfilter='dataset')
+    """
     if flt == {}:  # just find any!
         flt = {'$name': {'$regex': '.*'}}
     if isinstance(flt, str):  # just find the attribute and don't filter for the value:
@@ -329,8 +378,9 @@ def find(h5obj: Union[h5py.Group, h5py.Dataset],
     return common_results
 
 
-def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
-             objfilter: Union[h5py.Group, h5py.Dataset, None]) -> List[str]:
+def distinct(h5obj: Union[h5py.Group, h5py.Dataset],
+             key: str,
+             objfilter: Optional[Union[Type[h5py.Group], Type[h5py.Dataset]]]) -> List[str]:
     """Return a distinct list of all found targets. A target generally is
     understood to be an attribute name. However, by adding a $ in front, class
     properties can be found, too, e.g. $shape will return all distinct shapes of the
@@ -343,37 +393,37 @@ def distinct(h5obj: Union[h5py.Group, h5py.Dataset], key: str,
         if objfilter:
             if isinstance(h5obj, objfilter):
                 try:
-                    propval = h5obj.__getattribute__(key[1:])
-                    rpc.found_objects.append(propval)
+                    property_value = h5obj.__getattribute__(key[1:])
+                    rpc.found_objects.append(property_value)
                 except AttributeError:
                     pass
         else:
             try:
-                propval = h5obj.__getattribute__(key[1:])
-                rpc.found_objects.append(propval)
+                property_value = h5obj.__getattribute__(key[1:])
+                rpc.found_objects.append(property_value)
             except AttributeError:
                 pass
 
         return list(set(rpc.found_objects))
 
     rac = RecAttrCollect(key, objfilter)
-    for k, v in h5obj.attrs.raw.items():
+    for k, v in h5obj.attrs.items():
         if k == key:
             rac.found_objects.append(v)
     if isinstance(h5obj, h5py.Group):
         h5obj.visititems(rac)
         if objfilter:
             if isinstance(h5obj, objfilter):
-                if key in h5obj.attrs.raw:
-                    rac.found_objects.append(h5obj.attrs.raw[key])
+                if key in h5obj.attrs:
+                    rac.found_objects.append(h5obj.attrs[key])
         else:
-            if key in h5obj.attrs.raw:
-                rac.found_objects.append(h5obj.attrs.raw[key])
+            if key in h5obj.attrs:
+                rac.found_objects.append(h5obj.attrs[key])
 
     return list(set(rac.found_objects))
 
 
-class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
+class ObjDB(HDF5DBInterface):
     """HDF5 Group or Dataset as a database"""
 
     def __init__(self, obj: Union[h5py.Dataset, h5py.Group]):
@@ -383,12 +433,25 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
             self.src_obj = h5py.Dataset(obj.id)
         else:
             raise TypeError(f'Unexpected type: {type(obj)}')
+        self.find = self._instance_find  # allow `find` to be a static method and instance method
+        self.rdf_find = self._instance_rdf_find  # allow `find` to be a static method and instance method
+        self.find_one = self._instance_find_one  # allow `find_one` to be a static method and instance method
 
-    def find_one(self,
-                 flt: Union[Dict, str],
-                 objfilter=None,
-                 recursive: bool = True,
-                 ignore_attribute_error: bool = False) -> lazy.LHDFObject:
+    @staticmethod
+    def find_one(obj: Union[h5py.Dataset, h5py.Group], *args, **kwargs) -> Union[LazyObject]:
+        """Please refer to the docstring of the find_one method of the ObjDB class"""
+        return ObjDB(obj).find_one(*args, **kwargs)
+
+    @staticmethod
+    def find(obj: Union[h5py.Dataset, h5py.Group], *args, **kwargs) -> List[LazyObject]:
+        """Please refer to the docstring of the find_one method of the ObjDB class"""
+        return ObjDB(obj).find(*args, **kwargs)
+
+    def _instance_find_one(self,
+                           flt: Union[Dict, str],
+                           objfilter=None,
+                           recursive: bool = True,
+                           ignore_attribute_error: bool = False) -> LazyObject:
         """Find one object in the obj
 
         Parameters
@@ -405,21 +468,21 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
         """
         if isinstance(self.src_obj, h5py.Dataset) and recursive:
             recursive = False
-        return lazy.lazy(
-            find(
-                self.src_obj,
-                flt=flt,
-                objfilter=objfilter,
-                recursive=recursive,
-                find_one=True,
-                ignore_attribute_error=ignore_attribute_error)
+
+        return find(
+            self.src_obj,
+            flt=flt,
+            objfilter=objfilter,
+            recursive=recursive,
+            find_one=True,
+            ignore_attribute_error=ignore_attribute_error
         )
 
-    def find(self,
-             flt: Union[Dict, str],
-             objfilter=None,
-             recursive: bool = True,
-             ignore_attribute_error: bool = False) -> Generator[lazy.LHDFObject, None, None]:
+    def _instance_find(self,
+                       flt: Union[Dict, str],
+                       objfilter=None,
+                       recursive: bool = True,
+                       ignore_attribute_error: bool = False) -> List[LazyObject]:
         if isinstance(self.src_obj, h5py.Dataset) and recursive:
             recursive = False
         results = find(self.src_obj,
@@ -428,12 +491,28 @@ class ObjDB(NonInsertableDatabaseInterface, HDF5DBInterface):
                        recursive=recursive,
                        find_one=False,
                        ignore_attribute_error=ignore_attribute_error)
+        return results
 
-        for r in results:
-            yield r
+    def _instance_rdf_find(self, *,
+                           rdf_subject: Optional[str] = None,
+                           rdf_type: Optional[str] = None,
+                           rdf_predicate: Optional[str] = None,
+                           rdf_object: Optional[str] = None,
+                           recursive: bool = True) -> Optional[List[Union[LazyDataset, LazyGroup]]]:
+        """Find objects based on rdf triples"""
+        import h5rdmtoolbox as h5tbx
+        if isinstance(self.src_obj, h5py.Group):
+            src_obj = h5tbx.Group(self.src_obj)
+        else:
+            src_obj = h5tbx.Dataset(self.src_obj)
+        return lazy.lazy(src_obj.rdf.find(rdf_subject=rdf_subject,
+                                          rdf_type=rdf_type,
+                                          rdf_predicate=rdf_predicate,
+                                          rdf_object=rdf_object,
+                                          recursive=recursive))
 
     def distinct(self, key: str,
-                 objfilter: Union[h5py.Group, h5py.Dataset, None]):
+                 objfilter: Optional[Union[h5py.Group, h5py.Dataset]] = None):
         """Return a distinct list of all found targets. A target generally is
         understood to be an attribute name. However, by adding a $ in front, class
         properties can be found, too, e.g. $shape will return all distinct shapes of the

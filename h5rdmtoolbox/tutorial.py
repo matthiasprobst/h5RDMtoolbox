@@ -1,19 +1,24 @@
 """
 Tutorial module providing easy access to particular data.
 """
-import numpy as np
 import os
 import pathlib
-import xarray as xr
 from typing import List
+
+import numpy as np
+import xarray as xr
+from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
-from .utils import generate_temporary_directory
-from .wrapper.core import File
+from h5rdmtoolbox.utils import generate_temporary_directory
+from h5rdmtoolbox.wrapper.core import File
 
 __this_dir__ = pathlib.Path(__file__).parent
 testdir = __this_dir__ / '../tests/data'
+
+TutorialConventionZenodoRecordID = 12541214
+TutorialSNTZenodoRecordID = 10428795
 
 
 def get_standard_name_table_yaml_file() -> pathlib.Path:
@@ -21,8 +26,8 @@ def get_standard_name_table_yaml_file() -> pathlib.Path:
     return __this_dir__ / 'data/tutorial_standard_name_table.yaml'
 
 
-def get_standard_attribute_yaml_filename() -> pathlib.Path:
-    """Return the path to the standard attribute yaml file"""
+def get_convention_yaml_filename() -> pathlib.Path:
+    """Return the path to the convention yaml file"""
     return __this_dir__ / 'data/tutorial_convention.yaml'
 
 
@@ -203,7 +208,7 @@ class Database:
             filename = pathlib.Path(folders[ifolder]) / f'repofile_{fid:05d}.hdf'
             with File(filename, 'w') as h5:
                 h5.attrs['contact_person'] = contact_persons[np.random.randint(4)]
-                h5.iri['contact_person'].name = 'http://www.w3.org/ns/prov#Person'
+                h5.rdf['contact_person'].name = 'http://www.w3.org/ns/prov#Person'
 
                 if fid % 2:
                     __ftype__ = db_file_type[0]
@@ -243,7 +248,7 @@ class Database:
                                      shape=(zplanes, 64, 86, 2))
                     g.create_dataset('v', attrs={'units': 'm/s', 'long_name': 'mean v-component'},
                                      shape=(zplanes, 64, 86, 2))
-                    g.iri['units'].name = 'http://qudt.org/schema/qudt/Unit'
+                    g.rdf['units'].name = 'http://qudt.org/schema/qudt/Unit'
 
     @staticmethod
     def generate_test_files(n_files: int = 5) -> List[pathlib.Path]:
@@ -321,12 +326,16 @@ class FlowDataset(File):
                                 attach_scales=scales)
 
 
-def generate_fluid_hdf_file() -> pathlib.Path:
-    """Generate a hdf file with a velocity and pressure dataset"""
+def generate_sample_file() -> pathlib.Path:
+    """Generate a sample hdf file with a velocity and pressure dataset"""
     with h5tbx.File() as h5:
-        h5.write_iso_timestamp(name='timestamp', dt=None)  # writes the current date time in iso format to the attribute
+        h5.attrs.write_iso_timestamp(name='timestamp',
+                                     dt=None)  # writes the current date time in iso format to the attribute
         h5.attrs['project'] = 'tutorial'
-        h5.attrs['contact'] = {'name': 'John Doe', 'surname': 'Doe'}
+        contact_grp = h5.create_group('contact')
+        contact_grp.attrs['name', FOAF.firstName] = 'John'
+        contact_grp.attrs['surname', FOAF.lastName] = 'Doe'
+
         h5.attrs['check_value'] = 0
         h5.create_dataset('pressure1', data=np.random.random(size=10) * 800,
                           attrs=dict(units='Pa', standard_name='pressure',
@@ -346,3 +355,40 @@ def generate_fluid_hdf_file() -> pathlib.Path:
                          attrs=dict(units='kPa', standard_name='pressure',
                                     check_value=-10.3))
     return h5.hdf_filename
+
+
+def _upload_tutorial_data_to_zenodo():
+    """Upload the convention yaml file to Zenodo. Should only be called by the developer.
+    A valid Zenodo (not sandbox!) token with write permission is needed!"""
+    from h5rdmtoolbox.repository import zenodo
+
+    repo = zenodo.ZenodoRecord(TutorialConventionZenodoRecordID)
+
+    description = """<p>A YAML file containing definitions of standard attributes used as part of the documentation of the <a href="http://h5rdmtoolbox.readthedocs.io/">h5RDMtoolbox</a>. It serves as a <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html">convention</a> on how attributes are used in HDF5 files.</p>
+    <p>Works with h5RDMtoolbox&gt;v1.0.0.</p>
+    <p>`</p>"""
+
+    current_metadata = repo.get_metadata()
+    print(current_metadata)
+    current_metadata['description'] = description
+    current_metadata['title'] = 'H5TBX Tutorial Convention'
+    from h5rdmtoolbox import __author_orcid__
+    current_metadata['creators'] = [{'name': 'Probst, Matthias', 'orcid': __author_orcid__}, ]
+    current_metadata['version'] = '1.0.0'
+    current_metadata['upload_type'] = 'other'
+    current_metadata['prereserve_doi'] = None
+
+    repo.set_metadata(metadata=current_metadata)
+
+    # upload the convention yaml file
+    from h5rdmtoolbox.convention import yaml2jsonld
+    convention_filename = get_convention_yaml_filename()
+    # repo.upload_file(convention_filename, metamapper=None)
+    jsonld_filename = yaml2jsonld(get_convention_yaml_filename(),
+                                  file_url=f"{repo.base_url}/record/{repo.rec_id}/files/{convention_filename.name}")
+    repo.upload_file(jsonld_filename, metamapper=None, overwrite=True)
+    repo.publish()
+
+
+if __name__ == '__main__':
+    _upload_tutorial_data_to_zenodo()

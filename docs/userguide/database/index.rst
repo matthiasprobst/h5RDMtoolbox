@@ -1,19 +1,17 @@
 Database
 ========
 
-After creating one or multiple HDF5 files or received it from someone else, we would like to explore the data. Better said, we want to identify groups or datasets 
-based on their attribute values.
-
 HDF5 can be considered a database itself, as it allows multiple datasets and their metadata (attributes) to be stored in a single file. Most of the time, you want to find records in an HDF5 file based on the attributes. However, the `h5py` package does not provide a function to do this.
 
-The *h5rdmtoolbox* provides an interface to perform queries on a single or even multiple HDF5 files.
-This is shown in one of the subchapters here. However, this may not always be the fastest way to find data
-in an HDF5 file. A more effective way is to map the metadata to a dedicated database. One such example is MongoDB.
-The query is performed on the much more efficient dedicated database, then returned to the original file to continue working.
+The *h5rdmtoolbox* provides interfaces to perform queries on a single or even multiple HDF5 files. Two approaches exist: 
+Either a query is performed sequentially on one or multiple files or the file metadata is first written into a dedicated 
+database solution. The first solution may be slow for many and/or large files, it is a convenient way 
+without the need of third party databases. You can use it through `FileDB` (for querying a single HDF5 file) and `FilesDB` (for 
+querying multiple files). Those classes inherit from the abstract class `HDF5DBInterface`.
 
-You may implement a new interface between HDF5 and your preferable database solution yourself.
-For this, please inherit from the abstract class `h5rdmtoolbox.database.interface.HDF5DBInterface`. The
-following class diagram shows the architecture of the database interfaces:
+To make use of the capabilities of dedicated databases (e.g. advanced queries and 
+performant execution) implementations need to inherit from `ExtHDF5DBInterface`, which will require two more methods. As shown in the 
+class diagram, one such concrete implementation is provided by the toolbox, which uses MongoDB as the dedicated database system.
 
 .. image:: ../../_static/database_class_diagram.svg
   :width: 400

@@ -3,6 +3,7 @@ import copy
 import forge
 import h5py
 import inspect
+import logging
 import pathlib
 import re
 import shutil
@@ -18,7 +19,6 @@ from h5rdmtoolbox.wrapper import ds_decoder
 from . import cfg
 from . import consts
 from . import errors
-from . import logger
 from .errors import ConventionNotFound
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
@@ -27,6 +27,7 @@ from .._user import UserDir
 from ..repository import zenodo
 from ..repository.zenodo.utils import recid_from_doi_or_redid
 
+logger = logging.getLogger('h5rdmtoolbox')
 CV_DIR = UserDir['convention']
 
 datetime_str = '%Y-%m-%dT%H:%M:%SZ%z'
@@ -727,8 +728,8 @@ def from_zenodo(doi_or_recid: str,
     Parameters
     ----------
     doi_or_recid: str
-        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10156750 or
-        10.5281/zenodo.10156750 or https://doi.org/10.5281/zenodo.10156750 or only the record id, e.g. 10156750)
+        DOI of the zenodo repository. Can be a short DOI or a full DOI or the URL (e.g. 10428822 or
+        10.5281/zenodo.10428822 or https://doi.org/10.5281/zenodo.10428822 or only the record id, e.g. 10428822)
     name: str=None
         Name to be sed for the filename. If None, the name is taken from the zenodo record.
     overwrite: bool = False
@@ -754,7 +755,7 @@ def from_zenodo(doi_or_recid: str,
     if not filename.exists() or force_download:
         record = zenodo.ZenodoRecord(rec_id)
 
-        filenames = record.get_filenames()
+        filenames = list(record.files.keys())
         if name is None:
             matches = [file for file in filenames if pathlib.Path(file).suffix == '.yaml']
         else:
@@ -766,6 +767,55 @@ def from_zenodo(doi_or_recid: str,
         shutil.move(_filename, filename)
 
     return from_yaml(filename, overwrite=overwrite)
+
+
+def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
+                file_url: str = None,
+                jsonld_filename: Union[str, pathlib.Path] = None) -> pathlib.Path:
+    """Converts a convention stored in a YAML file to JSON-LD"""
+    yaml_filename = pathlib.Path(yaml_filename)
+    if jsonld_filename is None:
+        jsonld_filename = yaml_filename.with_suffix('.jsonld')
+    else:
+        jsonld_filename = pathlib.Path(jsonld_filename)
+
+    cv = Convention.from_yaml(yaml_filename)
+
+    from rdflib.namespace import DCAT, RDF, DCTERMS, PROV, FOAF
+    from ontolutils import M4I
+    from rdflib import Graph
+    import rdflib
+    person_orcid_id = cv.contact  # m4i
+
+    g = Graph()
+    if file_url is None:
+        n_ds = rdflib.BNode()
+    else:
+        n_ds = rdflib.URIRef(file_url)
+    g.add((n_ds, RDF.type, DCAT.Dataset))
+
+    n_person = rdflib.URIRef(value=person_orcid_id)
+    n_affiliation = rdflib.URIRef(value=cv.institution)
+
+    g.add((n_person, RDF.type, FOAF.Person))
+    g.add((n_affiliation, RDF.type, PROV.Organization))
+
+    g.add((n_person, M4I.orcidId, rdflib.URIRef(person_orcid_id)))
+    g.add((n_person, PROV.hadRole, M4I.Researcher))
+    g.add((n_person, PROV.hadRole, M4I.ContactPerson))
+    g.add((n_person, rdflib.URIRef("https://schema.org/affiliation"), n_affiliation))
+
+    g.add((n_ds, DCTERMS.creator, n_person))
+
+    # as jsonld:
+    with open(jsonld_filename, 'w', encoding='utf-8') as f:
+        f.write(g.serialize(format='json-ld',
+                            indent=4,
+                            context={'dcat': DCAT._NS,
+                                     'dcterms': DCTERMS._NS,
+                                     'm4i': M4I._NS},
+                            compact=False))
+    return jsonld_filename
 
 
 __all__ = ['datetime_str', 'StandardAttribute']

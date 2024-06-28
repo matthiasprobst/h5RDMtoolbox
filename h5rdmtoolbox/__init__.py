@@ -1,6 +1,33 @@
 """h5rdtoolbox repository"""
-import atexit
+
+import logging
 import pathlib
+from logging.handlers import RotatingFileHandler
+from typing import Optional, Dict
+
+import appdirs
+
+_logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
+_logdir.mkdir(parents=True, exist_ok=True)
+
+DEFAULT_LOGGING_LEVEL = logging.WARNING
+_formatter = logging.Formatter(
+    '%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d_%H:%M:%S')
+
+_stream_handler = logging.StreamHandler()
+_stream_handler.setLevel(DEFAULT_LOGGING_LEVEL)
+_stream_handler.setFormatter(_formatter)
+
+_file_handler = RotatingFileHandler(_logdir / 'h5rdmtoolbox.log')
+_file_handler.setLevel(logging.DEBUG)  # log everything to file!
+_file_handler.setFormatter(_formatter)
+
+logger = logging.getLogger(__package__)
+logger.addHandler(_stream_handler)
+logger.addHandler(_file_handler)
+
+import atexit
 # noinspection PyUnresolvedReferences
 import pint_xarray
 import shutil
@@ -18,18 +45,26 @@ from ._user import UserDir
 from ._version import __version__
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
-from . import warnings, errors
+from . import errors
 from .wrapper import jsonld
-from .wrapper.accessory import register_special_dataset
+from .wrapper.lazy import lazy
+from .wrapper.h5attr import Attribute
+# from h5rdmtoolbox.wrapper.accessor import register_accessor
+import json
+from .wrapper.accessor import register_accessor
 
 name = 'h5rdmtoolbox'
 __this_dir__ = pathlib.Path(__file__).parent
 __author__ = 'Matthias Probst'
 __author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
 
-logger = utils.create_tbx_logger('h5rdmtoolbox')
 
-logger.setLevel(get_config()['init_logger_level'])
+def get_package_meta():
+    """Reads codemeta.json and returns it as dict"""
+    with open(__this_dir__ / '../codemeta.json', 'r') as f:
+        codemeta = json.loads(f.read())
+    return codemeta
+
 
 cv_h5py = convention.Convention(name='h5py',
                                 contact=__author_orcid__)
@@ -40,7 +75,7 @@ use(None)
 
 
 def dump(src: Union[str, File, pathlib.Path],
-         **kwargs) -> None:
+         *args, **kwargs) -> None:
     """Call h5.dump() on the provided HDF5 file
 
     Parameters
@@ -52,7 +87,7 @@ def dump(src: Union[str, File, pathlib.Path],
     """
     if isinstance(src, File):
         with File(src.hdf_filename) as h5:
-            return h5.dump(**kwargs)
+            return h5.dump(*args, **kwargs)
 
     if isinstance(src, (str, pathlib.Path)):
         pass
@@ -86,10 +121,63 @@ def dumps(src: Union[str, File, pathlib.Path]):
         return h5.dumps()
 
 
+def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
+                skipND: int = 1,
+                structural: bool = True,
+                semantic: bool = True,
+                resolve_keys: bool = False,
+                context: Optional[Dict] = None,
+                **kwargs) -> str:
+    """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
+    represents the semantic content only. To get a pure structural representation, set semantic=False, which
+    will ignore any RDF content. If both are set to True, the JSON-LD will contain both structural and semantic.
+
+    Parameters
+    ----------
+    hdf_filename : str, pathlib.Path
+        the HDF5 file to dump.
+    skipND : int=1
+        Skip writing data of datasets with more than `skipND` dimensions. Only
+        considered if structural=True.
+    structural : bool=True
+        Include structural information in the JSON-LD output.
+    semantic : bool=True
+        Include semantic information in the JSON-LD output.
+    resolve_keys : bool=False
+        Resolve keys in the JSON-LD output. This is used when semantic=True.
+        If resolve_keys is False and an attribute name in the HDF5 file, which has
+        a predicate is different in its name from the predicate, the attribute name is used.
+        Example: an attribute "name" is associated with "foaf:lastName", then "name" is used
+        and "name": "https://xmlns.com/foaf/0.1/lastName" is added to the context.
+    context: Optional[Dict]
+        context in form of {prefix: IRI}, e.g. "ssno": "https://matthiasprobst.github.io/ssno#"
+        If resolve_keys is True, this is added to the built-in look-up table to be used in the
+        context part of JSON-LD
+
+    """
+    from .wrapper import jsonld
+    if not structural and not semantic:
+        raise ValueError('At least one of structural or semantic must be True.')
+    if structural and not semantic:
+        return jsonld.dump_file(hdf_filename, skipND=skipND)
+    with File(hdf_filename) as h5:
+        return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, context=context, **kwargs)
+
+
+def get_filesize(hdf_filename: Union[str, pathlib.Path]) -> int:
+    """Get the size of the HDF5 file in bytes"""
+    return utils.get_filesize(hdf_filename)
+
+
+def get_checksum(hdf_filename: Union[str, pathlib.Path]) -> str:
+    """Get the checksum of the HDF5 file"""
+    return utils.get_checksum(hdf_filename)
+
+
 def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwrite: bool = False):
     """A decoder function takes a xarray.DataArray and a dataset as input and returns a xarray.DataArray
     It is called after the dataset is loaded into memory and before being returned to the user. Be careful:
-    Multiple decoders can be registered and they are called in the order of registration. Hence, your decoder
+    Multiple decoders can be registered, and they are called in the order of registration. Hence, your decoder
     may behave unexpectedly!
     """
     from .wrapper import ds_decoder
@@ -103,6 +191,15 @@ def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwr
 
 
 atexit_verbose = False
+
+
+def set_loglevel(level: Union[int, str]):
+    """Set the logging level of the h5rdmtoolbox logger"""
+    import logging
+    _logger = logging.getLogger('h5rdmtoolbox')
+    _logger.setLevel(level)
+    for h in _logger.handlers:
+        h.setLevel(level)
 
 
 @atexit.register
@@ -163,8 +260,7 @@ xr.set_options(display_expand_data=False)
 
 __all__ = ('__version__', '__author__', '__author_orcid__',
            'UserDir', 'use',
-           'File', 'Group', 'Dataset',
+           'File', 'Group', 'Dataset', 'Attribute',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
-           'Convention', 'namespace',
-           'jsonld')
+           'Convention', 'jsonld', 'lazy')

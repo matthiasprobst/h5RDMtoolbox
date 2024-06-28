@@ -1,11 +1,10 @@
 Getting Started
 ===============
 
-Get a quick insight into the toolbox and an overview about the capabilities.
+Obtain a concise overview of the `h5rdmtoolbox` and its functionalities.
 
 
-
-The "HDF5 Research Data Management Toolbox" (`h5rdmMtoolbox`) is a python package supporting everyone who is working
+The "HDF5 Research Data Management Toolbox" (`h5rdmtoolbox`) is a python package supporting everyone who is working
 with HDF5 to achieve a sustainable data lifecycle which follows the
 `FAIR <https://www.nature.com/articles/sdata201618>`_ (Findable, Accessible, Interoperable, Reusable) principles.
 It specifically supports the five main steps of

@@ -30,6 +30,8 @@ dist/
 .idea
 .idea/
 
+scratch/
+
 # macOS DS indices
 .DS_STORE
 Thumbs.db
@@ -53,3 +55,9 @@ coverage.svg
 docs/colab/my_file.hdf
 *.h5
 *.nxs
+*.json
+*.jsonld
+testfile.*
+test.*
+docs/practical_examples/lib/vis-9.1.2/vis-network.min.js
+docs/practical_examples/graph.html

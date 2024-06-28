@@ -4,8 +4,8 @@ jupyterlab
 sphinx >= 4.5.0
 sphinx_book_theme
 sphinx-copybutton
-scikit-image
-scikit-learn
 sphinx-design
 myst-nb
 sphinxcontrib-bibtex
+kglab
+scikit-image

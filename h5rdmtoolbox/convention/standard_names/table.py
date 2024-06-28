@@ -1,6 +1,7 @@
 """Standard name table module"""
 import h5py
 import json
+import logging
 import pathlib
 import pint
 import warnings
@@ -17,10 +18,10 @@ from . import cache
 from . import consts
 from .affixes import Affix
 from .transformation import *
-from .. import logger
-from ..utils import dict2xml, get_similar_names_ratio
+from ..utils import get_similar_names_ratio
 from ... import errors
 
+logger = logging.getLogger('h5rdmtoolbox')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -112,7 +113,9 @@ class StandardNameTable:
                  version: str,
                  meta: Dict,
                  standard_names: Dict = None,
-                 affixes: Dict = None):
+                 affixes: Dict = None,
+                 download_url: str=None):
+        self.download_url = download_url
         self._name = name
         if standard_names is None:
             standard_names = {}
@@ -189,6 +192,12 @@ class StandardNameTable:
             return str(zenodo_doi)
         return self.to_json()
 
+    def __h5attr_repr__(self)-> str:
+        """HDF5 Attribute representation"""
+        if self.download_url:
+            return self.download_url
+        return self.to_json()
+
     def __contains__(self, standard_name):
         if isinstance(standard_name, StandardName):
             standard_name = standard_name.name
@@ -238,11 +247,11 @@ class StandardNameTable:
                                            f'{similar_names}?')
         raise errors.StandardNameError(f'"{standard_name}" not found in Standard Name Table "{self.name}".')
 
-    def __to_h5attrs__(self) -> str:
-        """Write standard name table to HDF5 attributes"""
-        if 'zenodo_doi' in self.meta:
-            return self.meta['zenodo_doi']
-        return self.to_sdict()
+    # def __to_h5attrs__(self) -> str:
+    #     """Write standard name table to HDF5 attributes"""
+    #     if 'zenodo_doi' in self.meta:
+    #         return self.meta['zenodo_doi']
+    #     return self.to_sdict()
 
     def _repr_html_(self):
         return f"""<li style="list-style-type: none; font-style: italic">{self.__repr__()[1:-1]}</li>"""
@@ -440,7 +449,7 @@ class StandardNameTable:
 
     @staticmethod
     def from_dict(snt_dict: Dict):
-        """Initialize a StandardNameTable from a YAML file"""
+        """Initialize a StandardNameTable from a dictionary"""
 
         DEFAULT_KEYS = ['standard_names',
                         'name',
@@ -644,7 +653,7 @@ class StandardNameTable:
         This method requires the package python-gitlab to be installed.
 
         Equivalent curl statement:
-        curl <url>/api/v4/projects/<project-id>/repository/files/<file-path>/raw?ref\=<ref_name> -o <output-filename>
+        curl <url>/api/v4/projects/<project-id>/repository/files/<file-path>/raw?ref\\=<ref_name> -o <output-filename>
         """
         try:
             import gitlab
@@ -669,18 +678,20 @@ class StandardNameTable:
         return snt
 
     @staticmethod
-    def from_zenodo(doi_or_recid: str) -> "StandardNameTable":
+    def from_zenodo(source: str = None, doi_or_recid=None) -> "StandardNameTable":
         """Download a standard name table from Zenodo based on its DOI.
 
 
         Parameters
         ----------
-        doi_or_recid: str
+        source: str
             The DOI or record id. It can have the following formats:
-            - 10428795
             - 10.5281/zenodo.10428795
             - https://doi.org/10.5281/zenodo.10428795
             - https://zenodo.org/record/10428795
+            - https://zenodo.org/record/10428795/files/standard_name_table.yaml
+        doi_or_recid: str
+            Deprecated. Use `source` instead.
 
         Returns
         -------
@@ -696,25 +707,63 @@ class StandardNameTable:
         -----
         Zenodo API: https://vlp-new.ur.de/developers/#using-access-tokens
         """
+        warnings.warn(f"Using `doi_or_recid` is depreciated. Use `source` instead.", DeprecationWarning)
+        if doi_or_recid is not None:
+            source = doi_or_recid
 
-        # parse input:
-        rec_id = zenodo.utils.recid_from_doi_or_redid(doi_or_recid)
-        if rec_id in cache.snt:
-            return cache.snt[rec_id]
+        if isinstance(source, str):
+            if source.startswith('https://zenodo.org') and source.rsplit('.', 1)[-1] in ('yaml',):
+                # it is a file from zenodo, download it:
+                from ...repository.utils import download_file
+                cv_filename = download_file(source)
+                snt = StandardNameTable.from_yaml(cv_filename)
+                snt.download_url = source
+                return snt
+            if source.startswith('https://zenodo.org/record/') or source.startswith('https://doi.org/'):
+                from ...repository.zenodo import ZenodoRecord
+                z = ZenodoRecord(source)
+                for file in z.files:
+                    if pathlib.Path(file.filename).suffix == '.yaml':
+                        try:
+                            snt = StandardNameTable.from_yaml(file.download())
+                            if source.endswith('/'):
+                                snt.download_url = f"{source}{file.filename}"
+                            else:
+                                snt.download_url = f"{source}/{file.filename}"
+                            return snt
+                        except Exception as e:
+                            logger.error(f'Error while reading file {file.filename}: {e}')
+                            continue
+                raise FileNotFoundError(f'No valid standard name found in Zenodo repo {source}')
+
+            if source.startswith('10.5281/zenodo.'):
+                rec_id = source.split('.')[-1]
+                if (UserDir['standard_name_tables'] / f'{rec_id}.yaml').exists():
+                    return StandardNameTable.from_yaml(UserDir['standard_name_tables'] / f'{rec_id}.yaml')
+                return StandardNameTable.from_zenodo(int(rec_id))
+
+            # parse input:
+            rec_id = zenodo.utils.recid_from_doi_or_redid(source)
+            if rec_id in cache.snt:
+                return cache.snt[rec_id]
+        elif isinstance(source, int):
+            rec_id = source
 
         z = zenodo.ZenodoRecord(rec_id)
         assert z.exists()
 
-        filenames = z.download_files(target_folder=UserDir['standard_name_tables'])
+        filenames = [file.download(target_folder=UserDir['standard_name_tables']) for file in z.files.values()]
+        # filenames = z.download_files(target_folder=UserDir['standard_name_tables'])
         assert len(filenames) == 1
         filename = filenames[0]
+        assert filename.exists()
         assert filename.suffix == '.yaml'
         new_filename = UserDir['standard_name_tables'] / f'{rec_id}.yaml'
         if new_filename.exists():
             new_filename.unlink()
         yaml_filename = filename.rename(UserDir['standard_name_tables'] / f'{rec_id}.yaml')
         snt = StandardNameTable.from_yaml(yaml_filename)
-        snt._meta.update(dict(zenodo_doi=doi_or_recid))
+        snt._meta.update(dict(zenodo_doi=source))
 
         cache.snt[rec_id] = snt
         return snt
@@ -746,45 +795,6 @@ class StandardNameTable:
             yaml.safe_dump(snt_dict, f, sort_keys=False)
 
         return yaml_filename
-
-    def to_xml(self,
-               xml_filename: pathlib.Path,
-               datetime_str: Union[str, None] = None) -> pathlib.Path:
-        """Export the SNT in a XML file
-
-        Parameters
-        ----------
-        xml_filename: pathlib.Path
-            Path to use for the XML file
-        datetime_str: str, optional
-            Datetime format to use for the last_modified field. If None, then
-            ISO 6801 format is used.
-
-        Returns
-        -------
-        pathlib.Path
-            Path to the XML file
-        """
-        if datetime_str is None:
-            last_modified = datetime.now(datetime.timezone.utc).isoformat()
-        else:
-            last_modified = datetime.now().strftime(datetime_str)
-
-        xml_parent = xml_filename.parent
-        xml_name = xml_filename.name
-        xml_translation_filename = xml_parent / 'translation' / xml_name
-        if not xml_translation_filename.parent.exists():
-            xml_translation_filename.parent.mkdir(parents=True)
-
-        meta = self.meta
-        meta.update(last_modified=last_modified)
-
-        meta.update(dict(version=self.version))
-
-        return dict2xml(filename=xml_filename,
-                        name=self.name,
-                        dictionary=self.standard_names,
-                        **meta)
 
     def to_markdown(self, markdown_filename) -> pathlib.Path:
         """Export the SNT to a markdown file"""
@@ -875,6 +885,9 @@ class StandardNameTable:
     def to_json(self) -> str:
         """Export a StandardNameTable to a JSON string"""
         return str(self.to_sdict())
+
+    def __jsonld__(self):
+        """Returns the JSON-LD representation"""
 
     # End Export ---------------------------------------------------------------
 

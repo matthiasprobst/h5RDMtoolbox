@@ -1,10 +1,11 @@
 """utils module for standard_name subpackage"""
 import h5py
+import logging
 import pathlib
 import re
 from typing import Union, Dict
 
-from .. import logger
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def _units_power_fix(_str: str):

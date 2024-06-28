@@ -1,15 +1,16 @@
-import h5py
-import numpy as np
 import os
 import pathlib
-import pymongo
 import warnings
 from datetime import datetime
 from typing import List, Dict, Any, Union, Generator
 
-from . import lazy
-from .template import HDF5DBInterface
+import h5py
+import numpy as np
+import pymongo
+
+from .interface import ExtHDF5DBInterface
 from .. import protected_attributes
+from ..wrapper import lazy
 
 
 def get_file_creation_time(filename: Union[str, pathlib.Path], tz=None) -> datetime:
@@ -65,7 +66,9 @@ def type2mongo(value: Any) -> Any:
     try:
         if isinstance(value, np.integer):
             return int(value)
-        return float(value)
+        if isinstance(value, np.floating):
+            return float(value)
+        return str(value)
     except Exception as e:
         warnings.warn(f'Could not determine/convert {value}. Try to continue with type {type(value)} of {value}. '
                       f'Original error: {e}')
@@ -220,8 +223,6 @@ def _insert_group(
         additional_fields: Dict = None
 ):
     """Insert a group into the collection"""
-    if not isinstance(collection, pymongo.collection.Collection):
-        raise TypeError(f'collection must be of type pymongo.collection.Collection, but is {type(collection)}')
     filename_ctime = get_file_creation_time(group.file.filename)
     if use_relative_filename:
         filename = group.file.filename
@@ -270,16 +271,17 @@ def _insert_group(
         for h5obj in grp.values():
             if isinstance(h5obj, h5py.Dataset):
                 if include_dataset:
-                    h5obj.mongo.insert(axis=None,
-                                       collection=collection,
-                                       update=update,
-                                       ignore_attrs=ignore_attrs)
+                    _insert_dataset(h5obj, collection=collection,
+                                    axis=None,
+                                    update=update,
+                                    ignore_attrs=ignore_attrs)
             else:
                 if recursive:
-                    h5obj.mongo.insert(collection, recursive=recursive,
-                                       update=update,
-                                       include_dataset=include_dataset,
-                                       ignore_attrs=ignore_attrs)
+                    _insert_group(h5obj, collection=collection, recursive=recursive,
+                                  update=update,
+                                  include_dataset=include_dataset,
+                                  ignore_attrs=ignore_attrs)
+
     return collection
 
 
@@ -297,7 +299,7 @@ class MongoDBLazyDataset(lazy.LDataset):
         super().__getitem__(item)
 
 
-class MongoDB(HDF5DBInterface):
+class MongoDB(ExtHDF5DBInterface):
     """The database interface between HDF5 and MongoDB.
 
     Call `.insert()` on opened HDF5 files to insert them into the database.

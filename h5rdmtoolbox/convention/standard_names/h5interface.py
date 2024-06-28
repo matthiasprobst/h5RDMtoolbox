@@ -1,7 +1,8 @@
-import numpy as np
 import pathlib
-import xarray as xr
 from typing import Dict
+
+import numpy as np
+import xarray as xr
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.database import ObjDB
@@ -76,7 +77,7 @@ class StandardTensor(StandardCoordinate):
         if not create_coords_if_missing:
             return ds
 
-        if all(len(c.coords()) == 0 for c in self.components.values()):
+        if all(len(c.coords) == 0 for c in self.components.values()):
             for i in range(len(self.components)):
                 ds = ds.assign_coords({f'dim_{i}': range(self.components[self.component_names[i]].shape[i])})
         return ds
@@ -133,13 +134,13 @@ class HDF5StandardNameInterface:
     @classmethod
     def from_hdf(cls, hdf_filename, group='/', recursive: bool = False):
         """search withing a group. Note, that duplicate standard names are not considered"""
-        from ...database.lazy import lazy
+        from ...wrapper.lazy import lazy
         hdf_filename = pathlib.Path(hdf_filename)
         standard_datasets = {}
         with h5tbx.File(hdf_filename) as h5:
             std_ds = ObjDB(h5).find({'standard_name': {'$regex': '.*'}},
-                                      recursive=recursive,
-                                      objfilter='$dataset')
+                                    recursive=recursive,
+                                    objfilter='$dataset')
             # std_ds = h5[group].find({'standard_name': {'$regex': '.*'}}, rec=rec, objfilter='$dataset')
             for ds in std_ds:
                 if ds.attrs['standard_name'] not in standard_datasets:

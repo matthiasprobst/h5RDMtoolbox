@@ -5,7 +5,7 @@ import xarray as xr
 
 import h5rdmtoolbox as h5tbx
 # noinspection PyUnresolvedReferences
-from h5rdmtoolbox.extensions import normalize, vector, magnitude
+from h5rdmtoolbox.extensions import normalize, vector, magnitude, units, onto
 
 
 class TestExtension(unittest.TestCase):
@@ -13,17 +13,40 @@ class TestExtension(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
-    def test_HDFXrDataset(self):
+    def test_onto(self):
         with h5tbx.File() as h5:
-            u = h5.create_dataset('u', data=np.arange(10, 20))
-            v = h5.create_dataset('v', data=np.arange(10, 100))
-            v2 = h5.create_dataset('v2', data=np.arange(10, 20))
-            with self.assertRaises(ValueError):
-                vector.HDFXrDataset(u=u, v=v)
-            vel = vector.HDFXrDataset(u=u, v=v2)
-            self.assertEqual(vel.data_vars, ['u', 'v'])
-            self.assertEqual(vel.shape, (10,))
-            self.assertIsInstance(vel[:], xr.Dataset)
+            h5.onto.create_person(orcid_id='https://orcid.org/0000-0001-8729-0482',
+                                  first_name='Matthias',
+                                  last_name='Probst')
+            self.assertEqual(h5['Matthias_Probst'].attrs['orcid_id'], 'https://orcid.org/0000-0001-8729-0482')
+            self.assertEqual(h5['Matthias_Probst'].attrs['first_name'], 'Matthias')
+            self.assertEqual(h5['Matthias_Probst'].attrs['last_name'], 'Probst')
+            self.assertEqual(h5['Matthias_Probst'].rdf.subject, 'https://orcid.org/0000-0001-8729-0482')
+
+            h5.dumps()
+
+    def test_Magnitude(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('x', data=[1, 2, 3], make_scale=True, attrs={'units': 'm'})
+            h5.create_dataset('y', data=[1, 2, 3, 4], make_scale=True, attrs={'units': 'm'})
+            h5.create_dataset('u', data=np.random.random((4, 3)), attach_scales=('y', 'x'))
+            h5.create_dataset('v', data=np.random.random((4, 3)), attach_scales=('y', 'x'))
+            mag_interface = h5.Magnitude('u', 'v')
+            self.assertIsInstance(mag_interface.datasets, dict)
+            mag = mag_interface[()]
+            self.assertEqual(mag.name, 'magnitude_of_u_and_v')
+            self.assertEqual(float(mag[0, 0]),
+                             float(np.sqrt(h5['u'][0, 0] ** 2 + h5['v'][0, 0] ** 2)))
+            self.assertEqual(float(mag[1, 0]),
+                             float(np.sqrt(h5['u'][1, 0] ** 2 + h5['v'][1, 0] ** 2)))
+            self.assertEqual(float(mag[0, 1]),
+                             float(np.sqrt(h5['u'][0, 1] ** 2 + h5['v'][0, 1] ** 2)))
+            self.assertEqual(float(mag[3, 2]),
+                             float(np.sqrt(h5['u'][3, 2] ** 2 + h5['v'][3, 2] ** 2)))
+
+            mag_interface = h5.Magnitude('u', 'v', name='uv')
+            mag = mag_interface[()]
+            self.assertEqual(mag.name, 'uv')
 
     def test_Vector(self):
         """Test the Vector special dataset"""
@@ -46,22 +69,21 @@ class TestExtension(unittest.TestCase):
                 h5.Vector('u', 6.5)
             with self.assertRaises(TypeError):
                 h5.Vector(u='u', v=6.5)
-            vec.magnitude.compute_from('uu', 'vv', inplace=True)
-            self.assertTrue('magnitude_of_uu_vv' in vec.data_vars)
-            for i in range(3):
-                self.assertEqual(float(vec.magnitude_of_uu_vv[i].values),
-                                 np.sqrt(float(vec.uu[i].values) ** 2 + float(vec.vv[i].values) ** 2))
 
-            vec.magnitude.compute_from('uu', 'vv', name='speed', inplace=True)
-            self.assertTrue('speed' in vec.data_vars)
+            vec = h5.Vector(uu='u', vv='v')[:]
+            self.assertListEqual(list(vec.data_vars), ['uu', 'vv'])
+            self.assertEqual(vec['uu'][0], 1)
+            self.assertEqual(vec['vv'][0], 2)
+
+            vec = h5.Vector(u='u', v='v').isel(dim_0=slice(None, None, None), dim_1=slice(None, None, None))
+            self.assertIsInstance(vec, xr.Dataset)
+            self.assertTrue('u' in vec.data_vars)
+            self.assertTrue('v' in vec.data_vars)
+            self.assertEqual(vec['u'][0], 1)
+            self.assertEqual(vec['v'][0], 2)
+
             with self.assertRaises(KeyError):
-                vec.magnitude.compute_from('uu', 'vv', name='speed', inplace=True)
-            vec.magnitude.compute_from('uu', 'vv', name='speed2', inplace=True, overwrite=True, attrs={'test': 1})
-            self.assertEqual(vec.speed2.attrs['test'], 1)
-            vec2 = vec.magnitude.compute_from('uu', 'vv', name='speed2', inplace=False, overwrite=True,
-                                              attrs={'test': 1})
-            self.assertEqual(vec2.attrs['test'], 1)
-            self.assertIsInstance(vec2, xr.DataArray)
+                h5.Vector(u='u', v='v').sel(dim_0=5, dim_1=2)
 
     def test_normalize_issue_with_time_vector(self):
         with h5tbx.File() as h5:
@@ -69,142 +91,58 @@ class TestExtension(unittest.TestCase):
             now = datetime.datetime.now()
             h5.create_time_dataset('t',
                                    data=[now, now + datetime.timedelta(seconds=1), now + datetime.timedelta(seconds=2)],
+                                   time_format='iso',
                                    make_scale=True)
-            u = h5.create_dataset('u', data=[-4, 10, 0], attach_scales=[('t', 'x'), ])
+            u = h5.create_dataset('u', data=[-4, 10, 0], attach_scales=[('x', 't'), ],
+                                  attrs=dict(units='m/s'))
 
-            with self.assertRaises(RuntimeError):
-                u[()].normalize.coords(rename=True, L=5)
-            unorm = u[()].normalize.coords(rename=True, x=dict(L=5))
-            np.testing.assert_array_equal(unorm['x/L'].values, u[()].x.values / 5)
-            np.testing.assert_array_equal(unorm.values, u[()].values)
-
-    def test_norm_one_for_all_without_unit(self):
-        with h5tbx.File() as h5:
-            h5.create_dataset('x', data=[1, 2, 3], make_scale=True)
-            h5.create_dataset('y', data=[1, 2, 3, 4], make_scale=True)
-            h5.create_dataset('u', data=np.random.random((4, 3)), attach_scales=('y', 'x'))
-            h5.create_dataset('v', data=np.random.random((4, 3)), attach_scales=('y', 'x'))
+            with self.assertRaises(AssertionError):
+                u.normalize(10)
 
             with self.assertRaises(TypeError):
-                h5['u'][:].normalize(dict(L='3m'), rename=2)
+                u.normalize(ref={'t': 10})[()]
 
-            unorm = h5['u'][:].normalize({"L": '3m'}, rename=True)
-            self.assertEqual(f'u{normalize.NORM_DELIMITER}L', unorm.name)
-            self.assertEqual('1/m', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['u'][()].values / 3)
-            self.assertEqual(unorm.attrs['comment'], 'Normalized by L=3m')
+            unorm = u.normalize(ref=10)[()]
+            np.testing.assert_almost_equal(unorm.values, u.values[()] / 10)
+            self.assertEqual(unorm.units, 'm/s')
+            self.assertEqual(unorm.name, 'u/ref')
 
-            unorm = h5['u'][:].normalize(dict(L='3m', o=4.5), rename=True)
-            self.assertEqual(f'u{normalize.NORM_DELIMITER}L{normalize.NORM_DELIMITER}o', unorm.name)
-            self.assertEqual('1/m', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['u'][()].values / 3 / 4.5)
+            with self.assertRaises(TypeError):
+                uxnorm = u.normalize(ref=10, name='uxnorm').x(xref={'t': 10})[()]
+            uxnorm = u.normalize(ref=10, name='uxnorm').x(xref=10)[()]
+            self.assertEqual(uxnorm.name, 'uxnorm')
+            np.testing.assert_almost_equal(uxnorm.values, u.values[()] / 10)
+            np.testing.assert_almost_equal(uxnorm['x/xref'].values, h5.x.values[()] / 10)
+            self.assertEqual(uxnorm.units, 'm/s')
 
-            unorm = h5['u'][:].normalize(dict(L='3m', o=4.5), rename=False)
-            self.assertEqual('u', unorm.name)
-            self.assertEqual('1/m', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['u'][()].values / 3 / 4.5)
+            uxnorm = u.normalize(ref=10, name='uxnorm').x(xref=10).isel(x=slice(None, None, None))
+            np.testing.assert_almost_equal(uxnorm.values, u.values[()] / 10)
+            np.testing.assert_almost_equal(uxnorm['x/xref'].values, h5.x.values[()] / 10)
 
-            unorm = h5['v'][:].normalize(dict(L='3m', o=4.5), rename=True)
-            self.assertEqual(f'v{normalize.NORM_DELIMITER}L{normalize.NORM_DELIMITER}o', unorm.name)
-            self.assertEqual('1/m', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['v'][()].values / 3 / 4.5)
+            uxnorm = u.normalize(ref=10, name='uxnorm').x(xref=10).sel(x=[1.1, 2.1, 3.1], method='nearest')
+            np.testing.assert_almost_equal(uxnorm.values, u.values[()] / 10)
+            np.testing.assert_almost_equal(uxnorm['x/xref'].values, h5.x.values[()] / 10)
 
-            u_xnorm = h5['u'][:].normalize.coords(dict(L='3m'), rename=True)
-            self.assertEqual('u', u_xnorm.name)
-            for coord in u_xnorm.coords:
-                self.assertEqual(f'{normalize.NORM_DELIMITER}L', coord[-2:])
-            self.assertEqual('', u_xnorm.attrs.get('units', ''))
-            self.assertEqual('1/m', u_xnorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
-            self.assertEqual('1/m', u_xnorm[f'y{normalize.NORM_DELIMITER}L'].attrs['units'])
+            uxnorm = u.normalize(ref='10 m/s').x(xref='10 m', name='xnorm')[()]
+            np.testing.assert_almost_equal(uxnorm.values, u.values[()] / 10)
+            np.testing.assert_almost_equal(uxnorm['xnorm'].values, h5.x.values[()] / 10)
+            self.assertEqual(uxnorm['xnorm'].units, '1/m')
+            self.assertEqual(uxnorm.units, '')
 
-            u_xnorm = h5['u'][:].normalize.coords(dict(L='3m'), rename=False)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual('', u_xnorm.attrs.get('units', ''))
-            self.assertEqual('1/m', u_xnorm['x'].attrs['units'])
-            self.assertEqual('1/m', u_xnorm['y'].attrs['units'])
+    def test_units_to(self):
+        with h5tbx.File(mode='w') as h5:
+            ds = h5.create_dataset('x', data=[1, 2, 3], make_scale=True, attrs={'units': 'm'})
+            y = h5.create_dataset('y', data=[1, 0, 1], attach_scale='x', attrs={'units': 'mm'})
+            ds_cm = ds.to_units('cm')[()]
+            self.assertEqual('cm', ds_cm.attrs['units'])
 
-            u_xnorm = h5['u'][:].normalize.coords(dict(x={'L': '3m'}), rename=False)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual('', u_xnorm.attrs.get('units', ''))
-            self.assertEqual('1/m', u_xnorm['x'].attrs['units'])
-            self.assertEqual('', u_xnorm['y'].attrs.get('units', ''))
+            y_cm = y.to_units('cm')[()]
+            self.assertEqual('cm', y_cm.attrs['units'])
 
-    def test_norm_one_for_all_with_unit(self):
-        with h5tbx.File() as h5:
-            h5.create_dataset('x', data=[1, 2, 3], make_scale=True, attrs={'units': 'm'})
-            h5.create_dataset('y', data=[1, 2, 3, 4], make_scale=True, attrs={'units': 'mm'})
-            h5.create_dataset('u', data=np.random.random((4, 3)), attach_scales=('y', 'x'), attrs={'units': 'm/s'})
-            h5.create_dataset('v', data=np.random.random((4, 3)), attach_scales=('y', 'x'), attrs={'units': 'Pa'})
+            y_xcm = y.to_units({'x': 'cm'})[()]
+            self.assertEqual('mm', y_xcm.attrs['units'])
+            self.assertEqual('cm', y_xcm.x.attrs['units'])
 
-            unorm = h5['u'][:].normalize(dict(L='3m'), rename=True)
-            self.assertEqual(f'u{normalize.NORM_DELIMITER}L', unorm.name)
-            self.assertEqual('1/s', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['u'][()].values / 3)
-
-            unorm = h5['u'][:].normalize(dict(L='3m', o=4.5), rename=True)
-            self.assertEqual(f'u{normalize.NORM_DELIMITER}L{normalize.NORM_DELIMITER}o', unorm.name)
-            self.assertEqual('1/s', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['u'][()].values / 3 / 4.5)
-
-            unorm = h5['u'][:].normalize(dict(L='3m', o=4.5), rename=False)
-            self.assertEqual('u', unorm.name)
-            self.assertEqual('1/s', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['u'][()].values / 3 / 4.5)
-
-            unorm = h5['v'][:].normalize(dict(L='3m', o=4.5), rename=True)
-            self.assertEqual(f'v{normalize.NORM_DELIMITER}L{normalize.NORM_DELIMITER}o', unorm.name)
-            self.assertEqual('Pa/m', unorm.attrs['units'])
-            np.testing.assert_array_equal(unorm.values, h5['v'][()].values / 3 / 4.5)
-
-            u_xnorm = h5['u'][:].normalize.coords(dict(L='3m'), rename=True)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual('m/s', u_xnorm.attrs.get('units', ''))
-            for coord in u_xnorm.coords:
-                self.assertEqual(f'{normalize.NORM_DELIMITER}L', coord[-2:])
-            self.assertEqual('', u_xnorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
-            self.assertEqual('mm/m', u_xnorm[f'y{normalize.NORM_DELIMITER}L'].attrs['units'])
-
-            u_xnorm = h5['u'][:].normalize.coords(L='3m', rename=True)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual('m/s', u_xnorm.attrs.get('units', ''))
-            for coord in u_xnorm.coords:
-                self.assertEqual(f'{normalize.NORM_DELIMITER}L', coord[-2:])
-            self.assertEqual('', u_xnorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
-            self.assertEqual('mm/m', u_xnorm[f'y{normalize.NORM_DELIMITER}L'].attrs['units'])
-
-            u_xnorm = h5['u'][:].normalize.coords(dict(L='3m'), rename=False)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual('m/s', u_xnorm.attrs.get('units', ''))
-            self.assertEqual('', u_xnorm['x'].attrs['units'])
-            self.assertEqual('mm/m', u_xnorm['y'].attrs['units'])
-            np.testing.assert_array_equal(u_xnorm['x'].values, h5['x'][()].values / 3)
-            np.testing.assert_array_equal(u_xnorm['y'].values, h5['y'][()].values / 3)
-
-            u_xnorm = h5['u'][:].normalize.coords({'x': {"L": '3m'}}, rename=False)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual('m/s', u_xnorm.attrs.get('units', ''))
-            self.assertEqual('', u_xnorm['x'].attrs['units'])
-            self.assertEqual('mm', u_xnorm['y'].attrs.get('units', ''))
-
-            u_xnorm = h5['u'][:].normalize.coords({'x': {"L": '3m'}}, rename=True)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual(f'x{normalize.NORM_DELIMITER}L', u_xnorm["x/L"].name)
-            self.assertEqual('m/s', u_xnorm.attrs.get('units', ''))
-            self.assertEqual('', u_xnorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
-            self.assertEqual('mm', u_xnorm['y'].attrs.get('units', ''))
-
-            u_xnorm = h5['u'][:].normalize.coords(x={"L": '3m'}, rename=True)
-            self.assertEqual('u', u_xnorm.name)
-            self.assertEqual(f'x{normalize.NORM_DELIMITER}L', u_xnorm["x/L"].name)
-            self.assertEqual('m/s', u_xnorm.attrs.get('units', ''))
-            self.assertEqual('', u_xnorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
-            self.assertEqual('mm', u_xnorm['y'].attrs.get('units', ''))
-
-            u_xynorm = h5['u'][:].normalize.coords(x={"L": '3m'}, y=10, rename=True)
-            self.assertEqual('u', u_xynorm.name)
-            self.assertEqual(f'x{normalize.NORM_DELIMITER}L', u_xynorm["x/L"].name)
-            self.assertEqual('y', u_xynorm.y.name)
-            self.assertEqual('m/s', u_xynorm.attrs.get('units', ''))
-            self.assertEqual('', u_xynorm[f'x{normalize.NORM_DELIMITER}L'].attrs['units'])
-            self.assertEqual('mm', u_xynorm['y'].attrs.get('units', ''))
-            self.assertEqual(u_xynorm.y[0], h5['u'][:].y[0] / 10)
+            y_xcm = y.to_units(x='cm')[()]
+            self.assertEqual('mm', y_xcm.attrs['units'])
+            self.assertEqual('cm', y_xcm.x.attrs['units'])

@@ -1,6 +1,10 @@
+"""query module"""
+import logging
 import numpy as np
 import re
 import warnings
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 
 def _eq(a, b):
@@ -33,9 +37,17 @@ def _gte(a, b):
 
 def _lt(a, b):
     """Check if a < b"""
+    logger.debug(f'checking if a < b ({a} < {b})')
     if a is None or b is None:
         return False
     return a < b
+
+
+def _in(a, b) -> bool:
+    """Check if a is in b"""
+    if a is None or b is None:
+        return False
+    return a in b
 
 
 def _lte(a, b):
@@ -55,18 +67,23 @@ def _regex(value, pattern) -> bool:
         except UnicodeDecodeError:
             warnings.warn(f'could not decode {value}', UserWarning)
             return False
+
     if isinstance(value, bytes):
         value = value.decode()
+
+    value = str(value)
 
     match = re.search(pattern, value)
     if match is None:
         return False
     return True
 
+
 def _userdefined(value, func) -> bool:
     if value is None:
         return False
     return func(value)
+
 
 def _basename(value, basename) -> bool:
     if value is None:
@@ -86,12 +103,11 @@ operator = {'$regex': _regex,
             '$gt': _gt,
             '$gte': _gte,
             '$lt': _lt,
+            '$in': _in,
             '$lte': _lte,
             '$exists': _exists,
             '$userdefined': _userdefined}
 value_operator = {'$eq': _arreq, '$gt': _gt, '$gte': _gte, '$lt': _lt, '$lte': _lte}
-
-AV_SPECIAL_FILTERS = ('$basename', '$name')
 
 
 def _pass(obj, comparison_value):

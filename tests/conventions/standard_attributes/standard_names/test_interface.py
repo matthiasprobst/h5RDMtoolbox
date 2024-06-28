@@ -1,21 +1,22 @@
+import unittest
+
 import matplotlib.pyplot as plt
 import numpy as np
-import unittest
 import xarray as xr
-from h5rdmtoolbox.repository import zenodo
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention.standard_names import HDF5StandardNameInterface
+from h5rdmtoolbox.repository import zenodo
+from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
 
 
 class TestStandardAttributes(unittest.TestCase):
 
     def setUp(self) -> None:
-        # cv = h5tbx.convention.from_zenodo(doi_or_recid=10156750, overwrite=True)
-        repo = zenodo.ZenodoRecord(10156750)
+        repo = zenodo.ZenodoRecord(TutorialConventionZenodoRecordID)
         cv = h5tbx.convention.from_repo(repo,
-                                         name='tutorial_convention.yaml',
-                                         take_existing=True)
+                                        name='tutorial_convention.yaml',
+                                        take_existing=True)
         cv.properties[h5tbx.File]['data_type'].make_optional()
         cv.properties[h5tbx.File]['contact'].make_optional()
         h5tbx.use(cv)
@@ -86,7 +87,7 @@ class TestStandardAttributes(unittest.TestCase):
                               attach_scales=('y', 'x'))
         h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
         for c in h5sni.coordinate:
-            self.assertIsInstance(c, h5tbx.database.lazy.LDataset)
+            self.assertIsInstance(c, h5tbx.wrapper.lazy.LDataset)
         self.assertEqual(h5sni.coordinate.x, h5sni.coordinate[0])
         self.assertEqual(h5sni.coordinate.y, h5sni.coordinate[1])
         self.assertDictEqual({'x': 5, 'y': 3}, h5sni.coordinate.shape)

@@ -40,3 +40,6 @@ class AffixKeyError(Exception):
 
 class StandardNameTableError(Exception):
     """Exception class for StandardName Tables"""
+
+class StandardAttributeValidationWarning(Warning):
+    """Warning during reading of HDF5 attribute by a validator"""

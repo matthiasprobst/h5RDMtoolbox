@@ -1,34 +1,37 @@
 """Core wrapper module containing basic wrapper implementation of File, Dataset and Group
 """
-import datetime
-import h5py
-import numpy as np
+
+import json
+import logging
 import os
 import pathlib
-# noinspection PyUnresolvedReferences
-import pint
 import shutil
 import warnings
-import xarray as xr
 from collections.abc import Iterable
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import List, Dict, Union, Tuple, Optional
+
+import h5py
+import numpy as np
+# noinspection PyUnresolvedReferences
+import pint
+import xarray as xr
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
-from pathlib import Path
-from typing import List, Dict, Union, Tuple, Callable
 
-from h5rdmtoolbox.database import ObjDB
-from . import logger, iri
 # noinspection PyUnresolvedReferences
-from . import xr2hdf
+from . import xr2hdf, rdf
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
 from .. import _repr, get_config, convention, utils, consts, protected_attributes
 from .. import get_ureg
+from .. import protocols
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
-from .._version import __version__
 from ..convention.consts import DefaultValue
+
+logger = logging.getLogger('h5rdmtoolbox')
 
 MODIFIABLE_PROPERTIES_OF_A_DATASET = ('name', 'chunks', 'compression', 'compression_opts',
                                       'dtype', 'maxshape')
@@ -39,11 +42,34 @@ H5KWARGS = ('driver', 'libver', 'userblock_size', 'swmr',
             'alignment_threshold', 'alignment_interval', 'meta_block_size')
 
 
-def convert_strings_to_datetimes(array):
-    if np.issubdtype(array.dtype, np.str_):
-        return np.array([datetime.fromisoformat(date_str) for date_str in array.flat]).reshape(array.shape)
-    else:
-        return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
+def assert_filename_existence(filename: pathlib.Path) -> pathlib.Path:
+    """Raises an error if the filename does not exist. Otherwise, the filename is returned.
+
+    Parameters
+    ----------
+    filename : pathlib.Path
+        Filename to check.
+
+    Returns
+    -------
+    pathlib.Path
+        The filename if it exists.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the filename does not exist.
+    """
+    if not filename.exists():
+        raise FileNotFoundError('Filename does not exist. It might be moved or deleted!')
+    return filename
+
+
+def convert_strings_to_datetimes(array, time_format='%Y-%m-%dT%H:%M:%S.%f'):
+    assert np.issubdtype(array.dtype, np.str_), 'Unexpected array type'
+    return np.array([datetime.strptime(date_str, time_format) for date_str in array.flat]).reshape(array.shape)
+    # else:
+    #     return np.array([convert_strings_to_datetimes(subarray) for subarray in array])
 
 
 def _pop_standard_attributes(kwargs, cache_entry) -> Tuple[Dict, Dict]:
@@ -63,7 +89,7 @@ class Lower(str):
         return instance
 
 
-def lower(string: str) -> Lower:
+def lower(string: str) -> str:
     """return object Lower(string). Used when a dataset
     is called, but the upper/lower case should be irrelevant."""
     return Lower(string)
@@ -74,7 +100,7 @@ def process_attributes(cls,
                        attrs: Dict,
                        kwargs: Dict,
                        name: str,
-                       existing_attrs: Tuple = None) -> Tuple[Dict, Dict, Dict]:
+                       existing_attrs: Optional[Tuple] = None) -> Tuple[Dict, Dict, Dict]:
     """Process attributes and kwargs for methods "create_dataset", "create_group" and "File.__init__" method.
 
     Parameters
@@ -89,6 +115,8 @@ def process_attributes(cls,
         Keyword arguments of the method.
     name : str
         Name of the dataset or group to be created.
+    existing_attrs: Optional[Tuple]
+        Tuple of existing attributes. If an attribute is in this tuple, it is not considered as a standard attribute.
     """
     if existing_attrs is None:
         existing_attrs = list()
@@ -172,95 +200,22 @@ def process_attributes(cls,
     return attrs, skwargs, kwargs
 
 
-class Core:
-    """Class inherited by File, Dataset and Group containing common methods."""
-
-    def __delattr__(self, item):
-        if self.standard_attributes.get(item, None):
-            if get_config('allow_deleting_standard_attributes'):
-                del self.attrs[item]
-                return
-            raise ValueError('Deleting standard attributes is not allowed based on the current configuration! '
-                             'You may change this by calling '
-                             '"h5tbx.set_config(allow_deleting_standard_attributes=True)".')
-        if item in self and get_config('natural_naming'):
-            del self[item]
+def _delattr(obj: protocols.H5TbxHLObject, item: str):
+    if obj.standard_attributes.get(item, None):
+        if get_config('allow_deleting_standard_attributes'):
+            del obj.attrs[item]
             return
-        super().__delattr__(item)
-
-    @property
-    def hdf_filename(self) -> pathlib.Path:
-        """The filename of the file, even if the HDF5 file is closed. Note, that
-        is not checked, if the file still exists!"""
-        return self._hdf_filename
-
-    @property
-    def convention(self):
-        """Return the convention currently enabled."""
-        return convention.get_current_convention()
-
-    @property
-    def standard_attributes(self) -> Dict:
-        """Return the standard attributes of the class."""
-        return self.convention.properties.get(self.__class__, {})
-
-    @property
-    def iri(self):
-        """Return IRI Manager"""
-        return iri.IRIManager(self.attrs)
-
-    @iri.setter
-    def iri(self, value):
-        """Sets an IRI to the group or dataset"""
-        iri.IRIManager(self.attrs).set_subject(value)
+        raise ValueError('Deleting standard attributes is not allowed based on the current configuration! '
+                         'You may change this by calling '
+                         '"h5tbx.set_config(allow_deleting_standard_attributes=True)".')
+    if item in obj and get_config('natural_naming'):
+        del obj[item]
+        return
+    del obj[item]
+    # super().__delattr__(item)
 
 
-class SpecialAttributeWriter:
-    """Accessor class, which provides methods to write special attributes to a dataset or group."""
-
-    def write_uuid(self, uuid: str = None, name='uuid', overwrite: bool = False) -> str:
-        """Write a uuid to the attribute of the object.
-
-        Parameters
-        ----------
-        uuid : str=None
-            The uuid to write. If None, a new uuid is generated.
-        name : str='uuid'
-            The name of the attribute. Default is "uuid".
-
-        Returns
-        -------
-        str
-            The uuid as string.
-        """
-        if name in self.attrs and not overwrite:
-            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
-                             '"overwrite" is set to False')
-        if uuid is None:
-            from uuid import uuid4
-            uuid = uuid4()
-        suuid = str(uuid)
-        self.attrs[name] = suuid
-        return suuid
-
-    def write_iso_timestamp(self, name='timestamp', dt: datetime = None, overwrite: bool = False, **kwargs):
-        """Write the iso timestamp to the attribute of the object.
-
-        Parameters
-        --
-        """
-        if name in self.attrs and not overwrite:
-            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
-                             '"overwrite" is set to False')
-        if dt is None:
-            dt = datetime.now()
-        else:
-            if not isinstance(dt, datetime):
-                raise TypeError(f'Invalid type for parameter "dt". Expected type datetime but got "{type(dt)}"')
-        self.attrs[name] = dt.isoformat(**kwargs)
-
-
-class Group(h5py.Group, SpecialAttributeWriter, Core):
+class Group(h5py.Group):
     """Inherited Group of the package h5py. Adds some useful methods on top
     of the underlying *h5py* package.
 
@@ -279,11 +234,16 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
     The following properties are added (or overwritten):
     * attrs - returns the *h5tbx* attribute manager, which is a subclass of the *h5py* attribute manager
-    * iri - returns the IRI Manager
+    * rdf - returns the RDF Manager
     * rootparent - returns the root group instance
     * basename - returns the basename of the group
     """
     hdfrepr = H5Repr()
+
+    @property
+    def hdf_filename(self) -> pathlib.Path:
+        """The filename of the file, even if the HDF5 file is closed."""
+        return assert_filename_existence(self._hdf_filename)
 
     @property
     def attrs(self):
@@ -310,17 +270,22 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         on the basenames of the datasets."""
         if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Dataset)]
-        grpDB = ObjDB(self)
-        return grpDB.find({'$name': {'$regex': pattern}}, '$Dataset', recursive=recursive)
+        return [self.rootparent[ds.name] for ds in
+                self.find({'$name': {'$regex': pattern}}, '$Dataset', recursive=recursive)]
 
-    def get_groups(self, pattern: str = '.*', recursive: bool = False) -> List[h5py.Group]:
+    def get_groups(self,
+                   pattern: str = '.*',
+                   recursive: bool = False) -> List[h5py.Group]:
         """Return list of groups in the current group.
         If pattern is None, all groups are returned.
         If pattern is not None a regrex-match is performed
         on the basenames of the groups."""
         if pattern == '.*' and not recursive:
             return [v for v in self.values() if isinstance(v, h5py.Group)]
-        return self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)
+        # if return_lazy:
+        #     return self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)
+        return [self.rootparent[g.name] for g in
+                self.find({'$name': {'$regex': pattern}}, '$Group', recursive=recursive)]
 
     def __init__(self, _id):
         if isinstance(_id, h5py.Group):
@@ -333,7 +298,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
     def __setitem__(self,
                     name: str,
-                    obj: Union[xr.DataArray, List, Tuple, Dict]) -> "Dataset":
+                    obj: Union[xr.DataArray, List, Tuple, Dict, h5py.ExternalLink]) -> protocols.H5TbxDataset:
         """
         Lazy creating datasets. More difficult than using h5py as mandatory
         parameters must be provided.
@@ -342,16 +307,16 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         ----------
         name: str
             Name of dataset
-        obj: xr.DataArray or Dict or List/Tuple of data and meta data-
-            If obj is not a xr.DataArray, data must be provided using a list or tuple.
-            See examples for possible ways to pass data.
+        obj: xr.DataArray or Dict or List/Tuple of data and metadata.
+                    If obj is not a xr.DataArray, data must be provided using a list or tuple.
+                    See examples for possible ways to pass data.
 
         Returns
         -------
         None
         """
         if isinstance(obj, xr.DataArray):
-            return obj.hdf.to_group(Group(self), name)
+            return Dataset(obj.hdf.to_group(Group(self), name).id)
         if isinstance(obj, (list, tuple)):
             if not isinstance(obj[1], dict):
                 raise TypeError(f'Second item must be type dict but is {type(obj[1])}')
@@ -373,10 +338,10 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         if isinstance(ret, h5py.Group):
             return self._h5grp(ret.id)
 
-    def __getattr__(self, item):
-        standard_attributes = self.standard_attributes
+    def __getattr__(self, item: str):
+        standard_attributes: Dict = self.standard_attributes
         if standard_attributes:  # are there standard attributes registered?
-            standard_attribute = standard_attributes.get(item, None)
+            standard_attribute: Optional[protocols.StandardAttribute] = standard_attributes.get(item, None)
             if standard_attribute:  # is there an attribute requested with name=item available?
                 return standard_attribute.get(self)
 
@@ -385,7 +350,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         except (RuntimeError, AttributeError) as e:
             if not get_config('natural_naming'):
                 # raise an error if natural naming is NOT enabled
-                raise Exception(e)
+                raise AttributeError(e)
 
         # if item in self.__dict__:
         #     return super().__getattribute__(item)
@@ -417,6 +382,35 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     def __lt__(self, other):
         return self.name < other.name
 
+    def __delattr__(self, item):
+        _delattr(self, item)
+
+    @property
+    def convention(self):
+        """Return the convention currently enabled."""
+        return convention.get_current_convention()
+
+    @property
+    def standard_attributes(self) -> Dict:
+        """Return the standard attributes of the class."""
+        return self.convention.properties.get(self.__class__, {})
+
+    @property
+    def rdf(self):
+        """Return RDF Manager"""
+        return rdf.RDFManager(self.attrs)
+
+    @property
+    def iri(self):
+        """Deprecated. Use rdf instead."""
+        warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
+        return rdf.RDFManager(self.attrs)
+
+    # @property
+    # def attrsdef(self) -> definition.DefinitionManager:
+    #     """Return DefinitionManager"""
+    #     return definition.DefinitionManager(self.attrs)
+
     def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
         """Return the tree (attributes, names, shapes) of the group and subgroups"""
         if ignore_attrs is None:
@@ -439,7 +433,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                      name: str,
                      overwrite: bool = None,
                      attrs: Dict = None,
-                     update_attrs: bool = False,
+                     update_attrs: Optional[bool] = False,
                      track_order=None,
                      **kwargs) -> "Group":
         """
@@ -459,6 +453,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             ... overwrite is False, then group creation has no effect. Existing group is returned.
         attrs : dict, optional
             Attributes of the group, default is None which is an empty dict
+        update_attrs: bool, optional
+            If overwrite is False, whether to update the attributes or not. Default is False.
         track_order : bool or None
             Track creation order under this group. Default is None.
         """
@@ -503,26 +499,60 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
     def create_time_dataset(self,
                             name: str,
-                            data: Union[datetime, List[datetime]],
+                            data: Union[datetime, List],
+                            time_format: str,
+                            assign_rdf: bool = True,
                             overwrite: bool = False,
                             attrs: Dict = None,
                             **kwargs):
         """Special creation function to create a time vector. Data is stored as a string dataset
-        where each datetime is converted to a string with ISO format"""
+        where each datetime is converted to a string using the provided time_format
+
+        Parameter
+        ---------
+        name : str
+            Name of the dataset
+        data : Union[datetime, List]
+            Data to be stored. If a list is provided, each element must be a datetime object
+        time_format : str
+            Format of the time string. E.g. '%Y-%m-%dT%H:%M:%S.%f' or 'iso'. If 'iso' is provided
+            the format is set to '%Y-%m-%dT%H:%M:%S.%f'
+        assign_rdf : bool, default=True
+            Automatically assign RDF to dataset. This includes type='https://schema.org/DateTime' and
+            predicate for time_format='https://matthiasprobst.github.io/pivmeta#timeFormat'
+            This is True by default
+        overwrite : bool, default=False
+            If the dataset already exists, it is overwritten if True. If False, the dataset is not created
+        attrs : Dict, default=None
+            Attributes of the dataset
+        **kwargs : dict
+            Additional keyword arguments passed to the h5py create_dataset method
+        """
         if attrs is None:
             attrs = {}
-        attrs.update({'ISTIMEDS': 1,
-                      'TIMEFORMAT': 'ISO'})
+        if time_format.lower() == 'iso':
+            time_format = '%Y-%m-%dT%H:%M:%S.%f'
+
+        attrs.update({'time_format': time_format})
+
         if isinstance(data, np.ndarray):
-            return self.create_string_dataset(name, data=[t.astype(datetime).isoformat() for t in data],
-                                              overwrite=overwrite, attrs=attrs, **kwargs)
-        _data = np.asarray(data)
-        _orig_shape = _data.shape
-        _flat_data = _data.flatten()
-        _flat_data = np.asarray([t.isoformat() for t in _flat_data])
-        _reshaped_data = _flat_data.reshape(_orig_shape)
-        return self.create_string_dataset(name, data=_reshaped_data.tolist(),
-                                          overwrite=overwrite, attrs=attrs, **kwargs)
+            ds = self.create_string_dataset(name,
+                                            data=[t.astype(datetime).strftime(time_format) for t in data],
+                                            overwrite=overwrite,
+                                            attrs=attrs,
+                                            **kwargs)
+        else:
+            _data = np.asarray(data)
+            _orig_shape = _data.shape
+            _flat_data = _data.flatten()
+            _flat_data = np.asarray([t.strftime(time_format) for t in _flat_data])
+            _reshaped_data = _flat_data.reshape(_orig_shape)
+            ds = self.create_string_dataset(name, data=_reshaped_data.tolist(),
+                                            overwrite=overwrite, attrs=attrs, **kwargs)
+        if assign_rdf:
+            ds.rdf.type = 'https://schema.org/DateTime'
+            ds.rdf['time_format'].predicate = 'https://matthiasprobst.github.io/pivmeta#timeFormat'
+        return ds
 
     def create_string_dataset(self,
                               name: str,
@@ -550,11 +580,25 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
             if overwrite is True:
                 del self[name]  # delete existing dataset
             # else let h5py return the error
-        ds = super().create_dataset(name, dtype=dtype, data=data)
+
+        if isinstance(data, str):
+            compression = None
+            compression_opts = None
+        else:
+            compression = kwargs.pop('compression', get_config('hdf_compression'))
+            compression_opts = kwargs.pop('compression_opts', get_config('hdf_compression_opts'))
+
+        make_scale = kwargs.pop('make_scale', False)
+        ds = super().create_dataset(name, dtype=dtype, data=data, **kwargs,
+                                    compression=compression, compression_opts=compression_opts)
+        if make_scale:
+            if isinstance(data, str):
+                ds.make_scale(make_scale)
+            else:
+                ds.make_scale()
 
         for ak, av in attrs.items():
             ds.attrs[ak] = av
-        # TODO: H5StingDataset
         return self._h5ds(ds.id)
 
     def create_dataset(self,
@@ -571,7 +615,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                        ancillary_datasets=None,
                        attrs=None,
                        **kwargs  # standard attributes and other keyword arguments
-                       ):
+                       ) -> protocols.H5TbxDataset:
         """
         Creating a dataset. Allows attaching/making scale, overwriting and setting attributes simultaneously.
 
@@ -706,11 +750,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                         raise TypeError(f'Expecting type string or a h5py.Dataset for scale, not {type(scale)}')
                     data = data.rename({dim: scale_name}).assign_coords({scale_name: scale_data})
             attrs.update(data.attrs)
-            return data.hdf.to_group(self._h5grp(self), name=name,
+            xrds = data.hdf.to_group(self._h5grp(self), name=name,
                                      overwrite=overwrite,
                                      compression=compression,
                                      compression_opts=compression_opts,
                                      attrs=attrs)
+            return Dataset(xrds.id)
 
         if not isinstance(make_scale, (bool, str)):
             raise TypeError(f'Make scale must be a boolean or a string not {type(make_scale)}')
@@ -732,14 +777,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 if anc_ds.shape != _data.shape:
                     raise ValueError(f'Associated dataset {anc_name} has shape {anc_ds.shape} '
                                      f'which does not match dataset shape {_data.shape}')
-            import json
             attrs[consts.ANCILLARY_DATASET] = json.dumps({k: v.name for k, v in ancillary_datasets.items()})
 
         _maxshape = kwargs.get('maxshape', shape)
 
-        logger.debug(
-            f'Creating dataset "{name}" in "{self.name}" with maxshape {_maxshape} " '
-            f'and using compression "{compression}" with opt "{compression_opts}"')
+        logger.debug(f'Creating dataset "{name}" in "{self.name}" with maxshape "{_maxshape}" '
+                     f'and using compression "{compression}" with opt "{compression_opts}"')
 
         # if possible, create dataset with shape first:
         if _data is not None:
@@ -768,7 +811,8 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                                          chunks=chunks,
                                          **kwargs)
 
-        ds = self._h5ds(_ds.id)
+        ds = Dataset(_ds.id)
+
         if attach_data_scale is not None or attach_data_offset is not None:
             units = attrs.get('units', None)
             if units:
@@ -777,19 +821,19 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         # assign attributes, which may raise errors if attributes are standardized and not fulfill requirements:
         if attrs:
-            try:
-                for k, v in attrs.items():
+            for k, v in attrs.items():
+                try:
                     # call __setitem__ because then we can pass attrs which is needed by the potential validators of
                     # standard attributes
                     if isinstance(v, h5py.Dataset):
                         ds.attrs.__setitem__(k, v.name, attrs)
                     else:
                         ds.attrs.__setitem__(k, v, attrs)
-            except convention.standard_attributes.errors.StandardAttributeError as e:
-                logger.debug(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
-                             f'{self.convention.name}. Orig err: "{e}"')
-                del self[name]
-                raise e
+                except convention.standard_attributes.errors.StandardAttributeError as e:
+                    logger.debug(f'Could not set attribute "{k}" with value "{v}" to dataset "{name}" for convention '
+                                 f'{self.convention.name}. Orig err: "{e}"')
+                    del self[name]
+                    raise e
 
         # what is this for? uncommented it in version v1.0.1
         # if isinstance(data, np.ndarray):
@@ -828,19 +872,54 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                         ds.dims[i].attach_scale(ds_to_attach)
         return ds
 
-    def find_one(self, flt: Union[Dict, str],
+    def find_one(self,
+                 flt: Union[Dict, str],
                  objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
                  recursive: bool = True,
-                 ignore_attribute_error: bool = False):
-        """See find()"""
-        raise NotImplementedError('Move to database subpackage')
+                 ignore_attribute_error: bool = False) -> protocols.LazyObject:
+        """See ObjDB.find_one()"""
+        from h5rdmtoolbox.database import ObjDB
+        return ObjDB(self).find_one(flt, objfilter, recursive, ignore_attribute_error)
+
+    def find(self,
+             flt: Union[Dict, str, List[str]],
+             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
+             recursive: bool = True,
+             ignore_attribute_error: bool = False) -> List[protocols.LazyObject]:
+        """
+        Examples for filter parameters:
+        filter = {'long_name': 'any objects long name'} --> searches in attributes only
+        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
+        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
+
+        Parameters
+        ----------
+        flt: Dict
+            Filter request
+        objfilter: str | h5py.Dataset | h5py.Group | None
+            Filter. Default is None. Otherwise, only dataset or group types are returned.
+        recursive: bool, optional
+            Recursive search. Default is True
+        ignore_attribute_error: bool, optional=False
+            If True, the KeyError normally raised when accessing hdf5 object attributes is ignored.
+            Otherwise, the KeyError is raised.
+
+        Returns
+        -------
+        h5obj: List[LazyObject]
+        """
+        from h5rdmtoolbox.database import ObjDB
+        return ObjDB(self).find(flt,
+                                objfilter,
+                                recursive=recursive,
+                                ignore_attribute_error=ignore_attribute_error)
 
     def create_dataset_from_csv(self, csv_filename: Union[str, pathlib.Path], *args, **kwargs):
         """Create datasets from a single csv file. Docstring: See File.create_datasets_from_csv()"""
         return self.create_datasets_from_csv(csv_filenames=[csv_filename, ], *args, **kwargs)
 
     def create_datasets_from_csv(self,
-                                 csv_filenames: Union[str, pathlib.Path],
+                                 csv_filenames: Union[str, pathlib.Path, List[Union[str, pathlib.Path]]],
                                  dimension: Union[int, str] = 0,
                                  shape=None,
                                  overwrite=False,
@@ -955,6 +1034,12 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                 for ds, variable_name in zip(datasets, column_names):
                     if variable_name != dimension:
                         ds.dims[0].attach_scale(self[dimension])
+            for ds in datasets:
+                ds.attrs['source_filename'] = csv_filenames
+                if isinstance(csv_filenames, (list, tuple)):
+                    ds.attrs['source_filename_hash_md5'] = [utils.get_checksum(f) for f in csv_filenames]
+                else:
+                    ds.attrs['source_filename_hash_md5'] = utils.get_checksum(csv_filenames)
             return datasets
 
         data = {}
@@ -971,16 +1056,19 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                     data[name].append(value.values.reshape(shape))
 
         for name, value in data.items():
-            self.create_dataset(name=name,
-                                data=np.stack(value, axis=axis),
-                                attrs=attrs.get(name, None),
-                                overwrite=overwrite,
-                                compression=compression,
-                                compression_opts=compression_opts,
-                                chunks=chunks)
+            ds = self.create_dataset(name=str(name),
+                                     data=np.stack(value, axis=axis),
+                                     attrs=attrs.get(name, None),
+                                     overwrite=overwrite,
+                                     compression=compression,
+                                     compression_opts=compression_opts,
+                                     chunks=chunks)
+
+            ds.attrs['source_filename'] = csv_filenames
+            ds.attrs['source_filename_has_md5'] = [utils.get_checksum(f) for f in csv_filenames]
 
     def create_dataset_from_image(self,
-                                  imgdata: Union[Callable, np.ndarray, List[np.ndarray]],
+                                  img_data: Union[Iterable, np.ndarray, List[np.ndarray]],
                                   name,
                                   chunks=None,
                                   dtype=None,
@@ -992,7 +1080,7 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
 
         Parameters
         ----------
-        imgdata : np.ndarray or list of np.ndarray
+        img_data : np.ndarray or list of np.ndarray
             Image filename or list of image file names. See also axis in case of multiple files
         name : str
             Name of create dataset
@@ -1016,42 +1104,35 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         _compression, _compression_opts = get_config('hdf_compression'), get_config('hdf_compression_opts')
         compression = kwargs.pop('compression', _compression)
         compression_opts = kwargs.pop('compression_opts', _compression_opts)
+        first_image = None
+        n = None
 
         if axis not in (0, -1):
-            raise ValueError(f'Value for parameter axis can only be 0 or 1 but not {axis}')
+            raise ValueError(f'Parameter for parameter axis can only be 0 or 1 but not {axis}')
 
-        is_list_tuple_or_numpy = isinstance(imgdata, (list, tuple, np.ndarray))
-        if not is_list_tuple_or_numpy:
-            if not isinstance(imgdata, Iterable):
-                raise ValueError('imgdata must be iterable')
-            # check if imgdata has method __len__():
-            if not hasattr(imgdata, '__len__'):
-                raise ValueError('imgdata must have method __len__()')
-            # get first element of imgdata:
-            first_image = next(imgdata)
+        iterable: bool = isinstance(img_data, Iterable)
+        if iterable:
+            # check if img_data has method __len__():
+            if not hasattr(img_data, '__len__'):
+                raise ValueError('img_data must have method __len__()')
+            n = len(img_data)
+
+            img_data = iter(img_data)
+
+            # get first element of img_data:
+            first_image = next(img_data)
             single_img_shape = first_image.shape
             if axis == 0:
-                shape = (len(imgdata), *single_img_shape)
+                shape = (n, *single_img_shape)
                 chunks = (1, *single_img_shape)
             else:
-                shape = (*single_img_shape, len(imgdata))
+                shape = (*single_img_shape, n)
                 chunks = (*single_img_shape, 1)
         else:
-            is_np_ndarray = isinstance(imgdata, np.ndarray)
-            if is_np_ndarray:
-                shape = imgdata.shape
+            if isinstance(img_data, np.ndarray):
+                shape = img_data.shape
             else:
-                single_img_shape = imgdata[0].shape
-                if not all([img.shape == single_img_shape for img in imgdata]):
-                    raise ValueError('All images must have the same shape to fit into the same dataset!')
-                if axis == 0:
-                    shape = (len(imgdata), *single_img_shape)
-                    if chunks is None:
-                        chunks = (1, *single_img_shape)
-                else:
-                    shape = (*single_img_shape, len(imgdata))
-                    if chunks is None:
-                        chunks = (*single_img_shape, 1)
+                shape = None
 
         ds = self.create_dataset(name=name,
                                  shape=shape,
@@ -1060,66 +1141,29 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
                                  chunks=chunks,
                                  dtype=dtype,
                                  **kwargs)
-        if not is_list_tuple_or_numpy:
-            if axis == 0:
-                ds[0, ...] = first_image
-            else:
-                ds[..., 0] = first_image
-            for i, img in enumerate(imgdata):
-                if axis == 0:
-                    ds[i, ...] = img
-                else:
-                    ds[..., i] = img
+        if isinstance(img_data, np.ndarray):
+            ds[()] = img_data
             return ds
 
-        if is_np_ndarray:
-            ds[:] = imgdata
+        assert first_image is not None, 'First image is None. This should not happen!'
+        if axis == 0:
+            ds[0, ...] = first_image
         else:
-            ds[:] = np.stack(imgdata, axis=axis)
-        return ds
+            ds[..., 0] = first_image
 
-    # unused, but leave it for a while:
-    # def create_dataset_from_xarray_dataarray(self,
-    #                                          dataarr: xr.DataArray,
-    #                                          name: str = None,
-    #                                          overwrite: bool = False,
-    #                                          overwrite_coords: bool = False) -> None:
-    #     """create hdf dataset from xarray DataArray. All attributes are written to the
-    #     hdf dataset. If coordinates are present, they are written as dimension scales.
-    #     If only dimensions are present, the dim names are written as attributes using
-    #     `DIMS` as key."""
-    #     ds_coords = {}
-    #     attach_scales = [None] * dataarr.ndim
-    #     for idim, dim in enumerate(dataarr.dims):
-    #         if dim not in self or overwrite_coords:
-    #             ds = self.create_dataset(dim,
-    #                                      data=dataarr.coords[dim].values,
-    #                                      attrs=dataarr.coords[dim].attrs,
-    #                                      overwrite=overwrite_coords)
-    #             ds.make_scale()
-    #             ds_coords[dim] = ds
-    #         if dim in self:
-    #             attach_scales[idim] = dim
-    #     if name is None:
-    #         name = dataarr.name
-    #     if len(ds_coords) == 0:
-    #         dim_attr = {'DIMS': dataarr.dims}
-    #     else:
-    #         dim_attr = {}
-    #     dataarr.attrs.update(dim_attr)
-    #     ds = self.create_dataset(name,
-    #                              shape=dataarr.shape,
-    #                              attrs=dataarr.attrs,
-    #                              overwrite=overwrite,
-    #                              attach_scales=attach_scales)
-    #     ds[()] = dataarr.values
+        for i in range(1, n):
+            if axis == 0:
+                ds[i, ...] = next(img_data)
+            else:
+                ds[..., i] = next(img_data)
+        return ds
 
     def create_dataset_from_xarray_dataset(self, dataset: xr.Dataset) -> None:
         """creates the xr.DataArrays of the passed xr.Dataset, writes all attributes
         and handles the dimension scales."""
         ds_coords = {}
         for coord in dataset.coords.keys():
-            ds = self.create_dataset(coord,
+            ds = self.create_dataset(str(coord),
                                      data=dataset.coords[coord].values,
                                      attrs=dataset.coords[coord].attrs,
                                      overwrite=False)
@@ -1177,24 +1221,50 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
         self[name] = h5py.ExternalLink(filename, path)
         return self[name]
 
-    def create_from_yaml(self, yaml_filename: Path):
+    def create_from_yaml(self, yaml_filename: Path, num_dtype: Optional[str] = None):
         """creates groups, datasets and attributes defined in a yaml file.
         Creation is performed relative to the current group level.
 
-        Note the required yaml file structure, e.g.
-        title='Title of the file'
-        contact='0000-1234-1234-1234'
-        grp/supgrp/y:
-          data: 2
-          overwrite: True
-          attrs:
-            units: 'm/s'
-        grp/supgrp:
-          attrs:
-            comment: This is a group comment
+        If a num_dtype is provided, all numerical datasets are created with this dtype.
+
+        An example YAML file content could look like this:
+
+        >>> title: 'Title of the file'
+        >>> contact: '0000-1234-1234-1234'
+        >>> grp:
+        >>>   attrs:
+        >>>     comment: test
+        >>> grp/subgrp/y:
+        >>>   data: 2
+        >>>   overwrite: True
+        >>>   attrs:
+        >>>     units: 'm/s'
+        >>> grp/subgrp:
+        >>>   attrs:
+        >>>     comment: This is a group comment
+        >>>   velocity:
+        >>>     data: [3.4, 1.1]
+        >>>     overwrite: True
+        >>>     attrs:
+        >>>       units: 'm/s'
+
+        Examples
+        --------
+        >>> with h5tbx.File('test.h5', 'w') as h5:
+        >>>     h5.create_from_yaml('test.yaml')
         """
         from . import h5yaml
-        h5yaml.H5Yaml(yaml_filename).write(self)
+        h5yaml.H5Yaml(yaml_filename).write(self, num_dtype=num_dtype)
+
+    def create_from_dict(self, dictionary: Dict):
+        """Create groups and datasets based on a dictionary"""
+        from . import h5yaml
+        h5yaml.H5Dict(dictionary).write(self)
+
+    def create_from_jsonld(self, data: str, context: Optional[Dict] = None):
+        """Create groups/datasets from a jsonld string."""
+        from . import jsonld
+        jsonld.to_hdf(self, data=json.loads(data), context=context)
 
     def _get_obj_names(self, obj_type, recursive):
         """Return all names of specified object type
@@ -1247,9 +1317,9 @@ class Group(h5py.Group, SpecialAttributeWriter, Core):
     def _repr_html_(self):
         return self.hdfrepr.__html__(self)
 
-    def sdump(self):
+    def sdump(self, hide_uri: bool = False):
         """string representation of group"""
-        return self.hdfrepr.str_repr(self)
+        return self.hdfrepr.str_repr(self, hide_uri=hide_uri)
 
     dumps = sdump
 
@@ -1270,14 +1340,14 @@ class DatasetValues:
 def only_0d_and_1d(obj):
     """Decorator to check if the dataset is 1D"""
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args):
         if args[0].ndim > 1:
             raise ValueError('Only applicable to 0D and 1D datasets!')
 
     return obj
 
 
-class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
+class Dataset(h5py.Dataset):
     """Wrapper around the h5py.Dataset. Some useful methods are added on top of
     the underlying *h5py* package.
 
@@ -1298,8 +1368,6 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     * dumps(): string representation of group
     * isel(): Select data by named dimension and index, mimics xarray.isel.
     * sel(): Select data by named dimension and values, mimics xarray.sel.
-    * to_units(): Convert the dataset to a new unit.
-    * write_iso_timestamp(): Write an ISO 8601 timestamp to the current dataset attribute.
 
     The following properties are added to the h5py.Dataset object:
 
@@ -1309,7 +1377,7 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     """
 
     @only_0d_and_1d
-    def __lt__(self, other: Union[int, float]):
+    def __lt__(self, other: Union[int, float, protocols.H5TbxDataset]):
         if isinstance(other, (int, float)):
             data = self.values[()]
             if data.ndim == 1:
@@ -1364,15 +1432,44 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
     def __hash__(self):
         return hash(self.id)
 
+    def __delattr__(self, item):
+        _delattr(self, item)
+
     @property
-    def attrs(self):
+    def convention(self):
+        """Return the convention currently enabled."""
+        return convention.get_current_convention()
+
+    @property
+    def standard_attributes(self) -> Dict:
+        """Return the standard attributes of the class."""
+        return self.convention.properties.get(self.__class__, {})
+
+    @property
+    def rdf(self):
+        """Return RDF Manager"""
+        return rdf.RDFManager(self.attrs)
+
+    @property
+    def iri(self):
+        """Deprecated. Use rdf instead."""
+        warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
+        return rdf.RDFManager(self.attrs)
+
+    @property
+    def hdf_filename(self) -> pathlib.Path:
+        """The filename of the file, even if the HDF5 file is closed."""
+        return assert_filename_existence(self._hdf_filename)
+
+    @property
+    def attrs(self) -> protocols.H5TbxAttributeManager:
         """Exact copy of parent class:
         Attributes attached to this object """
         with phil:
             return WrapperAttributeManager(self)
 
     @property
-    def parent(self) -> "Group":
+    def parent(self) -> protocols.H5TbxGroup:
         """Return the parent group of this dataset
 
         Returns
@@ -1458,11 +1555,6 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         self.attrs[consts.ANCILLARY_DATASET] = ancillary_datasets
         return self
 
-    # @property
-    # def has_flag_data(self):
-    #     """Check if the dataset has a flag dataset attached."""
-    #     return ANCILLARY_DATASET in self.attrs and self.attrs[FLAG_DATASET_CONST] in self.parent
-
     def detach_data_scale(self):
         """Remove the attached data scale dataset from this dataset."""
         warnings.warn('Note, that detaching data scale may influence the correctness and traceability of your data',
@@ -1521,10 +1613,51 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             return self.rootparent[self.attrs['DATA_OFFSET'].name]
         return None
 
-    def coords(self) -> Dict[str, "Dataset"]:
+    @property
+    def coords(self) -> Dict:
         """Return a dictionary of the dimension scales of the dataset.
         Corresponds to the xarray coordinates."""
-        return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
+        coords = {}
+        for dim in self.dims:
+            if len(dim) > 0:
+                for i, d in enumerate(dim):
+                    coords[dim[i].name.rsplit('/')[-1]] = dim[i]
+        return coords
+        # return {d[0].name.rsplit('/')[-1]: d[0] for d in self.dims if len(d) > 0}
+
+    def assign_coord(self, coord):
+        if isinstance(coord, str):
+            if coord not in self.rootparent:
+                raise ValueError(f'Coordinate {coord} not found in the file!')
+            coord = self.rootparent[coord]
+        curr_coords = self.attrs.get(protected_attributes.COORDINATES, [])
+        curr_coords.append(coord.name)
+        self.attrs[protected_attributes.COORDINATES] = curr_coords
+
+        # if coords is not None:
+        #     if not isinstance(coords, list):
+        #         coords = [coords]
+        #     for c in coords:
+        #         if not isinstance(c, h5py.Dataset):
+        #             raise ValueError('Only h5py.Dataset objects can be assigned as coordinates!')
+        #         coords_kwargs.update({c.name: c})
+        #
+        # for k, v in coords_kwargs.items():
+        #
+        #     if not isinstance(v, h5py.Dataset):
+        #         if not isinstance(v, xr.DataArray):
+        #             raise TypeError(f'Only h5py.Dataset or xarray.DataArray objects can be assigned as coordinates, '
+        #                             f'but got {type(v)}')
+        #         raise TypeError('Only h5py.Dataset objects can be assigned as coordinates!')
+        #
+        #     if v.ndim not in (0, self.ndim):
+        #         raise ValueError(f'Coordinate {k} must have the same dimension as the dataset or be a scalar!')
+        #     elif isinstance(v, xr.DataArray):
+        #         self.parent.create_dataset_from_xarray_dataset(v)
+        #
+        # curr_coords = self.attrs.get(protected_attributes.COORDINATES, {})
+        # curr_coords.update(coords_kwargs)
+        # self.attrs[protected_attributes.COORDINATES] = curr_coords
 
     def isel(self, **indexers) -> xr.DataArray:
         """Index selection by providing the coordinate name.
@@ -1546,30 +1679,61 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         """
         if len(indexers) == 0:
             return self[()]
-        ds_coords = self.coords()
+        ds_coords = self.coords
         if ds_coords:
             for cname in indexers.keys():
                 if cname not in ds_coords:
                     raise KeyError(f'Coordinate {cname} not in {list(ds_coords.keys())}')
-            sl = {cname: slice(None) for cname in ds_coords.keys()}
-            for cname, item in indexers.items():
-                sl[cname] = item
+
+            sl = {cname: slice(None) for cname, _ in zip(ds_coords.keys(), range(self.ndim))}
+            sl_key_list = list(sl.keys())
+            for (cname, item), _ in zip(indexers.items(), range(self.ndim)):
+                # if the indexer name is in the same dimension as one of the already registered
+                # coordinates in "sl", then replace
+                _replaced = False
+                for idim, d in enumerate(self.dims):
+                    for i in range(len(d)):
+                        if d[i].name.rsplit('/')[-1] == cname:
+                            sl[sl_key_list[idim]] = item
+                            _replaced = True
+                            break
+                if not _replaced:
+                    sl[cname] = item
+            # for k in sl.copy().keys():
+            #     if k not in indexers:
+            #         sl.pop(k)
         else:
             # no indexers available. User must provide dim_<i> then!
             if not all([cname.startswith('dim_') for cname in indexers.keys()]):
                 raise KeyError(f'No coordinates available. Provide dim_<i> as key!')
             dim_dict = {f'dim_{i}': slice(None) for i in range(len(self.shape))}
             # indices = [int(cname.split('_')[1]) for cname in indexers.keys()]
-            sl = {cname: slice(None) for cname in dim_dict.keys()}
-            for cname, item in indexers.items():
+            sl = {cname: slice(None) for cname, _ in zip(dim_dict.keys(), range(self.ndim))}
+            for (cname, item), _ in zip(indexers.items(), range(self.ndim)):
                 sl[cname] = item
 
-        return self[tuple([v for v in sl.values()])]
+        def _make_ascending(_data):
+            if isinstance(_data, (np.ndarray, list)):
+                # warnings.warn(
+                #     'Only ascending order is supported for np.ndarray and list. Reducing the data to unique values'
+                # )
+                unique_data = np.unique(_data)
+                _diff = np.diff(unique_data)
+                if np.all(_diff == 1):
+                    # more efficient to use slice
+                    return slice(unique_data[0], unique_data[-1] + 1, 1)
+                if np.all(_diff == 2):
+                    # more efficient to use slice
+                    return slice(unique_data[0], unique_data[-1] + 1, 2)
+                return unique_data
+            return _data
+
+        return self[tuple([_make_ascending(v) for v in sl.values()])]
 
     def sel(self, method=None, **coords):
         """Select data based on coordinates and specific value(s). This is useful if the index
         is not known. Only works for a single dimension and for method 'exact'."""
-        av_coord_datasets = self.coords()
+        av_coord_datasets = self.coords
         isel = {}
         for coord_name, coord_values in coords.items():
             if coord_name not in av_coord_datasets:
@@ -1631,12 +1795,22 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             super().__setitem__(key, value)
 
     @dataset_value_decoder
-    def __getitem__(self, args, new_dtype=None, nparray=False) -> Union[xr.DataArray, np.ndarray]:
+    def __getitem__(self,
+                    args,
+                    new_dtype=None,
+                    nparray=False,
+                    links_as_strings: bool = False) -> Union[xr.DataArray, np.ndarray]:
         """Return sliced HDF dataset. If global setting `return_xarray`
         is set to True, a `xr.DataArray` is returned, otherwise the default
         behaviour of the h5p-package is used and a np.ndarray is returned.
         Note, that even if `return_xarray` is True, there is another way to
-        receive  numpy array. This is by calling .values[:] on the dataset."""
+        receive  numpy array. This is by calling .values[:] on the dataset.
+
+        Parameters
+        ----------
+        links_as_strings: bool
+            Attributes, that are links to other datasets or groups are returned as strings.
+        """
 
         args = args if isinstance(args, tuple) else (args,)
 
@@ -1654,7 +1828,16 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             args = tuple(args)
 
         arr = super().__getitem__(args, new_dtype=new_dtype)
-        ds_attrs = self.attrs
+
+        if links_as_strings:
+            attrs = dict(self.attrs)
+            for k, v in attrs.copy().items():
+                if isinstance(v, (h5py.Group, h5py.Dataset)):
+                    attrs[k] = v.name
+            ds_attrs = attrs
+        else:
+            ds_attrs = self.attrs
+
         attrs = pop_hdf_attributes(ds_attrs)
 
         if 'DIMENSION_LIST' in ds_attrs:
@@ -1681,9 +1864,9 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                     dim_ds_attrs = pop_hdf_attributes(dim_ds.attrs)
                     if dim_ds_data.dtype.kind == 'S':
                         # decode string array
-                        if dim_ds_attrs.get('ISTIMEDS', False):
+                        if dim_ds_attrs.get('time_format', False):
                             if dim_ds_data.ndim == 0:
-                                dim_ds_data = np.array(datetime.fromisoformat(dim_ds_data.astype(str))).astype(datetime)
+                                dim_ds_data = np.array(datetime.strptime(dim_ds_data.astype(str), dim_ds_attrs['time_format'])).astype(datetime)
                             else:
                                 dim_ds_data = convert_strings_to_datetimes(dim_ds_data.astype(str))
                                 # dim_ds_data = np.array(
@@ -1713,14 +1896,14 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             used_dims = [dim_name for arg, dim_name in zip(
                 myargs, dims_names) if isinstance(arg, (slice, np.ndarray, list))]
 
-            COORDINATES = ds_attrs.get(protected_attributes.COORDINATES)
-            if COORDINATES is not None:
-                if isinstance(COORDINATES, str):
-                    COORDINATES = [COORDINATES, ]
+            coordinates: Optional[Union[str, List[str]]] = ds_attrs.get(protected_attributes.COORDINATES)
+            if coordinates is not None:
+                if isinstance(coordinates, str):
+                    coordinates = [coordinates, ]
                 else:
-                    COORDINATES = list(COORDINATES)
+                    coordinates = list(coordinates)
 
-                for c in COORDINATES:
+                for c in coordinates:
                     if c[0] == '/':
                         _data = self.rootparent[c]
                     else:
@@ -1741,21 +1924,46 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
                 _arr = arr.astype(str)
             except UnicodeDecodeError:
                 return xr.DataArray(arr, attrs=attrs)
-            if self.attrs.get('ISTIMEDS', False):
+
+            time_format = self.attrs.get('time_format', None)
+            if time_format is not None:
+                if time_format.lower() == 'iso':
+                    time_format = '%Y-%m-%dT%H:%M:%S.%f'
                 if _arr.ndim == 0:
-                    _arr = np.asarray(datetime.fromisoformat(_arr))
+                    _arr = np.asarray(datetime.strptime(_arr, time_format))
                 elif _arr.ndim == 1:
-                    _arr = [datetime.fromisoformat(t) for t in _arr]
+                    _arr = [datetime.strptime(str(t), time_format) for t in _arr]
                 else:  # _arr.ndim > 1:
                     orig_shape = _arr.shape
-                    _flat_arr = np.asarray([datetime.fromisoformat(t) for t in _arr.flatten()])
+                    _flat_arr = np.asarray([datetime.strptime(t, time_format) for t in _arr.flatten()])
                     _arr = _flat_arr.reshape(orig_shape)
                 return xr.DataArray(_arr, attrs=attrs)
-            else:
-                if isinstance(_arr, np.ndarray):
-                    return tuple(_arr)
+
+            if isinstance(_arr, np.ndarray):
+                return xr.DataArray(_arr, attrs=attrs)
             return _arr
 
+        coords = {}
+        coordinates: Optional[Union[str, List[str]]] = ds_attrs.get(protected_attributes.COORDINATES, None)
+        if coordinates is not None:
+            if isinstance(coordinates, str):
+                coordinates = [coordinates, ]
+            else:
+                coordinates = list(coordinates)
+
+            for c in coordinates:
+                if c[0] == '/':
+                    _data = self.rootparent[c]
+                else:
+                    _data = self.parent[c]
+                _name = Path(c).stem
+                coords.update({_name: xr.DataArray(name=_name, dims=(),
+                                                   data=_data,
+                                                   attrs=pop_hdf_attributes(self.parent[c].attrs))})
+            da = xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
+            for k, v in coords.items():
+                da = da.assign_coords({k: v})
+            return da
         return xr.DataArray(name=Path(self.name).stem, data=arr, attrs=attrs)
 
     def __repr__(self) -> str:
@@ -1809,18 +2017,6 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
         super().__init__(_id)
         self._hdf_filename = Path(self.file.filename)
 
-    def to_units(self, new_units: str, inplace: bool = False):
-        """Changes the physical unit of the dataset using pint_xarray.
-        If `inplace`=True, it loads to full dataset into RAM, which may
-        not recommended for very large datasets.
-        TODO: think about RAM check or perform it based on chunks"""
-        if inplace:
-            old_units = self[()].attrs['units']
-            self[()] = self[()].pint.quantify().pint.to(new_units).pint.dequantify()
-            new_units = self[()].attrs['units']
-            logger.debug(f'Changed units of {self.name} from {old_units} to {new_units}.')
-        return self[()].pint.quantify().pint.to(new_units).pint.dequantify()
-
     def set_primary_scale(self, axis, iscale: int):
         """Set the primary scale for a specific axis.
 
@@ -1847,35 +2043,8 @@ class Dataset(h5py.Dataset, SpecialAttributeWriter, Core):
             self.dims[axis].attach_scale(backup_scales[i][1])
         logger.debug('new primary scale: %s', self.dims[axis][0])
 
-    def find(self, flt: Union[Dict, str],
-             objfilter: Union[str, h5py.Dataset, h5py.Group, None] = None,
-             ignore_attribute_error: bool = False) -> List:
-        """
-        Examples for filter parameters:
-        filter = {'long_name': 'any objects long name'} --> searches in attributes only
-        filter = {'$name': '/name'}  --> searches in groups and datasets for the (path)name
-        filter = {'$basename': 'name'}  --> searches in groups and datasets for the basename (without path)
 
-        Parameters
-        ----------
-        flt: Dict
-            Filter request
-        objfilter: str | h5py.Dataset | h5py.Group | None
-            Filter. Default is None. Otherwise, only dataset or group types are returned.
-        recursive: bool, optional
-            Recursive search. Default is True
-        ignore_attribute_error: bool, optional=False
-            If True, the KeyError normally raised when accessing hdf5 object attributess is ignored.
-            Otherwise, the KeyError is raised.
-
-        Returns
-        -------
-        h5obj: h5py.Dataset or h5py.Group
-        """
-        raise NotImplementedError('Move to database subpackage')
-
-
-class File(h5py.File, Group, SpecialAttributeWriter, Core):
+class File(h5py.File, Group):
     """Main wrapper around h5py.File.
 
     Adds additional features and methods to h5py.File in order to streamline the work with
@@ -1907,7 +2076,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
     The following attributes are added to the h5py.File object:
 
-    * iri: IRI Manager
+    * rdf: RDF Manager
     * hdf_filename: (pathlib.Path) The name of the file, accessible even if the file is closed.
     * version: (str) The version of the package used to create the file.
     * modification_time: (datetime) The modification time of the file.
@@ -1927,7 +2096,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
     def version(self) -> str:
         """Return version stored in file, which is the package version used at the time of creation.
         Not necessarily the current version of the package."""
-        return self.attrs.get('__h5rdmtoolbox_version__')
+        return self.get('h5rdmtoolbox', {}).attrs.get('__h5rdmtoolbox_version__')
 
     @property
     def modification_time(self) -> datetime:
@@ -1970,7 +2139,6 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             self._hdf_filename = Path(self.filename)
             return
 
-        fname = None
         # name is path or None:
         if name is None:
             _tmp_init = True
@@ -1993,8 +2161,8 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
                 # file does not exist and mode is not given--> write!
                 elif not fname.exists():
-                    mode = 'w'
-                    logger.debug('Mode is set to "w" because file does not exist and mode was not given.')
+                    raise FileNotFoundError(f'File "{fname}" does not exist and mode is not given.')
+
             elif mode == 'w' and fname.exists():
                 fname.unlink()
                 logger.debug('File exists and mode is set to "w". Deleting file first.')
@@ -2011,7 +2179,7 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
             if mode == 'r+':
                 if not Path(name).exists():
                     _tmp_init = True
-                    mode = 'r+'
+                    # mode = 'r+'
                     # "touch" the file, so it exists
                     _h5pykwargs = kwargs.copy()
                     for k in list(kwargs.keys()):
@@ -2060,8 +2228,13 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
         if self.mode != 'r':
             # update file toolbox version, wrapper version
-            if '__h5rdmtoolbox_version__' not in self.attrs:
-                self.attrs['__h5rdmtoolbox_version__', consts.VERSION_IRI] = __version__
+            if get_config('auto_create_h5tbx_version'):
+                if 'h5rdmtoolbox' not in self and get_config('auto_create_h5tbx_version'):
+                    utils.create_h5tbx_version_grp(self)
+                    # logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
+                    # _tbx_grp = self.create_group('h5rdmtoolbox')
+                    # _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
+                    # _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
             for k, v in attrs.items():
                 self.attrs[k] = v
 
@@ -2082,6 +2255,35 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
 
     def __str__(self) -> str:
         return f'<class "{self.__class__.__name__}" convention: "{convention.get_current_convention().name}">'
+
+    def __delattr__(self, item):
+        _delattr(self, item)
+
+    @property
+    def convention(self):
+        """Return the convention currently enabled."""
+        return convention.get_current_convention()
+
+    @property
+    def standard_attributes(self) -> Dict:
+        """Return the standard attributes of the class."""
+        return self.convention.properties.get(self.__class__, {})
+
+    @property
+    def rdf(self):
+        """Return RDF Manager"""
+        return rdf.RDFManager(self.attrs)
+
+    @property
+    def iri(self):
+        """Deprecated. Use rdf instead."""
+        warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
+        return rdf.RDFManager(self.attrs)
+
+    # @property
+    # def attrsdef(self) -> definition.DefinitionManager:
+    #     """Return DefinitionManager"""
+    #     return definition.DefinitionManager(self.attrs)
 
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.
@@ -2175,6 +2377,21 @@ class File(h5py.File, Group, SpecialAttributeWriter, Core):
         Subclass of File
         """
         return File(filename, mode)
+
+    def dump_jsonld(self,
+                    skipND: int = 1,
+                    structural: bool = True,
+                    semantic: bool = True,
+                    resolve_keys: bool = False,
+                    **kwargs) -> str:
+        """Dump the file content as JSON-LD string"""
+        from .. import dump_jsonld
+        return dump_jsonld(self.hdf_filename,
+                           skipND=skipND,
+                           structural=structural,
+                           semantic=semantic,
+                           resolve_keys=resolve_keys,
+                           **kwargs)
 
 
 Dataset._h5grp = Group

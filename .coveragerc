@@ -1,21 +1,34 @@
 [run]
 omit =
+    h5rdmtoolbox/cli.py
+    gui.py
     tests/*
     h5rdmtoolbox/tutorial.py
     h5rdmtoolbox/errors.py
+    h5rdmtoolbox/protocols.py
 relative_files = true
+
+[paths]
+source =
+    tests
 
 [report]
 exclude_lines =
     @abstractmethod
     @abc.abstractmethod
     pragma: no cover
+    def _upload_tutorial_data_to_zenodo
+    class ZenodoRecord
+    class HDF5StructureHTMLRepr
+    def to_html
+    def to_latex
     def __repr__
     def __hash__
     def __str__
     @atexit.register
     except AttributeError
     raise NotImplementedError
+    raise requests.HTTPError
     except TypeError
     except ImportError
     except FileNotFoundError

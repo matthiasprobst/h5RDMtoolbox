@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'h5RDMtoolbox'
-copyright = '2023, Matthias Probst'
+copyright = '2024, Matthias Probst'
 author = 'Matthias Probst'
 
 # -- General configuration ---------------------------------------------------
@@ -57,7 +57,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', '**.ipynb_checkpoints', 'colab']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'tests', '**.ipynb_checkpoints', 'colab', 'webinars']
 
 autodoc_member_order = 'bysource'
 

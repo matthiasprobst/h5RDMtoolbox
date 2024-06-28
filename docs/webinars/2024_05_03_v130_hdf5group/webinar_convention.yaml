@@ -1,0 +1,33 @@
+__name__: webinar_convention
+__institution__: https://orcid.org/members/001G000001e5aUTIAY
+__contact__: https://orcid.org/0000-0001-8729-0482
+
+units:
+  target_method: create_dataset
+  validator: $units
+  default_value: $EMPTY
+  description: The physical unit of the dataset. If dimensionless, the unit is ''.
+
+
+symbol:
+  target_method: create_dataset
+  validator: $str
+  description: The mathematical symbol of the dataset. Is optional.
+  default_value: $NONE
+
+long_name:
+  target_method: create_group
+  validator: $str
+  description: A long name for a better description of the group.
+  default_value: $NONE
+
+$creationModes:
+  - experimental
+  - numerical
+  - analytical
+
+creation_mode:
+  description: Creation mode of the data. Specific for engineering. Is optional.
+  target_method: __init__
+  validator: $creationModes
+  default_value: $NONE

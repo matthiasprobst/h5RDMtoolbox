@@ -1,5 +1,6 @@
 import appdirs
 import h5py
+import logging
 import pathlib
 import pint
 import requests
@@ -15,12 +16,16 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import convention
 from h5rdmtoolbox import tutorial
 from h5rdmtoolbox.convention import core
-from h5rdmtoolbox.convention.core import InvalidAttribute
-from h5rdmtoolbox.convention.core import MissingAttribute
+from h5rdmtoolbox.convention import yaml2jsonld
+from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
 from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
+from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
 
+logger = logging.getLogger('h5rdmtoolbox')
+# setting logger to debug:
+logger.setLevel('DEBUG')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -28,16 +33,17 @@ class TestConventions(unittest.TestCase):
 
     def setUp(self) -> None:
         try:
-            requests.get('https://git.scc.kit.edu', timeout=5)
+            requests.get('https://zenodo.org', timeout=5)
             self.connected = True
         except (requests.ConnectionError,
                 requests.Timeout) as e:
             self.connected = False
             warnings.warn('No internet connection', UserWarning)
 
-        # setting logger to debug:
-        from h5rdmtoolbox.convention import logger
-        logger.setLevel('DEBUG')
+    def test_yaml2jsonld(self):
+        yaml_filename = tutorial.get_convention_yaml_filename()
+        jsonld_filename = yaml2jsonld(yaml_filename)
+        self.assertTrue(jsonld_filename.exists())
 
     def test_list_of_validators(self):
         lov = convention.get_list_of_validators()
@@ -87,7 +93,7 @@ class TestConventions(unittest.TestCase):
         h5tbx.use(None)
 
     def test_upload_convention(self):
-        cv_yaml_filename = tutorial.get_standard_attribute_yaml_filename()
+        cv_yaml_filename = tutorial.get_convention_yaml_filename()
         self.assertTrue(cv_yaml_filename.exists())
 
         # upload to zenodo sandbox
@@ -104,20 +110,19 @@ class TestConventions(unittest.TestCase):
             keywords=['h5rdmtoolbox', 'tutorial', 'convention'],
             publication_date=datetime.now(),
         )
-        zsr = ZenodoSandboxDeposit(rec_id=None)
+        zsr = ZenodoSandboxDeposit(source=None)
         zsr.metadata = meta
-        zsr.upload_file(cv_yaml_filename, overwrite=True)
+        zsr.upload_file(cv_yaml_filename, overwrite=True, metamapper=None)
 
         # zsr.publish()
 
         # download file from zenodo deposit:
         self.assertEqual(1, len(zsr.get_filenames()))
-        zsr.download_files()
-        zsr.download_file('tutorial_convention.yaml')
+
+        filename = zsr.files.get('tutorial_convention.yaml').download()
+        self.assertTrue(filename.exists())
         download_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads'
-        self.assertTrue(
-            (download_dir / f'{zsr.rec_id}' / 'tutorial_convention.yaml').exists()
-        )
+        self.assertEqual(download_dir, filename.parent.parent)
         zsr.delete()
 
     def test_delete(self):
@@ -158,7 +163,7 @@ def validate_f1(a, b, c=3, d=2):
     def test_h5tbx(self):
         f = h5tbx.UserDir['convention'] / 'h5tbx' / 'h5tbx.py'
         f.unlink(missing_ok=True)
-        from h5rdmtoolbox.convention._h5tbx import build_convention
+        from h5rdmtoolbox.convention import build_convention
         build_convention()
 
         h5tbx.use('h5tbx')
@@ -201,7 +206,7 @@ def validate_f1(a, b, c=3, d=2):
         self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
 
     def test_overload_standard_attributes(self):
-        yaml_filename = h5tbx.tutorial.get_standard_attribute_yaml_filename()
+        yaml_filename = h5tbx.tutorial.get_convention_yaml_filename()
         cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
         self.assertIsInstance(cv, h5tbx.convention.Convention)
         self.assertTupleEqual(('scale_and_offset',), cv.decoders)
@@ -211,8 +216,8 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            h5tbx.convention.from_zenodo(doi_or_recid='10156750', overwrite=False)
-            # h5tbx.convention.from_yaml('test_convention.yaml')
+            cv = h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, overwrite=False)
+            self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             with h5tbx.File(mode='w',
@@ -241,7 +246,7 @@ def validate_f1(a, b, c=3, d=2):
                 h5.attrs['data_type'] = 'invalid'
             with h5tbx.File(filename) as h5:
                 with h5tbx.set_config(ignore_get_std_attr_err=True):
-                    with self.assertWarns(h5tbx.warnings.StandardAttributeValidationWarning):
+                    with self.assertWarns(h5tbx.errors.StandardAttributeValidationWarning):
                         h5.data_type
                 with h5tbx.set_config(ignore_get_std_attr_err=False):
                     with self.assertRaises(h5tbx.errors.StandardAttributeError):
@@ -506,7 +511,7 @@ def validate_f1(a, b, c=3, d=2):
             _ddir = h5tbx.UserDir['convention'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.convention.from_zenodo(doi_or_recid='10428822')
+            h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID)
             # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
@@ -532,29 +537,6 @@ def validate_f1(a, b, c=3, d=2):
                     self.assertFalse('-' in sa)
                 self.assertNotEqual(h5.standard_attributes['comment'].description,
                                     h5['test'].standard_attributes['comment'].description)
-            if False:
-                self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
-                self.assertEqual(
-                    h5tbx.convention.standard_attributes.DefaultValue.EMPTY,
-                    cv.properties[h5tbx.File]['data_type'].default_value
-                )
-                cv.properties[h5tbx.File]['data_type'].make_optional()
-                self.assertEqual(
-                    h5tbx.convention.standard_attributes.DefaultValue.NONE,
-                    cv.properties[h5tbx.File]['data_type'].default_value
-                )
-
-                # we can download from zenodo by passing the short or full DOI or the URL:
-
-                dois = ('10156750', '10.5281/zenodo.10156750', 'https://zenodo.org/record/10156750',
-                        'https://doi.org/10.5281/zenodo.10156750')
-                h5tbx.UserDir.clear_cache()
-                with self.assertRaises(ValueError):  # because it is not a standard attribute YAML file!
-                    cv = h5tbx.convention.from_zenodo(doi=10428795)
-
-                for doi in dois:
-                    cv = h5tbx.convention.from_zenodo(doi=doi)
-                    self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
 
     def test_default_value(self):
         from h5rdmtoolbox.convention.consts import DefaultValue

@@ -1,5 +1,4 @@
 import datetime
-import h5py
 import json
 import numpy as np
 import pandas as pd
@@ -7,15 +6,18 @@ import pathlib
 import unittest
 import xarray as xr
 from datetime import datetime, timedelta
+from dateutil.parser import parse
 from numpy import linspace as ls
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
+# noinspection PyUnresolvedReferences
+from h5rdmtoolbox.extensions import units
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
 
-logger = h5tbx.logger
-# logger.setLevel('ERROR')
+logger = h5tbx.set_loglevel('ERROR')
+
 __this_dir__ = pathlib.Path(__file__).parent
 
 
@@ -24,18 +26,43 @@ class TestCore(unittest.TestCase):
     def setUp(self) -> None:
         h5tbx.use(None)
 
-    def test_logger(self):
-        from h5rdmtoolbox.utils import ToolboxLogger
-        self.assertIsInstance(logger, ToolboxLogger)
-
     def test_lower(self):
         self.assertEqual(h5tbx.Lower('Hello'), 'hello')
         self.assertIsInstance(h5tbx.lower('Hello'), h5tbx.Lower)
 
+    @classmethod
+    def tearDownClass(cls) -> None:
+        h5tbx.set_config(auto_create_h5tbx_version=False)
+
     def test_File(self):
         self.assertEqual(str(h5tbx.File), "<class 'h5rdmtoolbox.wrapper.core.File'>")
+        h5tbx.set_config(auto_create_h5tbx_version=False)
+        self.assertEqual(h5tbx.get_config('auto_create_h5tbx_version'), False)
         with h5tbx.File() as h5:
+            self.assertTrue('h5rdmtoolbox' not in h5)
             self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+
+        h5tbx.set_config(auto_create_h5tbx_version=True)
+        self.assertEqual(h5tbx.get_config('auto_create_h5tbx_version'), True)
+        with h5tbx.File() as h5:
+            self.assertFalse('h5rdmtoolbox' not in h5)
+            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+
+        with h5tbx.set_config(auto_create_h5tbx_version=False):
+            with h5tbx.File() as h5:
+                self.assertTrue('h5rdmtoolbox' not in h5)
+                self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+
+        with h5tbx.File() as h5:
+            self.assertFalse('h5rdmtoolbox' not in h5)
+            self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
+
+        assert h5.hdf_filename.exists()
+        _h5_filename = h5.hdf_filename
+
+        _h5_filename.rename(_h5_filename.with_suffix('.h5'))
+        with self.assertRaises(FileNotFoundError):
+            h5.hdf_filename
 
     def test_dump(self):
         # all following should not raise an error...
@@ -83,12 +110,49 @@ class TestCore(unittest.TestCase):
                 del h5.ds
                 self.assertTrue('ds' not in h5)
 
+    def test_delattr(self):
+        with h5tbx.File() as h5:
+            h5.attrs['test'] = 'test'
+            del h5.attrs['test']
+            h5.create_dataset('ds',
+                              data=np.arange(10),
+                              # units='m/s',
+                              attrs={'comment': 'test'})
+            self.assertIn('ds', h5)
+            del h5.ds
+            self.assertNotIn('ds', h5)
+
+        with h5tbx.File() as h5:
+            h5.attrs['test'] = 'test'
+            h5.create_dataset('ds',
+                              data=np.arange(10),
+                              # units='m/s',
+                              attrs={'comment': 'test'})
+            with h5tbx.set_config(natural_naming=False):
+                del h5.ds
+
     def test_setattr(self):
         with h5tbx.File() as h5:
             with self.assertRaises(AttributeError):
                 h5.smth = 10
             h5._smth = 10
             self.assertEqual(10, h5._smth)
+
+            h5tbx.set_config(ignore_none=True)
+            h5.attrs['none_attr'] = None
+            self.assertFalse('none_attr' in h5)
+            h5tbx.set_config(ignore_none=False)
+            h5.attrs['none_attr'] = None
+            self.assertEqual(h5.attrs['none_attr'], 'None')
+
+    def test_filename_attr(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds', data=np.arange(10))
+            h5['ds'].attrs['filename'] = '/path/to/file.csv'
+            self.assertEqual(h5['ds'].attrs['filename'], '/path/to/file.csv')
+
+            h5.attrs['filename'] = '/path/to/file.csv'
+            self.assertEqual(h5.attrs['filename'], '/path/to/file.csv')
 
     def test_rootparent(self):
         with h5tbx.File() as h5:
@@ -104,23 +168,14 @@ class TestCore(unittest.TestCase):
 
             self.assertEqual(dset.rootparent, h5)
 
-    # def test_basename(self):
-    #     with h5tbx.File() as h5:
-    #         h5.create_dataset('ds', data=np.arange(10))
-    #         self.assertEqual(h5['ds'].basename, 'ds')
-    #         h5.create_dataset('a/b/ds', data=np.arange(10))
-    #         self.assertEqual(h5['a/b/ds'].basename, 'ds')
-    #         self.assertEqual(h5['a'].basename, 'a')
-    #         self.assertEqual(h5['a/b'].basename, 'b')
-
     def test_write_iso_timestamp(self):
         with h5tbx.File() as h5:
             now = datetime.now()
-            h5.write_iso_timestamp('timestamp', dt=now)
+            h5.attrs.write_iso_timestamp('timestamp', dt=now)
             self.assertIsInstance(h5.attrs['timestamp'], str)
             self.assertEqual(h5.attrs['timestamp'], str(now.isoformat()))
             with self.assertRaises(TypeError):
-                h5.write_iso_timestamp('timestamp', dt='now', overwrite=True)
+                h5.attrs.write_iso_timestamp('timestamp', dt='now', overwrite=True)
 
     def test_create_dataset(self):
         with h5tbx.File() as h5:
@@ -141,13 +196,25 @@ class TestCore(unittest.TestCase):
 
     def test_create_datasets_from_csv(self):
         df = pd.DataFrame({'x': [1, 5, 10, 0], 'y': [-3, 20, 0, 11.5]})
-        csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv')
+        csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv', touch=False)
+        self.assertEqual(csv_filename1.suffix, '.csv')
+        self.assertFalse(csv_filename1.exists())
+        csv_filename1 = h5tbx.utils.generate_temporary_filename(suffix='.csv', touch=True)
+        self.assertEqual(csv_filename1.suffix, '.csv')
+        self.assertTrue(csv_filename1.exists())
+
         df.to_csv(csv_filename1, index=None)
 
         with h5tbx.File() as h5:
             with self.assertRaises(ValueError):
                 h5.create_datasets_from_csv(csv_filenames=csv_filename1, combine_opt='invlaid')
             h5.create_datasets_from_csv(csv_filenames=csv_filename1)
+            self.assertEqual(pathlib.Path(h5['x'].attrs['source_filename']).resolve().absolute(),
+                             csv_filename1.resolve().absolute())
+            self.assertEqual(h5['x'].attrs['source_filename_hash_md5'], h5tbx.utils.get_checksum(csv_filename1))
+            self.assertEqual(pathlib.Path(h5['y'].attrs['source_filename']).resolve().absolute(),
+                             csv_filename1.resolve().absolute())
+            self.assertEqual(h5['y'].attrs['source_filename_hash_md5'], h5tbx.utils.get_checksum(csv_filename1))
             self.assertEqual(h5['x'].shape, (4,))
             self.assertEqual(h5['y'].shape, (4,))
             np.testing.assert_equal(h5['x'][:], np.array([1, 5, 10, 0]))
@@ -180,14 +247,19 @@ class TestCore(unittest.TestCase):
 
         # test concatenate
         with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=[csv_filename1, csv_filename2],
                                         combine_opt='concatenate')
             self.assertEqual(h5['x'].shape, (8,))
+            filenames = sorted([pathlib.Path(f).resolve().absolute() for f in h5['y'].attrs['source_filename']])
+            ref_filenames = sorted([csv_filename1.resolve().absolute(), csv_filename2.resolve().absolute()])
+            self.assertEqual(filenames, ref_filenames)
+            self.assertEqual(h5['y'].attrs['source_filename_hash_md5'],
+                             [h5tbx.utils.get_checksum(csv_filename1), h5tbx.utils.get_checksum(csv_filename2)])
             self.assertEqual(h5['y'].shape, (8,))
 
         # test stack
         with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=[csv_filename1, csv_filename2],
                                         combine_opt='stack', axis=0)
             self.assertEqual(h5['x'].shape, (2, 4))
             np.testing.assert_equal(df['x'].values, h5['x'].values[0, :])
@@ -196,14 +268,14 @@ class TestCore(unittest.TestCase):
             np.testing.assert_equal(df2['y'].values, h5['y'].values[1, :])
 
         with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=[csv_filename1, csv_filename2],
                                         combine_opt='stack',
                                         axis=-1)
             self.assertEqual(h5['x'].shape, (4, 2))
             self.assertEqual(h5['y'].shape, (4, 2))
 
         with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=[csv_filename1, csv_filename2],
                                         combine_opt='stack',
                                         axis=0,
                                         shape=(2, 2))
@@ -211,7 +283,7 @@ class TestCore(unittest.TestCase):
             self.assertEqual(h5['y'].shape, (2, 2, 2))
 
         with h5tbx.File() as h5:
-            h5.create_datasets_from_csv(csv_filenames=(csv_filename1, csv_filename2),
+            h5.create_datasets_from_csv(csv_filenames=[csv_filename1, csv_filename2],
                                         combine_opt='stack',
                                         axis=-1,
                                         shape=(2, 2))
@@ -296,8 +368,9 @@ class TestCore(unittest.TestCase):
                 h5tbx.Group(4.3)
             with self.assertRaises(TypeError):
                 h5.grp['New'] = (4.3, int)
-            h5.grp['New'] = dict(data=np.random.rand(10, 20, 30))
 
+            h5.grp['New'] = np.random.rand(10, 20, 30), dict(attrs=dict(name='my_dataset'))
+            self.assertEqual(h5.grp['New'].attrs['name'], 'my_dataset')
             newds = h5.grp['New']
             self.assertEqual(newds.name, '/grp/New')
 
@@ -330,18 +403,23 @@ class TestCore(unittest.TestCase):
             self.assertTrue(h5['str'].name, '/str')
             self.assertEqual(h5['str'][()], 'test')
 
+            h5.create_string_dataset('arr_str', ['word1', 'word2'], attrs={'a': 'b'})
+            self.assertTrue('arr_str' in h5)
+            self.assertEqual(h5['arr_str'][0], 'word1')
+            self.assertEqual(h5['arr_str'][1], 'word2')
+
             h5.create_string_dataset('str2', ('a', 'b', 'c'))
             self.assertTrue(h5['str2'].name, '/str2')
-            self.assertEqual(h5['str2'][()], ('a', 'b', 'c'))
+            self.assertEqual(tuple(h5['str2'][()]), ('a', 'b', 'c'))
 
             h5.create_string_dataset('str2', ('a', 'bb', 'c', 'd'), overwrite=True)
             self.assertTrue(h5['str2'].name, '/str2')
-            self.assertEqual(h5['str2'][()], ('a', 'bb', 'c', 'd'))
+            self.assertEqual(tuple(h5['str2'][()]), ('a', 'bb', 'c', 'd'))
             self.assertTrue(h5['str2'].size, 2)
 
             h5.create_string_dataset('str2', ('a', 'b', 'c', 'dddd'), overwrite=True, attrs={'a': 'b'})
             self.assertTrue(h5['str2'].name, '/str2')
-            self.assertEqual(h5['str2'][()], ('a', 'b', 'c', 'dddd'))
+            self.assertEqual(tuple(h5['str2'][()]), ('a', 'b', 'c', 'dddd'))
             self.assertTrue(h5['str2'].size, 4)
 
             self.assertEqual('/grp', h5['grp'].name)
@@ -353,13 +431,18 @@ class TestCore(unittest.TestCase):
 
         # Iterable class:
         class ImgReader:
+            """DummyReader"""
+
             def __init__(self, imgdir):
                 self._imgdir = imgdir
                 self._index = 0
                 self._size = 5
-
-            def read_img(self):
-                return np.random.random((20, 10))
+                self._dummy_array = np.ones(shape=(5, 20, 10))
+                self._dummy_array[0, ...] = 10
+                self._dummy_array[1, ...] = 20
+                self._dummy_array[2, ...] = 30
+                self._dummy_array[3, ...] = 40
+                self._dummy_array[4, ...] = 50
 
             def __iter__(self):
                 return self
@@ -369,8 +452,9 @@ class TestCore(unittest.TestCase):
 
             def __next__(self):
                 if self._index < self._size:
+                    arr = self._dummy_array[self._index]
                     self._index += 1
-                    return self.read_img()
+                    return arr
                 raise StopIteration
 
         imgreader = ImgReader('testdir')
@@ -378,18 +462,27 @@ class TestCore(unittest.TestCase):
             ds = h5.create_dataset_from_image(imgreader, 'testimg', axis=0)
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
+            for i in range(5):
+                np.testing.assert_equal(ds.values[i, ...],
+                                        np.ones(shape=(20, 10)) * (i + 1) * 10)
             # reset imgreader
             imgreader._index = 0
             ds = h5.create_dataset_from_image(imgreader, 'testimg2', axis=-1)
             self.assertEqual(ds.shape, (20, 10, 5))
             self.assertEqual(ds.chunks, (20, 10, 1))
+            for i in range(5):
+                np.testing.assert_equal(ds.values[..., i],
+                                        np.ones(shape=(20, 10)) * (i + 1) * 10)
 
         # write more tests for create_dataset_from_image:
         with h5tbx.File() as h5:
-            ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
+            arr_list = [np.random.random((20, 10)).astype('float32')] * 5
+            ds = h5.create_dataset_from_image(arr_list,
                                               'testimg', axis=0)
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
+            for i in range(5):
+                np.testing.assert_array_almost_equal(ds.values[i, ...], arr_list[i], decimal=5)
 
         imgreader._index = 0
         h5tbx.use('h5py')
@@ -408,9 +501,13 @@ class TestCore(unittest.TestCase):
         # write more tests for create_dataset_from_image:
         with h5tbx.File() as h5:
             ds = h5.create_dataset_from_image([np.random.random((20, 10))] * 5,
-                                              'testimg', axis=0, attrs=dict(units='', long_name='test'))
+                                              'testimg', axis=0,
+                                              attrs=dict(units='', long_name='test'))
             self.assertEqual(ds.shape, (5, 20, 10))
             self.assertEqual(ds.chunks, (1, 20, 10))
+            self.assertEqual(ds.attrs['units'], '')
+            self.assertEqual(ds.attrs['long_name'], 'test')
+            self.assertEqual(ds.name, '/testimg')
 
     def test_properties(self):
         with h5tbx.File() as h5:
@@ -418,7 +515,7 @@ class TestCore(unittest.TestCase):
             now = datetime.now().astimezone()
             file_now = h5.creation_time
             self.assertTrue(abs((file_now - now).total_seconds()) < 1)
-            self.assertTrue('__h5rdmtoolbox_version__' in h5.attrs)
+            self.assertTrue('__h5rdmtoolbox_version__' in h5['h5rdmtoolbox'].attrs)
             self.assertEqual(h5.version, __version__)
             self.assertEqual(h5.filesize.units, h5tbx.get_ureg().byte)
             self.assertIsInstance(h5.hdf_filename, pathlib.Path)
@@ -451,15 +548,15 @@ class TestCore(unittest.TestCase):
 
                 # testing links:
                 obj.attrs['link_to_group'] = h5['/']
-                self.assertEqual(obj.attrs['link_to_group'], h5['/'])
-                self.assertIsInstance(obj.attrs['link_to_group'], h5py.Group)
+                self.assertEqual(obj.attrs['link_to_group'], '/')
+                self.assertIsInstance(obj.attrs['link_to_group'], str)
                 obj.attrs['link_to_ds'] = ds
                 self.assertEqual(obj.attrs['link_to_ds'], ds)
-                self.assertIsInstance(obj.attrs['link_to_ds'], h5py.Dataset)
+                self.assertIsInstance(obj.attrs['link_to_ds'], str)
                 obj.attrs['attribute_of_links_to_ds'] = {'ds': ds, 'grp': grp, 'astr': 'test', 'afloat': 3.1}
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds'], dict)
-                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['ds'], h5py.Dataset)
-                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['grp'], h5py.Group)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['ds'], str)
+                self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['grp'], str)
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['astr'], str)
                 self.assertIsInstance(obj.attrs['attribute_of_links_to_ds']['afloat'], float)
 
@@ -486,6 +583,7 @@ class TestCore(unittest.TestCase):
         with h5tbx.File() as h5:
             h5y.write(h5)
             self.assertIn('grp', h5)
+            self.assertEqual(h5.grp.attrs['comment'], 'test')
             self.assertIn('grp/supgrp', h5)
             self.assertIn('velocity', h5['grp/supgrp'])
             self.assertEqual('Title of the file', h5.attrs['title'])
@@ -582,6 +680,27 @@ class TestCore(unittest.TestCase):
             self.assertEqual(1, len(h5['ds3'].dims[0].keys()))
             self.assertEqual('/time', h5['ds3'].dims[0][0].name)
 
+    def test_create_dataset_from_xr2(self):
+        da = xr.DataArray(name='pressure', data=[1, 2, 3])
+        da = da.assign_coords(x=4.3)
+
+        with h5tbx.File() as h5:
+            h5['pressure'] = da
+            # print(h5['pressure'].coords)
+            # h5.pressure.assign_coords(x=h5['x'])
+            # h5.pressure.attrs['COORDINATES'] = 'x'
+            p = h5.pressure[()]
+        self.assertEqual(p.x.data, 4.3)
+        self.assertTrue('x' in p.coords)
+
+        with h5tbx.File() as h5:
+            h5['pressure'] = xr.DataArray(name='pressure', data=[1, 2, 3])
+            h5['x'] = xr.DataArray(name='x', data=4.3)
+            h5['pressure'].assign_coord(h5['x'])
+            p = h5.pressure[()]
+        self.assertEqual(p.x.data, 4.3)
+        self.assertTrue('x' in p.coords)
+
     def test_create_dataset_scale_issues(self):
         with h5tbx.File() as h5:
             with self.assertRaises(ValueError):
@@ -592,10 +711,18 @@ class TestCore(unittest.TestCase):
             h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
             h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attach_scales='time')
             h5.create_dataset('vel_no_scale', data=[1.5, 2.5, 3.5])
-            self.assertIsInstance(h5['vel'].coords(), dict)
-            self.assertEqual('time', list(h5['vel'].coords().keys())[0])
-            self.assertEqual({'time': h5['time']}, h5['vel'].coords())
-            self.assertEqual({}, h5['vel_no_scale'].coords())
+            self.assertIsInstance(h5['vel'].coords, dict)
+            self.assertEqual('time', list(h5['vel'].coords.keys())[0])
+            self.assertEqual({'time': h5['time']}, h5['vel'].coords)
+            self.assertEqual({}, h5['vel_no_scale'].coords)
+
+        # multiple dims:
+        with h5tbx.File() as h5:
+            h5.create_dataset('x1', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('x2', data=[10, 20, 30], make_scale=True)
+            h5.create_dataset('data', data=[-1, 0, 1], attach_scales=('x1',))
+            h5['data'].dims[0].attach_scale(h5['x2'])
+            self.assertEqual({'x1': h5['x1'], 'x2': h5['x2']}, h5['data'].coords)
 
     def test_isel_sel(self):
         with h5tbx.File() as h5:
@@ -613,6 +740,32 @@ class TestCore(unittest.TestCase):
                 h5['vel'].sel(time=1.2, method='invalid')
             self.assertEqual(1.5, float(h5['vel'].sel(time=1.2, method='nearest')))
 
+    def test_isel_multiple_coords_per_axis(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('time', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('another_time', data=[1, 2, 3], make_scale=True)
+            h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attach_scales=(('time', 'another_time'),))
+            v0 = h5.vel.isel(another_time=0)[()]
+            h5.dumps()
+
+    def test_unit_conversion_interface(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('time', data=[1, 2, 3], attrs=dict(units='s'), make_scale=True)
+            h5.create_dataset('vel', data=[1.5, 2.5, 3.5], attrs=dict(units='m/s'), attach_scales='time')
+            # print(h5['vel'].to_units('m/s', time='h'))
+            ret = h5['vel'].to_units('mm/s', time='h').sel(time=1.2, method='nearest')
+            self.assertEqual(1.5 * 1000, float(ret))
+            self.assertEqual('mm/s', ret.attrs['units'])
+            self.assertEqual('h', ret.coords['time'].units)
+
+            time_h = h5.time.to_units('h')[()]
+            self.assertEqual(time_h.units, 'h')
+            np.testing.assert_almost_equal(time_h.values, np.array([1, 2, 3]) / 60 / 60)
+
+            time_h = h5.vel.to_units('mm/s').isel(time=1)
+            self.assertEqual(time_h.units, 'mm/s')
+            self.assertEqual(time_h.values, 2.5 * 1000)
+
     def test_multi_isel_and_sel(self):
         with h5tbx.File() as h5:
             time = h5.create_dataset('time', data=ls(0, 1, 10), make_scale=True)
@@ -624,7 +777,6 @@ class TestCore(unittest.TestCase):
                                     h5['data'].values[0, 0, [0, 2]])
             np.testing.assert_equal(h5['data'].isel(time=0, y=0, x=[0, 2]),
                                     h5['data'].values[0, 0, [0, 2]])
-            h5.dump()
 
         filename = h5.hdf_filename
 
@@ -633,6 +785,16 @@ class TestCore(unittest.TestCase):
                 x=[4.3, 10.9],
                 time=0.2,
                 method='nearest')
+            np.testing.assert_equal(d.x.data, [5, 10])
+
+            d = h5['data'].sel(
+                x=np.linspace(4.3, 10.9, 100),
+                time=0.2,
+                method='nearest')
+            np.testing.assert_array_almost_equal(d.x.data, [5, 6.666667, 8.333333, 10])
+
+            d = h5['data'].isel(x=[0, 1])
+            self.assertEqual(float(d.x[0]), float(h5.x[0]))
 
     def test_create_dataset_with_ancillary_ds(self):
         with h5tbx.File() as h5:
@@ -672,22 +834,30 @@ class TestCore(unittest.TestCase):
                  (datetime.now() + timedelta(hours=1))]
         tdata_np = np.asarray(tdata, dtype=np.datetime64)
         with h5tbx.File() as h5:
-            h5.create_string_dataset('time', data=[t.isoformat() for t in tdata],
-                                     attrs={'ISTIMEDS': 1,
-                                            'TIMEFORMAT': 'ISO'})
+            with h5tbx.set_config(hdf_compression='gzip', hdf_compression_opts=5):
+                h5.create_string_dataset('time', data=[t.isoformat() for t in tdata],
+                                         attrs={'ISTIMEDS': 1,
+                                                'TIMEFORMAT': 'ISO'})
+                self.assertEqual(h5['time'].compression, 'gzip')
+                self.assertEqual(h5['time'].compression_opts, 5)
+                h5.create_string_dataset('single_time', data=tdata[0].isoformat(),
+                                         attrs={'ISTIMEDS': 1,
+                                                'time_format': 'ISO'})
+                self.assertEqual(h5['single_time'].compression, None)
+                self.assertEqual(h5['single_time'].compression_opts, None)
+
             tds = h5['time'][()]
 
-            h5.create_time_dataset('time2', data=tdata)
+            h5.create_time_dataset('time2', data=tdata, time_format='iso')
             tds2 = h5['time2'][()]
 
             h5.create_time_dataset('time3', data=tdata_np,
-                                   attrs={'ISTIMEDS': 1,
-                                          'TIMEFORMAT': 'ISO'})
+                                   time_format='iso',
+                                   attrs={'time_format': 'ISO'})
             tds3 = h5['time3'][()]
 
         for it, t in enumerate(tds):
-            self.assertIsInstance(t.values, np.datetime64)
-            np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
+            self.assertNotIsInstance(t.values, np.datetime64)
 
         for it, t in enumerate(tds2):
             self.assertIsInstance(t.values, np.datetime64)
@@ -697,28 +867,92 @@ class TestCore(unittest.TestCase):
             self.assertIsInstance(t.values, np.datetime64)
             np.testing.assert_equal(t.values, np.datetime64(tdata[it]))
 
+    def test_timedataset(self):
+        abs_time = [datetime.now() + timedelta(minutes=i) for i in range(10)]
+        # print(abs_time)
+        # print(abs_time[0].strftime('%Y-%m-%dT%H:%M:%S.%f'))
+
+        with h5tbx.File() as h5:
+            ds = h5.create_time_dataset('time', data=abs_time, time_format='%Y-%m-%dT%H:%M:%S.%f')
+            # ds.rdf.type = 'https://schema.org/DateTime'
+            # ds.attrs['timeformat'] = Attribute(value='%Y-%m-%dT%H:%M:%S.%f',
+            #                                    rdf_predicate='https://matthiasprobst.github.io/pivmeta#timeFormat')
+            self.assertEqual(ds.attrs['time_format'], '%Y-%m-%dT%H:%M:%S.%f')
+            self.assertEqual(ds.rdf['time_format'].predicate, 'https://matthiasprobst.github.io/pivmeta#timeFormat')
+            self.assertEqual(ds.rdf.type, 'https://schema.org/DateTime')
+
+        with h5tbx.File() as h5:
+            ds = h5.create_time_dataset('time', data=abs_time, time_format='iso')
+            self.assertEqual(ds.attrs['time_format'], '%Y-%m-%dT%H:%M:%S.%f')
+            self.assertEqual(ds.rdf['time_format'].predicate, 'https://matthiasprobst.github.io/pivmeta#timeFormat')
+            self.assertEqual(ds.rdf.type, 'https://schema.org/DateTime')
+
     def test_time_as_coord(self):
         with h5tbx.File() as h5:
             h5.create_time_dataset('time', data=[datetime.now(),
                                                  datetime.now() + timedelta(hours=1),
                                                  datetime.now() + timedelta(hours=3)],
+                                   time_format='iso',
                                    attrs={'ISTIMEDS': 1,
                                           'TIMEFORMAT': 'ISO'}, make_scale=True)
             h5.create_dataset('vel', data=[1, 2, -3], attach_scale='time')
             v = h5.vel[()]
 
+        with h5tbx.File() as h5:
+            t1 = [datetime.now(),
+                  datetime.now() + timedelta(hours=1),
+                  datetime.now() + timedelta(hours=3)]
+            h5.create_time_dataset('time1', data=t1,
+                                   time_format='iso',
+                                   attrs={'ISTIMEDS': 1,
+                                          'TIMEFORMAT': 'ISO'}, make_scale=True)
+            t2 = [datetime.now(),
+                  datetime.now() + timedelta(days=1),
+                  datetime.now() + timedelta(days=3)]
+            h5.create_time_dataset('time2', data=t2,
+                                   time_format='iso',
+                                   attrs={'ISTIMEDS': 1,
+                                          'TIMEFORMAT': 'ISO'}, make_scale=True)
+            h5.create_dataset('vel', data=[[1, 2, -3],
+                                           [1, 2, -3],
+                                           [1, 2, -3]], attach_scale=('time1', 'time2'))
+            v = h5.vel[()]
+            self.assertEqual(v.shape, (3, 3))
+            self.assertEqual(v.dims[0], 'time1')
+            self.assertEqual(v.dims[1], 'time2')
+            self.assertEqual(parse(str(v.time1[0].data).strip('0')),
+                             parse(str(t1[0]).strip('0')))
+            self.assertEqual(parse(str(v.time2[0].data).strip('0')),
+                             parse(str(t2[0]).strip('0')))
+
     def test_multidim_time_ds(self):
         with h5tbx.File() as h5:
-            h5.create_time_dataset('time', data=[[datetime.now(),
-                                                  datetime.now() + timedelta(hours=1),
-                                                  datetime.now() + timedelta(hours=3)],
-                                                 [datetime.now(),
-                                                  datetime.now() + timedelta(hours=6),
-                                                  datetime.now() + timedelta(hours=10)]
-                                                 ],
+            h5.create_time_dataset('time',
+                                   data=[[datetime.now(),
+                                          datetime.now() + timedelta(hours=1),
+                                          datetime.now() + timedelta(hours=3)],
+                                         [datetime.now(),
+                                          datetime.now() + timedelta(hours=6),
+                                          datetime.now() + timedelta(hours=10)]
+                                         ],
+                                   time_format='iso',
                                    attrs={'ISTIMEDS': 1,
                                           'TIMEFORMAT': 'ISO'})
             t = h5.time[()]
             self.assertIsInstance(t, xr.DataArray)
             self.assertEqual(t.shape, (2, 3))
             self.assertIsInstance(t[0, 0].values, np.datetime64)
+
+    def test_attr_group_link_and_xarray(self):
+        with h5tbx.File() as h5:
+            grp = h5.create_group('my_grp')
+            ds = h5.create_dataset(name='ds', data=4)
+
+            ds.attrs['link to grp'] = grp
+
+            self.assertIsInstance(ds.attrs['link to grp'], str)
+
+            da = ds[()]
+            self.assertIsInstance(da, xr.DataArray)
+            self.assertIsInstance(da.attrs['link to grp'], str)
+            print(da)

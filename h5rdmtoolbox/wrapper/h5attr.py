@@ -1,22 +1,88 @@
+"""Attribute module"""
 import ast
-import h5py
 import json
+import logging
+import warnings
+from datetime import datetime
+from typing import Dict, Union, Tuple, Optional, Any
+
 import numpy as np
 import pint
+import pydantic
 import rdflib
+from h5py._hl.attrs import AttributeManager
 from h5py._hl.base import with_phil
-from h5py._objects import ObjectID
-from typing import Dict, Union
+from h5py._objects import ObjectID, phil
+from pydantic import HttpUrl
 
-from . import logger
-from .h5utils import get_rootparent
 from .. import errors
 from .. import get_config, convention, utils
 from .. import get_ureg
 from .. import protected_attributes
 from ..convention import consts
 
+logger = logging.getLogger('h5rdmtoolbox')
 H5_DIM_ATTRS = protected_attributes.h5rdmtoolbox
+
+
+class AttrDescriptionError(Exception):
+    """Generic attribute description error"""
+    pass
+
+
+class Attribute:
+    """Helper class for quick assignment of RDF attributes to the HDF5 file.
+
+    Examples
+    --------
+    >>> import h5rdmtoolbox as h5tbx
+    >>> from ontolutils import M4I
+    >>> rdf_attr = h5tbx.Attribute('0000-0001-8729-0482', rdf_predicate=M4I.orcidId,
+    ...                            rdf_object='https://orcid.org/0000-0001-8729-0482')
+    >>> with h5tbx.File('test.h5', 'w') as h5:
+    ...     grp = h5.create_group('person')
+    ...     grp.attrs['orcid'] = rdf_attr
+    ...     # equal to:
+    ...     # grp.attrs['orcid'] = '0000-0001-8729-0482'
+    ...     # grp.rdf.predicate['orcid'] = str(M4I.orcidId)
+    ...     # grp.rdf.object['orcid'] = 'https://orcid.org/0000-0001-8729-0482'
+    """
+
+    def __init__(self,
+                 value, *,
+                 definition: Optional[str] = None,
+                 rdf_predicate=None,
+                 rdf_object=None):
+        self.value = value
+        self.definition = definition  # skos:definition
+        self.rdf_predicate = self._validate_rdf(rdf_predicate)
+        self.rdf_object = self._validate_rdf(rdf_object)
+
+    @staticmethod
+    def _validate_rdf(value):
+        if value is None:
+            return
+        try:
+            str(HttpUrl(value))
+        except pydantic.ValidationError as e:
+            raise AttrDescriptionError(
+                f'Invalid URL: "{value}". This was validated with pydantic. Pydantic error: {e}'
+            )
+        return value
+
+    def __repr__(self) -> str:
+        out = f'{self.__class__.__name__}({self.value}'
+        if self.rdf_predicate is not None:
+            out += f', rdf_predicate={self.rdf_predicate}'
+        if self.rdf_object is not None:
+            out += f', rdf_object={self.rdf_object}'
+        if self.definition is not None:
+            out += f', definition={self.definition}'
+        out += ')'
+        return out
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
 
 def pop_hdf_attributes(attrs: Dict) -> Dict:
@@ -54,7 +120,7 @@ class AttributeString(str):
         return get_ureg()(self)
 
 
-class WrapperAttributeManager(h5py.AttributeManager):
+class WrapperAttributeManager(AttributeManager):
     """
     Subclass of h5py's Attribute Manager.
     Allows storing dictionaries as json strings and to store a dataset or a group as an
@@ -78,29 +144,29 @@ class WrapperAttributeManager(h5py.AttributeManager):
                     if isinstance(v, str):
                         if not v:
                             dictionary[k] = ''
-                        else:
-                            if v[0] == '/':
-                                if isinstance(_id, h5py.h5g.GroupID):
-                                    rootgrp = get_rootparent(h5py.Group(_id))
-                                    dictionary[k] = rootgrp.get(v)
-                                elif isinstance(_id, h5py.h5d.DatasetID):
-                                    rootgrp = get_rootparent(h5py.Dataset(_id).parent)
-                                    dictionary[k] = rootgrp.get(v)
+                        # else:
+                        #     if v[0] == '/':
+                        #         if isinstance(_id, h5py.h5g.GroupID):
+                        #             rootgrp = get_rootparent(h5py.Group(_id))
+                        #             dictionary[k] = rootgrp.get(v)
+                        #         elif isinstance(_id, h5py.h5d.DatasetID):
+                        #             rootgrp = get_rootparent(h5py.Dataset(_id).parent)
+                        #             dictionary[k] = rootgrp.get(v)
                 return dictionary
-            if ret[0] == '/':
-                # it may be group or dataset path or actually just a filepath stored by the user
-                if isinstance(_id, h5py.h5g.GroupID):
-                    # call like this, otherwise recursive call!
-                    from .core import Group
-                    rootgrp = get_rootparent(Group(_id))
-                    if rootgrp.get(ret) is None:
-                        # not a dataset or group, maybe just a filename that has been stored
-                        return ret
-                    return rootgrp.get(ret)
-                else:
-                    from .core import Dataset
-                    rootgrp = get_rootparent(Dataset(_id).parent)
-                    return rootgrp.get(ret)
+            # if ret[0] == '/':
+            #     # it may be group or dataset path or actually just a filepath stored by the user
+            #     if isinstance(_id, h5py.h5g.GroupID):
+            #         # call like this, otherwise recursive call!
+            #         from .core import Group
+            #         rootgrp = get_rootparent(Group(_id))
+            #         if rootgrp.get(ret) is None:
+            #             # not a dataset or group, maybe just a filename that has been stored
+            #             return ret
+            #         return rootgrp.get(ret)
+            #     else:
+            #         from .core import Dataset
+            #         rootgrp = get_rootparent(Dataset(_id).parent)
+            #         return rootgrp.get(ret)
             if ret[0] == '(':
                 if ret[-1] == ')':
                     # might be a tuple object
@@ -124,7 +190,7 @@ class WrapperAttributeManager(h5py.AttributeManager):
         return ret
 
     @with_phil
-    def __getitem__(self, name):
+    def __getitem__(self, name: str):
 
         ret = super(WrapperAttributeManager, self).__getitem__(name)
         parent = self._parent
@@ -135,23 +201,67 @@ class WrapperAttributeManager(h5py.AttributeManager):
                 return convention.get_current_convention().properties[parent.__class__][name].get(parent)
         return WrapperAttributeManager._parse_return_value(self._id, ret)
 
+    @with_phil
+    def __delitem__(self, name):
+        super().__delitem__(name)
+        self._parent.rdf.delete(name)
+
     def create(self,
                name,
                data,
                shape=None, dtype=None,
-               predicate: Union[str, rdflib.URIRef] = None,
-               object: Union[str, rdflib.URIRef] = None):
+               rdf_predicate: Union[str, rdflib.URIRef] = None,
+               rdf_object: Optional[Union[str, rdflib.URIRef]] = None,
+               definition: Optional[str] = None,
+               **kwargs) -> Any:
+        """
+        Create a new attribute.
+
+        .. note:: Via the config setting "ignore_none" (`h5tbx.set_config(ignore_none=True)`) attribute values, that are None are not written.
+
+
+        Parameters
+        ----------
+        name: str
+            Name of the attribute.
+        data: any
+            Attribute value.
+        shape: tuple, optional
+            Shape of the attribute. If None, the shape is determined from the data.
+        dtype:
+            Data type of the attribute. If None, the data type is determined from the data.
+        rdf_predicate: Union[str, rdflib.URIRef], optional
+            IRI of the predicate
+        rdf_object: Union[str, rdflib.URIRef], optional
+            IRI of the object
+        """
+        if data is None and get_config('ignore_none'):
+            logger.debug(f'Attribute "{name}" is None and "ignore_none" in config is True. Attribute is not created.')
+            return
         r = super().create(name,
                            utils.parse_object_for_attribute_setting(data),
                            shape, dtype)
-        if predicate is not None:
-            self._parent.iri.predicate[name] = predicate
-        if object is not None:
-            self._parent.iri.object[name] = object
+        _predicate = kwargs.get('predicate', None)
+        if _predicate is not None:
+            rdf_predicate = _predicate
+            warnings.warn('The "predicate" argument is deprecated. Use "rdf_predicate" instead.', DeprecationWarning)
+        _object = kwargs.get('predicate', None)
+        if _object is not None:
+            rdf_object = _object
+            warnings.warn('The "object" argument is deprecated. Use "rdf_object" instead.', DeprecationWarning)
+
+        if rdf_predicate is not None:
+            self._parent.rdf.predicate[name] = rdf_predicate
+        if rdf_object is not None:
+            self._parent.rdf.object[name] = rdf_object
+        if definition is not None:
+            self._parent.rdf[name].definition = definition
         return r
 
     @with_phil
-    def __setitem__(self, name, value, attrs=None):
+    def __setitem__(self,
+                    name: Union[str, Tuple[str, str]],
+                    value, attrs: Optional[Dict] = None):
         """ Set a new attribute, overwriting any existing attribute.
 
         The type and shape of the attribute are determined from the data.  To
@@ -160,21 +270,45 @@ class WrapperAttributeManager(h5py.AttributeManager):
 
         Parameters
         ----------
-        name : str
-            Name of the attribute.
+        name : Union[str, Tuple[str, str]]
+            Name of the attribute. If it is a tuple, the second element is the IRI of the attribute.
         value : any
-            Attribute value.
+            Attribute value. Can also be type `AttributeValue` to set a value and its object IRI.
         """
         if name == '_parent':
             return
+
+        if isinstance(value, Attribute):
+            object_iri = value.rdf_object
+            predicate_iri = value.rdf_predicate
+            attr_def = value.definition
+            value = value.value
+
+            if not isinstance(name, tuple):
+                self.create(name,
+                            value,
+                            rdf_predicate=predicate_iri,
+                            rdf_object=object_iri,
+                            definition=attr_def)
+
+        else:
+            object_iri = None
+            predicate_iri = None
+            attr_def = None
+
         if isinstance(name, tuple):
             # length must be 2, second element must be a IRI (not checked though)
             if not len(name) == 2:
                 raise ValueError('Tuple must have length 2 in order to interpret it as an'
                                  'attribute name and its IRI')
-            _name, _iri = name
-            self.create(_name, value)
-            self._parent.iri.predicate[_name] = _iri
+            if predicate_iri is not None:
+                raise ValueError('You cannot set the predicate iri at the same time by RDFAttribute and through '
+                                 'the tuple syntax.')
+            _name, predicate_iri = name
+            self.create(_name, value,
+                        rdf_predicate=predicate_iri,
+                        rdf_object=object_iri,
+                        definition=attr_def)
             return
 
         if not isinstance(name, str):
@@ -286,29 +420,58 @@ class WrapperAttributeManager(h5py.AttributeManager):
             print(f'{k:{keylen}}:  {v}')
 
     @property
-    def raw(self) -> "h5py.AttributeManager":
+    def raw(self) -> AttributeManager:
         """Return the original h5py attribute object manager"""
-        from h5py._hl import attrs
-        from h5py._objects import phil
         with phil:
-            return attrs.AttributeManager(self._parent)
+            return AttributeManager(self._parent)
 
-# class IRIAttr:
-#     """Helper class to write attributes together with an IRI
-#
-#     Examples
-#     --------
-#     >>> import h5rdmtoolbox as h5tbx
-#     >>> hasKQ = namespace.M4I.hasKindOfQuantity
-#     >>> Velocity = 'https://qudt.org/vocab/quantitykind/Velocity'
-#     >>>
-#     >>> with h5tbx('test.h5') as h5:
-#     ...     h5.u.attrs['qK', hasKQ] = h5tbx.IRIAttr(value='Velocity', iri=Velocity)
-#     """
-#
-#     def __init__(self, value, iri):
-#         self.value = value
-#         self.iri = iri
-#
-#     def __repr__(self):
-#         return f'{self.__class__.__name__}({self.value} iri={self.iri})'
+    def write_uuid(self, uuid: Optional[str] = None,
+                   name: Optional[str] = None,
+                   overwrite: bool = False) -> str:
+        """Write an uuid to the attribute of the object.
+
+        Parameters
+        ----------
+        uuid : str=None
+            The uuid to write. If None, a new uuid is generated.
+        name: str=None
+            Name of the attribute. If None, the default name is taken from the configuration.
+        overwrite: bool=False
+            If the attribute already exists, it is not overwritten if overwrite is False.
+
+        Returns
+        -------
+        str
+            The uuid as string.
+        """
+        if name is None:
+            name = get_config('uuid_name')
+
+        if name in self and not overwrite:
+            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
+                             '"overwrite" is set to False')
+        if uuid is None:
+            from uuid import uuid4
+            uuid = uuid4()
+        suuid = str(uuid)
+        self.create(name=name, data=suuid)
+        return suuid
+
+    def write_iso_timestamp(self,
+                            name='timestamp',
+                            dt: Optional[datetime] = None,
+                            overwrite: bool = False, **kwargs):
+        """Write the iso timestamp to the attribute of the object.
+
+        Parameters
+        --
+        """
+        if name in self and not overwrite:
+            raise ValueError(f'The attribute "{name}" cannot be written. It already exists and '
+                             '"overwrite" is set to False')
+        if dt is None:
+            dt = datetime.now()
+        else:
+            if not isinstance(dt, datetime):
+                raise TypeError(f'Invalid type for parameter "dt". Expected type datetime but got "{type(dt)}"')
+        self.create(name=name, data=dt.isoformat(**kwargs))
