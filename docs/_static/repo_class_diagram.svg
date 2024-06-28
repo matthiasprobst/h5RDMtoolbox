@@ -24,13 +24,13 @@
      inkscape:deskcolor="#505050"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="0.70710678"
-     inkscape:cx="183.14066"
-     inkscape:cy="306.17724"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="182.08"
+     inkscape:cy="167.23075"
      inkscape:window-width="1366"
      inkscape:window-height="705"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
+     inkscape:window-x="253"
+     inkscape:window-y="1072"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1">
     <inkscape:grid
@@ -81,8 +81,8 @@
     <rect
        style="fill:#6f6f6f;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect1"
-       width="46.513145"
-       height="50.694767"
+       width="48.365227"
+       height="50.694771"
        x="35.817364"
        y="54.78907" />
     <text
@@ -93,7 +93,7 @@
        id="text1"><tspan
          sodipodi:role="line"
          id="tspan1"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif, 'bold and';-inkscape-font-specification:'sans-serif, bold and Italic';stroke-width:0.264583"
+         style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:sans-serif, 'bold and', 'Bold+Italic';-inkscape-font-specification:'sans-serif, bold and, Bold+Italic';stroke-width:0.264583"
          x="38.633457"
          y="60.147915">RepositoryInterface(ABC)</tspan></text>
     <text
@@ -109,7 +109,7 @@
          y="73.131584">+ _upload_file(...)</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 35.81738,62.370365 H 82.298946"
+       d="M 35.81738,62.370365 H 84.169833"
        id="path2"
        sodipodi:nodetypes="cc" />
     <text
@@ -287,7 +287,7 @@
          y="208.25868">+ publish()</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 35.754714,68.916856 H 82.244596"
+       d="M 35.754714,68.916856 H 84.115483"
        id="path10"
        sodipodi:nodetypes="cc" />
     <text
