@@ -21,6 +21,6 @@ xmltodict
 tabulate>=0.8.10
 python-gitlab
 pypandoc>=1.11
-pydantic >= 2.3.0
+pydantic >= 2.3.0, < 2.8.0
 # other:
 ontolutils >= 0.2.20
