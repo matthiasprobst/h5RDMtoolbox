@@ -25,12 +25,12 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="1.4142136"
-     inkscape:cx="182.08"
-     inkscape:cy="167.23075"
-     inkscape:window-width="1366"
-     inkscape:window-height="705"
-     inkscape:window-x="253"
-     inkscape:window-y="1072"
+     inkscape:cx="182.07999"
+     inkscape:cy="393.50491"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1">
     <inkscape:grid
@@ -106,7 +106,7 @@
          id="tspan2-2-8-6"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
          x="38.390629"
-         y="73.131584">+ _upload_file(...)</tspan></text>
+         y="73.131584">+ __upload_file__(...)</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        d="M 35.81738,62.370365 H 84.169833"
@@ -322,7 +322,7 @@
          id="tspan14"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.265;stroke-dasharray:none"
          x="23.110783"
-         y="151.16451">+ _upload_file(...)</tspan></text>
+         y="151.16451">+ __upload_file__(...)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"

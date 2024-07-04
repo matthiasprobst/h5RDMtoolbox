@@ -11,16 +11,16 @@ regex>=2020.7.9
 packaging
 python-forge==18.6.0
 requests
-rdflib
+rdflib<=7.0.0
 # database:
 pymongo>=4.2.0
 # csv
 pandas>=1.4.3
 # snt
-xmltodict
-tabulate>=0.8.10
+xmltodict<=0.13.0
+tabulate>=0.8.10,<=0.9.0
 python-gitlab
 pypandoc>=1.11
-pydantic >= 2.3.0
+pydantic >= 2.3.0, < 2.8.0
 # other:
-ontolutils >= 0.2.20
+ontolutils >= 0.2.23
