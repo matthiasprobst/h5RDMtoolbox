@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v1.4.0
+- update package dependency versions
+- minor bugfixes and updates in documentation
+
 ## v1.4.0rc2
 
 - using suffix `.jsonld` instead of `.json` for JSON-LD files, as it is recommended
