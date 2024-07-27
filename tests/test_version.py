@@ -24,3 +24,17 @@ class TestVersion(unittest.TestCase):
         codemeta = get_package_meta()
 
         assert codemeta['version'] == __version__
+
+    def test_colab_version(self):
+        """open colab jupyter notebook and check first cell for version"""
+        with open(__this_dir__ / '../docs' / 'colab' / 'quickstart.ipynb') as f:
+            lines = f.readlines()
+
+        found = False
+        for line in lines:
+            if 'pip install' in line:
+                print(line)
+                self.assertEqual(line.strip(), f'"# !pip install h5rdmtoolbox=={__version__}"')
+                found = True
+                break
+        self.assertTrue(found)

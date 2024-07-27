@@ -8,6 +8,10 @@ Log of changes in the versions
 - `RepositoryFile` has new property `suffix`
 
 ## v1.4.0
+- update package dependency versions
+- minor bugfixes and updates in documentation
+
+## v1.4.0rc2
 
 - using suffix `.jsonld` instead of `.json` for JSON-LD files, as it is recommended
   (see https://www.w3.org/TR/json-ld/#iana-considerations)
@@ -16,7 +20,7 @@ Log of changes in the versions
     - removed depr methods, e.g. `get()` from `AbstractZenodoInterface`
     - using cached json dict for zenodo records. call `refresh()` to update the json
     - minor bugfixes
-    - introduced property `files`
+    - introduced property `files`, which is `Dict[str, RepositoryFile]`
     - improve url handling by using properties instead of class variables
 
 ## v1.4.0rc1
