@@ -1,15 +1,24 @@
-import appdirs
-import importlib_resources
 import pathlib
 import shutil
 import time
 from itertools import count
 from typing import Tuple
 
+import appdirs
+import importlib_resources
+
+from ._version import __version__
+
+USER_LOG_DIR = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox', version=__version__))
+USER_DATA_DIR = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox', version=__version__))
+USER_CACHE_DIR = pathlib.Path(appdirs.user_cache_dir('h5rdmtoolbox', version=__version__))
+USER_LOG_DIR.mkdir(parents=True, exist_ok=True)
+USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
+USER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 _filecounter = count()
 _dircounter = count()
 
-_user_root_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox'))
 _now = time.time()
 
 
@@ -17,7 +26,7 @@ class DirManger:
     """Directory Manager class"""
 
     def __init__(self):
-        toolbox_tmp_folder = _user_root_dir / 'tmp'
+        toolbox_tmp_folder = USER_DATA_DIR / 'tmp'
         toolbox_tmp_folder.mkdir(parents=True, exist_ok=True)
 
         i = 0
@@ -31,13 +40,13 @@ class DirManger:
             i += 1
             tmp_dir = toolbox_tmp_folder / f'tmp_{i}'
 
-        self.user_dirs = {'root': _user_root_dir,
+        self.user_dirs = {'root': USER_DATA_DIR,
                           'tmp': tmp_dir,
-                          'convention': _user_root_dir / 'convention',
-                          'layouts': _user_root_dir / 'layouts',
-                          'repository': _user_root_dir / 'repository',
-                          'standard_name_tables': _user_root_dir / 'standard_name_tables',
-                          'cache': _user_root_dir / 'cache'}
+                          'convention': USER_DATA_DIR / 'convention',
+                          'layouts': USER_DATA_DIR / 'layouts',
+                          'repository': USER_DATA_DIR / 'repository',
+                          'standard_name_tables': USER_DATA_DIR / 'standard_name_tables',
+                          'cache': USER_DATA_DIR / 'cache'}
         self.clear_cache(6)
 
     def __str__(self):

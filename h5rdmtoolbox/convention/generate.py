@@ -10,7 +10,7 @@ from itertools import count
 from typing import Dict
 from typing import List, Union
 
-from h5rdmtoolbox._user import UserDir
+from h5rdmtoolbox.user import UserDir
 from h5rdmtoolbox.convention import toolbox_validators
 
 logger = logging.getLogger('h5rdmtoolbox')

@@ -7,7 +7,7 @@ import unittest
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import clean_temp_data
-from h5rdmtoolbox._user import UserDir
+from h5rdmtoolbox.user import UserDir
 
 
 class TestUser(unittest.TestCase):

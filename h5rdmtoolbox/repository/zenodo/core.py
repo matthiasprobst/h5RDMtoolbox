@@ -6,7 +6,6 @@ import time
 import warnings
 from typing import Union, List, Dict, Optional
 
-import appdirs
 import requests
 from packaging.version import Version
 from rdflib import Graph
@@ -247,7 +246,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         """
         warnings.warn("Please use `.files.get(filename).download()`", DeprecationWarning)
         if target_folder is None:
-            target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
+            target_folder = user_data_dir / 'zenodo_downloads' / str(
                 self.rec_id)
             target_folder.mkdir(exist_ok=True, parents=True)
         else:
@@ -566,7 +565,7 @@ class ZenodoRecord(RepositoryInterface):
             access_token = self.access_token
             r = requests.get(url, params={"access_token": access_token})
 
-            if r.status_code == '403':
+            if r.status_code == 403:
                 logger.critical(
                     f"You don't have the permission to request {url}. You may need to check your access token.")
                 r.raise_for_status()
@@ -672,16 +671,7 @@ class ZenodoRecord(RepositoryInterface):
             The path to the downloaded file.
         """
         warnings.warn("Please use `.files.get(filename).download()`", DeprecationWarning)
-        if target_folder is None:
-            target_folder = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads' / str(
-                self.rec_id)
-            target_folder.mkdir(exist_ok=True, parents=True)
-        else:
-            logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
-            target_folder = pathlib.Path(target_folder)
-
-        f = self.files.get(filename)
-        return f.download(target_folder=target_folder)
+        return self.files.get(filename).download(target_folder=target_folder)
 
     def delete(self) -> requests.Response:
         """Delete the deposit."""

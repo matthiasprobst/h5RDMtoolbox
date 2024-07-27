@@ -1,9 +1,12 @@
 import abc
-import appdirs
-import pathlib
 import re
-import requests
 from typing import Union, List
+
+import requests
+
+from .user import USER_DATA_DIR
+
+KNOWN_ORCID_FILENAME = USER_DATA_DIR / 'known_and_validated_orcids.txt'
 
 
 class ObjectIdentifier(abc.ABC):
@@ -36,9 +39,6 @@ class ObjectIdentifier(abc.ABC):
         return re.match(cls.pattern, identifier) is not None
 
 
-KNOWN_ORCID_FILENAME = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'known_and_validated_orcids.txt'
-
-
 class ORCID(ObjectIdentifier):
     """https://www.wikidata.org/wiki/Property:P496"""
     pattern = r'^(https:\/\/orcid\.org\/)?(\d{4}-){3}\d{3}(\d|X)$'
@@ -52,7 +52,6 @@ class ORCID(ObjectIdentifier):
     def get_existing_orcids(cls) -> List[str]:
         """Return list of validated ORCIDs. They have been saved
         in a file when they were validated the first time."""
-
         if not KNOWN_ORCID_FILENAME.exists():
             return []
         with open(KNOWN_ORCID_FILENAME) as f:

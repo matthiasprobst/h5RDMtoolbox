@@ -18,7 +18,7 @@ from .core import Convention, from_yaml, from_repo, get_current_convention, from
     yaml2jsonld
 from .standard_attributes import StandardAttribute
 from .toolbox_validators import get_list_of_validators
-from .._user import UserDir
+from ..user import UserDir
 
 __this_dir__ = pathlib.Path(__file__).parent
 

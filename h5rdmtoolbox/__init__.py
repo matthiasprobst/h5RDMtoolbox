@@ -1,14 +1,12 @@
-"""h5rdtoolbox repository"""
+"""h5rdmtoolbox repository"""
 
 import logging
 import pathlib
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
-import appdirs
-
-_logdir = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox'))
-_logdir.mkdir(parents=True, exist_ok=True)
+from ._version import __version__
+from .user import USER_LOG_DIR, USER_DATA_DIR
 
 DEFAULT_LOGGING_LEVEL = logging.WARNING
 _formatter = logging.Formatter(
@@ -19,7 +17,7 @@ _stream_handler = logging.StreamHandler()
 _stream_handler.setLevel(DEFAULT_LOGGING_LEVEL)
 _stream_handler.setFormatter(_formatter)
 
-_file_handler = RotatingFileHandler(_logdir / 'h5rdmtoolbox.log')
+_file_handler = RotatingFileHandler(USER_LOG_DIR / 'h5rdmtoolbox.log')
 _file_handler.setLevel(logging.DEBUG)  # log everything to file!
 _file_handler.setFormatter(_formatter)
 
@@ -41,7 +39,7 @@ pint_xarray.unit_registry = get_ureg()
 from . import convention
 from .convention.core import Convention
 from . import wrapper
-from ._user import UserDir
+from .user import UserDir
 from ._version import __version__
 from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
@@ -52,6 +50,9 @@ from .wrapper.h5attr import Attribute
 # from h5rdmtoolbox.wrapper.accessor import register_accessor
 import json
 from .wrapper.accessor import register_accessor
+
+# noinspection PyUnresolvedReferences
+from .utils import DownloadFileManager
 
 name = 'h5rdmtoolbox'
 __this_dir__ = pathlib.Path(__file__).parent
@@ -205,12 +206,11 @@ def set_loglevel(level: Union[int, str]):
 @atexit.register
 def clean_temp_data(full: bool = False):
     """cleaning up the tmp directory"""
-    from ._user import _user_root_dir
 
     failed_dirs = []
     failed_dirs_file = UserDir['tmp'] / 'failed.txt'
     if full:
-        root_tmp = _user_root_dir / 'tmp'
+        root_tmp = USER_DATA_DIR / 'tmp'
         if root_tmp.exists():
             try:
                 shutil.rmtree(root_tmp)
@@ -263,4 +263,4 @@ __all__ = ('__version__', '__author__', '__author_orcid__',
            'File', 'Group', 'Dataset', 'Attribute',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
-           'Convention', 'jsonld', 'lazy')
+           'Convention', 'jsonld', 'lazy', 'DownloadFileManager')

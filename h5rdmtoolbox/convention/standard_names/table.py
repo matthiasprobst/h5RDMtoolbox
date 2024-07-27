@@ -1,19 +1,20 @@
 """Standard name table module"""
-import h5py
 import json
 import logging
 import pathlib
-import pint
 import warnings
-import yaml
-from IPython.display import display, HTML
 from datetime import datetime, timezone
 from typing import List, Union, Dict, Tuple
 
-from h5rdmtoolbox._user import UserDir
+import h5py
+import pint
+import yaml
+from IPython.display import display, HTML
+
 from h5rdmtoolbox.database import ObjDB
 from h5rdmtoolbox.repository import zenodo
-from h5rdmtoolbox.utils import generate_temporary_filename, download_file, is_xml_file
+from h5rdmtoolbox.user import UserDir
+from h5rdmtoolbox.utils import generate_temporary_filename, is_xml_file
 from . import cache
 from . import consts
 from .affixes import Affix
@@ -114,7 +115,7 @@ class StandardNameTable:
                  meta: Dict,
                  standard_names: Dict = None,
                  affixes: Dict = None,
-                 download_url: str=None):
+                 download_url: str = None):
         self.download_url = download_url
         self._name = name
         if standard_names is None:
@@ -192,7 +193,7 @@ class StandardNameTable:
             return str(zenodo_doi)
         return self.to_json()
 
-    def __h5attr_repr__(self)-> str:
+    def __h5attr_repr__(self) -> str:
         """HDF5 Attribute representation"""
         if self.download_url:
             return self.download_url
@@ -600,7 +601,8 @@ class StandardNameTable:
         >>> cf = StandardNameTable.from_web("https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml",
         >>>                                known_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         """
-        filename = download_file(url, known_hash)
+        from h5rdmtoolbox.utils import DownloadFileManager
+        filename = DownloadFileManager().download(url, known_hash)
 
         # get name from url
         if not name:
@@ -714,8 +716,8 @@ class StandardNameTable:
         if isinstance(source, str):
             if source.startswith('https://zenodo.org') and source.rsplit('.', 1)[-1] in ('yaml',):
                 # it is a file from zenodo, download it:
-                from ...repository.utils import download_file
-                cv_filename = download_file(source)
+                from ...utils import DownloadFileManager
+                cv_filename = DownloadFileManager().download(source)
                 snt = StandardNameTable.from_yaml(cv_filename)
                 snt.download_url = source
                 return snt

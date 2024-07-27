@@ -3,7 +3,7 @@ import logging
 import pathlib
 from typing import Union
 
-from h5rdmtoolbox._user import UserDir
+from h5rdmtoolbox.user import UserDir
 from . import cache
 from .h5interface import HDF5StandardNameInterface
 from .name import StandardName

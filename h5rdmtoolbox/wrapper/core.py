@@ -2221,9 +2221,16 @@ class File(h5py.File, Group):
         # if not isinstance(name, ObjectID):
         #     self._hdf_filename = Path(name)
         logger.debug(f'Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}')
-        super().__init__(name=name,
+        try:
+            super().__init__(name=name,
                          mode=mode,
                          **kwargs)
+        except OSError as e:
+            logger.error(f"Unable to open file {name}. Error message: {e}")
+            from ..utils import DownloadFileManager
+            DownloadFileManager().remove_corrupted_file(name)
+
+            raise e
         self._hdf_filename = Path(self.filename)
 
         if self.mode != 'r':

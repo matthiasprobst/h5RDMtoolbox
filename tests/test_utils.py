@@ -1,9 +1,12 @@
 import datetime
-import h5py
 import pathlib
+import time
 import unittest
 
+import h5py
+
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.utils import DownloadFileManager
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -37,9 +40,9 @@ class TestUtils(unittest.TestCase):
         f = h5tbx.utils.generate_temporary_filename(touch=False)
         self.assertFalse(f.exists())
 
-        next_n = next(h5tbx._user._filecounter)
-        f_block = h5tbx._user.UserDir['tmp'] / f'test{next_n + 1}.txt'
-        f_predict = h5tbx._user.UserDir['tmp'] / f'test{next_n + 2}.txt'
+        next_n = next(h5tbx.user._filecounter)
+        f_block = h5tbx.user.UserDir['tmp'] / f'test{next_n + 1}.txt'
+        f_predict = h5tbx.user.UserDir['tmp'] / f'test{next_n + 2}.txt'
         with open(f_block, 'w') as f:
             pass
 
@@ -50,22 +53,22 @@ class TestUtils(unittest.TestCase):
 
     def test_generate_temporary_directory(self):
         import shutil
-        from h5rdmtoolbox._user import _dircounter
+        from h5rdmtoolbox.user import _dircounter
 
-        shutil.rmtree(str(h5tbx._user.UserDir['tmp']))
-        n = next(_dircounter)+1
+        shutil.rmtree(str(h5tbx.user.UserDir['tmp']))
+        n = next(_dircounter) + 1
         testfolder = h5tbx.utils.generate_temporary_directory(prefix='testfolder')
-        folder = h5tbx._user.UserDir['tmp'] / f'testfolder{n + 1}'
+        folder = h5tbx.user.UserDir['tmp'] / f'testfolder{n + 1}'
         folder.mkdir()
         testfolder = h5tbx.utils.generate_temporary_directory(prefix='testfolder')
         self.assertTrue(testfolder.exists())
         self.assertTrue(testfolder.is_dir())
-        self.assertEqual(h5tbx._user.UserDir['tmp'] / f'testfolder{n + 2}', testfolder)
+        self.assertEqual(h5tbx.user.UserDir['tmp'] / f'testfolder{n + 2}', testfolder)
 
     def test_create_special_attribute(self):
         with h5tbx.File() as h5:
-            h5tbx.utils.create_special_attribute(h5.attrs, 'test', h5tbx._user.UserDir['tmp'])
-            self.assertEqual(str(h5tbx._user.UserDir['tmp']), h5.attrs['test'])
+            h5tbx.utils.create_special_attribute(h5.attrs, 'test', h5tbx.user.UserDir['tmp'])
+            self.assertEqual(str(h5tbx.user.UserDir['tmp']), h5.attrs['test'])
             h5tbx.utils.create_special_attribute(h5.attrs, 'test', None)
             self.assertEqual('None', h5.attrs['test'])
 
@@ -100,3 +103,28 @@ class TestUtils(unittest.TestCase):
 
                 self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
                 self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
+
+    def test_download_manager(self):
+        dfm = DownloadFileManager()
+        self.assertTrue(dfm.file_directory.exists())
+
+        dfm2 = DownloadFileManager()
+        self.assertTrue(dfm is dfm2)  # is a singleton!
+
+        dfm.reset_registry()
+        self.assertEqual(0, len(dfm))
+
+        time_st = time.time_ns()
+        downloaded_filename = dfm.download("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
+                                           checksum='e678a1eca79d5a836b58772eeee7f831')
+        time1 = time.time_ns() - time_st
+        self.assertTrue(downloaded_filename.exists())
+        self.assertTrue(downloaded_filename.name, 'planar_piv.yaml=download=1')
+        self.assertEqual(1, len(dfm))
+        time_st = time.time_ns()
+        downloaded_filename = dfm.download("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
+                                           checksum='e678a1eca79d5a836b58772eeee7f831')
+        time2 = time.time_ns() - time_st
+        self.assertTrue(time2 < time1, msg="Download should be slower than reading from cache")
+        self.assertTrue(downloaded_filename.exists())
+        self.assertTrue(downloaded_filename.name, 'planar_piv.yaml=download=1')

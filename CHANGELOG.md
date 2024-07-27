@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v1.4.1
+- downloading a file from a repository without specifying a target dir will use `generate_temporary_directory` to 
+  generate a temporary directory and store the file there.
+- `RepositoryFile` has new property `suffix`
+
 ## v1.4.0
 
 - using suffix `.jsonld` instead of `.json` for JSON-LD files, as it is recommended

@@ -1,20 +1,19 @@
-import appdirs
-import h5py
 import logging
 import pathlib
-import pint
-import requests
 import shutil
 import sys
 import unittest
 import warnings
-import yaml
 from datetime import datetime
+
+import h5py
+import pint
+import requests
+import yaml
 
 import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox import convention
-from h5rdmtoolbox import tutorial
+from h5rdmtoolbox import convention, tutorial
 from h5rdmtoolbox.convention import core
 from h5rdmtoolbox.convention import yaml2jsonld
 from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
@@ -22,6 +21,7 @@ from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
 from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
+from h5rdmtoolbox.user import USER_DATA_DIR
 
 logger = logging.getLogger('h5rdmtoolbox')
 # setting logger to debug:
@@ -121,8 +121,6 @@ class TestConventions(unittest.TestCase):
 
         filename = zsr.files.get('tutorial_convention.yaml').download()
         self.assertTrue(filename.exists())
-        download_dir = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo_downloads'
-        self.assertEqual(download_dir, filename.parent.parent)
         zsr.delete()
 
     def test_delete(self):

@@ -1,4 +1,5 @@
 """utilities of the h5rdmtoolbox"""
+import atexit
 import datetime
 import hashlib
 import json
@@ -6,10 +7,10 @@ import logging
 import os
 import pathlib
 import re
+import uuid
 import warnings
 from re import sub as re_sub
-from typing import Dict
-from typing import Union, Callable, List, Tuple
+from typing import Union, Callable, List, Tuple, Optional, Dict
 
 import h5py
 import numpy as np
@@ -19,8 +20,10 @@ from h5py import File
 from pydantic import HttpUrl, validate_call
 from rdflib.plugins.shared.jsonld.context import Context
 
-from . import _user, get_config, get_ureg
+from . import get_config, get_ureg
+from . import user
 from ._version import __version__
+from .user import USER_CACHE_DIR, USER_DATA_DIR
 from .wrapper import rdf
 
 logger = logging.getLogger('h5rdmtoolbox')
@@ -48,9 +51,12 @@ def has_internet_connection(timeout: int = 5) -> bool:
         return False
 
 
-def download_file(url, known_hash):
+def _download_file(url,
+                   known_hash,
+                   target: Optional[pathlib.Path] = None,
+                   params: Optional[Dict] = None) -> pathlib.Path:
     """Download a file from a URL and check its hash"""
-    response = requests.get(url, stream=True)
+    response = requests.get(url, stream=True, params=params)
     if response.status_code == 200:
         content = response.content
 
@@ -58,12 +64,16 @@ def download_file(url, known_hash):
         calculated_hash = hashlib.sha256(content).hexdigest()
         if known_hash:
             if not calculated_hash == known_hash:
-                raise ValueError('File does not match the expected has')
+                raise ValueError('File does not match the expected hash')
         else:
             warnings.warn('No hash given! This is recommended when downloading files from the web.', UserWarning)
 
         # Save the content to a file
-        fname = generate_temporary_filename()
+        if target:
+            fname = target
+        else:
+            fname = generate_temporary_filename()
+        fname.parent.mkdir(parents=True, exist_ok=True)
         with open(fname, "wb") as f:
             f.write(content)
 
@@ -154,9 +164,9 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = Fa
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _filename = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
+    _filename = user.UserDir['tmp'] / f"{prefix}{next(user._filecounter)}{suffix}"
     while _filename.exists():
-        _filename = _user.UserDir['tmp'] / f"{prefix}{next(_user._filecounter)}{suffix}"
+        _filename = user.UserDir['tmp'] / f"{prefix}{next(user._filecounter)}{suffix}"
     if touch:
         if _filename.suffix in ('.h5', '.hdf', '.hdf5'):
             with h5py.File(_filename, 'w'):
@@ -180,9 +190,9 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._dircounter)}"
+    _dir = user.UserDir['tmp'] / f"{prefix}{next(user._dircounter)}"
     while _dir.exists():
-        _dir = _user.UserDir['tmp'] / f"{prefix}{next(_user._dircounter)}"
+        _dir = user.UserDir['tmp'] / f"{prefix}{next(user._dircounter)}"
     _dir.mkdir(parents=True)
     return _dir
 
@@ -544,7 +554,7 @@ def download_context(url_source: Union[HttpUrl, List[HttpUrl]], force_download: 
     for url in url_source:
         _url = str(url)
         _fname = _url.rsplit('/', 1)[-1]
-        context_file = _user.UserDir['cache'] / _fname
+        context_file = user.UserDir['cache'] / _fname
         if not context_file.exists() or force_download:
             logger.debug(f'Downloading context file from {_url} to {context_file}')
             try:
@@ -571,3 +581,147 @@ def deprecated(version: str, msg: str, removing_in: str = None):
         return depr_func
 
     return deprecated_decorator
+
+
+def sanitize_filename(filename: str) -> str:
+    # Define a regex pattern to match illegal characters
+    illegal_chars = r'[\/:*?"<>|\\]'
+
+    # Replace illegal characters with an underscore or remove them
+    sanitized = re.sub(illegal_chars, '_', filename)
+
+    return sanitized
+
+
+class DownloadFileManager:
+    """Manager for downloading files. By registering checksums and filenames, the manager can be used to
+    download files from a remote location. The manager will check if the file is already downloaded and if the
+    checksum matches. If the file is not downloaded, it will be downloaded and the checksum will be checked.
+
+    This class is a singleton, hence only one instance can be created."""
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(DownloadFileManager, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def __init__(self):
+        self.file_directory = USER_CACHE_DIR
+        self.file_directory.mkdir(parents=True, exist_ok=True)
+        self.registry: Dict[str, Dict[str, str]] = self.load_registry()
+        atexit.register(self.save_registry)
+
+    def __len__(self):
+        return len(self.registry)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.file_directory})'
+
+    @property
+    def registry_filename(self) -> pathlib.Path:
+        return USER_DATA_DIR / 'download_registry.json'
+
+    def get_from_url(self, url):
+        if url is None:
+            return None
+        for k, v in self.registry.items():
+            if v.get('url', None) == url:
+                filename = v.get('filepath', None)
+                if filename:
+                    return pathlib.Path(filename) if pathlib.Path(filename).exists() else None
+
+    def add(self, checksum: str, url: str, filename: Union[str, pathlib.Path]):
+        assert checksum is not None, 'Checksum must not be None!'
+        assert url is not None, 'url must not be None!'
+        assert filename is not None, 'filename must not be None!'
+        self.registry[checksum] = {'url': url, 'filepath': str(pathlib.Path(filename).absolute().resolve())}
+
+    def get_from_checksum(self, checksum):
+        if checksum is None:
+            return None
+        match = self.registry.get(checksum, None)
+        filename = match.get('filepath', None) if match else None
+        if filename:
+            return pathlib.Path(filename) if pathlib.Path(filename).exists() else None
+
+    def get(self, url=None, checksum=None):
+        if url:
+            return self.get_from_url(url)
+        if checksum:
+            return self.get_from_checksum(checksum)
+        raise ValueError('Either url or checksum must be provided')
+
+    def remove_corrupted_file(self, filename):
+        """Removes a corrupted file from the registry"""
+        remove_keys = []
+        for k, v in self.registry.items():
+            if pathlib.Path(self.registry[k].get('filepath', None)) == pathlib.Path(filename):
+                remove_keys.append(k)
+        for k in remove_keys:
+            self.registry.pop(k)
+
+    def save_registry(self):
+        self.registry_filename.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.registry_filename, 'w') as f:
+            json.dump(self.registry, f, indent=2)
+
+    def load_registry(self) -> Dict[str, str]:
+        registry_filename = self.registry_filename
+        if registry_filename.exists():
+            with open(self.registry_filename, 'r') as f:
+                return json.load(f)
+        return {}
+
+    def reset_registry(self):
+        """Resets the registry. This will also delete the downloaded files"""
+        for k, v in self.registry.items():
+            fpath = v.get('filepath', None)
+            if fpath:
+                pathlib.Path(fpath).unlink(missing_ok=True)
+        self.registry_filename.unlink(missing_ok=True)
+        self.registry = self.load_registry()
+
+    @validate_call
+    def download(self,
+                 url: HttpUrl,
+                 target_folder: Optional[Union[str, pathlib.Path]] = None,
+                 params: Optional[Dict] = None,
+                 checksum: Optional[str] = None,
+                 known_hash: Optional[str] = None) -> pathlib.Path:
+        """Returns the downloaded file. Based on an optionally provided checksum
+        already downloaded files can be quickly returned"""
+
+        if checksum and checksum in self.registry:
+            logger.debug('Returning already downloaded file')
+            filename = pathlib.Path(self.registry[checksum]['filepath'])
+            if filename.exists():
+                return filename
+            self.registry.pop(checksum)
+
+        delete_key = None
+        for k, v in self.registry.items():
+            if url == v.get('url', None):
+                fpath = v.get('filepath', None)
+                if fpath:
+                    if pathlib.Path(fpath).exists():
+                        return pathlib.Path(fpath)
+                    delete_key = k  # the file did not exist --> remove from registry!
+
+        if delete_key:
+            self.registry.pop(delete_key)
+
+        filename = sanitize_filename(str(url).rsplit('/', 1)[-1])
+        if filename == '':
+            filename = uuid.uuid4().hex
+        assert len(filename) > 0, f'Could not extract filename from URL {url}'
+        if target_folder is None:
+            file_path = self.file_directory / filename
+        else:
+            file_path = pathlib.Path(target_folder) / filename
+        downloaded_filename = _download_file(url, known_hash, target=file_path, params=params)
+        assert downloaded_filename == file_path, f'Expected {file_path}, got {downloaded_filename}'
+        if not checksum:
+            checksum = get_checksum(downloaded_filename)
+        self.registry[checksum] = {'url': str(url), 'filepath': str(downloaded_filename.absolute().resolve())}
+        return downloaded_filename

@@ -10,6 +10,7 @@ import pydantic
 import requests
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.user import USER_DATA_DIR
 from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
@@ -193,8 +194,7 @@ class TestZenodo(unittest.TestCase):
         self.assertIsInstance(get_api_token(sandbox=True), str)
 
         from h5rdmtoolbox.repository.zenodo.tokens import _parse_ini_file
-        import appdirs
-        fname = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox')) / 'zenodo.ini'
+        fname = USER_DATA_DIR / 'zenodo.ini'
         if fname.exists():
             bak_fname = fname.rename(fname.with_suffix('.bak'))
         else:
@@ -315,6 +315,7 @@ class TestZenodo(unittest.TestCase):
             self.assertEqual(h5['grp1/test2'].attrs['test'], 1)
             self.assertEqual(h5['grp1/test2'].attrs['long_name'], 'dataset 2')
 
+        self.assertEqual(z.files.get(json_name).suffix, '.jsonld')
         json_filename = z.files.get(json_name).download()
         self.assertTrue(json_filename.exists())
         with open(json_filename) as f:

@@ -23,7 +23,7 @@ from .errors import ConventionNotFound
 from .standard_attributes import StandardAttribute, __doc_string_parser__
 from .utils import json2yaml
 from .._repr import make_italic, make_bold
-from .._user import UserDir
+from ..user import UserDir
 from ..repository import zenodo
 from ..repository.zenodo.utils import recid_from_doi_or_redid
 

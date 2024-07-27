@@ -4,8 +4,6 @@ import pathlib
 import warnings
 from typing import Callable, Union, Optional, List, Dict
 
-import appdirs
-
 from h5rdmtoolbox.utils import deprecated
 
 logger = logging.getLogger('h5rdmtoolbox')
@@ -103,16 +101,14 @@ class RepositoryFile:
         jsonld_str += '\n}'
         return jsonld_str
 
+    @property
+    def suffix(self) -> str:
+        return pathlib.Path(self.name).suffix
+
     def download(self, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download the file to target_folder. If None, local user dir is used.
         Returns the file location"""
         from .utils import download_file
-
-        if target_folder is None:
-            target_folder = pathlib.Path(
-                appdirs.user_data_dir('h5rdmtoolbox')
-            ) / 'zenodo_downloads' / str(self.identifier)
-
         return download_file(file_url=self.download_url,
                              target_folder=target_folder,
                              access_token=self.access_token)
