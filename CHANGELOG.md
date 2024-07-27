@@ -3,8 +3,7 @@
 Log of changes in the versions
 
 ## v1.4.1
-- downloading a file from a repository without specifying a target dir will use `generate_temporary_directory` to 
-  generate a temporary directory and store the file there.
+- downloading files will be cached by their checksum and/or URL. This avoids multiple downloads of the same file.
 - `RepositoryFile` has new property `suffix`
 
 ## v1.4.0
