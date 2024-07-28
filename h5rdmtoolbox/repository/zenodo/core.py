@@ -96,6 +96,17 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
 
     @property
+    def identifier(self) -> str:
+        identifier = self.get_metadata().get('identifier', None)
+        if identifier is None:
+            return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
+        return identifier
+
+    @property
+    def title(self):
+        return self.get_metadata().get('title', 'No title')
+
+    @property
     @abc.abstractmethod
     def base_url(self):
         """Return the base url, e.g. 'https://sandbox.zenodo.org'"""
@@ -388,6 +399,17 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
         self.refresh()
 
     @property
+    def identifier(self) -> str:
+        identifier = self.get_metadata().get('identifier', None)
+        if identifier is None:
+            return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
+        return identifier
+
+    @property
+    def title(self):
+        return self.get_metadata().get('title', 'No title')
+
+    @property
     def base_url(self):
         return 'https://sandbox.zenodo.org'
 
@@ -496,7 +518,16 @@ class ZenodoRecord(RepositoryInterface):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
+    @property
+    def identifier(self) -> str:
+        identifier = self.get_metadata().get('identifier', None)
+        if identifier is None:
+            return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
+        return identifier
 
+    @property
+    def title(self):
+        return self.get_metadata().get('title', 'No title')
     @property
     def base_url(self) -> str:
         """Returns the base url of the repository"""

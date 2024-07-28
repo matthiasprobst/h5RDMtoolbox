@@ -376,6 +376,7 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
         self.assertFalse(z.exists())  # not yet published!
         self.assertFalse(z.is_published())
+        self.assertEqual(z.title, 'No title')
 
         old_rec_id = z.rec_id
 
