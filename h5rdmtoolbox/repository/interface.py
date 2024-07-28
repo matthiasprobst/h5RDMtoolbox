@@ -121,6 +121,16 @@ class RepositoryInterface(abc.ABC):
     def __init__(self):
         raise RuntimeError('Not implemented.')
 
+    @property
+    @abc.abstractmethod
+    def identifier(self) -> str:
+        """Return the identifier of the Repository."""
+
+    @property
+    @abc.abstractmethod
+    def title(self) -> str:
+        """Return the title of the Repository."""
+        
     @abc.abstractmethod
     def exists(self):
         """Check if the repository exists."""
@@ -244,3 +254,7 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def get_doi(self):
         """Get the DOI of the repository."""
+
+    @abc.abstractmethod
+    def get_jsonld(self) -> str:
+        """Returns the JSONLD representation of the repository"""

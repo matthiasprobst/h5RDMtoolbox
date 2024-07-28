@@ -128,3 +128,14 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(time2 < time1, msg="Download should be slower than reading from cache")
         self.assertTrue(downloaded_filename.exists())
         self.assertTrue(downloaded_filename.name, 'planar_piv.yaml=download=1')
+
+        dfm.reset_registry()
+        time_st = time.time_ns()
+        h5tbx.utils.download_file("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
+                                  checksum='e678a1eca79d5a836b58772eeee7f831')
+        time1 = time.time_ns() - time_st
+        time_st = time.time_ns()
+        h5tbx.utils.download_file("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
+                                  checksum='e678a1eca79d5a836b58772eeee7f831')
+        time2 = time.time_ns() - time_st
+        self.assertTrue(time2 < time1, msg="Download should be slower than reading from cache")

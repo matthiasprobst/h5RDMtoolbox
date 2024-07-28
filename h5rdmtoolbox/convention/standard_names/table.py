@@ -4,7 +4,7 @@ import logging
 import pathlib
 import warnings
 from datetime import datetime, timezone
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict, Tuple, Optional
 
 import h5py
 import pint
@@ -288,27 +288,27 @@ class StandardNameTable:
         return self._meta
 
     @property
-    def version(self) -> str:
+    def version(self) -> Optional[str]:
         """Return version number of the Standard Name Table"""
         return self._meta.get('version', None)
 
     @property
-    def institution(self) -> str:
+    def institution(self) -> Optional[str]:
         """Return institution name"""
         return self._meta.get('institution', None)
 
     @property
-    def contact(self) -> str:
+    def contact(self) -> Optional[str]:
         """Return version_number"""
         return self._meta.get('contact', None)
 
     @property
-    def valid_characters(self) -> str:
+    def valid_characters(self) -> Optional[str]:
         """Return valid_characters"""
         return self._meta.get('valid_characters', None)
 
     @property
-    def pattern(self) -> str:
+    def pattern(self) -> Optional[str]:
         """Return pattern"""
         return self._meta.get('pattern', None)
 
@@ -602,7 +602,7 @@ class StandardNameTable:
         >>>                                known_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         """
         from h5rdmtoolbox.utils import DownloadFileManager
-        filename = DownloadFileManager().download(url, known_hash)
+        filename = DownloadFileManager().download(url, known_hash=known_hash)
 
         # get name from url
         if not name:
@@ -714,29 +714,45 @@ class StandardNameTable:
             source = doi_or_recid
 
         if isinstance(source, str):
-            if source.startswith('https://zenodo.org') and source.rsplit('.', 1)[-1] in ('yaml',):
-                # it is a file from zenodo, download it:
-                from ...utils import DownloadFileManager
-                cv_filename = DownloadFileManager().download(source)
-                snt = StandardNameTable.from_yaml(cv_filename)
-                snt.download_url = source
-                return snt
+            if source.startswith('https://zenodo.org/record'):
+                if source.endswith(".yaml"):
+                    # it is a file from zenodo, download it:
+                    # extract record id using regex:
+                    pattern = r"zenodo\.org/records?/(\d+)/"
+                    match = re.search(pattern, source)
+                    if match:
+                        recid = int(match.group(1))
+                    else:
+                        raise ValueError(f'Could not extract record id from {source}')
+                    filename = source.rsplit('/', 1)[-1]
+                    from ...repository.zenodo import ZenodoRecord
+                    z = ZenodoRecord(recid)
+                    for _fname, file in z.files.items():
+                        if _fname == filename:
+                            return StandardNameTable.from_yaml(file.download())
+                    raise FileNotFoundError(f'File {filename} not in record {source}')
+                    # from ...utils import DownloadFileManager
+                    # cv_filename = DownloadFileManager().download(source)
+                    # snt = StandardNameTable.from_yaml(cv_filename)
+                    # snt = StandardNameTable.from(cv_filename)
+                    # snt.download_url = source
+                    # return snt
             if source.startswith('https://zenodo.org/record/') or source.startswith('https://doi.org/'):
                 from ...repository.zenodo import ZenodoRecord
                 z = ZenodoRecord(source)
-                for file in z.files:
-                    if pathlib.Path(file.filename).suffix == '.yaml':
+                for file in z.files.values():
+                    if file.suffix == '.yaml':
                         try:
                             snt = StandardNameTable.from_yaml(file.download())
                             if source.endswith('/'):
-                                snt.download_url = f"{source}{file.filename}"
+                                snt.download_url = f"{source}{file.name}"
                             else:
-                                snt.download_url = f"{source}/{file.filename}"
+                                snt.download_url = f"{source}/{file.name}"
                             return snt
                         except Exception as e:
-                            logger.error(f'Error while reading file {file.filename}: {e}')
+                            logger.error(f'Error while reading file {file.name}: {e}')
                             continue
-                raise FileNotFoundError(f'No valid standard name found in Zenodo repo {source}')
+                raise FileNotFoundError(f'No valid standard name found in Zenodo repo {source}.')
 
             if source.startswith('10.5281/zenodo.'):
                 rec_id = source.split('.')[-1]

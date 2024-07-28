@@ -105,6 +105,14 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         return f"{self.base_url}/api/deposit/depositions"
 
     @property
+    def identifier(self):
+        return self.get_metadata()['identifier']
+
+    @property
+    def title(self):
+        return self.get_metadata()['title']
+
+    @property
     def records_url(self):
         return f"{self.base_url}/api/deposit/depositions"
 
@@ -245,14 +253,6 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             The path to the downloaded file.
         """
         warnings.warn("Please use `.files.get(filename).download()`", DeprecationWarning)
-        if target_folder is None:
-            target_folder = user_data_dir / 'zenodo_downloads' / str(
-                self.rec_id)
-            target_folder.mkdir(exist_ok=True, parents=True)
-        else:
-            logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
-            target_folder = pathlib.Path(target_folder)
-
         f = self.files.get(filename)
         return f.download(target_folder=target_folder)
 
@@ -444,6 +444,10 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
                 logger.critical(f"Access denied message: {r.json()}. This could be because the record is published. "
                                 f"You can only modify metadata.")
             r.raise_for_status()
+
+    def get_jsonld(self) -> str:
+        """Get the jsonld data of the deposit."""
+        raise NotImplementedError("This method is not implemented. Please use the class ZenodoRecord(sandbox=True)")
 
 
 class ZenodoRecord(RepositoryInterface):
@@ -812,7 +816,8 @@ class ZenodoRecord(RepositoryInterface):
 
         return target_filename
 
-    def jsonld(self) -> str:
+    def get_jsonld(self) -> str:
+        """Return the json-ld representation of the record."""
         tmp_dcat_filename = self.export(fmt='dcat-ap')
         g = Graph()
         g.parse(tmp_dcat_filename, format='xml')

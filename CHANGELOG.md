@@ -2,9 +2,11 @@
 
 Log of changes in the versions
 
-## v1.4.1
-- downloading files will be cached by their checksum and/or URL. This avoids multiple downloads of the same file.
-- `RepositoryFile` has new property `suffix`
+## v1.5.0
+- Downloading files will be cached by their checksum and/or URL. This avoids multiple downloads of the same file.
+- `RepositoryFile` has new abstract property `suffix`, 
+- `RepositoryInterface` has new abstract method `get_jsonld`
+- `RepositoryInterface` has new abstract property `identifier` and `title`
 
 ## v1.4.0
 - update package dependency versions

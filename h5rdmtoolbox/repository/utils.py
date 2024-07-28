@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import uuid
 from typing import Optional, Union
 
 import requests
@@ -11,22 +12,29 @@ def download_file(file_url,
                   target_folder: Union[str, pathlib.Path] = None,
                   access_token: Optional[str] = None,
                   checksum: Optional[str] = None) -> pathlib.Path:
+    logger.debug(f'Attempting to provide file from URL (download or return from cache): {file_url}')
     from ..utils import DownloadFileManager
     dfm = DownloadFileManager()
-    if checksum:
-        existing_filename = dfm.get(checksum=checksum, url=file_url)
-        if existing_filename:
-            return existing_filename
+
+    existing_filename = dfm.get(checksum=checksum, url=file_url)
+    if existing_filename:
+        return existing_filename
 
     if target_folder is None:
         from ..user import USER_CACHE_DIR
         target_folder = USER_CACHE_DIR
     else:
+        print(f'A target folder was specified. Downloading file to this folder: {target_folder}')
         logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
         target_folder = pathlib.Path(target_folder)
     target_folder.mkdir(exist_ok=True, parents=True)
 
-    filename = str(file_url).rsplit('/', 1)[-1]
+    guessed_filename_from_url = str(file_url).rsplit('/', 1)[-1]
+    suffix = pathlib.Path(guessed_filename_from_url).suffix
+    if checksum:
+        filename = f'{checksum}{suffix}'
+    else:
+        filename = f'{uuid.uuid4().hex}{suffix}'
     target_filename = target_folder / filename
     r = requests.get(file_url, params={'access_token': access_token})
     r.raise_for_status()
@@ -52,7 +60,5 @@ def download_file(file_url,
             raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({file_url}. '
                                      f'Status code: {_content_response.status_code}')
 
-    from ..utils import get_checksum
-    checksum = get_checksum(target_filename)
     dfm.add(checksum=checksum, url=file_url, filename=target_filename)
     return target_filename

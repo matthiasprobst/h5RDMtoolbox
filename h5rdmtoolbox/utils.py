@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import re
+import time
 import uuid
 import warnings
 from re import sub as re_sub
@@ -66,7 +67,7 @@ def _download_file(url,
             if not calculated_hash == known_hash:
                 raise ValueError('File does not match the expected hash')
         else:
-            warnings.warn('No hash given! This is recommended when downloading files from the web.', UserWarning)
+            logger.warning('No hash given! This is recommended when downloading files from the web.')
 
         # Save the content to a file
         if target:
@@ -623,19 +624,20 @@ class DownloadFileManager:
         return USER_DATA_DIR / 'download_registry.json'
 
     def get_from_url(self, url):
+        remove_filenames = []
         if url is None:
             return None
         for k, v in self.registry.items():
             if v.get('url', None) == url:
                 filename = v.get('filepath', None)
                 if filename:
-                    return pathlib.Path(filename) if pathlib.Path(filename).exists() else None
-
-    def add(self, checksum: str, url: str, filename: Union[str, pathlib.Path]):
-        assert checksum is not None, 'Checksum must not be None!'
-        assert url is not None, 'url must not be None!'
-        assert filename is not None, 'filename must not be None!'
-        self.registry[checksum] = {'url': url, 'filepath': str(pathlib.Path(filename).absolute().resolve())}
+                    filename = pathlib.Path(filename)
+                    if filename.exists():
+                        logger.info('Returning already downloaded file based on URL')
+                        return filename
+                    remove_filenames.append(filename)
+        for filename in remove_filenames:
+            self.remove_corrupted_file(filename)
 
     def get_from_checksum(self, checksum):
         if checksum is None:
@@ -643,17 +645,35 @@ class DownloadFileManager:
         match = self.registry.get(checksum, None)
         filename = match.get('filepath', None) if match else None
         if filename:
-            return pathlib.Path(filename) if pathlib.Path(filename).exists() else None
+            filename = pathlib.Path(filename)
+            if filename.exists():
+                logger.info('Returning already downloaded file based on checksum')
+                return filename
+            self.remove_corrupted_file(filename)
 
-    def get(self, url=None, checksum=None):
+    def add(self, *, url: str, filename: Union[str, pathlib.Path], checksum: Optional[str] = None):
+        """Add to registry. Computes the checksum if not provided"""
+        assert url is not None, 'url must not be None!'
+        assert filename is not None, 'filename must not be None!'
+        logger.debug(f'Adding {filename} to download file cache registry')
+        if checksum is None:
+            checksum = get_checksum(filename)
+            logger.debug(f'Computing checksum for {filename}: {checksum}')
+        self.registry[checksum] = {'url': url, 'filepath': str(pathlib.Path(filename).absolute().resolve())}
+        self.save_registry()
+
+    def get(self, url=None, checksum=None) -> Optional[pathlib.Path]:
+        """Returns the filename of a file based on the URL or checksum"""
         if url:
-            return self.get_from_url(url)
+            found_by_url = self.get_from_url(url)
+            if found_by_url is not None:
+                return found_by_url
         if checksum:
             return self.get_from_checksum(checksum)
-        raise ValueError('Either url or checksum must be provided')
 
-    def remove_corrupted_file(self, filename):
+    def remove_corrupted_file(self, filename: Union[str, pathlib.Path]):
         """Removes a corrupted file from the registry"""
+        logger.info(f"Removing corrupted file from registry: {filename}")
         remove_keys = []
         for k, v in self.registry.items():
             if pathlib.Path(self.registry[k].get('filepath', None)) == pathlib.Path(filename):
@@ -662,9 +682,19 @@ class DownloadFileManager:
             self.registry.pop(k)
 
     def save_registry(self):
+        max_tries = 10
+        n_tries = 0
         self.registry_filename.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.registry_filename, 'w') as f:
-            json.dump(self.registry, f, indent=2)
+        while n_tries < max_tries:
+            try:
+                with open(self.registry_filename, 'w') as f:
+                    json.dump(self.registry, f, indent=2)
+                return
+            except PermissionError:
+                logger.debug(f'Could not save registry. Trying again in 0.1s')
+                n_tries += 1
+                time.sleep(0.1)
+        logger.debug(f'Could not save registry after {max_tries} tries. File seems to be locked.')
 
     def load_registry(self) -> Dict[str, str]:
         registry_filename = self.registry_filename
@@ -685,6 +715,7 @@ class DownloadFileManager:
     @validate_call
     def download(self,
                  url: HttpUrl,
+                 *,
                  target_folder: Optional[Union[str, pathlib.Path]] = None,
                  params: Optional[Dict] = None,
                  checksum: Optional[str] = None,
@@ -699,17 +730,9 @@ class DownloadFileManager:
                 return filename
             self.registry.pop(checksum)
 
-        delete_key = None
-        for k, v in self.registry.items():
-            if url == v.get('url', None):
-                fpath = v.get('filepath', None)
-                if fpath:
-                    if pathlib.Path(fpath).exists():
-                        return pathlib.Path(fpath)
-                    delete_key = k  # the file did not exist --> remove from registry!
-
-        if delete_key:
-            self.registry.pop(delete_key)
+        existing_filename = self.get(url=url, checksum=checksum)
+        if existing_filename:
+            return existing_filename
 
         filename = sanitize_filename(str(url).rsplit('/', 1)[-1])
         if filename == '':
@@ -725,3 +748,10 @@ class DownloadFileManager:
             checksum = get_checksum(downloaded_filename)
         self.registry[checksum] = {'url': str(url), 'filepath': str(downloaded_filename.absolute().resolve())}
         return downloaded_filename
+
+
+def download_file(url, known_hash=None, target_folder: Optional[Union[str, pathlib.Path]] = None,
+                  checksum: Optional[str] = None, params: Optional[Dict] = None):
+    """Downloads the file or returns the already downloaded file"""
+    dfm = DownloadFileManager()
+    return dfm.download(url, target_folder=target_folder, known_hash=known_hash, checksum=checksum, params=params)

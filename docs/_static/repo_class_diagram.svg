@@ -25,10 +25,10 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="1.4142136"
-     inkscape:cx="182.07999"
-     inkscape:cy="393.50491"
+     inkscape:cx="182.43354"
+     inkscape:cy="392.79781"
      inkscape:window-width="1920"
-     inkscape:window-height="1017"
+     inkscape:window-height="1009"
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
@@ -81,75 +81,75 @@
     <rect
        style="fill:#6f6f6f;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect1"
-       width="48.365227"
-       height="50.694771"
+       width="48.365223"
+       height="54.436543"
        x="35.817364"
-       y="54.78907" />
+       y="51.0849" />
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
        x="38.633457"
-       y="60.147915"
+       y="56.443745"
        id="text1"><tspan
          sodipodi:role="line"
          id="tspan1"
          style="font-style:italic;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:sans-serif, 'bold and', 'Bold+Italic';-inkscape-font-specification:'sans-serif, bold and, Bold+Italic';stroke-width:0.264583"
          x="38.633457"
-         y="60.147915">RepositoryInterface(ABC)</tspan></text>
+         y="56.443745">RepositoryInterface(ABC)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
        x="38.390629"
-       y="73.131584"
+       y="69.427414"
        id="text2-2-7-5"><tspan
          sodipodi:role="line"
          id="tspan2-2-8-6"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
          x="38.390629"
-         y="73.131584">+ __upload_file__(...)</tspan></text>
+         y="69.427414">+ __upload_file__(...)</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 35.81738,62.370365 H 84.169833"
+       d="M 35.81738,58.666196 H 84.169833"
        id="path2"
        sodipodi:nodetypes="cc" />
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
        x="38.53532"
-       y="101.90322"
+       y="98.199043"
        id="text4"><tspan
          sodipodi:role="line"
          id="tspan4"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.265;stroke-dasharray:none"
          x="38.53532"
-         y="101.90322">+ upload_file(...)</tspan></text>
+         y="98.199043">+ upload_file(...)</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
        x="38.390629"
-       y="84.551346"
+       y="80.847176"
        id="text5"><tspan
          sodipodi:role="line"
          id="tspan5"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
          x="38.390629"
-         y="84.551346">+ get_doi()</tspan></text>
+         y="80.847176">+ get_doi()</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
        x="38.390629"
-       y="78.841461"
+       y="75.137291"
        id="text6"><tspan
          sodipodi:role="line"
          id="tspan6"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
          x="38.390629"
-         y="78.841461">+ exists()</tspan></text>
+         y="75.137291">+ exists()</tspan></text>
     <rect
        style="fill:#6f6f6f;stroke:#000000;stroke-width:0.285;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect1-8"
        width="75.262329"
-       height="89.921661"
+       height="94.785965"
        x="20.619564"
        y="120.32349" />
     <text
@@ -223,24 +223,24 @@
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
        x="38.390629"
-       y="90.26123"
+       y="86.55706"
        id="text18-4"><tspan
          sodipodi:role="line"
          id="tspan18-4"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
          x="38.390629"
-         y="90.26123">+ set_metadata()</tspan></text>
+         y="86.55706">+ set_metadata()</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
        x="38.390629"
-       y="95.971123"
+       y="92.266953"
        id="text20-5"><tspan
          sodipodi:role="line"
          id="tspan20-4"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
          x="38.390629"
-         y="95.971123">+ get_metadata()</tspan></text>
+         y="92.266953">+ get_metadata()</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
@@ -287,20 +287,20 @@
          y="208.25868">+ publish()</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 35.754714,68.916856 H 84.115483"
+       d="M 35.754714,65.212687 H 84.115483"
        id="path10"
        sodipodi:nodetypes="cc" />
     <text
        xml:space="preserve"
        style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52777px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
        x="38.390629"
-       y="66.856186"
+       y="63.152016"
        id="text11"><tspan
          sodipodi:role="line"
          id="tspan11"
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
          x="38.390629"
-         y="66.856186">+ files</tspan></text>
+         y="63.152016">+ files</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
@@ -482,5 +482,27 @@
        d="M 59.066666,120.26147 V 108.35521"
        id="path5-8-1"
        sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
+       x="38.53532"
+       y="103.49075"
+       id="text2"><tspan
+         sodipodi:role="line"
+         id="tspan2"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.265;stroke-dasharray:none"
+         x="38.53532"
+         y="103.49075">+ get_jsonld()</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.52777px;line-height:1.25;font-family:sans-serif;stroke-width:0.265;stroke-dasharray:none"
+       x="23.255474"
+       y="213.55035"
+       id="text3"><tspan
+         sodipodi:role="line"
+         id="tspan3"
+         style="stroke-width:0.265;stroke-dasharray:none"
+         x="23.255474"
+         y="213.55035">+ get_jsonld()</tspan></text>
   </g>
 </svg>

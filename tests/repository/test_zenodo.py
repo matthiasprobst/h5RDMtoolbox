@@ -52,8 +52,8 @@ class TestZenodo(unittest.TestCase):
         self.assertIsInstance(fname, pathlib.Path)
         self.assertTrue(fname.exists())
 
-        self.assertIsInstance(z.jsonld(), str)
-        print(z.jsonld())
+        self.assertIsInstance(z.get_jsonld(), str)
+        print(z.get_jsonld())
 
     def test_ZenodoFile(self):
         z = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID)  # an existing repo
@@ -443,14 +443,14 @@ class TestZenodo(unittest.TestCase):
         tmpfile.unlink()
         self.assertFalse(tmpfile.exists())
 
-        filename = z.download_file('testfile.txt', target_folder='.')
+        filename = z.download_file('testfile.txt')
         self.assertIsInstance(filename, pathlib.Path)
         self.assertTrue(filename.exists())
         with open(filename, 'r') as f:
             self.assertEqual(f.read(), 'This is a test file.')
         filename.unlink()
 
-        filenames = z.download_files(target_folder='.')
+        filenames = z.download_files()
 
         self.assertIsInstance(filenames, list)
         self.assertIsInstance(filenames[0], pathlib.Path)
@@ -458,16 +458,16 @@ class TestZenodo(unittest.TestCase):
             self.assertTrue(filename.exists())
             filename.unlink()
 
-        hdf5_filenames = z.download_files(target_folder='.', suffix='.hdf')
+        hdf5_filenames = z.download_files(suffix='.hdf')
         self.assertIsInstance(hdf5_filenames, list)
         self.assertEqual(len(hdf5_filenames), 1)
 
-        txt_filenames = z.download_files(target_folder='.', suffix='.txt')
+        txt_filenames = z.download_files(suffix='.txt')
         self.assertIsInstance(txt_filenames, list)
         self.assertEqual(len(txt_filenames), 1)
         self.assertEqual(txt_filenames[0].suffix, '.txt')
 
-        hdf_and_txt_filenames = z.download_files(target_folder='.', suffix=['.txt', '.hdf'])
+        hdf_and_txt_filenames = z.download_files(suffix=['.txt', '.hdf'])
         self.assertIsInstance(hdf_and_txt_filenames, list)
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
@@ -553,14 +553,14 @@ class TestZenodo(unittest.TestCase):
         tmpfile.unlink()
         self.assertFalse(tmpfile.exists())
 
-        filename = z.download_file('testfile.txt', target_folder='.')
+        filename = z.download_file('testfile.txt')
         self.assertIsInstance(filename, pathlib.Path)
         self.assertTrue(filename.exists())
         with open(filename, 'r') as f:
             self.assertEqual(f.read(), 'This is a test file.')
         filename.unlink()
 
-        filenames = z.download_files(target_folder='.')
+        filenames = z.download_files()
 
         self.assertIsInstance(filenames, list)
         self.assertIsInstance(filenames[0], pathlib.Path)
@@ -568,16 +568,16 @@ class TestZenodo(unittest.TestCase):
             self.assertTrue(filename.exists())
             filename.unlink()
 
-        hdf5_filenames = z.download_files(target_folder='.', suffix='.hdf')
+        hdf5_filenames = z.download_files(suffix='.hdf')
         self.assertIsInstance(hdf5_filenames, list)
         self.assertEqual(len(hdf5_filenames), 1)
 
-        txt_filenames = z.download_files(target_folder='.', suffix='.txt')
+        txt_filenames = z.download_files(suffix='.txt')
         self.assertIsInstance(txt_filenames, list)
         self.assertEqual(len(txt_filenames), 1)
         self.assertEqual(txt_filenames[0].suffix, '.txt')
 
-        hdf_and_txt_filenames = z.download_files(target_folder='.', suffix=['.txt', '.hdf'])
+        hdf_and_txt_filenames = z.download_files(suffix=['.txt', '.hdf'])
         self.assertIsInstance(hdf_and_txt_filenames, list)
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')

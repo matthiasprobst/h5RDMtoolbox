@@ -701,20 +701,20 @@ def from_repo(repo_interface: RepositoryInterface,
               force_download: bool = False):
     """Download a YAML file from a repository"""
     # check if file exists:
-    path_compatible_doi = repo_interface.get_doi().replace('/', '_')
-    estimated_filename = UserDir['cache'] / f'{path_compatible_doi}' / name
-    estimated_filename.parent.mkdir(parents=True, exist_ok=True)
-    if estimated_filename.exists():
-        if not take_existing:
-            raise FileExistsError(f'File {name} exists in cache but take_existing is set to False.')
-        if take_existing and not force_download:
-            return from_file(estimated_filename)
+    # path_compatible_doi = repo_interface.get_doi().replace('/', '_')
+    # estimated_filename = UserDir['cache'] / f'{path_compatible_doi}' / name
+    # estimated_filename.parent.mkdir(parents=True, exist_ok=True)
+    # if estimated_filename.exists():
+    #     if not take_existing:
+    #         raise FileExistsError(f'File {name} exists in cache but take_existing is set to False.')
+    #     if take_existing and not force_download:
+    #         return from_file(estimated_filename)
 
     filename = repo_interface.download_file(name)
-    if estimated_filename.exists():
-        estimated_filename.unlink()
-    filename.rename(estimated_filename)
-    return from_file(estimated_filename)
+    # if estimated_filename.exists():
+    #     estimated_filename.unlink()
+    # filename.rename(estimated_filename)
+    return from_file(filename)
 
 
 def from_zenodo(doi_or_recid: str,
