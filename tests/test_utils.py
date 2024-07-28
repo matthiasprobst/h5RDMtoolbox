@@ -112,6 +112,7 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(dfm is dfm2)  # is a singleton!
 
         dfm.reset_registry()
+        self.assertFalse('e678a1eca79d5a836b58772eeee7f831' in dfm.registry)
         self.assertEqual(0, len(dfm))
 
         time_st = time.time_ns()
@@ -119,23 +120,25 @@ class TestUtils(unittest.TestCase):
                                            checksum='e678a1eca79d5a836b58772eeee7f831')
         time1 = time.time_ns() - time_st
         self.assertTrue(downloaded_filename.exists())
+        self.assertTrue('e678a1eca79d5a836b58772eeee7f831' in dfm.registry)
+
         self.assertTrue(downloaded_filename.name, 'planar_piv.yaml=download=1')
         self.assertEqual(1, len(dfm))
-        time_st = time.time_ns()
+        
         downloaded_filename = dfm.download("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
                                            checksum='e678a1eca79d5a836b58772eeee7f831')
-        time2 = time.time_ns() - time_st
-        self.assertTrue(time2 < time1, msg="Download should be slower than reading from cache")
+
         self.assertTrue(downloaded_filename.exists())
         self.assertTrue(downloaded_filename.name, 'planar_piv.yaml=download=1')
 
         dfm.reset_registry()
+        self.assertFalse('e678a1eca79d5a836b58772eeee7f831' in dfm.registry)
+        self.assertEqual(0, len(dfm))
+
+        h5tbx.utils.download_file("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
+                                  checksum='e678a1eca79d5a836b58772eeee7f831')
+
+        self.assertTrue('e678a1eca79d5a836b58772eeee7f831' in dfm.registry)
         time_st = time.time_ns()
         h5tbx.utils.download_file("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
                                   checksum='e678a1eca79d5a836b58772eeee7f831')
-        time1 = time.time_ns() - time_st
-        time_st = time.time_ns()
-        h5tbx.utils.download_file("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
-                                  checksum='e678a1eca79d5a836b58772eeee7f831')
-        time2 = time.time_ns() - time_st
-        self.assertTrue(time2 < time1, msg="Download should be slower than reading from cache")
