@@ -113,14 +113,15 @@ class DirManger:
             return
         if self.user_dirs['cache'].exists():
             for f in self.user_dirs['cache'].iterdir():
-                # get the file creation time
-                if utime:
-                    fct = f.stat().st_atime
-                else:
-                    fct = f.stat().st_ctime
-                dt = _now - fct
-                if dt > delta_days * 86400:
-                    f.unlink()
+                if f.is_file():
+                    # get the file creation time
+                    if utime:
+                        fct = f.stat().st_atime
+                    else:
+                        fct = f.stat().st_ctime
+                    dt = _now - fct
+                    if dt > delta_days * 86400:
+                        f.unlink()
 
     def reset(self):
         """Deletes all user data"""
