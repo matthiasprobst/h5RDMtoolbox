@@ -81,6 +81,23 @@ class TestFile(unittest.TestCase):
             self.assertTrue('data_type' in h5.attrs.raw)
             self.assertTrue('contact' in h5.attrs.raw)
 
+    def test_grrrr(self):
+        from pydantic.functional_validators import WrapValidator
+        from typing_extensions import Annotated
+        from pydantic import BaseModel
+        import re
+        def regex_0(value, handler):
+            pattern = re.compile(r'^[a-zA-Z].*$')
+            if not pattern.match(value):
+                raise ValueError('Invalid format for pattern')
+            return value
+
+        regex_0 = Annotated[str, WrapValidator(regex_0)]
+
+        class long_name(BaseModel):
+            """A comprehensive description of the dataset. If not set, the standard_name attribute must be given."""
+            long_name: regex_0
+
     def test_dumps(self):
         with h5tbx.File() as h5:
             h5.dumps()

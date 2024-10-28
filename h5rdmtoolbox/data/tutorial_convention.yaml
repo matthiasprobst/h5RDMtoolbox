@@ -39,7 +39,7 @@ long_name:
   target_method: create_dataset
   validator: $regex(^[a-zA-Z].*$)
   alternative_standard_attribute: standard_name
-  description: An comprehensive description of the dataset. If not set, the standard_name attribute must be given.
+  description: A comprehensive description of the dataset. If not set, the standard_name attribute must be given.
 
 comment-file:
   target_method: __init__

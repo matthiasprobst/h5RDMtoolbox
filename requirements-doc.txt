@@ -1,11 +1,11 @@
 -e .
 -r requirements.txt
-jupyterlab
-sphinx >= 4.5.0
-sphinx_book_theme
-sphinx-copybutton
-sphinx-design
-myst-nb
-sphinxcontrib-bibtex
-kglab
-scikit-image
+Sphinx==4.5.0
+sphinx_book_theme==0.3.3
+sphinx-copybutton==0.5.2
+sphinx-design==0.4.1
+myst-nb==0.17.2
+sphinxcontrib-bibtex==2.6.3
+
+scikit-image==0.24.0
+scikit-learn

@@ -221,7 +221,7 @@ class TestStandardAttributes(unittest.TestCase):
 
     def test_from_zenodo(self):
         if self.connected:
-            snt = StandardNameTable.from_zenodo(siurce=TutorialSNTZenodoRecordID)
+            snt = StandardNameTable.from_zenodo(source=TutorialSNTZenodoRecordID)
             self.assertIsInstance(snt, StandardNameTable)
             filename = h5tbx.UserDir['standard_name_tables'] / f'{TutorialSNTZenodoRecordID}.yaml'
             self.assertTrue(filename.exists())

@@ -509,7 +509,7 @@ def validate_f1(a, b, c=3, d=2):
             _ddir = h5tbx.UserDir['convention'] / 'h5rdmtoolbox_tutorial_convention'
             if _ddir.exists():
                 shutil.rmtree(_ddir)
-            h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID)
+            h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, force_download=True)
             # h5tbx.convention.from_yaml('test_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
