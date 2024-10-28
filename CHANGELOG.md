@@ -3,12 +3,20 @@
 Log of changes in the versions
 
 ## v1.5.0
+
+- make compliant with higher `pydantic` and `ontolutils` versions
+- concrete version selection for other dependencies
+
+## v1.4.1
+
 - Downloading files will be cached by their checksum and/or URL. This avoids multiple downloads of the same file.
-- `RepositoryFile` has new abstract property `suffix`, 
+- `RepositoryFile` has new abstract property `suffix`,
 - `RepositoryInterface` has new abstract method `get_jsonld`
 - `RepositoryInterface` has new abstract property `identifier` and `title`
+- bugfixes
 
 ## v1.4.0
+
 - update package dependency versions
 - minor bugfixes and updates in documentation
 
