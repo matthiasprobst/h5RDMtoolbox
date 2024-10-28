@@ -23,4 +23,4 @@ python-gitlab
 pypandoc>=1.11
 pydantic>=2.8.2
 # other:
-ontolutils >= 0.2.23
+ontolutils >= 0.5.0
