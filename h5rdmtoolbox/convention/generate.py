@@ -374,7 +374,7 @@ class RegexProcessor:
     def write_lines(self, file):
         """Write validator lines to file"""
         file.writelines(f'\n\nimport re\n\n')
-        file.writelines(f'\ndef {self.name}(value, parent=None, attrs=None):')
+        file.writelines(f'\ndef {self.name}(value, handler):')
         file.writelines(f"\n    pattern = re.compile(r'{self.re_pattern}')")
         file.writelines("\n    if not pattern.match(value):")
         file.writelines("\n        raise ValueError('Invalid format for pattern')")

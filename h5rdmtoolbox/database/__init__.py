@@ -42,6 +42,16 @@ def rdf_find(source, *,
     ----------
     source: Union[str, pathlib.Path, h5tbx.Group]
         Filename or hdf group
+    rdf_subject: Optional[str]
+        The RDF subject to search for if provided
+    rdf_type: Optional[str]
+        The RDF type to search for if provided
+    rdf_predicate: Optional[str]
+        The RDF predicate to search for if provided
+    rdf_object: Optional[str]
+        The RDF object to search for if provided
+    recursive: bool=True
+        If True, search recursively. If False, only search the current group
     """
     if isinstance(source, (str, pathlib.Path)):
         return FileDB(source).rdf_find(rdf_subject=rdf_subject,

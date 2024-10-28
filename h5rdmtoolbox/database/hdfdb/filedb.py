@@ -18,7 +18,7 @@ class FileDB(HDF5DBInterface):
         self.rdf_find = self._instance_rdf_find
 
     @staticmethod
-    def find_one(filename: Union[str, pathlib.Path], *args, **kwargs) -> lazy.LHDFObject:
+    def find_one(filename: Union[str, pathlib.Path], *args, **kwargs) -> lazy.LazyObject:
         """Please refer to the docstring of the find_one method of the ObjDB class"""
         with h5py.File(str(filename), 'r') as h5:
             return ObjDB(h5).find_one(*args, **kwargs)
@@ -45,7 +45,7 @@ class FileDB(HDF5DBInterface):
             return ObjDB(h5).find_one(*args, **kwargs)
 
     @staticmethod
-    def find(file_or_filename, *args, **kwargs) -> Generator[lazy.LHDFObject, None, None]:
+    def find(file_or_filename, *args, **kwargs) -> List[lazy.LazyObject]:
         """Please refer to the docstring of the find method of the ObjDB class"""
         if isinstance(file_or_filename, (h5py.Group, h5py.Dataset)):
             return list(ObjDB(file_or_filename).find(*args, **kwargs))
@@ -104,7 +104,7 @@ class FilesDB(HDF5DBInterface):
         self.filenames.append(pathlib.Path(filename))
         self.filenames = list(set(self.filenames))
 
-    def find_one(self, *args, **kwargs) -> lazy.LHDFObject:
+    def find_one(self, *args, **kwargs) -> lazy.LazyObject:
         """Call find_one on all the files registered. If more than one file
         contains the object, the first one is returned. If you want to find one per file,
         call find_one_per_file instead."""

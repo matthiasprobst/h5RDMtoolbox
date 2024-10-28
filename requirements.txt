@@ -8,12 +8,12 @@ xarray>=2022.3.0
 pint==0.21.1
 pint_xarray>=0.2.1
 regex>=2020.7.9
-packaging
+packaging>=24.1
 python-forge==18.6.0
-requests
-rdflib<=7.0.0
+requests>=2.32.3
+rdflib>=7.0.0
 # database:
-pymongo>=4.2.0
+pymongo>=4.2.0,<4.9.0
 # csv
 pandas>=1.4.3
 # snt
@@ -21,6 +21,6 @@ xmltodict<=0.13.0
 tabulate>=0.8.10,<=0.9.0
 python-gitlab
 pypandoc>=1.11
-pydantic >= 2.3.0, < 2.8.0
+pydantic>=2.8.2
 # other:
 ontolutils >= 0.2.23
