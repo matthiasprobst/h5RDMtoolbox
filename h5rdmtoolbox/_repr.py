@@ -1,19 +1,20 @@
-import h5py
-import importlib_resources
-import numpy as np
+import json
 import os
 import re
 import typing
 import warnings
-import xarray as xr
-from IPython.display import HTML, display
 from abc import abstractmethod
-from numpy import ndarray
-from ontolutils import M4I, Thing
 from time import perf_counter_ns
 
-from h5rdmtoolbox.wrapper.rdf import (RDF_SUBJECT_ATTR_NAME,
-                                      RDF_PREDICATE_ATTR_NAME,
+import h5py
+import importlib_resources
+import numpy as np
+import xarray as xr
+from IPython.display import HTML, display
+from numpy import ndarray
+from ontolutils import M4I
+
+from h5rdmtoolbox.wrapper.rdf import (RDF_PREDICATE_ATTR_NAME,
                                       RDF_OBJECT_ATTR_NAME,
                                       RDF_TYPE_ATTR_NAME)
 from . import get_config, identifiers, protected_attributes
@@ -33,6 +34,7 @@ except FileNotFoundError:
 # else:
 DEF_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/def_icon.png?raw=true"
 IRI_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/iri_icon.png?raw=true"
+JLD_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/jld_icon.png?raw=true"
 ID_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/id_icon.png?raw=true"
 TYPE_ICON = "https://github.com/matthiasprobst/h5RDMtoolbox/blob/dev/h5rdmtoolbox/data/type_icon.png?raw=true"
 
@@ -176,7 +178,10 @@ def get_iri_icon_href(iri: str,
     #     return f'<div class="tooltip">' \
     #            f'<img class="size_of_img" src="{icon_url}" alt="IRI_ICON" width="16" height="16" />' \
     #            f'<span class="tooltiptext">{thing_str}</span></div>'
-
+    if isinstance(iri, dict):
+        return f'<a href="#" target="_blank" class="tooltip"> ' \
+               f'<img class="size_of_img" src="{JLD_ICON}" alt="JLD_ICON" width="16" height="16" />' \
+               f' <span class="tooltiptext"><p>{json.dumps(iri, indent=2)}</p></span></a>'
     return f'<a href="{iri}" target="_blank" class="tooltip"> ' \
            f'<img class="size_of_img" src="{icon_url}" alt="IRI_ICON" width="16" height="16" />' \
            f' <span class="tooltiptext">{tooltiptext or iri}</span></a>'

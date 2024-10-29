@@ -60,7 +60,7 @@ class TestRDF(unittest.TestCase):
         """
 
         with h5tbx.File(mode='w') as h5:
-            from ontolutils import SSNO
+            from ssnolib import SSNO
             ds = h5.create_dataset('u', data=4.5)
             # ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'
             ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'
@@ -403,3 +403,23 @@ class TestRDF(unittest.TestCase):
                              {'test': 'https://example.org/test'})
             del h5.attrs['test']
             self.assertEqual(json.loads(h5.attrs.raw.get(h5.rdf.predicate.IRI_ATTR_NAME, None)), {})
+
+    def test_using_plain_jsonld(self):
+        sn_xvel = """{
+            "@context": {
+                "ssno": "https://matthiasprobst.github.io/ssno#"
+            },
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "x_velocity",
+            "ssno:unit": "http://qudt.org/vocab/unit/M-PER-SEC",
+            "ssno:description": "X-component of a velocity vector."
+        }"""
+        with h5tbx.File() as h5:
+            h5.create_dataset("u", data=[1, 2, 3], attrs={"standard_name": "x_velocity"})
+            h5.u.rdf["standard_name"].predicate = "https://matthiasprobst.github.io/ssno#hasStandardName"
+            h5.u.rdf["standard_name"].object = sn_xvel
+            # from ssnolib import StandardName
+            # h5.u.rdf["standard_name"].object = StandardName(standard_name="x_velocity", unit="m/s")
+            h5.dump(False)
+            h5jld = h5.dump_jsonld(indent=2, structural=False)
+            print(h5jld)

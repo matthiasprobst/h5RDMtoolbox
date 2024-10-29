@@ -1,10 +1,12 @@
 """RDF (Resource Description Framework) module for use with HDF5 files"""
 import abc
+import json
+import warnings
+from typing import Dict, Union, Optional, List
+
 import h5py
 import pydantic
-import warnings
 from pydantic import HttpUrl
-from typing import Dict, Union, Optional, List
 
 from . import lazy
 from ..protocols import H5TbxAttributeManager
@@ -83,6 +85,10 @@ def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
     from ontolutils import Thing
     if isinstance(data, Thing):
         data = data.get_jsonld_dict(assign_bnode=False)
+    elif isinstance(data, dict):
+        # assuming it is a JSON-LD dict
+        if not "@type" in data:
+            raise RDFError(f"The input data is interpreted as JSON-LD, but no @type is found: {data}")
     else:
         try:
             data = str(HttpUrl(data))
@@ -146,8 +152,9 @@ class IRIDict(Dict):
         o = self[RDF_OBJECT_ATTR_NAME]
         if o is None:
             return o
-        # if isinstance(o, list):
-        #     return [i for i in o]
+        if isinstance(o, str) and o.startswith("{"):
+            """assuming, that it is a json string"""
+            return json.loads(o)
         return o
 
     @object.setter
@@ -156,6 +163,9 @@ class IRIDict(Dict):
             set_object(self._attr, self._attr_name, value[0])
             for v in value[1:]:
                 append(self._attr, self._attr_name, v, RDF_OBJECT_ATTR_NAME)
+        elif isinstance(value, str) and value.startswith("{"):
+            """assuming, that it is a json string"""
+            set_object(self._attr, self._attr_name, json.loads(value))
         else:
             set_object(self._attr, self._attr_name, value)
 
@@ -493,7 +503,7 @@ class RDFManager:
     @subject.setter
     def subject(self, jsonld_id: Union[str, HttpUrl]):
         """Set the RDF subject, which is the @ID in JSON-LD syntax.
-        Hence a valdi URL is required. This is validated by pydantic!
+        Hence, a valdi URL is required. This is validated by pydantic!
 
         Raises
         ------

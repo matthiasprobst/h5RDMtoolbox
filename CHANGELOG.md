@@ -2,6 +2,9 @@
 
 Log of changes in the versions
 
+## v1.5.1
+- a json-ld string can be assigned to a rdf object (see https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/wrapper/FAIRAttributes.html)
+
 ## v1.5.0
 
 - make compliant with higher `pydantic` and `ontolutils` versions
