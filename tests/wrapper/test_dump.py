@@ -1,12 +1,13 @@
-"""Testing common functionality across all wrapper classes"""
+"""Testing dumping functionality"""
 import json
 import unittest
+
 from rdflib import PROV, FOAF
 
 import h5rdmtoolbox as h5tbx
 
 
-class TestCommon(unittest.TestCase):
+class TestDump(unittest.TestCase):
 
     def test_dump_jsonld(self):
         with h5tbx.File(mode='w') as h5:
@@ -16,7 +17,8 @@ class TestCommon(unittest.TestCase):
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
             h5.dumps()
 
-        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=True, compact=False)
+        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=True, compact=False,
+                                context={'foaf': 'http://xmlns.com/foaf/0.1/'})
         jsondict = json.loads(ret)
         self.assertEqual(jsondict['foaf:firstName'], 'John')
         self.assertEqual(jsondict['@type'], 'prov:Person')

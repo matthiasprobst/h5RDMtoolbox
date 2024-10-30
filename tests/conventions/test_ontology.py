@@ -1,8 +1,10 @@
 """Testing the standard attributes"""
 import json
 import pathlib
-import rdflib
 import unittest
+
+import rdflib
+from ontolutils import QUDT_UNIT
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
@@ -35,9 +37,23 @@ class TestOntology(unittest.TestCase):
         h5tbx.set_config(auto_create_h5tbx_version=self.curr_auto_create_h5tbx_version)
 
     def test_Attribute(self):
-        attr = Attribute(name='standard_name',
+        attr = Attribute(id="_:1",
+                         name='standard_name',
                          value='x_velocity')
-        print(attr.model_dump_jsonld())
+        self.assertDictEqual(
+            {
+                "@context": {
+                    "owl": "http://www.w3.org/2002/07/owl#",
+                    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+                    "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+                },
+                "@type": "hdf5:Attribute",
+                "hdf5:name": "standard_name",
+                "hdf5:value": "x_velocity",
+                "@id": "_:1"
+            },
+            json.loads(attr.model_dump_jsonld())
+        )
 
     def test_Dataset(self):
         ds = Dataset(
@@ -46,7 +62,9 @@ class TestOntology(unittest.TestCase):
                 Attribute(name='standard_name',
                           value='x_velocity')],
             size=100)
-        print(ds.model_dump_jsonld())
+        jld_dict = json.loads(ds.model_dump_jsonld())
+        self.assertEqual("hdf5:Dataset", jld_dict["@type"])
+        self.assertEqual("/grp1/grp2/ds1", jld_dict["hdf5:name"])
 
     def test_Group(self):
         grp = Group(
@@ -73,7 +91,33 @@ class TestOntology(unittest.TestCase):
                                 Attribute(name='standard_name',
                                           value='x_velocity')],
                             size=100)])])
-        print(grp.model_dump_jsonld())
+        jd = json.loads(grp.model_dump_jsonld())
+        self.assertDictEqual(
+            {
+                "owl": "http://www.w3.org/2002/07/owl#",
+                "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+                "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+            },
+            jd["@context"]
+        )
+        if jd["hdf5:member"][0]["@type"] == "hdf5:Dataset":
+            self.assertEqual(
+                "/grp1/grp2/grp3",
+                jd["hdf5:member"][1]["hdf5:name"],
+            )
+            self.assertEqual(
+                "/grp1/grp2/ds1",
+                jd["hdf5:member"][0]["hdf5:name"],
+            )
+        else:
+            self.assertEqual(
+                "/grp1/grp2/grp3",
+                jd["hdf5:member"][0]["hdf5:name"],
+            )
+            self.assertEqual(
+                "/grp1/grp2/ds1",
+                jd["hdf5:member"][1]["hdf5:name"],
+            )
 
     def test_RootGroup(self):
         grp = Group(
@@ -100,7 +144,6 @@ class TestOntology(unittest.TestCase):
                                 Attribute(name='standard_name',
                                           value='x_velocity')],
                             size=100)])])
-        print(grp.model_dump_jsonld())
 
     def test_File(self):
         rootGroup = Group(
@@ -120,11 +163,21 @@ class TestOntology(unittest.TestCase):
                 grp
             ]
         )
-        print(file.model_dump_jsonld())
+
+    def test_hdf_to_jsonld_struct_and_semantic(self):
+        from ontolutils.namespacelib import M4I
+        with h5tbx.File(mode="w") as h5:
+            ds = h5.create_dataset("D1", data=138)
+            ds.attrs["units"] = "m/s"
+            ds.rdf.type = M4I.NumericalVariable
+            ds.rdf["units"].predicate = M4I.hasUnit
+            ds.rdf["units"].object = QUDT_UNIT.M_PER_SEC
+
+            jd = h5.dump_jsonld(semantic=True, structural=True, indent=4)
 
     def test_hdf_to_jsonld(self):
         with h5tbx.File(mode='w') as h5:
-            h5.create_dataset('ds', data=3.4)
+            h5.create_dataset('root_ds', data=3.4)
             grp = h5.create_group('grp')
             sub_grp = grp.create_group('sub_grp')
             sub_grp.create_dataset('ds', data=3, dtype='i8')
@@ -134,9 +187,17 @@ class TestOntology(unittest.TestCase):
         hdf_jsonld = dump_file(h5.hdf_filename, skipND=1)
 
         jsonld_dict = json.loads(hdf_jsonld)
+        self.assertEqual(jsonld_dict['@type'], 'hdf5:File')
+        self.assertEqual(jsonld_dict['hdf5:rootGroup']['@type'], 'hdf5:Group')
+        self.assertEqual(jsonld_dict['hdf5:rootGroup']['hdf5:name'], '/')
+        for member in jsonld_dict['hdf5:rootGroup']['hdf5:member']:
+            if member["hdf5:name"] == 'root_ds':
+                self.assertEqual(member['@type'], 'hdf5:Dataset')
+                self.assertEqual(member['hdf5:name'], 'root_ds')
+                self.assertEqual(member['hdf5:value'], 3.4)
+                self.assertEqual(member['hdf5:datatype'], "H5T_FLOAT")
 
         remove_key_recursive(jsonld_dict, '@id')
-        print(json.dumps(jsonld_dict, indent=2))
 
         # get all group names with SPARQL:
         sparql_query = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -156,7 +217,6 @@ class TestOntology(unittest.TestCase):
         # convert results to dataframe:
         import pandas as pd
         df = pd.DataFrame(results.bindings)
-        print(df)
 
     def test_jsonld_to_hdf(self):
         jsonld = """
@@ -198,9 +258,10 @@ class TestOntology(unittest.TestCase):
             if isinstance(g['@type'], list):
                 if 'prov:Person' in g['@type']:
                     i += 1
-                    self.assertEqual(g["foaf:firstName"], 'Alexandra')
-                    self.assertEqual(g["foaf:lastName"], 'Test')
-                    self.assertEqual(g["m4i:orcidId"], '0000-0000-0123-4567')
+                    print(g)
+                    self.assertEqual(g["http://xmlns.com/foaf/0.1/firstName"], 'Alexandra')
+                    self.assertEqual(g["http://xmlns.com/foaf/0.1/lastName"], 'Test')
+                    self.assertEqual(g["http://w3id.org/nfdi4ing/metadata4ing#orcidId"], '0000-0000-0123-4567')
                 elif 'schema:SoftwareSourceCode' in g['@type']:
                     i += 1
                     self.assertEqual(g['schema:softwareVersion'], __version__)
@@ -225,6 +286,7 @@ class TestOntology(unittest.TestCase):
                 self.assertEqual(json_dict['@context']['has ORCID ID'], "http://w3id.org/nfdi4ing/metadata4ing#orcidId")
             elif isinstance(g['@type'], list) and 'schema:SoftwareSourceCode' in g['@type']:
                 i += 1
+                print(g)
                 self.assertEqual(g['__h5rdmtoolbox_version__'], __version__)
                 self.assertEqual(json_dict['@context']['__h5rdmtoolbox_version__'],
                                  "https://schema.org/softwareVersion")

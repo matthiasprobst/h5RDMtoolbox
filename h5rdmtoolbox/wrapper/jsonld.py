@@ -525,9 +525,12 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                      context: Dict = None,
                      structural: bool = True,
                      resolve_keys: bool = True,
-                     use_simple_bnode_value: bool = True) -> Tuple[Graph, Dict]:
+                     use_simple_bnode_value: bool = True,
+                     skipND: int = None) -> Tuple[Graph, Dict]:
     """using rdflib graph. This will not write HDF5 dataset data to the graph. Impossible and
      not reasonable as potentially multidimensional"""
+    if skipND is None:
+        skipND = 10000
     if isinstance(source, (str, pathlib.Path)):
         from .core import File
         with File(source) as h5:
@@ -535,7 +538,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                                     iri_only,
                                     recursive=recursive,
                                     compact=compact,
-                                    context=context)
+                                    context=context,
+                                    skipND=skipND)
 
     grp = source
 
@@ -548,18 +552,27 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
     # download jsonld files provided via "@import" in the context:
     at_import = _context.get("@import", None)
-    _import_context_dat = {}  # here, context data from "@import" entries is stored
+    _import_context_data = {}  # here, context data from "@import" entries is stored
     if at_import is not None:
         from ..utils import download_context
         if isinstance(at_import, str):
             at_import = [at_import]
         for c in at_import:
             for k, v in download_context(c)._context_cache.items():
-                _import_context_dat[c] = v['@context']
+                _import_context_data[c] = v['@context']
+                # for _k, _v in v['@context'].items():
+                #     if isinstance(_v, str) and _v.startswith("http"):
+                #         _context[_k] = _v
+                # elif isinstance(_v, dict):
+                #     _context[_k] = _v["@id"]
                 # _context.update(v['@context'])
             # with open(context_filename, 'r') as f:
             #     data_context.update(json.load(f)['@context'])
-        _context["@import"] = _import_context_dat
+            # _context.pop("@import", None)
+            # for k, v in _import_context_data[c].items():
+            #     if k!="@vocab":
+            #         _context.update({k: v})
+        _context["@import"] = _import_context_data
 
     iri_dict = {}
 
@@ -615,10 +628,11 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
         elif isinstance(obj, h5py.Dataset):
             if structural:
+                _ndim = obj.ndim
                 _add_node(g, (obj_node, RDF.type, HDF5.Dataset))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
                 _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
-                _add_node(g, (obj_node, HDF5.dimension, rdflib.Literal(obj.ndim, datatype=XSD.integer)))
+                _add_node(g, (obj_node, HDF5.dimension, rdflib.Literal(_ndim, datatype=XSD.integer)))
 
                 if obj.dtype.kind == 'S':
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_STRING')))
@@ -626,6 +640,12 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_INTEGER')))
                 else:
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_FLOAT')))
+
+                if _ndim < skipND:
+                    if _ndim > 0:
+                        _add_node(g, (obj_node, HDF5.value, rdflib.Literal(obj.values[()].tolist())))
+                    else:
+                        _add_node(g, (obj_node, HDF5.value, rdflib.Literal(obj.values[()])))
 
             h5_rdf_type = obj.attrs.get(RDF_TYPE_ATTR_NAME, None)
             if h5_rdf_type:
@@ -698,11 +718,17 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             logger.debug(f'Predicate for attribute "{ak}": "{attr_predicate}"')
 
             if attr_predicate is not None:
+                _namespace, _predicate_name = split_URIRef(attr_predicate)
+                if resolve_keys:
+                    _rdf_name = _predicate_name
+                else:
+                    _rdf_name = ak
                 predicate_uri, ctx = process_rdf_key(
-                    rdf_name=ak,
+                    rdf_name=_rdf_name,
                     rdf_value=attr_predicate,
                     resolve_keys=resolve_keys,
                     context=ctx)
+
                 assert isinstance(ctx, dict)
 
             attr_object = obj.rdf.object.get(ak, None)
@@ -715,8 +741,11 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                     _id = _val.pop('@id', None)
 
                     # init new node:
-                    _sub_obj_node = rdflib.BNode(
-                        value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+                    if _id:
+                        _sub_obj_node = rdflib.URIRef(resolve_iri(_id, context=attr_context))
+                    else:
+                        _sub_obj_node = rdflib.BNode(
+                            value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
 
                     _add_node(g, (_sub_obj_node, RDF.type, rdflib.URIRef(resolve_iri(_type, context=attr_context))))
                     # the new node is a member of the object node
@@ -754,7 +783,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
             if structural:
                 if attr_object:
-                    _add_node(g, (obj_node, HDF5.value, rdflib.URIRef(attr_object)))
+                    _add_node(g, (attr_node, HDF5.value, rdflib.URIRef(attr_object)))
                 if list_node:
                     _add_node(g, (attr_node, HDF5.value, list_node))
 
@@ -803,8 +832,9 @@ def serialize(source: Union[str, pathlib.Path, h5py.File],
               compact: bool = True,
               context: Dict = None,
               structural: bool = True,
-              resolve_keys: bool = True) -> str:
-    g, ctx = get_rdflib_graph(source, iri_only, recursive, compact, context, structural, resolve_keys)
+              resolve_keys: bool = True,
+              skipND: Optional[int] = None) -> str:
+    g, ctx = get_rdflib_graph(source, iri_only, recursive, compact, context, structural, resolve_keys, skipND=skipND)
     return g.serialize(
         format='json-ld',
         context=ctx,

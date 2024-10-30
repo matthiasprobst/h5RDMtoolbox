@@ -1,17 +1,17 @@
 import json
 import unittest
 
+import ontolutils
+from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
-import ontolutils
 from h5rdmtoolbox import Attribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 from h5rdmtoolbox.wrapper.rdf import RDFError
 from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
-from ontolutils.namespacelib import M4I, OBO
 
 
 class TestRDF(unittest.TestCase):
@@ -407,12 +407,15 @@ class TestRDF(unittest.TestCase):
     def test_using_plain_jsonld(self):
         sn_xvel = """{
             "@context": {
-                "ssno": "https://matthiasprobst.github.io/ssno#"
+                "ssno": "https://matthiasprobst.github.io/ssno#",
+                "ex": "https://example.org/"
             },
+            "@id": "https://www.example.org/standard_name/x_velocity",
             "@type": "ssno:StandardName",
             "ssno:standardName": "x_velocity",
             "ssno:unit": "http://qudt.org/vocab/unit/M-PER-SEC",
-            "ssno:description": "X-component of a velocity vector."
+            "ssno:description": "X-component of a velocity vector.",
+            "ssno:standardNameTable": "https://doi.org/10.5281/zenodo.122658"
         }"""
         with h5tbx.File() as h5:
             h5.create_dataset("u", data=[1, 2, 3], attrs={"standard_name": "x_velocity"})
@@ -422,4 +425,8 @@ class TestRDF(unittest.TestCase):
             # h5.u.rdf["standard_name"].object = StandardName(standard_name="x_velocity", unit="m/s")
             h5.dump(False)
             h5jld = h5.dump_jsonld(indent=2, structural=False)
-            print(h5jld)
+            h5jld_dict = json.loads(h5jld)
+            self.assertDictEqual(h5jld_dict["@context"],
+                                 {"ssno": "https://matthiasprobst.github.io/ssno#",
+                                  "ex": "https://example.org/",
+                                  "standard_name": "https://matthiasprobst.github.io/ssno#hasStandardName"})
