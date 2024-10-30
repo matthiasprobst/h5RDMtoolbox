@@ -2,6 +2,9 @@
 
 Log of changes in the versions
 
+## v1.5.2
+- bugix dumping json-ld
+
 ## v1.5.1
 - a json-ld string can be assigned to a rdf object (see https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/wrapper/FAIRAttributes.html)
 
