@@ -599,7 +599,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
             # now go through all predicates
             for ak, av in obj.attrs.items():
-                attr_predicate = obj.rdf.predicate.get(ak, None)  # TODO: here nur die file predicates holen!
+                attr_predicate = obj.frdf.predicate.get(ak, None)  # TODO: here nur die file predicates holen!
                 if attr_predicate is not None:
                     _namespace, _predicate_name = split_URIRef(attr_predicate)
                     if resolve_keys:
@@ -619,6 +619,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
             if not structural:
                 obj_node = file_node
+
         else:
             obj_node = iri_dict.get(obj.name, None)
             if obj_node is None:

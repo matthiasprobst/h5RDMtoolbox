@@ -2281,6 +2281,11 @@ class File(h5py.File, Group):
     @property
     def rdf(self):
         """Return RDF Manager"""
+        return rdf.RDFManager(self.attrs)
+
+    @property
+    def frdf(self):
+        """Return File RDF Manager"""
         return rdf.FileRDFManager(self.attrs)
 
     @property

@@ -541,7 +541,7 @@ WHERE {
     def test_hdf2jsonld_with_standard_name_table(self):
         with h5tbx.File() as h5:
             h5.attrs["snt_file"] = "https://sandbox.zenodo.org/uploads/125545"
-            h5.rdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
+            h5.frdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
             h5["/"].attrs["snt_rootgroup"] = "https://sandbox.zenodo.org/uploads/12554567"
             h5["/"].rdf["snt_rootgroup"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
         print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, semantic=True, structural=True,
