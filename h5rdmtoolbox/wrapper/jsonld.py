@@ -544,8 +544,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
     grp = source
 
     _context = {}
-    if structural:
-        _context['hdf5'] = str(HDF5._NS)
+    # if structural:
+    _context['hdf5'] = str(HDF5._NS)
     _context.update(context or {})  # = context or {}
 
     assert isinstance(_context, dict)
@@ -584,19 +584,46 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
     def _add_hdf_node(name, obj, ctx) -> Dict:
         # node = rdflib.URIRef(f'_:{obj.name}')
         if isinstance(obj, h5py.File):
-            root_group = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
-            iri_dict[name] = root_group
+            file_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+            iri_dict['.'] = file_node
+            _add_node(g, (file_node, RDF.type, HDF5.File))
             if structural:
-                file_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
-                _add_node(g, (file_node, RDF.type, HDF5.File))
+                root_group = rdflib.BNode(
+                    value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+                iri_dict[name] = root_group
                 _add_node(g, (file_node, HDF5.rootGroup, root_group))
                 # _add_node(g, (root_group, RDF.type, HDF5.Group))
                 # _add_node(g, (root_group, HDF5.name, rdflib.Literal(name)))
+                obj_node = root_group
+                iri_dict["/"] = root_group
 
-        obj_node = iri_dict.get(obj.name, None)
-        if obj_node is None:
-            obj_node = _get_id(obj)
-            iri_dict[obj.name] = obj_node
+            # now go through all predicates
+            for ak, av in obj.attrs.items():
+                attr_predicate = obj.rdf.predicate.get(ak, None)  # TODO: here nur die file predicates holen!
+                if attr_predicate is not None:
+                    _namespace, _predicate_name = split_URIRef(attr_predicate)
+                    if resolve_keys:
+                        _rdf_name = _predicate_name
+                    else:
+                        _rdf_name = ak
+                    predicate_uri, ctx = process_rdf_key(
+                        rdf_name=_rdf_name,
+                        rdf_value=attr_predicate,
+                        resolve_keys=resolve_keys,
+                        context=ctx)
+
+                    assert isinstance(ctx, dict)
+
+                    _add_node(g, (file_node, predicate_uri, rdflib.URIRef(av)))
+
+
+            if not structural:
+                obj_node = file_node
+        else:
+            obj_node = iri_dict.get(obj.name, None)
+            if obj_node is None:
+                obj_node = _get_id(obj)
+                iri_dict[obj.name] = obj_node
 
         if structural and name != '/':
             parent_name = obj.parent.name
@@ -611,6 +638,10 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             h5_rdf_type = obj.attrs.get(RDF_TYPE_ATTR_NAME, None)
             if h5_rdf_type:
                 _add_node(g, (obj_node, RDF.type, rdflib.URIRef(h5_rdf_type)))
+
+            if obj.name == "/":
+                obj = obj[obj.name]
+
             group_type = obj.rdf.type
             if isinstance(group_type, list):
                 for gs in group_type:

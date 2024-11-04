@@ -1,9 +1,11 @@
 import json
+import pathlib
+import unittest
+
 import numpy as np
 import ontolutils
-import pathlib
 import rdflib
-import unittest
+import ssnolib
 from ontolutils import M4I
 from ontolutils import namespaces, urirefs, Thing
 
@@ -535,3 +537,18 @@ WHERE {
         self.assertTrue(jsonld_filename.exists())
         self.assertTrue(jsonld_filename.suffix == '.jsonld')
         jsonld_filename.unlink()
+
+    def test_hdf2jsonld_with_standard_name_table(self):
+        with h5tbx.File() as h5:
+            h5.attrs["snt_file"] = "https://sandbox.zenodo.org/uploads/125545"
+            h5.rdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
+            h5["/"].attrs["snt_rootgroup"] = "https://sandbox.zenodo.org/uploads/12554567"
+            h5["/"].rdf["snt_rootgroup"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
+        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, semantic=True, structural=True,
+                                resolve_keys=True,
+                                context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
+        jdict = json.loads(
+            h5tbx.dump_jsonld(h5.hdf_filename, indent=2, semantic=True, structural=True,
+                              resolve_keys=True,
+                              context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
+        jdict["ssno:usesStandardNameTable"] = "https://sandbox.zenodo.org/uploads/125545"

@@ -1866,7 +1866,9 @@ class Dataset(h5py.Dataset):
                         # decode string array
                         if dim_ds_attrs.get('time_format', False):
                             if dim_ds_data.ndim == 0:
-                                dim_ds_data = np.array(datetime.strptime(dim_ds_data.astype(str), dim_ds_attrs['time_format'])).astype(datetime)
+                                dim_ds_data = np.array(
+                                    datetime.strptime(dim_ds_data.astype(str), dim_ds_attrs['time_format'])).astype(
+                                    datetime)
                             else:
                                 dim_ds_data = convert_strings_to_datetimes(dim_ds_data.astype(str))
                                 # dim_ds_data = np.array(
@@ -2223,8 +2225,8 @@ class File(h5py.File, Group):
         logger.debug(f'Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}')
         try:
             super().__init__(name=name,
-                         mode=mode,
-                         **kwargs)
+                             mode=mode,
+                             **kwargs)
         except OSError as e:
             logger.error(f"Unable to open file {name}. Error message: {e}")
             from ..utils import DownloadFileManager
@@ -2279,7 +2281,7 @@ class File(h5py.File, Group):
     @property
     def rdf(self):
         """Return RDF Manager"""
-        return rdf.RDFManager(self.attrs)
+        return rdf.FileRDFManager(self.attrs)
 
     @property
     def iri(self):

@@ -12,7 +12,9 @@ from . import lazy
 from ..protocols import H5TbxAttributeManager
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
+RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
+RDF_FILE_PREDICATE_ATTR_NAME = 'RDF_FILE_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = 'RDF_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
 RDF_TYPE_ATTR_NAME = 'RDF_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 
@@ -45,7 +47,10 @@ def validate_url(url: str) -> str:
                        f'Tested with pydantic: {e}')
 
 
-def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> None:
+def set_predicate(attr: h5py.AttributeManager,
+                  attr_name: str,
+                  value: str,
+                  rdf_predicate_attr_name=RDF_PREDICATE_ATTR_NAME) -> None:
     """Set the class of an attribute
 
     Parameters
@@ -67,11 +72,11 @@ def set_predicate(attr: h5py.AttributeManager, attr_name: str, value: str) -> No
         raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
                        f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
-    iri_name_data = attr.get(RDF_PREDICATE_ATTR_NAME, None)
+    iri_name_data = attr.get(rdf_predicate_attr_name, None)
     if iri_name_data is None:
         iri_name_data = {}
     iri_name_data.update({attr_name: value})
-    attr[RDF_PREDICATE_ATTR_NAME] = iri_name_data
+    attr[rdf_predicate_attr_name] = iri_name_data
 
 
 def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
@@ -549,3 +554,59 @@ class RDFManager:
             del self.predicate[name]
         if name in self.object:
             del self.object[name]
+
+
+class FileIRIDict(Dict):
+
+    def __init__(self, _dict: Dict, attr: h5py.AttributeManager = None, attr_name: str = None):
+        super().__init__(_dict)
+        self._attr = attr
+        self._attr_name = attr_name
+
+    @property
+    def predicate(self):
+        p = self[RDF_FILE_PREDICATE_ATTR_NAME]
+        if p is not None:
+            return p
+        return p
+
+    @predicate.setter
+    def predicate(self, value):
+        set_predicate(self._attr, self._attr_name, value,
+                      rdf_predicate_attr_name=RDF_FILE_PREDICATE_ATTR_NAME)
+
+
+class File_RDF_Predicate(_RDFPO):
+    """IRI class attribute manager"""
+
+    IRI_ATTR_NAME = RDF_FILE_PREDICATE_ATTR_NAME
+
+    def __setiri__(self, key, value):
+        set_predicate(self._attr, key, value)
+
+
+class FileRDFManager:
+
+    def __init__(self, attr: H5TbxAttributeManager = None):
+        self._attr = attr
+
+    def __getitem__(self, item) -> FileIRIDict:
+        """Overwrite parent implementation, because other attr name is used"""
+        if item not in self._attr:
+            raise KeyError(f'Attribute "{item}" not found in {self.parent.name}.')
+        return FileIRIDict(
+            {
+                RDF_FILE_PREDICATE_ATTR_NAME: self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, {}).get(item, None),
+                RDF_FILE_OBJECT_ATTR_NAME: self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, {}).get(item, None)},
+            self._attr, item)
+
+    @property
+    def predicate(self) -> File_RDF_Predicate:
+        """Return the RDF predicate manager"""
+        rdf_pred = File_RDF_Predicate(self._attr)
+        rdf_pred.IRI_ATTR_NAME = RDF_FILE_PREDICATE_ATTR_NAME
+        return rdf_pred
+
+    @predicate.setter
+    def predicate(self, value):
+        set_predicate(self._attr, self._attr_name, value)
