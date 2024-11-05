@@ -585,9 +585,9 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
         # node = rdflib.URIRef(f'_:{obj.name}')
         if isinstance(obj, h5py.File):
             file_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
-            iri_dict['.'] = file_node
-            _add_node(g, (file_node, RDF.type, HDF5.File))
             if structural:
+                iri_dict['.'] = file_node
+                _add_node(g, (file_node, RDF.type, HDF5.File))
                 root_group = rdflib.BNode(
                     value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
                 iri_dict[name] = root_group

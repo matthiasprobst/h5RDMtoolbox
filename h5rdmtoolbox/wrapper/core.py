@@ -2285,7 +2285,12 @@ class File(h5py.File, Group):
 
     @property
     def frdf(self):
-        """Return File RDF Manager"""
+        """Via the File RDF Manager, semantic properties can be associated with the file rather than the
+        root group. If you want to describe a root attribute semantically, use `.rdf` instead.
+
+        .. versionadded:: 1.5.3
+           Explanation of the new feature, or additional notes if necessary.
+        """
         return rdf.FileRDFManager(self.attrs)
 
     @property

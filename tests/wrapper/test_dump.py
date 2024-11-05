@@ -20,13 +20,14 @@ class TestDump(unittest.TestCase):
         ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=True, compact=False,
                                 context={'foaf': 'http://xmlns.com/foaf/0.1/'})
         jsondict = json.loads(ret)
-        self.assertEqual(jsondict["@graph"][1]['foaf:firstName'], 'John')
-        self.assertEqual(jsondict["@graph"][1]['@type'], 'prov:Person')
+        print(jsondict)
+        self.assertEqual(jsondict['foaf:firstName'], 'John')
+        self.assertEqual(jsondict['@type'], 'prov:Person')
 
         ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=False)
         jsondict = json.loads(ret)
-        self.assertEqual(jsondict["@graph"][1]['fname'], 'John')
-        self.assertEqual(jsondict["@graph"][1]['@type'], 'prov:Person')
+        self.assertEqual(jsondict['fname'], 'John')
+        self.assertEqual(jsondict['@type'], 'prov:Person')
 
         ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, resolve_keys=False, compact=False)
         jsondict = json.loads(ret)

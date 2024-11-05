@@ -426,7 +426,10 @@ class TestRDF(unittest.TestCase):
             h5.dump(False)
             h5jld = h5.dump_jsonld(indent=2, structural=False)
             h5jld_dict = json.loads(h5jld)
-            self.assertDictEqual(h5jld_dict["@context"],
-                                 {"ssno": "https://matthiasprobst.github.io/ssno#",
-                                  "ex": "https://example.org/",
-                                  "standard_name": "https://matthiasprobst.github.io/ssno#hasStandardName"})
+            self.assertDictEqual(
+                h5jld_dict["@context"],
+                {"ssno": "https://matthiasprobst.github.io/ssno#",
+                 "ex": "https://example.org/",
+                 "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
+                 "standard_name": "https://matthiasprobst.github.io/ssno#hasStandardName"}
+            )
