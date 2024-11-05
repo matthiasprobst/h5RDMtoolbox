@@ -597,9 +597,18 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 obj_node = root_group
                 iri_dict["/"] = root_group
 
+            file_rdf = obj.frdf.type
+            if isinstance(file_rdf, list):
+                for _type in file_rdf:
+                    nsp, key = split_URIRef(_type)
+                    ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
+                    if ns_iri is not None:
+                        _context.update({ns_prefix: ns_iri})
+                    _add_node(g, (file_node, RDF.type, rdflib.URIRef(_type)))
+
             # now go through all predicates
             for ak, av in obj.attrs.items():
-                attr_predicate = obj.frdf.predicate.get(ak, None)  # TODO: here nur die file predicates holen!
+                attr_predicate = obj.frdf.predicate.get(ak, None)
                 if attr_predicate is not None:
                     _namespace, _predicate_name = split_URIRef(attr_predicate)
                     if resolve_keys:

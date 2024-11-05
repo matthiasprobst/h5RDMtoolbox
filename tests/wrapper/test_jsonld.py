@@ -14,7 +14,7 @@ from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention.hdf_ontology import HDF5
 from h5rdmtoolbox.wrapper import jsonld, rdf
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
-from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME
+from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDFError
 
 logger = h5tbx.logger
 
@@ -552,3 +552,42 @@ WHERE {
                               resolve_keys=True,
                               context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
         jdict["ssno:usesStandardNameTable"] = "https://sandbox.zenodo.org/uploads/125545"
+
+    def test_frdf(self):
+        with h5tbx.File() as h5:
+            self.assertEqual(h5.frdf.type, str(HDF5.File))
+            h5.frdf.type = "dcat:Dataset"
+            self.assertEqual(
+                sorted(h5.frdf.type),
+                sorted([str(HDF5.File), "http://www.w3.org/ns/dcat#Dataset"])
+            )
+
+            with self.assertRaises(RDFError):
+                h5.frdf.type = "unknown:Dataset"
+            self.assertEqual(
+                sorted(h5.frdf.type),
+                sorted([str(HDF5.File), "http://www.w3.org/ns/dcat#Dataset"])
+            )
+
+            jdict = json.loads(h5.dump_jsonld(structural=True, indent=2))
+            self.assertDictEqual({
+                "dcat": "http://www.w3.org/ns/dcat#",
+                "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+            },
+                jdict["@context"]
+            )
+            self.assertEqual(len(jdict["@graph"]), 1)
+            self.assertEqual(sorted(jdict["@graph"][0]["@type"]),
+                             sorted(["hdf5:File", "dcat:Dataset"]))
+
+            jdict = json.loads(h5.dump_jsonld(structural=False, indent=2))
+            self.assertDictEqual({
+                "dcat": "http://www.w3.org/ns/dcat#",
+                "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+            },
+                jdict["@context"]
+            )
+            self.assertEqual(
+                sorted(jdict["@type"]),
+                sorted(["hdf5:File", "dcat:Dataset"])
+            )

@@ -9,6 +9,7 @@ import pydantic
 from pydantic import HttpUrl
 
 from . import lazy
+from ..convention.ontology import HDF5
 from ..protocols import H5TbxAttributeManager
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
@@ -16,9 +17,29 @@ RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
 RDF_FILE_PREDICATE_ATTR_NAME = 'RDF_FILE_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = 'RDF_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
+RDF_FILE_TYPE_ATTR_NAME = 'RDF_FILE_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 RDF_TYPE_ATTR_NAME = 'RDF_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 
 DEFINITION_ATTR_NAME = 'ATTR_DEFINITION'
+
+KNOWN_NAMESPACES = {
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "dct": "http://purl.org/dc/terms/",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "xml": "http://www.w3.org/XML/1998/namespace",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
+    "prov": "http://www.w3.org/ns/prov#",
+    "qudt": "http://qudt.org/schema/qudt/",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "ssno": "https://matthiasprobst.github.io/ssno#",
+    "vann": "http://purl.org/vocab/vann/",
+    "schema": "https://schema.org/",
+    "dcterms": "http://purl.org/dc/terms/",
+}
 
 
 class RDFError(Exception):
@@ -36,10 +57,19 @@ def validate_url(url: str) -> str:
     Returns
     -------
     str
-        Returns the original string if the URL is valid. Thus white spaces are not replaced
+        Returns the original string if the URL is valid. Thus, white spaces are not replaced
         by %20.
     """
     try:
+        if not url.startswith("http"):
+            if ":" in url:
+                prefix, name = url.split(":")
+                if prefix not in KNOWN_NAMESPACES:
+                    raise RDFError(f'Invalid URL: "{url}". The prefix "{prefix}" is not known. Please provide a '
+                                   f'valid and full IRI. Here are the known prefixes: {KNOWN_NAMESPACES}')
+                url = KNOWN_NAMESPACES[prefix] + name
+            else:
+                raise RDFError(f'Invalid URL: "{url}".')
         HttpUrl(url)  # validate the URL, will raise an error if invalid
         return str(url)  # return the original string
     except pydantic.ValidationError as e:
@@ -586,6 +616,7 @@ class File_RDF_Predicate(_RDFPO):
 
 
 class FileRDFManager:
+    """Similar to RDFManager, but to assign semantic data to the file rather than to a group or dataset"""
 
     def __init__(self, attr: H5TbxAttributeManager = None):
         self._attr = attr
@@ -610,3 +641,47 @@ class FileRDFManager:
     @predicate.setter
     def predicate(self, value):
         set_predicate(self._attr, self._attr_name, value)
+
+    @property
+    def type(self) -> Union[str, List[str], None]:
+        """Returns the RDF subject (@type in JSON-LD syntax) of the HDF5 file (not the root group!)
+        If nothing has been set before, hdf5:File is returned.
+
+        Returns
+        -------
+        Union[str, List[str], None]
+        """
+        s = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
+        if s is None:
+            return str(HDF5.File)
+        return s
+
+    @type.setter
+    def type(self, rdf_type: Union[str, List[str]]):
+        """Add a rdf type (@type in JSON-LD syntax) to the hdf5 file (not the root group!)"""
+        if isinstance(rdf_type, list):
+            data = [validate_url(str(i)) for i in rdf_type]
+        else:
+            data = validate_url(str(rdf_type))
+
+        # get the attribute
+        iri_sbj_data = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, str(HDF5.File))
+
+        if iri_sbj_data is None:
+            self._attr[RDF_FILE_TYPE_ATTR_NAME] = data
+            return
+
+        if isinstance(iri_sbj_data, list):
+            if isinstance(data, list):
+                iri_sbj_data.extend(data)
+            else:
+                iri_sbj_data.append(data)
+        else:
+            iri_sbj_data = [iri_sbj_data, ]
+            if isinstance(data, list):
+                iri_sbj_data.extend(data)
+            else:
+                iri_sbj_data.append(data)
+
+        # ensure, that the list contains unique values:
+        self._attr[RDF_FILE_TYPE_ATTR_NAME] = list(set(iri_sbj_data))
