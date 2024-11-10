@@ -401,6 +401,18 @@ class Group(h5py.Group):
         return rdf.RDFManager(self.attrs)
 
     @property
+    def frdf(self):
+        """Via the File RDF Manager, semantic properties can be associated with the file rather than the
+        root group. If you want to describe a root attribute semantically, use `.rdf` instead.
+
+        .. versionadded:: 1.5.3
+           Explanation of the new feature, or additional notes if necessary.
+        """
+        if self.name == "/":
+            return rdf.FileRDFManager(self.attrs)
+        return rdf.FileRDFManager(self.rootparent.attrs)
+
+    @property
     def iri(self):
         """Deprecated. Use rdf instead."""
         warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
@@ -2284,16 +2296,6 @@ class File(h5py.File, Group):
         return rdf.RDFManager(self.attrs)
 
     @property
-    def frdf(self):
-        """Via the File RDF Manager, semantic properties can be associated with the file rather than the
-        root group. If you want to describe a root attribute semantically, use `.rdf` instead.
-
-        .. versionadded:: 1.5.3
-           Explanation of the new feature, or additional notes if necessary.
-        """
-        return rdf.FileRDFManager(self.attrs)
-
-    @property
     def iri(self):
         """Deprecated. Use rdf instead."""
         warnings.warn('Property "iri" is deprecated. Use "rdf" instead.', DeprecationWarning)
@@ -2402,6 +2404,7 @@ class File(h5py.File, Group):
                     structural: bool = True,
                     semantic: bool = True,
                     resolve_keys: bool = False,
+                    blank_node_iri_base: Optional[Dict] = None,
                     **kwargs) -> str:
         """Dump the file content as JSON-LD string"""
         from .. import dump_jsonld
@@ -2410,6 +2413,7 @@ class File(h5py.File, Group):
                            structural=structural,
                            semantic=semantic,
                            resolve_keys=resolve_keys,
+                           blank_node_iri_base=blank_node_iri_base,
                            **kwargs)
 
 

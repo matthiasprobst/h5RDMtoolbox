@@ -10,6 +10,7 @@ import numpy as np
 import ontolutils
 import rdflib
 from ontolutils.classes.utils import split_URIRef
+from pydantic import HttpUrl
 from rdflib import Graph, URIRef, BNode, XSD, RDF, SKOS
 from rdflib.plugins.shared.jsonld.context import Context
 
@@ -67,14 +68,22 @@ CONTEXT_PREFIXES = {
 CONTEXT_PREFIXES_INV = {v: k for k, v in CONTEXT_PREFIXES.items()}
 
 
-def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool = True) -> BNode:
+def _build_bnode(simple, blank_node_iri_base: str):
+    if blank_node_iri_base:
+        if simple:
+            return rdflib.URIRef(f'{blank_node_iri_base}N{next(_bnode_counter)}')
+        return rdflib.URIRef(rdflib.BNode().n3().replace('_:', f"{blank_node_iri_base}"))
+    return rdflib.BNode(value=f'N{next(_bnode_counter)}') if simple else rdflib.BNode()
+
+
+def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool, blank_node_iri_base: Optional[str]) -> BNode:
     """Build an RDF List from a list of data"""
     # Create an RDF List for flag values
     # initial_node = rdflib.BNode()
     n = len(data)
     # assert n > 1, 'Expecting at least two element in the list'
 
-    initial_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+    initial_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
 
     flag_list = initial_node
 
@@ -151,14 +160,14 @@ def resolve_iri(key_or_iri: str, context: Context) -> str:
 #         return Literal(_av)
 
 
-def _get_id(_node, use_simple_bnode_value: bool = True) -> Union[URIRef, BNode]:
+def _get_id(_node, use_simple_bnode_value: bool, blank_node_iri_base: Optional[Dict]) -> Union[URIRef, BNode]:
     """if an attribute in the node is called "@id", use that, otherwise use the node name"""
     _id = _node.rdf.subject  # _node.attrs.get('@id', None)
     # if local is not None:
     #     local = rf'file://{_node.hdf_filename.resolve().absolute()}'
     #     return URIRef(local + _node.name[1:])
     if _id is None:
-        return rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+        return _build_bnode(use_simple_bnode_value, blank_node_iri_base)
         # _id = _node.attrs.get(get_config('uuid_name'),
         #                       local + _node.name[1:])  # [1:] because the name starts with a "/"
     return URIRef(_id)
@@ -525,10 +534,15 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                      context: Dict = None,
                      structural: bool = True,
                      resolve_keys: bool = True,
-                     use_simple_bnode_value: bool = True,
+                     use_simple_bnode_value: bool = False,
+                     blank_node_iri_base: Optional[HttpUrl] = None,
                      skipND: int = None) -> Tuple[Graph, Dict]:
     """using rdflib graph. This will not write HDF5 dataset data to the graph. Impossible and
      not reasonable as potentially multidimensional"""
+    if blank_node_iri_base is not None:
+        blank_node_iri_base = str(HttpUrl(blank_node_iri_base))
+        if not blank_node_iri_base.endswith(("/", "#")):
+            raise ValueError("The blank node IRI base must end with a '/' or '#'")
     if skipND is None:
         skipND = 10000
     if isinstance(source, (str, pathlib.Path)):
@@ -539,6 +553,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                                     recursive=recursive,
                                     compact=compact,
                                     context=context,
+                                    blank_node_iri_base=blank_node_iri_base,
                                     skipND=skipND)
 
     grp = source
@@ -584,12 +599,11 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
     def _add_hdf_node(name, obj, ctx) -> Dict:
         # node = rdflib.URIRef(f'_:{obj.name}')
         if isinstance(obj, h5py.File):
-            file_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+            file_node = _build_bnode(simple=use_simple_bnode_value, blank_node_iri_base=blank_node_iri_base)
             if structural:
                 iri_dict['.'] = file_node
                 _add_node(g, (file_node, RDF.type, HDF5.File))
-                root_group = rdflib.BNode(
-                    value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+                root_group = _build_bnode(simple=use_simple_bnode_value, blank_node_iri_base=blank_node_iri_base)
                 iri_dict[name] = root_group
                 _add_node(g, (file_node, HDF5.rootGroup, root_group))
                 # _add_node(g, (root_group, RDF.type, HDF5.Group))
@@ -605,6 +619,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                     if ns_iri is not None:
                         _context.update({ns_prefix: ns_iri})
                     _add_node(g, (file_node, RDF.type, rdflib.URIRef(_type)))
+
 
             # now go through all predicates
             for ak, av in obj.attrs.items():
@@ -625,6 +640,22 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
                     _add_node(g, (file_node, predicate_uri, rdflib.URIRef(av)))
 
+                    file_rdf_object = obj.frdf.object.get(ak, None)
+                    if file_rdf_object is not None:
+                        _namespace, _object_name = split_URIRef(file_rdf_object)
+                        if resolve_keys:
+                            _rdf_name = _object_name
+                        else:
+                            _rdf_name = ak
+                        object_uri, ctx = process_rdf_key(
+                            rdf_name=_rdf_name,
+                            rdf_value=file_rdf_object,
+                            resolve_keys=resolve_keys,
+                            context=ctx)
+
+                        assert isinstance(ctx, dict)
+
+                        _add_node(g, (rdflib.URIRef(av), RDF.type, object_uri))
 
             if not structural:
                 obj_node = file_node
@@ -632,7 +663,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
         else:
             obj_node = iri_dict.get(obj.name, None)
             if obj_node is None:
-                obj_node = _get_id(obj)
+                obj_node = _get_id(obj, use_simple_bnode_value=use_simple_bnode_value,
+                                   blank_node_iri_base=blank_node_iri_base)
                 iri_dict[obj.name] = obj_node
 
         if structural and name != '/':
@@ -645,9 +677,6 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             if structural:
                 _add_node(g, (obj_node, RDF.type, HDF5.Group))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
-            h5_rdf_type = obj.attrs.get(RDF_TYPE_ATTR_NAME, None)
-            if h5_rdf_type:
-                _add_node(g, (obj_node, RDF.type, rdflib.URIRef(h5_rdf_type)))
 
             if obj.name == "/":
                 obj = obj[obj.name]
@@ -703,7 +732,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 continue
 
             # create a new node for the attribute
-            attr_node = rdflib.BNode(value=f'N{next(_bnode_counter)}') if use_simple_bnode_value else rdflib.BNode()
+            attr_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
             logger.debug(f'Create new node for attribute "{ak}": {attr_node}')
 
             if structural:  # add hdf type and name nodes
@@ -731,9 +760,13 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 attr_literal = rdflib.Literal(float(av), datatype=XSD.float)
             elif isinstance(av, list) or isinstance(av, np.ndarray):
                 if isinstance(av, np.ndarray):
-                    list_node = build_node_list(g, av.tolist())
+                    list_node = build_node_list(g, av.tolist(),
+                                                use_simple_bnode_value=use_simple_bnode_value,
+                                                blank_node_iri_base=blank_node_iri_base)
                 else:
-                    list_node = build_node_list(g, av)
+                    list_node = build_node_list(g, av,
+                                                use_simple_bnode_value=use_simple_bnode_value,
+                                                blank_node_iri_base=blank_node_iri_base)
             elif isinstance(av, (h5py.Dataset, h5py.Group)):
                 attr_literal = rdflib.Literal(av.name)
             else:
@@ -872,10 +905,20 @@ def serialize(source: Union[str, pathlib.Path, h5py.File],
               recursive: bool = True,
               compact: bool = True,
               context: Dict = None,
+              blank_node_iri_base: Optional[HttpUrl] = None,
               structural: bool = True,
               resolve_keys: bool = True,
               skipND: Optional[int] = None) -> str:
-    g, ctx = get_rdflib_graph(source, iri_only, recursive, compact, context, structural, resolve_keys, skipND=skipND)
+    g, ctx = get_rdflib_graph(
+        source=source,
+        iri_only=iri_only,
+        recursive=recursive,
+        compact=compact,
+        context=context,
+        structural=structural,
+        resolve_keys=resolve_keys,
+        blank_node_iri_base=blank_node_iri_base,
+        skipND=skipND)
     return g.serialize(
         format='json-ld',
         context=ctx,
@@ -888,6 +931,7 @@ def dumpd(grp,
           recursive: bool = True,
           compact: bool = True,
           context: Dict = None,
+          blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
           resolve_keys: bool = False
           ) -> Union[List, Dict]:
@@ -897,6 +941,7 @@ def dumpd(grp,
                   recursive=recursive,
                   compact=compact,
                   context=context,
+                  blank_node_iri_base=blank_node_iri_base,
                   structural=structural,
                   resolve_keys=resolve_keys)
     if context:
@@ -915,11 +960,11 @@ def dumpd(grp,
     return jsonld_dict
 
 
-def dumps(grp,
-          iri_only=False,
+def dumps(grp, iri_only=False,
           recursive: bool = True,
           compact: bool = True,
           context: Optional[Dict] = None,
+          blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
           resolve_keys: bool = False,
           **kwargs) -> str:
@@ -930,6 +975,7 @@ def dumps(grp,
         recursive=recursive,
         compact=compact,
         context=context,
+        blank_node_iri_base=blank_node_iri_base,
         structural=structural,
         resolve_keys=resolve_keys),
         **kwargs
@@ -945,6 +991,7 @@ def dump(grp,
          recursive: bool = True,
          compact: bool = True,
          context: Optional[Dict] = None,
+         blank_node_iri_base: Optional[HttpUrl] = None,
          structural: bool = True,
          **kwargs):
     """Dump a group or a dataset to to file."""
@@ -954,6 +1001,7 @@ def dump(grp,
             recursive=recursive,
             compact=compact,
             context=context,
+            blank_node_iri_base=blank_node_iri_base,
             structural=structural
         ),
         fp,

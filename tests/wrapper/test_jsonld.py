@@ -6,15 +6,14 @@ import numpy as np
 import ontolutils
 import rdflib
 import ssnolib
-from ontolutils import M4I
-from ontolutils import namespaces, urirefs, Thing
+from ontolutils import namespaces, urirefs, Thing, M4I
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention.hdf_ontology import HDF5
 from h5rdmtoolbox.wrapper import jsonld, rdf
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
-from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDFError
+from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDFError, RDF_FILE_PREDICATE_ATTR_NAME
 
 logger = h5tbx.logger
 
@@ -38,16 +37,25 @@ class TestJSONLD(unittest.TestCase):
             grp.rdf.type = 'https://example.org/MyGroup'
             print(h5.dump_jsonld(indent=2))
 
+    def test_dump_with_blank_node_iri_base(self):
+        with h5tbx.File() as h5:
+            jsonld = h5.dump_jsonld(blank_node_iri_base='https://example.org/',
+                                    context={"local": "https://example.org/"},
+                                    indent=2)
+            jsonlddict = json.loads(jsonld)
+            self.assertEqual(jsonlddict['@context']['local'], 'https://example.org/')
+            self.assertTrue(jsonlddict['@graph'][0]['@id'].startswith('local:'))
+
     def test_build_node_list(self):
 
         g = rdflib.Graph()
         base_node = rdflib.BNode()
         g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
-        list_node_int = build_node_list(g, [1, 2, 3])
+        list_node_int = build_node_list(g, [1, 2, 3], use_simple_bnode_value=True, blank_node_iri_base=None)
         g.add((base_node, HDF5.value, list_node_int))
 
         with self.assertRaises(TypeError):
-            build_node_list(g, [1, dict(a='1'), 3])
+            build_node_list(g, [1, dict(a='1'), 3], use_simple_bnode_value=True, blank_node_iri_base=None)
 
         print(g.serialize(format='json-ld', indent=2))
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -66,7 +74,7 @@ WHERE {
         g = rdflib.Graph()
         base_node = rdflib.BNode()
         g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
-        list_node = build_node_list(g, [1, 'str', 3.4, True])
+        list_node = build_node_list(g, [1, 'str', 3.4, True], use_simple_bnode_value=True, blank_node_iri_base=None)
         g.add((base_node, HDF5.value, list_node))
 
         print(g.serialize(format='json-ld', indent=2))
@@ -552,6 +560,19 @@ WHERE {
                               resolve_keys=True,
                               context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
         jdict["ssno:usesStandardNameTable"] = "https://sandbox.zenodo.org/uploads/125545"
+
+        from rdflib import DCAT
+        with h5tbx.File() as h5:
+            h5.create_group('grp')
+            h5.attrs["snt_file"] = "https://sandbox.zenodo.org/uploads/125545"
+            h5["grp"].frdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
+            h5["grp"].frdf["snt_file"].object = DCAT.Dataset
+            self.assertEqual(h5["/"].attrs[RDF_FILE_PREDICATE_ATTR_NAME]["snt_file"],
+                             str(ssnolib.namespace.SSNO.usesStandardNameTable))
+
+        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, semantic=True, structural=True,
+                                resolve_keys=True,
+                                context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
 
     def test_frdf(self):
         with h5tbx.File() as h5:

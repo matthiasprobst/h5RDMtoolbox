@@ -31,6 +31,7 @@ import pint_xarray
 import shutil
 import xarray as xr
 from typing import Union, Callable
+from pydantic import HttpUrl
 
 from h5rdmtoolbox._cfg import set_config, get_config, get_ureg
 
@@ -128,6 +129,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
                 semantic: bool = True,
                 resolve_keys: bool = False,
                 context: Optional[Dict] = None,
+                blank_node_iri_base: Optional[HttpUrl] = None,
                 **kwargs) -> str:
     """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
     represents the semantic content only. To get a pure structural representation, set semantic=False, which
@@ -156,13 +158,17 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
         context part of JSON-LD
 
     """
+    if blank_node_iri_base is not None:
+        if not isinstance(blank_node_iri_base, (str, HttpUrl)):
+            raise ValueError('blank_node_iri_base must be a valid URL')
     from .wrapper import jsonld
     if not structural and not semantic:
         raise ValueError('At least one of structural or semantic must be True.')
     if structural and not semantic:
         return jsonld.dump_file(hdf_filename, skipND=skipND)
     with File(hdf_filename) as h5:
-        return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, context=context, **kwargs)
+        return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, context=context,
+                            blank_node_iri_base=blank_node_iri_base, **kwargs)
 
 
 def get_filesize(hdf_filename: Union[str, pathlib.Path]) -> int:

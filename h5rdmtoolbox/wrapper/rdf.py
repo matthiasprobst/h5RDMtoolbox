@@ -109,10 +109,13 @@ def set_predicate(attr: h5py.AttributeManager,
     attr[rdf_predicate_attr_name] = iri_name_data
 
 
-def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
+def set_object(attr: h5py.AttributeManager,
+               attr_name: str,
+               data: str,
+               rdf_object_attr_name=RDF_OBJECT_ATTR_NAME) -> None:
     """Set the class of an attribute"""
 
-    iri_data_data = attr.get(RDF_OBJECT_ATTR_NAME, None)
+    iri_data_data = attr.get(rdf_object_attr_name, None)
 
     if iri_data_data is None:
         iri_data_data = {}
@@ -132,7 +135,7 @@ def set_object(attr: h5py.AttributeManager, attr_name: str, data: str) -> None:
                            f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
     iri_data_data.update({attr_name: data})
-    attr[RDF_OBJECT_ATTR_NAME] = iri_data_data
+    attr[rdf_object_attr_name] = iri_data_data
 
 
 def append(attr: h5py.AttributeManager,
@@ -602,8 +605,23 @@ class FileIRIDict(Dict):
 
     @predicate.setter
     def predicate(self, value):
-        set_predicate(self._attr, self._attr_name, value,
+        set_predicate(self._attr,
+                      self._attr_name,
+                      value,
                       rdf_predicate_attr_name=RDF_FILE_PREDICATE_ATTR_NAME)
+
+    @property
+    def object(self):
+        p = self[RDF_FILE_OBJECT_ATTR_NAME]
+        if p is not None:
+            return p
+        return p
+
+    @object.setter
+    def object(self, value):
+        set_object(self._attr,
+                   self._attr_name, value,
+                   rdf_object_attr_name=RDF_FILE_OBJECT_ATTR_NAME)
 
 
 class File_RDF_Predicate(_RDFPO):
@@ -615,6 +633,15 @@ class File_RDF_Predicate(_RDFPO):
         set_predicate(self._attr, key, value)
 
 
+class File_RDF_Object(_RDFPO):
+    """IRI class attribute manager"""
+
+    IRI_ATTR_NAME = RDF_FILE_OBJECT_ATTR_NAME
+
+    def __setiri__(self, key, value):
+        set_object(self._attr, key, value)
+
+
 class FileRDFManager:
     """Similar to RDFManager, but to assign semantic data to the file rather than to a group or dataset"""
 
@@ -624,7 +651,7 @@ class FileRDFManager:
     def __getitem__(self, item) -> FileIRIDict:
         """Overwrite parent implementation, because other attr name is used"""
         if item not in self._attr:
-            raise KeyError(f'Attribute "{item}" not found in {self.parent.name}.')
+            raise KeyError(f'Attribute "{item}" not found in "{self._attr._parent.name}".')
         return FileIRIDict(
             {
                 RDF_FILE_PREDICATE_ATTR_NAME: self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, {}).get(item, None),
@@ -640,7 +667,18 @@ class FileRDFManager:
 
     @predicate.setter
     def predicate(self, value):
-        set_predicate(self._attr, self._attr_name, value)
+        set_predicate(self._attr, self._attr_name, value, rdf_predicate_attr_name=RDF_FILE_PREDICATE_ATTR_NAME)
+
+    @property
+    def object(self) -> File_RDF_Object:
+        """Return the RDF predicate manager"""
+        rdf_obj = File_RDF_Object(self._attr)
+        rdf_obj.IRI_ATTR_NAME = RDF_FILE_OBJECT_ATTR_NAME
+        return rdf_obj
+
+    @object.setter
+    def object(self, value):
+        set_object(self._attr, self._attr_name, value, rdf_predicate_attr_name=RDF_FILE_OBJECT_ATTR_NAME)
 
     @property
     def type(self) -> Union[str, List[str], None]:
