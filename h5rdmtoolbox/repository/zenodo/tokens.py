@@ -32,7 +32,8 @@ def _parse_ini_file(zenodo_ini_filename: Union[str, pathlib.Path]):
 
 
 def get_api_token(sandbox: bool,
-                  zenodo_ini_filename: Union[str, pathlib.Path] = None) -> Optional[str]:
+                  zenodo_ini_filename: Union[str, pathlib.Path] = None,
+                  env_var_name: Optional[str] = None) -> Optional[str]:
     """Read the Zenodo API token from the environment variable or config file.
     If an environment variable is found, a possibly existing ini file is ignored!
 
@@ -43,12 +44,17 @@ def get_api_token(sandbox: bool,
     zenodo_ini_filename : str or pathlib.Path
         The path to the Zenodo ini file. If None, the default path is used, which is
         the repository directory of the user: UserDir['repository'] / 'zenodo.ini'
+    env_var_name : str
+        The name of the environment variable to read the token from. If None, the default environment variables
+        are checked: 'ZENODO_API_TOKEN' or 'ZENODO_SANDBOX_API_TOKEN'.
 
     Returns
     -------
     Optional[str]
         The Zenodo API token. If unable to find, returns None
     """
+    if env_var_name is not None:
+        return os.environ.get(env_var_name, None)
     if sandbox:
         env_token = os.environ.get('ZENODO_SANDBOX_API_TOKEN', None)
         # logger.debug('Took token from environment variable ZENODO_SANDBOX_API_TOKEN: %s', env_token)

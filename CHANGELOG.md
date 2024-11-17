@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v1.6.0
+- `rootgroup` as alias for `rootparent`
+- `ZenodoRecord` has new property `env_name_for_token` to define the environment variable name to be used for the Zenodo token
+
 ## v1.5.2
 - bugix dumping json-ld
 

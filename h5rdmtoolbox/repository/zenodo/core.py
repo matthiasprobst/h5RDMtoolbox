@@ -50,7 +50,8 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     def __init__(self,
                  source: Union[int, str, None] = None,
-                 rec_id=None):
+                 rec_id=None,
+                 env_name_for_token: Optional[str] = None):
         """Initialize the ZenodoInterface.
 
         Parameters
@@ -60,6 +61,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             If a rec_id is passed, the deposit must exist.
 
         """
+        self.env_name_for_token = env_name_for_token
         self._cached_json = {}
         if rec_id is not None:
             warnings.warn("The `rec_id` parameter is deprecated. Please use the source parameter instead.",
@@ -372,7 +374,6 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
     >>> new_repo = repo.new_version()
     >>> new_repo.discard()
 
-
     """
 
     def get_metadata(self) -> Dict:
@@ -416,7 +417,7 @@ class ZenodoSandboxDeposit(AbstractZenodoInterface):
     @property
     def access_token(self):
         """Return current access token for the Zenodo API."""
-        return get_api_token(sandbox=True)
+        return get_api_token(sandbox=True, env_var_name=self.env_name_for_token)
 
     def get_file_infos(self, suffix=None) -> Dict[str, Dict]:
         """Get a dictionary of file information (name, size, checksum, ...)"""
@@ -482,7 +483,9 @@ class ZenodoRecord(RepositoryInterface):
 
     def __init__(self, source: Union[int, str, None] = None,
                  sandbox: bool = False,
+                 env_name_for_token: Optional[str] = None,
                  **kwargs):
+        self.env_name_for_token = env_name_for_token
         rec_id = kwargs.pop('rec_id', None)
         if rec_id is not None:
             warnings.warn("The `rec_id` parameter is deprecated. Please use the source parameter instead.",
@@ -518,6 +521,7 @@ class ZenodoRecord(RepositoryInterface):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
+
     @property
     def identifier(self) -> str:
         identifier = self.get_metadata().get('identifier', None)
@@ -528,6 +532,7 @@ class ZenodoRecord(RepositoryInterface):
     @property
     def title(self):
         return self.get_metadata().get('title', 'No title')
+
     @property
     def base_url(self) -> str:
         """Returns the base url of the repository"""
@@ -552,7 +557,7 @@ class ZenodoRecord(RepositoryInterface):
     @property
     def access_token(self):
         """Get the access token for the Zenodo API. This is needed to upload files."""
-        return get_api_token(sandbox=self.sandbox)
+        return get_api_token(sandbox=self.sandbox, env_var_name=self.env_name_for_token)
 
     def get_metadata(self) -> Dict:
         return self.json()['metadata']

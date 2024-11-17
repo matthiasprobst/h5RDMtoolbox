@@ -148,17 +148,21 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
             zenodo_url = string
             img_url = ''
         return make_href(url=zenodo_url, text=f'<img src="{img_url}" alt="DOI">'), True
-    for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
-        urls = re.findall(p, string)
-        if urls:
-            for url in urls:
-                identifier = identifiers.from_url(url)
-                if identifier:
-                    orcid_url_repr = identifier._repr_html_()
-                    string = string.replace(url, orcid_url_repr)
-                else:
-                    string = string.replace(url, make_href(url, url))
-            return string, True
+    if string.startswith(("https://", "http://", "ftp://", "www.")):
+        print(string)
+    #     return make_href(url=string, text=string), True
+    # for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
+    #     urls = re.findall(p, string)
+    #     if urls:
+    #         print(string, urls)
+        url = string
+        identifier = identifiers.from_url(url)
+        if identifier:
+            orcid_url_repr = identifier._repr_html_()
+            string = string.replace(url, orcid_url_repr)
+        else:
+            string = string.replace(url, make_href(url, url))
+        return string, True
 
     return string, False
 
@@ -628,7 +632,7 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 if _value_str[0] == '<' and _value_str[-1] == '>':
                     _value_str = _value_str[1:-1]
 
-            # check if it is a identifier:
+            # check if it is an identifier:
             identifier = identifiers.from_url(_value_str)
             if identifier is not None:
                 _value_html = identifier._repr_html_()

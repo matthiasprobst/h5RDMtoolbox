@@ -16,6 +16,7 @@ import h5py
 import numpy as np
 # noinspection PyUnresolvedReferences
 import pint
+import rdflib
 import xarray as xr
 from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
@@ -257,6 +258,8 @@ class Group(h5py.Group):
         if self.name == '/':
             return File(self._id)
         return File(get_rootparent(self.parent)._id)
+
+    rootgroup = rootparent  # alias
 
     @property
     def basename(self) -> str:
@@ -2407,14 +2410,36 @@ class File(h5py.File, Group):
                     blank_node_iri_base: Optional[Dict] = None,
                     **kwargs) -> str:
         """Dump the file content as JSON-LD string"""
+        return self.serialize(fmt="jsonld",
+                              skipND=skipND,
+                              structural=structural,
+                              semantic=semantic,
+                              resolve_keys=resolve_keys,
+                              blank_node_iri_base=blank_node_iri_base,
+                              **kwargs)
+
+    def serialize(self, fmt: str,
+                  skipND: int = 1,
+                  structural: bool = True,
+                  semantic: bool = True,
+                  resolve_keys: bool = False,
+                  blank_node_iri_base: Optional[Dict] = None,
+                  **kwargs
+                  ):
+        """Serialize the file content to a specific format"""
+        if not fmt in ("jsonld", "json-ld", "ttl", "turtle"):
+            raise NotImplementedError('Only JSON-LD or TTL serialization is supported at the moment')
         from .. import dump_jsonld
-        return dump_jsonld(self.hdf_filename,
-                           skipND=skipND,
-                           structural=structural,
-                           semantic=semantic,
-                           resolve_keys=resolve_keys,
-                           blank_node_iri_base=blank_node_iri_base,
-                           **kwargs)
+        jsonldstr = dump_jsonld(self.hdf_filename,
+                                skipND=skipND,
+                                structural=structural,
+                                semantic=semantic,
+                                resolve_keys=resolve_keys,
+                                blank_node_iri_base=blank_node_iri_base,
+                                **kwargs)
+        if fmt.lower() in ("jsonld", "json-ld"):
+            return jsonldstr
+        return rdflib.Graph().parse(jsonldstr, format='json-ld').serialize(format="turtle")
 
 
 Dataset._h5grp = Group
