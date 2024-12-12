@@ -39,7 +39,7 @@ For everybody, who is...
 - ... looking for a management approach for his or her data.
 - ... community has not yet established a stable convention.
 - ... working with small and big data, that fits into HDF5 files.
-- ... looking for an easy way to work with HDF5, especially through Jupyter Notebooks.
+- ... looking for an easy way to work with HDF5, especially through [Jupyter Notebooks](https://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html).
 - ... trying to integrate HDF5 with repositories and databases.
 - ... wishing to enrich data semantically with the RDF standard.
 - ... looking for a way to do all the above whiles not needing to learn a new syntax.
