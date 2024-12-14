@@ -6,7 +6,8 @@ from typing import List, Dict, Any, Union, Generator
 
 import h5py
 import numpy as np
-import pymongo
+from pymongo.collection import Collection
+from pymongo.errors import InvalidDocument
 
 from .interface import ExtHDF5DBInterface
 from .. import protected_attributes
@@ -182,7 +183,7 @@ def _generate_dataset_document(
 
 def _insert_dataset(
         dataset: h5py.Dataset,
-        collection: pymongo.collection.Collection,
+        collection: Collection,
         axis=None,
         update: bool = True,
         ignore_attrs: List[str] = None,
@@ -213,7 +214,7 @@ def _insert_dataset(
 
 def _insert_group(
         group: h5py.Group,
-        collection: pymongo.collection.Collection,
+        collection: Collection,
         recursive: bool = False,
         update: bool = True,
         include_dataset: bool = True,
@@ -236,8 +237,8 @@ def _insert_group(
         tree["filename"] = filename
         try:
             collection.insert_one(make_dict_mongo_compatible(tree))
-        except pymongo.errors.InvalidDocument as e:
-            raise pymongo.errors.InvalidDocument(
+        except InvalidDocument as e:
+            raise InvalidDocument(
                 f'Could not insert dict: \n{make_dict_mongo_compatible(tree)}\nOriginal error: {e}') from e
         return collection
 
@@ -308,7 +309,7 @@ class MongoDB(ExtHDF5DBInterface):
     (see module `lazy`).
     """
 
-    def __init__(self, collection: pymongo.collection.Collection):
+    def __init__(self, collection: Collection):
         self.collection = collection
 
     def insert_dataset(self, dataset: h5py.Dataset, **kwargs):

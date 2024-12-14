@@ -8,6 +8,7 @@ import h5py
 import mongomock
 import numpy as np
 import pymongo
+from pymongo.errors import ServerSelectionTimeoutError
 from skimage.feature import graycomatrix, graycoprops
 from sklearn.datasets import load_digits  # ! pip install scikit-learn
 
@@ -25,7 +26,7 @@ try:
     def get_client():
         print('Using real mongoDB server over mongomock')
         return pymongo.MongoClient()
-except pymongo.errors.ServerSelectionTimeoutError as err:
+except ServerSelectionTimeoutError as err:
 
     def get_client():
         print('Using mongomock')
