@@ -170,17 +170,26 @@ Install optional dependencies by specifying them in square brackets after the pa
 
 ## Citing the package
 
-If you intend to use the package in your work, you may cite the paper in the
-journal [inggrid](https://preprints.inggrid.org/repository/view/23/)
+If you intend to use the package in your work, you may cite the software itself as published on paper in the
+[Zenodo](https://zenodo.org/records/14473697) repository. A related paper is published in the
+journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!
 
 Here's the bibtext to it:
 
 ```
-@article{probst2023h5rdmtoolbox,
-  title={h5RDMtoolbox-A Python Toolbox for FAIR Data Management around HDF5},
-  author={Probst, Matthias and Pritz, Balazs},
-  year={2023},
-  publisher={ing. grid Preprint Repository}
+@article{probst2024h5rdmtoolbox,
+	author = {Matthias Probst, Balazs Pritz},
+	title = {h5RDMtoolbox - A Python Toolbox for FAIR Data Management around HDF5},
+	volume = {2},
+	year = {2024},
+	url = {https://www.inggrid.org/article/id/4028/},
+	issue = {1},
+	doi = {10.48694/inggrid.4028},
+	month = {8},
+	keywords = {Data management,HDF5,metadata,data lifecycle,Python,database},
+	issn = {2941-1300},
+	publisher={Universitäts- und Landesbibliothek Darmstadt},
+	journal = {ing.grid}
 }
 ```
 

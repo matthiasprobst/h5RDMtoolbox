@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Probst"
+    given-names: "Matthias"
+    orcid: "https://orcid.org/0000-0001-8729-0482"
+  - family-names: "Pritz"
+    given-names: "Balazs"
+    orcid: "https://orcid.org/0000-0002-4116-0065"
+  - family-names: "Büttner"
+    given-names: "Lucas"
+    orcid: "https://orcid.org/0000-0002-4116-0065"
+title: "h5rdmtoolbox - HDF5 Research Data Management Toolbox"
+version: 1.6.0
+doi: 10.5281/zenodo.14473697
+date-released: 2024-14-12
+url: "https://github.com/matthiasprobst/h5rdmtoolbox"
