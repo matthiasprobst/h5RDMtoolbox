@@ -5,9 +5,11 @@ Log of changes in the versions
 ## v1.6.0
 - `rootgroup` as alias for `rootparent`
 - `ZenodoRecord` has new property `env_name_for_token` to define the environment variable name to be used for the Zenodo token
+- bugfix downloading zenodo files
+- allowing higher versions of `pymongo`
 
 ## v1.5.2
-- bugix dumping json-ld
+- bugfix dumping json-ld
 
 ## v1.5.1
 - a json-ld string can be assigned to a rdf object (see https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/wrapper/FAIRAttributes.html)
@@ -134,7 +136,7 @@ major changes:
 
 ## v0.13.0
 
-- scale and offset is now implemented in the package is should not longer be defined in a convention.
+- scale and offset is now implemented in the package. it should no longer be defined in a convention.
 - bugfix normalization extension
 - bugfix exporting xr.DataArray built with the toolbox to netCDF
 - support usage of IRI to describe metadata
@@ -154,7 +156,7 @@ major changes:
 ## v0.12.0
 
 - 0D data is written to MongoDB
-- new utils like computing filesize
+- new utils like computing file size
 - update to new zenodo_search package due to change in backend at Zenodo.org
 - `find`, `find_one` and `distinct` can be called on HDF files
 - small bugfixes

@@ -10,7 +10,6 @@ import pydantic
 import requests
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.user import USER_DATA_DIR
 from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
@@ -18,6 +17,7 @@ from h5rdmtoolbox.repository.interface import RepositoryFile
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
+from h5rdmtoolbox.user import USER_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -459,9 +459,11 @@ class TestZenodo(unittest.TestCase):
             self.assertTrue(filename.exists())
             filename.unlink()
 
-        hdf5_filenames = z.download_files(suffix='.hdf')
+        hdf5_filenames = [file.download() for file in z.files.values() if file.suffix == '.hdf']
+        with self.assertWarns(DeprecationWarning):
+            z.download_files(suffix='.hdf')
         self.assertIsInstance(hdf5_filenames, list)
-        self.assertEqual(len(hdf5_filenames), 1)
+        self.assertEqual(len(hdf5_filenames), 0)
 
         txt_filenames = z.download_files(suffix='.txt')
         self.assertIsInstance(txt_filenames, list)

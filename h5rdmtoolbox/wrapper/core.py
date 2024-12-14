@@ -408,7 +408,7 @@ class Group(h5py.Group):
         """Via the File RDF Manager, semantic properties can be associated with the file rather than the
         root group. If you want to describe a root attribute semantically, use `.rdf` instead.
 
-        .. versionadded:: 1.5.3
+        .. versionadded:: 1.6.0
            Explanation of the new feature, or additional notes if necessary.
         """
         if self.name == "/":

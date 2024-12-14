@@ -98,7 +98,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
 
     @property
-    def identifier(self) -> str:
+    def identifier(self) -> Union[str, None]:
         identifier = self.get_metadata().get('identifier', None)
         if identifier is None:
             return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
@@ -228,7 +228,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         return {f.name: f for f in rfiles}
 
     @deprecated(version='1.4.0rc1',
-                msg='Please use `[file.download() for file in self.files.values()]` instead.')
+                msg='Please use `[file.download() for file in <repo>.files.values()]` instead.')
     def download_files(self,
                        target_folder: Union[str, pathlib.Path] = None,
                        suffix: Union[str, List[str], None] = None) -> List[pathlib.Path]:
@@ -246,7 +246,11 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         List[pathlib.Path]
             A list of all downloaded files.
         """
-        return [file.download(target_folder=target_folder) for file in self.files.values()]
+        if suffix is None:
+            return [file.download(target_folder=target_folder) for file in self.files.values()]
+        if not isinstance(suffix, list):
+            suffix = [suffix, ]
+        return [file.download(target_folder=target_folder) for file in self.files.values() if file.suffix in suffix]
 
     def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download a file based on URL. The url is validated using pydantic
@@ -320,7 +324,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         self.rec_id = _id
         return self
 
-    def publish(self) -> requests.Response:
+    def publish(self) -> None:
         """Be careful. The record cannot be deleted afterward!"""
         r = requests.post(self.json()['links']['publish'],
                           # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
