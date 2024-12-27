@@ -167,8 +167,15 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     if structural and not semantic:
         return jsonld.dump_file(hdf_filename, skipND=skipND)
     with File(hdf_filename) as h5:
-        return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, context=context,
-                            blank_node_iri_base=blank_node_iri_base, **kwargs)
+        return jsonld.dumps(
+            h5,
+            structural=structural,
+            resolve_keys=resolve_keys,
+            context=context,
+            blank_node_iri_base=blank_node_iri_base,
+            skipND=skipND,
+            **kwargs
+        )
 
 
 def get_filesize(hdf_filename: Union[str, pathlib.Path]) -> int:

@@ -620,7 +620,6 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                         _context.update({ns_prefix: ns_iri})
                     _add_node(g, (file_node, RDF.type, rdflib.URIRef(_type)))
 
-
             # now go through all predicates
             for ak, av in obj.attrs.items():
                 attr_predicate = obj.frdf.predicate.get(ak, None)
@@ -933,7 +932,8 @@ def dumpd(grp,
           context: Dict = None,
           blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
-          resolve_keys: bool = False
+          resolve_keys: bool = False,
+          skipND: Optional[int] = None
           ) -> Union[List, Dict]:
     """If context is missing, return will be a List"""
     s = serialize(grp,
@@ -943,7 +943,8 @@ def dumpd(grp,
                   context=context,
                   blank_node_iri_base=blank_node_iri_base,
                   structural=structural,
-                  resolve_keys=resolve_keys)
+                  resolve_keys=resolve_keys,
+                  skipND=skipND)
     if context:
         for k, v in context.items():
             CONTEXT_PREFIXES_INV[v] = k
@@ -960,13 +961,15 @@ def dumpd(grp,
     return jsonld_dict
 
 
-def dumps(grp, iri_only=False,
+def dumps(grp,
+          iri_only=False,
           recursive: bool = True,
           compact: bool = True,
           context: Optional[Dict] = None,
           blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
           resolve_keys: bool = False,
+          skipND: Optional[int] = None,
           **kwargs) -> str:
     """Dump a group or a dataset to string."""
     return json.dumps(dumpd(
@@ -977,7 +980,8 @@ def dumps(grp, iri_only=False,
         context=context,
         blank_node_iri_base=blank_node_iri_base,
         structural=structural,
-        resolve_keys=resolve_keys),
+        resolve_keys=resolve_keys,
+        skipND=skipND),
         **kwargs
     )
 
