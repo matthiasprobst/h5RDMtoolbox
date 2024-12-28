@@ -12,6 +12,6 @@ authors:
     orcid: "https://orcid.org/0000-0002-4116-0065"
 title: "h5rdmtoolbox - HDF5 Research Data Management Toolbox"
 version: 1.6.1
-doi: 10.5281/zenodo.14473697
-date-released: 2024-14-27
+doi: 10.5281/zenodo.13309253
+date-released: 2024-14-28
 url: "https://github.com/matthiasprobst/h5rdmtoolbox"
