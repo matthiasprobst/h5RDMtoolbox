@@ -77,7 +77,7 @@ class _H5DictDataInterface(Protocol):
                 if isinstance(v, dict):
                     return True
                 break
-            return not self.is_dataset(item)
+            return not H5Yaml.is_dataset(item)
         return False
 
 

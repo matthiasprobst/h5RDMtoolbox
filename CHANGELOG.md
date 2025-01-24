@@ -2,20 +2,30 @@
 
 Log of changes in the versions
 
+## v1.6.2
+
+- hotfix `rdf_find`
+
 ## v1.6.1
+
 - hotfix `skipND` when calling `dump_jsonld()`. Option was not passed correctly to underlying function.
 
 ## v1.6.0
+
 - `rootgroup` as alias for `rootparent`
-- `ZenodoRecord` has new property `env_name_for_token` to define the environment variable name to be used for the Zenodo token
+- `ZenodoRecord` has new property `env_name_for_token` to define the environment variable name to be used for the Zenodo
+  token
 - bugfix downloading zenodo files
 - allowing higher versions of `pymongo`
 
 ## v1.5.2
+
 - bugfix dumping json-ld
 
 ## v1.5.1
-- a json-ld string can be assigned to a rdf object (see https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/wrapper/FAIRAttributes.html)
+
+- a json-ld string can be assigned to a rdf object (
+  see https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/wrapper/FAIRAttributes.html)
 
 ## v1.5.0
 

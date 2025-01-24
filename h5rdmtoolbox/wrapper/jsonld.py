@@ -1017,7 +1017,7 @@ h5dump = dump  # alias, use this in future
 
 
 def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
-    """Dump an HDF5 file to a JSON-LD file.
+    """Dump an HDF5 file to a JSON-LD format.
 
     Parameter
     ---------
