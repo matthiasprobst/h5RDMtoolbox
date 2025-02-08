@@ -2,8 +2,7 @@ from typing import List, Union
 from typing import Literal
 
 from ontolutils import Thing, namespaces, urirefs
-
-from .h5namespace import HDF5
+from ontolutils.namespacelib.hdf5 import HDF5
 
 
 @namespaces(hdf5=HDF5._NS)

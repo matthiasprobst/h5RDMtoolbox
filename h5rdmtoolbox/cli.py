@@ -1,52 +1,59 @@
-import argparse
-import logging
 import pathlib
-import sys
 
-import h5rdmtoolbox as h5tbx
-
-logger = logging.getLogger('h5rdmtoolbox')
-
-__this_dir__ = pathlib.Path(__file__).parent
-
-fairify_path = __this_dir__.parent / 'gui'
-sys.path.insert(0, str(fairify_path.resolve().absolute()))
+import click
 
 
-def main():
-    """command line interface"""
-    parser = argparse.ArgumentParser(
-        description='h5RDMtoolbox Command line interface'
-    )
-
-    # Add the arguments
-    # parser.add_argument('input_file',
-    #                     nargs=1, help='Input file HDF5 file path (e.g., my_file.hdf)')
-    parser.add_argument('-l', '--loglevel', type=str, default='WARNING',
-                        help='Set the log level, e.g. "DEBUG"')
-
-    parser.add_argument('-d', '--dump', type=str,
-                        help='Input file HDF5 file path (e.g., my_file.hdf)')
-
-    parser.add_argument('-f', '--fairify', type=str,
-                        help='Fairify the file (e.g., my_file.hdf)')
-
-    args = parser.parse_args()
-
-    # Set the log level
-    logger.setLevel(args.loglevel)
-    for h in logger.handlers:
-        h.setLevel(args.loglevel)
-
-    logger.debug(f'Command line arguments: {args}')
-
-    if args.dump:
-        filename = pathlib.Path(args.dump)
-        if not filename.exists():
-            raise FileNotFoundError(f'File not found: {filename}')
-        h5tbx.dumps(filename)
-    if args.fairify:
-        filename = pathlib.Path(args.fairify)
+@click.group()
+@click.option('--fairify', type=click.Path(exists=True), help='Starts the app helping you to make the file FAIRer')
+def cli(fairify):
+    if fairify:
+        filename = pathlib.Path(fairify)
         from fairify import start
         start(filename=filename)
         print(f'Opening GUI to fairify the file {filename}')
+
+
+@cli.command()
+@click.argument('filename', type=click.Path(exists=True))
+@click.option(
+    '-o', '--output',
+    type=click.Path(exists=False),
+    help='Filename to write the JSON-LD data to.'
+)
+@click.option("--format", type=str, help="The output format, e.g. jsonld.")
+@click.option("--graph", is_flag=True, help="Generates a graph and stores it in OUTPUT-graph.html. Uses pyvis and kglab. "
+                                        "Please Make sure it is installed")
+def ld(filename, output, format, graph):
+    """Linked-Data command"""
+
+    content = None
+
+    def _serialize(filename):
+        from h5rdmtoolbox import serialize
+        return serialize(filename, fmt=format, indent=2)
+
+    if output:
+        output = pathlib.Path(output)
+        if not format:
+            format = output.suffix[1:]
+        if output:
+            valid_extension = (".jsonld", ".json-ld", ".ttl", ".turtle")
+            if output.suffix not in valid_extension:
+                raise ValueError(f"Please use one of the following extensions: {valid_extension}")
+            if not content:
+                content = _serialize(filename)
+            with open(output, "w") as f:
+                f.write(content)
+    else:
+        if not content:
+            content = _serialize(filename)
+        print(content)
+
+    if graph:
+        from h5rdmtoolbox import build_pyvis_graph
+        build_pyvis_graph(filename, output_filename=filename.with_suffix("-graph.html"))
+
+
+
+if __name__ == '__main__':
+    cli(obj={"--fairify", "gkgz"})

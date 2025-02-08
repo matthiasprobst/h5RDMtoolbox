@@ -127,7 +127,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
                 skipND: int = 1,
                 structural: bool = True,
                 semantic: bool = True,
-                resolve_keys: bool = False,
+                resolve_keys: bool = True,
                 context: Optional[Dict] = None,
                 blank_node_iri_base: Optional[HttpUrl] = None,
                 **kwargs) -> str:
@@ -146,7 +146,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
         Include structural information in the JSON-LD output.
     semantic : bool=True
         Include semantic information in the JSON-LD output.
-    resolve_keys : bool=False
+    resolve_keys : bool=True
         Resolve keys in the JSON-LD output. This is used when semantic=True.
         If resolve_keys is False and an attribute name in the HDF5 file, which has
         a predicate is different in its name from the predicate, the attribute name is used.
@@ -169,6 +169,49 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     with File(hdf_filename) as h5:
         return jsonld.dumps(h5, structural=structural, resolve_keys=resolve_keys, context=context,
                             blank_node_iri_base=blank_node_iri_base, **kwargs)
+
+
+def serialize(hdf_filename,
+              fmt: str,
+              skipND: int = 1,
+              structural: bool = True,
+              semantic: bool = True,
+              resolve_keys: bool = True,
+              blank_node_iri_base: Optional[Dict] = None,
+              **kwargs):
+    """Alternative to json-ld but allows multiple serialization options"""
+    with File(hdf_filename) as h5:
+        return h5.serialize(fmt,
+                            skipND,
+                            structural=structural,
+                            semantic=semantic,
+                            resolve_keys=resolve_keys,
+                            blank_node_iri_base=blank_node_iri_base,
+                            **kwargs)
+
+
+def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,
+                      style:Dict=None):
+    """Calls `build_pyvis_graph` of kglab library. Requires kglab and pyvis"""
+    import kglab
+    kg = kglab.KnowledgeGraph().load_rdf_text(
+        serialize(hdf_filename, fmt="ttl")
+    )
+    VIS_STYLE = style or {
+        "hdf": {
+            "color": "orange",
+            "size": 40,
+        },
+        "ind": {
+            "color": "blue",
+            "size": 30,
+        },
+    }
+    subgraph = kglab.SubgraphTensor(kg)
+    pyvis_graph = subgraph.build_pyvis_graph(notebook=notebook, style=VIS_STYLE)
+    pyvis_graph.force_atlas_2based()
+    pyvis_graph.show(output_filename)
+    return pyvis_graph
 
 
 def get_filesize(hdf_filename: Union[str, pathlib.Path]) -> int:

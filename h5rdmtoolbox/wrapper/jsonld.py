@@ -10,6 +10,7 @@ import numpy as np
 import ontolutils
 import rdflib
 from ontolutils.classes.utils import split_URIRef
+from ontolutils.namespacelib.hdf5 import HDF5
 from pydantic import HttpUrl
 from rdflib import Graph, URIRef, BNode, XSD, RDF, SKOS
 from rdflib.plugins.shared.jsonld.context import Context
@@ -17,7 +18,7 @@ from rdflib.plugins.shared.jsonld.context import Context
 from h5rdmtoolbox.convention import hdf_ontology
 from .core import Dataset, File
 from .rdf import RDF_TYPE_ATTR_NAME
-from ..convention.ontology import HDF5
+from ..protocols import H5TbxGroup
 
 _bnode_counter = count()
 logger = logging.getLogger('h5rdmtoolbox')
@@ -45,7 +46,7 @@ CONTEXT_PREFIXES = {
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "sosa": "http://www.w3.org/ns/sosa/",
     "ssn": "http://www.w3.org/ns/ssn/",
-    # "ssno": "https://matthiasprobst.github.io/ssno#",
+    "ssno": "https://matthiasprobst.github.io/ssno#",
     "time": "http://www.w3.org/2006/time#",
     "vann": "http://purl.org/vocab/vann/",
     "void": "http://rdfs.org/ns/void#",
@@ -231,6 +232,9 @@ def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef,
 
     def _process_attr_predicate(_attr_predicate) -> Tuple[URIRef, Dict]:
         ns, _key = split_URIRef(_attr_predicate)
+        known_prefix = CONTEXT_PREFIXES_INV.get(ns, None)
+        if known_prefix:
+            context[known_prefix] = ns
 
         if rdf_name != _key:
             if resolve_keys:
@@ -296,13 +300,13 @@ def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef,
     return _process_attr_predicate(rdf_value)
 
 
-def to_hdf(grp,
+def to_hdf(grp: H5TbxGroup,
            *,
            data: Union[Dict, str] = None,
            source: Union[str, pathlib.Path, ontolutils.Thing] = None,
            predicate: Optional[str] = None,
            context: Dict = None,
-           resolve_keys: bool = False) -> None:
+           resolve_keys: bool = True) -> None:
     """write json-ld data to group
 
     .. note::
@@ -553,6 +557,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                                     recursive=recursive,
                                     compact=compact,
                                     context=context,
+                                    resolve_keys=resolve_keys,
                                     blank_node_iri_base=blank_node_iri_base,
                                     skipND=skipND)
 
@@ -620,7 +625,6 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                         _context.update({ns_prefix: ns_iri})
                     _add_node(g, (file_node, RDF.type, rdflib.URIRef(_type)))
 
-
             # now go through all predicates
             for ak, av in obj.attrs.items():
                 attr_predicate = obj.frdf.predicate.get(ak, None)
@@ -671,7 +675,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             parent_name = obj.parent.name
             parent_node = iri_dict.get(parent_name, None)
             if parent_node is not None:
-                _add_node(g, (parent_node, HDF5.member, obj_node))
+                _add_node(g, (parent_node, HDF5.member, obj_node))  # fixme: should not be named obj_node
 
         if isinstance(obj, h5py.Group):
             if structural:
@@ -858,6 +862,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             if structural:
                 if attr_object:
                     _add_node(g, (attr_node, HDF5.value, rdflib.URIRef(attr_object)))
+                if isinstance(attr_object, str) and attr_object.startswith("http"):
+                    _add_node(g, (rdflib.URIRef(attr_object), SKOS.prefLabel, rdflib.Literal(av)))
                 if list_node:
                     _add_node(g, (attr_node, HDF5.value, list_node))
 
@@ -933,7 +939,7 @@ def dumpd(grp,
           context: Dict = None,
           blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
-          resolve_keys: bool = False
+          resolve_keys: bool = True
           ) -> Union[List, Dict]:
     """If context is missing, return will be a List"""
     s = serialize(grp,
@@ -966,7 +972,7 @@ def dumps(grp, iri_only=False,
           context: Optional[Dict] = None,
           blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
-          resolve_keys: bool = False,
+          resolve_keys: bool = True,
           **kwargs) -> str:
     """Dump a group or a dataset to string."""
     return json.dumps(dumpd(

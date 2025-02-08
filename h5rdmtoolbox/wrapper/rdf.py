@@ -6,10 +6,10 @@ from typing import Dict, Union, Optional, List
 
 import h5py
 import pydantic
+from ontolutils.namespacelib.hdf5 import HDF5
 from pydantic import HttpUrl
 
 from . import lazy
-from ..convention.ontology import HDF5
 from ..protocols import H5TbxAttributeManager
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'

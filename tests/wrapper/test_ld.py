@@ -13,7 +13,7 @@ from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention.hdf_ontology import HDF5
 from h5rdmtoolbox.wrapper import jsonld, rdf
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
-from h5rdmtoolbox.wrapper.rdf import RDF_SUBJECT_ATTR_NAME, RDFError, RDF_FILE_PREDICATE_ATTR_NAME
+from h5rdmtoolbox.wrapper.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
 
 logger = h5tbx.logger
 
@@ -90,6 +90,13 @@ WHERE {
         qres = g.query(sparql_str)
         list_values = [row[0].value for row in qres]
         self.assertEqual(list_values, [1, 'str', 3.4, True])
+
+    def test_serialize(self):
+        with h5tbx.File() as h5:
+            h5.attrs["a", "https://matthiasprobst.github.io/ssno#test"] = 3
+            ttl = h5.serialize(fmt="ttl")
+
+        print(ttl)
 
     def test_dump_hdf_to_json(self):
         """similar yet different to https://hdf5-json.readthedocs.io/en/latest/index.html"""
@@ -283,34 +290,46 @@ WHERE {
             sub_grp['D3'].attrs['units', 'http://w3id.org/nfdi4ing/metadata4ing#hasUnits'] = 'mm'
             sub_grp['D3'].rdf['units'].object = 'https://qudt.org/vocab/unit/MilliM'
             sub_grp['D3'].attrs['standard_name', sn_iri] = 'blade_diameter3'
-            ds.rdf.subject = 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable'
-            self.assertEqual(ds.rdf.subject, 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
-            self.assertEqual(ds.attrs[RDF_SUBJECT_ATTR_NAME],
-                             'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
+            ds.rdf.type = 'http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable'
+            self.assertEqual(ds.rdf.type, 'http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
+            self.assertEqual(ds.attrs[RDF_TYPE_ATTR_NAME], 'http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
             h5.dumps()
-        from pprint import pprint
-        out_dict = h5tbx.jsonld.dumpd(h5.hdf_filename,
-                                      context={'schema': 'http://schema.org/',
-                                               "ssno": "https://matthiasprobst.github.io/ssno#",
-                                               "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
-                                      resolve_keys=True,
-                                      compact=False)
 
-        pprint(out_dict)
-        found_m4iNumericalVariable = False
-        for g in out_dict['@graph']:
-            if 'https://w3id.org/nfdi4ing/metadata4ing#NumericalVariable' in g['@type']:
-                self.assertDictEqual(g['m4i:hasUnits'], {'@id': 'https://qudt.org/vocab/unit/MilliM'})
-                self.assertEqual(g['ssno:standardName'], 'blade_diameter3')
-                found_m4iNumericalVariable = True
-        self.assertTrue(found_m4iNumericalVariable)
+        jsonld_str = h5tbx.dump_jsonld(h5.hdf_filename,
+                                       context={'schema': 'http://schema.org/',
+                                                "ssno": "https://matthiasprobst.github.io/ssno#",
+                                                "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
+                                       resolve_keys=True,
+                                       indent=2,
+                                       compact=False
+                                       )
+
+        g = rdflib.Graph()
+        g.parse(data=jsonld_str, format='json-ld')
+        sparql_query = """
+        PREFIX m4i: <http://w3id.org/nfdi4ing/metadata4ing#>
+        PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
+        
+        SELECT ?s ?sn ?units
+        WHERE {
+            ?s a m4i:NumericalVariable .
+            ?s ssno:standardName ?sn . 
+            ?s m4i:hasUnits ?units .
+        }
+        """
+        res = g.query(sparql_query)
+        bindings = res.bindings
+        self.assertEqual(len(bindings), 1)
+        self.assertEqual(bindings[0][rdflib.Variable('units')],
+                         rdflib.term.URIRef('https://qudt.org/vocab/unit/MilliM'))
+        self.assertEqual(bindings[0][rdflib.Variable('sn')], rdflib.term.Literal('blade_diameter3'))
 
     def test_person(self):
         with h5tbx.File() as h5:
             h5.create_group('person')
             h5['person'].attrs['name'] = 'John'
             h5['person'].attrs['age'] = 21
-            h5.person.rdf.type = 'https://w3id.org/nfdi4ing/metadata4ing#Person'
+            h5.person.rdf.type = 'http://w3id.org/nfdi4ing/metadata4ing#Person'
             h5.person.rdf.subject = 'https://orcid.org/XXXX-XXXX-XXXX-XXXX'
             print(h5.dump_jsonld(indent=2))
 

@@ -149,12 +149,11 @@ def process_string_for_link(string: str) -> typing.Tuple[str, bool]:
             img_url = ''
         return make_href(url=zenodo_url, text=f'<img src="{img_url}" alt="DOI">'), True
     if string.startswith(("https://", "http://", "ftp://", "www.")):
-        print(string)
-    #     return make_href(url=string, text=string), True
-    # for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
-    #     urls = re.findall(p, string)
-    #     if urls:
-    #         print(string, urls)
+        #     return make_href(url=string, text=string), True
+        # for p in (r"(https?://\S+)", r"(ftp://\S+)", r"(www\.\S+)"):
+        #     urls = re.findall(p, string)
+        #     if urls:
+        #         print(string, urls)
         url = string
         identifier = identifiers.from_url(url)
         if identifier:
