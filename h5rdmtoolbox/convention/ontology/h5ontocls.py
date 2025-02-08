@@ -5,7 +5,7 @@ from ontolutils import Thing, namespaces, urirefs
 from ontolutils.namespacelib.hdf5 import HDF5
 
 
-@namespaces(hdf5=HDF5._NS)
+@namespaces(hdf5=str(HDF5))
 @urirefs(Attribute='hdf5:Attribute',
          name='hdf5:name',
          value='hdf5:value')
@@ -15,7 +15,7 @@ class Attribute(Thing):
     value: Union[int, float, List, str, bool]
 
 
-@namespaces(hdf5=HDF5._NS)
+@namespaces(hdf5=str(HDF5))
 @urirefs(attribute='hdf5:attribute')
 class _HDF5Thing(Thing):
     """Abstract class for File, Dataset and Group. Dont use directly."""
@@ -29,7 +29,7 @@ Datatype = Literal[
 ]
 
 
-@namespaces(hdf5=HDF5._NS)
+@namespaces(hdf5=str(HDF5))
 @urirefs(Dataset='hdf5:Dataset',
          size='hdf5:size',
          name='hdf5:name',
@@ -43,7 +43,7 @@ class Dataset(_HDF5Thing):
     value: Union[int, float, List, str, bool] = None
 
 
-@namespaces(hdf5=HDF5._NS)
+@namespaces(hdf5=str(HDF5))
 @urirefs(Group='hdf5:Group',
          member='hdf5:member',
          name='hdf5:name')
@@ -53,7 +53,7 @@ class Group(_HDF5Thing):
     member: List[Union["Group", Dataset]] = None
 
 
-@namespaces(hdf5=HDF5._NS)
+@namespaces(hdf5=str(HDF5))
 @urirefs(File='hdf5:File',
          rootGroup='hdf5:rootGroup')
 class File(Thing):
