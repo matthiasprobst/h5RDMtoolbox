@@ -949,7 +949,8 @@ def dumpd(grp,
                   context=context,
                   blank_node_iri_base=blank_node_iri_base,
                   structural=structural,
-                  resolve_keys=resolve_keys)
+                  resolve_keys=resolve_keys,
+                  skipND=skipND)
     if context:
         for k, v in context.items():
             CONTEXT_PREFIXES_INV[v] = k
@@ -966,7 +967,8 @@ def dumpd(grp,
     return jsonld_dict
 
 
-def dumps(grp, iri_only=False,
+def dumps(grp,
+          iri_only=False,
           recursive: bool = True,
           compact: bool = True,
           context: Optional[Dict] = None,
@@ -983,7 +985,8 @@ def dumps(grp, iri_only=False,
         context=context,
         blank_node_iri_base=blank_node_iri_base,
         structural=structural,
-        resolve_keys=resolve_keys),
+        resolve_keys=resolve_keys,
+        skipND=skipND),
         **kwargs
     )
 
@@ -1019,7 +1022,7 @@ h5dump = dump  # alias, use this in future
 
 
 def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
-    """Dump an HDF5 file to a JSON-LD file.
+    """Dump an HDF5 file to a JSON-LD format.
 
     Parameter
     ---------

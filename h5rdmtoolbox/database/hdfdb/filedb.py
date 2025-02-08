@@ -49,14 +49,20 @@ class FileDB(HDF5DBInterface):
         """Please refer to the docstring of the find method of the ObjDB class"""
         if isinstance(file_or_filename, (h5py.Group, h5py.Dataset)):
             return list(ObjDB(file_or_filename).find(*args, **kwargs))
-            # for r in results:
-            #     yield r
         else:
             with h5py.File(file_or_filename, 'r') as h5:
                 results = list(ObjDB(h5).find(*args, **kwargs))
             return results
-            # for r in results:
-            #     yield r
+
+    @staticmethod
+    def rdf_find(file_or_filename, *args, **kwargs) -> List[lazy.LazyObject]:
+        """Please refer to the docstring of the find method of the ObjDB class"""
+        if isinstance(file_or_filename, (h5py.Group, h5py.Dataset)):
+            return list(ObjDB(file_or_filename).rdf_find(*args, **kwargs))
+        else:
+            with h5py.File(file_or_filename, 'r') as h5:
+                results = list(ObjDB(h5).find(*args, **kwargs))
+            return results
 
 
 class FilesDB(HDF5DBInterface):
