@@ -259,9 +259,9 @@ class TestOntology(unittest.TestCase):
                 if 'prov:Person' in g['@type']:
                     i += 1
                     print(g)
-                    self.assertEqual(g["http://xmlns.com/foaf/0.1/firstName"], 'Alexandra')
-                    self.assertEqual(g["http://xmlns.com/foaf/0.1/lastName"], 'Test')
-                    self.assertEqual(g["http://w3id.org/nfdi4ing/metadata4ing#orcidId"], '0000-0000-0123-4567')
+                    self.assertEqual(g["foaf:firstName"], 'Alexandra')
+                    self.assertEqual(g["foaf:lastName"], 'Test')
+                    self.assertEqual(g["m4i:orcidId"], '0000-0000-0123-4567')
                 elif 'schema:SoftwareSourceCode' in g['@type']:
                     i += 1
                     self.assertEqual(g['schema:softwareVersion'], __version__)

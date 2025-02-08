@@ -430,6 +430,5 @@ class TestRDF(unittest.TestCase):
                 h5jld_dict["@context"],
                 {"ssno": "https://matthiasprobst.github.io/ssno#",
                  "ex": "https://example.org/",
-                 "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
-                 "standard_name": "https://matthiasprobst.github.io/ssno#hasStandardName"}
+                 "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"}
             )

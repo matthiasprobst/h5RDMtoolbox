@@ -6,12 +6,14 @@ the classes must implement, and the classes that implement the protocols
 must have the same method signatures.
 """
 
+import pathlib
+from abc import abstractmethod
+from typing import Protocol, Optional, Union, Dict, List, Any, Tuple
+
 import h5py
 import numpy as np
-import pathlib
 import rdflib
 import xarray as xr
-from typing import Protocol, Optional, Union, Dict, List, Any, Tuple
 
 
 class NamedObject(Protocol):
@@ -176,9 +178,15 @@ class H5TbxGroup(H5TbxFile):
         ...
 
     @property
+    @abstractmethod
     def basename(self) -> str:
         """Return the basename, which is the last part
         of the HDF5 object path."""
+
+    @property
+    @abstractmethod
+    def rdf(self):
+        ...
 
 
 class H5TbxDataset(H5TbxHLObject):
@@ -186,14 +194,22 @@ class H5TbxDataset(H5TbxHLObject):
     name: str
 
     @property
+    @abstractmethod
     def coords(self):
         ...
 
     @property
+    @abstractmethod
+    def rdf(self):
+        ...
+
+    @property
+    @abstractmethod
     def hdf_filename(self) -> pathlib.Path:
         """Return the filename as a pathlib.Path object."""
 
     @property
+    @abstractmethod
     def basename(self) -> str:
         """Return the basename, which is the last part
         of the HDF5 object path."""

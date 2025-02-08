@@ -2141,7 +2141,7 @@ class File(h5py.File, Group):
         return utils.get_filesize(self.filename)
 
     def __init__(self,
-                 name: Path = None,
+                 name: Union[str, Path] = None,
                  mode: str = None,
                  attrs: Dict = None,
                  **kwargs):
@@ -2406,7 +2406,7 @@ class File(h5py.File, Group):
                     skipND: int = 1,
                     structural: bool = True,
                     semantic: bool = True,
-                    resolve_keys: bool = False,
+                    resolve_keys: bool = True,
                     blank_node_iri_base: Optional[Dict] = None,
                     **kwargs) -> str:
         """Dump the file content as JSON-LD string"""
@@ -2422,7 +2422,7 @@ class File(h5py.File, Group):
                   skipND: int = 1,
                   structural: bool = True,
                   semantic: bool = True,
-                  resolve_keys: bool = False,
+                  resolve_keys: bool = True,
                   blank_node_iri_base: Optional[Dict] = None,
                   **kwargs
                   ):
@@ -2439,7 +2439,7 @@ class File(h5py.File, Group):
                                 **kwargs)
         if fmt.lower() in ("jsonld", "json-ld"):
             return jsonldstr
-        return rdflib.Graph().parse(jsonldstr, format='json-ld').serialize(format="turtle")
+        return rdflib.Graph().parse(data=jsonldstr, format='json-ld').serialize(format="turtle")
 
 
 Dataset._h5grp = Group
