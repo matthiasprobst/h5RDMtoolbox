@@ -1,11 +1,12 @@
 import pathlib
+from email.policy import default
 
 import click
 
 
 @click.group()
 @click.option('--fairify', type=click.Path(exists=True), help='Starts the app helping you to make the file FAIRer')
-def cli(fairify):
+def h5tbx(fairify):
     if fairify:
         filename = pathlib.Path(fairify)
         from fairify import start
@@ -13,14 +14,15 @@ def cli(fairify):
         print(f'Opening GUI to fairify the file {filename}')
 
 
-@cli.command()
+@h5tbx.command()
 @click.argument('filename', type=click.Path(exists=True))
 @click.option(
     '-o', '--output',
     type=click.Path(exists=False),
     help='Filename to write the JSON-LD data to.'
 )
-@click.option("--format", type=str, help="The output format, e.g. jsonld.")
+@click.option("--format", type=str, help="The output format, e.g. jsonld.",
+              default="ttl")
 @click.option("--graph", is_flag=True, help="Generates a graph and stores it in OUTPUT-graph.html. Uses pyvis and kglab. "
                                         "Please Make sure it is installed")
 def ld(filename, output, format, graph):
@@ -56,4 +58,4 @@ def ld(filename, output, format, graph):
 
 
 if __name__ == '__main__':
-    cli(obj={"--fairify", "gkgz"})
+    h5tbx(obj={})
