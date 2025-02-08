@@ -939,7 +939,8 @@ def dumpd(grp,
           context: Dict = None,
           blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
-          resolve_keys: bool = True
+          resolve_keys: bool = True,
+          skipND: Optional[int] = None
           ) -> Union[List, Dict]:
     """If context is missing, return will be a List"""
     s = serialize(grp,
@@ -975,6 +976,7 @@ def dumps(grp,
           blank_node_iri_base: Optional[HttpUrl] = None,
           structural: bool = True,
           resolve_keys: bool = True,
+          skipND: Optional[int] = None,
           **kwargs) -> str:
     """Dump a group or a dataset to string."""
     return json.dumps(dumpd(
