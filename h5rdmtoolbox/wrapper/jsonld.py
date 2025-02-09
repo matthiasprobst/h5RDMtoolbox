@@ -705,6 +705,17 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 _ndim = obj.ndim
                 _add_node(g, (obj_node, RDF.type, HDF5.Dataset))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
+                if obj.chunks:
+                    chunk_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                    _add_node(g, (chunk_node, RDF.type, HDF5.Chunk))
+                    chunk_dimension = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                    _add_node(g, (chunk_dimension, RDF.type, HDF5.ChunkDimension))
+                    for ic, _c in enumerate(obj.chunks):
+                        _add_node(g, (chunk_dimension, HDF5.size, rdflib.Literal(_c, datatype=XSD.long)))
+                        _add_node(g, (chunk_dimension, HDF5.dimensionIndex, HDF5.__getitem__(f"index_{ic}")))
+                    _add_node(g, (chunk_node, HDF5.dimension, chunk_dimension))
+                    _add_node(g, (obj_node, HDF5.chunk, chunk_node))
+                _add_node(g, (obj_node, HDF5.chunk, rdflib.Literal(obj.name)))
                 _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
                 _add_node(g, (obj_node, HDF5.dimension, rdflib.Literal(_ndim, datatype=XSD.integer)))
 

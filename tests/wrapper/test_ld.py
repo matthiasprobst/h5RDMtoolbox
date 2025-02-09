@@ -286,7 +286,7 @@ WHERE {
             self.assertIsInstance(grp.attrs['description'], np.floating)
 
             sub_grp = grp.create_group('Fan')
-            ds = sub_grp.create_dataset('D3', data=300)
+            ds = sub_grp.create_dataset('D3', data=np.array([[1, 2], [3, 4], [5.4, 1.9]]), chunks=(1, 2))
             sub_grp['D3'].attrs['units', 'http://w3id.org/nfdi4ing/metadata4ing#hasUnits'] = 'mm'
             sub_grp['D3'].rdf['units'].object = 'https://qudt.org/vocab/unit/MilliM'
             sub_grp['D3'].attrs['standard_name', sn_iri] = 'blade_diameter3'

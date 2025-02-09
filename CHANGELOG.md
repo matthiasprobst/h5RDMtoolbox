@@ -5,6 +5,8 @@ Log of changes in the versions
 ## v1.6.2
 
 - hotfix `rdf_find`
+- using `ontolutils` v0.13.2 and its HDF5 namespace definition
+- update/improve CLI interface
 
 ## v1.6.1
 
