@@ -1,8 +1,9 @@
 from typing import List, Union
-from typing import Literal
 
 from ontolutils import Thing, namespaces, urirefs
 from ontolutils.namespacelib.hdf5 import HDF5
+from pydantic import HttpUrl
+from pydantic import field_validator, Field
 
 
 @namespaces(hdf5=str(HDF5))
@@ -18,15 +19,31 @@ class Attribute(Thing):
 @namespaces(hdf5=str(HDF5))
 @urirefs(attribute='hdf5:attribute')
 class _HDF5Thing(Thing):
-    """Abstract class for File, Dataset and Group. Dont use directly."""
+    """Abstract class for File, Dataset and Group. Don't use directly."""
     attribute: List[Attribute] = None
 
 
-Datatype = Literal[
-    'H5T_INTEGER',
-    'H5T_FLOAT',
-    'H5T_STRING',
-]
+
+@namespaces(hdf5=str(HDF5))
+@urirefs(TypeClass='hdf5:TypeClass')
+class TypeClass(Thing):
+    """HDF5 TypeClass"""
+    pass
+
+@namespaces(hdf5=str(HDF5))
+@urirefs(Datatype='hdf5:Datatype',
+         typeClass='hdf5:typeClass')
+class Datatype(Thing):
+    """HDF5 Datatype"""
+    typeClass: TypeClass = Field(default=None, alias="type_class")
+
+    @field_validator('typeClass', mode='before')
+    @classmethod
+    def _typeClass(cls, typeClass):
+        if isinstance(typeClass, str):
+            dt = HttpUrl(typeClass)
+            return TypeClass(id=dt)
+        return typeClass
 
 
 @namespaces(hdf5=str(HDF5))
@@ -39,8 +56,16 @@ class Dataset(_HDF5Thing):
     """A multi-dimensional array"""
     name: str
     size: int
-    datatype: Datatype = None
+    datatype: Union[HttpUrl, Datatype] = None
     value: Union[int, float, List, str, bool] = None
+
+    @field_validator('datatype', mode='before')
+    @classmethod
+    def _datatype(cls, datatype):
+        if isinstance(datatype, str):
+            dt = HttpUrl(datatype)
+            return Datatype(id=dt)
+        return datatype
 
 
 @namespaces(hdf5=str(HDF5))

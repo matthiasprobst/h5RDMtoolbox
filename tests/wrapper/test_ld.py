@@ -6,11 +6,11 @@ import numpy as np
 import ontolutils
 import rdflib
 import ssnolib
-from ontolutils import namespaces, urirefs, Thing, M4I
+from ontolutils import namespaces, urirefs, Thing
+from ontolutils.namespacelib import M4I, HDF5
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.convention.hdf_ontology import HDF5
 from h5rdmtoolbox.wrapper import jsonld, rdf
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
 from h5rdmtoolbox.wrapper.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME

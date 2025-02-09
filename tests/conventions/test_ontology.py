@@ -3,12 +3,14 @@ import json
 import pathlib
 import unittest
 
+import numpy as np
 import rdflib
 from ontolutils import QUDT_UNIT
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.convention.ontology import Attribute, Dataset, Group, File
+from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -28,6 +30,8 @@ def remove_key_recursive(d, key_to_remove):
 class TestOntology(unittest.TestCase):
 
     def setUp(self):
+        self.maxDiff = None
+
         h5tbx.use(None)
 
         self.curr_auto_create_h5tbx_version = h5tbx.get_config('auto_create_h5tbx_version')
@@ -35,6 +39,59 @@ class TestOntology(unittest.TestCase):
 
     def tearDown(self):
         h5tbx.set_config(auto_create_h5tbx_version=self.curr_auto_create_h5tbx_version)
+
+    def test_hdf_datatype(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('root_ds', data=3.4)
+            dt = get_datatype(h5["root_ds"])
+            self.assertEqual(str(dt), "http://purl.allotrope.org/ontologies/hdf5/1.8#H5T_IEEE_F64LE")
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('root_ds', data=3)
+            dt = get_datatype(h5["root_ds"])
+            self.assertEqual(str(dt), "http://purl.allotrope.org/ontologies/hdf5/1.8#H5T_INTEL_I32")
+
+    def test_dataset_with_compound_dtype(self):
+        dt = np.dtype([('id', 'i4'), ('time', 'f4'), ('matrix', 'f4', (10, 2))])
+
+        with h5tbx.File(mode='w') as h5:
+            h5.create_group('/group1')
+            ds = h5.create_dataset('/group1/ds1', shape=(10,), dtype=dt)
+            for i in range(0, ds.shape[0]):
+                arr = np.random.rand(10, 2)
+                ds[i] = (i + 1, 0.125 * (i + 1), arr)
+        serialization = h5tbx.serialize(h5.hdf_filename, format="ttl", structural=True, semantic=False)
+        print(serialization)
+        serialization_expected = """@prefix hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+hdf5:H5T_COMPOUND a hdf5:TypeClass .
+
+[] a hdf5:File ;
+    hdf5:rootGroup [ a hdf5:Group ;
+            hdf5:member [ a hdf5:Group ;
+                    hdf5:member [ a hdf5:Dataset ;
+                            hdf5:datatype [ a hdf5:Datatype ;
+                                    hdf5:typeClass hdf5:H5T_COMPOUND ] ;
+                            hdf5:name "/group1/ds1" ;
+                            hdf5:size 10 ] ;
+                    hdf5:name "/group1" ],
+                [ a hdf5:Group ;
+                    hdf5:attribute [ a hdf5:Attribute ;
+                            hdf5:name "__h5rdmtoolbox_version__" ;
+                            hdf5:value "1.6.3" ],
+                        [ a hdf5:Attribute ;
+                            hdf5:name "code_repository" ;
+                            hdf5:value "https://github.com/matthiasprobst/h5RDMtoolbox" ] ;
+                    hdf5:name "/h5rdmtoolbox" ] ;
+            hdf5:name "/" ] .
+
+"""
+        rdflib.Graph().parse(data=serialization, format='ttl')
+        self.assertEquals(
+            rdflib.Graph().parse(data=serialization, format='ttl').serialize(format="ttl"),
+            rdflib.Graph().parse(data=serialization_expected, format='ttl').serialize(format="ttl")
+        )
 
     def test_Attribute(self):
         attr = Attribute(id="_:1",
@@ -56,12 +113,33 @@ class TestOntology(unittest.TestCase):
         )
 
     def test_Dataset(self):
+        from ontolutils.namespacelib import HDF5
         ds = Dataset(
             name='/grp1/grp2/ds1',
+            datatype=HDF5.H5T_INTEL_I16,
             attribute=[
                 Attribute(name='standard_name',
                           value='x_velocity')],
             size=100)
+        serialization = ds.serialize(format="ttl", indent=4)
+        print(serialization)
+        expected_serialization = """@prefix hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+hdf5:H5T_INTEL_I16 a hdf5:Datatype .
+
+[] a hdf5:Dataset ;
+    hdf5:attribute [ a hdf5:Attribute ;
+            hdf5:name "standard_name" ;
+            hdf5:value "x_velocity" ] ;
+    hdf5:datatype hdf5:H5T_INTEL_I16 ;
+    hdf5:name "/grp1/grp2/ds1" ;
+    hdf5:size 100 .
+
+"""
+        self.assertEqual(
+            expected_serialization,
+            serialization)
         jld_dict = json.loads(ds.model_dump_jsonld())
         self.assertEqual("hdf5:Dataset", jld_dict["@type"])
         self.assertEqual("/grp1/grp2/ds1", jld_dict["hdf5:name"])

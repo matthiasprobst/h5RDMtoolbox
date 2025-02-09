@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v1.6.3
+- update to `ontolutils` v0.13.3
+- improve semantic structural description of HDF5 file content
+
 ## v1.6.2
 
 - hotfix `rdf_find`

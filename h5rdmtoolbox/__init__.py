@@ -179,7 +179,7 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
 
 
 def serialize(hdf_filename,
-              fmt: str,
+              fmt: str="ttl",
               skipND: int = 1,
               structural: bool = True,
               semantic: bool = True,
@@ -187,6 +187,7 @@ def serialize(hdf_filename,
               blank_node_iri_base: Optional[Dict] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
+    fmt = kwargs.pop("format", fmt)
     with File(hdf_filename) as h5:
         return h5.serialize(fmt,
                             skipND,
@@ -198,9 +199,12 @@ def serialize(hdf_filename,
 
 
 def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,
-                      style:Dict=None):
+                      style: Dict = None):
     """Calls `build_pyvis_graph` of kglab library. Requires kglab and pyvis"""
-    import kglab
+    try:
+        import kglab
+    except ImportError:
+        raise ImportError('kglab is required for this function. Install it using: pip install kglab')
     kg = kglab.KnowledgeGraph().load_rdf_text(
         serialize(hdf_filename, fmt="ttl")
     )
