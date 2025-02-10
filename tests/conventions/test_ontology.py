@@ -61,7 +61,7 @@ class TestOntology(unittest.TestCase):
                 arr = np.random.rand(10, 2)
                 ds[i] = (i + 1, 0.125 * (i + 1), arr)
         serialization = h5tbx.serialize(h5.hdf_filename, format="ttl", structural=True, semantic=False)
-        print(serialization)
+
         serialization_expected = """@prefix hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -70,24 +70,24 @@ hdf5:H5T_COMPOUND a hdf5:TypeClass .
 [] a hdf5:File ;
     hdf5:rootGroup [ a hdf5:Group ;
             hdf5:member [ a hdf5:Group ;
-                    hdf5:member [ a hdf5:Dataset ;
-                            hdf5:datatype [ a hdf5:Datatype ;
-                                    hdf5:typeClass hdf5:H5T_COMPOUND ] ;
-                            hdf5:name "/group1/ds1" ;
-                            hdf5:size 10 ] ;
-                    hdf5:name "/group1" ],
-                [ a hdf5:Group ;
                     hdf5:attribute [ a hdf5:Attribute ;
                             hdf5:name "__h5rdmtoolbox_version__" ;
                             hdf5:value "1.6.3" ],
                         [ a hdf5:Attribute ;
                             hdf5:name "code_repository" ;
                             hdf5:value "https://github.com/matthiasprobst/h5RDMtoolbox" ] ;
-                    hdf5:name "/h5rdmtoolbox" ] ;
+                    hdf5:name "/h5rdmtoolbox" ],
+                [ a hdf5:Group ;
+                    hdf5:member [ a hdf5:Dataset ;
+                            hdf5:datatype [ a hdf5:Datatype ;
+                                    hdf5:typeClass hdf5:H5T_COMPOUND ] ;
+                            hdf5:name "/group1/ds1" ;
+                            hdf5:size 10 ] ;
+                    hdf5:name "/group1" ] ;
             hdf5:name "/" ] .
-
 """
-        rdflib.Graph().parse(data=serialization, format='ttl')
+        print(rdflib.Graph().parse(data=serialization, format='ttl').serialize(format="ttl"))
+        print(rdflib.Graph().parse(data=serialization_expected, format='ttl').serialize(format="ttl"))
         self.assertEquals(
             rdflib.Graph().parse(data=serialization, format='ttl').serialize(format="ttl"),
             rdflib.Graph().parse(data=serialization_expected, format='ttl').serialize(format="ttl")

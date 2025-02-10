@@ -726,11 +726,11 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             logger.debug(f'Create new node for attribute "{ak}": {attr_node}')
 
             if structural:  # add hdf type and name nodes
-                if av.dtype.kind == 'S':
+                if isinstance(av, str):
                     _add_node(g, (attr_node, RDF.type, HDF5.StringAttribute))
-                elif av.dtype.kind in ('i', 'u'):
+                elif isinstance(av, int):
                     _add_node(g, (attr_node, RDF.type, HDF5.IntegerAttribute))
-                elif av.dtype.kind == 'f':
+                elif isinstance(av, float):
                     _add_node(g, (attr_node, RDF.type, HDF5.FloatAttribute))
                 else:
                     _add_node(g, (attr_node, RDF.type, HDF5.Attribute))

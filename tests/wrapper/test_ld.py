@@ -39,6 +39,7 @@ class TestJSONLD(unittest.TestCase):
 
     def test_dump_with_blank_node_iri_base(self):
         with h5tbx.File() as h5:
+            h5.attrs["__version__"] = __version__
             jsonld = h5.dump_jsonld(blank_node_iri_base='https://example.org/',
                                     context={"local": "https://example.org/"},
                                     indent=2)
