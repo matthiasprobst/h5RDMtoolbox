@@ -64,18 +64,16 @@ class TestOntology(unittest.TestCase):
 
         serialization_expected = """@prefix hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-
 hdf5:H5T_COMPOUND a hdf5:TypeClass .
-
 [] a hdf5:File ;
     hdf5:rootGroup [ a hdf5:Group ;
             hdf5:member [ a hdf5:Group ;
                     hdf5:attribute [ a hdf5:Attribute ;
-                            hdf5:name "__h5rdmtoolbox_version__" ;
-                            hdf5:value "1.6.3" ],
+                            hdf5:data "1.6.3" ;
+                            hdf5:name "__h5rdmtoolbox_version__" ],
                         [ a hdf5:Attribute ;
-                            hdf5:name "code_repository" ;
-                            hdf5:value "https://github.com/matthiasprobst/h5RDMtoolbox" ] ;
+                            hdf5:data "https://github.com/matthiasprobst/h5RDMtoolbox" ;
+                            hdf5:name "code_repository" ] ;
                     hdf5:name "/h5rdmtoolbox" ],
                 [ a hdf5:Group ;
                     hdf5:member [ a hdf5:Dataset ;
@@ -85,6 +83,7 @@ hdf5:H5T_COMPOUND a hdf5:TypeClass .
                             hdf5:size 10 ] ;
                     hdf5:name "/group1" ] ;
             hdf5:name "/" ] .
+
 """
         print(rdflib.Graph().parse(data=serialization, format='ttl').serialize(format="ttl"))
         print(rdflib.Graph().parse(data=serialization_expected, format='ttl').serialize(format="ttl"))
@@ -96,7 +95,7 @@ hdf5:H5T_COMPOUND a hdf5:TypeClass .
     def test_Attribute(self):
         attr = Attribute(id="_:1",
                          name='standard_name',
-                         value='x_velocity')
+                         data='x_velocity')
         self.assertDictEqual(
             {
                 "@context": {
@@ -106,7 +105,7 @@ hdf5:H5T_COMPOUND a hdf5:TypeClass .
                 },
                 "@type": "hdf5:Attribute",
                 "hdf5:name": "standard_name",
-                "hdf5:value": "x_velocity",
+                "hdf5:data": "x_velocity",
                 "@id": "_:1"
             },
             json.loads(attr.model_dump_jsonld())
@@ -119,7 +118,7 @@ hdf5:H5T_COMPOUND a hdf5:TypeClass .
             datatype=HDF5.H5T_INTEL_I16,
             attribute=[
                 Attribute(name='standard_name',
-                          value='x_velocity')],
+                          data='x_velocity')],
             size=100)
         serialization = ds.serialize(format="ttl", indent=4)
         print(serialization)
@@ -131,7 +130,7 @@ hdf5:H5T_INTEL_I16 a hdf5:Datatype .
 [] a hdf5:Dataset ;
     hdf5:attribute [ a hdf5:Attribute ;
             hdf5:name "standard_name" ;
-            hdf5:value "x_velocity" ] ;
+            hdf5:data "x_velocity" ] ;
     hdf5:datatype hdf5:H5T_INTEL_I16 ;
     hdf5:name "/grp1/grp2/ds1" ;
     hdf5:size 100 .
@@ -149,25 +148,25 @@ hdf5:H5T_INTEL_I16 a hdf5:Datatype .
             name='/grp1/grp2',
             attribute=[
                 Attribute(name='standard_name',
-                          value='x_velocity')],
+                          data='x_velocity')],
             member=[
                 Dataset(
                     name='/grp1/grp2/ds1',
                     attribute=[
                         Attribute(name='standard_name',
-                                  value='x_velocity')],
+                                  data='x_velocity')],
                     size=100),
                 Group(
                     name='/grp1/grp2/grp3',
                     attribute=[
                         Attribute(name='standard_name',
-                                  value='x_velocity')],
+                                  data='x_velocity')],
                     member=[
                         Dataset(
                             name='/grp1/grp2/grp3/ds2',
                             attribute=[
                                 Attribute(name='standard_name',
-                                          value='x_velocity')],
+                                          data='x_velocity')],
                             size=100)])])
         jd = json.loads(grp.model_dump_jsonld())
         self.assertDictEqual(
@@ -202,25 +201,25 @@ hdf5:H5T_INTEL_I16 a hdf5:Datatype .
             name='/',
             attribute=[
                 Attribute(name='standard_name',
-                          value='x_velocity')],
+                          data='x_velocity')],
             member=[
                 Dataset(
                     name='/ds1',
                     attribute=[
                         Attribute(name='standard_name',
-                                  value='x_velocity')],
+                                  data='x_velocity')],
                     size=100),
                 Group(
                     name='/grp1',
                     attribute=[
                         Attribute(name='standard_name',
-                                  value='x_velocity')],
+                                  data='x_velocity')],
                     member=[
                         Dataset(
                             name='/grp1/ds2',
                             attribute=[
                                 Attribute(name='standard_name',
-                                          value='x_velocity')],
+                                          data='x_velocity')],
                             size=100)])])
 
     def test_File(self):
@@ -232,7 +231,7 @@ hdf5:H5T_INTEL_I16 a hdf5:Datatype .
             name='/',
             attribute=[
                 Attribute(name='version',
-                          value='1.0.0')]
+                          data='1.0.0')]
         )
 
         file = File(
@@ -272,7 +271,7 @@ hdf5:H5T_INTEL_I16 a hdf5:Datatype .
             if member["hdf5:name"] == 'root_ds':
                 self.assertEqual(member['@type'], 'hdf5:Dataset')
                 self.assertEqual(member['hdf5:name'], 'root_ds')
-                self.assertEqual(member['hdf5:value'], 3.4)
+                self.assertEqual(member['hdf5:data'], 3.4)
                 self.assertEqual(member['hdf5:datatype'], "H5T_FLOAT")
 
         remove_key_recursive(jsonld_dict, '@id')

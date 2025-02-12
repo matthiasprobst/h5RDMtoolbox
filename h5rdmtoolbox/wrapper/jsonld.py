@@ -30,7 +30,7 @@ CONTEXT_PREFIXES = {
     'prov': 'http://www.w3.org/ns/prov#',
     'foaf': 'http://xmlns.com/foaf/0.1/',
     'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
-    'hdf5': str(HDF5._NS),
+    'hdf5': str(HDF5),
     "brick": "https://brickschema.org/schema/Brick#",
     "csvw": "http://www.w3.org/ns/csvw#",
     "dc": "http://purl.org/dc/elements/1.1/",
@@ -675,18 +675,33 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 _add_node(g, (obj_node, RDF.type, HDF5.Dataset))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
                 if obj.chunks:
-                    chunk_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
-                    _add_node(g, (chunk_node, RDF.type, HDF5.Chunk))
-                    chunk_dimension = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
-                    _add_node(g, (chunk_dimension, RDF.type, HDF5.ChunkDimension))
-                    for ic, _c in enumerate(obj.chunks):
-                        _add_node(g, (chunk_dimension, HDF5.size, rdflib.Literal(_c, datatype=XSD.long)))
-                        _add_node(g, (chunk_dimension, HDF5.dimensionIndex, HDF5.__getitem__(f"index_{ic}")))
-                    _add_node(g, (chunk_node, HDF5.dimension, chunk_dimension))
-                    _add_node(g, (obj_node, HDF5.chunk, chunk_node))
-                _add_node(g, (obj_node, HDF5.chunk, rdflib.Literal(obj.name)))
+                    chunk_dimension_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                    _add_node(g, (chunk_dimension_node, RDF.type, HDF5.ChunkDimension))
+                    _add_node(g, (obj_node, HDF5.chunk, chunk_dimension_node))
+
+                    for ichunk, chunk in enumerate(obj.chunks):
+                        dimension_index_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                        _add_node(g, (dimension_index_node, RDF.type, HDF5.DataspaceDimension))
+                        _add_node(g, (chunk_dimension_node, HDF5.dimension, dimension_index_node))
+                        _add_node(g, (dimension_index_node, HDF5.size, rdflib.Literal(chunk, datatype=XSD.integer)))
+                        _add_node(g, (dimension_index_node, HDF5.dimensionIndex, rdflib.Literal(ichunk, datatype=XSD.integer)))
+
+                _add_node(g, (obj_node, HDF5.rank, rdflib.Literal(obj.ndim, datatype=XSD.integer)))
                 _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
-                _add_node(g, (obj_node, HDF5.dimension, rdflib.Literal(_ndim, datatype=XSD.integer)))
+
+                if obj.ndim > 0:
+                    dataspace_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                    _add_node(g, (dataspace_node, RDF.type, HDF5.SimpleDataspace))
+                    for idim, dim in enumerate(obj.shape):
+                        dataspace_dimension_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                        _add_node(g, (dataspace_dimension_node, RDF.type, HDF5.DataspaceDimension))
+                        _add_node(g, (dataspace_node, HDF5.dimension, dataspace_dimension_node))
+                        _add_node(g, (dataspace_dimension_node, HDF5.size, rdflib.Literal(dim, datatype=XSD.integer)))
+                        _add_node(g, (dataspace_dimension_node, HDF5.dimensionIndex, rdflib.Literal(idim, datatype=XSD.integer)))
+                else:
+                    dataspace_node = HDF5.scalarDataspace
+                    _add_node(g, (dataspace_node, RDF.type, HDF5.scalarDataspace))
+                _add_node(g, (obj_node, HDF5.dataspace, dataspace_node))
 
                 datatype = get_datatype(obj)
 
@@ -1053,7 +1068,7 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
                 return None
             return str(v)
 
-        attrs = [hdf_ontology.Attribute(name=k, value=_parse_dtype(v)) for k, v in attrs.items() if not k.isupper()]
+        attrs = [hdf_ontology.Attribute(name=k, data=_parse_dtype(v)) for k, v in attrs.items() if not k.isupper()]
         return attrs
 
     def _build_dataset_onto_class(ds):

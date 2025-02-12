@@ -9,11 +9,11 @@ from pydantic import field_validator, Field
 @namespaces(hdf5=str(HDF5))
 @urirefs(Attribute='hdf5:Attribute',
          name='hdf5:name',
-         value='hdf5:value')
+         data='hdf5:data')
 class Attribute(Thing):
     """HDF5 Attribute"""
     name: str
-    value: Union[int, float, List, str, bool]
+    data: Union[int, float, List, str, bool]
 
 
 @namespaces(hdf5=str(HDF5))
@@ -58,14 +58,27 @@ class Dimension(Thing):
 
 @namespaces(hdf5=str(HDF5))
 @urirefs(DataspaceDimension='hdf5:DataspaceDimension',
-         start='hdf5:start',
-         end='hdf5:end',
-         stride='hdf5:stride')
+         currentSize='hdf5:currentSize',
+         initialSize='hdf5:initialSize',
+         maximumSize='hdf5:maximumSize')
 class DataspaceDimension(Dimension):
     """HDF5 Dataspace Dimension"""
-    start: int
-    end: int
-    stride: int
+    currentSize: int = Field(default=None, alias='current_size', ge=0)
+    initialSize: int = Field(default=None, alias='initial_size', ge=0)
+    maximumSize: int = Field(default=None, alias='maximum_size', ge=-1)
+
+
+@namespaces(hdf5=str(HDF5))
+@urirefs(ChunkDimension='hdf5:ChunkDimension')
+class ChunkDimension(Dimension):
+    """HDF5 Chunk Dimension"""
+    pass
+
+@namespaces(hdf5=str(HDF5))
+@urirefs(ArrayDimension='hdf5:ArrayDimension')
+class ArrayDimension(Dimension):
+    """HDF5 Array Dimension"""
+    pass
 
 
 @namespaces(hdf5=str(HDF5))
