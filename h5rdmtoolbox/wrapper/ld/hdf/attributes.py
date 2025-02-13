@@ -3,6 +3,8 @@ from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Namespace, Literal
 from rdflib import XSD, RDF
 
+from h5rdmtoolbox.wrapper.ld.utils import ExtractionOptions
+from typing import Optional
 HDF = Namespace(str(HDF5))
 
 

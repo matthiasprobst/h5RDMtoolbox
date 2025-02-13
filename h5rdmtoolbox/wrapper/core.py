@@ -622,7 +622,7 @@ class Group(h5py.Group):
                        dtype=None,
                        data=None,
                        overwrite=None,
-                       chunks=True,
+                       chunks=None,
                        make_scale=False,
                        attach_data_scale=None,
                        attach_data_offset=None,

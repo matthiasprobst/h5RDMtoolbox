@@ -1,29 +1,30 @@
+from typing import Optional
 from typing import Union
 
 import rdflib
 from ontolutils.namespacelib import M4I
 from ontolutils.namespacelib import SCHEMA
 from ontolutils.namespacelib.hdf5 import HDF5
-from rdflib import Graph, RDF
+from rdflib import Graph
 from rdflib import Namespace
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.wrapper.ld.groups import process_group
+from h5rdmtoolbox.wrapper.ld.user.groups import process_group
 
 HDF = Namespace(str(HDF5))
 
 
-def get_ld(source: Union[str, h5tbx.File]):
+def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base: Optional[str] = None) -> rdflib.Graph:
     """Convert an HDF5 file into an RDF graph."""
+
     if not isinstance(source, h5tbx.File):
-        with h5tbx.File(source) as h5:
-            return get_ld(h5)
+        with h5tbx.File(source) as h5f:
+            return get_ld(h5f)
+
     graph = Graph()
     graph.bind("hdf", HDF)
 
-    root_uri = rdflib.BNode(source.id.id)
-    graph.add((root_uri, RDF.type, HDF.File))
-    process_group(source, graph, root_uri)
+    process_group(source, graph, blank_node_iri_base=blank_node_iri_base)
 
     return graph
 

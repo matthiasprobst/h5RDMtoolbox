@@ -19,7 +19,7 @@ from h5rdmtoolbox.convention import ontology as hdf_ontology
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
 from .core import Dataset, File
 from .rdf import RDF_TYPE_ATTR_NAME
-from ..convention.ontology.h5ontocls import Datatype
+# from ..convention.ontology.h5ontocls import Datatype
 from ..protocols import H5TbxGroup
 
 _bnode_counter = count()
@@ -1090,18 +1090,18 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
 
         datatype = get_datatype(ds)
 
-        if datatype:
-            params['datatype'] = Datatype(id=datatype)
-        else:
-            np_kind = np.dtype(ds.dtype).kind  # see https://numpy.org/doc/stable/reference/generated/numpy.dtype.kind.html
-            if np_kind == "V":
-                params['datatype'] = Datatype(typeClass=HDF5.H5T_COMPOUND)
-        ontods = hdf_ontology.Dataset(**params)
+        # if datatype:
+        #     params['datatype'] = Datatype(id=datatype)
+        # else:
+        #     np_kind = np.dtype(ds.dtype).kind  # see https://numpy.org/doc/stable/reference/generated/numpy.dtype.kind.html
+        #     if np_kind == "V":
+        #         params['datatype'] = Datatype(typeClass=HDF5.H5T_COMPOUND)
+        # ontods = hdf_ontology.Dataset(**params)
 
-        if ds.parent.name not in data:
-            data[ds.parent.name] = [ontods, ]
-        else:
-            data[ds.parent.name].append(ontods)
+        # if ds.parent.name not in data:
+        #     data[ds.parent.name] = [ontods, ]
+        # else:
+        #     data[ds.parent.name].append(ontods)
 
     def _build_group_onto_class(grp):
         attrs = _build_attributes(grp.attrs)

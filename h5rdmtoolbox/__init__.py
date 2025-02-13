@@ -123,14 +123,47 @@ def dumps(src: Union[str, File, pathlib.Path]):
         return h5.dumps()
 
 
-def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
-                skipND: int = 1,
-                structural: bool = True,
-                semantic: bool = True,
-                resolve_keys: bool = True,
-                context: Optional[Dict] = None,
-                blank_node_iri_base: Optional[HttpUrl] = None,
-                **kwargs) -> str:
+from h5rdmtoolbox.wrapper.ld.hdf.file import get_ld as hdf_get_ld
+from h5rdmtoolbox.wrapper.ld.user.file import get_ld as user_get_ld
+
+
+def dump_jsonld(
+        hdf_filename: Union[str, pathlib.Path],
+        skipND: int = 1,
+        structural: bool = True,
+        semantic: bool = True,
+        resolve_keys: bool = True,
+        context: Optional[Dict] = None,
+        blank_node_iri_base: Optional[HttpUrl] = None,
+        **kwargs):
+    from .wrapper.ld import optimize_context
+    context = context or {}
+    graph = None
+    if semantic and structural:
+        graph1 = user_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+        graph2 = hdf_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+        graph = graph1 + graph2
+    else:
+        if structural:
+            graph = hdf_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+
+        if semantic:
+            graph = user_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+    if graph is None:
+        raise ValueError("structural and semantic cannot be both False.")
+    context = optimize_context(graph, context)
+    return graph.serialize(format="json-ld", indent=2, auto_compact=True,
+                           context=context)
+
+
+def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
+                     skipND: int = 1,
+                     structural: bool = True,
+                     semantic: bool = True,
+                     resolve_keys: bool = True,
+                     context: Optional[Dict] = None,
+                     blank_node_iri_base: Optional[HttpUrl] = None,
+                     **kwargs) -> str:
     """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
     represents the semantic content only. To get a pure structural representation, set semantic=False, which
     will ignore any RDF content. If both are set to True, the JSON-LD will contain both structural and semantic.
@@ -164,22 +197,25 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     from .wrapper import jsonld
     if not structural and not semantic:
         raise ValueError('At least one of structural or semantic must be True.')
+
+    from h5rdmtoolbox.wrapper.ld.hdf.file import get_serialized_ld
     if structural and not semantic:
-        return jsonld.dump_file(hdf_filename, skipND=skipND)
-    with File(hdf_filename) as h5:
-        return jsonld.dumps(
-            h5,
-            structural=structural,
-            resolve_keys=resolve_keys,
-            context=context,
-            blank_node_iri_base=blank_node_iri_base,
-            skipND=skipND,
-            **kwargs
-        )
+        return get_serialized_ld(hdf_filename, structural, semantic, format="json-ld")
+    return get_serialized_ld(hdf_filename, structural, semantic, format="json-ld")
+    # with File(hdf_filename) as h5:
+    #     return jsonld.dumps(
+    #         h5,
+    #         structural=structural,
+    #         resolve_keys=resolve_keys,
+    #         context=context,
+    #         blank_node_iri_base=blank_node_iri_base,
+    #         skipND=skipND,
+    #         **kwargs
+    #     )
 
 
 def serialize(hdf_filename,
-              fmt: str="ttl",
+              fmt: str = "ttl",
               skipND: int = 1,
               structural: bool = True,
               semantic: bool = True,

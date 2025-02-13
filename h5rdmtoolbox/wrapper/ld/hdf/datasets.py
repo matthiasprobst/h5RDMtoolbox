@@ -5,9 +5,10 @@ from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Namespace
 from rdflib import RDFS
 from rdflib import XSD, RDF
-
+from typing import Optional
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
-from h5rdmtoolbox.wrapper.ld.attributes import process_attribute
+from h5rdmtoolbox.wrapper.ld.hdf.attributes import process_attribute
+from h5rdmtoolbox.wrapper.ld.utils import ExtractionOptions
 
 HDF = Namespace(str(HDF5))
 HDF5_FILTER_ONTOLOGY = {
@@ -28,23 +29,22 @@ def add_filter(dataset: h5py.Dataset, dataset_uri, graph) -> rdflib.Graph:
         if filter_type:
             graph.add((filter_uri, RDF.type, filter_type))
             if filter_type == HDF5.FilterDeflate:
-                graph.add((filter_uri, HDF5.deflateLevel, rdflib.Literal(dataset.compression_opts)))
+                graph.add(
+                    (filter_uri, HDF5.deflateLevel, rdflib.Literal(dataset.compression_opts, datatype=XSD.integer))
+                )
         else:
             graph.add((filter_uri, RDF.type, HDF5.Filter))
-            graph.add((filter_uri, RDFS.label, rdflib.Literal(dataset.compression)))
+            graph.add((filter_uri, RDFS.label, rdflib.Literal(dataset.compression, datatype=XSD.integer)))
             graph.add((filter_uri, RDFS.comment,
-                       rdflib.Literal("Unknown compression filter. Could not determine class nor parameters.")))
+                       rdflib.Literal("Unknown compression filter. Could not determine class nor parameters.",
+                                      datatype=XSD.string)))
         graph.add((dataset_uri, HDF5.filter, filter_uri))
     return graph
 
 
-def process_dataset(dataset, graph, parent_uri, dataset_uri):
+def process_dataset(dataset, graph, parent_uri, dataset_uri, blank_node_iri_base: Optional[str]=None):
     """Process an HDF5 dataset, adding it to the RDF graph."""
     graph.add((dataset_uri, RDF.type, HDF.Dataset))
-
-    user_rdf_type = dataset.rdf.type
-    if user_rdf_type:
-        graph.add((dataset_uri, RDF.type, rdflib.URIRef(user_rdf_type)))
 
     graph = add_filter(dataset, dataset_uri, graph)
 
@@ -56,7 +56,7 @@ def process_dataset(dataset, graph, parent_uri, dataset_uri):
 
     if dataset.maxshape:
         if all(dataset.maxshape):
-            graph.add((dataset_uri, HDF5.maximumSize, rdflib.Literal(np.prod(dataset.maxshape), datatype=XSD.integer)))
+            graph.add((dataset_uri, HDF5.maximumSize, rdflib.Literal(int(np.prod(dataset.maxshape)), datatype=XSD.integer)))
         else:
             graph.add((dataset_uri, HDF5.maximumSize, rdflib.Literal(-1, datatype=XSD.integer)))
     else:
