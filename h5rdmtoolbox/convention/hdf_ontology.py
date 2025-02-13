@@ -17,8 +17,8 @@
 #
 # @namespaces(hdf5=_HDF5_NS_IRI)
 # @urirefs(attribute='hdf5:attribute')
-# class _HDF5Thing(Thing):
-#     """Abstract class for File, Dataset and Group. Dont use directly."""
+# class NamedObject(Thing):
+#     """Abstract class for File, Dataset and Group. Don't use directly."""
 #     attribute: List[Attribute] = None
 #
 #
@@ -35,7 +35,7 @@
 #          name='hdf5:name',
 #          value='hdf5:value',
 #          datatype='hdf5:datatype')
-# class Dataset(_HDF5Thing):
+# class Dataset(NamedObject):
 #     """A multi-dimensional array"""
 #     name: str
 #     size: int
@@ -47,7 +47,7 @@
 # @urirefs(Group='hdf5:Group',
 #          member='hdf5:member',
 #          name='hdf5:name')
-# class Group(_HDF5Thing):
+# class Group(NamedObject):
 #     """HDF5 Group"""
 #     name: str
 #     member: List[Union["Group", Dataset]] = None

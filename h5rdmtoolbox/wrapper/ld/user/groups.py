@@ -30,7 +30,7 @@ def process_group(group, graph, blank_node_iri_base: Optional[str]=None):
         # graph.add((group_uri, HDF.member, sub_group_or_dataset_uri))
 
         if isinstance(sub_group_or_dataset, h5py.Group):
-            process_group(sub_group_or_dataset, graph)
+            process_group(sub_group_or_dataset, graph, blank_node_iri_base=blank_node_iri_base)
 
         elif isinstance(sub_group_or_dataset, h5py.Dataset):
-            process_dataset(sub_group_or_dataset, graph)
+            process_dataset(sub_group_or_dataset, graph, blank_node_iri_base=blank_node_iri_base)

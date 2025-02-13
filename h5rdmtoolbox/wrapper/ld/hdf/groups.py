@@ -1,6 +1,7 @@
 from typing import Optional
 
 import h5py
+import rdflib
 from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Namespace
 from rdflib import RDF
@@ -16,6 +17,7 @@ def process_group(group, graph, parent_uri, blank_node_iri_base: Optional[str] =
     """Recursively process HDF5 groups and datasets, adding them to the RDF graph."""
     group_uri = get_obj_bnode(group, blank_node_iri_base=blank_node_iri_base)
     graph.add((group_uri, RDF.type, HDF.Group))
+    graph.add((group_uri, HDF.name, rdflib.Literal(group.name, datatype=rdflib.XSD.string)))
 
     # Iterate through items in the group
     for name, item in group.items():

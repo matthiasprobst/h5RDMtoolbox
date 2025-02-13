@@ -40,9 +40,9 @@ class TestUserRDF(unittest.TestCase):
         graph.bind("hdf5", str(HDF5))
         graph.bind("ssno", str(SSNO))
         with h5tbx.File(self.hdf_filename) as h5:
-            process_attribute(h5["a/b/ds"], "standard_name", h5["a/b/ds"].attrs["standard_name"], graph)
+            process_attribute(h5["a/b/ds"], "standard_name", h5["a/b/ds"].attrs["standard_name"], graph, None)
         serialization = graph.serialize(format="turtle", indent=2)
-        print(serialization)
+
         exception_serialization = """@prefix ssno: <https://matthiasprobst.github.io/ssno#> .
 
 [] a <http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable> ;

@@ -15,6 +15,9 @@ from h5rdmtoolbox.database.hdfdb.query import _basename
 
 class TestHDFDB(unittest.TestCase):
 
+    def setUp(self):
+        h5tbx.use(None)
+
     def test_find_str(self):
         with h5tbx.File(attrs=dict(title='my file')) as h5:
             self.assertEqual(h5.find('title')[0].name, '/')

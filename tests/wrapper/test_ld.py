@@ -60,12 +60,12 @@ class TestJSONLD(unittest.TestCase):
 
         print(g.serialize(format='json-ld', indent=2))
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX HDF5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-    ?id a HDF5:Attribute .
-    ?id HDF5:value ?list .
+    ?id a hdf:Attribute .
+    ?id hdf:value ?list .
     ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -80,12 +80,12 @@ WHERE {
 
         print(g.serialize(format='json-ld', indent=2))
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX HDF5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-    ?id a HDF5:Attribute .
-    ?id HDF5:value ?list .
+    ?id a hdf:Attribute .
+    ?id hdf:value ?list .
     ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -119,13 +119,13 @@ WHERE {
         with h5tbx.File(h5.hdf_filename, 'r') as h5:
             json_str = jsonld.dumps(h5, indent=2, compact=False)
 
-        get_all_datasets_with_standard_name = """PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        get_all_datasets_with_standard_name = """PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
         PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
         
         SELECT  ?name ?sn
         {
-            ?obj a hdf5:Dataset .
-            ?obj hdf5:name ?name .
+            ?obj a hdf:Dataset .
+            ?obj hdf:name ?name .
             ?obj ssno:standardName ?sn .
         }"""
         g = rdflib.Graph().parse(data=json_str, format='json-ld')
@@ -138,13 +138,13 @@ WHERE {
         # get list 1
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX pivmeta: <https://matthiasprobst.github.io/pivmeta#>
-PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-  ?id a hdf5:Attribute .
-  ?id hdf5:value ?list .
-  ?id hdf5:name "a list" .
+  ?id a hdf:Attribute .
+  ?id hdf:value ?list .
+  ?id hdf:name "a list" .
   ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -155,13 +155,13 @@ WHERE {
         # get list 2
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX pivmeta: <https://matthiasprobst.github.io/pivmeta#>
-PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-  ?id a hdf5:Attribute .
-  ?id hdf5:value ?list .
-  ?id hdf5:name "a 1D list" .
+  ?id a hdf:Attribute .
+  ?id hdf:value ?list .
+  ?id hdf:name "a 1D list" .
   ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -610,25 +610,26 @@ WHERE {
                 sorted([str(HDF5.File), "http://www.w3.org/ns/dcat#Dataset"])
             )
 
-            jdict = json.loads(h5.dump_jsonld(structural=True, indent=2))
+            jdict = json.loads(h5tbx.dump_jsonld(h5.hdf_filename, structural=True, indent=2))
             self.assertDictEqual({
                 "dcat": "http://www.w3.org/ns/dcat#",
-                "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+                "hdf": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
+                "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
             },
                 jdict["@context"]
             )
-            self.assertEqual(len(jdict["@graph"]), 1)
+            self.assertEqual(len(jdict["@graph"]), 2)
             self.assertEqual(sorted(jdict["@graph"][0]["@type"]),
-                             sorted(["hdf5:File", "dcat:Dataset"]))
+                             sorted(["hdf:File", "dcat:Dataset"]))
 
             jdict = json.loads(h5.dump_jsonld(structural=False, indent=2))
             self.assertDictEqual({
                 "dcat": "http://www.w3.org/ns/dcat#",
-                "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+                "hdf": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
             },
                 jdict["@context"]
             )
             self.assertEqual(
                 sorted(jdict["@type"]),
-                sorted(["hdf5:File", "dcat:Dataset"])
+                sorted(["hdf:File", "dcat:Dataset"])
             )

@@ -10,6 +10,7 @@ from rdflib import Namespace
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.wrapper.ld.user.groups import process_group
+from h5rdmtoolbox.wrapper.ld.utils import get_file_bnode
 
 HDF = Namespace(str(HDF5))
 
@@ -24,7 +25,17 @@ def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base: Optional[str] = 
     graph = Graph()
     graph.bind("hdf", HDF)
 
+    file_uri = get_file_bnode(source, blank_node_iri_base=blank_node_iri_base)
+    file_rdf = source.frdf.type
+    if file_rdf:
+        if isinstance(file_rdf, list):
+            for rdf_type in file_rdf:
+                graph.add((file_uri, rdflib.RDF.type, rdflib.URIRef(rdf_type)))
+        else:
+            graph.add((file_uri, rdflib.RDF.type, rdflib.URIRef(file_rdf)))
+
     process_group(source, graph, blank_node_iri_base=blank_node_iri_base)
+
 
     return graph
 
