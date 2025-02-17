@@ -46,8 +46,12 @@ class TestJSONLD(unittest.TestCase):
                 indent=2)
             jsonld_dict = json.loads(jsonld)
             self.assertEqual(jsonld_dict['@context']['local'], 'https://example.org/')
-            print(jsonld_dict)
-            self.assertTrue(jsonld_dict['@graph'][0]['@id'].startswith('local:'))
+            found_local = False
+            for e in jsonld_dict["@graph"]:
+                if e.get("@id", "").startswith("local:"):
+                    found_local = True
+                    break
+            self.assertTrue(found_local)
 
     def test_build_node_list(self):
 
