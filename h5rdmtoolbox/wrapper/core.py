@@ -2407,7 +2407,7 @@ class File(h5py.File, Group):
                     structural: bool = True,
                     semantic: bool = True,
                     resolve_keys: bool = True,
-                    blank_node_iri_base: Optional[Dict] = None,
+                    blank_node_iri_base: Optional[str] = None,
                     **kwargs) -> str:
         """Dump the file content as JSON-LD string"""
         return self.serialize(fmt="jsonld",
@@ -2423,7 +2423,7 @@ class File(h5py.File, Group):
                   structural: bool = True,
                   semantic: bool = True,
                   resolve_keys: bool = True,
-                  blank_node_iri_base: Optional[Dict] = None,
+                  blank_node_iri_base: Optional[str] = None,
                   **kwargs
                   ):
         """Serialize the file content to a specific format"""

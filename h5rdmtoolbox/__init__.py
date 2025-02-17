@@ -2,6 +2,7 @@
 
 import logging
 import pathlib
+import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
@@ -129,13 +130,17 @@ from h5rdmtoolbox.wrapper.ld.user.file import get_ld as user_get_ld
 
 def dump_jsonld(
         hdf_filename: Union[str, pathlib.Path],
-        skipND: int = 1,
         structural: bool = True,
         semantic: bool = True,
-        resolve_keys: bool = True,
         context: Optional[Dict] = None,
-        blank_node_iri_base: Optional[HttpUrl] = None,
+        blank_node_iri_base: Optional[str] = None,
         **kwargs):
+    resolve_keys = kwargs.get("resolve_keys", None)
+    skipND = kwargs.get("skipND", None)
+    if resolve_keys is not None:
+        warnings.warn("resolve_keys is deprecated. Use context instead.", DeprecationWarning)
+    if skipND is not None:
+        warnings.warn("skipND is deprecated. Use context instead.", DeprecationWarning)
     from .wrapper.ld import optimize_context
     context = context or {}
     graph = None
@@ -162,7 +167,7 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
                      semantic: bool = True,
                      resolve_keys: bool = True,
                      context: Optional[Dict] = None,
-                     blank_node_iri_base: Optional[HttpUrl] = None,
+                     blank_node_iri_base: Optional[str] = None,
                      **kwargs) -> str:
     """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
     represents the semantic content only. To get a pure structural representation, set semantic=False, which
@@ -220,7 +225,7 @@ def serialize(hdf_filename,
               structural: bool = True,
               semantic: bool = True,
               resolve_keys: bool = True,
-              blank_node_iri_base: Optional[Dict] = None,
+              blank_node_iri_base: Optional[str] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
     fmt = kwargs.pop("format", fmt)

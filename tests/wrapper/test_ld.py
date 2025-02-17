@@ -40,12 +40,14 @@ class TestJSONLD(unittest.TestCase):
     def test_dump_with_blank_node_iri_base(self):
         with h5tbx.File() as h5:
             h5.attrs["__version__"] = __version__
-            jsonld = h5.dump_jsonld(blank_node_iri_base='https://example.org/',
-                                    context={"local": "https://example.org/"},
-                                    indent=2)
-            jsonlddict = json.loads(jsonld)
-            self.assertEqual(jsonlddict['@context']['local'], 'https://example.org/')
-            self.assertTrue(jsonlddict['@graph'][0]['@id'].startswith('local:'))
+            jsonld = h5.dump_jsonld(
+                blank_node_iri_base="https://example.org/",
+                context={"local": "https://example.org/"},
+                indent=2)
+            jsonld_dict = json.loads(jsonld)
+            self.assertEqual(jsonld_dict['@context']['local'], 'https://example.org/')
+            print(jsonld_dict)
+            self.assertTrue(jsonld_dict['@graph'][0]['@id'].startswith('local:'))
 
     def test_build_node_list(self):
 
@@ -625,7 +627,8 @@ WHERE {
             jdict = json.loads(h5.dump_jsonld(structural=False, indent=2))
             self.assertDictEqual({
                 "dcat": "http://www.w3.org/ns/dcat#",
-                "hdf": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+                "hdf": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
+                "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
             },
                 jdict["@context"]
             )
