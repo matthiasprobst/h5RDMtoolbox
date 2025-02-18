@@ -12,7 +12,11 @@ HDF = Namespace(str(HDF5))
 
 
 def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
-    parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base)
+    parent_uri = parent_obj.rdf.subject
+    if parent_uri:
+        parent_uri = rdflib.URIRef(parent_uri)
+    else:
+        parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base)
     rdf_user_type = parent_obj.rdf.type
     if rdf_user_type:
         graph.add((parent_uri, RDF.type, rdflib.URIRef(rdf_user_type)))

@@ -1,5 +1,4 @@
 import hashlib
-import pathlib
 from dataclasses import dataclass
 from typing import Optional
 from typing import Union
@@ -41,25 +40,33 @@ def optimize_context(graph, context=None):
     return selected_namespaces
 
 
+def _get_obj_id(obj: Union[h5py.Dataset, h5py.Group], name: Optional[str] = None):
+    if name:
+        name = f"/{name}"
+    return hashlib.md5(f"{obj.file.id.id}/{obj.name}{name}".encode()).hexdigest()
+
+
 def get_file_bnode(file: h5py.File,
                    blank_node_iri_base: Optional[str]):
-    _id = hashlib.md5(str(pathlib.Path(file.filename).absolute()).encode()).hexdigest()
+    if not isinstance(file, h5py.File):
+        raise ValueError("Expected h5py.File object")
+    _id = _get_obj_id(file, name="file")
     if blank_node_iri_base:
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(_id)
 
 
 def get_obj_bnode(obj: Union[h5py.Dataset, h5py.Group], blank_node_iri_base):
-    _id = hashlib.md5(obj.name.encode()).hexdigest()
+    _id = _get_obj_id(obj)
     if blank_node_iri_base:
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(_id)
 
 
 def get_attr_bnode(obj: Union[h5py.Dataset, h5py.Group], name: str, blank_node_iri_base: Optional[str]):
-    _id = hashlib.md5(obj.name.encode()).hexdigest()
+    _id = _get_obj_id(obj, name)
     if blank_node_iri_base:
-        return rdflib.URIRef(f'{blank_node_iri_base}{_id}_{name}')
+        return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(f"{_id}_{name}")
 
 

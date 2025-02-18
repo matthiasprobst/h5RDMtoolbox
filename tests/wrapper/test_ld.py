@@ -194,7 +194,8 @@ WHERE {
             lastName: str
             affiliation: Affiliation
 
-        p = Person(name='John', lastName='Doe',
+        p = Person(id="https://orcid.org/123",
+                   name='John', lastName='Doe',
                    affiliation=dict(name='MyCompany'))
         jdict = json.loads(p.model_dump_jsonld(resolve_keys=False))
         self.assertEqual(jdict['@type'], 'prov:Person')
@@ -206,6 +207,8 @@ WHERE {
 
         with h5tbx.File() as h5:
             jsonld.to_hdf(h5, data=jdict)
+            self.assertTrue(h5.rdf.subject, 'https://orcid.org/123')
+            self.assertTrue(h5.rdf.type, 'http://www.w3.org/ns/prov#Person')
             self.assertTrue(h5.attrs['name'], 'John')
             self.assertEqual(h5.rdf.predicate['name'], 'http://xmlns.com/foaf/0.1/firstName')
             self.assertTrue(h5['affiliation'].attrs['name'], 'MyCompany')

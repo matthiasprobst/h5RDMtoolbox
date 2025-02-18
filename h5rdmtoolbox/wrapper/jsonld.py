@@ -284,7 +284,7 @@ def to_hdf(grp: H5TbxGroup,
 
     Parameters
     ----------
-    grp : h5py.Group
+    grp : H5TbxGroup
         The group to write to
     data : Union[Dict, str] = None
         The data to write either as dictionary or json string
@@ -512,6 +512,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                      skipND: int = None) -> Tuple[Graph, Dict]:
     """using rdflib graph. This will not write HDF5 dataset data to the graph. Impossible and
      not reasonable as potentially multidimensional"""
+    warnings.warn("This function is deprecated. Use `h5tbx.get_ld()` instead", DeprecationWarning)
     if blank_node_iri_base is not None:
         blank_node_iri_base = str(HttpUrl(blank_node_iri_base))
         if not blank_node_iri_base.endswith(("/", "#")):

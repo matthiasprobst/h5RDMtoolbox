@@ -15,11 +15,9 @@ logger = h5tbx.set_loglevel('ERROR')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
-class TestUserRDF(unittest.TestCase):
+class TestUserGraph(unittest.TestCase):
 
     def setUp(self):
-        import h5rdmtoolbox as h5tbx
-
         with h5tbx.File() as h5:
             grp = h5.create_group("h5rdmtoolbox")
             grp.rdf.type = SCHEMA.SoftwareSourceCode

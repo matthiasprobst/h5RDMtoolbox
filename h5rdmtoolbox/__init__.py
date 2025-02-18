@@ -6,6 +6,8 @@ import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
+import rdflib
+
 from ._version import __version__
 from .user import USER_LOG_DIR, USER_DATA_DIR
 
@@ -128,6 +130,37 @@ from h5rdmtoolbox.wrapper.ld.hdf.file import get_ld as hdf_get_ld
 from h5rdmtoolbox.wrapper.ld.user.file import get_ld as user_get_ld
 
 
+def get_ld(
+        hdf_filename: Union[str, pathlib.Path],
+        structural: bool = True,
+        semantic: bool = True,
+        blank_node_iri_base: Optional[str] = None,
+        **kwargs) -> rdflib.Graph:
+    """Return the HDF file content as a rdflib.Graph object."""
+    resolve_keys = kwargs.get("resolve_keys", None)
+    skipND = kwargs.get("skipND", None)
+    if resolve_keys is not None:
+        warnings.warn("resolve_keys is deprecated. Use context instead.", DeprecationWarning)
+    if skipND is not None:
+        warnings.warn("skipND is deprecated. Use context instead.", DeprecationWarning)
+
+    graph = None
+    with File(hdf_filename) as h5:
+        if semantic and structural:
+            graph1 = user_get_ld(h5, blank_node_iri_base=blank_node_iri_base)
+            graph2 = hdf_get_ld(h5, blank_node_iri_base=blank_node_iri_base)
+            graph = graph1 + graph2
+        else:
+            if structural:
+                graph = hdf_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+
+            if semantic:
+                graph = user_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+    if graph is None:
+        raise ValueError("structural and semantic cannot be both False.")
+    return graph
+
+
 def dump_jsonld(
         hdf_filename: Union[str, pathlib.Path],
         structural: bool = True,
@@ -135,27 +168,10 @@ def dump_jsonld(
         context: Optional[Dict] = None,
         blank_node_iri_base: Optional[str] = None,
         **kwargs):
-    resolve_keys = kwargs.get("resolve_keys", None)
-    skipND = kwargs.get("skipND", None)
-    if resolve_keys is not None:
-        warnings.warn("resolve_keys is deprecated. Use context instead.", DeprecationWarning)
-    if skipND is not None:
-        warnings.warn("skipND is deprecated. Use context instead.", DeprecationWarning)
+    """Return the file content as a JSON-LD string."""
     from .wrapper.ld import optimize_context
     context = context or {}
-    graph = None
-    if semantic and structural:
-        graph1 = user_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
-        graph2 = hdf_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
-        graph = graph1 + graph2
-    else:
-        if structural:
-            graph = hdf_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
-
-        if semantic:
-            graph = user_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
-    if graph is None:
-        raise ValueError("structural and semantic cannot be both False.")
+    graph = get_ld(hdf_filename, structural, semantic, blank_node_iri_base, **kwargs)
     context = optimize_context(graph, context)
     return graph.serialize(format="json-ld", indent=2, auto_compact=True,
                            context=context)

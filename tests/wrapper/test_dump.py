@@ -13,6 +13,7 @@ class TestDump(unittest.TestCase):
         with h5tbx.File(mode='w') as h5:
             grp = h5.create_group('Person')
             grp.rdf.type = PROV.Person
+            grp.rdf.subject = "https://orcid.org/123"
             grp.attrs['fname', FOAF.firstName] = 'John'
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
             h5.dumps()
@@ -39,7 +40,7 @@ class TestDump(unittest.TestCase):
         for g in jsondict['@graph']:
             if g.get('foaf:firstName', None) == 'John':
                 verified_types = True
-                self.assertEqual(sorted(g['@type']), sorted(['hdf:Group', 'prov:Person']))
+                self.assertEqual(g['@type'], 'prov:Person')
         self.assertTrue(verified_types)
 
         with self.assertRaises(ValueError):
