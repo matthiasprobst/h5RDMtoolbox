@@ -9,6 +9,7 @@ from rdflib import Graph
 from rdflib import Namespace
 
 import h5rdmtoolbox as h5tbx
+from h5rdmtoolbox.wrapper.ld.user.attributes import process_file_attribute
 from h5rdmtoolbox.wrapper.ld.user.groups import process_group
 from h5rdmtoolbox.wrapper.ld.utils import get_file_bnode
 
@@ -34,8 +35,10 @@ def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base: Optional[str] = 
         else:
             graph.add((file_uri, rdflib.RDF.type, rdflib.URIRef(file_rdf)))
 
-    process_group(source, graph, blank_node_iri_base=blank_node_iri_base)
+    for ak, av in source.attrs.items():
+        process_file_attribute(source, ak, av, graph, blank_node_iri_base)
 
+    process_group(source, graph, blank_node_iri_base=blank_node_iri_base)
 
     return graph
 

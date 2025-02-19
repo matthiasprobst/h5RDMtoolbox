@@ -607,18 +607,17 @@ WHERE {
 
     def test_frdf(self):
         with h5tbx.File() as h5:
-            self.assertEqual(h5.frdf.type, str(HDF5.File))
             h5.frdf.type = "dcat:Dataset"
             self.assertEqual(
-                sorted(h5.frdf.type),
-                sorted([str(HDF5.File), "http://www.w3.org/ns/dcat#Dataset"])
+                h5.frdf.type,
+                "http://www.w3.org/ns/dcat#Dataset"
             )
 
             with self.assertRaises(RDFError):
                 h5.frdf.type = "unknown:Dataset"
             self.assertEqual(
-                sorted(h5.frdf.type),
-                sorted([str(HDF5.File), "http://www.w3.org/ns/dcat#Dataset"])
+                h5.frdf.type,
+                "http://www.w3.org/ns/dcat#Dataset"
             )
 
             jdict = json.loads(h5tbx.dump_jsonld(h5.hdf_filename, structural=True, indent=2))
@@ -641,6 +640,6 @@ WHERE {
                 jdict["@context"]
             )
             self.assertEqual(
-                sorted(jdict["@type"]),
-                sorted([str(HDF5) + "File", "dcat:Dataset"])
+                sorted(jdict["@graph"][0]["@type"]),
+                sorted("dcat:Dataset")
             )

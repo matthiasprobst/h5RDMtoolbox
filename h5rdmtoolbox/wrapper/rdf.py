@@ -699,10 +699,7 @@ class FileRDFManager:
         -------
         Union[str, List[str], None]
         """
-        s = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
-        if s is None:
-            return str(HDF5.File)
-        return s
+        return self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
 
     @type.setter
     def type(self, rdf_type: Union[str, List[str]]):
@@ -713,7 +710,7 @@ class FileRDFManager:
             data = validate_url(str(rdf_type))
 
         # get the attribute
-        iri_sbj_data = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, str(HDF5.File))
+        iri_sbj_data = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
 
         if iri_sbj_data is None:
             self._attr[RDF_FILE_TYPE_ATTR_NAME] = data

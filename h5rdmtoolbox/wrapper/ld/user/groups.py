@@ -1,16 +1,14 @@
+from typing import Optional
+
 import h5py
 import rdflib
-from ontolutils.namespacelib.hdf5 import HDF5
-from rdflib import Namespace
 
 from h5rdmtoolbox.wrapper.ld.user.attributes import process_attribute
 from h5rdmtoolbox.wrapper.ld.user.datasets import process_dataset
 from h5rdmtoolbox.wrapper.ld.utils import get_obj_bnode
-from typing import Optional
-HDF = Namespace(str(HDF5))
 
 
-def process_group(group, graph, blank_node_iri_base: Optional[str]=None):
+def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
     for ak, av in group.attrs.items():
         process_attribute(group, ak, av, graph, blank_node_iri_base)
 

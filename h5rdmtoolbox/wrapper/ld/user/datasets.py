@@ -1,12 +1,8 @@
 import rdflib
-from ontolutils.namespacelib.hdf5 import HDF5
-from rdflib import Namespace
 
 from h5rdmtoolbox.wrapper.ld.user.attributes import process_attribute
 from h5rdmtoolbox.wrapper.ld.utils import get_obj_bnode
 from h5rdmtoolbox.wrapper.rdf import PROTECTED_ATTRIBUTE_NAMES
-
-HDF = Namespace(str(HDF5))
 
 
 def process_dataset(dataset, graph, blank_node_iri_base=None):

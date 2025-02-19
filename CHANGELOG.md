@@ -7,6 +7,7 @@ Log of changes in the versions
 - chunks=None as default for `create_dataset` to mimic behaviour of `h5py`
 - improved formalized representation of the HDF5 file structure based on the Allotrope Foundation's ontology
 - removed unclear parameter `resolve_keys` from `dump_jsonld()` and `serialize()`
+- HDF.File is not automatically returned if `h5.frdf.type` is called
 
 ## v1.6.3
 

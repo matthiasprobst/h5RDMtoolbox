@@ -8,7 +8,7 @@ from ontolutils.namespacelib.hdf5 import HDF5
 from ssnolib.namespace import SSNO
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.wrapper.ld.user.attributes import process_attribute
+from h5rdmtoolbox.wrapper.ld.user.attributes import process_attribute, process_file_attribute
 
 logger = h5tbx.set_loglevel('ERROR')
 
@@ -52,3 +52,23 @@ class TestUserGraph(unittest.TestCase):
             rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),
             rdflib.Graph().parse(data=exception_serialization, format="turtle").serialize(format="turtle")
         )
+
+    def test_process_file_attributes(self):
+        graph = rdflib.Graph()
+        graph.bind("hdf5", str(HDF5))
+        graph.bind("ssno", str(SSNO))
+        with h5tbx.File() as h5:
+            h5.attrs["mod_time"] = "today"
+            h5.frdf["mod_time"].predicate = SCHEMA.dateModified
+            process_file_attribute(h5, "mod_time", h5.attrs["mod_time"], graph, None)
+        serialization = graph.serialize(format="turtle")
+        exception_serialization = """@prefix schema: <https://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+[] schema:dateModified "today"^^xsd:string ."""
+        self.assertEqual(
+            rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),
+            rdflib.Graph().parse(data=exception_serialization, format="turtle").serialize(format="turtle")
+        )
+
+
