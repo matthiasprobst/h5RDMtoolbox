@@ -221,8 +221,8 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
 
     from h5rdmtoolbox.wrapper.ld.hdf.file import get_serialized_ld
     if structural and not semantic:
-        return get_serialized_ld(hdf_filename, structural, semantic, format="json-ld")
-    return get_serialized_ld(hdf_filename, structural, semantic, format="json-ld")
+        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context)
+    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context)
     # with File(hdf_filename) as h5:
     #     return jsonld.dumps(
     #         h5,

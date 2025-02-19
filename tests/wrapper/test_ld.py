@@ -487,7 +487,7 @@ WHERE {
 "foaf:lastName": "Doe",
 "age": 21,
 "schema:affiliation": {
-    "@id": "Nef657ff40e464dd09580db3f32de2cf1",
+    "@id": "local:KIT",
     "@type": "schema:Organization",
     "rdfs:label": "MyAffiliation"
     }
@@ -502,6 +502,8 @@ WHERE {
             self.assertTrue('lastName' in h5['person'].attrs)
             self.assertEqual(h5['person'].attrs['firstName'], 'John')
             self.assertEqual(h5['person'].attrs['age'], 21)
+            self.assertEqual("http://example.org/testperson", h5.person.rdf.subject)
+            self.assertEqual("http://example.org/KIT", h5.person.affiliation.rdf.subject)
 
         h5tbx.dumps('test.hdf')
         pathlib.Path('test.json').unlink(missing_ok=True)
@@ -634,12 +636,11 @@ WHERE {
             jdict = json.loads(h5.dump_jsonld(structural=False, indent=2))
             self.assertDictEqual({
                 "dcat": "http://www.w3.org/ns/dcat#",
-                "hdf": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
                 "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
             },
                 jdict["@context"]
             )
             self.assertEqual(
                 sorted(jdict["@type"]),
-                sorted(["hdf:File", "dcat:Dataset"])
+                sorted([str(HDF5) + "File", "dcat:Dataset"])
             )

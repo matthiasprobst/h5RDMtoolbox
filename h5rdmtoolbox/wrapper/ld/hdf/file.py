@@ -38,12 +38,11 @@ def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base:Optional[str]=Non
 
 def get_serialized_ld(
         source,
-        structural,
-        semantic,
+        blank_node_iri_base,
         format,
         context=None
 ) -> str:
-    graph = get_ld(source, structural, semantic)
+    graph = get_ld(source, blank_node_iri_base)
     context = optimize_context(graph, context)
     return graph.serialize(format=format, indent=2, auto_compact=True, context=context)
 

@@ -359,7 +359,11 @@ def to_hdf(grp: H5TbxGroup,
         if k in ('@id', 'id'):
             if v.startswith('http'):  # blank nodes should not be written to an HDF5 file!
                 grp.rdf.subject = resolve_iri(v, ctx)
-                # grp.attrs.create(name="@id", data=v)
+            else:
+                split_id = v.split(':')
+                if len(split_id) == 2:
+                    if split_id[0] in ctx.terms:
+                        grp.rdf.subject = resolve_iri(v, ctx)
             continue
         elif k == '@type':
             grp.rdf.type = resolve_iri(v, ctx)
@@ -487,6 +491,7 @@ def to_hdf(grp: H5TbxGroup,
                             rdf_object = f'{_ns}{value_object}'
                         else:
                             rdf_object = None
+
             else:
                 value_object = v
 
@@ -497,7 +502,7 @@ def to_hdf(grp: H5TbxGroup,
                 grp.rdf.subject = v
                 # grp.attrs.create(name=k, data=v)
             else:
-                grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate)
+                grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate, rdf_object=rdf_object)
 
 
 def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],

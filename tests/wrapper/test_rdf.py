@@ -424,10 +424,13 @@ class TestRDF(unittest.TestCase):
             # from ssnolib import StandardName
             # h5.u.rdf["standard_name"].object = StandardName(standard_name="x_velocity", unit="m/s")
             h5.dump(False)
-            h5jld = h5.dump_jsonld(indent=2, structural=False)
+            h5jld = h5.dump_jsonld(indent=2, structural=False,
+                                   context={"ssno": "https://matthiasprobst.github.io/ssno#",
+                                            "ex": "https://example.org/"})
             h5jld_dict = json.loads(h5jld)
             self.assertDictEqual(
                 h5jld_dict["@context"],
-                {"hdf": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
-                 "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"}
+                {"rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                 "ssno": "https://matthiasprobst.github.io/ssno#",
+                 "ex": "https://example.org/"}
             )
