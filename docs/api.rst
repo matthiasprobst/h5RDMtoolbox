@@ -21,6 +21,18 @@ Base wrapper class
    wrapper.core.Group
    wrapper.core.Group.create_from_yaml
 
+Conventions
+===========
+
+Layouts
+-------
+
+.. autosummary::
+    :toctree: generated/
+
+    layout.core.LayoutSpecification
+    layout.core.Layout
+
 
 
 Standard attributes
