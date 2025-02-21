@@ -31,7 +31,6 @@ Layouts
     :toctree: generated/
 
     layout.core.LayoutSpecification
-    layout.core.Layout
 
 
 
