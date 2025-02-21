@@ -15,9 +15,11 @@ from pydantic import HttpUrl
 from rdflib import Graph, URIRef, BNode, XSD, RDF, SKOS
 from rdflib.plugins.shared.jsonld.context import Context
 
-from h5rdmtoolbox.convention import hdf_ontology
+from h5rdmtoolbox.convention import ontology as hdf_ontology
+from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
 from .core import Dataset, File
 from .rdf import RDF_TYPE_ATTR_NAME
+# from ..convention.ontology.h5ontocls import Datatype
 from ..protocols import H5TbxGroup
 
 _bnode_counter = count()
@@ -28,7 +30,7 @@ CONTEXT_PREFIXES = {
     'prov': 'http://www.w3.org/ns/prov#',
     'foaf': 'http://xmlns.com/foaf/0.1/',
     'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
-    'hdf5': str(HDF5._NS),
+    'hdf5': str(HDF5),
     "brick": "https://brickschema.org/schema/Brick#",
     "csvw": "http://www.w3.org/ns/csvw#",
     "dc": "http://purl.org/dc/elements/1.1/",
@@ -126,39 +128,6 @@ def resolve_iri(key_or_iri: str, context: Context) -> str:
     except AttributeError:
         if key_or_iri == 'label':
             return 'http://www.w3.org/2000/01/rdf-schema#label'
-
-
-# def _merge_entries(entries: Dict, clean: bool = True) -> Dict:
-#     _entries = entries.copy()
-#
-#     ids = list(entries.keys())
-#
-#     delete_candidates = []
-#
-#     for _id, entry in entries.items():
-#         for k, v in entry.items():
-#             if clean and len(entry) == 1:
-#                 # remove empty entry, Note, this could be a problem if the entry references elsewhere...
-#                 delete_candidates.append(_id)
-#                 continue
-#             if k not in ('@id', '@type'):
-#                 if isinstance(v, list):
-#                     if all([i in ids for i in v]):
-#                         _entries[_id][k] = [_entries.pop(i) for i in v]
-#
-#                 elif v in ids:
-#                     _entries[_id][k] = _entries.pop(v)
-#     if clean:
-#         for dc in delete_candidates:
-#             _entries.pop(dc, None)
-#     return _entries
-
-
-# def _get_id_from_attr_value(_av, file_url):
-#     if isinstance(_av, (h5py.Dataset, h5py.Group)):
-#         return _get_id(_av, file_url)
-#     else:
-#         return Literal(_av)
 
 
 def _get_id(_node, use_simple_bnode_value: bool, blank_node_iri_base: Optional[Dict]) -> Union[URIRef, BNode]:
@@ -315,7 +284,7 @@ def to_hdf(grp: H5TbxGroup,
 
     Parameters
     ----------
-    grp : h5py.Group
+    grp : H5TbxGroup
         The group to write to
     data : Union[Dict, str] = None
         The data to write either as dictionary or json string
@@ -390,7 +359,11 @@ def to_hdf(grp: H5TbxGroup,
         if k in ('@id', 'id'):
             if v.startswith('http'):  # blank nodes should not be written to an HDF5 file!
                 grp.rdf.subject = resolve_iri(v, ctx)
-                # grp.attrs.create(name="@id", data=v)
+            else:
+                split_id = v.split(':')
+                if len(split_id) == 2:
+                    if split_id[0] in ctx.terms:
+                        grp.rdf.subject = resolve_iri(v, ctx)
             continue
         elif k == '@type':
             grp.rdf.type = resolve_iri(v, ctx)
@@ -518,6 +491,7 @@ def to_hdf(grp: H5TbxGroup,
                             rdf_object = f'{_ns}{value_object}'
                         else:
                             rdf_object = None
+
             else:
                 value_object = v
 
@@ -528,7 +502,7 @@ def to_hdf(grp: H5TbxGroup,
                 grp.rdf.subject = v
                 # grp.attrs.create(name=k, data=v)
             else:
-                grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate)
+                grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate, rdf_object=rdf_object)
 
 
 def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
@@ -539,10 +513,11 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                      structural: bool = True,
                      resolve_keys: bool = True,
                      use_simple_bnode_value: bool = False,
-                     blank_node_iri_base: Optional[HttpUrl] = None,
+                     blank_node_iri_base: Optional[str] = None,
                      skipND: int = None) -> Tuple[Graph, Dict]:
     """using rdflib graph. This will not write HDF5 dataset data to the graph. Impossible and
      not reasonable as potentially multidimensional"""
+    warnings.warn("This function is deprecated. Use `h5tbx.get_ld()` instead", DeprecationWarning)
     if blank_node_iri_base is not None:
         blank_node_iri_base = str(HttpUrl(blank_node_iri_base))
         if not blank_node_iri_base.endswith(("/", "#")):
@@ -565,7 +540,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
     _context = {}
     # if structural:
-    _context['hdf5'] = str(HDF5._NS)
+    _context['hdf5'] = str(HDF5)
     _context.update(context or {})  # = context or {}
 
     assert isinstance(_context, dict)
@@ -675,7 +650,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             parent_name = obj.parent.name
             parent_node = iri_dict.get(parent_name, None)
             if parent_node is not None:
-                _add_node(g, (parent_node, HDF5.member, obj_node))  # fixme: should not be named obj_node
+                _add_node(g, (parent_node, HDF5.member, obj_node))
 
         if isinstance(obj, h5py.Group):
             if structural:
@@ -705,8 +680,40 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 _ndim = obj.ndim
                 _add_node(g, (obj_node, RDF.type, HDF5.Dataset))
                 _add_node(g, (obj_node, HDF5.name, rdflib.Literal(obj.name)))
+                if obj.chunks:
+                    chunk_dimension_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                    _add_node(g, (chunk_dimension_node, RDF.type, HDF5.ChunkDimension))
+                    _add_node(g, (obj_node, HDF5.chunk, chunk_dimension_node))
+
+                    for ichunk, chunk in enumerate(obj.chunks):
+                        dimension_index_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                        _add_node(g, (dimension_index_node, RDF.type, HDF5.DataspaceDimension))
+                        _add_node(g, (chunk_dimension_node, HDF5.dimension, dimension_index_node))
+                        _add_node(g, (dimension_index_node, HDF5.size, rdflib.Literal(chunk, datatype=XSD.integer)))
+                        _add_node(g, (dimension_index_node, HDF5.dimensionIndex, rdflib.Literal(ichunk, datatype=XSD.integer)))
+
+                _add_node(g, (obj_node, HDF5.rank, rdflib.Literal(obj.ndim, datatype=XSD.integer)))
                 _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
-                _add_node(g, (obj_node, HDF5.dimension, rdflib.Literal(_ndim, datatype=XSD.integer)))
+
+                if obj.ndim > 0:
+                    dataspace_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                    _add_node(g, (dataspace_node, RDF.type, HDF5.SimpleDataspace))
+                    for idim, dim in enumerate(obj.shape):
+                        dataspace_dimension_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
+                        _add_node(g, (dataspace_dimension_node, RDF.type, HDF5.DataspaceDimension))
+                        _add_node(g, (dataspace_node, HDF5.dimension, dataspace_dimension_node))
+                        _add_node(g, (dataspace_dimension_node, HDF5.size, rdflib.Literal(dim, datatype=XSD.integer)))
+                        _add_node(g, (dataspace_dimension_node, HDF5.dimensionIndex, rdflib.Literal(idim, datatype=XSD.integer)))
+                else:
+                    dataspace_node = HDF5.scalarDataspace
+                    _add_node(g, (dataspace_node, RDF.type, HDF5.scalarDataspace))
+                _add_node(g, (obj_node, HDF5.dataspace, dataspace_node))
+
+                datatype = get_datatype(obj)
+
+                if datatype:
+                    _add_node(g, (datatype, RDF.type, HDF5.Datatype))
+                    _add_node(g, (obj_node, HDF5.datatype, datatype))
 
                 if obj.dtype.kind == 'S':
                     _add_node(g, (obj_node, HDF5.datatype, rdflib.Literal('H5T_STRING')))
@@ -740,7 +747,14 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             logger.debug(f'Create new node for attribute "{ak}": {attr_node}')
 
             if structural:  # add hdf type and name nodes
-                _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
+                if isinstance(av, str):
+                    _add_node(g, (attr_node, RDF.type, HDF5.StringAttribute))
+                elif isinstance(av, int):
+                    _add_node(g, (attr_node, RDF.type, HDF5.IntegerAttribute))
+                elif isinstance(av, float):
+                    _add_node(g, (attr_node, RDF.type, HDF5.FloatAttribute))
+                else:
+                    _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
                 attr_def: str = obj.rdf[ak].definition
                 if attr_def:
                     _add_node(g, (attr_node, HDF5.name, rdflib.Literal(ak)))
@@ -911,7 +925,7 @@ def serialize(source: Union[str, pathlib.Path, h5py.File],
               recursive: bool = True,
               compact: bool = True,
               context: Dict = None,
-              blank_node_iri_base: Optional[HttpUrl] = None,
+              blank_node_iri_base: Optional[str] = None,
               structural: bool = True,
               resolve_keys: bool = True,
               skipND: Optional[int] = None) -> str:
@@ -937,7 +951,7 @@ def dumpd(grp,
           recursive: bool = True,
           compact: bool = True,
           context: Dict = None,
-          blank_node_iri_base: Optional[HttpUrl] = None,
+          blank_node_iri_base: Optional[str] = None,
           structural: bool = True,
           resolve_keys: bool = True,
           skipND: Optional[int] = None
@@ -973,7 +987,7 @@ def dumps(grp,
           recursive: bool = True,
           compact: bool = True,
           context: Optional[Dict] = None,
-          blank_node_iri_base: Optional[HttpUrl] = None,
+          blank_node_iri_base: Optional[str] = None,
           structural: bool = True,
           resolve_keys: bool = True,
           skipND: Optional[int] = None,
@@ -1002,7 +1016,7 @@ def dump(grp,
          recursive: bool = True,
          compact: bool = True,
          context: Optional[Dict] = None,
-         blank_node_iri_base: Optional[HttpUrl] = None,
+         blank_node_iri_base: Optional[str] = None,
          structural: bool = True,
          **kwargs):
     """Dump a group or a dataset to to file."""
@@ -1060,7 +1074,7 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
                 return None
             return str(v)
 
-        attrs = [hdf_ontology.Attribute(name=k, value=_parse_dtype(v)) for k, v in attrs.items() if not k.isupper()]
+        attrs = [hdf_ontology.Attribute(name=k, data=_parse_dtype(v)) for k, v in attrs.items() if not k.isupper()]
         return attrs
 
     def _build_dataset_onto_class(ds):
@@ -1080,42 +1094,20 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
         if _id:
             params['id'] = _id
 
-        dtype_dict = {'u': 'H5T_INTEGER',
-                      'i': 'H5T_INTEGER',
-                      'f': 'H5T_FLOAT',
-                      'S': 'H5T_STRING'}
+        datatype = get_datatype(ds)
 
-        # dtype_dict = {'u<8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U8LE'},
-        #               'u<16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U16LE'},
-        #               'u<32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U32LE'},
-        #               'u<64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U64LE'},
-        #               'u>8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U8BE'},
-        #               'u>16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U16BE'},
-        #               'u>32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U32BE'},
-        #               'u>64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_U64BE'},
-        #               'i<8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I8LE'},
-        #               'i<16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I16LE'},
-        #               'i<32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I32LE'},
-        #               'i<64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I64LE'},
-        #               'i>8': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I8BE'},
-        #               'i>16': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I16BE'},
-        #               'i>32': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I32BE'},
-        #               'i>64': {'class': 'H5T_INTEGER', 'base': 'H5T_STD_I64BE'},
-        #               'f<32': {'class': 'H5T_FLOAT', 'base': 'H5T_IEEE_F32LE'},
-        #               'f<64': {'class': 'H5T_FLOAT', 'base': 'H5T_IEEE_F64LE'},
-        #               }
+        # if datatype:
+        #     params['datatype'] = Datatype(id=datatype)
+        # else:
+        #     np_kind = np.dtype(ds.dtype).kind  # see https://numpy.org/doc/stable/reference/generated/numpy.dtype.kind.html
+        #     if np_kind == "V":
+        #         params['datatype'] = Datatype(typeClass=HDF5.H5T_COMPOUND)
+        # ontods = hdf_ontology.Dataset(**params)
 
-        # datatype = dtype_dict.get(f'{ds.dtype.kind}{ds.dtype.byteorder}{ds.dtype.alignment}', None)
-        datatype = dtype_dict.get(ds.dtype.kind, None)
-        if datatype:
-            params['datatype'] = datatype
-
-        ontods = hdf_ontology.Dataset(**params)
-
-        if ds.parent.name not in data:
-            data[ds.parent.name] = [ontods, ]
-        else:
-            data[ds.parent.name].append(ontods)
+        # if ds.parent.name not in data:
+        #     data[ds.parent.name] = [ontods, ]
+        # else:
+        #     data[ds.parent.name].append(ontods)
 
     def _build_group_onto_class(grp):
         attrs = _build_attributes(grp.attrs)

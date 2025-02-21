@@ -23,5 +23,5 @@ python-gitlab
 pypandoc>=1.11
 pydantic>=2.8.2
 # other:
-ontolutils >= 0.13.2
+ontolutils >= 0.13.3
 click==8.1.7

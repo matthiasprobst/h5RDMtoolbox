@@ -13,33 +13,44 @@ class TestDump(unittest.TestCase):
         with h5tbx.File(mode='w') as h5:
             grp = h5.create_group('Person')
             grp.rdf.type = PROV.Person
+            grp.rdf.subject = "https://orcid.org/123"
             grp.attrs['fname', FOAF.firstName] = 'John'
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
             h5.dumps()
 
-        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=True, compact=False,
+        ret = h5tbx.dump_jsonld(h5.hdf_filename,
+                                structural=False,
+                                compact=False,
                                 context={'foaf': 'http://xmlns.com/foaf/0.1/'})
         jsondict = json.loads(ret)
-        print(jsondict)
+
+        self.assertEqual(jsondict['@type'], 'prov:Person')
         self.assertEqual(jsondict['foaf:firstName'], 'John')
-        self.assertEqual(jsondict['@type'], 'prov:Person')
+        self.assertEqual(jsondict['foaf:lastName'], 'Doe')
 
-        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=False, resolve_keys=False)
-        jsondict = json.loads(ret)
-        self.assertEqual(jsondict['fname'], 'John')
-        self.assertEqual(jsondict['@type'], 'prov:Person')
-
-        ret = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, resolve_keys=False, compact=False)
+        ret = h5tbx.dump_jsonld(h5.hdf_filename,
+                                structural=True,
+                                compact=False)
         jsondict = json.loads(ret)
         verified_types = False
         for g in jsondict['@graph']:
-            if g.get('fname', None) == 'John':
+            if g.get('foaf:firstName', None) == 'John':
                 verified_types = True
-                self.assertEqual(sorted(g['@type']), sorted(['hdf5:Group', 'prov:Person']))
+                self.assertEqual(g['@type'], 'prov:Person')
         self.assertTrue(verified_types)
 
         with self.assertRaises(ValueError):
             h5tbx.dump_jsonld(h5.hdf_filename, structural=False, semantic=False)
+
+    def test_dump_structural_true_semantic_false(self):
+        with h5tbx.File(mode='w') as h5:
+            grp = h5.create_group('Person')
+            grp.rdf.type = PROV.Person
+            grp.attrs['fname', FOAF.firstName] = 'John'
+            grp.attrs['lastName', FOAF.lastName] = 'Doe'
+
+        jsonld_str = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, semantic=False)
+        print(jsonld_str)
 
     def test_sdump(self):
         h5tbx.use(None)

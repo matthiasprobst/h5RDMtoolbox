@@ -6,6 +6,7 @@ from typing import Dict, Union, Optional, List
 
 import h5py
 import pydantic
+from ontolutils import Thing
 from ontolutils.namespacelib.hdf5 import HDF5
 from pydantic import HttpUrl
 
@@ -19,6 +20,16 @@ RDF_FILE_PREDICATE_ATTR_NAME = 'RDF_FILE_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = 'RDF_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
 RDF_FILE_TYPE_ATTR_NAME = 'RDF_FILE_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 RDF_TYPE_ATTR_NAME = 'RDF_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
+
+PROTECTED_ATTRIBUTE_NAMES = (
+    RDF_OBJECT_ATTR_NAME,
+    RDF_FILE_OBJECT_ATTR_NAME,
+    RDF_PREDICATE_ATTR_NAME,
+    RDF_FILE_PREDICATE_ATTR_NAME,
+    RDF_SUBJECT_ATTR_NAME,
+    RDF_FILE_TYPE_ATTR_NAME,
+    RDF_TYPE_ATTR_NAME,
+)
 
 DEFINITION_ATTR_NAME = 'ATTR_DEFINITION'
 
@@ -120,7 +131,6 @@ def set_object(attr: h5py.AttributeManager,
     if iri_data_data is None:
         iri_data_data = {}
 
-    from ontolutils import Thing
     if isinstance(data, Thing):
         data = data.get_jsonld_dict(assign_bnode=False)
     elif isinstance(data, dict):
@@ -689,10 +699,7 @@ class FileRDFManager:
         -------
         Union[str, List[str], None]
         """
-        s = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
-        if s is None:
-            return str(HDF5.File)
-        return s
+        return self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
 
     @type.setter
     def type(self, rdf_type: Union[str, List[str]]):
@@ -703,7 +710,7 @@ class FileRDFManager:
             data = validate_url(str(rdf_type))
 
         # get the attribute
-        iri_sbj_data = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, str(HDF5.File))
+        iri_sbj_data = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)
 
         if iri_sbj_data is None:
             self._attr[RDF_FILE_TYPE_ATTR_NAME] = data

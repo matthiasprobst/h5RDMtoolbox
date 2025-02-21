@@ -6,11 +6,11 @@ import numpy as np
 import ontolutils
 import rdflib
 import ssnolib
-from ontolutils import namespaces, urirefs, Thing, M4I
+from ontolutils import namespaces, urirefs, Thing
+from ontolutils.namespacelib import M4I, HDF5
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.convention.hdf_ontology import HDF5
 from h5rdmtoolbox.wrapper import jsonld, rdf
 from h5rdmtoolbox.wrapper.jsonld import build_node_list
 from h5rdmtoolbox.wrapper.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
@@ -39,12 +39,19 @@ class TestJSONLD(unittest.TestCase):
 
     def test_dump_with_blank_node_iri_base(self):
         with h5tbx.File() as h5:
-            jsonld = h5.dump_jsonld(blank_node_iri_base='https://example.org/',
-                                    context={"local": "https://example.org/"},
-                                    indent=2)
-            jsonlddict = json.loads(jsonld)
-            self.assertEqual(jsonlddict['@context']['local'], 'https://example.org/')
-            self.assertTrue(jsonlddict['@graph'][0]['@id'].startswith('local:'))
+            h5.attrs["__version__"] = __version__
+            jsonld = h5.dump_jsonld(
+                blank_node_iri_base="https://example.org/",
+                context={"local": "https://example.org/"},
+                indent=2)
+            jsonld_dict = json.loads(jsonld)
+            self.assertEqual(jsonld_dict['@context']['local'], 'https://example.org/')
+            found_local = False
+            for e in jsonld_dict["@graph"]:
+                if e.get("@id", "").startswith("local:"):
+                    found_local = True
+                    break
+            self.assertTrue(found_local)
 
     def test_build_node_list(self):
 
@@ -59,12 +66,12 @@ class TestJSONLD(unittest.TestCase):
 
         print(g.serialize(format='json-ld', indent=2))
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX HDF5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-    ?id a HDF5:Attribute .
-    ?id HDF5:value ?list .
+    ?id a hdf:Attribute .
+    ?id hdf:value ?list .
     ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -79,12 +86,12 @@ WHERE {
 
         print(g.serialize(format='json-ld', indent=2))
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX HDF5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-    ?id a HDF5:Attribute .
-    ?id HDF5:value ?list .
+    ?id a hdf:Attribute .
+    ?id hdf:value ?list .
     ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -118,13 +125,13 @@ WHERE {
         with h5tbx.File(h5.hdf_filename, 'r') as h5:
             json_str = jsonld.dumps(h5, indent=2, compact=False)
 
-        get_all_datasets_with_standard_name = """PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        get_all_datasets_with_standard_name = """PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
         PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
         
         SELECT  ?name ?sn
         {
-            ?obj a hdf5:Dataset .
-            ?obj hdf5:name ?name .
+            ?obj a hdf:Dataset .
+            ?obj hdf:name ?name .
             ?obj ssno:standardName ?sn .
         }"""
         g = rdflib.Graph().parse(data=json_str, format='json-ld')
@@ -137,13 +144,13 @@ WHERE {
         # get list 1
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX pivmeta: <https://matthiasprobst.github.io/pivmeta#>
-PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-  ?id a hdf5:Attribute .
-  ?id hdf5:value ?list .
-  ?id hdf5:name "a list" .
+  ?id a hdf:Attribute .
+  ?id hdf:value ?list .
+  ?id hdf:name "a list" .
   ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -154,13 +161,13 @@ WHERE {
         # get list 2
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX pivmeta: <https://matthiasprobst.github.io/pivmeta#>
-PREFIX hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
 
 SELECT ?item
 WHERE {
-  ?id a hdf5:Attribute .
-  ?id hdf5:value ?list .
-  ?id hdf5:name "a 1D list" .
+  ?id a hdf:Attribute .
+  ?id hdf:value ?list .
+  ?id hdf:name "a 1D list" .
   ?list rdf:rest*/rdf:first ?item
 }"""
         qres = g.query(sparql_str)
@@ -187,7 +194,8 @@ WHERE {
             lastName: str
             affiliation: Affiliation
 
-        p = Person(name='John', lastName='Doe',
+        p = Person(id="https://orcid.org/123",
+                   name='John', lastName='Doe',
                    affiliation=dict(name='MyCompany'))
         jdict = json.loads(p.model_dump_jsonld(resolve_keys=False))
         self.assertEqual(jdict['@type'], 'prov:Person')
@@ -199,6 +207,8 @@ WHERE {
 
         with h5tbx.File() as h5:
             jsonld.to_hdf(h5, data=jdict)
+            self.assertTrue(h5.rdf.subject, 'https://orcid.org/123')
+            self.assertTrue(h5.rdf.type, 'http://www.w3.org/ns/prov#Person')
             self.assertTrue(h5.attrs['name'], 'John')
             self.assertEqual(h5.rdf.predicate['name'], 'http://xmlns.com/foaf/0.1/firstName')
             self.assertTrue(h5['affiliation'].attrs['name'], 'MyCompany')
@@ -286,7 +296,7 @@ WHERE {
             self.assertIsInstance(grp.attrs['description'], np.floating)
 
             sub_grp = grp.create_group('Fan')
-            ds = sub_grp.create_dataset('D3', data=300)
+            ds = sub_grp.create_dataset('D3', data=np.array([[1, 2], [3, 4], [5.4, 1.9]]), chunks=(1, 2))
             sub_grp['D3'].attrs['units', 'http://w3id.org/nfdi4ing/metadata4ing#hasUnits'] = 'mm'
             sub_grp['D3'].rdf['units'].object = 'https://qudt.org/vocab/unit/MilliM'
             sub_grp['D3'].attrs['standard_name', sn_iri] = 'blade_diameter3'
@@ -477,7 +487,7 @@ WHERE {
 "foaf:lastName": "Doe",
 "age": 21,
 "schema:affiliation": {
-    "@id": "Nef657ff40e464dd09580db3f32de2cf1",
+    "@id": "local:KIT",
     "@type": "schema:Organization",
     "rdfs:label": "MyAffiliation"
     }
@@ -492,6 +502,8 @@ WHERE {
             self.assertTrue('lastName' in h5['person'].attrs)
             self.assertEqual(h5['person'].attrs['firstName'], 'John')
             self.assertEqual(h5['person'].attrs['age'], 21)
+            self.assertEqual("http://example.org/testperson", h5.person.rdf.subject)
+            self.assertEqual("http://example.org/KIT", h5.person.affiliation.rdf.subject)
 
         h5tbx.dumps('test.hdf')
         pathlib.Path('test.json').unlink(missing_ok=True)
@@ -595,39 +607,39 @@ WHERE {
 
     def test_frdf(self):
         with h5tbx.File() as h5:
-            self.assertEqual(h5.frdf.type, str(HDF5.File))
             h5.frdf.type = "dcat:Dataset"
             self.assertEqual(
-                sorted(h5.frdf.type),
-                sorted([str(HDF5.File), "http://www.w3.org/ns/dcat#Dataset"])
+                h5.frdf.type,
+                "http://www.w3.org/ns/dcat#Dataset"
             )
 
             with self.assertRaises(RDFError):
                 h5.frdf.type = "unknown:Dataset"
             self.assertEqual(
-                sorted(h5.frdf.type),
-                sorted([str(HDF5.File), "http://www.w3.org/ns/dcat#Dataset"])
+                h5.frdf.type,
+                "http://www.w3.org/ns/dcat#Dataset"
             )
 
-            jdict = json.loads(h5.dump_jsonld(structural=True, indent=2))
+            jdict = json.loads(h5tbx.dump_jsonld(h5.hdf_filename, structural=True, indent=2))
             self.assertDictEqual({
                 "dcat": "http://www.w3.org/ns/dcat#",
-                "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+                "hdf": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
+                "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
             },
                 jdict["@context"]
             )
-            self.assertEqual(len(jdict["@graph"]), 1)
+            self.assertEqual(len(jdict["@graph"]), 2)
             self.assertEqual(sorted(jdict["@graph"][0]["@type"]),
-                             sorted(["hdf5:File", "dcat:Dataset"]))
+                             sorted(["hdf:File", "dcat:Dataset"]))
 
             jdict = json.loads(h5.dump_jsonld(structural=False, indent=2))
             self.assertDictEqual({
                 "dcat": "http://www.w3.org/ns/dcat#",
-                "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#"
+                "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
             },
                 jdict["@context"]
             )
             self.assertEqual(
-                sorted(jdict["@type"]),
-                sorted(["hdf5:File", "dcat:Dataset"])
+                sorted(jdict["@graph"][0]["@type"]),
+                sorted("dcat:Dataset")
             )

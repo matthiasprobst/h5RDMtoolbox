@@ -2,8 +2,11 @@
 
 import logging
 import pathlib
+import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
+
+import rdflib
 
 from ._version import __version__
 from .user import USER_LOG_DIR, USER_DATA_DIR
@@ -123,14 +126,65 @@ def dumps(src: Union[str, File, pathlib.Path]):
         return h5.dumps()
 
 
-def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
-                skipND: int = 1,
-                structural: bool = True,
-                semantic: bool = True,
-                resolve_keys: bool = True,
-                context: Optional[Dict] = None,
-                blank_node_iri_base: Optional[HttpUrl] = None,
-                **kwargs) -> str:
+from h5rdmtoolbox.wrapper.ld.hdf.file import get_ld as hdf_get_ld
+from h5rdmtoolbox.wrapper.ld.user.file import get_ld as user_get_ld
+
+
+def get_ld(
+        hdf_filename: Union[str, pathlib.Path],
+        structural: bool = True,
+        semantic: bool = True,
+        blank_node_iri_base: Optional[str] = None,
+        **kwargs) -> rdflib.Graph:
+    """Return the HDF file content as a rdflib.Graph object."""
+    resolve_keys = kwargs.get("resolve_keys", None)
+    skipND = kwargs.get("skipND", None)
+    if resolve_keys is not None:
+        warnings.warn("resolve_keys is deprecated. Use context instead.", DeprecationWarning)
+    if skipND is not None:
+        warnings.warn("skipND is deprecated. Use context instead.", DeprecationWarning)
+
+    graph = None
+    with File(hdf_filename) as h5:
+        if semantic and structural:
+            graph1 = user_get_ld(h5, blank_node_iri_base=blank_node_iri_base)
+            graph2 = hdf_get_ld(h5, blank_node_iri_base=blank_node_iri_base)
+            graph = graph1 + graph2
+        else:
+            if structural:
+                graph = hdf_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+
+            if semantic:
+                graph = user_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+    if graph is None:
+        raise ValueError("structural and semantic cannot be both False.")
+    return graph
+
+
+def dump_jsonld(
+        hdf_filename: Union[str, pathlib.Path],
+        structural: bool = True,
+        semantic: bool = True,
+        context: Optional[Dict] = None,
+        blank_node_iri_base: Optional[str] = None,
+        **kwargs):
+    """Return the file content as a JSON-LD string."""
+    from .wrapper.ld import optimize_context
+    context = context or {}
+    graph = get_ld(hdf_filename, structural, semantic, blank_node_iri_base, **kwargs)
+    context = optimize_context(graph, context)
+    return graph.serialize(format="json-ld", indent=2, auto_compact=True,
+                           context=context)
+
+
+def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
+                     skipND: int = 1,
+                     structural: bool = True,
+                     semantic: bool = True,
+                     resolve_keys: bool = True,
+                     context: Optional[Dict] = None,
+                     blank_node_iri_base: Optional[str] = None,
+                     **kwargs) -> str:
     """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
     represents the semantic content only. To get a pure structural representation, set semantic=False, which
     will ignore any RDF content. If both are set to True, the JSON-LD will contain both structural and semantic.
@@ -164,29 +218,33 @@ def dump_jsonld(hdf_filename: Union[str, pathlib.Path],
     from .wrapper import jsonld
     if not structural and not semantic:
         raise ValueError('At least one of structural or semantic must be True.')
+
+    from h5rdmtoolbox.wrapper.ld.hdf.file import get_serialized_ld
     if structural and not semantic:
-        return jsonld.dump_file(hdf_filename, skipND=skipND)
-    with File(hdf_filename) as h5:
-        return jsonld.dumps(
-            h5,
-            structural=structural,
-            resolve_keys=resolve_keys,
-            context=context,
-            blank_node_iri_base=blank_node_iri_base,
-            skipND=skipND,
-            **kwargs
-        )
+        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context)
+    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context)
+    # with File(hdf_filename) as h5:
+    #     return jsonld.dumps(
+    #         h5,
+    #         structural=structural,
+    #         resolve_keys=resolve_keys,
+    #         context=context,
+    #         blank_node_iri_base=blank_node_iri_base,
+    #         skipND=skipND,
+    #         **kwargs
+    #     )
 
 
 def serialize(hdf_filename,
-              fmt: str,
+              fmt: str = "ttl",
               skipND: int = 1,
               structural: bool = True,
               semantic: bool = True,
               resolve_keys: bool = True,
-              blank_node_iri_base: Optional[Dict] = None,
+              blank_node_iri_base: Optional[str] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
+    fmt = kwargs.pop("format", fmt)
     with File(hdf_filename) as h5:
         return h5.serialize(fmt,
                             skipND,
@@ -198,9 +256,12 @@ def serialize(hdf_filename,
 
 
 def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,
-                      style:Dict=None):
+                      style: Dict = None):
     """Calls `build_pyvis_graph` of kglab library. Requires kglab and pyvis"""
-    import kglab
+    try:
+        import kglab
+    except ImportError:
+        raise ImportError('kglab is required for this function. Install it using: pip install kglab')
     kg = kglab.KnowledgeGraph().load_rdf_text(
         serialize(hdf_filename, fmt="ttl")
     )

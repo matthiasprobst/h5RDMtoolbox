@@ -2,9 +2,23 @@
 
 Log of changes in the versions
 
+## v1.7.0
+
+- chunks=None as default for `create_dataset` to mimic behaviour of `h5py`
+- improved formalized representation of the HDF5 file structure based on the Allotrope Foundation's ontology
+- removed unclear parameter `resolve_keys` from `dump_jsonld()` and `serialize()`
+- HDF.File is not automatically returned if `h5.frdf.type` is called
+
+## v1.6.3
+
+- update to `ontolutils` v0.13.3
+- improve semantic structural description of HDF5 file content
+
 ## v1.6.2
 
 - hotfix `rdf_find`
+- using `ontolutils` v0.13.2 and its HDF5 namespace definition
+- update/improve CLI interface
 
 ## v1.6.1
 

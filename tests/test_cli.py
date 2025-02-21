@@ -47,14 +47,15 @@ Options:
         runner = CliRunner()
         result = runner.invoke(h5tbx, ["ld", f"{h5.hdf_filename}"])
         self.assertIsNone(result.exception)
-        expected = """@prefix hdf5: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+        expected = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 
-[] a hdf5:File ;
-    hdf5:rootGroup [ a hdf5:Group ;
-            hdf5:name "/" ] .
+[] a hdf:File ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:name "/" ] .
 
 
 """
+        print(result.output)
         self.assertEqual(
             expected,
             result.output
