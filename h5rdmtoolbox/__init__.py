@@ -375,6 +375,7 @@ def clean_temp_data(full: bool = False):
 
 xr.set_options(display_expand_data=False)
 
+from . import layout
 __all__ = ('__version__', '__author__', '__author_orcid__',
            'UserDir', 'use',
            'File', 'Group', 'Dataset', 'Attribute',
