@@ -30,8 +30,8 @@ Layouts
 .. autosummary::
     :toctree: generated/
 
-    layout.core.LayoutSpecification
-    layout.core.Layout
+    h5rdmtoolbox.layout.core.LayoutSpecification
+    h5rdmtoolbox.layout.core.Layout
 
 
 
