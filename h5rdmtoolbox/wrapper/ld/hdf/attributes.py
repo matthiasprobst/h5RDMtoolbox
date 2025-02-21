@@ -8,9 +8,9 @@ from typing import Optional
 HDF = Namespace(str(HDF5))
 
 
-def process_attribute(attr, value, graph, parent_uri):
+def process_attribute(name, value, graph, parent_uri):
     """Process an HDF5 attribute, adding it to the RDF graph."""
-    if attr.isupper() or attr.startswith('@'):
+    if name.isupper() or name.startswith('@'):
         return
     attr_uri = rdflib.BNode()
 
@@ -27,4 +27,5 @@ def process_attribute(attr, value, graph, parent_uri):
         graph.add((attr_uri, RDF.type, HDF5.Attribute))
         graph.add((attr_uri, HDF.data, Literal(value)))
 
-    graph.add((parent_uri, HDF.member, attr_uri))
+    graph.add((attr_uri, HDF.name, rdflib.Literal(name)))
+    graph.add((parent_uri, HDF.attribute, attr_uri))
