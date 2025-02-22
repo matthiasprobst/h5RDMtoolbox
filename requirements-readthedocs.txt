@@ -1,3 +1,2 @@
 -e .
 -r requirements-doc.txt
-mongomock == 4.1.2

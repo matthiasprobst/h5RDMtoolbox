@@ -1,5 +1,5 @@
 -e .
--r requirements.txt
+-r requirements-dev.txt
 Sphinx==8.0.0
 sphinx_book_theme==1.1.4
 pydata-sphinx-theme==0.15.4
