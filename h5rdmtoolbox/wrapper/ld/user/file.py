@@ -2,8 +2,6 @@ from typing import Optional
 from typing import Union
 
 import rdflib
-from ontolutils.namespacelib import M4I
-from ontolutils.namespacelib import SCHEMA
 from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Graph
 from rdflib import Namespace
@@ -24,6 +22,7 @@ def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base: Optional[str] = 
             return get_ld(h5f)
 
     graph = Graph()
+    graph.bind("m4i", rdflib.URIRef("http://w3id.org/nfdi4ing/metadata4ing#"))
 
     file_uri = get_file_bnode(source, blank_node_iri_base=blank_node_iri_base)
     file_rdf = source.frdf.type
@@ -41,17 +40,3 @@ def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base: Optional[str] = 
     process_group(source, graph, blank_node_iri_base=blank_node_iri_base)
 
     return graph
-
-
-if __name__ == "__main__":
-    import h5rdmtoolbox as h5tbx
-
-    with h5tbx.File() as h5:
-        h5.attrs["version", SCHEMA.version] = "1.2.3"
-
-        ds = h5.create_dataset("a/b/ds", data=[[1, 2], [3, 4]], chunks=(1, 2), compression="gzip", compression_opts=2)
-        ds2 = h5.create_dataset("nochunk", data=[[1, 2], [3, 4]], chunks=None)
-        ds.rdf.type = M4I.NumericalVariable
-
-    graph = get_ld(str(h5.hdf_filename))
-    print(graph.serialize(format="turtle"))

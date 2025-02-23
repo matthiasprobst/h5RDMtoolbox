@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v1.7.2
+
+- remove `skipND` from being deprecated
+
 ## v1.7.1
 
 - fix documentation at readthedocs

@@ -2,7 +2,6 @@
 
 import logging
 import pathlib
-import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
@@ -126,52 +125,36 @@ def dumps(src: Union[str, File, pathlib.Path]):
         return h5.dumps()
 
 
-from h5rdmtoolbox.wrapper.ld.hdf.file import get_ld as hdf_get_ld
-from h5rdmtoolbox.wrapper.ld.user.file import get_ld as user_get_ld
-
-
 def get_ld(
         hdf_filename: Union[str, pathlib.Path],
         structural: bool = True,
-        semantic: bool = True,
+        contextual: bool = True,
+        skipND: int = 1,
         blank_node_iri_base: Optional[str] = None,
         **kwargs) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
-    resolve_keys = kwargs.get("resolve_keys", None)
-    skipND = kwargs.get("skipND", None)
-    if resolve_keys is not None:
-        warnings.warn("resolve_keys is deprecated. Use context instead.", DeprecationWarning)
-    if skipND is not None:
-        warnings.warn("skipND is deprecated. Use context instead.", DeprecationWarning)
-
-    graph = None
-    with File(hdf_filename) as h5:
-        if semantic and structural:
-            graph1 = user_get_ld(h5, blank_node_iri_base=blank_node_iri_base)
-            graph2 = hdf_get_ld(h5, blank_node_iri_base=blank_node_iri_base)
-            graph = graph1 + graph2
-        else:
-            if structural:
-                graph = hdf_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
-
-            if semantic:
-                graph = user_get_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
-    if graph is None:
-        raise ValueError("structural and semantic cannot be both False.")
-    return graph
+    from h5rdmtoolbox.wrapper.ld import get_ld
+    return get_ld(hdf_filename, structural=structural, contextual=contextual, skipND=skipND,
+                  blank_node_iri_base=blank_node_iri_base, **kwargs)
 
 
 def dump_jsonld(
         hdf_filename: Union[str, pathlib.Path],
+        skipND: int = 1,
         structural: bool = True,
-        semantic: bool = True,
+        contextual: bool = True,
         context: Optional[Dict] = None,
         blank_node_iri_base: Optional[str] = None,
         **kwargs):
     """Return the file content as a JSON-LD string."""
     from .wrapper.ld import optimize_context
     context = context or {}
-    graph = get_ld(hdf_filename, structural, semantic, blank_node_iri_base, **kwargs)
+    graph = get_ld(hdf_filename,
+                   structural=structural,
+                   contextual=contextual,
+                   blank_node_iri_base=blank_node_iri_base,
+                   skipND=skipND,
+                   **kwargs)
     context = optimize_context(graph, context)
     return graph.serialize(format="json-ld", indent=2, auto_compact=True,
                            context=context)
@@ -221,8 +204,8 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
 
     from h5rdmtoolbox.wrapper.ld.hdf.file import get_serialized_ld
     if structural and not semantic:
-        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context)
-    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context)
+        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)
+    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)
     # with File(hdf_filename) as h5:
     #     return jsonld.dumps(
     #         h5,

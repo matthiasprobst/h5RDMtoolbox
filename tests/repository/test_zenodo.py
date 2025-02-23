@@ -9,6 +9,7 @@ from datetime import datetime
 import pydantic
 import requests
 
+import rdflib
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
@@ -318,11 +319,24 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(z.files.get(json_name).suffix, '.jsonld')
         json_filename = z.files.get(json_name).download()
         self.assertTrue(json_filename.exists())
-        with open(json_filename) as f:
-            json_dict = json.loads(f.read())
 
-        self.assertTrue('@context' in json_dict)
-        self.assertEqual(json_dict['@type'], 'hdf5:File')
+        graph = rdflib.Graph().parse(source=json_filename, format='json-ld')
+        query = """
+        PREFIX schema: <http://schema.org/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        
+        SELECT ?name
+        WHERE {
+            ?s rdf:type hdf:Group .
+            ?s hdf:name ?name .
+}"""
+        res = graph.query(query)
+        group_names = [str(row[rdflib.Variable("name")]) for row in res.bindings]
+        self.assertEqual(
+            sorted(["/", "/grp1"]),
+            sorted(group_names)
+        )
 
     def test_upload_hdf_new_implementation(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
@@ -364,7 +378,24 @@ class TestZenodo(unittest.TestCase):
             json_dict = json.loads(f.read())
 
         self.assertTrue('@context' in json_dict)
-        self.assertEqual(json_dict['@type'], 'hdf5:File')
+
+        graph = rdflib.Graph().parse(source=json_filename, format='json-ld')
+        query = """
+        PREFIX schema: <http://schema.org/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        
+        SELECT ?name
+        WHERE {
+            ?s rdf:type hdf:Group .
+            ?s hdf:name ?name .
+}"""
+        res = graph.query(query)
+        group_names = [str(row[rdflib.Variable("name")]) for row in res.bindings]
+        self.assertEqual(
+            sorted(["/", "/grp1"]),
+            sorted(group_names)
+        )
 
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoSandboxDeposit(None)

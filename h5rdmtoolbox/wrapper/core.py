@@ -448,6 +448,8 @@ class Group(h5py.Group):
                      name: str,
                      overwrite: bool = None,
                      attrs: Dict = None,
+                     rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
+                     rdf_subject: Optional[Union[str, rdflib.URIRef]] = None,
                      update_attrs: Optional[bool] = False,
                      track_order=None,
                      **kwargs) -> "Group":
@@ -510,6 +512,10 @@ class Group(h5py.Group):
                 except convention.standard_attributes.errors.StandardAttributeError as e:
                     del self[name]  # undo group creation
                     raise e
+        if rdf_type:
+            h5tbxgrp.rdf.type = rdf_type
+        if rdf_subject:
+            h5tbxgrp.rdf.subject = rdf_subject
         return h5tbxgrp
 
     def create_time_dataset(self,
@@ -574,6 +580,7 @@ class Group(h5py.Group):
                               data: Union[str, List[str]],
                               overwrite=False,
                               attrs=None,
+                              rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
                               **kwargs):
         """Create a string dataset. In this version only one string is allowed.
         In future version a list of strings may be allowed, too.
@@ -614,6 +621,8 @@ class Group(h5py.Group):
 
         for ak, av in attrs.items():
             ds.attrs[ak] = av
+        if rdf_type:
+            ds.rdf.type = rdf_type
         return self._h5ds(ds.id)
 
     def create_dataset(self,
@@ -628,6 +637,7 @@ class Group(h5py.Group):
                        attach_data_offset=None,
                        attach_scales=None,
                        ancillary_datasets=None,
+                       rdf_type: Optional[Union[str, rdflib.URIRef]]=None,
                        attrs=None,
                        **kwargs  # standard attributes and other keyword arguments
                        ) -> protocols.H5TbxDataset:
@@ -699,6 +709,7 @@ class Group(h5py.Group):
                                               data=data,
                                               overwrite=overwrite,
                                               attrs=attrs,
+                                              rdf_type=rdf_type,
                                               **kwargs)
         if attrs is None:
             attrs = {}
@@ -827,6 +838,9 @@ class Group(h5py.Group):
                                          **kwargs)
 
         ds = Dataset(_ds.id)
+
+        if rdf_type:
+            ds.rdf.type = rdf_type
 
         if attach_data_scale is not None or attach_data_offset is not None:
             units = attrs.get('units', None)
@@ -2410,7 +2424,7 @@ class File(h5py.File, Group):
                     blank_node_iri_base: Optional[str] = None,
                     **kwargs) -> str:
         """Dump the file content as JSON-LD string"""
-        return self.serialize(fmt="jsonld",
+        return self.serialize(fmt="json-ld",
                               skipND=skipND,
                               structural=structural,
                               semantic=semantic,
@@ -2421,25 +2435,29 @@ class File(h5py.File, Group):
     def serialize(self, fmt: str,
                   skipND: int = 1,
                   structural: bool = True,
-                  semantic: bool = True,
-                  resolve_keys: bool = True,
+                  contextual: bool = True,
                   blank_node_iri_base: Optional[str] = None,
+                  context: Optional[Dict] = None,
+                  indent: int = 2,
                   **kwargs
                   ):
         """Serialize the file content to a specific format"""
-        if not fmt in ("jsonld", "json-ld", "ttl", "turtle"):
-            raise NotImplementedError('Only JSON-LD or TTL serialization is supported at the moment')
-        from .. import dump_jsonld
-        jsonldstr = dump_jsonld(self.hdf_filename,
-                                skipND=skipND,
-                                structural=structural,
-                                semantic=semantic,
-                                resolve_keys=resolve_keys,
-                                blank_node_iri_base=blank_node_iri_base,
-                                **kwargs)
-        if fmt.lower() in ("jsonld", "json-ld"):
-            return jsonldstr
-        return rdflib.Graph().parse(data=jsonldstr, format='json-ld').serialize(format="turtle")
+        from .ld import optimize_context
+        from .. import get_ld
+        fmt = kwargs.pop("format", fmt)
+
+        graph = get_ld(self.hdf_filename,
+                       structural=structural,
+                       contextual=contextual,
+                       blank_node_iri_base=blank_node_iri_base,
+                       skipND=skipND,
+                       **kwargs)
+        context = context or {}
+        context = optimize_context(graph, context)
+        return graph.serialize(format=fmt,
+                               indent=indent,
+                               auto_compact=True,
+                               context=context)
 
 
 Dataset._h5grp = Group

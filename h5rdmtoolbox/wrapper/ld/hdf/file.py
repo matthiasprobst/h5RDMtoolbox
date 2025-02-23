@@ -15,12 +15,13 @@ from h5rdmtoolbox.wrapper.ld.utils import optimize_context, get_obj_bnode, get_f
 HDF = Namespace(str(HDF5))
 
 
-def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base:Optional[str]=None) -> rdflib.Graph:
+def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base: Optional[str] = None,
+           skipND: int = 1) -> rdflib.Graph:
     """Convert an HDF5 file into an RDF graph."""
 
     if not isinstance(source, h5tbx.File):
         with h5tbx.File(source) as h5f:
-            return get_ld(h5f, blank_node_iri_base=blank_node_iri_base)
+            return get_ld(h5f, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
 
     graph = Graph()
     graph.bind("hdf", HDF)
@@ -31,7 +32,7 @@ def get_ld(source: Union[str, h5tbx.File], blank_node_iri_base:Optional[str]=Non
     root_group_uri = get_obj_bnode(source["/"], blank_node_iri_base=blank_node_iri_base)
     graph.add((file_uri, HDF5.rootGroup, root_group_uri))
 
-    process_group(source["/"], graph, file_uri, blank_node_iri_base=blank_node_iri_base)
+    process_group(source["/"], graph, file_uri, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
 
     return graph
 
@@ -40,22 +41,29 @@ def get_serialized_ld(
         source,
         blank_node_iri_base,
         format,
-        context=None
+        context=None,
+        skipND: int = 1
 ) -> str:
-    graph = get_ld(source, blank_node_iri_base)
+    graph = get_ld(source, blank_node_iri_base, skipND=skipND)
     context = optimize_context(graph, context)
     return graph.serialize(format=format, indent=2, auto_compact=True, context=context)
 
 
 if __name__ == "__main__":
     import h5rdmtoolbox as h5tbx
+    from rdflib import FOAF
+    from ontolutils import M4I
 
     with h5tbx.File() as h5:
-        h5.attrs["version", SCHEMA.version] = "1.2.3"
+        g = h5.create_group("contact")
+        g.attrs["name"] = "Probst"
+        g.attrs["id"] = "0000-0001-8729-0482"
 
-        ds = h5.create_dataset("a/b/ds", data=[[1, 2], [3, 4]], chunks=(1, 2), compression="gzip", compression_opts=2)
-        ds2 = h5.create_dataset("nochunk", data=[[1, 2], [3, 4]], chunks=None)
-        ds.rdf.type = M4I.NumericalVariable
+        # enrich with RDF metadata:
+        g.rdf.type = FOAF.Person
+        g.rdf.subject = "https://orcid.org/0000-0001-8729-0482"
+        g.rdf.predicate["name"] = FOAF.lastName
+        g.rdf.predicate["id"] = M4I.orcidId
 
-    graph = get_ld(str(h5.hdf_filename), structural=True, semantic=False)
-    print(graph.serialize(format="turtle"))
+        ttl = h5.serialize(structural=False, fmt="ttl")
+    print(ttl)
