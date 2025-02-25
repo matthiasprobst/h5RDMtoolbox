@@ -2,7 +2,7 @@ import json
 import warnings
 
 import rdflib
-from rdflib import RDF
+from rdflib import RDF, DCTERMS
 
 from h5rdmtoolbox.wrapper.ld.utils import get_attr_dtype_as_XSD, get_obj_bnode
 
@@ -14,8 +14,11 @@ def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base):
         graph.add((parent_uri, RDF.type, rdflib.URIRef(rdf_user_type)))
     rdf_user_predicate = parent_obj.frdf.predicate[name]
 
+    rdf_user_object = parent_obj.frdf.object[name]
+    if rdf_user_object and not rdf_user_predicate:
+        rdf_user_predicate = DCTERMS.relation
+
     if rdf_user_predicate:
-        rdf_user_object = parent_obj.frdf.object[name]
         if rdf_user_object:
             if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
                 graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))
@@ -52,9 +55,11 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
     if rdf_user_type:
         graph.add((parent_uri, RDF.type, rdflib.URIRef(rdf_user_type)))
     rdf_user_predicate = parent_obj.rdf.predicate[name]
+    rdf_user_object = parent_obj.rdf.object[name]
+    if rdf_user_object and not rdf_user_predicate:
+        rdf_user_predicate = DCTERMS.relation
 
     if rdf_user_predicate:
-        rdf_user_object = parent_obj.rdf.object[name]
         if rdf_user_object:
             if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
                 graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))

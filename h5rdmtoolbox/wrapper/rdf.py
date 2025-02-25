@@ -7,7 +7,6 @@ from typing import Dict, Union, Optional, List
 import h5py
 import pydantic
 from ontolutils import Thing
-from ontolutils.namespacelib.hdf5 import HDF5
 from pydantic import HttpUrl
 
 from . import lazy
