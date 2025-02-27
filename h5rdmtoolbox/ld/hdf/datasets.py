@@ -1,3 +1,5 @@
+from typing import Optional
+
 import h5py
 import numpy as np
 import rdflib
@@ -5,10 +7,9 @@ from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Namespace
 from rdflib import RDFS
 from rdflib import XSD, RDF
-from typing import Optional
+
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
-from h5rdmtoolbox.wrapper.ld.hdf.attributes import process_attribute
-from h5rdmtoolbox.wrapper.ld.utils import ExtractionOptions
+from h5rdmtoolbox.ld.hdf.attributes import process_attribute
 
 HDF = Namespace(str(HDF5))
 HDF5_FILTER_ONTOLOGY = {
@@ -42,7 +43,14 @@ def add_filter(dataset: h5py.Dataset, dataset_uri, graph) -> rdflib.Graph:
     return graph
 
 
-def process_dataset(dataset, graph, parent_uri, dataset_uri, blank_node_iri_base: Optional[str]=None):
+def process_dataset(
+        dataset,
+        graph,
+        parent_uri,
+        dataset_uri,
+        blank_node_iri_base: Optional[str] = None,
+        skipND: int = 1
+):
     """Process an HDF5 dataset, adding it to the RDF graph."""
     graph.add((dataset_uri, RDF.type, HDF.Dataset))
 
@@ -56,7 +64,8 @@ def process_dataset(dataset, graph, parent_uri, dataset_uri, blank_node_iri_base
 
     if dataset.maxshape:
         if all(dataset.maxshape):
-            graph.add((dataset_uri, HDF5.maximumSize, rdflib.Literal(int(np.prod(dataset.maxshape)), datatype=XSD.integer)))
+            graph.add(
+                (dataset_uri, HDF5.maximumSize, rdflib.Literal(int(np.prod(dataset.maxshape)), datatype=XSD.integer)))
         else:
             graph.add((dataset_uri, HDF5.maximumSize, rdflib.Literal(-1, datatype=XSD.integer)))
     else:
@@ -68,7 +77,9 @@ def process_dataset(dataset, graph, parent_uri, dataset_uri, blank_node_iri_base
         graph.add((datatype, RDF.type, HDF5.Datatype))
         graph.add((dataset_uri, HDF5.datatype, datatype))
 
+    is_string_dataset = False
     if dataset.dtype.kind == 'S':
+        is_string_dataset = True
         graph.add((dataset_uri, HDF5.datatype, rdflib.Literal('H5T_STRING')))
     elif dataset.dtype.kind in ('i', 'u'):
         graph.add((dataset_uri, HDF5.datatype, rdflib.Literal('H5T_INTEGER')))
@@ -106,9 +117,24 @@ def process_dataset(dataset, graph, parent_uri, dataset_uri, blank_node_iri_base
             graph.add((dataspace_uri, HDF5.dimension, dataspace_dimension_node))
             graph.add((dataspace_dimension_node, HDF5.size, rdflib.Literal(dim, datatype=XSD.integer)))
             graph.add((dataspace_dimension_node, HDF5.dimensionIndex, rdflib.Literal(idim, datatype=XSD.integer)))
+
+        if skipND and dataset.ndim < skipND:
+            data = dataset[()].tolist()
+            if is_string_dataset:
+                graph.add((dataset_uri, HDF5.value, rdflib.Literal([s.decode() for s in data])))
+            else:
+                graph.add((dataset_uri, HDF5.value, rdflib.Literal(data)))
     else:
         dataspace_uri = HDF5.scalarDataspace
         graph.add((dataspace_uri, RDF.type, HDF5.scalarDataspace))
+
+        if skipND and dataset.ndim < skipND:
+            data = dataset[()]
+            if is_string_dataset:
+                graph.add((dataset_uri, HDF5.value, rdflib.Literal(data.decode())))
+            else:
+                graph.add((dataset_uri, HDF5.value, rdflib.Literal(data)))
+
     graph.add((dataset_uri, HDF5.dataspace, dataspace_uri))
 
     # Process attributes of the dataset

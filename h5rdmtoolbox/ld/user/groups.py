@@ -3,18 +3,18 @@ from typing import Optional
 import h5py
 import rdflib
 
-from h5rdmtoolbox.wrapper.ld.user.attributes import process_attribute
-from h5rdmtoolbox.wrapper.ld.user.datasets import process_dataset
-from h5rdmtoolbox.wrapper.ld.utils import get_obj_bnode
-
+from h5rdmtoolbox.ld.user.attributes import process_attribute
+from h5rdmtoolbox.ld.user.datasets import process_dataset
+from h5rdmtoolbox.ld.utils import get_obj_bnode
+from ..rdf import RDFManager
 
 def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
     for ak, av in group.attrs.items():
         process_attribute(group, ak, av, graph, blank_node_iri_base)
 
     group_uri = get_obj_bnode(group, blank_node_iri_base)
-    rdf_type = group.rdf.type
-    rdf_subject = group.rdf.subject
+    rdf_type = RDFManager(group.attrs).type
+    rdf_subject = RDFManager(group.attrs).subject
     if rdf_type:
         if rdf_subject:
             graph.add((rdflib.URIRef(rdf_subject), rdflib.RDF.type, rdflib.URIRef(rdf_type)))

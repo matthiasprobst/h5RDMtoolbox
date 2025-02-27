@@ -2,20 +2,23 @@ import json
 import warnings
 
 import rdflib
-from rdflib import RDF
+from rdflib import RDF, DCTERMS
 
-from h5rdmtoolbox.wrapper.ld.utils import get_attr_dtype_as_XSD, get_obj_bnode
+from h5rdmtoolbox.ld.utils import get_attr_dtype_as_XSD, get_obj_bnode
 
-
+from ..rdf import FileRDFManager, RDFManager
 def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base):
     parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base)
-    rdf_user_type = parent_obj.frdf.type
+    rdf_user_type = FileRDFManager(parent_obj.attrs).type
     if rdf_user_type:
         graph.add((parent_uri, RDF.type, rdflib.URIRef(rdf_user_type)))
-    rdf_user_predicate = parent_obj.frdf.predicate[name]
+    rdf_user_predicate = FileRDFManager(parent_obj.attrs).predicate[name]
+
+    rdf_user_object = FileRDFManager(parent_obj.attrs).object[name]
+    if rdf_user_object and not rdf_user_predicate:
+        rdf_user_predicate = DCTERMS.relation
 
     if rdf_user_predicate:
-        rdf_user_object = parent_obj.frdf.object[name]
         if rdf_user_object:
             if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
                 graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))
@@ -43,18 +46,23 @@ def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base):
 
 
 def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
-    parent_uri = parent_obj.rdf.subject
+
+    rdf_manager = RDFManager(parent_obj.attrs)
+
+    parent_uri = rdf_manager.subject
     if parent_uri:
         parent_uri = rdflib.URIRef(parent_uri)
     else:
         parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base)
-    rdf_user_type = parent_obj.rdf.type
+    rdf_user_type = rdf_manager.type
     if rdf_user_type:
         graph.add((parent_uri, RDF.type, rdflib.URIRef(rdf_user_type)))
-    rdf_user_predicate = parent_obj.rdf.predicate[name]
+    rdf_user_predicate = rdf_manager.predicate[name]
+    rdf_user_object = rdf_manager.object[name]
+    if rdf_user_object and not rdf_user_predicate:
+        rdf_user_predicate = DCTERMS.relation
 
     if rdf_user_predicate:
-        rdf_user_object = parent_obj.rdf.object[name]
         if rdf_user_object:
             if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
                 graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))

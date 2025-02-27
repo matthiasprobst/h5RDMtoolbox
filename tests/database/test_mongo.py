@@ -16,7 +16,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
 from h5rdmtoolbox.database.mongo import MongoDB
 from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
-from h5rdmtoolbox.wrapper.lazy import LDataset
+from h5rdmtoolbox.database.lazy import LDataset
 
 try:
     client = pymongo.MongoClient(serverSelectionTimeoutMS=1.)

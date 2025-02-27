@@ -54,9 +54,10 @@ For everybody, who ...
 
 ## Package Architecture/structure
 
-The toolbox implements five modules, which are shown below. The numbers reference to their main usage in the stages in
-the data lifecycle above. Except the wrapper module, which uses the convention module, all other modules are independent
-of each other.
+The toolbox implements six modules, which are shown below. The numbers reference to their main usage in the stages in
+the data lifecycle above. The wrapper module implements the main interface between the user and the HDF5 file. It 
+extends the features of the underlying `h5py` library. Some of the features are implemented in other modules, hence the 
+wrapper module depends on the convention, database and linked data (ld) module.
 
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/h5tbx_modules.svg" alt="H5TBX modules" style="widht:600px;"></a>
 

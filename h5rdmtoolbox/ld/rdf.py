@@ -7,11 +7,10 @@ from typing import Dict, Union, Optional, List
 import h5py
 import pydantic
 from ontolutils import Thing
-from ontolutils.namespacelib.hdf5 import HDF5
 from pydantic import HttpUrl
 
-from . import lazy
-from ..protocols import H5TbxAttributeManager
+from h5rdmtoolbox.protocols import H5TbxAttributeManager
+from h5rdmtoolbox.database import lazy
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
@@ -252,7 +251,10 @@ class _RDFPO(abc.ABC):
             return default
         if item is None:
             return attrs.get('SELF', default)
-        return attrs.get(item, default)
+        if isinstance(attrs, dict):
+            return attrs.get(item, default)
+        assert isinstance(attrs, str)
+        return json.loads(attrs).get(item, default)
 
     def __getitem__(self, item) -> Union[str, None]:
         return self.get(item, default=None)
@@ -312,7 +314,7 @@ class RDF_OBJECT(_RDFPO):
 class RDFManager:
     """IRI attribute manager"""
 
-    def __init__(self, attr: H5TbxAttributeManager = None):
+    def __init__(self, attr: h5py.AttributeManager = None):
         self._attr = attr
 
     def __str__(self) -> str:

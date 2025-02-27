@@ -10,8 +10,8 @@ from h5rdmtoolbox import Attribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
-from h5rdmtoolbox.wrapper.rdf import RDFError
-from h5rdmtoolbox.wrapper.rdf import RDF_PREDICATE_ATTR_NAME
+from h5rdmtoolbox.ld.rdf import RDFError
+from h5rdmtoolbox.ld.rdf import RDF_PREDICATE_ATTR_NAME
 
 
 class TestRDF(unittest.TestCase):

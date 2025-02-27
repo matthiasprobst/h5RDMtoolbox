@@ -1,0 +1,148 @@
+{
+  "@context": {
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "hdf5": "http://purl.allotrope.org/ontologies/hdf5/1.8#",
+    "m4i": "http://w3id.org/nfdi4ing/metadata4ing#",
+    "obo": "http://purl.obolibrary.org/obo/",
+    "schema": "https://schema.org/"
+  },
+  "@graph": [
+    {
+      "@id": "_:N986fc458487a43c682fddd5ccde742d4",
+      "@type": "hdf5:File",
+      "hdf5:rootGroup": {
+        "@id": "_:N858d8d94f6614db6ac2de18d3d2efc41",
+        "@type": "hdf5:Group",
+        "hdf5:member": [
+          {
+            "@id": "https://orcid.org/0000-0001-8729-0482",
+            "@type": [
+              "hdf5:Group",
+              "foaf:Person"
+            ],
+            "foaf:firstName": "Matthias",
+            "hdf5:attribute": [
+              {
+                "@id": "_:N39f8cf4302734e1e8901ebe53e065201",
+                "@type": "hdf5:StringAttribute",
+                "hdf5:name": "first_name",
+                "hdf5:value": "Matthias"
+              },
+              {
+                "@id": "_:Ne3daa513155d4a5ab63c0905e75b2651",
+                "@type": "hdf5:StringAttribute",
+                "hdf5:name": "orcid",
+                "hdf5:value": {
+                  "@type": "http://www.w3.org/2001/XMLSchema#anyURI",
+                  "@value": "https://orcid.org/0000-0001-8729-0482"
+                }
+              }
+            ],
+            "hdf5:name": "/contact",
+            "m4i:orcidId": {
+              "@type": "http://www.w3.org/2001/XMLSchema#anyURI",
+              "@value": "https://orcid.org/0000-0001-8729-0482"
+            }
+          },
+          {
+            "@id": "_:Nc1a567f3a0ad492bbfa0c1452bf027d6",
+            "@type": "hdf5:Group",
+            "hdf5:member": {
+              "@id": "_:Nfeaf3dc5a5944ac7bdfc8984af65f67d",
+              "@type": "hdf5:Dataset",
+              "hdf5:attribute": [
+                {
+                  "@id": "_:N6c40e46a1f2348c692f25fb20b9e66ff",
+                  "@type": "hdf5:StringAttribute",
+                  "hdf5:name": "quantity_kind",
+                  "hdf5:value": [
+                    "velocity",
+                    {
+                      "@id": "http://qudt.org/vocab/quantitykind/Velocity",
+                      "http://www.w3.org/2004/02/skos/core#prefLabel": "velocity"
+                    }
+                  ]
+                },
+                {
+                  "@id": "_:N6c31876bd9e24fc58fc67772053eaa16",
+                  "@type": "hdf5:StringAttribute",
+                  "hdf5:name": "units",
+                  "hdf5:value": [
+                    "m/s",
+                    {
+                      "@id": "http://qudt.org/vocab/unit/M-PER-SEC",
+                      "http://www.w3.org/2004/02/skos/core#prefLabel": "m/s"
+                    }
+                  ]
+                }
+              ],
+              "hdf5:dataspace": {
+                "@id": "_:N3f09fbe2f62843e8b7b3865ecb01015b",
+                "@type": "hdf5:SimpleDataspace",
+                "hdf5:dimension": {
+                  "@id": "_:N40a41446b172490096b659c69983c7c2",
+                  "@type": "hdf5:DataspaceDimension",
+                  "hdf5:dimensionIndex": 0,
+                  "hdf5:size": 100
+                }
+              },
+              "hdf5:datatype": [
+                {
+                  "@id": "hdf5:H5T_IEEE_F64LE",
+                  "@type": "hdf5:Datatype"
+                },
+                "H5T_FLOAT"
+              ],
+              "hdf5:name": "/grp/random_velocity",
+              "hdf5:rank": 1,
+              "hdf5:size": 100,
+              "hdf5:value": "[0.060814996532972954, 0.9585238612187142, 0.8613509482569932, 0.8991982969136197, 0.5514935220415705, 0.584846600316924, 0.5797494757640376, 0.8830300774335306, 0.018818651570906564, 0.5950733660962788, 0.8089302325777902, 0.4804668343991355, 0.7533115662906964, 0.5499251031799645, 0.0003852870884195614, 0.6248465144362986, 0.846797278527271, 0.9030496758954888, 0.6898959990193593, 0.9169479931639165, 0.7873980115189645, 0.6028753833186401, 0.8994867614012113, 0.4974676676908024, 0.2074810727604155, 0.6174881086469756, 0.6243782300263855, 0.3300984169134369, 0.10660883592109993, 0.4164684674321274, 0.5126757191435488, 0.6766099502590829, 0.14402959565846685, 0.23912439607730163, 0.5755693339844662, 0.12587357258261533, 0.13290628468476684, 0.6213757147998229, 0.8454869682094377, 0.29029930788692393, 0.7946861048281364, 0.8424306457928226, 0.48031977249724433, 0.7726648892074323, 0.42201274503086406, 0.13260034136691767, 0.16692354725850145, 0.27328340132568374, 0.20146454886434695, 0.22171362247006365, 0.12499970479717071, 0.7728815745388377, 0.8859561980515973, 0.7597146458045355, 0.1307989139953799, 0.7106824547958263, 0.20257802231245947, 0.7176783508970496, 0.8626697776776682, 0.45049459927612423, 0.7750319539770164, 0.11663812399749662, 0.45771867950619116, 0.047122394731270556, 0.6917169737208596, 0.6612816253966625, 0.7229592990392741, 0.5810108398848042, 0.3652453368620441, 0.16307353345996645, 0.4210923678007663, 0.8756045829661702, 0.9935602594542187, 0.37911253341210727, 0.30571758377563263, 0.4762417611972507, 0.9492683273176848, 0.7974124372511895, 0.43028207662836704, 0.017391785822457373, 0.28686873550886804, 0.06962279089234913, 0.47550126868516984, 0.9789347473445891, 0.2521255875685061, 0.7472417291573814, 0.4007642649516756, 0.38449109047003716, 0.8673443441904756, 0.940024466645289, 0.42440106338275496, 0.44785335602162, 0.3771981696298232, 0.07119074950459969, 0.932308164635076, 0.9289377719249592, 0.37218111938818554, 0.8101930159792626, 0.29756968302240294, 0.15429778828962248]",
+              "m4i:hasKindOfQuantity": {
+                "@id": "http://qudt.org/vocab/quantitykind/Velocity"
+              },
+              "m4i:hasUnit": {
+                "@id": "http://qudt.org/vocab/unit/M-PER-SEC"
+              }
+            },
+            "hdf5:name": "/grp"
+          },
+          {
+            "@id": "m4i:ProcessingStep",
+            "@type": "hdf5:Group",
+            "hdf5:attribute": [
+              {
+                "@id": "_:N5e24f220216649e1917834e71cae93b6",
+                "@type": "hdf5:StringAttribute",
+                "hdf5:name": "end_time",
+                "hdf5:value": "2025-02-19T18:24:46.302767"
+              },
+              {
+                "@id": "_:N45f14689eb6846fa89ff89d9aa1ee349",
+                "@type": "hdf5:StringAttribute",
+                "hdf5:name": "has_participants",
+                "hdf5:value": "/contact"
+              },
+              {
+                "@id": "_:N4c0010d83ef7461eb98e13be4cdfeddd",
+                "@type": "hdf5:StringAttribute",
+                "hdf5:name": "output",
+                "hdf5:value": "/grp/random_velocity"
+              },
+              {
+                "@id": "_:N43927f7490a440dba044ce510a289ecb",
+                "@type": "hdf5:StringAttribute",
+                "hdf5:name": "start_time",
+                "hdf5:value": "2025-02-19T18:24:46.302767"
+              }
+            ],
+            "hdf5:name": "/processing_info",
+            "obo:RO_0000057": "/contact",
+            "obo:RO_0002234": "/grp/random_velocity",
+            "schema:startTime": "2025-02-19T18:24:46.302767"
+          }
+        ],
+        "hdf5:name": "/"
+      }
+    }
+  ]
+}

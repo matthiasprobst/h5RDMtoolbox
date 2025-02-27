@@ -32,7 +32,7 @@ def _HDF2JSON(filename: Union[str, pathlib.Path], **kwargs) -> pathlib.Path:
     if pathlib.Path(filename).suffix not in ('.hdf', '.hdf5', '.h5'):
         raise ValueError('The (default) HDF2JSON metamapper function can only be used with HDF5 files.')
 
-    from ..wrapper.jsonld import hdf2jsonld
+    from h5rdmtoolbox.ld import hdf2jsonld
 
     return hdf2jsonld(filename=filename, skipND=1)
 

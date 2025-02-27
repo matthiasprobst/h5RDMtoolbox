@@ -7,7 +7,7 @@ from typing import Union, Dict, List, Callable, Optional
 from . import query, utils
 from ..interface import HDF5DBInterface
 from ...protocols import LazyDataset, LazyGroup, LazyObject
-from ...wrapper import lazy
+from .. import lazy
 
 
 def basename(name: str) -> str:

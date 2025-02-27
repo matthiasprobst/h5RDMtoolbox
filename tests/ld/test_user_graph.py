@@ -8,7 +8,7 @@ from ontolutils.namespacelib.hdf5 import HDF5
 from ssnolib.namespace import SSNO
 
 import h5rdmtoolbox as h5tbx
-from h5rdmtoolbox.wrapper.ld.user.attributes import process_attribute, process_file_attribute
+from h5rdmtoolbox.ld.user.attributes import process_attribute, process_file_attribute
 
 logger = h5tbx.set_loglevel('ERROR')
 

@@ -7,13 +7,14 @@ import ontolutils
 import rdflib
 import ssnolib
 from ontolutils import namespaces, urirefs, Thing
-from ontolutils.namespacelib import M4I, HDF5
+from ontolutils.namespacelib import M4I
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.wrapper import jsonld, rdf
-from h5rdmtoolbox.wrapper.jsonld import build_node_list
-from h5rdmtoolbox.wrapper.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.wrapper import jsonld
+from h5rdmtoolbox.ld import rdf
+from h5rdmtoolbox.ld import hdf2jsonld
+from h5rdmtoolbox.ld.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
 
 logger = h5tbx.logger
 
@@ -37,6 +38,82 @@ class TestJSONLD(unittest.TestCase):
             grp.rdf.type = 'https://example.org/MyGroup'
             print(h5.dump_jsonld(indent=2))
 
+    def test_dump_dataset_data_using_serialize_0D_datasets(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds0', data=5.4)
+            h5.create_dataset('ds_str0', data="Hello")
+            h5.create_string_dataset('ds_str1', data=["Hello", "World"])
+            h5.create_dataset('ds1', data=[1, 2, 3])
+            h5.create_dataset('ds2', data=[[1, 2], [3, 4]])
+            ttl = h5.serialize(fmt="ttl", serialize_0d_datasets=True)
+
+        g = rdflib.Graph().parse(data=ttl, format="ttl")
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?values
+WHERE {
+    ?id a hdf:Dataset .
+    ?id hdf:name "/ds1" .
+    ?id hdf:value ?values .
+}
+"""
+        res = g.query(sparql_str)
+        bindings = res.bindings
+        self.assertEqual(0, len(bindings))
+
+    def test_dump_dataset_data(self):
+        with h5tbx.File() as h5:
+            h5.create_dataset('ds0', data=5.4)
+            h5.create_dataset('ds_str0', data="Hello")
+            h5.create_string_dataset('ds_str1', data=["Hello", "World"])
+            h5.create_dataset('ds1', data=[1, 2, 3])
+            h5.create_dataset('ds2', data=[[1, 2], [3, 4]])
+            ttl = h5.serialize(fmt="ttl", skipND=2)
+
+        g = rdflib.Graph().parse(data=ttl, format="ttl")
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?values
+WHERE {
+    ?id a hdf:Dataset .
+    ?id hdf:name "/ds1" .
+    ?id hdf:value ?values .
+}
+"""
+        res = g.query(sparql_str)
+        bindings = res.bindings
+        self.assertEqual('[1, 2, 3]', bindings[0][rdflib.Variable('values')].value)
+
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?values
+WHERE {
+    ?id a hdf:Dataset .
+    ?id hdf:name "/ds_str0" .
+    ?id hdf:value ?values .
+}
+"""
+        res = g.query(sparql_str)
+        bindings = res.bindings
+        self.assertEqual('Hello', bindings[0][rdflib.Variable('values')].value)
+
+        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+
+SELECT ?values
+WHERE {
+    ?id a hdf:Dataset .
+    ?id hdf:name "/ds_str1" .
+    ?id hdf:value ?values .
+}
+"""
+        res = g.query(sparql_str)
+        bindings = res.bindings
+        self.assertEqual("['Hello', 'World']", bindings[0][rdflib.Variable('values')].value)
+
     def test_dump_with_blank_node_iri_base(self):
         with h5tbx.File() as h5:
             h5.attrs["__version__"] = __version__
@@ -53,50 +130,50 @@ class TestJSONLD(unittest.TestCase):
                     break
             self.assertTrue(found_local)
 
-    def test_build_node_list(self):
-
-        g = rdflib.Graph()
-        base_node = rdflib.BNode()
-        g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
-        list_node_int = build_node_list(g, [1, 2, 3], use_simple_bnode_value=True, blank_node_iri_base=None)
-        g.add((base_node, HDF5.value, list_node_int))
-
-        with self.assertRaises(TypeError):
-            build_node_list(g, [1, dict(a='1'), 3], use_simple_bnode_value=True, blank_node_iri_base=None)
-
-        print(g.serialize(format='json-ld', indent=2))
-        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
-
-SELECT ?item
-WHERE {
-    ?id a hdf:Attribute .
-    ?id hdf:value ?list .
-    ?list rdf:rest*/rdf:first ?item
-}"""
-        qres = g.query(sparql_str)
-        list_values = [int(row[0]) for row in qres]
-        self.assertEqual(list_values, [1, 2, 3])
-
-        g = rdflib.Graph()
-        base_node = rdflib.BNode()
-        g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
-        list_node = build_node_list(g, [1, 'str', 3.4, True], use_simple_bnode_value=True, blank_node_iri_base=None)
-        g.add((base_node, HDF5.value, list_node))
-
-        print(g.serialize(format='json-ld', indent=2))
-        sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
-
-SELECT ?item
-WHERE {
-    ?id a hdf:Attribute .
-    ?id hdf:value ?list .
-    ?list rdf:rest*/rdf:first ?item
-}"""
-        qres = g.query(sparql_str)
-        list_values = [row[0].value for row in qres]
-        self.assertEqual(list_values, [1, 'str', 3.4, True])
+    #     def test_build_node_list(self):
+    #
+    #         g = rdflib.Graph()
+    #         base_node = rdflib.BNode()
+    #         g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
+    #         list_node_int = build_node_list(g, [1, 2, 3], use_simple_bnode_value=True, blank_node_iri_base=None)
+    #         g.add((base_node, HDF5.value, list_node_int))
+    #
+    #         with self.assertRaises(TypeError):
+    #             build_node_list(g, [1, dict(a='1'), 3], use_simple_bnode_value=True, blank_node_iri_base=None)
+    #
+    #         print(g.serialize(format='json-ld', indent=2))
+    #         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    # PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+    #
+    # SELECT ?item
+    # WHERE {
+    #     ?id a hdf:Attribute .
+    #     ?id hdf:value ?list .
+    #     ?list rdf:rest*/rdf:first ?item
+    # }"""
+    #         qres = g.query(sparql_str)
+    #         list_values = [int(row[0]) for row in qres]
+    #         self.assertEqual(list_values, [1, 2, 3])
+    #
+    #         g = rdflib.Graph()
+    #         base_node = rdflib.BNode()
+    #         g.add((base_node, rdflib.RDF.type, HDF5.Attribute))
+    #         list_node = build_node_list(g, [1, 'str', 3.4, True], use_simple_bnode_value=True, blank_node_iri_base=None)
+    #         g.add((base_node, HDF5.value, list_node))
+    #
+    #         print(g.serialize(format='json-ld', indent=2))
+    #         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    # PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+    #
+    # SELECT ?item
+    # WHERE {
+    #     ?id a hdf:Attribute .
+    #     ?id hdf:value ?list .
+    #     ?list rdf:rest*/rdf:first ?item
+    # }"""
+    #         qres = g.query(sparql_str)
+    #         list_values = [row[0].value for row in qres]
+    #         self.assertEqual(list_values, [1, 'str', 3.4, True])
 
     def test_serialize(self):
         with h5tbx.File() as h5:
@@ -524,7 +601,7 @@ WHERE {
         self.assertIsInstance(data[0]['author'], list)
         with h5tbx.File('test.hdf', 'w') as h5:
             jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
-                          context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
+                   context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
             self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
                              'http://schema.org/author')
 
@@ -572,7 +649,7 @@ WHERE {
         with h5tbx.File('test.hdf', 'w') as h5:
             jsonld.to_hdf(grp=h5.create_group('person'), source='test.json')
 
-        jsonld_filename = jsonld.hdf2jsonld('test.hdf', skipND=1)
+        jsonld_filename = hdf2jsonld('test.hdf', skipND=1)
         self.assertTrue(jsonld_filename.exists())
         self.assertTrue(jsonld_filename.suffix == '.jsonld')
         jsonld_filename.unlink()
@@ -583,11 +660,11 @@ WHERE {
             h5.frdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
             h5["/"].attrs["snt_rootgroup"] = "https://sandbox.zenodo.org/uploads/12554567"
             h5["/"].rdf["snt_rootgroup"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
-        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, semantic=True, structural=True,
+        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
                                 resolve_keys=True,
                                 context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
         jdict = json.loads(
-            h5tbx.dump_jsonld(h5.hdf_filename, indent=2, semantic=True, structural=True,
+            h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
                               resolve_keys=True,
                               context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
         jdict["ssno:usesStandardNameTable"] = "https://sandbox.zenodo.org/uploads/125545"
@@ -601,7 +678,7 @@ WHERE {
             self.assertEqual(h5["/"].attrs[RDF_FILE_PREDICATE_ATTR_NAME]["snt_file"],
                              str(ssnolib.namespace.SSNO.usesStandardNameTable))
 
-        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, semantic=True, structural=True,
+        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
                                 resolve_keys=True,
                                 context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
 

@@ -1,5 +1,4 @@
 import pathlib
-from email.policy import default
 
 import click
 
@@ -23,8 +22,9 @@ def h5tbx(fairify):
 )
 @click.option("--format", type=str, help="The output format, e.g. jsonld.",
               default="ttl")
-@click.option("--graph", is_flag=True, help="Generates a graph and stores it in OUTPUT-graph.html. Uses pyvis and kglab. "
-                                        "Please Make sure it is installed")
+@click.option("--graph", is_flag=True,
+              help="Generates a graph and stores it in OUTPUT-graph.html. Uses pyvis and kglab. "
+                   "Please Make sure it is installed")
 def ld(filename, output, format, graph):
     """Linked-Data command"""
 
@@ -54,7 +54,6 @@ def ld(filename, output, format, graph):
     if graph:
         from h5rdmtoolbox import build_pyvis_graph
         build_pyvis_graph(filename, output_filename=filename.with_suffix("-graph.html"))
-
 
 
 if __name__ == '__main__':

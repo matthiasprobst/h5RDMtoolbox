@@ -18,7 +18,7 @@ from rdflib.plugins.shared.jsonld.context import Context
 from h5rdmtoolbox.convention import ontology as hdf_ontology
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
 from .core import Dataset, File
-from .rdf import RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.ld.rdf import RDF_TYPE_ATTR_NAME
 # from ..convention.ontology.h5ontocls import Datatype
 from ..protocols import H5TbxGroup
 
@@ -1152,37 +1152,9 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
     return file.model_dump_jsonld()
 
 
-def hdf2jsonld(filename: Union[str, pathlib.Path],
-               skipND: int,
-               metadata_filename: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
-    """Dumps the metadata (not only attributes but also structure and possible RDF tripels...) to
-    a target filename.
-
-    Parameter
-    ---------
-    filename: Union[str, pathlib.Path]
-        The HDF5 file to read from.
-    skipND: int
-        The number of dimensions to skip when reading a dataset.
-    metadata_filename: Optional[Union[str, pathlib.Path]]
-        The target filename to write to. If None, the target filename will be the filename with
-        the suffix ".jsonld" (using this suffix over '.json' due to recommendation:
-        https://www.w3.org/TR/json-ld/#iana-considerations).
-
-    Returns
-    -------
-    metadata_filename: pathlib.Path
-        The metadata filename
-    """
-    if metadata_filename is None:
-        metadata_filename = pathlib.Path(filename).with_suffix('.jsonld')  # recommended suffix for JSON-LD is .jsonld!
-    else:
-        metadata_filename = pathlib.Path(metadata_filename)
-
-    with open(metadata_filename, 'w', encoding='utf-8') as f:
-        f.write(dump_file(filename, skipND))
-
-    return metadata_filename
+def hdf2jsonld(*arge, **kwargs):
+    from h5rdmtoolbox.ld import hdf2jsonld
+    return hdf2jsonld(*arge, **kwargs)
 
 
 def make_graph_compact(graph: List[Dict]) -> List[Dict]:

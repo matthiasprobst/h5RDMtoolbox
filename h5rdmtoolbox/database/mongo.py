@@ -11,7 +11,7 @@ from pymongo.errors import InvalidDocument
 
 from .interface import ExtHDF5DBInterface
 from .. import protected_attributes
-from ..wrapper import lazy
+from ..database import lazy
 
 
 def get_file_creation_time(filename: Union[str, pathlib.Path], tz=None) -> datetime:

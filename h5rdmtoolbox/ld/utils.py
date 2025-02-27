@@ -20,6 +20,7 @@ def get_attr_dtype_as_XSD(data):
 
 def optimize_context(graph, context=None):
     bound_namespaces = {k: str(v) for k, v in graph.namespaces()}
+    bound_namespaces["m4i"] = "http://w3id.org/nfdi4ing/metadata4ing#"
 
     # Collect actually used namespaces
     selected_namespaces = dict()
