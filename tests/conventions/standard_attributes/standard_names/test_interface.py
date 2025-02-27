@@ -87,7 +87,7 @@ class TestStandardAttributes(unittest.TestCase):
                               attach_scales=('y', 'x'))
         h5sni = HDF5StandardNameInterface.from_hdf(h5.hdf_filename)
         for c in h5sni.coordinate:
-            self.assertIsInstance(c, h5tbx.wrapper.lazy.LDataset)
+            self.assertIsInstance(c, h5tbx.database.lazy.LDataset)
         self.assertEqual(h5sni.coordinate.x, h5sni.coordinate[0])
         self.assertEqual(h5sni.coordinate.y, h5sni.coordinate[1])
         self.assertDictEqual({'x': 5, 'y': 3}, h5sni.coordinate.shape)

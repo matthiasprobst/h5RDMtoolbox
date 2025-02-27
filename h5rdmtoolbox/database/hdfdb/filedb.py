@@ -5,7 +5,7 @@ import h5py
 
 from .objdb import ObjDB
 from ..interface import HDF5DBInterface
-from ...wrapper import lazy
+from .. import lazy
 
 
 class FileDB(HDF5DBInterface):

@@ -5,6 +5,8 @@ Log of changes in the versions
 ## v1.7.2
 
 - remove `skipND` from being deprecated
+- separation of "linked data" code into a separate repo
+- update documentation
 
 ## v1.7.1
 

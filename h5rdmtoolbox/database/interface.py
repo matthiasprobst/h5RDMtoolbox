@@ -3,7 +3,7 @@ from typing import Generator
 
 import h5py
 
-from ..wrapper.lazy import LHDFObject
+from .lazy import LHDFObject
 
 
 class HDF5DBInterface(abc.ABC):

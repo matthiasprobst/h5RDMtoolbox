@@ -48,9 +48,8 @@ from . import utils
 from .wrapper.core import lower, Lower, File, Group, Dataset
 from . import errors
 from .wrapper import jsonld
-from .wrapper.lazy import lazy
+from .database.lazy import lazy
 from .wrapper.h5attr import Attribute
-# from h5rdmtoolbox.wrapper.accessor import register_accessor
 import json
 from .wrapper.accessor import register_accessor
 
@@ -202,7 +201,7 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
     if not structural and not semantic:
         raise ValueError('At least one of structural or semantic must be True.')
 
-    from h5rdmtoolbox.ld.hdf import get_serialized_ld
+    from h5rdmtoolbox.ld.hdf.file import get_serialized_ld
     if structural and not semantic:
         return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)
     return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)

@@ -221,7 +221,7 @@ class LayoutSpecification:
         return f'{self.__class__.__name__}(kwargs={_kwargs})'
 
     def __call__(self, target: Union[h5py.Group, h5py.Dataset]):
-        if isinstance(target, h5tbx.wrapper.lazy.LHDFObject):
+        if isinstance(target, h5tbx.database.lazy.LHDFObject):
             with target as _target:
                 return self.__call__(_target)
 

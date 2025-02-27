@@ -5,7 +5,6 @@ from typing import Protocol
 from .hdfdb import FileDB
 from .hdfdb import FilesDB, ObjDB
 from .interface import HDF5DBInterface
-from ..wrapper import lazy
 
 
 def find(source, *args, **kwargs):
@@ -71,20 +70,6 @@ def rdf_find(source, *,
                                       rdf_predicate=rdf_predicate,
                                       rdf_object=rdf_object,
                                       recursive=recursive)
-    # from .. import File
-    # from .lazy import lazy
-    # if isinstance(source, (str, pathlib.Path)):
-    #     with File(source) as h5:
-    #         return rdf_find(h5, rdf_subject=rdf_subject,
-    #                         rdf_type=rdf_type,
-    #                         rdf_predicate=rdf_predicate,
-    #                         rdf_object=rdf_object,
-    #                         recursive=recursive)
-    # return lazy(source.rdf.find(rdf_subject=rdf_subject,
-    #                             rdf_type=rdf_type,
-    #                             rdf_predicate=rdf_predicate,
-    #                             rdf_object=rdf_object,
-    #                             recursive=recursive))
 
 
-__all__ = ['lazy', 'FileDB', 'FilesDB', 'ObjDB', 'HDF5DBInterface']
+__all__ = ['FileDB', 'FilesDB', 'ObjDB', 'HDF5DBInterface']

@@ -26,11 +26,11 @@ It specifically supports the five main steps of
 
 Overview
 --------
-The `h5rdmtoolbox` is organized in five sub-packages corresponding to main features, which are needed to achieve a
-sustainable data lifecycle. The sub-packages are:
-
-Besides the wrapper, which uses the convention sub-package, all sub-packages are independent of each other and can be
-developed and used separately.
+The toolbox implements six modules corresponding to main features, which are needed to achieve a
+sustainable data lifecycle. The module layout is shown below. The numbers reference to their main usage in the stages in
+the data lifecycle above. The wrapper module implements the main interface between the user and the HDF5 file. It
+extends the features of the underlying `h5py` library. Some of the features are implemented in other modules, hence the
+wrapper module depends on the convention, database and linked data (ld) module.
 
 
 .. image:: ../_static/h5tbx_modules.svg

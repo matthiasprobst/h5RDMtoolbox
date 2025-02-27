@@ -10,7 +10,7 @@ from ontolutils import Thing
 from pydantic import HttpUrl
 
 from h5rdmtoolbox.protocols import H5TbxAttributeManager
-from h5rdmtoolbox.wrapper import lazy
+from h5rdmtoolbox.database import lazy
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'

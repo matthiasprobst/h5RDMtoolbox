@@ -36,9 +36,9 @@ class TestLazy(unittest.TestCase):
 
         self.assertTrue(lroot_grp < l_dataset)
 
-        self.assertIsInstance(lroot_grp, h5tbx.wrapper.lazy.LGroup)
+        self.assertIsInstance(lroot_grp, h5tbx.database.lazy.LGroup)
 
-        self.assertIsInstance(l_dataset, h5tbx.wrapper.lazy.LDataset)
+        self.assertIsInstance(l_dataset, h5tbx.database.lazy.LDataset)
         self.assertEqual(l_dataset.name, '/grp/test')
         self.assertEqual(l_dataset.filename, h5.hdf_filename)
         self.assertEqual(l_dataset.basename, 'test')
@@ -47,10 +47,10 @@ class TestLazy(unittest.TestCase):
 
         self.assertListEqual(list(lroot_grp.keys()), ['grp', 'x'])
 
-        self.assertIsInstance(lroot_grp['grp'], h5tbx.wrapper.lazy.LGroup)
+        self.assertIsInstance(lroot_grp['grp'], h5tbx.database.lazy.LGroup)
         self.assertEqual(lroot_grp['grp'].name, '/grp')
 
-        self.assertIsInstance(lroot_grp['grp']['test'], h5tbx.wrapper.lazy.LDataset)
+        self.assertIsInstance(lroot_grp['grp']['test'], h5tbx.database.lazy.LDataset)
         self.assertEqual(lroot_grp['grp']['test'].name, '/grp/test')
 
         self.assertEqual(l_dataset.isel(x=0), 1)
