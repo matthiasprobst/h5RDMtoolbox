@@ -22,7 +22,7 @@ from h5py._hl.base import phil, with_phil
 from h5py._objects import ObjectID
 
 # noinspection PyUnresolvedReferences
-from . import xr2hdf, rdf
+from . import xr2hdf
 from .ds_decoder import dataset_value_decoder
 from .h5attr import H5_DIM_ATTRS, pop_hdf_attributes, WrapperAttributeManager
 from .h5utils import _is_not_valid_natural_name, get_rootparent
@@ -31,6 +31,7 @@ from .. import get_ureg
 from .. import protocols
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from ..convention.consts import DefaultValue
+from ..ld import rdf
 
 logger = logging.getLogger('h5rdmtoolbox')
 
@@ -637,7 +638,7 @@ class Group(h5py.Group):
                        attach_data_offset=None,
                        attach_scales=None,
                        ancillary_datasets=None,
-                       rdf_type: Optional[Union[str, rdflib.URIRef]]=None,
+                       rdf_type: Optional[Union[str, rdflib.URIRef]] = None,
                        attrs=None,
                        **kwargs  # standard attributes and other keyword arguments
                        ) -> protocols.H5TbxDataset:
@@ -2442,8 +2443,8 @@ class File(h5py.File, Group):
                   **kwargs
                   ):
         """Serialize the file content to a specific format"""
-        from .ld import optimize_context
-        from .. import get_ld
+        from h5rdmtoolbox.ld.utils import optimize_context
+        from h5rdmtoolbox.ld import get_ld
         fmt = kwargs.pop("format", fmt)
 
         graph = get_ld(self.hdf_filename,

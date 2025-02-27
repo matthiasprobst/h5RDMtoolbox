@@ -25,7 +25,7 @@ from . import get_config, get_ureg
 from . import user
 from ._version import __version__
 from .user import USER_CACHE_DIR, USER_DATA_DIR
-from .wrapper import rdf
+from .ld import rdf
 
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
@@ -293,7 +293,7 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         fragment = name.fragment
         if not fragment:
             raise ValueError(f'Name {name} has no fragment')
-        from h5rdmtoolbox.wrapper.rdf import set_predicate
+        from h5rdmtoolbox.ld.rdf import set_predicate
         set_predicate(h5obj, fragment, name)
         name = fragment
 

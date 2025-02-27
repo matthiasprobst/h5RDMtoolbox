@@ -6,9 +6,9 @@ from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Namespace
 from rdflib import RDF
 
-from h5rdmtoolbox.wrapper.ld.hdf.attributes import process_attribute
-from h5rdmtoolbox.wrapper.ld.hdf.datasets import process_dataset
-from h5rdmtoolbox.wrapper.ld.utils import get_obj_bnode
+from h5rdmtoolbox.ld.hdf.attributes import process_attribute
+from h5rdmtoolbox.ld.hdf.datasets import process_dataset
+from h5rdmtoolbox.ld.utils import get_obj_bnode
 
 HDF = Namespace(str(HDF5))
 

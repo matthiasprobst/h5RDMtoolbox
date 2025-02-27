@@ -18,7 +18,7 @@ from rdflib.plugins.shared.jsonld.context import Context
 from h5rdmtoolbox.convention import ontology as hdf_ontology
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
 from .core import Dataset, File
-from .rdf import RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.ld.rdf import RDF_TYPE_ATTR_NAME
 # from ..convention.ontology.h5ontocls import Datatype
 from ..protocols import H5TbxGroup
 
@@ -1153,7 +1153,7 @@ def dump_file(filename: Union[str, pathlib.Path], skipND) -> str:
 
 
 def hdf2jsonld(*arge, **kwargs):
-    from h5rdmtoolbox.wrapper.ld import hdf2jsonld
+    from h5rdmtoolbox.ld import hdf2jsonld
     return hdf2jsonld(*arge, **kwargs)
 
 

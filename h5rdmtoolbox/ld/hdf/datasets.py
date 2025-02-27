@@ -9,7 +9,7 @@ from rdflib import RDFS
 from rdflib import XSD, RDF
 
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
-from h5rdmtoolbox.wrapper.ld.hdf.attributes import process_attribute
+from h5rdmtoolbox.ld.hdf.attributes import process_attribute
 
 HDF = Namespace(str(HDF5))
 HDF5_FILTER_ONTOLOGY = {
@@ -119,7 +119,7 @@ def process_dataset(
             graph.add((dataspace_dimension_node, HDF5.dimensionIndex, rdflib.Literal(idim, datatype=XSD.integer)))
 
         if skipND and dataset.ndim < skipND:
-            data = dataset.values[()].tolist()
+            data = dataset[()].tolist()
             if is_string_dataset:
                 graph.add((dataset_uri, HDF5.value, rdflib.Literal([s.decode() for s in data])))
             else:
@@ -129,7 +129,7 @@ def process_dataset(
         graph.add((dataspace_uri, RDF.type, HDF5.scalarDataspace))
 
         if skipND and dataset.ndim < skipND:
-            data = dataset.values[()]
+            data = dataset[()]
             if is_string_dataset:
                 graph.add((dataset_uri, HDF5.value, rdflib.Literal(data.decode())))
             else:

@@ -2,11 +2,11 @@ import pathlib
 import warnings
 from typing import Union, Optional
 
+import h5py
 import rdflib
 
-from h5rdmtoolbox import File
-from h5rdmtoolbox.wrapper.ld.hdf.file import get_ld as get_hdf_ld
-from h5rdmtoolbox.wrapper.ld.user.file import get_ld as get_contextual_ld
+from .hdf.file import get_ld as get_hdf_ld
+from .user.file import get_ld as get_contextual_ld
 from .utils import optimize_context
 
 
@@ -36,7 +36,7 @@ def get_ld(
         contextual = semantic
 
     graph = None
-    with File(hdf_filename) as h5:
+    with h5py.File(hdf_filename) as h5:
         if contextual and structural:
             graph1 = get_hdf_ld(h5, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
             graph2 = get_contextual_ld(h5, blank_node_iri_base=blank_node_iri_base)

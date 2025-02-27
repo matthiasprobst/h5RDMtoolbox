@@ -12,9 +12,9 @@ from ontolutils.namespacelib import M4I
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
 from h5rdmtoolbox.wrapper import jsonld
-from h5rdmtoolbox.wrapper import rdf
-from h5rdmtoolbox.wrapper.ld import hdf2jsonld
-from h5rdmtoolbox.wrapper.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.ld import rdf
+from h5rdmtoolbox.ld import hdf2jsonld
+from h5rdmtoolbox.ld.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
 
 logger = h5tbx.logger
 
@@ -587,7 +587,7 @@ WHERE {
         h5.hdf_filename.unlink(missing_ok=True)
 
     def test_codemeta_to_hdf(self):
-        codemeta_filename = __this_dir__ / '../../../codemeta.json'
+        codemeta_filename = __this_dir__ / '../../codemeta.json'
 
         data = ontolutils.dquery(
             'schema:SoftwareSourceCode',

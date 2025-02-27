@@ -133,7 +133,7 @@ def get_ld(
         blank_node_iri_base: Optional[str] = None,
         **kwargs) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
-    from h5rdmtoolbox.wrapper.ld import get_ld
+    from h5rdmtoolbox.ld import get_ld
     return get_ld(hdf_filename, structural=structural, contextual=contextual, skipND=skipND,
                   blank_node_iri_base=blank_node_iri_base, **kwargs)
 
@@ -147,7 +147,7 @@ def dump_jsonld(
         blank_node_iri_base: Optional[str] = None,
         **kwargs):
     """Return the file content as a JSON-LD string."""
-    from .wrapper.ld import optimize_context
+    from .ld import optimize_context
     context = context or {}
     graph = get_ld(hdf_filename,
                    structural=structural,
@@ -202,7 +202,7 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
     if not structural and not semantic:
         raise ValueError('At least one of structural or semantic must be True.')
 
-    from h5rdmtoolbox.wrapper.ld.hdf.file import get_serialized_ld
+    from h5rdmtoolbox.ld.hdf import get_serialized_ld
     if structural and not semantic:
         return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)
     return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)
