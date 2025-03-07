@@ -618,7 +618,7 @@ WHERE {
         self.assertIsInstance(data[0]['author'], list)
         with h5tbx.File('test.hdf', 'w') as h5:
             jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
-                          context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
+                   context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
             self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
                              'http://schema.org/author')
 

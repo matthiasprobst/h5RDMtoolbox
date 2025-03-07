@@ -51,6 +51,7 @@ def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base, f
 
 
 def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
+
     rdf_manager = RDFManager(parent_obj.attrs)
 
     parent_uri = rdf_manager.subject
