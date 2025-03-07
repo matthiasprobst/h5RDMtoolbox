@@ -2,9 +2,14 @@
 
 Log of changes in the versions
 
+## v1.7.3
+
+- hotfix serialization when multiple rdf:type values are set
+- move `jsonld` sub-module from `wrapper` to `ld` module
+
 ## v1.7.2
 
-- remove `skipND` from being deprecated
+- remove skipND from being deprecated
 - separation of "linked data" code into a separate repo
 - update documentation
 

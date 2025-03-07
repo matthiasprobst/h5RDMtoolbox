@@ -3,14 +3,15 @@ import pathlib
 import click
 
 
-@click.group()
-@click.option('--fairify', type=click.Path(exists=True), help='Starts the app helping you to make the file FAIRer')
+@click.group(invoke_without_command=True)
+@click.option('--fairify', type=str, help='Starts the app helping you to make the file FAIRer')
 def h5tbx(fairify):
     if fairify:
         filename = pathlib.Path(fairify)
-        from fairify import start
-        start(filename=filename)
+        from h5rdmtoolbox.gui.fairify import start
         print(f'Opening GUI to fairify the file {filename}')
+        start(filename=filename)
+        print(f'GUI closed')
 
 
 @h5tbx.command()

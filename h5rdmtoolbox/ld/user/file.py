@@ -42,7 +42,7 @@ def get_ld(source: Union[str, h5py.File], blank_node_iri_base: Optional[str] = N
             graph.add((file_uri, rdflib.RDF.type, rdflib.URIRef(file_rdf)))
 
     for ak, av in source.attrs.items():
-        process_file_attribute(source, ak, av, graph, blank_node_iri_base)
+        process_file_attribute(source, ak, av, graph, blank_node_iri_base, file_uri)
 
     process_group(source, graph, blank_node_iri_base=blank_node_iri_base)
 

@@ -393,13 +393,15 @@ class RDFManager:
             rdfm = RDFManager(node.attrs)
             if str(rdf_object) in rdfm.object.values():
                 res_object.append(node)
+            if str(rdf_object) in [s for s in list(node.attrs.values()) if isinstance(s, str)]:
+                res_object.append(node)
 
         if rdf_object:
             _find_object(self.parent.name, self.parent)
             if recursive and isinstance(self.parent, h5py.Group):
                 self.parent.visititems(_find_object)
 
-        if rdf_type:
+        if rdf_type is not None:
             _find_type(self.parent.name, self.parent)
             if recursive and isinstance(self.parent, h5py.Group):
                 self.parent.visititems(_find_type)

@@ -12,5 +12,5 @@ def process_dataset(dataset, graph, blank_node_iri_base=None):
             process_attribute(dataset, ak, av, graph, blank_node_iri_base=blank_node_iri_base)
 
     rdf_type = RDFManager(dataset.attrs).type
-    if rdf_type:
+    if rdf_type is not None:
         graph.add((dataset_uri, rdflib.RDF.type, rdflib.URIRef(rdf_type)))

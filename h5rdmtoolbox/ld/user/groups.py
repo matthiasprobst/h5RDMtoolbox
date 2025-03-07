@@ -1,6 +1,7 @@
 from typing import Optional
 
 import h5py
+import numpy as np
 import rdflib
 
 from h5rdmtoolbox.ld.user.attributes import process_attribute
@@ -15,11 +16,23 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
     group_uri = get_obj_bnode(group, blank_node_iri_base)
     rdf_type = RDFManager(group.attrs).type
     rdf_subject = RDFManager(group.attrs).subject
-    if rdf_type:
+
+    if rdf_type is None:
         if rdf_subject:
-            graph.add((rdflib.URIRef(rdf_subject), rdflib.RDF.type, rdflib.URIRef(rdf_type)))
+            graph.add((group_uri, rdflib.DCTERMS.relation, rdflib.URIRef(rdf_subject)))
+    else:
+        if rdf_subject:
+            if isinstance(rdf_type, (list, np.ndarray)):
+                for t in rdf_type:
+                    graph.add((rdflib.URIRef(rdf_subject), rdflib.RDF.type, rdflib.URIRef(t)))
+            else:
+                graph.add((rdflib.URIRef(rdf_subject), rdflib.RDF.type, rdflib.URIRef(rdf_type)))
         else:
-            graph.add((group_uri, rdflib.RDF.type, rdflib.URIRef(rdf_type)))
+            if isinstance(rdf_type, (list, np.ndarray)):
+                for t in rdf_type:
+                    graph.add((group_uri, rdflib.RDF.type, rdflib.URIRef(t)))
+            else:
+                graph.add((group_uri, rdflib.RDF.type, rdflib.URIRef(rdf_type)))
 
     # Iterate through items in the group
     for name, sub_group_or_dataset in group.items():
