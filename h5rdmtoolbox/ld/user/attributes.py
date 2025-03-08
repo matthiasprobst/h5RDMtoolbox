@@ -27,8 +27,27 @@ def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base, f
         if rdf_user_object:
             if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
                 graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))
-            else:
-                if isinstance(rdf_user_object, dict):
+            elif isinstance(rdf_user_object, list):
+                for ruo in rdf_user_object:
+
+                    if isinstance(ruo, str) and ruo.startswith('http'):
+                        graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(ruo)))
+
+                    elif isinstance(ruo, dict):
+                        try:
+                            obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(ruo)), format="json-ld")
+                            # relate the obj_graph with the predicate:
+                            _subjects = set(obj_graph.subjects())
+                            if len(_subjects) != 1:
+                                warnings.warn(f"Error parsing JSON-LD object for attribute. name={name}, data={data}. "
+                                              f"Expected exactly one subject, found {len(_subjects)}")
+                            obj_graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), list(_subjects)[0]))
+                            graph += obj_graph
+                        except Exception as e:
+                            warnings.warn(
+                                f"Error parsing JSON-LD object for attribute. name={name}, data={data}. Orig. Error: {e}")
+
+            elif isinstance(rdf_user_object, dict):
                     try:
                         obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(rdf_user_object)), format="json-ld")
                         # relate the obj_graph with the predicate:

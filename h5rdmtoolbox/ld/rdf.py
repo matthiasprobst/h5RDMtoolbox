@@ -9,8 +9,8 @@ import pydantic
 from ontolutils import Thing
 from pydantic import HttpUrl
 
-from h5rdmtoolbox.protocols import H5TbxAttributeManager
 from h5rdmtoolbox.database import lazy
+from h5rdmtoolbox.protocols import H5TbxAttributeManager
 
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
@@ -124,6 +124,10 @@ def set_object(attr: h5py.AttributeManager,
                data: str,
                rdf_object_attr_name=RDF_OBJECT_ATTR_NAME) -> None:
     """Set the class of an attribute"""
+    if isinstance(data, (list, tuple)):
+        for d in data:
+            set_object(attr, attr_name, d, rdf_object_attr_name)
+        return
 
     iri_data_data = attr.get(rdf_object_attr_name, None)
 
@@ -142,9 +146,24 @@ def set_object(attr: h5py.AttributeManager,
         except pydantic.ValidationError as e:
             raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
                            f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
-
-    iri_data_data.update({attr_name: data})
+    curr_data = iri_data_data.get(attr_name, None)
+    if curr_data is None:
+        iri_data_data.update({attr_name: data})
+    else:
+        if isinstance(curr_data, list):
+            if isinstance(data, list):
+                curr_data.extend(data)
+            else:
+                curr_data.append(data)
+                iri_data_data.update({attr_name: curr_data})
+        else:
+            if isinstance(data, list):
+                iri_data_data.update({attr_name: [curr_data, *data]})
+            else:
+                iri_data_data.update({attr_name: [curr_data, data]})
     attr[rdf_object_attr_name] = iri_data_data
+    # iri_data_data.update({attr_name: data})
+    # attr[rdf_object_attr_name] = iri_data_data
 
 
 def append(attr: h5py.AttributeManager,
