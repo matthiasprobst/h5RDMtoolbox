@@ -1,7 +1,9 @@
-import h5py
 import pathlib
-import yaml
 from typing import Dict, Optional, Protocol
+
+import yaml
+
+from ..wrapper.core import Group
 
 
 class _H5DictDataInterface(Protocol):
@@ -11,7 +13,7 @@ class _H5DictDataInterface(Protocol):
         """Return data"""
         ...
 
-    def write(self, h5: h5py.Group, num_dtype:Optional[str]=None):
+    def write(self, h5: Group, num_dtype: Optional[str] = None):
         data = self.data
         for k, v in data.items():
             if not isinstance(v, dict):
@@ -32,8 +34,10 @@ class _H5DictDataInterface(Protocol):
                     try:
                         if dtype is None and num_dtype and not isinstance(data, str):
                             dtype = num_dtype
-
-                        h5.create_dataset(name, data=data, dtype=dtype, **v)
+                        if isinstance(data, str):
+                            h5.create_string_dataset(name, data=data, **v)
+                        else:
+                            h5.create_dataset(name, data=data, dtype=dtype, **v)
                     except (TypeError,) as e:
                         raise RuntimeError('Could not create dataset. Please check the yaml file. The orig. '
                                            f'error is "{e}"')

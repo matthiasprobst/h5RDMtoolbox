@@ -9,9 +9,9 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Attribute
 from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
-from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 from h5rdmtoolbox.ld.rdf import RDFError
 from h5rdmtoolbox.ld.rdf import RDF_PREDICATE_ATTR_NAME
+from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 
 
 class TestRDF(unittest.TestCase):
@@ -163,6 +163,24 @@ class TestRDF(unittest.TestCase):
             self.assertEqual(len(h5.attrs.get(RDF_PREDICATE_ATTR_NAME, None)), 1)
             self.assertEqual(h5.rdf['title'].predicate, 'https://example.org/hasTitle')
 
+    def test_multiple_objects(self):
+        with h5tbx.File() as h5:
+            h5.attrs["contacts"] = ["john", "jane"]
+            h5.frdf["contacts"].predicate = "https://example.org/hasContacts"
+            h5.frdf["contacts"].object = ["https://example.org/john", "https://example.org/jane"]
+            self.assertEqual(h5.frdf["contacts"].object, ["https://example.org/john", "https://example.org/jane"])
+
+    def test_multiple_objects_2(self):
+        person1 = ontolutils.Thing(label="John Doe")
+        person2 = ontolutils.Thing(label="Jane Wane")
+        with h5tbx.File() as h5:
+            h5.attrs["contacts"] = ["john", "jane"]
+            h5.frdf["contacts"].predicate = "https://example.org/hasContacts"
+            h5.frdf["contacts"].object = person1
+            h5.frdf["contacts"].object = person2
+            print(h5.serialize(fmt="ttl", structural=False))
+
+
     def test_multiple_types_or_objects(self):
         with h5tbx.File() as h5:
             h5.attrs['title', 'https://example.org/hasTitle'] = 'test'
@@ -179,11 +197,12 @@ class TestRDF(unittest.TestCase):
             self.assertEqual(h5.rdf['title'].object, 'https://example.org/object')
 
             h5.rdf['title'].object = 'https://example.org/object2'
-            self.assertEqual(h5.rdf['title'].object, 'https://example.org/object2')
-
+            self.assertEqual(h5.rdf['title'].object, ['https://example.org/object', 'https://example.org/object2'])
             self.assertEqual(h5.attrs['title'], 'test')
-            self.assertEqual(h5.rdf['title'].object, 'https://example.org/object2')
+            self.assertEqual(h5.rdf['title'].object, ['https://example.org/object', 'https://example.org/object2'])
 
+        with h5tbx.File() as h5:
+            h5.attrs['title', 'https://example.org/hasTitle'] = 'test'
             h5.rdf['title'].object = ['https://example.org/objectURI1', 'https://example.org/objectURI2']
             self.assertEqual(h5.attrs['title'], 'test')
 

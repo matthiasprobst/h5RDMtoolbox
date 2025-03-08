@@ -11,10 +11,10 @@ from ontolutils.namespacelib import M4I
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.wrapper import jsonld
-from h5rdmtoolbox.ld import rdf
 from h5rdmtoolbox.ld import hdf2jsonld
+from h5rdmtoolbox.ld import rdf
 from h5rdmtoolbox.ld.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
+from h5rdmtoolbox.wrapper import jsonld
 
 logger = h5tbx.logger
 
@@ -61,6 +61,23 @@ WHERE {
         res = g.query(sparql_str)
         bindings = res.bindings
         self.assertEqual(0, len(bindings))
+
+    def test_serialize_multiple_types(self):
+        with h5tbx.File() as h5:
+            h5.rdf.type = [M4I.Tool, 'https://www.wikidata.org/wiki/Q1058834']
+        ttl = h5tbx.serialize(h5.hdf_filename, fmt="ttl", structural=False)
+        sparql_query = """SELECT ?type
+        WHERE {
+            ?s a ?type
+        }
+        """
+        g = rdflib.Graph()
+        g.parse(data=ttl, format="ttl")
+        res = g.query(sparql_query)
+        self.assertEqual(
+            sorted(b[rdflib.Variable("type")] for b in res.bindings),
+            sorted([rdflib.URIRef(uri) for uri in [M4I.Tool, 'https://www.wikidata.org/wiki/Q1058834']])
+        )
 
     def test_dump_dataset_data(self):
         with h5tbx.File() as h5:
@@ -717,6 +734,14 @@ WHERE {
                 jdict["@context"]
             )
             self.assertEqual(
-                sorted(jdict["@graph"][0]["@type"]),
+                sorted(jdict.get("@type")),
                 sorted("dcat:Dataset")
             )
+
+    def test_only_subject(self):
+        with h5tbx.File() as h5:
+            g = h5.create_group("contact")
+            g.attrs["id"] = "0000-0001-8729-0482"
+            g.rdf.subject = "https://orcid.org/0000-0001-8729-0482"
+            jsonld = h5.serialize(fmt="json-ld", structural=True)
+        print(jsonld)

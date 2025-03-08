@@ -10,14 +10,14 @@ class TestCLI(unittest.TestCase):
 
     def test_help(self):
         runner = CliRunner()
-        result = runner.invoke(h5tbx, input='--help\n')
+        result = runner.invoke(h5tbx, ['--help', ])
 
         self.assertIsNone(result.exception)
         self.assertEqual(result.output,
-                         """Usage: h5tbx [OPTIONS] COMMAND [ARGS]...
+                         r"""Usage: h5tbx [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --fairify PATH  Starts the app helping you to make the file FAIRer
+  --fairify TEXT  Starts the app helping you to make the file FAIRer
   --help          Show this message and exit.
 
 Commands:
@@ -61,3 +61,11 @@ Options:
             expected,
             result.output
         )
+
+    # def test_fairify(self):
+    #     with File() as h5:
+    #         pass
+    #     runner = CliRunner()
+    #     result = runner.invoke(h5tbx, [f"--fairify=does-not-exist.hdf"])
+    #     self.assertIsNotNone(result.exception)
+

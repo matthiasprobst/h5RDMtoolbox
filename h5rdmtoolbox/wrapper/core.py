@@ -513,7 +513,7 @@ class Group(h5py.Group):
                 except convention.standard_attributes.errors.StandardAttributeError as e:
                     del self[name]  # undo group creation
                     raise e
-        if rdf_type:
+        if rdf_type is not None:
             h5tbxgrp.rdf.type = rdf_type
         if rdf_subject:
             h5tbxgrp.rdf.subject = rdf_subject
@@ -622,7 +622,7 @@ class Group(h5py.Group):
 
         for ak, av in attrs.items():
             ds.attrs[ak] = av
-        if rdf_type:
+        if rdf_type is not None:
             ds.rdf.type = rdf_type
         return self._h5ds(ds.id)
 
@@ -840,7 +840,7 @@ class Group(h5py.Group):
 
         ds = Dataset(_ds.id)
 
-        if rdf_type:
+        if rdf_type is not None:
             ds.rdf.type = rdf_type
 
         if attach_data_scale is not None or attach_data_offset is not None:

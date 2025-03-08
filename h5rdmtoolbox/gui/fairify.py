@@ -1,18 +1,21 @@
 """main gui"""
 import getpass
-import h5py
 import logging
 import pathlib
-import rdflib
 import sys
-from PyQt5 import QtWidgets
-from PyQt5.QtGui import QFont
 from typing import Dict, Union, Tuple
 
-import h5rdmtoolbox as h5tbx
-from ontolutils import M4I, PIVMETA, SCHEMA, OBO, CODEMETA, QUDT_UNIT, QUDT_KIND, SSNO
+import h5py
+import rdflib
+from PyQt5 import QtWidgets
+from PyQt5.QtGui import QFont
+from ontolutils import M4I, SCHEMA, OBO, CODEMETA, QUDT_UNIT, QUDT_KIND
 from ontolutils.classes.utils import split_URIRef
-from src.main import Ui_MainWindow
+from pivmetalib.namespace import PIVMETA
+from ssnolib.namespace import SSNO
+
+import h5rdmtoolbox as h5tbx
+from .src.main import Ui_MainWindow
 
 __this_dir__ = pathlib.Path(__file__).parent
 logger = logging.getLogger(__name__)
@@ -280,7 +283,17 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def on_selection_changed(self):
         """Update call if selection in tree view changes"""
-        obj, attr_name = self.get_curr_obj()
+
+        self.lineEditIRI1.setText('')
+        self.lineEditIRI1.setToolTip('')
+        self.lineEditIRI2.setText('')
+        self.lineEditIRI2.setToolTip('')
+
+        obj, attr_display_name = self.get_curr_obj()
+        if attr_display_name:
+            attr_name = attr_display_name.split('=', 1)[0]
+        else:
+            attr_name = attr_display_name
         if obj is None:
             self.groupBox1.setTitle(f'nothing selected')
             self.groupBox2.setTitle(f'nothing selected')
@@ -292,21 +305,35 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
 
         if attr_name is None:  # is a dataset or group
             obj_name = obj.name
-            self.groupBox1.setTitle(f'predicate of "{obj_name}"')
-            self.groupBox2.setTitle(f'subject of "{obj_name}"')
-            pred = obj.rdf.predicate.get('SELF', None)
-            if pred:
-                self.lineEditIRI1.setText(pred)
-            else:
-                self.lineEditIRI1.setText('')
+            self.groupBox1.setTitle(f'subject of "{obj_name}"')
+            self.groupBox2.setTitle(f'type of "{obj_name}"')
+
+            self.comboBoxPrefix1.setEnabled(False)
+            self.comboBoxSuffix1.setEnabled(False)
+            self.comboBoxPrefix2.setEnabled(True)
+            self.comboBoxSuffix2.setEnabled(True)
+
             subj = obj.rdf.subject
             if subj:
-                self.lineEditIRI2.setText(subj)
-                self.groupBox2.setToolTip(f'"{obj.basename}" is a {subj}')
+                self.lineEditIRI1.setText(subj)
+                self.groupBox1.setToolTip(f'"{obj.basename}" is entity <{subj}>')
             else:
-                self.lineEditIRI2.setText('')
-                self.groupBox2.setToolTip(f'no subject found for "{obj.basename}"')
+                self.lineEditIRI1.setText('')
+                self.groupBox1.setToolTip(f'no subject found for "{obj.basename}"')
+
+            subj = obj.rdf.type
+            if subj:
+                self.lineEditIRI1.setText(subj)
+                self.groupBox1.setToolTip(f'"{obj.basename}" is of type <{subj}>')
+            else:
+                self.lineEditIRI1.setText('')
+                self.groupBox1.setToolTip(f'no type found for "{obj.basename}"')
         else:
+            self.comboBoxPrefix1.setEnabled(True)
+            self.comboBoxSuffix1.setEnabled(True)
+            self.comboBoxPrefix2.setEnabled(False)
+            self.comboBoxSuffix2.setEnabled(False)
+
             self.groupBox1.setTitle(f'RDF predicate for attr. name "{attr_name}"')
             self.groupBox2.setTitle(f'RDF object for attr. value "{obj.attrs[attr_name]}"')
             pred = obj.rdf.predicate.get(attr_name, '')
@@ -356,7 +383,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         grp_item.addChild(grp_item)
         for ak, av in grp.attrs.items():
             if not ak.isupper():
-                attr_item = QtWidgets.QTreeWidgetItem(grp_item, [ak])
+                attr_item = QtWidgets.QTreeWidgetItem(grp_item, [f"{ak}={av}"])
                 s, p, o = None, grp.rdf.predicate.get(ak, None), grp.rdf.object.get(ak, None)
                 if any((s, p, o)):
                     font = attr_item.font(0)

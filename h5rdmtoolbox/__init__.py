@@ -187,7 +187,7 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
         If resolve_keys is False and an attribute name in the HDF5 file, which has
         a predicate is different in its name from the predicate, the attribute name is used.
         Example: an attribute "name" is associated with "foaf:lastName", then "name" is used
-        and "name": "https://xmlns.com/foaf/0.1/lastName" is added to the context.
+        and "name": "http://xmlns.com/foaf/0.1/lastName" is added to the context.
     context: Optional[Dict]
         context in form of {prefix: IRI}, e.g. "ssno": "https://matthiasprobst.github.io/ssno#"
         If resolve_keys is True, this is added to the built-in look-up table to be used in the
@@ -238,6 +238,8 @@ def serialize(hdf_filename,
 
 
 def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,
+                      structural: bool = True,
+                      contextual: bool = True,
                       style: Dict = None):
     """Calls `build_pyvis_graph` of kglab library. Requires kglab and pyvis"""
     try:
@@ -245,7 +247,7 @@ def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=Fa
     except ImportError:
         raise ImportError('kglab is required for this function. Install it using: pip install kglab')
     kg = kglab.KnowledgeGraph().load_rdf_text(
-        serialize(hdf_filename, fmt="ttl")
+        serialize(hdf_filename, fmt="ttl", structural=structural, contextual=contextual)
     )
     VIS_STYLE = style or {
         "hdf": {

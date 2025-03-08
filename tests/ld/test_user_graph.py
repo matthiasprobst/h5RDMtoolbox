@@ -60,7 +60,7 @@ class TestUserGraph(unittest.TestCase):
         with h5tbx.File() as h5:
             h5.attrs["mod_time"] = "today"
             h5.frdf["mod_time"].predicate = SCHEMA.dateModified
-            process_file_attribute(h5, "mod_time", h5.attrs["mod_time"], graph, None)
+            process_file_attribute(h5, "mod_time", h5.attrs["mod_time"], graph, None, rdflib.BNode("1234"))
         serialization = graph.serialize(format="turtle")
         exception_serialization = """@prefix schema: <https://schema.org/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
