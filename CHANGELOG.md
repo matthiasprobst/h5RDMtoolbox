@@ -6,7 +6,8 @@ Log of changes in the versions
 
 - hotfix serialization when multiple rdf:type values are set
 - move `jsonld` sub-module from `wrapper` to `ld` module
-
+- hotfix when instantiating File with `fileobj`, which is the case when working with hdf5 through streamlit, for
+  instance
 
 ## v1.7.2
 
