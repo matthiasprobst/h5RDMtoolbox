@@ -38,3 +38,10 @@ class TestVersion(unittest.TestCase):
                 found = True
                 break
         self.assertTrue(found)
+
+    def test_citation_cff(self):
+        citation_cff = __this_dir__ / "../CITATION.cff"
+        import yaml
+        with open(citation_cff, 'r') as f:
+            cff = yaml.safe_load(f)
+        self.assertTrue("todo" not in cff["doi"].lower(), "Please replace 'todo' in CITATION.cff")
