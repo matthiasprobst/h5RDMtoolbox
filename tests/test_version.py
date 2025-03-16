@@ -44,4 +44,4 @@ class TestVersion(unittest.TestCase):
         import yaml
         with open(citation_cff, 'r') as f:
             cff = yaml.safe_load(f)
-        self.assertTrue("todo" not in cff["doi"].lower())
+        self.assertTrue("todo" not in cff["doi"].lower(), "Please replace 'todo' in CITATION.cff")

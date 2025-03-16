@@ -2160,6 +2160,7 @@ class File(h5py.File, Group):
                  mode: str = None,
                  attrs: Dict = None,
                  **kwargs):
+        is_fileobj_init = False
         # path is file object:
         if isinstance(name, ObjectID):
             # filter out standard attributes from kwargs:
@@ -2170,112 +2171,118 @@ class File(h5py.File, Group):
             super(File, self).__init__(name, mode, **kwargs)
             self._hdf_filename = Path(self.filename)
             return
+        elif hasattr(name, 'read') and hasattr(name, 'seek'):
+            super(File, self).__init__(name, mode, **kwargs)
+            self._hdf_filename = Path(self.filename)
+            is_fileobj_init = True
+            super(File, self).__init__(name, mode, **kwargs)
 
-        # name is path or None:
-        if name is None:
-            _tmp_init = True
-            logger.debug("An empty File class is initialized")
-            name = utils.touch_tmp_hdf5_file()
+        if not is_fileobj_init:
+            # name is path or None:
+            if name is None:
+                _tmp_init = True
+                logger.debug("An empty File class is initialized")
+                name = utils.touch_tmp_hdf5_file()
+                if mode is None:
+                    mode = 'r+'
+                else:
+                    mode = mode
+            elif isinstance(name, (str, pathlib.Path)):
+                logger.debug('A filename is given to initialize the File class')
+                fname = pathlib.Path(name)
+                # a filename is given.
+
+                if mode is None:  # mode not given:
+                    # file does exist and mode not given --> read only!
+                    if fname.exists():
+                        mode = 'r'
+                        logger.debug('Mode is set to "r" because file exists and mode was not given.')
+
+                    # file does not exist and mode is not given--> write!
+                    elif not fname.exists():
+                        raise FileNotFoundError(f'File "{fname}" does not exist and mode is not given.')
+
+                elif mode == 'w' and fname.exists():
+                    fname.unlink()
+                    logger.debug('File exists and mode is set to "w". Deleting file first.')
+                # else mode is given, so just continue... may be correct, may be not... let h5py find out
+
             if mode is None:
-                mode = 'r+'
-            else:
-                mode = mode
-        elif isinstance(name, (str, pathlib.Path)):
-            logger.debug('A filename is given to initialize the File class')
-            fname = pathlib.Path(name)
-            # a filename is given.
-
-            if mode is None:  # mode not given:
-                # file does exist and mode not given --> read only!
-                if fname.exists():
-                    mode = 'r'
-                    logger.debug('Mode is set to "r" because file exists and mode was not given.')
-
-                # file does not exist and mode is not given--> write!
-                elif not fname.exists():
-                    raise FileNotFoundError(f'File "{fname}" does not exist and mode is not given.')
-
-            elif mode == 'w' and fname.exists():
-                fname.unlink()
-                logger.debug('File exists and mode is set to "w". Deleting file first.')
-            # else mode is given, so just continue... may be correct, may be not... let h5py find out
-
-        if mode is None:
-            logger.debug('Mode not set. Set it to "r" by default')
-            mode = 'r'
-        elif not isinstance(name, (str, Path)):
-            raise ValueError(
-                f'It seems that no proper file name is passed: type of "{name}" is {type(name)}'
-            )
-        else:
-            if mode == 'r+':
-                if not Path(name).exists():
-                    _tmp_init = True
-                    # mode = 'r+'
-                    # "touch" the file, so it exists
-                    _h5pykwargs = kwargs.copy()
-                    for k in list(kwargs.keys()):
-                        if k not in H5KWARGS:
-                            _h5pykwargs.pop(k, None)
-                    with h5py.File(name, mode='w', **_h5pykwargs) as _h5:
-                        pass  # just touching the file
-                    logger.debug(f'An empty File class is initialized for "{name}".Mode is set to "r+"')
-
-        if attrs is None:
-            attrs = {}
-
-        if mode == 'r':
-            # check for required standard attributes
-            if "__init__" in convention.get_current_convention().methods[self.__class__]:
-                kwargs, skwargs = _pop_standard_attributes(
-                    kwargs, cache_entry=convention.get_current_convention().methods[self.__class__]["__init__"]
+                logger.debug('Mode not set. Set it to "r" by default')
+                mode = 'r'
+            elif not isinstance(name, (str, Path)):
+                raise ValueError(
+                    f'It seems that no proper file name is passed: type of "{name}" is {type(name)}'
                 )
-                logger.debug('The file mode is read only ("r"). Provided standard attributes are ignored: '
-                             f'{skwargs.keys()}')
-            # ignore standard attributes during read-only
-            skwargs = {}
-        else:
-            # note, that in r+ mode, some attributes may already exist which are mandatory!
-            # get existing first:
-            if pathlib.Path(name).exists():
-                with h5py.File(pathlib.Path(name), mode='r') as _h5:
-                    existing_attrs = tuple(_h5.attrs.keys())
             else:
-                existing_attrs = None
-            attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name,
-                                                        existing_attrs=existing_attrs)
+                if mode == 'r+':
+                    if not Path(name).exists():
+                        _tmp_init = True
+                        # mode = 'r+'
+                        # "touch" the file, so it exists
+                        _h5pykwargs = kwargs.copy()
+                        for k in list(kwargs.keys()):
+                            if k not in H5KWARGS:
+                                _h5pykwargs.pop(k, None)
+                        with h5py.File(name, mode='w', **_h5pykwargs) as _h5:
+                            pass  # just touching the file
+                        logger.debug(f'An empty File class is initialized for "{name}".Mode is set to "r+"')
 
-        if mode == 'r' and len(skwargs) > 0:
-            for k, v in skwargs.items():
-                if v is not None:
-                    raise ValueError(f'Cannot set attribute {k} in read mode')
+            if attrs is None:
+                attrs = {}
 
-        # if not isinstance(name, ObjectID):
-        #     self._hdf_filename = Path(name)
-        logger.debug(f'Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}')
-        try:
-            super().__init__(name=name,
-                             mode=mode,
-                             **kwargs)
-        except OSError as e:
-            logger.error(f"Unable to open file {name}. Error message: {e}")
-            from ..utils import DownloadFileManager
-            DownloadFileManager().remove_corrupted_file(name)
+            if mode == 'r':
+                # check for required standard attributes
+                if "__init__" in convention.get_current_convention().methods[self.__class__]:
+                    kwargs, skwargs = _pop_standard_attributes(
+                        kwargs, cache_entry=convention.get_current_convention().methods[self.__class__]["__init__"]
+                    )
+                    logger.debug('The file mode is read only ("r"). Provided standard attributes are ignored: '
+                                 f'{skwargs.keys()}')
+                # ignore standard attributes during read-only
+                skwargs = {}
+            else:
+                # note, that in r+ mode, some attributes may already exist which are mandatory!
+                # get existing first:
+                if pathlib.Path(name).exists():
+                    with h5py.File(pathlib.Path(name), mode='r') as _h5:
+                        existing_attrs = tuple(_h5.attrs.keys())
+                else:
+                    existing_attrs = None
+                attrs, skwargs, kwargs = process_attributes(self.__class__, '__init__', attrs, kwargs, name,
+                                                            existing_attrs=existing_attrs)
 
-            raise e
-        self._hdf_filename = Path(self.filename)
+            if mode == 'r' and len(skwargs) > 0:
+                for k, v in skwargs.items():
+                    if v is not None:
+                        raise ValueError(f'Cannot set attribute {k} in read mode')
 
-        if self.mode != 'r':
-            # update file toolbox version, wrapper version
-            if get_config('auto_create_h5tbx_version'):
-                if 'h5rdmtoolbox' not in self and get_config('auto_create_h5tbx_version'):
-                    utils.create_h5tbx_version_grp(self)
-                    # logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
-                    # _tbx_grp = self.create_group('h5rdmtoolbox')
-                    # _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
-                    # _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
-            for k, v in attrs.items():
-                self.attrs[k] = v
+            # if not isinstance(name, ObjectID):
+            #     self._hdf_filename = Path(name)
+            logger.debug(f'Initializing h5py.File with name={name}, mode={mode} and kwargs={kwargs}')
+            try:
+                super().__init__(name=name,
+                                 mode=mode,
+                                 **kwargs)
+            except OSError as e:
+                logger.error(f"Unable to open file {name}. Error message: {e}")
+                from ..utils import DownloadFileManager
+                DownloadFileManager().remove_corrupted_file(name)
+
+                raise e
+            self._hdf_filename = Path(self.filename)
+
+            if self.mode != 'r':
+                # update file toolbox version, wrapper version
+                if get_config('auto_create_h5tbx_version'):
+                    if 'h5rdmtoolbox' not in self and get_config('auto_create_h5tbx_version'):
+                        utils.create_h5tbx_version_grp(self)
+                        # logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
+                        # _tbx_grp = self.create_group('h5rdmtoolbox')
+                        # _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
+                        # _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
+                for k, v in attrs.items():
+                    self.attrs[k] = v
 
     def __setattr__(self, key, value):
         props = self.convention.properties.get(self.__class__, None)
