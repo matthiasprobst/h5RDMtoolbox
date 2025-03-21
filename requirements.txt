@@ -4,7 +4,7 @@ h5py>3.7.0
 matplotlib>=3.5.2
 IPython>=8.4.0
 pyyaml>6.0.0
-xarray>=2022.3.0
+xarray>=2022.3.0, <= 2025.3.0
 pint==0.21.1
 pint_xarray>=0.2.1
 regex>=2020.7.9
