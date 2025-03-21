@@ -17,6 +17,7 @@ RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
 RDF_FILE_PREDICATE_ATTR_NAME = 'RDF_FILE_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = 'RDF_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
+RDF_FILE_SUBJECT_ATTR_NAME = 'RDF_FILE_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
 RDF_FILE_TYPE_ATTR_NAME = 'RDF_FILE_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 RDF_TYPE_ATTR_NAME = 'RDF_TYPE'  # equivalent to @type in JSON-LD, thus can be multiple values.
 
@@ -690,6 +691,36 @@ class FileRDFManager:
                 RDF_FILE_PREDICATE_ATTR_NAME: self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, {}).get(item, None),
                 RDF_FILE_OBJECT_ATTR_NAME: self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, {}).get(item, None)},
             self._attr, item)
+
+    @property
+    def subject(self) -> Optional[str]:
+        """Return the RDF subject (a URL), which is equivalent to the @ID in JSON-LD syntax"""
+        if RDF_FILE_SUBJECT_ATTR_NAME not in self._attr:
+            return
+        return self._attr[RDF_FILE_SUBJECT_ATTR_NAME]
+
+    @subject.setter
+    def subject(self, identifier: Union[str, HttpUrl]):
+        """Set the RDF subject, which is the @ID in JSON-LD syntax.
+        Hence, a valdi URL is required. This is validated by pydantic!
+
+        Raises
+        ------
+        TypeError
+            If the subject is not a string or URL
+        RDFError
+            If the URL is invalid
+        """
+        if not isinstance(identifier, str):
+            raise TypeError(f'Expecting a string or URL. Got {type(identifier)}. Note, that a subject '
+                            'can only be one value. If you meant to set one or multiple RDF types, '
+                            'use .type instead.')
+        self._attr[RDF_FILE_SUBJECT_ATTR_NAME] = validate_url(identifier)
+
+    @subject.deleter
+    def subject(self):
+        """Delete the subject (the @ID in JSON-LD syntax)"""
+        del self._attr[RDF_FILE_SUBJECT_ATTR_NAME]
 
     @property
     def predicate(self) -> File_RDF_Predicate:
