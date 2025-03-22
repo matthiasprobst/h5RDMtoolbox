@@ -1,6 +1,10 @@
 import xarray as xr
 from typing import Dict
-from xarray.core.rolling import DataArrayRolling
+try:
+    from xarray.core.rolling import DataArrayRolling
+except ImportError:
+    # for xarray >= 2025.3.0:
+    from xarray.computation.rolling import DataArrayRolling
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.protected_attributes import PROVENANCE
