@@ -415,11 +415,20 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
                 for k, v in pred_dict.items():
                     if v == hasUnitIRI:
                         units = h5obj.attrs[k].rsplit('/', 1)[-1]
+        if h5obj.dtype.char != 'O':
+            data_values = h5obj.values[()]
+        else:
+            data_values = ''
+        dtype = h5obj.dtype
+        if units:
+            units_str = f"[{units}]"
+        else:
+            units_str = ""
         _html = f"""\n
                 <ul id="{_id1}" class="h5tb-var-list">
                 <input id="{_id2}" class="h5tb-varname-in" type="checkbox" {self.checkbox_state}>
                 <label class='h5tb-varname' for="{_id2}">{name}</label>
-                <span class="h5tb-dims">{h5obj.values[()]} [{units}] ({h5obj.dtype})</span>"""
+                <span class="h5tb-dims">{data_values} {units_str} [{dtype}]</span>"""
         return _html
 
     def __NDdataset__(self, name, h5obj: h5py.Dataset):
@@ -476,8 +485,6 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __dataset__(self, name, h5obj) -> str:
         """generate html representation of a dataset"""
-
-        # iri = h5obj.rdf.predicate.get('SELF', None)
         self_predicate = h5obj.rdf.predicate.get('SELF', None)
         self_type = h5obj.rdf.type
         self_ID = h5obj.rdf.subject

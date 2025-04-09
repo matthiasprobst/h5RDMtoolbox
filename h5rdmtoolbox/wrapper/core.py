@@ -1950,7 +1950,9 @@ class Dataset(h5py.Dataset):
                                 coords=coords,
                                 attrs=attrs)
         # check if arr is string
-        if arr.dtype.kind == 'S':
+        if self.dtype == 'object':
+            pass
+        elif arr.dtype.kind == 'S':
             # decode string array
             try:
                 _arr = arr.astype(str)

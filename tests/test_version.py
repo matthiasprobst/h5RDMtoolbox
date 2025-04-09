@@ -45,3 +45,14 @@ class TestVersion(unittest.TestCase):
         with open(citation_cff, 'r') as f:
             cff = yaml.safe_load(f)
         self.assertTrue("todo" not in cff["doi"].lower(), "Please replace 'todo' in CITATION.cff")
+
+    def test_citation_cff_version(self):
+        """checking if the version in CITATION.cff is the same as the one of the h5rdmtoolbox"""
+        this_version = 'x.x.x'
+        setupcfg_filename = __this_dir__ / '../CITATION.cff'
+        with open(setupcfg_filename, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if 'version: ' in line:
+                    this_version = line.split(':')[-1].strip()
+        self.assertEqual(__version__, this_version)
