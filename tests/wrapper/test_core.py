@@ -1,11 +1,13 @@
 import datetime
 import json
-import numpy as np
-import pandas as pd
 import pathlib
 import unittest
-import xarray as xr
 from datetime import datetime, timedelta
+
+import h5py
+import numpy as np
+import pandas as pd
+import xarray as xr
 from dateutil.parser import parse
 from numpy import linspace as ls
 
@@ -955,4 +957,24 @@ class TestCore(unittest.TestCase):
             da = ds[()]
             self.assertIsInstance(da, xr.DataArray)
             self.assertIsInstance(da.attrs['link to grp'], str)
-            print(da)
+
+    def test_object_data(self):
+        # Sample variable-length strings
+        data = np.array(["hello", "world", "hdf5", "object dtype"], dtype=object)
+
+        # Create HDF5 file and dataset
+        with h5tbx.File("example_strings.h5", "w") as h5:
+            dt = h5py.string_dtype(encoding='utf-8')  # variable-length UTF-8 strings
+            dset = h5.create_dataset("varlen_strings", data=data, dtype=dt)
+            varlen_data = dset[()]
+            d = h5.create_dataset("data", [1,2,3])
+        self.assertEqual(varlen_data[0], b"hello")
+        self.assertEqual(varlen_data[1], b"world")
+        self.assertEqual(varlen_data[2], b"hdf5")
+        self.assertEqual(varlen_data[3], b"object dtype")
+
+        ds = h5tbx.database.find_one(h5.hdf_filename, flt={"$basename": "varlen_strings"})
+        self.assertEqual(ds[0], b"hello")
+        self.assertEqual(ds[1], b"world")
+        self.assertEqual(ds[2], b"hdf5")
+        self.assertEqual(ds[3], b"object dtype")

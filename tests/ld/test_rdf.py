@@ -170,6 +170,24 @@ class TestRDF(unittest.TestCase):
             h5.frdf["contacts"].object = ["https://example.org/john", "https://example.org/jane"]
             self.assertEqual(h5.frdf["contacts"].object, ["https://example.org/john", "https://example.org/jane"])
 
+    def test_assign_id_to_hdf_file(self):
+        with h5tbx.File() as h5:
+            h5.frdf.subject = "https://example.org/123123"
+            h5.frdf.type = "https://example.org/HDFFile"
+            self.assertEqual('\n<https://example.org/123123> a <https://example.org/HDFFile> .\n\n',
+                             h5.serialize(fmt="ttl", structural=False))
+
+            expected_ttl = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/123123> a hdf:File,
+        <https://example.org/HDFFile> ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:name "/"^^xsd:string ] .
+
+"""
+            self.assertEqual(h5.serialize(fmt="ttl", structural=True), expected_ttl)
+
     def test_multiple_objects_2(self):
         person1 = ontolutils.Thing(label="John Doe")
         person2 = ontolutils.Thing(label="Jane Wane")
@@ -179,7 +197,6 @@ class TestRDF(unittest.TestCase):
             h5.frdf["contacts"].object = person1
             h5.frdf["contacts"].object = person2
             print(h5.serialize(fmt="ttl", structural=False))
-
 
     def test_multiple_types_or_objects(self):
         with h5tbx.File() as h5:

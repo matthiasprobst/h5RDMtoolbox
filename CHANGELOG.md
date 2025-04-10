@@ -2,6 +2,12 @@
 
 Log of changes in the versions
 
+## v1.7.4
+
+- limit xarray version to <=2025.3.0
+- bugfix reading/displaying binary data
+- file can be associates with an ID (h5.frdf.subject = <ID>)
+
 ## v1.7.3
 
 - hotfix serialization when multiple rdf:type values are set

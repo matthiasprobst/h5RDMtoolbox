@@ -17,10 +17,10 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
     rdf_type = RDFManager(group.attrs).type
     rdf_subject = RDFManager(group.attrs).subject
 
-    if rdf_type is None:
-        if rdf_subject:
-            graph.add((group_uri, rdflib.DCTERMS.relation, rdflib.URIRef(rdf_subject)))
-    else:
+    # if rdf_type is None:
+    if rdf_subject:
+        graph.add((group_uri, rdflib.DCTERMS.relation, rdflib.URIRef(rdf_subject)))
+    if rdf_type is not None:
         if rdf_subject:
             if isinstance(rdf_type, (list, np.ndarray)):
                 for t in rdf_type:
