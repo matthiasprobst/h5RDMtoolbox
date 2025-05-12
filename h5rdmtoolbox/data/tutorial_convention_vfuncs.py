@@ -10,16 +10,21 @@ from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg
 from h5rdmtoolbox.errors import StandardAttributeError
+import types
 
 _snt = None
 
 inverse_qudt_lookup = {v: k for k, v in qudt_lookup.items()}
 
-
 def __validate_standard_name_table(value, handler, info) -> StandardNameTable:
     global _snt
+
+    def __snt_h5attr_repr__(self):
+        return str(HttpUrl(value))
+
     _snt_filename = dcat.Distribution(downloadURL=HttpUrl(value)).download()
     _snt = parse_table(source=_snt_filename)
+    _snt.__h5attr_repr__ = types.MethodType(__snt_h5attr_repr__, _snt)
     return _snt
 
 
@@ -43,6 +48,10 @@ def equal_base_units(u1: Union[str, pint.Unit, pint.Quantity],
 
 def __validate_standard_name(value, handler, info) -> str:
     """Verify that version is a valid as defined in https://semver.org/"""
+    def __sn_h5attr_repr__(self):
+        if isinstance(value, str):
+            return str(value)
+
     if info.context:
         parent = info.context.get('parent', None)
     else:
@@ -62,8 +71,8 @@ def __validate_standard_name(value, handler, info) -> str:
     if not equal_base_units(sn.unit, units):
         raise StandardAttributeError(f'Standard name {value} has incompatible units {units}. '
                                      f'Expected units: {sn.unit} but got {units}.')
-
-    return value
+    sn.__h5attr_repr__ =types.MethodType(__sn_h5attr_repr__, _snt)
+    return sn
 
 
 standardNameTableType = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]

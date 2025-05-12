@@ -309,8 +309,8 @@ def get_user_define_validator_info(file_path, validate=True):
         for name, arguments in function_info:
             if name.startswith("validate_"):
                 function_info_dict[name] = arguments
-            else:
-                warnings.warn(f'Skipping function "{name}" in {file_path} because it does not start with "validate_"')
+            # else:
+            #     warnings.warn(f'Skipping function "{name}" in {file_path} because it does not start with "validate_"')
     if validate:
         validate_specialtype_functions(function_info_dict)
     return function_info_dict

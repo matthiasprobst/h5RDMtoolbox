@@ -1,0 +1,96 @@
+__name__: h5rdmtoolbox-tutorial-convention
+__institution__: https://orcid.org/members/001G000001e5aUTIAY
+__contact__: https://orcid.org/0000-0001-8729-0482
+__decoders__: scale_and_offset
+
+$datatypes:
+  - experimental
+  - numerical
+  - analytical
+
+scale:
+  target_method: create_dataset
+  validator: $quantity
+  description: Scale factor for the dataset values.
+  default_value: $NONE
+
+offset:
+  target_method: create_dataset
+  validator: $offset
+  description: The offset of the dataset.
+  default_value: $NONE
+
+data_type:
+  description: Type of data in file. Can be numerical, analytical or experimental.
+  target_method: __init__
+  validator: $datatypes
+  default_value: $EMPTY
+
+units:
+  target_method: create_dataset
+  validator: $units
+  description: The physical unit of the dataset. If dimensionless, the unit is ''.
+
+standard_name:
+  target_method: create_dataset
+  validator: $standard_name
+  requirements: units
+  description: Standard name of the dataset. If not set, the long_name attribute must be given.
+  alternative_standard_attribute: long_name
+
+standard_name_table:
+  target_method: __init__
+  validator: $standard_name_table
+  default_value: https://zenodo.org/record/8276716
+  requirements:
+    - standard_name
+    - units
+  description: The standard name table of the convention.
+
+long_name:
+  target_method: create_dataset
+  validator: $regex(^[a-zA-Z].*$)
+  alternative_standard_attribute: standard_name
+  description: An comprehensive description of the dataset. If not set, the standard_name attribute must be given.
+
+comment-file:
+  target_method: __init__
+  validator: $regex(^[A-Z].*[a-zA-Z.]$)
+  default_value: $NONE
+  description: Comment describes the file content in more detail.
+
+comment-group:
+  target_method: create_group
+  validator: $regex(^[A-Z].*[a-zA-Z.]$)
+  default_value: $NONE
+  description: Comment describes the group content in more detail.
+
+comment-dataset:
+  target_method: create_dataset
+  validator: $regex(^[A-Z].*[a-zA-Z.]$)
+  default_value: $NONE
+  description: Comment describes the dataset in more detail.
+
+contact:
+  validator: $orcid
+  description: Contact or responsible person for the full file. Contact is represented by an ORCID.
+  default_value: $EMPTY
+  target_method: __init__
+
+references-file:
+  validator: $url
+  target_method: __init__
+  default_value: $NONE
+  description: Web resources serving as references for the full file.
+
+references-group:
+  validator: $url
+  target_method: create_group
+  default_value: $NONE
+  description: Web resources serving as references for the group.
+
+references-dataset:
+  validator: $url
+  target_method: create_dataset
+  default_value: $NONE
+  description: Web resources serving as references for the dataset.
