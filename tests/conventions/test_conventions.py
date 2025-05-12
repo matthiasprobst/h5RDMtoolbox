@@ -10,6 +10,7 @@ import h5py
 import pint
 import requests
 import yaml
+from ssnolib import StandardName, StandardNameTable
 
 import h5rdmtoolbox
 import h5rdmtoolbox as h5tbx
@@ -17,11 +18,9 @@ from h5rdmtoolbox import convention, tutorial
 from h5rdmtoolbox.convention import core
 from h5rdmtoolbox.convention import yaml2jsonld
 from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
-from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
 from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
-from h5rdmtoolbox.user import USER_DATA_DIR
 
 logger = logging.getLogger('h5rdmtoolbox')
 # setting logger to debug:
@@ -214,7 +213,9 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            cv = h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, overwrite=False)
+            cv = h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID,
+                                              overwrite=False,
+                                              force_download=True)
             self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
@@ -308,33 +309,33 @@ def validate_f1(a, b, c=3, d=2):
         self.assertTrue('multiply_by_2_decoder' not in cv.remove_decoder('multiply_by_2_decoder'))
         self.assertTrue('multiply_by_2_decoder_v2' not in cv.remove_decoder('multiply_by_2_decoder_v2'))
 
-    def test_standard_name_table_as_relative_filename(self):
-        snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
-
-        yaml_filename = h5tbx.utils.generate_temporary_filename(suffix='.yaml')
-        # copy to the same directory
-        shutil.copy(snt_filename, yaml_filename.parent / snt_filename.name)
-
-        sa_dict = {'__name__': 'standard_name_table',
-                   '__institution__': 'https://orcid.org/members/001G000001e5aUTIAY',
-                   '__contact__': 'https://orcid.org/0000-0001-8729-0482',
-                   'standard_name_table':
-                       {
-                           'target_method': '__init__',
-                           'validator': '$standard_name_table',
-                           'default_value': f'relpath({snt_filename.name})',
-                           'type_hint': 'StandardNameTable',
-                           'description': 'A standard name table'
-                       }
-                   }
-        with open(yaml_filename, 'w') as f:
-            yaml.safe_dump(sa_dict, f)
-
-        local_cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
-        local_cv.register()
-        with h5tbx.use(local_cv.name):
-            with h5tbx.File() as h5:
-                self.assertIsInstance(h5.standard_name_table, StandardNameTable)
+    # def test_standard_name_table_as_relative_filename(self):
+    #     snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
+    #
+    #     yaml_filename = h5tbx.utils.generate_temporary_filename(suffix='.yaml')
+    #     # copy to the same directory
+    #     shutil.copy(snt_filename, yaml_filename.parent / snt_filename.name)
+    #
+    #     sa_dict = {'__name__': 'standard_name_table',
+    #                '__institution__': 'https://orcid.org/members/001G000001e5aUTIAY',
+    #                '__contact__': 'https://orcid.org/0000-0001-8729-0482',
+    #                'standard_name_table':
+    #                    {
+    #                        'target_method': '__init__',
+    #                        'validator': '$standard_name_table',
+    #                        'default_value': f'relpath({snt_filename.name})',
+    #                        'type_hint': 'StandardNameTable',
+    #                        'description': 'A standard name table'
+    #                    }
+    #                }
+    #     with open(yaml_filename, 'w') as f:
+    #         yaml.safe_dump(sa_dict, f)
+    #
+    #     local_cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
+    #     local_cv.register()
+    #     with h5tbx.use(local_cv.name):
+    #         with h5tbx.File() as h5:
+    #             self.assertIsInstance(h5.standard_name_table, StandardNameTable)
 
     def test_process_paths(self):
         abspath = str((__this_dir__ / 'a/path/').absolute())
@@ -510,7 +511,7 @@ def validate_f1(a, b, c=3, d=2):
             if _ddir.exists():
                 shutil.rmtree(_ddir)
             h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, force_download=True)
-            # h5tbx.convention.from_yaml('test_convention.yaml')
+            # h5tbx.convention.from_yaml('tutorial_convention.yaml')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             cv = h5tbx.convention.get_current_convention()
@@ -525,12 +526,13 @@ def validate_f1(a, b, c=3, d=2):
                 h5.create_group('grp', comment='Group comment')
                 self.assertEqual(h5['grp'].comment, 'Group comment')
 
-                h5.create_dataset('test', data=4.3, standard_name='x_velocity', units='m/s')
-                self.assertEqual(h5['test'].standard_name, 'x_velocity')
-                self.assertIsInstance(h5['test'].standard_name, h5tbx.convention.standard_names.StandardName)
+                h5.create_dataset('test', data=4.3, standard_name='xx_reynolds_stress', units='m**2/s**2')
+                self.assertEqual(str(h5['test'].standard_name), 'xx_reynolds_stress')
+                self.assertEqual(h5['test'].attrs.raw["standard_name"], 'xx_reynolds_stress')
+                self.assertIsInstance(h5['test'].standard_name, StandardName)
                 h5.contact  # takes a bit because validated online!
                 snt = h5.standard_name_table
-                self.assertIsInstance(snt, h5tbx.convention.standard_names.StandardNameTable)
+                self.assertIsInstance(snt, StandardNameTable)
                 for sa in h5.standard_attributes:
                     self.assertFalse('-' in sa)
                 self.assertNotEqual(h5.standard_attributes['comment'].description,

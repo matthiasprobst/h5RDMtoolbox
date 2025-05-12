@@ -60,7 +60,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     # <convention_name>_vfuncs.py (vfuncs stands for "validator functions").
     # If such a file exists, it is copied to the convention directory.
     # If not, an empty file is created.
-    user_validator_functions = yaml_filename.parent / f'{convention_name}_vfuncs.py'
+    user_validator_functions = yaml_filename.parent / f'{yaml_filename.stem}_vfuncs.py'
     if user_validator_functions.exists():
         logger.debug('A validator function file for the convention exists: "%s". Copying it to "%s"',
                      user_validator_functions, py_filename)
@@ -309,8 +309,8 @@ def get_user_define_validator_info(file_path, validate=True):
         for name, arguments in function_info:
             if name.startswith("validate_"):
                 function_info_dict[name] = arguments
-            else:
-                warnings.warn(f'Skipping function "{name}" in {file_path} because it does not start with "validate_"')
+            # else:
+            #     warnings.warn(f'Skipping function "{name}" in {file_path} because it does not start with "validate_"')
     if validate:
         validate_specialtype_functions(function_info_dict)
     return function_info_dict

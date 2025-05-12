@@ -756,17 +756,23 @@ def from_zenodo(doi_or_recid: str,
         record = zenodo.ZenodoRecord(rec_id)
 
         filenames = list(record.files.keys())
+
         if name is None:
-            matches = [file for file in filenames if pathlib.Path(file).suffix == '.yaml']
+            yaml_matches = [file for file in filenames if pathlib.Path(file).suffix == '.yaml']
+            vfuns_matches = [file for file in filenames if file.endswith('vfuncs.py')]
         else:
-            matches = [file for file in filenames if file == name]
-            if len(matches) == 0:
+            yaml_matches = [file for file in filenames if file == name]
+            vfuns_matches = [file for file in filenames if file == f'{name}_vfuncs.py']
+            if len(yaml_matches) == 0:
                 raise ValueError(f'No file with name "{name}" found in record {doi_or_recid}')
 
-        _filename = record.download_file(matches[0], target_folder=filename.parent)
-        shutil.move(_filename, filename)
+        found_filenames = [f for f in yaml_matches]
+        found_filenames.extend(vfuns_matches)
+        for match in found_filenames:
+            _filename = record.download_file(match, target_folder=pathlib.Path(match).parent)
+            shutil.move(_filename, match)
 
-    return from_yaml(filename, overwrite=overwrite)
+    return from_yaml(yaml_matches[0], overwrite=overwrite)
 
 
 def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],

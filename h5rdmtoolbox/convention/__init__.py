@@ -13,7 +13,6 @@ Helpful functions:
 
 import pathlib
 
-from . import standard_names
 from .core import Convention, from_yaml, from_repo, get_current_convention, from_zenodo, get_registered_conventions, \
     yaml2jsonld
 from .standard_attributes import StandardAttribute
