@@ -60,7 +60,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
     # <convention_name>_vfuncs.py (vfuncs stands for "validator functions").
     # If such a file exists, it is copied to the convention directory.
     # If not, an empty file is created.
-    user_validator_functions = yaml_filename.parent / f'{convention_name}_vfuncs.py'
+    user_validator_functions = yaml_filename.parent / f'{yaml_filename.stem}_vfuncs.py'
     if user_validator_functions.exists():
         logger.debug('A validator function file for the convention exists: "%s". Copying it to "%s"',
                      user_validator_functions, py_filename)

@@ -17,7 +17,7 @@ from h5rdmtoolbox.wrapper.core import File
 __this_dir__ = pathlib.Path(__file__).parent
 testdir = __this_dir__ / '../tests/data'
 
-TutorialConventionZenodoRecordID = 12541214
+TutorialConventionZenodoRecordID = 15389242
 TutorialSNTZenodoRecordID = 10428795
 
 

@@ -1,0 +1,265 @@
+name: fan_standard_name_shorttable
+institution: Karlsruhe Institute of Technology
+contact: https://orcid.org/0000-0001-8729-0482
+valid_characters:
+- ^a-zA-Z0-9_
+pattern: ^[0-9 ].*
+last_modified: '2023-07-18 09:05:38.112885+00:00'
+version: v4.1.0-alpha
+standard_names:
+  absolute_pressure:
+    description: Pressure is force per unit area. Absolute air pressure is pressure
+      deviation to a total vacuum.
+    units: Pa
+  ambient_static_pressure:
+    description: Static air pressure is the amount of pressure exerted by air that
+      is not moving. Ambient static air pressure is the static air pressure of the
+      surrounding air.
+    units: Pa
+  ambient_temperature:
+    description: Air temperature is the bulk temperature of the air, not the surface
+      (skin) temperature. Ambient air temperature is the temperature of the surrounding
+      air.
+    units: K
+  auxiliary_fan_rotational_speed:
+    description: Number of revolutions of an auxiliary fan.
+    units: 1/s
+  blade_inlet_angle:
+    description: Angle of blade at inlet.
+    units: rad
+  blade_inlet_diameter:
+    description: The inner diameter of the test fan (D1).
+    units: m
+  blade_number:
+    description: The blade number is the number of blades of the test fan.
+    units: ''
+  blade_outlet_angle:
+    description: Angle of blade at inlet.
+    units: rad
+  blade_outlet_diameter:
+    description: The outer diameter of the test fan (D2).
+    units: m
+  coordinate:
+    description: The spatial coordinate.
+    units: m
+    vector: true
+  density:
+    description: Air density is defined as the mass of air divided by its volume.
+    units: kg/m**3
+  difference_of_total_pressure_to_static_pressure_between_across_fan:
+    alias: difference_of_total_pressure_to_static_pressure_between_fan_outlet_and_fan_inlet
+    description: The difference of static pressure at fan outlet w.r.t. the total
+      pressure upstream of the fan. The total pressure generally is not known at the
+      fan inlet pipe but further upstream, e.g. in a settling chamber. The dataset
+      must provide detailed information, e.g. referencing to the respective pressure
+      measurement device containing the exact location in the setup.
+    units: Pa
+  difference_of_wall_static_pressure_across_fan:
+    description: Static air pressure is the amount of pressure exerted by air that
+      is not moving. Difference of wall static air pressure across a fan is the difference
+      between the static air pressure downstream (at fan_outlet) of the fan and the
+      total air pressure upstream of the fan at the wall (at fan_inlet).
+    units: Pa
+  difference_of_wall_static_pressure_across_orifice:
+    description: Differnece of static air pressure across orifice to compute volume
+      flow rate according to DIN EN ISO 5167.
+    units: Pa
+  dynamic_pressure:
+    description: Dynamic air pressure is a measure for kinetic energy per unit volume
+      of moving air.
+    units: Pa
+  dynamic_viscosity:
+    description: Dynamic air viscosity indicates the resistance  of air towards deformation
+      under shear stress. (https://doi.org/10.1016/B978-0-08-096949-7.00020-0)
+    units: Pa*s
+  fan_efficiency:
+    description: Total fan efficiency as defined in (CAROLUS, Thomas. Ventilatoren-Aerodynamischer
+      Entwurf, Schallvorhersage. Konstruktion, 2013, 2. Jg., p.5, eq.1.16).
+    units: ''
+  fan_flow_coefficient:
+    description: Air flow coefficient is a dimensionless number as defined in (CAROLUS,
+      Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion,
+      2013, 2. Jg., p.2, eq.1.3). The addition "of_fan" indicates that this coefficient
+      applies to the deployed fan.
+    units: ''
+  fan_inlet_area:
+    description: The fan cross-sectional area at the location "fan_inlet" for fans
+      with a casing. The position of the referred cross-sectional area is in the pipe
+      upstream of the fan. The area is generally taken to compute the dynamic pressure
+      at the inlet of the fan based on the volume flow rate.
+    units: m**2
+  fan_outlet_area:
+    description: The fan cross-sectional area at the location "fan_outlet" for fans
+      with a casing. The position of the referred cross-sectional area is in the pipe
+      downstream of the fan. The area is generally taken to compute the dynamic pressure
+      at the outlet of the fan based on the volume flow rate.
+    units: m**2
+  fan_power_coefficient:
+    description: Power coefficient is a dimensionless number as defined in (CAROLUS,
+      Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion,
+      2013, 2. Jg., p.2, eq.1.5). The addition "of_fan" indicates that this coefficient
+      applies for the deployed fan.
+    units: ''
+  fan_pressure_coefficient:
+    description: Total pressure coefficient is a dimensionless number as defined in
+      (CAROLUS, Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion,
+      2013, 2. Jg., p.2, eq.1.4).  The addition "of_fan" indicates that this coefficient
+      applies for the deployed fan.
+    units: ''
+  fan_rotational_speed:
+    description: Number of revolutions of the test fan.
+    units: 1/s
+  fan_shaft_power:
+    description: Power of fan drive shaft.
+    units: W
+  fan_specific_speed:
+    description: Specific speed of the fan as defined in (CAROLUS, Thomas. Ventilatoren-Aerodynamischer
+      Entwurf, Schallvorhersage. Konstruktion, 2013, 2. Jg., p.2, eq.1.6).
+    units: ''
+  fan_torque:
+    description: The torque acting on the impeller of the fan.
+    units: Nm
+  fan_volume_flow_rate:
+    description: Air volume flow rate is the volume of air that passes a cross section
+      per unit time. The volume flow rate of the fan is the volume flow entering and
+      leaving the fan. Due to gaps between the impeller and the housing, the volume
+      flow rate is lower than the volume flow rate through the impeller (see impeller_volume_flow_rate).
+    units: m**3/s
+  impeller_diameter:
+    description: The diameter of the impeller of the test fan, also D3. For some fans
+      D2 is equal to D3.
+    units: m
+  impeller_inlet_width:
+    description: The width of the impeller inlet.
+    units: m
+  impeller_outlet_width:
+    description: The width of the impeller outlet.
+    units: m
+  impeller_volume_flow_rate:
+    description: Air volume flow rate is the volume of air that passes a cross section
+      per unit time. The volume flow rate of the impeller is the volume flow entering
+      and leaving the impeller. Due to gaps between the impeller and the housing,
+      this volume flow rate is higher than the volume flow rate through the fan (see
+      fan_volume_flow_rate).
+    units: m**3/s
+  impeller_weight:
+    description: Weight of the impeller.
+    units: kg
+  inner_diameter_of_orifice:
+    description: Inner diameter of an orifice.
+    units: m
+  kinematic_viscosity:
+    description: Dynamic air viscosity indicates the resistance  of air towards deformation
+      under shear stress. Kinematic viscosity. Dynamic air viscosity divided by air
+      denisity equals kinematic air viscosity. (https://doi.org/10.1016/B978-0-12-410461-7.00007-9)
+    units: m**2/s
+  mass_flow_rate:
+    description: Air mass flow rate is the mass of air that passes a certain cross
+      sectiont per unit time.
+    units: kg/s
+  outer_diameter_of_orifice:
+    description: Outer diameter of an orifice.
+    units: m
+  pulse_delay:
+    description: Time between two laser pulses.
+    units: s
+  relative_humidity:
+    description: Relative humidity is a measure of the water vapor content of air.
+    units: ''
+  static_pressure:
+    description: Static air pressure is the amount of pressure exerted by air that
+      is not moving.
+    units: Pa
+  temperature:
+    description: Air temperature is the bulk temperature of the air, not the surface
+      (skin) temperature. (CF Conventions)
+    units: degC
+  time:
+    description: Recording time since start of experiment.
+    units: s
+  total_pressure:
+    description: The sum of dynamic and static air pressure.
+    units: Pa
+  turbulent_kinetic_energy:
+    description: The kinetic energy per unit mass of a fluid.
+    units: m**2/s**2
+  velocity:
+    description: Velocity.
+    units: m/s
+    vector: true
+  vorticity:
+    description: Vorticity.
+    units: 1/s
+    vector: true
+  wall_static_pressure:
+    description: Static air pressure is the amount of pressure exerted by air that
+      is not moving. Wall static air pressure is the static air pressure at the wall.
+    units: Pa
+  xx_reynolds_stress:
+    description: Reynolds stress is a tensor quantity. "xx" indicates that the variations
+      of x-velocity is used.
+    units: m**2/s**2
+  yx_reynolds_stress:
+    description: Reynolds stress is a tensor quantity. "yx" indicates that the variations
+      of x- and y-velocity are used.
+    units: m**2/s**2
+  yy_reynolds_stress:
+    description: Reynolds stress is a tensor quantity. "yy" indicates that the variations
+      of y-velocity is used.
+    units: m**2/s**2
+  yz_reynolds_stress:
+    description: Reynolds stress is a tensor quantity. "yz" indicates that the variations
+      of y- and z-velocity are used.
+    units: m**2/s**2
+  zx_reynolds_stress:
+    description: Reynolds stress is a tensor quantity. "zx" indicates that the variations
+      of z- and x-velocity are used.
+    units: m**2/s**2
+  zy_reynolds_stress:
+    description: Reynolds stress is a tensor quantity. "zy" indicates that the variations
+      of z- and y-velocity are used. in y-axis direction.
+    units: m**2/s**2
+  zz_reynolds_stress:
+    description: Reynolds stress is a tensor quantity. "zy" indicates that the variations
+      of z-velocity is used.
+    units: m**2/s**2
+affixes:
+  component:
+    description: Components are prefixes to the standard_name, e.g. x_velocity
+    x: X indicates the x-axis component of the vector.
+    y: Y indicates the y-axis component of the vector.
+    z: Z indicates the z-axis component of the vector.
+  device:
+    description: Devices are suffixes to the standard_name, e.g. pressure_difference_across_fan
+    fan: The test fan.
+    orifice: The orifice used to measure the volume flow rate.
+  location:
+    description: Locations are suffixes to the standard_name, e.g. static_pressure_at_fan_inlet
+    fan_inlet: Inlet of the test fan with casing.
+    fan_outlet: Inlet of the test fan with casing.
+    settling_chamber: The settling chamber is located in front of the inlet pipe of
+      the fan.
+  reference_frame:
+    description: Reference frames are suffixes to the standard_name, e.g. velocity_in_rotating_frame
+    rotating_frame:
+      orientation:
+        x: x
+        y: y
+        z: z
+      origin:
+      - 0
+      - 0
+      - 0
+      principle_axis: z
+      type: rotating
+    stationary_frame:
+      orientation:
+        x: x
+        y: y
+        z: z
+      origin:
+      - 0
+      - 0
+      - 0
+      principle_axis: null
+      type: stationary

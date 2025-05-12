@@ -585,105 +585,113 @@ class HDF5StructureHTMLRepr(_HDF5StructureRepr):
 
     def __attrs__(self, name, h5obj):
         attr_value = h5obj.attrs.raw[name]
+        try:
+            if isinstance(attr_value, np.bytes_):
+                try:
+                    attr_value = attr_value.decode('utf-8')
+                except UnicodeDecodeError:
+                    warnings.warn(f'Cannot decode attribute value for {name}', RuntimeWarning)
+            rdf = h5obj.rdf.get(name)
 
-        if isinstance(attr_value, np.bytes_):
-            try:
-                attr_value = attr_value.decode('utf-8')
-            except UnicodeDecodeError:
-                warnings.warn(f'Cannot decode attribute value for {name}', RuntimeWarning)
-        rdf = h5obj.rdf.get(name)
+            disp_name = name
 
-        disp_name = name
+            rdf_predicate = rdf.predicate
+            if rdf_predicate is not None:
+                disp_name += get_iri_icon_href(rdf_predicate, icon_url=IRI_ICON)
 
-        rdf_predicate = rdf.predicate
-        if rdf_predicate is not None:
-            disp_name += get_iri_icon_href(rdf_predicate, icon_url=IRI_ICON)
+            attrs_def = h5obj.rdf[name].definition
+            if attrs_def is not None:
+                disp_name += get_def_icon_href(attrs_def)
 
-        attrs_def = h5obj.rdf[name].definition
-        if attrs_def is not None:
-            disp_name += get_def_icon_href(attrs_def)
+            rdf_object = rdf.object
 
-        rdf_object = rdf.object
+            if isinstance(attr_value, ndarray):
 
-        if isinstance(attr_value, ndarray):
+                if all(isinstance(item, str) for item in attr_value):
+                    _string_value_list = []
+                    for item in attr_value:
+                        _value, is_url = process_string_for_link(item)
+                        if is_url:
+                            _string_value_list.append(_value)
+                        else:
+                            _string_value_list.append(item)
+                    _value_str = ", ".join(_string_value_list)
 
-            if all(isinstance(item, str) for item in attr_value):
-                _string_value_list = []
-                for item in attr_value:
-                    _value, is_url = process_string_for_link(item)
-                    if is_url:
-                        _string_value_list.append(_value)
+                    if rdf_object is not None:
+                        _value_str += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
+                    return '<li style="list-style-type: none; ' \
+                           f'font-style: italic">{disp_name}: {_value_str}</li>'
+                else:
+                    _value = attr_value.__repr__()
+
+                    if len(_value) > self.max_attr_length:
+                        _value = f'{_value[0:self.max_attr_length]}...'
+
+                    if rdf_object is not None:
+                        _value += get_iri_icon_href(rdf_predicate, icon_url=IRI_ICON)
+
+                    return f'<li style="list-style-type: none; font-style: italic">{disp_name}: {_value}</li>'
+
+            elif isinstance(attr_value, str):
+                _value_str = f'{attr_value}'
+                if len(_value_str) > 1:
+                    if _value_str[0] == '<' and _value_str[-1] == '>':
+                        _value_str = _value_str[1:-1]
+
+                # check if it is an identifier:
+                if _value_str.startswith('{'):
+                    _value_html = _value_str
+                    is_url = False
+                else:
+                    identifier = identifiers.from_url(_value_str)
+                    if identifier is not None:
+                        _value_html = identifier._repr_html_()
+                        is_url = True
+                    else:  # maybe some other url:
+                        _value_html, is_url = process_string_for_link(_value_str)
+                        # if is_url and not _value_html.startswith('{'):
+
+                # add rdf icon if available:
+                if rdf_object is not None:
+                    _value_html += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
+
+                if is_url and not _value_html.startswith('{'):  # TODO: why the second condition?
+                    return f'<li style="list-style-type: none; font-style: italic">{disp_name}: {_value_html}</li>'
+                else:
+                    if self.max_attr_length:
+                        if len(_value_str) > self.max_attr_length:
+                            _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
+                        else:
+                            _value_str = attr_value
                     else:
-                        _string_value_list.append(item)
-                _value_str = ", ".join(_string_value_list)
-
+                        _value_str = attr_value
                 if rdf_object is not None:
                     _value_str += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
-                return '<li style="list-style-type: none; ' \
-                       f'font-style: italic">{disp_name}: {_value_str}</li>'
-            else:
-                _value = attr_value.__repr__()
+                return f'<li style="list-style-type: none; font-style: italic">{disp_name}: {_value_str}</li>'
 
-                if len(_value) > self.max_attr_length:
-                    _value = f'{_value[0:self.max_attr_length]}...'
-
-                if rdf_object is not None:
-                    _value += get_iri_icon_href(rdf_predicate, icon_url=IRI_ICON)
-
-                return f'<li style="list-style-type: none; font-style: italic">{disp_name}: {_value}</li>'
-
-        if isinstance(attr_value, str):
-            _value_str = f'{attr_value}'
-            if len(_value_str) > 1:
-                if _value_str[0] == '<' and _value_str[-1] == '>':
-                    _value_str = _value_str[1:-1]
-
-            # check if it is an identifier:
-            identifier = identifiers.from_url(_value_str)
-            if identifier is not None:
-                _value_html = identifier._repr_html_()
-                is_url = True
-            else:  # maybe some other url:
-                _value_html, is_url = process_string_for_link(_value_str)
-                # if is_url and not _value_html.startswith('{'):
-
-            # add rdf icon if available:
-            if rdf_object is not None:
-                _value_html += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
-
-            if is_url and not _value_html.startswith('{'):  # TODO: why the second condition?
-                return f'<li style="list-style-type: none; font-style: italic">{disp_name}: {_value_html}</li>'
-            else:
-                if self.max_attr_length:
-                    if len(_value_str) > self.max_attr_length:
-                        _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
+            elif not isinstance(attr_value, ndarray):
+                if getattr(attr_value, '_repr_html_', None):
+                    _value_str = attr_value._repr_html_()
+                else:
+                    _value_str = str(attr_value)
+                    if _value_str[0] == '<' and _value_str[-1] == '>':
+                        _value_str = _value_str[1:-1]
+                    if self.max_attr_length:
+                        if len(_value_str) > self.max_attr_length:
+                            _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
+                        else:
+                            _value_str = attr_value
                     else:
                         _value_str = attr_value
-                else:
-                    _value_str = attr_value
+            else:
+                _value_str = attr_value
+
             if rdf_object is not None:
                 _value_str += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
-            return f'<li style="list-style-type: none; font-style: italic">{disp_name}: {_value_str}</li>'
 
-        if not isinstance(attr_value, ndarray):
-            if getattr(attr_value, '_repr_html_', None):
-                _value_str = attr_value._repr_html_()
-            else:
-                _value_str = str(attr_value)
-                if _value_str[0] == '<' and _value_str[-1] == '>':
-                    _value_str = _value_str[1:-1]
-                if self.max_attr_length:
-                    if len(_value_str) > self.max_attr_length:
-                        _value_str = f'{_value_str[0:self.max_attr_length - 3]}...'
-                    else:
-                        _value_str = attr_value
-                else:
-                    _value_str = attr_value
-
-        if rdf_object is not None:
-            _value_str += get_iri_icon_href(rdf_object, icon_url=IRI_ICON)
-        return f'<li style="list-style-type: none; font-style: italic">{name}: {_value_str}</li>'
-
+            return f'<li style="list-style-type: none; font-style: italic">{name}: {_value_str}</li>'
+        except Exception as e:
+            return f'<li style="list-style-type: none; font-style: italic">{name}: {attr_value}</li>'
 
 class H5Repr:
     """Class managing the sting/html output of HDF5 content"""
