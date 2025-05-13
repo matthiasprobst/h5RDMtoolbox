@@ -23,7 +23,7 @@ def describe_xarray(da: xr.DataArray):
 
 
 @xr.register_dataarray_accessor("prov")
-class StandardNameTableAccessor:
+class ProvenanceAccessor:
     def __init__(self, da):
         self._da = da
 

@@ -10,7 +10,6 @@ import xarray as xr
 from rdflib import FOAF
 
 import h5rdmtoolbox as h5tbx
-# from h5rdmtoolbox.convention.standard_names.table import StandardNameTable
 from h5rdmtoolbox.utils import generate_temporary_directory
 from h5rdmtoolbox.wrapper.core import File
 
@@ -29,14 +28,6 @@ def get_standard_name_table_yaml_file() -> pathlib.Path:
 def get_convention_yaml_filename() -> pathlib.Path:
     """Return the path to the convention yaml file"""
     return __this_dir__ / 'data/tutorial_convention.yaml'
-
-
-# def get_standard_name_table() -> StandardNameTable:
-#     """Return an example standard name table"""
-#     # if False:
-#     #     url = 'https://raw.githubusercontent.com/matthiasprobst/h5RDMtoolbox/main/h5rdmtoolbox/data/Test-v1.yml'
-#     #     return StandardNameTable.from_web(url)
-#     return StandardNameTable.from_yaml(get_standard_name_table_yaml_file())
 
 
 def get_xr_dataset(name):
@@ -159,17 +150,6 @@ def get_xr_dataset(name):
 
     if name.lower() == 'poiseuille2d':
         return poiseuille2D(np.linspace(0, 4, 2), np.linspace(0, 4, 10), 2)
-
-
-# class Conventions:
-#     """Tutorial methods for package convention"""
-#
-#     @staticmethod
-#     def fetch_cf_standard_name_table():
-#         """download cf-standard-name-table"""
-#         url = "https://cfconventions.org/Data/cf-standard-names/79/src/cf-standard-name-table.xml"
-#         return StandardNameTable.from_web(url,
-#                                           known_hash='4c29b5ad70f6416ad2c35981ca0f9cdebf8aab901de5b7e826a940cf06f9bae4')
 
 
 class Database:

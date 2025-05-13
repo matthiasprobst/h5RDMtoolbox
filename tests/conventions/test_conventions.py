@@ -309,34 +309,6 @@ def validate_f1(a, b, c=3, d=2):
         self.assertTrue('multiply_by_2_decoder' not in cv.remove_decoder('multiply_by_2_decoder'))
         self.assertTrue('multiply_by_2_decoder_v2' not in cv.remove_decoder('multiply_by_2_decoder_v2'))
 
-    # def test_standard_name_table_as_relative_filename(self):
-    #     snt_filename = h5tbx.tutorial.get_standard_name_table_yaml_file()
-    #
-    #     yaml_filename = h5tbx.utils.generate_temporary_filename(suffix='.yaml')
-    #     # copy to the same directory
-    #     shutil.copy(snt_filename, yaml_filename.parent / snt_filename.name)
-    #
-    #     sa_dict = {'__name__': 'standard_name_table',
-    #                '__institution__': 'https://orcid.org/members/001G000001e5aUTIAY',
-    #                '__contact__': 'https://orcid.org/0000-0001-8729-0482',
-    #                'standard_name_table':
-    #                    {
-    #                        'target_method': '__init__',
-    #                        'validator': '$standard_name_table',
-    #                        'default_value': f'relpath({snt_filename.name})',
-    #                        'type_hint': 'StandardNameTable',
-    #                        'description': 'A standard name table'
-    #                    }
-    #                }
-    #     with open(yaml_filename, 'w') as f:
-    #         yaml.safe_dump(sa_dict, f)
-    #
-    #     local_cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
-    #     local_cv.register()
-    #     with h5tbx.use(local_cv.name):
-    #         with h5tbx.File() as h5:
-    #             self.assertIsInstance(h5.standard_name_table, StandardNameTable)
-
     def test_process_paths(self):
         abspath = str((__this_dir__ / 'a/path/').absolute())
 
