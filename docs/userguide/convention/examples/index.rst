@@ -10,7 +10,5 @@ In this chapter, we want to explore two practical examples of established metada
     :hidden:
 
     EngMeta.ipynb
-    standard_name_convention.ipynb
-    standard_name_interface.ipynb
     metadata4ing.ipynb
     Provenance.ipynb

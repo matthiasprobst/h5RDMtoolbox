@@ -9,7 +9,7 @@ import typing_extensions
 from pydantic.functional_validators import WrapValidator
 from typing_extensions import Annotated
 
-from h5rdmtoolbox import get_ureg, errors
+from h5rdmtoolbox import get_ureg
 from h5rdmtoolbox import identifiers
 
 
@@ -40,51 +40,6 @@ def __validate_identifier(value, handler, info) -> Union[None, identifiers.Objec
     else:
         raise ValueError(f'Identifier "{value}" is not valid!')
     return ident
-
-
-def __validate_standard_name_table(value, handler, info) -> "StandardNameTable":
-    from h5rdmtoolbox.convention import standard_names
-    return standard_names.parse_snt(value)
-
-
-def __validate_standard_name(value, handler, info) -> "StandardName":
-    from h5rdmtoolbox.convention import standard_names
-    if not isinstance(value, (str, standard_names.StandardName)):
-        raise TypeError(f'Expected a string or StandardName object, got {type(value)}')
-    if info.context:
-        parent = info.context.get('parent', None)
-        if parent is None:
-            raise KeyError('No parent dataset found, which is needed to get the standard name table information!')
-
-        attrs = info.context.get('attrs', None)
-        if attrs is None:
-            attrs = {}
-
-        snt = info.context['parent'].rootparent.standard_name_table
-
-        units = parent.attrs.get('units', None)
-        if units is None:
-            raise KeyError('No units defined for this variable!')
-
-        # check if scale is provided:
-        data_scale = parent.attrs.get('DATA_SCALE', None)
-        if data_scale is not None:
-            # scale_ds = parent.rootparent[data_scale]
-            ds_scale_units = parent.rootparent[data_scale].attrs.get('units', '')
-            ureg = get_ureg()
-            units = str(ureg.Unit(ds_scale_units) * units)
-
-        sn = snt[value]
-        if sn.is_vector():
-            raise errors.StandardAttributeError(f'Standard name {value} is a vector and cannot be used as '
-                                                'attribute. Use a transformation e.g. with a component or magnitude '
-                                                'instead.')
-        if not sn.equal_unit(units):
-            raise errors.StandardAttributeError(f'Standard name {value} has incompatible units {units}. '
-                                                f'Expected units: {sn.units} but got {units}.')
-
-        return sn
-    raise ValueError(f'A standard name must be provided to check the validity of the name: {value}')
 
 
 def __validate_url(value, handler, info):
@@ -198,10 +153,6 @@ orcidType = Annotated[str, WrapValidator(__validate_orcid)]
 
 identifierType = Annotated[str, WrapValidator(__validate_identifier)]
 
-standardNameTableType = Annotated[Union[str, Dict], WrapValidator(__validate_standard_name_table)]
-
-standardNameType = Annotated[str, WrapValidator(__validate_standard_name)]
-
 urlType = Annotated[str, WrapValidator(__validate_url)]
 
 versionType = Annotated[str, WrapValidator(__verify_version)]
@@ -214,8 +165,6 @@ validators = {
     # 'data_scale': dataScaleType,
     'orcid': orcidType,
     'identifier': identifierType,
-    'standard_name_table': standardNameTableType,
-    'standard_name': standardNameType,
     'url': urlType,
     'version': versionType
 }

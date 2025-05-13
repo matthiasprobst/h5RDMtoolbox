@@ -46,6 +46,16 @@ class TestDump(unittest.TestCase):
         with self.assertRaises(ValueError):
             h5tbx.dump_jsonld(h5.hdf_filename, structural=False, semantic=False)
 
+    def test_dump_serialized_dict_with_urls(self):
+        with h5tbx.File() as h5:
+            h5.attrs["metadata"] = json.dumps({
+                "title": "My title",
+                "description": "My description",
+                "url": "https://example.com",
+                "doi": "https://zenodo.org/records/13182574",
+            })
+            h5.dump()
+
     def test_dump_structural_true_semantic_false(self):
         with h5tbx.File(mode='w') as h5:
             grp = h5.create_group('Person')

@@ -6,4 +6,4 @@ mongomock == 4.1.2
 scikit-image>=0.21.0
 scikit-learn
 scipy>=1.10.1
-ssnolib>=1.3.0.1a11
+ssnolib>=1.5.0.1

@@ -21,15 +21,15 @@ units:
 
 standard_name:
   target_method: create_dataset
-  validator: $standardNameType
+  validator: $standard_name
   requirements: units
   description: Standard name of the dataset. If not set, the long_name attribute must be given.
   alternative_standard_attribute: long_name
 
 standard_name_table:
   target_method: __init__
-  validator: $standardNameTableType
-  default_value: https://zenodo.org/records/15300151/files/fan_standard_name_table.jsonld
+  validator: $standard_name_table
+  default_value: https://zenodo.org/record/10428817
   requirements:
     - standard_name
     - units
@@ -39,7 +39,7 @@ long_name:
   target_method: create_dataset
   validator: $regex(^[a-zA-Z].*$)
   alternative_standard_attribute: standard_name
-  description: A comprehensive description of the dataset. If not set, the standard_name attribute must be given.
+  description: An comprehensive description of the dataset. If not set, the standard_name attribute must be given.
 
 comment-file:
   target_method: __init__
