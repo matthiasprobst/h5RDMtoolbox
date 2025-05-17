@@ -531,7 +531,8 @@ def validate_f1(a, b, c=3, d=2):
                 self.assertEqual(h5.title, "test file")
                 self.assertEqual(h5.frdf['title'].predicate, 'https://schema.org/title')
                 self.assertEqual(h5.data_type, "experimental")
-                self.assertEqual(h5.rdf['data_type'].object, 'https://www.wikidata.org/wiki/Q101965')
+                self.assertEqual(h5.frdf['data_type'].object, 'https://www.wikidata.org/wiki/Q101965')
+                self.assertEqual(h5.rdf['data_type'].object, None)
 
     def test_default_value(self):
         from h5rdmtoolbox.convention.consts import DefaultValue
