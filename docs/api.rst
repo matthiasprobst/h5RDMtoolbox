@@ -31,16 +31,3 @@ Standard attributes
    convention.StandardAttribute
    convention.StandardAttribute.get
    convention.StandardAttribute.set
-
-Standard names and tables
--------------------------
-
-.. autosummary::
-   :toctree: generated/
-
-   convention.standard_names.name.StandardName
-   convention.standard_names.table.StandardNameTable
-   convention.standard_names.table.StandardNameTable.from_web
-   convention.standard_names.table.StandardNameTable.from_yaml
-   convention.standard_names.table.StandardNameTable.from_xml
-   convention.standard_names.table.StandardNameTable.from_zenodo
