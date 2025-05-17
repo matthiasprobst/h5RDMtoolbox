@@ -673,7 +673,7 @@ class File_RDF_Object(_RDFPO):
     IRI_ATTR_NAME = RDF_FILE_OBJECT_ATTR_NAME
 
     def __setiri__(self, key, value):
-        set_object(self._attr, key, value)
+        set_object(self._attr, key, value, rdf_object_attr_name=RDF_FILE_OBJECT_ATTR_NAME)
 
 
 class FileRDFManager:

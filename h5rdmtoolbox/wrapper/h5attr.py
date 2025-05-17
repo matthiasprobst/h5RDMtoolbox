@@ -52,11 +52,20 @@ class Attribute:
                  value, *,
                  definition: Optional[str] = None,
                  rdf_predicate=None,
-                 rdf_object=None):
+                 frdf_predicate=None,
+                 rdf_object=None,
+                 frdf_object=None,
+                 ):
         self.value = value
         self.definition = definition  # skos:definition
+        if rdf_predicate is not None and frdf_predicate is not None:
+            raise ValueError('You cannot set both rdf_predicate and frdf_predicate at the same time.')
+        if rdf_object is not None and frdf_object is not None:
+            raise ValueError('You cannot set both rdf_object and frdf_object at the same time.')
         self.rdf_predicate = self._validate_rdf(rdf_predicate)
+        self.frdf_predicate = self._validate_rdf(frdf_predicate)
         self.rdf_object = self._validate_rdf(rdf_object)
+        self.frdf_object = self._validate_rdf(frdf_object)
 
     @staticmethod
     def _validate_rdf(value):
@@ -212,6 +221,8 @@ class WrapperAttributeManager(AttributeManager):
                shape=None, dtype=None,
                rdf_predicate: Union[str, rdflib.URIRef] = None,
                rdf_object: Optional[Union[str, rdflib.URIRef]] = None,
+               frdf_predicate: Union[str, rdflib.URIRef] = None,
+               frdf_object: Optional[Union[str, rdflib.URIRef]] = None,
                definition: Optional[str] = None,
                **kwargs) -> Any:
         """
@@ -256,6 +267,17 @@ class WrapperAttributeManager(AttributeManager):
             self._parent.rdf.object[name] = rdf_object
         if definition is not None:
             self._parent.rdf[name].definition = definition
+        _frdf = None
+        if frdf_predicate is not None or frdf_object is not None:
+            try:
+                _frdf = self._parent.frdf
+            except AttributeError:
+                raise AttributeError('You try to assign a rdf to the file level, however, "{self._parent.name}" is not the root level')
+        if _frdf:
+            if frdf_predicate is not None:
+                _frdf.predicate[name] = frdf_predicate
+            if frdf_object is not None:
+                _frdf.object[name] = frdf_object
         return r
 
     @with_phil
@@ -281,6 +303,8 @@ class WrapperAttributeManager(AttributeManager):
         if isinstance(value, Attribute):
             object_iri = value.rdf_object
             predicate_iri = value.rdf_predicate
+            fpredicate_iri = value.frdf_predicate
+            frdf_object_iri = value.frdf_object
             attr_def = value.definition
             value = value.value
 
@@ -288,7 +312,9 @@ class WrapperAttributeManager(AttributeManager):
                 self.create(name,
                             value,
                             rdf_predicate=predicate_iri,
+                            frdf_predicate=fpredicate_iri,
                             rdf_object=object_iri,
+                            frdf_object=frdf_object_iri,
                             definition=attr_def)
 
         else:

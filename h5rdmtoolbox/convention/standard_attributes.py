@@ -1,11 +1,13 @@
 """standard attribute module"""
-import h5py
 import json
 import logging
-import pydantic
-import typing_extensions
 import warnings
 from typing import Dict, List, Union
+
+import h5py
+import pydantic
+import typing_extensions
+from pydantic import HttpUrl
 
 from . import errors
 from .consts import DefaultValue
@@ -74,6 +76,8 @@ class StandardAttribute:
                  position: Union[None, Dict[str, str]] = None,
                  requirements: List[str] = None,
                  type_hint: str = None,
+                 rdf_predicate: str = None,
+                 frdf_predicate: str = None,
                  **kwargs):
         # name of attribute:
         self.name = name.split('-', 1)[0]  # the attrs key
@@ -97,6 +101,23 @@ class StandardAttribute:
             raise ValueError(f'Invalid target method: "{target_method}".from '
                              f'Valid target methods are: {self.VALID_TARGET_METHODS}.')
         self.target_method = target_method
+
+        if rdf_predicate is not None:
+            try:
+                HttpUrl(rdf_predicate)
+            except pydantic.ValidationError:
+                raise TypeError(f'rdf_predicate must be a valid URL. Got {rdf_predicate} instead.')
+        if frdf_predicate is not None:
+            try:
+                HttpUrl(frdf_predicate)
+            except pydantic.ValidationError:
+                raise TypeError(f'rdf_predicate must be a valid URL. Got {frdf_predicate} instead.')
+        self.rdf_predicate = rdf_predicate
+        self.frdf_predicate = frdf_predicate
+        if frdf_predicate is not None and target_method != "__init__":
+            raise ValueError(
+                f'frdf_predicate is only supported for the __init__ method. Got {target_method} instead.'
+            )
 
         # The default value
         if isinstance(default_value, str):
@@ -220,10 +241,15 @@ class StandardAttribute:
                             f'Expected fields: {self.validator.model_fields}\nPydantic error: {err}')
                     validated_value = getattr(_validated_value, key0)
 
-                return super(type(parent.attrs), parent.attrs).__setitem__(
+                ret = super(type(parent.attrs), parent.attrs).__setitem__(
                     self.name,
                     parse_object_for_attribute_setting(validated_value)
                 )
+                if self.rdf_predicate is not None:
+                    parent.rdf[self.name].predicate = self.rdf_predicate
+                if self.frdf_predicate is not None:
+                    parent.frdf[self.name].predicate = self.frdf_predicate
+                return ret
 
     def get(self, parent: Union[h5py.File, h5py.Group, h5py.Dataset]):
         """Read the attribute from `parent`

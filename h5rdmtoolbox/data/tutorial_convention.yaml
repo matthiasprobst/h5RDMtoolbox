@@ -19,6 +19,12 @@ units:
   validator: $units
   description: The physical unit of the dataset. If dimensionless, the unit is ''.
 
+title:
+  description: Title of the HDF5 file acting as a minimal description of the dataset.
+  target_method: __init__
+  validator: str
+  frdf_predicate: https://schema.org/title
+
 standard_name:
   target_method: create_dataset
   validator: $standardNameType
