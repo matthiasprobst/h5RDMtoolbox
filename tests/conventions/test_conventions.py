@@ -483,7 +483,7 @@ def validate_f1(a, b, c=3, d=2):
             if _ddir.exists():
                 shutil.rmtree(_ddir)
             h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, force_download=True)
-            # h5tbx.convention.from_yaml('tutorial_convention.yaml')
+
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             cv = h5tbx.convention.get_current_convention()
@@ -509,6 +509,19 @@ def validate_f1(a, b, c=3, d=2):
                     self.assertFalse('-' in sa)
                 self.assertNotEqual(h5.standard_attributes['comment'].description,
                                     h5['test'].standard_attributes['comment'].description)
+
+    def test_standard_name_table_as_file(self):
+        cv = h5tbx.Convention.from_yaml(
+            __this_dir__ / "test_convention.yaml",
+            overwrite=True
+        )
+        h5tbx.use(cv)
+        snt_file = __this_dir__ / "fan_standard_name_table.jsonld"
+        with h5tbx.File(
+                data_type='experimental',
+                contact=h5tbx.__author_orcid__,
+                standard_name_table=f"file://{snt_file}") as h5:
+            isinstance(h5.standard_name_table, StandardNameTable)
 
     def test_alternative_attribute(self):
         h5tbx.Convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)

@@ -1,28 +1,44 @@
+import pathlib
+import types
 from typing import Union, Dict
 
 import pint
 import rdflib
 from ontolutils.utils.qudt_units import qudt_lookup
-from pydantic import HttpUrl
+from pydantic import HttpUrl, FileUrl
 from pydantic.functional_validators import WrapValidator
 from ssnolib import StandardNameTable, dcat, parse_table
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg
 from h5rdmtoolbox.errors import StandardAttributeError
-import types
 
 _snt = None
 
 inverse_qudt_lookup = {v: k for k, v in qudt_lookup.items()}
 
+
 def __validate_standard_name_table(value, handler, info) -> StandardNameTable:
     global _snt
 
-    def __snt_h5attr_repr__(self):
-        return str(HttpUrl(value))
+    def _parse_web_or_file_url(value):
+        if isinstance(value, str):
+            if value.startswith("http"):
+                return HttpUrl(value)
+            if pathlib.Path(value).exists():
+                return FileUrl(value)
+            try:
+                return FileUrl(value)
+            except ValueError:
+                return HttpUrl(value)
+        return value
 
-    _snt_filename = dcat.Distribution(downloadURL=HttpUrl(value)).download()
+    value = _parse_web_or_file_url(value)
+
+    def __snt_h5attr_repr__(self):
+        return value
+
+    _snt_filename = dcat.Distribution(downloadURL=value).download()
     _snt = parse_table(source=_snt_filename)
     _snt.__h5attr_repr__ = types.MethodType(__snt_h5attr_repr__, _snt)
     return _snt
@@ -48,6 +64,7 @@ def equal_base_units(u1: Union[str, pint.Unit, pint.Quantity],
 
 def __validate_standard_name(value, handler, info) -> str:
     """Verify that version is a valid as defined in https://semver.org/"""
+
     def __sn_h5attr_repr__(self):
         if isinstance(value, str):
             return str(value)
@@ -71,7 +88,7 @@ def __validate_standard_name(value, handler, info) -> str:
     if not equal_base_units(sn.unit, units):
         raise StandardAttributeError(f'Standard name {value} has incompatible units {units}. '
                                      f'Expected units: {sn.unit} but got {units}.')
-    sn.__h5attr_repr__ =types.MethodType(__sn_h5attr_repr__, _snt)
+    sn.__h5attr_repr__ = types.MethodType(__sn_h5attr_repr__, _snt)
     return sn
 
 

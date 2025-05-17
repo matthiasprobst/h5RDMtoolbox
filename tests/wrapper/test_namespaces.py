@@ -1,13 +1,14 @@
 import json
 import logging
 import pathlib
-import rdflib
 import unittest
+
+import rdflib
+from ontolutils import namespacelib
 from rdflib import URIRef
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.utils import download_context
-from ontolutils import namespacelib
 
 logger = logging.getLogger('h5rdmtoolbox')
 
