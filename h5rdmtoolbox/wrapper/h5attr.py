@@ -333,10 +333,20 @@ class WrapperAttributeManager(AttributeManager):
 
                 if value is consts.DefaultValue.EMPTY:
                     # no value given, but is mandatory. check if there's an alternative
-                    if sattr.alternative_standard_attribute is None:
+                    _alternative_sattr = sattr.alternative_standard_attribute
+                    if _alternative_sattr is None:
                         raise errors.StandardAttributeError(
                             f'Convention "{curr_cv.name}" expects standard attribute "{name}" to be provided '
                             f'as an argument during {self._parent.__class__.__name__.lower()} creation.'
+                        )
+                    if attrs[_alternative_sattr] is None:
+                        other_provided_attrs = {k: v for k, v in attrs.items() if
+                                                v is not None and not isinstance(v, consts._SpecialDefaults)}
+                        raise errors.StandardAttributeError(
+                            f'Convention "{curr_cv.name}" expects standard attribute "{name}" to be provided '
+                            f'as an argument during {self._parent.__class__.__name__.lower()} creation. Alternative '
+                            f'standard attribute for it is "{_alternative_sattr}" but is not found in the other '
+                            f'provided attributes: {other_provided_attrs}.'
                         )
                     return
 

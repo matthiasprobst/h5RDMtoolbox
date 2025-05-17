@@ -225,7 +225,7 @@ def validate_f1(a, b, c=3, d=2):
                                 contact='https://orcid.org/0000-0001-8729-0482'),
                             comment='Root comment') as h5:
                 h5.create_group('g1', comment='Group comment')
-                h5.create_dataset('g1/ds1', data=1, comment='Dataset comment')
+                h5.create_dataset('g1/ds1', data=1, comment='Dataset comment', long_name="dataset 1")
                 self.assertEqual(h5.attrs['comment'], 'Root comment')
                 self.assertEqual(h5.comment, 'Root comment')
                 self.assertEqual(h5.comment, 'Root comment')
@@ -509,6 +509,16 @@ def validate_f1(a, b, c=3, d=2):
                     self.assertFalse('-' in sa)
                 self.assertNotEqual(h5.standard_attributes['comment'].description,
                                     h5['test'].standard_attributes['comment'].description)
+
+    def test_alternative_attribute(self):
+        if self.connected:
+            h5tbx.Convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
+            with h5tbx.use('h5rdmtoolbox-tutorial-convention'):
+                with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                    with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                        h5.create_dataset('u', data=0.0, units='m/s')
+                    ds = h5.create_dataset("u", data=0.0, long_name="x-velocity")
+                    self.assertEqual(ds.long_name, "x-velocity")
 
     def test_default_value(self):
         from h5rdmtoolbox.convention.consts import DefaultValue

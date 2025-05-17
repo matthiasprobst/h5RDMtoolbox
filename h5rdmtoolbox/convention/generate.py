@@ -193,7 +193,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
             _default_value = v.get('default_value', '$EMPTY')
 
             # it is not allowed to have a dash in the class name.
-            # However it was needed to have standard attribute with the same name for different methods
+            # However, it was needed to have standard attribute with the same name for different methods
             class_name = k.replace('-', '_')
             attr_name = k.rsplit('-', 1)[0]
             f.write(f'\nclass {class_name}(BaseModel):')
@@ -241,6 +241,7 @@ def write_convention_module_from_yaml(yaml_filename: pathlib.Path, name=None):
         name='{kk}',
         description={_str_getter(vv, 'description', None)},
         validator={_validator.replace('-', '_')},
+        alternative_standard_attribute={_str_getter(vv, 'alternative_standard_attribute', None)},
         target_method={_str_getter(vv, 'target_method')},
         default_value={_default_value_str},
         requirements={_str_getter(vv, 'requirements', None)},

@@ -25,6 +25,7 @@ standard_name:
   requirements: units
   description: Standard name of the dataset. If not set, the long_name attribute must be given.
   alternative_standard_attribute: long_name
+  default_value: $EMPTY
 
 standard_name_table:
   target_method: __init__
