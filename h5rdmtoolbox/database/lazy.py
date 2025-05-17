@@ -164,7 +164,7 @@ class LDataset(LHDFObject):
 LazyInput = Union[h5py.Group, h5py.Dataset, LHDFObject, List[Union[h5py.Group, h5py.Dataset, LHDFObject]]]
 
 
-def lazy(h5obj: LazyInput) -> Optional[Union[List[LazyObject], LazyObject]]:
+def lazy(h5obj: LazyInput) -> Optional[Union[List[LazyObject], LHDFObject, LazyObject]]:
     """Make a lazy object from a h5py object"""
     if isinstance(h5obj, (LDataset, LGroup)):
         return h5obj
