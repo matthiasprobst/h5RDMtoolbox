@@ -17,7 +17,6 @@ from ..interface import RepositoryInterface, RepositoryFile
 
 logger = logging.getLogger('h5rdmtoolbox')
 
-__all__ = ['Metadata']
 IANA_DICT = {
     '.json': 'application/json',
     '.jsonld': 'application/ld+json',

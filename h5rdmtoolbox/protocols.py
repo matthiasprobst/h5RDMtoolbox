@@ -53,6 +53,11 @@ class LazyObject(Protocol):
         ...
 
     @property
+    def dtype(self) -> str:
+        """Return the dtype of the object."""
+        ...
+
+    @property
     def parentname(self) -> str:
         """Return the parent name of the object path."""
         ...
@@ -163,8 +168,8 @@ class H5TbxHLObject(Protocol):
 
     def __delitem__(self, key): ...
 
-    def __getitem__(self, *args, **kwargs):
-        ...
+    # def __getitem__(self, *args, **kwargs):
+    #     ...
 
 
 class H5TbxFile(H5TbxHLObject):

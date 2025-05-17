@@ -824,4 +824,4 @@ def yaml2jsonld(yaml_filename: Union[str, pathlib.Path],
     return jsonld_filename
 
 
-__all__ = ['datetime_str', 'StandardAttribute']
+__all__ = ['datetime_str', 'StandardAttribute', "Convention"]
