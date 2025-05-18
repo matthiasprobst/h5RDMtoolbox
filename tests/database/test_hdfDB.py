@@ -121,7 +121,7 @@ class TestHDFDB(unittest.TestCase):
             ds = h5.create_dataset('num', data=2.4)
             print(str(ds.dtype))
             gdb = hdfdb.ObjDB(h5['/'])
-            res = gdb.find({'$dtype': {'$regex': '^(?!\|S|\|).*'}},  # does not starts with "|S" or "|"
+            res = gdb.find({'$dtype': {'$regex': r'^(?!\|S|\|).*'}},  # does not starts with "|S" or "|"
                            objfilter='dataset',
                            recursive=False)
             self.assertEqual(list(res), [ds, ])

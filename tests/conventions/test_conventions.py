@@ -225,7 +225,7 @@ def validate_f1(a, b, c=3, d=2):
                                 contact='https://orcid.org/0000-0001-8729-0482'),
                             comment='Root comment') as h5:
                 h5.create_group('g1', comment='Group comment')
-                h5.create_dataset('g1/ds1', data=1, comment='Dataset comment')
+                h5.create_dataset('g1/ds1', data=1, comment='Dataset comment', long_name="dataset 1")
                 self.assertEqual(h5.attrs['comment'], 'Root comment')
                 self.assertEqual(h5.comment, 'Root comment')
                 self.assertEqual(h5.comment, 'Root comment')
@@ -483,7 +483,7 @@ def validate_f1(a, b, c=3, d=2):
             if _ddir.exists():
                 shutil.rmtree(_ddir)
             h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID, force_download=True)
-            # h5tbx.convention.from_yaml('tutorial_convention.yaml')
+
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
             cv = h5tbx.convention.get_current_convention()
@@ -509,6 +509,43 @@ def validate_f1(a, b, c=3, d=2):
                     self.assertFalse('-' in sa)
                 self.assertNotEqual(h5.standard_attributes['comment'].description,
                                     h5['test'].standard_attributes['comment'].description)
+
+    def test_standard_name_table_as_file(self):
+        cv = h5tbx.Convention.from_yaml(
+            __this_dir__ / "test_convention.yaml",
+            overwrite=True
+        )
+        h5tbx.use(cv)
+        snt_file = __this_dir__ / "fan_standard_name_table.jsonld"
+        with h5tbx.File(
+                data_type='experimental',
+                contact=h5tbx.__author_orcid__,
+                standard_name_table=f"file://{snt_file}") as h5:
+            isinstance(h5.standard_name_table, StandardNameTable)
+
+    def test_alternative_attribute(self):
+        h5tbx.Convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
+        with h5tbx.use('h5rdmtoolbox-tutorial-convention'):
+            with h5tbx.File(data_type='experimental', contact=h5tbx.__author_orcid__) as h5:
+                with self.assertRaises(h5tbx.errors.StandardAttributeError):
+                    h5.create_dataset('u', data=0.0, units='m/s')
+                ds = h5.create_dataset("u", data=0.0, long_name="x-velocity")
+                self.assertEqual(ds.long_name, "x-velocity")
+
+    def test_standard_attributes_and_rdf(self):
+        h5tbx.Convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
+        with h5tbx.use('h5rdmtoolbox-tutorial-convention'):
+            with h5tbx.File(
+                    data_type=h5tbx.Attribute(
+                        value="experimental",
+                        frdf_object="https://www.wikidata.org/wiki/Q101965"),
+                    contact=h5tbx.__author_orcid__,
+                    title="test file") as h5:
+                self.assertEqual(h5.title, "test file")
+                self.assertEqual(h5.frdf['title'].predicate, 'https://schema.org/title')
+                self.assertEqual(h5.data_type, "experimental")
+                self.assertEqual(h5.frdf['data_type'].object, 'https://www.wikidata.org/wiki/Q101965')
+                self.assertEqual(h5.rdf['data_type'].object, None)
 
     def test_default_value(self):
         from h5rdmtoolbox.convention.consts import DefaultValue

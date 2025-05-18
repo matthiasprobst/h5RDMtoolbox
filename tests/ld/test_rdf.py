@@ -41,6 +41,31 @@ class TestRDF(unittest.TestCase):
                          'Attribute(0000-0001-8729-0482, ' \
                          'rdf_object=https://orcid.org/0000-0001-8729-0482)')
 
+    def test_Attribute(self):
+        with h5tbx.File() as h5:
+            h5.attrs['title'] = Attribute(
+                value="test",
+                frdf_object="https://example.org/hasTitle",
+            )
+            self.assertEqual(h5.frdf['title'].object, "https://example.org/hasTitle")
+            self.assertEqual(h5.rdf['title'].object, None)
+
+        with h5tbx.File() as h5:
+            h5.attrs['title'] = Attribute(
+                value="test",
+                rdf_object="https://example.org/hasTitle",
+            )
+            self.assertEqual(h5.rdf['title'].object, "https://example.org/hasTitle")
+            self.assertEqual(h5.frdf['title'].object, None)
+
+        with h5tbx.File() as h5:
+            with self.assertRaises(ValueError):
+                h5.attrs['title'] = Attribute(
+                    value="test",
+                    rdf_object="https://example.org/hasTitle",
+                    frdf_object="https://example.org/hasTitle",
+                )
+
     def test_rdf_special_values(self):
         """e.g. lists, ..."""
         with h5tbx.File() as h5:

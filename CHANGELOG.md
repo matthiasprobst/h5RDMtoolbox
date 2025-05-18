@@ -3,9 +3,14 @@
 Log of changes in the versions
 
 ## v2.0.0
+
+- changed version number to 2.0.0
+- housekeeping
+
+## v2.0.0a0
+
 - Major change: Removed code for standard names as it is outsourced to the `ssnolib` package
 - fix and upgrade feature `Convention` so that user-defined validators work as expected
-
 
 ## v1.7.4
 

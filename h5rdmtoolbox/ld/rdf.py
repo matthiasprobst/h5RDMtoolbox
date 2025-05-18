@@ -673,7 +673,7 @@ class File_RDF_Object(_RDFPO):
     IRI_ATTR_NAME = RDF_FILE_OBJECT_ATTR_NAME
 
     def __setiri__(self, key, value):
-        set_object(self._attr, key, value)
+        set_object(self._attr, key, value, rdf_object_attr_name=RDF_FILE_OBJECT_ATTR_NAME)
 
 
 class FileRDFManager:
@@ -684,8 +684,14 @@ class FileRDFManager:
 
     def __getitem__(self, item) -> FileIRIDict:
         """Overwrite parent implementation, because other attr name is used"""
-        if item not in self._attr:
+        ret = self.get(item, None)
+        if ret is None:
             raise KeyError(f'Attribute "{item}" not found in "{self._attr._parent.name}".')
+        return ret
+
+    def get(self, item, default=None):
+        if item not in self._attr:
+            return default
         return FileIRIDict(
             {
                 RDF_FILE_PREDICATE_ATTR_NAME: self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, {}).get(item, None),

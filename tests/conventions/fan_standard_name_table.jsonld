@@ -1,0 +1,390 @@
+{
+    "@context": {
+        "owl": "http://www.w3.org/2002/07/owl#",
+        "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+        "dcterms": "http://purl.org/dc/terms/",
+        "skos": "http://www.w3.org/2004/02/skos/core#",
+        "ssno": "https://matthiasprobst.github.io/ssno#",
+        "schema": "https://schema.org/",
+        "dcat": "http://www.w3.org/ns/dcat#"
+    },
+    "@type": "ssno:StandardNameTable",
+    "dcterms:title": "fan_standard_name_shorttable",
+    "dcterms:hasVersion": "v5.0.0",
+    "identifier": "10.5281/zenodo.15300151",
+    "dcterms:modified": "2023-07-18 09:05:38.112885+00:00",
+    "ssno:standardNames": [
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "absolute_pressure",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "Pressure is force per unit area. Absolute air pressure is pressure deviation to a total vacuum.",
+            "@id": "_:N493ca5e99e6b449ba23503a79af3ab70"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "ambient_static_pressure",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "Static air pressure is the amount of pressure exerted by air that is not moving. Ambient static air pressure is the static air pressure of the surrounding air.",
+            "@id": "_:Nf7d6f31a3b3749488f7288e42c55816d"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "ambient_temperature",
+            "ssno:unit": "http://qudt.org/vocab/unit/K",
+            "ssno:description": "Air temperature is the bulk temperature of the air, not the surface (skin) temperature. Ambient air temperature is the temperature of the surrounding air.",
+            "@id": "_:Nf5fbbfae1efc4fa79688f323acb750cf"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "auxiliary_fan_rotational_speed",
+            "ssno:unit": "http://qudt.org/vocab/unit/PER-SEC",
+            "ssno:description": "Number of revolutions of an auxiliary fan.",
+            "@id": "_:N55155b4a568444b0a09d347693d70699"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "blade_inlet_angle",
+            "ssno:unit": "http://qudt.org/vocab/unit/RAD",
+            "ssno:description": "Angle of blade at inlet.",
+            "@id": "_:Nf55dc3bace924a94ad7784426246d0d0"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "blade_inlet_diameter",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "The inner diameter of the test fan (D1).",
+            "@id": "_:N0ae36563d12e42c5b74cfe6b05a005fd"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "blade_number",
+            "ssno:unit": "http://qudt.org/vocab/unit/UNITLESS",
+            "ssno:description": "The blade number is the number of blades of the test fan.",
+            "@id": "_:N83697b26d97d4865a90aae5563c34f4c"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "blade_outlet_angle",
+            "ssno:unit": "http://qudt.org/vocab/unit/RAD",
+            "ssno:description": "Angle of blade at inlet.",
+            "@id": "_:N371504af649c4c8ab8bf3f977c6c655c"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "blade_outlet_diameter",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "The outer diameter of the test fan (D2).",
+            "@id": "_:Ncc19d73d143f47b7b5551355466cead4"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "coordinate",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "The spatial coordinate.",
+            "@id": "_:N2020e63fbe4b4315a6e1e06bb59d188d"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "density",
+            "ssno:unit": "http://qudt.org/vocab/unit/KiloGM-PER-M3",
+            "ssno:description": "Air density is defined as the mass of air divided by its volume.",
+            "@id": "_:N4fd1af99f1a74ceba0aece6ffe3a5736"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "difference_of_total_pressure_to_static_pressure_between_across_fan",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "The difference of static pressure at fan outlet w.r.t. the total pressure upstream of the fan. The total pressure generally is not known at the fan inlet pipe but further upstream, e.g. in a settling chamber. The dataset must provide detailed information, e.g. referencing to the respective pressure measurement device containing the exact location in the setup.",
+            "@id": "_:Ne2a8b9a45d1f42c790ab771923e649c1"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "difference_of_wall_static_pressure_across_fan",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "Static air pressure is the amount of pressure exerted by air that is not moving. Difference of wall static air pressure across a fan is the difference between the static air pressure downstream (at fan_outlet) of the fan and the total air pressure upstream of the fan at the wall (at fan_inlet).",
+            "@id": "_:N025db6babccd4e74a17f76ef1903deba"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "difference_of_wall_static_pressure_across_orifice",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "Differnece of static air pressure across orifice to compute volume flow rate according to DIN EN ISO 5167.",
+            "@id": "_:Nf8b3c2455fc84702b607a9cc51f8ea4f"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "dynamic_pressure",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "Dynamic air pressure is a measure for kinetic energy per unit volume of moving air.",
+            "@id": "_:Na13c3001b0bf42fa9dc11637854d7e4d"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "dynamic_viscosity",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA-SEC",
+            "ssno:description": "Dynamic air viscosity indicates the resistance  of air towards deformation under shear stress. (https://doi.org/10.1016/B978-0-08-096949-7.00020-0)",
+            "@id": "_:Nbbf22df756c8480aa3b520a96c6e686e"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_efficiency",
+            "ssno:unit": "http://qudt.org/vocab/unit/UNITLESS",
+            "ssno:description": "Total fan efficiency as defined in (CAROLUS, Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion, 2013, 2. Jg., p.5, eq.1.16).",
+            "@id": "_:N1cd4656440944a9bb0bfcf665d3cde66"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_flow_coefficient",
+            "ssno:unit": "http://qudt.org/vocab/unit/UNITLESS",
+            "ssno:description": "Air flow coefficient is a dimensionless number as defined in (CAROLUS, Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion, 2013, 2. Jg., p.2, eq.1.3). The addition 'of_fan' indicates that this coefficient applies to the deployed fan.",
+            "@id": "_:N07f488f5523b40139ba95efc93562dff"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_inlet_area",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2",
+            "ssno:description": "The fan cross-sectional area at the location 'fan_inlet' for fans with a casing. The position of the referred cross-sectional area is in the pipe upstream of the fan. The area is generally taken to compute the dynamic pressure at the inlet of the fan based on the volume flow rate.",
+            "@id": "_:Nc20ff777724c4f2a867766610aacc8a8"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_outlet_area",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2",
+            "ssno:description": "The fan cross-sectional area at the location 'fan_outlet' for fans with a casing. The position of the referred cross-sectional area is in the pipe downstream of the fan. The area is generally taken to compute the dynamic pressure at the outlet of the fan based on the volume flow rate.",
+            "@id": "_:Nfc1f2feb1d6540bfb09613babbde4b2e"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_power_coefficient",
+            "ssno:unit": "http://qudt.org/vocab/unit/UNITLESS",
+            "ssno:description": "Power coefficient is a dimensionless number as defined in (CAROLUS, Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion, 2013, 2. Jg., p.2, eq.1.5). The addition 'of_fan' indicates that this coefficient applies for the deployed fan.",
+            "@id": "_:Nc6668f8751be444eab94bf6bcb5c846a"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_pressure_coefficient",
+            "ssno:unit": "http://qudt.org/vocab/unit/UNITLESS",
+            "ssno:description": "Total pressure coefficient is a dimensionless number as defined in (CAROLUS, Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion, 2013, 2. Jg., p.2, eq.1.4).  The addition 'of_fan' indicates that this coefficient applies for the deployed fan.",
+            "@id": "_:N520221bf14d64dc794383838e30fa09b"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_rotational_speed",
+            "ssno:unit": "http://qudt.org/vocab/unit/PER-SEC",
+            "ssno:description": "Number of revolutions of the test fan.",
+            "@id": "_:N355100b064324bf4b617ab0f23c0a8a1"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_shaft_power",
+            "ssno:unit": "http://qudt.org/vocab/unit/W",
+            "ssno:description": "Power of fan drive shaft.",
+            "@id": "_:Nb4f0570c16dd4880ad5c4d5e27a2271f"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_specific_speed",
+            "ssno:unit": "http://qudt.org/vocab/unit/UNITLESS",
+            "ssno:description": "Specific speed of the fan as defined in (CAROLUS, Thomas. Ventilatoren-Aerodynamischer Entwurf, Schallvorhersage. Konstruktion, 2013, 2. Jg., p.2, eq.1.6).",
+            "@id": "_:Nd9bf08b640654d5da62b5d22cab9a5bd"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_torque",
+            "ssno:unit": "http://qudt.org/vocab/unit/N-M",
+            "ssno:description": "The torque acting on the impeller of the fan.",
+            "@id": "_:Nfa401a5247874a7fa78b7de5546a0836"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "fan_volume_flow_rate",
+            "ssno:unit": "http://qudt.org/vocab/unit/M3-PER-SEC",
+            "ssno:description": "Air volume flow rate is the volume of air that passes a cross section per unit time. The volume flow rate of the fan is the volume flow entering and leaving the fan. Due to gaps between the impeller and the housing, the volume flow rate is lower than the volume flow rate through the impeller (see impeller_volume_flow_rate).",
+            "@id": "_:N0d22638c553e4d0dbc041dc3b03a13b3"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "impeller_diameter",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "The diameter of the impeller of the test fan, also D3. For some fans D2 is equal to D3.",
+            "@id": "_:N25277d0cf5bb4b8ea56598fc05bad76f"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "impeller_inlet_width",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "The width of the impeller inlet.",
+            "@id": "_:N037720e543834cf9b363fad732ce3d40"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "impeller_outlet_width",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "The width of the impeller outlet.",
+            "@id": "_:Ne86cd72b000b452e8822c07100c6209c"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "impeller_volume_flow_rate",
+            "ssno:unit": "http://qudt.org/vocab/unit/M3-PER-SEC",
+            "ssno:description": "Air volume flow rate is the volume of air that passes a cross section per unit time. The volume flow rate of the impeller is the volume flow entering and leaving the impeller. Due to gaps between the impeller and the housing, this volume flow rate is higher than the volume flow rate through the fan (see fan_volume_flow_rate).",
+            "@id": "_:N339b8b7193f1463c9601eb96fa598b0a"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "impeller_weight",
+            "ssno:unit": "http://qudt.org/vocab/unit/KiloGM",
+            "ssno:description": "Weight of the impeller.",
+            "@id": "_:Nbb2ddbd2a83844959e769250a6eac9a8"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "inner_diameter_of_orifice",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "Inner diameter of an orifice.",
+            "@id": "_:N09753020d2e84e6788cc1200f7288198"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "kinematic_viscosity",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC",
+            "ssno:description": "Dynamic air viscosity indicates the resistance  of air towards deformation under shear stress. Kinematic viscosity. Dynamic air viscosity divided by air denisity equals kinematic air viscosity. (https://doi.org/10.1016/B978-0-12-410461-7.00007-9)",
+            "@id": "_:N6d71f42f83f04965a8e7c19345d78cff"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "mass_flow_rate",
+            "ssno:unit": "http://qudt.org/vocab/unit/KiloGM-PER-SEC",
+            "ssno:description": "Air mass flow rate is the mass of air that passes a certain cross sectiont per unit time.",
+            "@id": "_:N563ed1982f3946a1b949a96e1e734cbc"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "outer_diameter_of_orifice",
+            "ssno:unit": "http://qudt.org/vocab/unit/M",
+            "ssno:description": "Outer diameter of an orifice.",
+            "@id": "_:Nff9177d11f8345b6b1cad72cb455d21c"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "pulse_delay",
+            "ssno:unit": "http://qudt.org/vocab/unit/SEC",
+            "ssno:description": "Time between two laser pulses.",
+            "@id": "_:N754b024f1b2749668f450f113aa63d02"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "relative_humidity",
+            "ssno:unit": "http://qudt.org/vocab/unit/UNITLESS",
+            "ssno:description": "Relative humidity is a measure of the water vapor content of air.",
+            "@id": "_:N38393e53d06a4168b56ca735b8961e3b"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "static_pressure",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "Static air pressure is the amount of pressure exerted by air that is not moving.",
+            "@id": "_:Nf0ef654485fe46b5b06bce77ba4d2127"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "temperature",
+            "ssno:unit": "http://qudt.org/vocab/unit/DEG_C",
+            "ssno:description": "Air temperature is the bulk temperature of the air, not the surface (skin) temperature. (CF Conventions)",
+            "@id": "_:N356923deb8284e218c96a01e22afb0ab"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "time",
+            "ssno:unit": "http://qudt.org/vocab/unit/SEC",
+            "ssno:description": "Recording time since start of experiment.",
+            "@id": "_:N34f287c94cf94b2e8ee95157f1e46c8d"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "total_pressure",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "The sum of dynamic and static air pressure.",
+            "@id": "_:Ndc91f9689eca485b82fa84ebd37119fc"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "turbulent_kinetic_energy",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "The kinetic energy per unit mass of a fluid.",
+            "@id": "_:N43934671c887439ab047e7fbea03e90c"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "velocity",
+            "ssno:unit": "http://qudt.org/vocab/unit/M-PER-SEC",
+            "ssno:description": "Velocity.",
+            "@id": "_:N54e0c4a62bae4f3a8f182cfd7776293b"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "vorticity",
+            "ssno:unit": "http://qudt.org/vocab/unit/PER-SEC",
+            "ssno:description": "Vorticity.",
+            "@id": "_:N74d418e98183425a8bde32930e7fb09a"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "wall_static_pressure",
+            "ssno:unit": "http://qudt.org/vocab/unit/PA",
+            "ssno:description": "Static air pressure is the amount of pressure exerted by air that is not moving. Wall static air pressure is the static air pressure at the wall.",
+            "@id": "_:Nbbccf717982d4a608f9396a160658f3a"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "xx_reynolds_stress",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "Reynolds stress is a tensor quantity. 'xx' indicates that the variations of x-velocity is used.",
+            "@id": "_:Ndf2fca183fd6463ab306ebc8a22fc6ff"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "yx_reynolds_stress",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "Reynolds stress is a tensor quantity. 'yx' indicates that the variations of x- and y-velocity are used.",
+            "@id": "_:Nf96623e7b27a4ba1995fb32e608664e1"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "yy_reynolds_stress",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "Reynolds stress is a tensor quantity. 'yy' indicates that the variations of y-velocity is used.",
+            "@id": "_:Nf4c2edcddd0447c5bcf054fb193154d1"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "yz_reynolds_stress",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "Reynolds stress is a tensor quantity. 'yz' indicates that the variations of y- and z-velocity are used.",
+            "@id": "_:N45c1a3c1812549a9ba83ce107726f168"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "zx_reynolds_stress",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "Reynolds stress is a tensor quantity. 'zx' indicates that the variations of z- and x-velocity are used.",
+            "@id": "_:Nd14966e6f8d547b49f6fb3cbdbea6315"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "zy_reynolds_stress",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "Reynolds stress is a tensor quantity. 'zy' indicates that the variations of z- and y-velocity are used. in y-axis direction.",
+            "@id": "_:Ncf51dc82f13142bf999a8cbce1e30400"
+        },
+        {
+            "@type": "ssno:StandardName",
+            "ssno:standardName": "zz_reynolds_stress",
+            "ssno:unit": "http://qudt.org/vocab/unit/M2-PER-SEC2",
+            "ssno:description": "Reynolds stress is a tensor quantity. 'zy' indicates that the variations of z-velocity is used.",
+            "@id": "_:N3354c7311dee428391ae501b6ebc8bba"
+        }
+    ],
+    "@id": "https://doi.org/10.5281/zenodo.15300151"
+}

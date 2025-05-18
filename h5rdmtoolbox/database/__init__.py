@@ -72,4 +72,4 @@ def rdf_find(source, *,
                                       recursive=recursive)
 
 
-__all__ = ['FileDB', 'FilesDB', 'ObjDB', 'HDF5DBInterface']
+__all__ = ['FileDB', 'FilesDB', 'ObjDB', 'HDF5DBInterface', 'lazy']
