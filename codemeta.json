@@ -4,12 +4,11 @@
     "license": "https://spdx.org/licenses/MIT",
     "codeRepository": "git+https://github.com/matthiasprobst/h5RDMtoolbox.git",
     "name": "h5RDMtoolbox",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "description": "Supporting a FAIR Research Data lifecycle using Python and HDF5.",
     "applicationCategory": "Engineering",
     "programmingLanguage": [
         "Python 3",
-        "Python 3.8",
         "Python 3.9",
         "Python 3.10",
         "Python 3.11",
