@@ -1,7 +1,7 @@
 # HDF5 Research Data Management Toolbox
 
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
-![DOCS](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/branch/dev/graph/badge.svg)
+[![codecov](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/graph/badge.svg?token=IVG4AQEW47)](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
 ![pyvers](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)
 
