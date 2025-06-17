@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.1.0
+
+- upgrade setuptools due to cve and therefore limit minimum python version to 3.9
+
 ## v2.0.0
 
 - changed version number to 2.0.0
