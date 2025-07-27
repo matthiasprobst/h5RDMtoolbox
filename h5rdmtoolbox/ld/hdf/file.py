@@ -36,7 +36,7 @@ def get_ld(source: Union[str, h5py.File], blank_node_iri_base: Optional[str] = N
     root_group_uri = get_obj_bnode(source["/"], blank_node_iri_base=blank_node_iri_base)
     graph.add((file_uri, HDF5.rootGroup, root_group_uri))
 
-    process_group(source["/"], graph, file_uri, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
+    process_group(source["/"], graph, parent_uri=file_uri, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
 
     return graph
 

@@ -139,4 +139,4 @@ def process_dataset(
 
     # Process attributes of the dataset
     for attr, value in dataset.attrs.items():
-        process_attribute(attr, value, graph, dataset_uri)
+        process_attribute(name=attr, value=value, graph=graph, parent=dataset, parent_uri=dataset_uri, blank_node_iri_base=blank_node_iri_base)

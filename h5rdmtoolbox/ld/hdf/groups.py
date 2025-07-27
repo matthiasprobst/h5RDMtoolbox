@@ -25,10 +25,10 @@ def process_group(group, graph, parent_uri, blank_node_iri_base: Optional[str] =
         graph.add((group_uri, HDF.member, item_uri))
 
         if isinstance(item, h5py.Group):
-            process_group(item, graph, group_uri, blank_node_iri_base=blank_node_iri_base)
+            process_group(item, graph, parent_uri=group_uri, blank_node_iri_base=blank_node_iri_base)
         elif isinstance(item, h5py.Dataset):
-            process_dataset(item, graph, group_uri, item_uri, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
+            process_dataset(item, graph, parent_uri=group_uri, dataset_uri=item_uri, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
 
     # Process attributes of the group
     for attr, value in group.attrs.items():
-        process_attribute(attr, value, graph, group_uri)
+        process_attribute(name=attr, value=value, graph=graph, parent=group, parent_uri=group_uri, blank_node_iri_base=blank_node_iri_base)

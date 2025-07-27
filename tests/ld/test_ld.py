@@ -34,9 +34,29 @@ class TestJSONLD(unittest.TestCase):
 
     def test_dump_type(self):
         with h5tbx.File() as h5:
+            h5.attrs["__version__"] = __version__
+            h5.create_group("__version__")
             grp = h5.create_group('grp')
             grp.rdf.type = 'https://example.org/MyGroup'
-            print(h5.dump_jsonld(indent=2))
+            data = json.loads(h5.dump_jsonld(indent=2, blank_node_iri_base="https://example.org/"))
+            graph = data["@graph"]
+            version_attr_id = None
+            version_group_id = None
+            for g in graph:
+                if g.get("hdf:name", None) == "__version__" and g.get("@type", None) == "hdf:StringAttribute":
+                    version_attr_id = g.get("@id")
+                elif g.get("hdf:name", None) == "/__version__" and g.get("@type", None) == "hdf:Group":
+                    version_group_id = g.get("@id")
+            self.assertTrue(version_attr_id is not None)
+            self.assertTrue(version_group_id is not None)
+            self.assertNotEqual(version_attr_id, version_group_id)
+
+        # reopen:
+        with h5tbx.File(h5.hdf_filename) as h5:
+            data_reopened = json.loads(h5.dump_jsonld(indent=2, blank_node_iri_base="https://example.org/"))
+            self.assertDictEqual(
+                data, data_reopened
+            )
 
     def test_dump_dataset_data_using_serialize_0D_datasets(self):
         with h5tbx.File() as h5:
