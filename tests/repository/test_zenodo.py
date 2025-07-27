@@ -3,13 +3,14 @@ import logging
 import os
 import pathlib
 import shutil
+import sys
 import unittest
 from datetime import datetime
 
 import pydantic
+import rdflib
 import requests
 
-import rdflib
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
@@ -21,6 +22,11 @@ from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
 from h5rdmtoolbox.user import USER_DATA_DIR
 
 logger = logging.getLogger(__name__)
+
+
+def get_python_version():
+    """Get the current Python version as a tuple."""
+    return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
 
 class TestZenodo(unittest.TestCase):
@@ -56,6 +62,8 @@ class TestZenodo(unittest.TestCase):
         self.assertIsInstance(z.get_jsonld(), str)
         print(z.get_jsonld())
 
+    @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
+                     reason="Only testing on min and max python version")
     def test_ZenodoFile(self):
         z = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID)  # an existing repo
         self.assertDictEqual(z._cached_json, {})
@@ -282,6 +290,8 @@ class TestZenodo(unittest.TestCase):
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
 
+    @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
+                     reason="Only testing on min and max python version")
     def test_upload_hdf(self):
         z = zenodo.ZenodoSandboxDeposit(None)
 
@@ -338,6 +348,8 @@ class TestZenodo(unittest.TestCase):
             sorted(group_names)
         )
 
+    @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
+                     reason="Only testing on min and max python version")
     def test_upload_hdf_new_implementation(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
 
@@ -397,6 +409,8 @@ class TestZenodo(unittest.TestCase):
             sorted(group_names)
         )
 
+    @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
+                     reason="Only testing on min and max python version")
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoSandboxDeposit(None)
         self.assertIsInstance(z.get_metadata(), dict)
@@ -510,6 +524,8 @@ class TestZenodo(unittest.TestCase):
         # z.delete()
         # self.assertFalse(z.exists())
 
+    @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
+                     reason="Only testing on min and max python version")
     def test_ZenodoSandboxDeposit_newImplementation(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
         self.assertIsInstance(z.get_metadata(), dict)
