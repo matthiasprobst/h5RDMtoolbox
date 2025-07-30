@@ -54,9 +54,36 @@ class TestJSONLD(unittest.TestCase):
         # reopen:
         with h5tbx.File(h5.hdf_filename) as h5:
             data_reopened = json.loads(h5.dump_jsonld(indent=2, blank_node_iri_base="https://example.org/"))
-            self.assertDictEqual(
-                data, data_reopened
-            )
+
+        self.assertDictEqual(
+            data, data_reopened
+        )
+
+        # reopen2:
+        with h5tbx.File(h5.hdf_filename) as h5:
+            data_reopened2 = json.loads(h5.dump_jsonld(indent=2, blank_node_iri_base=None))
+
+
+        g = rdflib.Graph().parse(data=data_reopened, format='json-ld')
+        res = g.query("""PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        SELECT ?id
+        WHERE {
+            ?id a hdf:File .
+        }""")
+        bindings_reopened = res.bindings
+
+        g = rdflib.Graph().parse(data=data_reopened2, format='json-ld')
+        res = g.query("""PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        SELECT ?id
+        WHERE {
+            ?id a hdf:File .
+        }""")
+        bindings_reopened2 = res.bindings
+        self.assertEqual(len(bindings_reopened2), 1)
+        self.assertNotEqual(
+            bindings_reopened[0][rdflib.Variable("id")],
+            bindings_reopened2[0][rdflib.Variable("id")]
+        )
 
     def test_dump_dataset_data_using_serialize_0D_datasets(self):
         with h5tbx.File() as h5:
@@ -216,8 +243,14 @@ WHERE {
         with h5tbx.File() as h5:
             h5.attrs["a", "https://matthiasprobst.github.io/ssno#test"] = 3
             ttl = h5.serialize(fmt="ttl")
-
         print(ttl)
+        g = rdflib.Graph().parse(data=ttl, format="ttl")
+        res = g.query("""PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
+        SELECT ?value
+        WHERE {
+            ?s ssno:test ?value .
+            }""")
+        self.assertEqual(len(res.bindings), 1)
 
     def test_dump_hdf_to_json(self):
         """similar yet different to https://hdf5-json.readthedocs.io/en/latest/index.html"""
@@ -638,7 +671,7 @@ WHERE {
         self.assertIsInstance(data[0]['author'], list)
         with h5tbx.File('test.hdf', 'w') as h5:
             jsonld.to_hdf(grp=h5.create_group('person'), data=data[0],
-                   context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
+                          context={'@import': "https://doi.org/10.5063/schema/codemeta-2.0"})
             self.assertEqual(h5['person']['author1'].attrs[rdf.RDF_PREDICATE_ATTR_NAME]['SELF'],
                              'http://schema.org/author')
 
