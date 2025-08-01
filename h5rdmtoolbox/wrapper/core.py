@@ -2427,12 +2427,12 @@ class File(h5py.File, Group):
         return File(filename, mode)
 
     def dump_jsonld(self,
+                    indent: int = 2,
                     skipND: int = 1,
                     structural: bool = True,
                     semantic: bool = True,
-                    resolve_keys: bool = True,
-                    file_uri: Optional[str] = None,
-                    **kwargs) -> str:
+                    context: Optional[Dict] = None,
+                    file_uri: Optional[str] = None) -> str:
         """Dump the file content as JSON-LD string"""
         if file_uri is not None:
             if not file_uri.endswith("#"):
@@ -2442,34 +2442,34 @@ class File(h5py.File, Group):
                     "it would incorrectly suggest that internal components are resolvable sub-resources on the web."
                 )
 
-        return self.serialize(fmt="json-ld",
-                              skipND=skipND,
-                              structural=structural,
-                              semantic=semantic,
-                              resolve_keys=resolve_keys,
-                              file_uri=file_uri,
-                              **kwargs)
+        return self.serialize(
+            fmt="json-ld",
+            indent=indent,
+            skipND=skipND,
+            structural=structural,
+            contextual=semantic,
+            context=context,
+            file_uri=file_uri
+        )
 
-    def serialize(self, fmt: str,
+    def serialize(self,
+                  fmt: str,
                   skipND: int = 1,
                   structural: bool = True,
                   contextual: bool = True,
                   file_uri: Optional[str] = None,
                   context: Optional[Dict] = None,
-                  indent: int = 2,
-                  **kwargs
+                  indent: int = 2
                   ):
         """Serialize the file content to a specific format"""
         from h5rdmtoolbox.ld.utils import optimize_context
         from h5rdmtoolbox.ld import get_ld
-        fmt = kwargs.pop("format", fmt)
 
         graph = get_ld(self.hdf_filename,
                        structural=structural,
                        contextual=contextual,
-                       blank_node_iri_base=file_uri,
-                       skipND=skipND,
-                       **kwargs)
+                       file_uri=file_uri,
+                       skipND=skipND)
         context = context or {}
         context = optimize_context(graph, context)
         return graph.serialize(format=fmt,

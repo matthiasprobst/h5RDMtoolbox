@@ -92,7 +92,7 @@ class TestJSONLD(unittest.TestCase):
             h5.create_string_dataset('ds_str1', data=["Hello", "World"])
             h5.create_dataset('ds1', data=[1, 2, 3])
             h5.create_dataset('ds2', data=[[1, 2], [3, 4]])
-            ttl = h5.serialize(fmt="ttl", serialize_0d_datasets=True)
+            ttl = h5.serialize(fmt="ttl", skipND=1)
 
         g = rdflib.Graph().parse(data=ttl, format="ttl")
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -451,14 +451,13 @@ WHERE {
             self.assertEqual(ds.attrs[RDF_TYPE_ATTR_NAME], 'http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable')
             h5.dumps()
 
-        jsonld_str = h5tbx.dump_jsonld(h5.hdf_filename,
-                                       context={'schema': 'http://schema.org/',
-                                                "ssno": "https://matthiasprobst.github.io/ssno#",
-                                                "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
-                                       resolve_keys=True,
-                                       indent=2,
-                                       compact=False
-                                       )
+        jsonld_str = h5tbx.dump_jsonld(
+            h5.hdf_filename,
+            context={'schema': 'http://schema.org/',
+                     "ssno": "https://matthiasprobst.github.io/ssno#",
+                     "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
+            indent=2
+        )
 
         g = rdflib.Graph()
         g.parse(data=jsonld_str, format='json-ld')
@@ -729,7 +728,6 @@ WHERE {
 
         jdict = json.loads(
             h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
-                              resolve_keys=True,
                               context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
         jdict["ssno:usesStandardNameTable"] = "https://sandbox.zenodo.org/uploads/125545"
 

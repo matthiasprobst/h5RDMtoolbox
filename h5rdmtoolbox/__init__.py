@@ -129,34 +129,41 @@ def get_ld(
         structural: bool = True,
         contextual: bool = True,
         skipND: int = 1,
-        blank_node_iri_base: Optional[str] = None,
-        **kwargs) -> rdflib.Graph:
+        file_uri: Optional[str] = None
+) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
     from h5rdmtoolbox.ld import get_ld
-    return get_ld(hdf_filename, structural=structural, contextual=contextual, skipND=skipND,
-                  blank_node_iri_base=blank_node_iri_base, **kwargs)
+    return get_ld(hdf_filename,
+                  structural=structural,
+                  contextual=contextual,
+                  skipND=skipND,
+                  file_uri=file_uri)
 
 
 def dump_jsonld(
         hdf_filename: Union[str, pathlib.Path],
         skipND: int = 1,
+        indent: int = 2,
         structural: bool = True,
         contextual: bool = True,
         context: Optional[Dict] = None,
-        blank_node_iri_base: Optional[str] = None,
-        **kwargs):
+        file_uri: Optional[str] = None
+):
     """Return the file content as a JSON-LD string."""
     from .ld import optimize_context
     context = context or {}
     graph = get_ld(hdf_filename,
                    structural=structural,
                    contextual=contextual,
-                   blank_node_iri_base=blank_node_iri_base,
-                   skipND=skipND,
-                   **kwargs)
+                   file_uri=file_uri,
+                   skipND=skipND)
     context = optimize_context(graph, context)
-    return graph.serialize(format="json-ld", indent=2, auto_compact=True,
-                           context=context)
+    return graph.serialize(
+        format="json-ld",
+        indent=indent,
+        auto_compact=True,
+        context=context
+    )
 
 
 def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
@@ -221,20 +228,17 @@ def serialize(hdf_filename,
               fmt: str = "ttl",
               skipND: int = 1,
               structural: bool = True,
-              semantic: bool = True,
-              resolve_keys: bool = True,
-              blank_node_iri_base: Optional[str] = None,
+              contextual: bool = True,
+              file_uri: Optional[str] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
     fmt = kwargs.pop("format", fmt)
     with File(hdf_filename) as h5:
-        return h5.serialize(fmt,
-                            skipND,
+        return h5.serialize(fmt=fmt,
+                            skipND=skipND,
                             structural=structural,
-                            semantic=semantic,
-                            resolve_keys=resolve_keys,
-                            file_uri=blank_node_iri_base,
-                            **kwargs)
+                            contextual=contextual,
+                            file_uri=file_uri)
 
 
 def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,
