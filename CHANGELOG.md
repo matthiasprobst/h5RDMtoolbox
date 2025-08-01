@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v2.2.0
+
+- use fragments in internal HDF5 URIs to align with semantic web standards (fragments are not resolved in the web
+  interface, but are used to identify the HDF5 object in the file)
+
 ## v2.1.0
 
 - upgrade setuptools due to cve and therefore limit minimum python version to 3.9

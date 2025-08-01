@@ -233,7 +233,7 @@ def serialize(hdf_filename,
                             structural=structural,
                             semantic=semantic,
                             resolve_keys=resolve_keys,
-                            blank_node_iri_base=blank_node_iri_base,
+                            file_uri=blank_node_iri_base,
                             **kwargs)
 
 

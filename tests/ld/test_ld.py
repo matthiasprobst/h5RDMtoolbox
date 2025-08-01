@@ -37,8 +37,9 @@ class TestJSONLD(unittest.TestCase):
             h5.attrs["__version__"] = __version__
             h5.create_group("__version__")
             grp = h5.create_group('grp')
+            grp.attrs["group_attr"] = 2.4
             grp.rdf.type = 'https://example.org/MyGroup'
-            data = json.loads(h5.dump_jsonld(indent=2, blank_node_iri_base="https://example.org/"))
+            data = json.loads(h5.dump_jsonld(indent=2, file_uri="https://example.org#"))
             graph = data["@graph"]
             version_attr_id = None
             version_group_id = None
@@ -53,7 +54,7 @@ class TestJSONLD(unittest.TestCase):
 
         # reopen:
         with h5tbx.File(h5.hdf_filename) as h5:
-            data_reopened = json.loads(h5.dump_jsonld(indent=2, blank_node_iri_base="https://example.org/"))
+            data_reopened = json.loads(h5.dump_jsonld(indent=2, file_uri="https://example.org#"))
 
         self.assertDictEqual(
             data, data_reopened
@@ -61,8 +62,7 @@ class TestJSONLD(unittest.TestCase):
 
         # reopen2:
         with h5tbx.File(h5.hdf_filename) as h5:
-            data_reopened2 = json.loads(h5.dump_jsonld(indent=2, blank_node_iri_base=None))
-
+            data_reopened2 = json.loads(h5.dump_jsonld(indent=2, file_uri=None))
 
         g = rdflib.Graph().parse(data=data_reopened, format='json-ld')
         res = g.query("""PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
@@ -182,16 +182,18 @@ WHERE {
         with h5tbx.File() as h5:
             h5.attrs["__version__"] = __version__
             jsonld = h5.dump_jsonld(
-                blank_node_iri_base="https://example.org/",
-                context={"local": "https://example.org/"},
-                indent=2)
+                file_uri="https://example.org/#",
+                context={"local": "https://example.org/#"},
+                indent=2
+            )
             jsonld_dict = json.loads(jsonld)
-            self.assertEqual(jsonld_dict['@context']['local'], 'https://example.org/')
+            self.assertEqual(jsonld_dict['@context']['local'], 'https://example.org/#')
             found_local = False
             for e in jsonld_dict["@graph"]:
                 if e.get("@id", "").startswith("local:"):
                     found_local = True
                     break
+
             self.assertTrue(found_local)
 
     #     def test_build_node_list(self):
@@ -243,7 +245,6 @@ WHERE {
         with h5tbx.File() as h5:
             h5.attrs["a", "https://matthiasprobst.github.io/ssno#test"] = 3
             ttl = h5.serialize(fmt="ttl")
-        print(ttl)
         g = rdflib.Graph().parse(data=ttl, format="ttl")
         res = g.query("""PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
         SELECT ?value
@@ -302,7 +303,6 @@ WHERE {
 }"""
         qres = g.query(sparql_str)
         for i, row in enumerate(qres):
-            print(row)
             self.assertEqual(int(row[0]), i)
 
         # get list 2
@@ -319,7 +319,6 @@ WHERE {
 }"""
         qres = g.query(sparql_str)
         for i, row in enumerate(qres):
-            print(row)
             self.assertEqual(float(row[0]), -2.3)
 
     def test_model_dump_jsonld_resolve_keys(self):
@@ -488,7 +487,6 @@ WHERE {
             h5['person'].attrs['age'] = 21
             h5.person.rdf.type = 'http://w3id.org/nfdi4ing/metadata4ing#Person'
             h5.person.rdf.subject = 'https://orcid.org/XXXX-XXXX-XXXX-XXXX'
-            print(h5.dump_jsonld(indent=2))
 
     def test_jsonld_dumps_NDdataset(self):
         with h5tbx.File(mode='w') as h5:
@@ -496,8 +494,6 @@ WHERE {
             h5.attrs['name'] = 'test attr'
             # _ = h5.create_dataset('test_dataset', data=5.4)
             jd = jsonld.dumpd(h5, structural=True)
-        from pprint import pprint
-        pprint(jd)
 
     def test_to_hdf_with_graph(self):
         test_data = """{
@@ -730,9 +726,7 @@ WHERE {
             h5.frdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
             h5["/"].attrs["snt_rootgroup"] = "https://sandbox.zenodo.org/uploads/12554567"
             h5["/"].rdf["snt_rootgroup"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
-        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
-                                resolve_keys=True,
-                                context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
+
         jdict = json.loads(
             h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
                               resolve_keys=True,
@@ -747,10 +741,6 @@ WHERE {
             h5["grp"].frdf["snt_file"].object = DCAT.Dataset
             self.assertEqual(h5["/"].attrs[RDF_FILE_PREDICATE_ATTR_NAME]["snt_file"],
                              str(ssnolib.namespace.SSNO.usesStandardNameTable))
-
-        print(h5tbx.dump_jsonld(h5.hdf_filename, indent=2, contextual=True, structural=True,
-                                resolve_keys=True,
-                                context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
 
     def test_frdf(self):
         with h5tbx.File() as h5:
@@ -797,4 +787,3 @@ WHERE {
             g.attrs["id"] = "0000-0001-8729-0482"
             g.rdf.subject = "https://orcid.org/0000-0001-8729-0482"
             jsonld = h5.serialize(fmt="json-ld", structural=True)
-        print(jsonld)

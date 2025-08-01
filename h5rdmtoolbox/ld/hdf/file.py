@@ -29,7 +29,7 @@ def get_ld(source: Union[str, h5py.File], blank_node_iri_base: Optional[str] = N
     if file_frdf_manager.subject:
         file_uri = rdflib.URIRef(file_frdf_manager.subject)
     else:
-        file_uri = get_file_bnode(source, blank_node_iri_base=blank_node_iri_base)
+        file_uri = get_file_bnode(source, file_uri=blank_node_iri_base)
 
     graph.add((file_uri, RDF.type, HDF.File))
 

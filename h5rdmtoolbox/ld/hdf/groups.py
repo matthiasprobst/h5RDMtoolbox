@@ -13,7 +13,13 @@ from h5rdmtoolbox.ld.utils import get_obj_bnode
 HDF = Namespace(str(HDF5))
 
 
-def process_group(group, graph, parent_uri, blank_node_iri_base: Optional[str] = None, skipND: int = 1):
+def process_group(
+        group,
+        graph,
+        parent_uri,
+        blank_node_iri_base: Optional[str] = None,
+        skipND: int = 1
+):
     """Recursively process HDF5 groups and datasets, adding them to the RDF graph."""
     group_uri = get_obj_bnode(group, blank_node_iri_base=blank_node_iri_base)
     graph.add((group_uri, RDF.type, HDF.Group))
@@ -27,8 +33,16 @@ def process_group(group, graph, parent_uri, blank_node_iri_base: Optional[str] =
         if isinstance(item, h5py.Group):
             process_group(item, graph, parent_uri=group_uri, blank_node_iri_base=blank_node_iri_base)
         elif isinstance(item, h5py.Dataset):
-            process_dataset(item, graph, parent_uri=group_uri, dataset_uri=item_uri, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
+            process_dataset(
+                item,
+                graph,
+                parent_uri=group_uri,
+                dataset_uri=item_uri,
+                blank_node_iri_base=blank_node_iri_base,
+                skipND=skipND
+            )
 
     # Process attributes of the group
     for attr, value in group.attrs.items():
-        process_attribute(name=attr, value=value, graph=graph, parent=group, parent_uri=group_uri, blank_node_iri_base=blank_node_iri_base)
+        process_attribute(name=attr, value=value, graph=graph, parent=group, parent_uri=group_uri,
+                          blank_node_iri_base=blank_node_iri_base)
