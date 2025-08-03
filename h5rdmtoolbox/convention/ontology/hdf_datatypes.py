@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import rdflib
 from ontolutils.namespacelib.hdf5 import HDF5
 
 # Mapping HDF5 numpy datatypes to ontology types
@@ -53,12 +54,11 @@ def _get_endianness(dtype):
     return 'LE'  # Default to little-endian if unknown
 
 
-def get_datatype(dataset: h5py.Dataset):
+def get_datatype(dataset: h5py.Dataset) -> rdflib.URIRef:
     """Maps an HDF5 dataset to its ontology-defined datatype."""
     dtype = dataset.dtype
     np_type = np.dtype(dtype).type  # Get numpy type (e.g., np.float32)
 
     endianness = _get_endianness(dtype)
 
-    ontology_type = HDF5_DATATYPE_MAP.get((np_type, endianness), None)
-    return ontology_type
+    return HDF5_DATATYPE_MAP.get((np_type, endianness), None)

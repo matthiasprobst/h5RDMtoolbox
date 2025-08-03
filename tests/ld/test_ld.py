@@ -8,6 +8,7 @@ import rdflib
 import ssnolib
 from ontolutils import namespaces, urirefs, Thing
 from ontolutils.namespacelib import M4I
+from rdflib import DCAT
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
@@ -731,14 +732,15 @@ WHERE {
                               context={"ssno": "https://matthiasprobst.github.io/ssno#"}))
         jdict["ssno:usesStandardNameTable"] = "https://sandbox.zenodo.org/uploads/125545"
 
-        from rdflib import DCAT
         with h5tbx.File() as h5:
             h5.create_group('grp')
             h5.attrs["snt_file"] = "https://sandbox.zenodo.org/uploads/125545"
             h5["grp"].frdf["snt_file"].predicate = ssnolib.namespace.SSNO.usesStandardNameTable
             h5["grp"].frdf["snt_file"].object = DCAT.Dataset
-            self.assertEqual(h5["/"].attrs[RDF_FILE_PREDICATE_ATTR_NAME]["snt_file"],
-                             str(ssnolib.namespace.SSNO.usesStandardNameTable))
+            self.assertEqual(
+                h5["/"].attrs[RDF_FILE_PREDICATE_ATTR_NAME]["snt_file"],
+                str(ssnolib.namespace.SSNO.usesStandardNameTable)
+            )
 
     def test_frdf(self):
         with h5tbx.File() as h5:

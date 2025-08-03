@@ -10,6 +10,7 @@ from rdflib import XSD, RDF
 
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
 from h5rdmtoolbox.ld.hdf.attributes import process_attribute
+from h5rdmtoolbox.ld.utils import get_property_node
 
 HDF = Namespace(str(HDF5))
 HDF5_FILTER_ONTOLOGY = {
@@ -71,11 +72,11 @@ def process_dataset(
     else:
         graph.add((dataset_uri, HDF5.maximumSize, rdflib.Literal(-1, datatype=XSD.integer)))
 
-    datatype = get_datatype(dataset)
+    datatype_node = get_datatype(dataset)
 
-    if datatype:
-        graph.add((datatype, RDF.type, HDF5.Datatype))
-        graph.add((dataset_uri, HDF5.datatype, datatype))
+    if datatype_node:
+        graph.add((datatype_node, RDF.type, HDF5.Datatype))
+        graph.add((dataset_uri, HDF5.datatype, datatype_node))
 
     is_string_dataset = False
     if dataset.dtype.kind == 'S':
@@ -97,22 +98,36 @@ def process_dataset(
         graph.add((dataset_uri, HDF5.layout, HDF5.H5D_VIRTUAL))
 
     if dataset.chunks:
-        chunk_dimension_uri = rdflib.BNode()
+        chunk_dimension_uri = get_property_node(
+            dataset,
+            name='chunk_dimensions',
+            blank_node_iri_base=blank_node_iri_base
+        )
         graph.add((chunk_dimension_uri, RDF.type, HDF5.ChunkDimension))
         graph.add((dataset_uri, HDF5.chunk, chunk_dimension_uri))
 
         for ichunk, chunk in enumerate(dataset.chunks):
-            dimension_index_uri = rdflib.BNode()
+            dimension_index_uri = get_property_node(
+                dataset,
+                name=f'chunk_dimension_{ichunk}',
+                blank_node_iri_base=blank_node_iri_base
+            )
             graph.add((dimension_index_uri, RDF.type, HDF5.DataspaceDimension))
             graph.add((chunk_dimension_uri, HDF5.dimension, dimension_index_uri))
             graph.add((dimension_index_uri, HDF5.size, rdflib.Literal(chunk, datatype=XSD.integer)))
             graph.add((dimension_index_uri, HDF5.dimensionIndex, rdflib.Literal(ichunk, datatype=XSD.integer)))
 
+    dataspace_uri = get_property_node(
+        obj=dataset, name='dataspace', blank_node_iri_base=blank_node_iri_base
+    )
     if dataset.ndim > 0:
-        dataspace_uri = rdflib.BNode()
         graph.add((dataspace_uri, RDF.type, HDF5.SimpleDataspace))
         for idim, dim in enumerate(dataset.shape):
-            dataspace_dimension_node = rdflib.BNode()
+            dataspace_dimension_node = get_property_node(
+                obj=dataset,
+                name=f'dataspace_dimension_{idim}',
+                blank_node_iri_base=blank_node_iri_base
+            )
             graph.add((dataspace_dimension_node, RDF.type, HDF5.DataspaceDimension))
             graph.add((dataspace_uri, HDF5.dimension, dataspace_dimension_node))
             graph.add((dataspace_dimension_node, HDF5.size, rdflib.Literal(dim, datatype=XSD.integer)))
@@ -125,8 +140,7 @@ def process_dataset(
             else:
                 graph.add((dataset_uri, HDF5.value, rdflib.Literal(data)))
     else:
-        dataspace_uri = HDF5.scalarDataspace
-        graph.add((dataspace_uri, RDF.type, HDF5.scalarDataspace))
+        graph.add((dataspace_uri, RDF.type, HDF5.ScalarDataspace))
 
         if skipND and dataset.ndim < skipND:
             data = dataset[()]
@@ -139,4 +153,5 @@ def process_dataset(
 
     # Process attributes of the dataset
     for attr, value in dataset.attrs.items():
-        process_attribute(name=attr, value=value, graph=graph, parent=dataset, parent_uri=dataset_uri, blank_node_iri_base=blank_node_iri_base)
+        process_attribute(name=attr, value=value, graph=graph, parent=dataset, parent_uri=dataset_uri,
+                          blank_node_iri_base=blank_node_iri_base)

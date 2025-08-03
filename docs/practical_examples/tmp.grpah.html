@@ -88,8 +88,8 @@
                   
 
                   // parsing and collecting nodes and edges from the python
-                  nodes = new vis.DataSet([{"color": "black", "id": 0, "label": "_:na2e7d0a818084743bae90da894fc6b22b2", "shape": "dot", "size": 20, "title": "_:na2e7d0a818084743bae90da894fc6b22b2"}, {"color": "red", "id": 1, "label": "hdf:File", "shape": "dot", "size": 30, "title": "hdf:File"}, {"color": "black", "id": 2, "label": "_:na2e7d0a818084743bae90da894fc6b22b1", "shape": "dot", "size": 20, "title": "_:na2e7d0a818084743bae90da894fc6b22b1"}, {"color": "#97c2fc", "id": 3, "label": "Matthias", "shape": "dot", "title": "Matthias"}, {"color": "#97c2fc", "id": 4, "label": "Probst", "shape": "dot", "title": "Probst"}]);
-                  edges = new vis.DataSet([{"from": 0, "label": "rdf:type", "to": 1}, {"from": 2, "label": "foaf:firstName", "to": 3}, {"from": 2, "label": "foaf:lastName", "to": 4}]);
+                  nodes = new vis.DataSet([{"color": "black", "id": 0, "label": "_:n7c645bc8001e4a62846d49d3b3f01c62b1", "shape": "dot", "size": 20, "title": "_:n7c645bc8001e4a62846d49d3b3f01c62b1"}, {"color": "#97c2fc", "id": 1, "label": "prov:Person", "shape": "dot", "title": "prov:Person"}, {"color": "#97c2fc", "id": 2, "label": "Probst", "shape": "dot", "title": "Probst"}, {"color": "#97c2fc", "id": 3, "label": "Matthias", "shape": "dot", "title": "Matthias"}]);
+                  edges = new vis.DataSet([{"from": 0, "label": "dcterms:relation", "to": 1}, {"from": 1, "label": "foaf:lastName", "to": 2}, {"from": 1, "label": "foaf:firstName", "to": 3}]);
 
                   nodeColors = {};
                   allNodes = nodes.get({ returnType: "Object" });
