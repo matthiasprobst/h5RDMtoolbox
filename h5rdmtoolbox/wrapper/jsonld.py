@@ -189,9 +189,6 @@ def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef,
         subject, predicate or object key
     context: Dict
         The context
-    resolve_keys: bool
-        If True, the key will be resolved to a full IRI and the prefix is
-        added to the context. If False, no context is added.
     """
     # if there is @import in the context, the key might be defined in there, which make resolving the
     # key unnecessary.

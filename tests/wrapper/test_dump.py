@@ -20,7 +20,6 @@ class TestDump(unittest.TestCase):
 
         ret = h5tbx.dump_jsonld(h5.hdf_filename,
                                 structural=False,
-                                compact=False,
                                 context={'foaf': 'http://xmlns.com/foaf/0.1/'})
         jsondict = json.loads(ret)
 
@@ -33,8 +32,7 @@ class TestDump(unittest.TestCase):
         self.assertEqual(person_data['foaf:lastName'], 'Doe')
 
         ret = h5tbx.dump_jsonld(h5.hdf_filename,
-                                structural=True,
-                                compact=False)
+                                structural=True)
         jsondict = json.loads(ret)
         verified_types = False
         for g in jsondict['@graph']:
@@ -44,7 +42,7 @@ class TestDump(unittest.TestCase):
         self.assertTrue(verified_types)
 
         with self.assertRaises(ValueError):
-            h5tbx.dump_jsonld(h5.hdf_filename, structural=False, semantic=False)
+            h5tbx.dump_jsonld(h5.hdf_filename, structural=False, contextual=False)
 
     def test_dump_serialized_dict_with_urls(self):
         with h5tbx.File() as h5:
@@ -63,7 +61,7 @@ class TestDump(unittest.TestCase):
             grp.attrs['fname', FOAF.firstName] = 'John'
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
 
-        jsonld_str = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, semantic=False)
+        jsonld_str = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, contextual=False)
         print(jsonld_str)
 
     def test_sdump(self):
