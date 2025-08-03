@@ -169,11 +169,11 @@ def dump_jsonld(
 def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
                      skipND: int = 1,
                      structural: bool = True,
-                     semantic: bool = True,
+                     contextual: bool = True,
                      resolve_keys: bool = True,
                      context: Optional[Dict] = None,
-                     blank_node_iri_base: Optional[str] = None,
-                     **kwargs) -> str:
+                     blank_node_iri_base: Optional[str] = None
+                     ) -> str:
     """Dump the JSON-LD representation of the file. With semantic=True and structural=False, the JSON-LD
     represents the semantic content only. To get a pure structural representation, set semantic=False, which
     will ignore any RDF content. If both are set to True, the JSON-LD will contain both structural and semantic.
@@ -205,13 +205,13 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
         if not isinstance(blank_node_iri_base, (str, HttpUrl)):
             raise ValueError('blank_node_iri_base must be a valid URL')
     from .wrapper import jsonld
-    if not structural and not semantic:
-        raise ValueError('At least one of structural or semantic must be True.')
+    if not structural and not contextual:
+        raise ValueError('At least one of structural or contextual must be True.')
 
     from h5rdmtoolbox.ld.hdf.file import get_serialized_ld
-    if structural and not semantic:
-        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)
-    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, skipND=skipND)
+    if structural and not contextual:
+        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, contextual=contextual, skipND=skipND)
+    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, contextual=contextual, skipND=skipND)
     # with File(hdf_filename) as h5:
     #     return jsonld.dumps(
     #         h5,

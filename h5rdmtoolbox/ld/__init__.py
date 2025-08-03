@@ -15,17 +15,12 @@ def get_ld(
         structural: bool = True,
         contextual: bool = True,
         file_uri: Optional[str] = None,
-        semantic: Optional[bool] = None,
         skipND: Optional[int] = 1) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
     if skipND is not None:
         warnings.warn(
             "skipND is deprecated and will be removed in v1.8.0. Instead 'serialize_0d_datasets' is introduced, which enables the serialization of numerical or string 0D datasets.",
             DeprecationWarning)
-    if semantic is not None:
-        warnings.warn("semantic is deprecated and will be removed in v1.8.0. Use 'contextual' instead.",
-                      DeprecationWarning)
-        contextual = semantic
 
     graph = None
     with h5py.File(hdf_filename) as h5:
@@ -47,33 +42,31 @@ def get_ld(
 def hdf2jsonld(
         filename: Union[str, pathlib.Path],
         metadata_filename: Optional[Union[str, pathlib.Path]] = None,
-        fmt='json-ld',
         context: Optional[dict] = None,
         structural: bool = True,
         contextual: bool = True,
         indent: int = 2,
         file_uri: Optional[str] = None,
-        **kwargs
+        skipND: Optional[int] = 1,
 ):
     if metadata_filename is None:
         metadata_filename = pathlib.Path(filename).with_suffix('.jsonld')  # recommended suffix for JSON-LD is .jsonld!
     else:
         metadata_filename = pathlib.Path(metadata_filename)
 
-    fmt = kwargs.pop("format", fmt)
     graph = get_ld(
         hdf_filename=filename,
         structural=structural,
         contextual=contextual,
         file_uri=file_uri,
-        **kwargs
+        skipND=skipND
     )
     context = context or {}
     context = optimize_context(graph, context)
 
     with open(metadata_filename, 'w', encoding='utf-8') as f:
         f.write(
-            graph.serialize(format=fmt,
+            graph.serialize(format='json-ld',
                             indent=indent,
                             auto_compact=True,
                             context=context)

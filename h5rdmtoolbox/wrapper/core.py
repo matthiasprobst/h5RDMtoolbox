@@ -2430,7 +2430,7 @@ class File(h5py.File, Group):
                     indent: int = 2,
                     skipND: int = 1,
                     structural: bool = True,
-                    semantic: bool = True,
+                    contextual: bool = True,
                     context: Optional[Dict] = None,
                     file_uri: Optional[str] = None) -> str:
         """Dump the file content as JSON-LD string"""
@@ -2447,7 +2447,7 @@ class File(h5py.File, Group):
             indent=indent,
             skipND=skipND,
             structural=structural,
-            contextual=semantic,
+            contextual=contextual,
             context=context,
             file_uri=file_uri
         )

@@ -1,15 +1,10 @@
-import hashlib
-import os
 import pathlib
-from dataclasses import dataclass
 from typing import Optional
 from typing import Union
 
 import h5py
 import rdflib
 from rdflib.namespace import XSD
-
-from .globals import _CACHE
 
 
 def get_attr_dtype_as_XSD(data):
@@ -114,6 +109,7 @@ def get_property_node(
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(_id)
 
+
 def get_attr_bnode(obj: Union[h5py.Dataset, h5py.Group],
                    name: str,
                    blank_node_iri_base: Optional[str]):
@@ -125,9 +121,3 @@ def get_attr_bnode(obj: Union[h5py.Dataset, h5py.Group],
     if blank_node_iri_base:
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(f"{_id}")
-
-
-@dataclass()
-class ExtractionOptions:
-    structural: bool
-    semantic: bool
