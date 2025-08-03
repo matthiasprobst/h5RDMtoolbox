@@ -129,7 +129,8 @@ def get_ld(
         structural: bool = True,
         contextual: bool = True,
         skipND: int = 1,
-        file_uri: Optional[str] = None
+        file_uri: Optional[str] = None,
+        context: Optional[Dict] = None
 ) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
     from h5rdmtoolbox.ld import get_ld
@@ -137,7 +138,8 @@ def get_ld(
                   structural=structural,
                   contextual=contextual,
                   skipND=skipND,
-                  file_uri=file_uri)
+                  file_uri=file_uri,
+                  context=context)
 
 
 def dump_jsonld(
@@ -210,8 +212,10 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
 
     from h5rdmtoolbox.ld.hdf.file import get_serialized_ld
     if structural and not contextual:
-        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, contextual=contextual, skipND=skipND)
-    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context, contextual=contextual, skipND=skipND)
+        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context,
+                                 contextual=contextual, skipND=skipND)
+    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context,
+                             contextual=contextual, skipND=skipND)
     # with File(hdf_filename) as h5:
     #     return jsonld.dumps(
     #         h5,

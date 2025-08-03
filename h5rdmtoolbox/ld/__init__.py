@@ -1,6 +1,6 @@
 import pathlib
 import warnings
-from typing import Union, Optional
+from typing import Union, Optional, Dict
 
 import h5py
 import rdflib
@@ -15,7 +15,8 @@ def get_ld(
         structural: bool = True,
         contextual: bool = True,
         file_uri: Optional[str] = None,
-        skipND: Optional[int] = 1) -> rdflib.Graph:
+        skipND: Optional[int] = 1,
+        context: Optional[Dict] = None) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
     if skipND is not None:
         warnings.warn(
@@ -36,6 +37,10 @@ def get_ld(
                 graph = get_contextual_ld(hdf_filename, file_uri=file_uri)
     if graph is None:
         raise ValueError("structural and semantic cannot be both False.")
+    context = context or {}
+    for prefix, uri in context.items():
+        if not isinstance(uri, rdflib.URIRef):
+            graph.bind("ex", rdflib.URIRef(uri))
     return graph
 
 

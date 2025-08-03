@@ -3,7 +3,7 @@ from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Namespace, Literal
 from rdflib import XSD, RDF
 
-from ..utils import get_attr_bnode
+from ..utils import get_attr_node
 
 HDF = Namespace(str(HDF5))
 
@@ -12,7 +12,7 @@ def process_attribute(*, name, value, graph, parent, parent_uri, blank_node_iri_
     """Process an HDF5 attribute, adding it to the RDF graph."""
     if name.isupper() or name.startswith('@'):
         return
-    attr_uri = get_attr_bnode(
+    attr_uri = get_attr_node(
         parent,
         name,
         blank_node_iri_base

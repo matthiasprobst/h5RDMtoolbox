@@ -98,7 +98,7 @@ def get_property_node(
         obj: Union[h5py.Dataset, h5py.Group],
         name: str,
         blank_node_iri_base: Optional[str] = None
-) -> rdflib.URIRef:
+) -> Union[rdflib.URIRef, rdflib.BNode]:
     """Get a property node for an HDF5 object."""
     _file_id = _get_file_id(obj.file)
     if obj.name == "/":
@@ -110,9 +110,10 @@ def get_property_node(
     return rdflib.BNode(_id)
 
 
-def get_attr_bnode(obj: Union[h5py.Dataset, h5py.Group],
-                   name: str,
-                   blank_node_iri_base: Optional[str]):
+def get_attr_node(
+        obj: Union[h5py.Dataset, h5py.Group],
+        name: str,
+        blank_node_iri_base: str) -> Union[rdflib.URIRef, rdflib.BNode]:
     _file_id = _get_file_id(obj.file)
     if obj.name == "/":
         _id = f"{_file_id}@{name}"
