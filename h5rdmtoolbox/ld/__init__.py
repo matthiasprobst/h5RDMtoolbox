@@ -1,6 +1,6 @@
 import pathlib
 import warnings
-from typing import Union, Optional
+from typing import Union, Optional, Dict
 
 import h5py
 import rdflib
@@ -14,75 +14,60 @@ def get_ld(
         hdf_filename: Union[str, pathlib.Path],
         structural: bool = True,
         contextual: bool = True,
-        blank_node_iri_base: Optional[str] = None,
-        **kwargs) -> rdflib.Graph:
+        file_uri: Optional[str] = None,
+        skipND: Optional[int] = 1,
+        context: Optional[Dict] = None) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
-    resolve_keys = kwargs.get("resolve_keys", None)
-    semantic = kwargs.get("semantic", None)
-    skipND = kwargs.get("skipND", None)
-    if skipND is not None:
-        warnings.warn(
-            "skipND is deprecated and will be removed in v1.8.0. Instead 'serialize_0d_datasets' is introduced, which enables the serialization of numerical or string 0D datasets.",
-            DeprecationWarning)
-    serialize_0d_datasets: Optional[bool] = kwargs.get("serialize_0d_datasets", None)
-    if serialize_0d_datasets:
-        skipND = 1
-    if resolve_keys is not None:
-        warnings.warn("resolve_keys has no effect anymore and is deprecated and will be removed in v1.8.0.",
-                      DeprecationWarning)
-    if semantic is not None:
-        warnings.warn("semantic is deprecated and will be removed in v1.8.0. Use 'contextual' instead.",
-                      DeprecationWarning)
-        contextual = semantic
 
     graph = None
     with h5py.File(hdf_filename) as h5:
         if contextual and structural:
-            graph1 = get_hdf_ld(h5, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
-            graph2 = get_contextual_ld(h5, blank_node_iri_base=blank_node_iri_base)
+            graph1 = get_hdf_ld(h5, file_uri=file_uri, skipND=skipND)
+            graph2 = get_contextual_ld(h5, file_uri=file_uri)
             graph = graph1 + graph2
         else:
             if structural:
-                graph = get_hdf_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base, skipND=skipND)
+                graph = get_hdf_ld(hdf_filename, file_uri=file_uri, skipND=skipND)
 
             if contextual:
-                graph = get_contextual_ld(hdf_filename, blank_node_iri_base=blank_node_iri_base)
+                graph = get_contextual_ld(hdf_filename, file_uri=file_uri)
     if graph is None:
         raise ValueError("structural and semantic cannot be both False.")
+    context = context or {}
+    for prefix, uri in context.items():
+        if not isinstance(uri, rdflib.URIRef):
+            graph.bind("ex", rdflib.URIRef(uri))
     return graph
 
 
 def hdf2jsonld(
         filename: Union[str, pathlib.Path],
         metadata_filename: Optional[Union[str, pathlib.Path]] = None,
-        fmt='json-ld',
-        **kwargs
+        context: Optional[dict] = None,
+        structural: bool = True,
+        contextual: bool = True,
+        indent: int = 2,
+        file_uri: Optional[str] = None,
+        skipND: Optional[int] = 1,
 ):
     if metadata_filename is None:
         metadata_filename = pathlib.Path(filename).with_suffix('.jsonld')  # recommended suffix for JSON-LD is .jsonld!
     else:
         metadata_filename = pathlib.Path(metadata_filename)
 
-    context = kwargs.pop("context", None)
-    indent = kwargs.pop("indent", 2)
-    structural = kwargs.pop("structural", True)
-    contextual = kwargs.pop("contextual", True)
-    blank_node_iri_base = kwargs.pop("blank_node_iri_base", None)
-
-    fmt = kwargs.pop("format", fmt)
     graph = get_ld(
         hdf_filename=filename,
         structural=structural,
         contextual=contextual,
-        blank_node_iri_base=blank_node_iri_base,
-        **kwargs
+        file_uri=file_uri,
+        skipND=skipND
     )
     context = context or {}
     context = optimize_context(graph, context)
 
     with open(metadata_filename, 'w', encoding='utf-8') as f:
         f.write(
-            graph.serialize(format=fmt,
+            graph.serialize(format='json-ld',
                             indent=indent,
                             auto_compact=True,
                             context=context)

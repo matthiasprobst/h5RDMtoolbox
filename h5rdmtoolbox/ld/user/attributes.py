@@ -1,5 +1,6 @@
 import json
 import warnings
+from typing import Union
 
 import numpy as np
 import rdflib
@@ -9,7 +10,7 @@ from h5rdmtoolbox.ld.utils import get_attr_dtype_as_XSD, get_obj_bnode
 from ..rdf import FileRDFManager, RDFManager
 
 
-def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base, file_uri):
+def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[rdflib.URIRef, rdflib.BNode]):
     rdf_user_type = FileRDFManager(parent_obj.attrs).type
     if rdf_user_type is not None:
         if isinstance(rdf_user_type, (list, np.ndarray)):
@@ -48,18 +49,18 @@ def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base, f
                                 f"Error parsing JSON-LD object for attribute. name={name}, data={data}. Orig. Error: {e}")
 
             elif isinstance(rdf_user_object, dict):
-                    try:
-                        obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(rdf_user_object)), format="json-ld")
-                        # relate the obj_graph with the predicate:
-                        _subjects = set(obj_graph.subjects())
-                        if len(_subjects) != 1:
-                            warnings.warn(f"Error parsing JSON-LD object for attribute. name={name}, data={data}. "
-                                          f"Expected exactly one subject, found {len(_subjects)}")
-                        obj_graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), list(_subjects)[0]))
-                        graph += obj_graph
-                    except Exception as e:
-                        warnings.warn(
-                            f"Error parsing JSON-LD object for attribute. name={name}, data={data}. Orig. Error: {e}")
+                try:
+                    obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(rdf_user_object)), format="json-ld")
+                    # relate the obj_graph with the predicate:
+                    _subjects = set(obj_graph.subjects())
+                    if len(_subjects) != 1:
+                        warnings.warn(f"Error parsing JSON-LD object for attribute. name={name}, data={data}. "
+                                      f"Expected exactly one subject, found {len(_subjects)}")
+                    obj_graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), list(_subjects)[0]))
+                    graph += obj_graph
+                except Exception as e:
+                    warnings.warn(
+                        f"Error parsing JSON-LD object for attribute. name={name}, data={data}. Orig. Error: {e}")
         else:
             graph.add(
                 (file_uri,
@@ -70,7 +71,6 @@ def process_file_attribute(parent_obj, name, data, graph, blank_node_iri_base, f
 
 
 def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
-
     rdf_manager = RDFManager(parent_obj.attrs)
 
     parent_uri = rdf_manager.subject
