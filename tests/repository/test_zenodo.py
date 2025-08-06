@@ -306,13 +306,13 @@ class TestZenodo(unittest.TestCase):
         json_name = hdf_file_name.replace('.hdf', '.jsonld')
 
         z.upload_file(orig_hdf_filename)  # metamapper per default converts to JSONLD file
-        filenames = z.get_filenames()
+        filenames = list(z.files.keys())
         self.assertIn(hdf_file_name, filenames)
         self.assertIn(json_name, filenames)
 
         self.assertEqual(z.files.get('invalid.hdf'), None)
 
-        hdf_filenames = [f for f in z.get_filenames() if pathlib.Path(f).suffix == '.hdf']
+        hdf_filenames = [f for f in z.files.keys() if pathlib.Path(f).suffix == '.hdf']
         self.assertEqual(len(hdf_filenames), 1)
 
         hdf_filename = z.files.get(hdf_file_name).download()
@@ -364,13 +364,13 @@ class TestZenodo(unittest.TestCase):
         json_name = hdf_file_name.replace('.hdf', '.jsonld')
 
         z.upload_file(orig_hdf_filename)  # metamapper per default converts to JSONLD file
-        filenames = z.get_filenames()
+        filenames = list(z.files.keys())
         self.assertIn(hdf_file_name, filenames)
         self.assertIn(json_name, filenames)
 
         self.assertEqual(z.files.get('invalid.hdf'), None)
 
-        hdf_filenames = [f for f in z.get_filenames() if pathlib.Path(f).suffix == '.hdf']
+        hdf_filenames = [f for f in list(z.files.keys()) if pathlib.Path(f).suffix == '.hdf']
         self.assertEqual(len(hdf_filenames), 1)
 
         hdf_filename = z.files.get(hdf_file_name).download()
@@ -475,7 +475,7 @@ class TestZenodo(unittest.TestCase):
             z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
 
         z.upload_file(tmpfile, overwrite=True, metamapper=None)
-        self.assertIn('testfile.txt', z.get_filenames())
+        self.assertIn('testfile.txt', list(z.files.keys()))
 
         with self.assertWarns(UserWarning):
             z.upload_file('testfile.txt', overwrite=False, metamapper=None)
@@ -589,7 +589,7 @@ class TestZenodo(unittest.TestCase):
             z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
 
         z.upload_file(tmpfile, overwrite=True, metamapper=None)
-        self.assertIn('testfile.txt', z.get_filenames())
+        self.assertIn('testfile.txt', list(z.files.keys()))
 
         with self.assertWarns(UserWarning):
             z.upload_file('testfile.txt', overwrite=False, metamapper=None)

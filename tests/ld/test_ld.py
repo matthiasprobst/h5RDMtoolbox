@@ -457,8 +457,10 @@ WHERE {
             context={'schema': 'http://schema.org/',
                      "ssno": "https://matthiasprobst.github.io/ssno#",
                      "m4i": "http://w3id.org/nfdi4ing/metadata4ing#"},
+            file_uri="https://example.org#",
             indent=2
         )
+        self.assertTrue("_:" not in jsonld_str)
 
         g = rdflib.Graph()
         g.parse(data=jsonld_str, format='json-ld')

@@ -116,7 +116,7 @@ class TestConventions(unittest.TestCase):
         # zsr.publish()
 
         # download file from zenodo deposit:
-        self.assertEqual(1, len(zsr.get_filenames()))
+        self.assertEqual(1, len(zsr.files.keys()))
 
         filename = zsr.files.get('tutorial_convention.yaml').download()
         self.assertTrue(filename.exists())

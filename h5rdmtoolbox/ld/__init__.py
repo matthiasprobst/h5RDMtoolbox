@@ -18,10 +18,6 @@ def get_ld(
         skipND: Optional[int] = 1,
         context: Optional[Dict] = None) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
-    if skipND is not None:
-        warnings.warn(
-            "skipND is deprecated and will be removed in v1.8.0. Instead 'serialize_0d_datasets' is introduced, which enables the serialization of numerical or string 0D datasets.",
-            DeprecationWarning)
 
     graph = None
     with h5py.File(hdf_filename) as h5:

@@ -6,6 +6,7 @@ Log of changes in the versions
 
 - use fragments in internal HDF5 URIs to align with semantic web standards (fragments are not resolved in the web
   interface, but are used to identify the HDF5 object in the file)
+- housekeeping
 
 ## v2.1.0
 

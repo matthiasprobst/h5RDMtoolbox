@@ -62,7 +62,7 @@ class TestDump(unittest.TestCase):
             grp.attrs['lastName', FOAF.lastName] = 'Doe'
 
         jsonld_str = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, contextual=False)
-        print(jsonld_str)
+
 
     def test_sdump(self):
         h5tbx.use(None)
