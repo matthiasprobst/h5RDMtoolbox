@@ -63,7 +63,6 @@ class TestDump(unittest.TestCase):
 
         jsonld_str = h5tbx.dump_jsonld(h5.hdf_filename, structural=True, contextual=False)
 
-
     def test_sdump(self):
         h5tbx.use(None)
 
