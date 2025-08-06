@@ -1,10 +1,7 @@
 import abc
 import logging
 import pathlib
-import warnings
-from typing import Callable, Union, Optional, List, Dict
-
-from h5rdmtoolbox.utils import deprecated
+from typing import Callable, Union, Optional, Dict
 
 logger = logging.getLogger('h5rdmtoolbox')
 
@@ -130,7 +127,7 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def title(self) -> str:
         """Return the title of the Repository."""
-        
+
     @abc.abstractmethod
     def exists(self):
         """Check if the repository exists."""
@@ -156,12 +153,6 @@ class RepositoryInterface(abc.ABC):
 
         ..note: This method is deprecated. Please iterate over `files` and call .download() on the items.
         """
-
-    @deprecated(version='1.4.0rc1',
-                msg='Please use `list(self.files.keys())` instead')
-    def get_filenames(self) -> List[str]:
-        """Get a list of all filenames."""
-        return list(self.files.keys())
 
     @property
     @abc.abstractmethod
@@ -226,31 +217,6 @@ class RepositoryInterface(abc.ABC):
             self.__upload_file__(filename=meta_data_file, overwrite=overwrite)
         self.refresh()
 
-    @deprecated(version='1.4.0rc1',
-                msg='This method is deprecated. '
-                    'Use `.upload_file(...)` instead and provide the '
-                    'metamapper parameter there')
-    def upload_hdf_file(self,
-                        filename,
-                        metamapper: Callable[[Union[str, pathlib.Path]], pathlib.Path],
-                        overwrite: bool = False):
-        """Upload an HDF5 file. Additionally, a metadata file will be extracted from the
-        HDF5 file using the metamapper function and is uploaded as well.
-        The metamapper function takes a filename, extracts the metadata and stores it in
-        a file. The filename of it is returned by the function. It is automatically uploaded
-        with the HDF5 file.
-
-        .. note::
-
-            This method is deprecated. Use `upload_file` instead and provide the metamapper
-            function there.
-
-
-        """
-        warnings.warn('This method is deprecated. Use `upload_file` instead and provide the '
-                      'metamapper parameter there', DeprecationWarning)
-        return self.upload_file(filename, metamapper, overwrite)
-
     @abc.abstractmethod
     def get_doi(self):
         """Get the DOI of the repository."""
@@ -258,3 +224,7 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def get_jsonld(self) -> str:
         """Returns the JSONLD representation of the repository"""
+
+    @abc.abstractmethod
+    def refresh(self) -> str:
+        """update the cached information of the repository."""
