@@ -136,7 +136,7 @@ def set_object(attr: h5py.AttributeManager,
         iri_data_data = {}
 
     if isinstance(data, Thing):
-        data = data.get_jsonld_dict(assign_bnode=False)
+        data = data.get_jsonld_dict()
     elif isinstance(data, dict):
         # assuming it is a JSON-LD dict
         if not "@type" in data:

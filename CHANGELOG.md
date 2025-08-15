@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.2.1
+
+- hotfix dependency to ontolutils 0.19.2
+
 ## v2.2.0
 
 - use fragments in internal HDF5 URIs to align with semantic web standards (fragments are not resolved in the web
