@@ -23,11 +23,15 @@ HDF5_FILTER_ONTOLOGY = {
 }
 
 
-def add_filter(dataset: h5py.Dataset, dataset_uri, graph) -> rdflib.Graph:
+def add_filter(dataset: h5py.Dataset, dataset_uri, graph, blank_node_iri_base) -> rdflib.Graph:
     # Check predefined compression filters
     if dataset.compression:
         filter_type = HDF5_FILTER_ONTOLOGY.get(dataset.compression, None)
-        filter_uri = rdflib.BNode()
+        filter_uri = get_property_node(
+            dataset,
+            name='filter',
+            blank_node_iri_base=blank_node_iri_base
+        )
         if filter_type:
             graph.add((filter_uri, RDF.type, filter_type))
             if filter_type == HDF5.FilterDeflate:
@@ -55,7 +59,7 @@ def process_dataset(
     """Process an HDF5 dataset, adding it to the RDF graph."""
     graph.add((dataset_uri, RDF.type, HDF.Dataset))
 
-    graph = add_filter(dataset, dataset_uri, graph)
+    graph = add_filter(dataset, dataset_uri, graph, blank_node_iri_base)
 
     graph.add((parent_uri, HDF.member, dataset_uri))
 

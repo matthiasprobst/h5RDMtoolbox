@@ -11,7 +11,7 @@ authors:
     given-names: "Lucas"
     orcid: "https://orcid.org/0000-0002-4116-0065"
 title: "h5rdmtoolbox - HDF5 Research Data Management Toolbox"
-version: 2.2.1
+version: 2.2.2
 doi: 10.5281/zenodo.16881561
-date-released: 2025-08-15
+date-released: 2025-08-25
 url: "https://github.com/matthiasprobst/h5rdmtoolbox"

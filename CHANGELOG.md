@@ -2,6 +2,9 @@
 
 Log of changes in the versions
 
+## v2.2.2
+- hotfix avoiding blank nodes for hdf filter
+
 ## v2.2.1
 
 - hotfix dependency to ontolutils 0.19.2
