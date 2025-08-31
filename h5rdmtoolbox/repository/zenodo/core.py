@@ -4,13 +4,12 @@ import logging
 import pathlib
 import time
 import warnings
-from typing import Union, List, Dict, Optional
+from typing import Union, Dict, Optional
 
 import requests
 from packaging.version import Version
 from rdflib import Graph
 
-from h5rdmtoolbox.utils import deprecated
 from .metadata import Metadata
 from .tokens import get_api_token
 from ..interface import RepositoryInterface, RepositoryFile
@@ -225,31 +224,6 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
         rfiles = [RepositoryFile(**_parse(data)) for data in self.json()['files']]
         return {f.name: f for f in rfiles}
-
-    @deprecated(version='1.4.0rc1',
-                msg='Please use `[file.download() for file in <repo>.files.values()]` instead.')
-    def download_files(self,
-                       target_folder: Union[str, pathlib.Path] = None,
-                       suffix: Union[str, List[str], None] = None) -> List[pathlib.Path]:
-        """Download all (!) files from Zenodo. You may specify one or multiple suffixes to only download certain files.
-
-        Parameters
-        ----------
-        target_folder : str or pathlib.Path, optional
-            The target folder, by default None
-        suffix: Union[str, List[str], None], optional=None
-            Specify a suffix to only download certain files
-
-        Returns
-        -------
-        List[pathlib.Path]
-            A list of all downloaded files.
-        """
-        if suffix is None:
-            return [file.download(target_folder=target_folder) for file in self.files.values()]
-        if not isinstance(suffix, list):
-            suffix = [suffix, ]
-        return [file.download(target_folder=target_folder) for file in self.files.values() if file.suffix in suffix]
 
     def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download a file based on URL. The url is validated using pydantic
@@ -672,29 +646,6 @@ class ZenodoRecord(RepositoryInterface):
 
         rfiles = [RepositoryFile(**_parse(data)) for data in self.json()['files']]
         return {f.name: f for f in rfiles}
-
-    @deprecated(version='1.4.0rc1',
-                msg='Please use `[file.download() for file in self.files.values()]` instead.')
-    def download_files(self,
-                       target_folder: Union[str, pathlib.Path] = None,
-                       suffix: Union[str, List[str], None] = None) -> List[pathlib.Path]:
-        """Download all (!) files from Zenodo. You may specify one or multiple suffixes to only download certain files.
-
-        Parameters
-        ----------
-        target_folder : str or pathlib.Path, optional
-            The target folder, by default None
-        suffix: Union[str, List[str], None], optional=None
-            Specify a suffix to only download certain files
-
-        Returns
-        -------
-        List[pathlib.Path]
-            A list of all downloaded files.
-        """
-        warnings.warn("This method is deprecated. Please loop over `.files` and call `.download()` on the "
-                      "items of the returned list", DeprecationWarning)
-        return [file.download(target_folder=target_folder) for file in self.files.values()]
 
     def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download a file based on URL. The url is validated using pydantic

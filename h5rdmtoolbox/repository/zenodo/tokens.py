@@ -7,7 +7,7 @@ from typing import Union, Optional
 logger = logging.getLogger('h5rdmtoolbox')
 
 
-def _parse_ini_file(zenodo_ini_filename: Union[str, pathlib.Path]):
+def _parse_ini_file(zenodo_ini_filename: Optional[Union[str, pathlib.Path]]):
     """Parse the Zenodo ini file.
 
     Parameters

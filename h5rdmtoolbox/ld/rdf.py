@@ -81,8 +81,7 @@ def validate_url(url: str) -> str:
                 url = KNOWN_NAMESPACES[prefix] + name
             else:
                 raise RDFError(f'Invalid URL: "{url}".')
-        HttpUrl(url)  # validate the URL, will raise an error if invalid
-        return str(url)  # return the original string
+        return str(HttpUrl(url))  # validate the URL, will raise an error if invalid and return the encoded string
     except pydantic.ValidationError as e:
         raise RDFError(f'Invalid URL: "{url}". Expecting a valid URL. This was validated with pydantic. '
                        f'Tested with pydantic: {e}')
@@ -102,6 +101,8 @@ def set_predicate(attr: h5py.AttributeManager,
         The name of the attribute
     value : str
         The value (identifier) to add to the iri dict attribute
+    rdf_predicate_attr_name: str, optional
+        The name of the attribute to store the predicate information, by default RDF_PREDICATE_ATTR_NAME
 
     Returns
     -------
@@ -349,6 +350,11 @@ class RDFManager:
                        'predicate',
                        'type'):
             raise KeyError(f"Cannot set {key}. Only subject, predicate and type can be set!")
+        if key in ("subject", "predicate"):
+            try:
+                value = str(HttpUrl(value))
+            except pydantic.ValidationError as e:
+                RDFError(f"Invalid value. Expecting a valid URL. This was validated with pydantic: {value}")
         super().__setattr__(key, value)
 
     @property
@@ -394,7 +400,7 @@ class RDFManager:
             if _subject == str(rdf_subject):
                 res_subject.append(node)
 
-        def _find_type(name, node):
+        def _find_type(_, node):
             rdfm = RDFManager(node.attrs)
             if not isinstance(rdfm.type, list):
                 types = [rdfm.type]
@@ -513,7 +519,7 @@ class RDFManager:
 
     def pop_type(self, rdf_type: str):
         """Remove a type from the list of types"""
-        rdf_type = str(rdf_type)
+        rdf_type = str(HttpUrl(rdf_type))
         iri_type_data = self._attr.get(RDF_TYPE_ATTR_NAME, None)
         if iri_type_data is None:
             return

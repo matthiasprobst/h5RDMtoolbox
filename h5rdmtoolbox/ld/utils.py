@@ -1,10 +1,15 @@
 import pathlib
+import urllib.parse
 from typing import Optional
 from typing import Union
 
 import h5py
 import rdflib
 from rdflib.namespace import XSD
+
+
+def _parse_obj_name(obj_name: str):
+    return urllib.parse.quote(obj_name, safe='')
 
 
 def get_attr_dtype_as_XSD(data):
@@ -47,8 +52,8 @@ def _get_obj_id(file_id: float, obj: Union[h5py.Dataset, h5py.Group], name: Opti
     if name is None:
         if obj.name == "/":
             return f"{_file_id}{obj.name}"
-        return f"{_file_id}{obj.name}"
-    return f"{_file_id}{obj.name}{name}"
+        return f"{_file_id}{_parse_obj_name(obj.name)}"
+    return f"{_file_id}{_parse_obj_name(obj.name)}{name}"
     # return hashlib.md5(f"{obj.file.id.id}/{obj.name}{name}".encode()).hexdigest()
 
 
@@ -104,7 +109,7 @@ def get_property_node(
     if obj.name == "/":
         _id = f"{_file_id}@{name}"
     else:
-        _id = f"{_file_id}{obj.name}__{name}"
+        _id = f"{_file_id}{_parse_obj_name(obj.name)}__{name}"
     if blank_node_iri_base:
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(_id)
@@ -118,7 +123,7 @@ def get_attr_node(
     if obj.name == "/":
         _id = f"{_file_id}@{name}"
     else:
-        _id = f"{_file_id}{obj.name}@{name}"
+        _id = f"{_file_id}{_parse_obj_name(obj.name)}@{name}"
     if blank_node_iri_base:
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(f"{_id}")
