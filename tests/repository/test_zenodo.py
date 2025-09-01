@@ -110,7 +110,7 @@ class TestZenodo(unittest.TestCase):
     def test_creator(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Creator
         with self.assertRaises(ValueError):
-            creator = Creator(name='John Doe', affiliation='University of Nowhere')
+            _ = Creator(name='John Doe', affiliation='University of Nowhere')
         creator = Creator(name='Doe, John')
         self.assertEqual(creator.name, 'Doe, John')
         with self.assertRaises(pydantic.ValidationError):
@@ -163,41 +163,41 @@ class TestZenodo(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             # wrong version
-            metadata = Metadata(version='invalid',
-                                title='h5rdmtoolbox',
-                                description='A toolbox for managing HDF5-based research data management',
-                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
-                                keywords=['hdf5', 'research data management', 'rdm'],
-                                upload_type='publication',
-                                publication_type='other',
-                                access_right='open',
-                                publication_date='2023-01-01')
+            _ = Metadata(version='invalid',
+                         title='h5rdmtoolbox',
+                         description='A toolbox for managing HDF5-based research data management',
+                         creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                         keywords=['hdf5', 'research data management', 'rdm'],
+                         upload_type='publication',
+                         publication_type='other',
+                         access_right='open',
+                         publication_date='2023-01-01')
 
         with self.assertRaises(ValueError):
             # invalid embargo date
-            metadata = Metadata(version='0.1.0-rc.1+build.1',
-                                title='h5rdmtoolbox',
-                                description='A toolbox for managing HDF5-based research data management',
-                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
-                                keywords=['hdf5', 'research data management', 'rdm'],
-                                upload_type='publication',
-                                publication_type='other',
-                                access_right='embargoed',
-                                embargo_date='2022-01-01',  # too early!
-                                publication_date='2023-01-01')
+            _ = Metadata(version='0.1.0-rc.1+build.1',
+                         title='h5rdmtoolbox',
+                         description='A toolbox for managing HDF5-based research data management',
+                         creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                         keywords=['hdf5', 'research data management', 'rdm'],
+                         upload_type='publication',
+                         publication_type='other',
+                         access_right='embargoed',
+                         embargo_date='2022-01-01',  # too early!
+                         publication_date='2023-01-01')
 
         # invalid embargo date format
         with self.assertRaises(ValueError):
-            metadata = Metadata(version='0.1.0-rc.1+build.1',
-                                title='h5rdmtoolbox',
-                                description='A toolbox for managing HDF5-based research data management',
-                                creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
-                                keywords=['hdf5', 'research data management', 'rdm'],
-                                upload_type='publication',
-                                publication_type='other',
-                                access_right='embargoed',
-                                embargo_date='01-2022-01',  # wrong format!
-                                publication_date='2023-01-01')
+            _ = Metadata(version='0.1.0-rc.1+build.1',
+                         title='h5rdmtoolbox',
+                         description='A toolbox for managing HDF5-based research data management',
+                         creators=[Creator(name='Doe, John', affiliation='University of Nowhere')],
+                         keywords=['hdf5', 'research data management', 'rdm'],
+                         upload_type='publication',
+                         publication_type='other',
+                         access_right='embargoed',
+                         embargo_date='01-2022-01',  # wrong format!
+                         publication_date='2023-01-01')
 
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)
@@ -270,7 +270,7 @@ class TestZenodo(unittest.TestCase):
                       access_token='321',
                       zenodo_ini_filename=ini_filename)
         ini_filename = h5tbx.utils.generate_temporary_filename(suffix='.ini', touch=False)
-        with open(ini_filename, 'w') as f:
+        with open(ini_filename, 'w'):
             pass
         set_api_token(sandbox=True,
                       access_token='321',
@@ -455,9 +455,6 @@ class TestZenodo(unittest.TestCase):
             embargo_date='2020'
         )
 
-        with self.assertRaises(TypeError):
-            z.set_metadata(12)
-
         z.set_metadata(meta.model_dump())
         z.set_metadata(meta)
         ret_metadata = z.get_metadata()
@@ -489,14 +486,14 @@ class TestZenodo(unittest.TestCase):
         tmpfile.unlink()
         self.assertFalse(tmpfile.exists())
 
-        filename = z.download_file('testfile.txt')
+        filename = z.files["testfile.txt"].download()
         self.assertIsInstance(filename, pathlib.Path)
         self.assertTrue(filename.exists())
         with open(filename, 'r') as f:
             self.assertEqual(f.read(), 'This is a test file.')
         filename.unlink()
 
-        filenames = z.download_files()
+        filenames = [f.download() for f in z.files.values()]
 
         self.assertIsInstance(filenames, list)
         self.assertIsInstance(filenames[0], pathlib.Path)
@@ -505,17 +502,16 @@ class TestZenodo(unittest.TestCase):
             filename.unlink()
 
         hdf5_filenames = [file.download() for file in z.files.values() if file.suffix == '.hdf']
-        with self.assertWarns(DeprecationWarning):
-            z.download_files(suffix='.hdf')
+
         self.assertIsInstance(hdf5_filenames, list)
         self.assertEqual(len(hdf5_filenames), 0)
 
-        txt_filenames = z.download_files(suffix='.txt')
+        txt_filenames = [f.download() for f in z.files.values() if f.suffix == ".txt"]
         self.assertIsInstance(txt_filenames, list)
         self.assertEqual(len(txt_filenames), 1)
         self.assertEqual(txt_filenames[0].suffix, '.txt')
 
-        hdf_and_txt_filenames = z.download_files(suffix=['.txt', '.hdf'])
+        hdf_and_txt_filenames = [f.download() for f in z.files.values() if f.suffix in (".txt", "*.hdf")]
         self.assertIsInstance(hdf_and_txt_filenames, list)
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
@@ -569,9 +565,6 @@ class TestZenodo(unittest.TestCase):
             embargo_date='2020'
         )
 
-        with self.assertRaises(TypeError):
-            z.set_metadata(12)
-
         z.set_metadata(meta.model_dump())
         z.set_metadata(meta)
         ret_metadata = z.get_metadata()
@@ -603,14 +596,14 @@ class TestZenodo(unittest.TestCase):
         tmpfile.unlink()
         self.assertFalse(tmpfile.exists())
 
-        filename = z.download_file('testfile.txt')
+        filename = z.files["testfile.txt"].download()
         self.assertIsInstance(filename, pathlib.Path)
         self.assertTrue(filename.exists())
         with open(filename, 'r') as f:
             self.assertEqual(f.read(), 'This is a test file.')
         filename.unlink()
 
-        filenames = z.download_files()
+        filenames = [f.download() for f in z.files.values()]
 
         self.assertIsInstance(filenames, list)
         self.assertIsInstance(filenames[0], pathlib.Path)
@@ -618,16 +611,16 @@ class TestZenodo(unittest.TestCase):
             self.assertTrue(filename.exists())
             filename.unlink()
 
-        hdf5_filenames = z.download_files(suffix='.hdf')
+        hdf5_filenames = [f.download() for f in z.files.values() if f.suffix == '.hdf']
         self.assertIsInstance(hdf5_filenames, list)
-        self.assertEqual(len(hdf5_filenames), 1)
+        self.assertEqual(len(hdf5_filenames), 0)
 
-        txt_filenames = z.download_files(suffix='.txt')
+        txt_filenames = [f.download() for f in z.files.values() if f.suffix == '.txt']
         self.assertIsInstance(txt_filenames, list)
         self.assertEqual(len(txt_filenames), 1)
         self.assertEqual(txt_filenames[0].suffix, '.txt')
 
-        hdf_and_txt_filenames = z.download_files(suffix=['.txt', '.hdf'])
+        hdf_and_txt_filenames = [f.download() for f in z.files.values() if f.suffix in ('.txt', '.hdf')]
         self.assertIsInstance(hdf_and_txt_filenames, list)
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')

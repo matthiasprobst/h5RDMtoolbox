@@ -69,7 +69,7 @@ class RepositoryFile:
                     access_url=self.access_url,
                     media_type=self.media_type,
                     checksum=self.checksum,
-                    filename=self.filename,
+                    filename=self.name,
                     size=self.size)
 
     def jsonld(self) -> str:
@@ -114,10 +114,6 @@ class RepositoryFile:
 class RepositoryInterface(abc.ABC):
     """Abstract base class for repository interfaces."""
 
-    # __init__  must be implemented in the child class
-    def __init__(self):
-        raise RuntimeError('Not implemented.')
-
     @property
     @abc.abstractmethod
     def identifier(self) -> str:
@@ -139,20 +135,6 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def set_metadata(self, metadata):
         """Set the metadata of the repository."""
-
-    @abc.abstractmethod
-    def download_file(self, filename):
-        """Download a specific file from the repository.
-
-        ..note: This method is deprecated. Use method `.files.get(filename).download()` method instead.
-        """
-
-    @abc.abstractmethod
-    def download_files(self):
-        """Download all files from the repository.
-
-        ..note: This method is deprecated. Please iterate over `files` and call .download() on the items.
-        """
 
     @property
     @abc.abstractmethod

@@ -2,6 +2,16 @@
 
 Log of changes in the versions
 
+## v2.3.0
+
+- hotfix avoiding blank nodes for hdf filter
+- RDF IRIs are encoded correctly, when using special characters or spaces. The issue was that if HDF names (dataset,
+  group, attribute names) contained special characters or spaces, the generated RDF IRI was not encoded correctly. Now,
+  the HDF names are URL-encoded when generating the RDF IRI.
+- removed deprecated methods `download_file` and `download_files` from `RepositoryInterface`. The `files`
+  property accessor should be used instead.
+- bug-fixing
+
 ## v2.2.1
 
 - hotfix dependency to ontolutils 0.19.2

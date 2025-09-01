@@ -257,14 +257,15 @@ class TestRDF(unittest.TestCase):
                                   'https://example.org/objectURI3'])
 
             h5['/'].rdf.subject = 'https://example.org/is group'
-            self.assertEqual(h5.rdf.subject, 'https://example.org/is group')
+            self.assertEqual(h5.rdf.subject, 'https://example.org/is%20group')
 
             h5['/'].rdf.subject = 'https://example.org/is root group'
-            self.assertEqual(h5.rdf.subject, 'https://example.org/is root group')
+            self.assertEqual(h5.rdf.subject, 'https://example.org/is%20root%20group')
 
     def test_delete_rdf_properties(self):
         with h5tbx.File() as h5:
             h5['/'].rdf.subject = 'https://example.org/is root group'
+            self.assertEqual(h5.rdf.subject, 'https://example.org/is%20root%20group')
             del h5['/'].rdf.subject
             self.assertEqual(h5.rdf.subject, None)
 

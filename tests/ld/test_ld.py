@@ -1,6 +1,7 @@
 import json
 import pathlib
 import unittest
+from typing import Union
 
 import numpy as np
 import ontolutils
@@ -20,6 +21,41 @@ from h5rdmtoolbox.wrapper import jsonld
 logger = h5tbx.logger
 
 __this_dir__ = pathlib.Path(__file__).parent
+
+EXCEPTION_PROPERTIES_NAMESPACES = {
+    str(rdflib.OWL),
+    str(rdflib.RDF),
+    str(rdflib.RDFS),
+    str(rdflib.XSD)
+}
+
+
+def _raise_on_blank_nodes(
+        ttl,
+        exception_properties=None) -> rdflib.Graph:
+    """Raises an error if the given RDF file contains blank nodes."""
+    if exception_properties is None:
+        exception_properties = EXCEPTION_PROPERTIES_NAMESPACES
+
+    temp_graph = rdflib.Graph()
+    temp_graph.parse(data=ttl, format='ttl')
+
+    # Check if there are any blank nodes
+    has_blank_nodes = any(
+        isinstance(term, rdflib.BNode)
+        for triple in temp_graph
+        for term in triple
+    )
+    if has_blank_nodes:
+        for s, p, o in temp_graph:
+            if isinstance(s, rdflib.BNode) or isinstance(p, rdflib.BNode) or isinstance(o, rdflib.BNode):
+                # allow all owl properties:
+                for ep in exception_properties:
+                    if str(p).startswith(ep):
+                        break
+                else:
+                    raise ValueError(f"Blank nodes are not supported: {s}, {p}, {o}")
+    return temp_graph
 
 
 class TestJSONLD(unittest.TestCase):
@@ -93,7 +129,7 @@ class TestJSONLD(unittest.TestCase):
             h5.create_string_dataset('ds_str1', data=["Hello", "World"])
             h5.create_dataset('ds1', data=[1, 2, 3])
             h5.create_dataset('ds2', data=[[1, 2], [3, 4]])
-            ttl = h5.serialize(fmt="ttl", skipND=1)
+            ttl = h5.serialize(fmt="ttl", skipND=1, file_uri="https://example.org/#")
 
         g = rdflib.Graph().parse(data=ttl, format="ttl")
         sparql_str = """PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -109,6 +145,8 @@ WHERE {
         res = g.query(sparql_str)
         bindings = res.bindings
         self.assertEqual(0, len(bindings))
+
+        _raise_on_blank_nodes(ttl)
 
     def test_serialize_multiple_types(self):
         with h5tbx.File() as h5:
