@@ -2,7 +2,7 @@
 
 Log of changes in the versions
 
-## v2.2.2
+## v2.3.0
 
 - hotfix avoiding blank nodes for hdf filter
 - RDF IRIs are encoded correctly, when using special characters or spaces. The issue was that if HDF names (dataset,
@@ -10,7 +10,7 @@ Log of changes in the versions
   the HDF names are URL-encoded when generating the RDF IRI.
 - removed deprecated methods `download_file` and `download_files` from `RepositoryInterface`. The `files`
   property accessor should be used instead.
-- bugfixing
+- bug-fixing
 
 ## v2.2.1
 

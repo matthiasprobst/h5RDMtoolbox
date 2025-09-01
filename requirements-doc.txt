@@ -8,5 +8,5 @@ sphinx-design== 0.6.1
 myst-nb==1.2.0
 sphinxcontrib-bibtex==2.6.3
 scikit-image>=0.21.0
-kglab
+kglab~=0.7.0
 scikit-learn
