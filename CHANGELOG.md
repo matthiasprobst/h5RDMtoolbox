@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v2.3.1
+
+- fixing error in parsing obj name. "/" is safed and will not be converted anymore
+
+
 ## v2.3.0
 
 - hotfix avoiding blank nodes for hdf filter

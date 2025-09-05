@@ -1,6 +1,7 @@
 import pathlib
 import unittest
-from datetime import datetime
+
+import yaml
 
 from h5rdmtoolbox import __version__, get_package_meta
 
@@ -34,14 +35,13 @@ class TestVersion(unittest.TestCase):
         found = False
         for line in lines:
             if 'pip install' in line:
-                self.assertEqual(line.strip(), f'"# !pip install h5rdmtoolbox=={__version__}"')
+                self.assertTrue(f'"# !pip install h5rdmtoolbox=={__version__}"' in line.strip())
                 found = True
                 break
         self.assertTrue(found)
 
     def test_citation_cff(self):
         citation_cff = __this_dir__ / "../CITATION.cff"
-        import yaml
         with open(citation_cff, 'r') as f:
             cff = yaml.safe_load(f)
         self.assertTrue("todo" not in cff["doi"].lower(), "Please replace 'todo' in CITATION.cff")

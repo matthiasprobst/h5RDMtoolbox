@@ -9,7 +9,7 @@ from rdflib.namespace import XSD
 
 
 def _parse_obj_name(obj_name: str):
-    return urllib.parse.quote(obj_name, safe='')
+    return urllib.parse.quote(obj_name, safe='/')
 
 
 def get_attr_dtype_as_XSD(data):
