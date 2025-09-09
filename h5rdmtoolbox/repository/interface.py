@@ -201,7 +201,6 @@ class RepositoryInterface(abc.ABC):
 
         if meta_data_file is not None:
             self.__upload_file__(filename=meta_data_file, overwrite=overwrite)
-        self.refresh()
 
     @abc.abstractmethod
     def get_doi(self):
@@ -210,7 +209,3 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def get_jsonld(self) -> str:
         """Returns the JSONLD representation of the repository"""
-
-    @abc.abstractmethod
-    def refresh(self) -> str:
-        """update the cached information of the repository."""

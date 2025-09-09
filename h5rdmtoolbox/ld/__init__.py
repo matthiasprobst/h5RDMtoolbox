@@ -49,8 +49,61 @@ def hdf2jsonld(
         file_uri: Optional[str] = None,
         skipND: Optional[int] = 1,
 ):
+    return _hdf2ld(
+        filename=filename,
+        fmt='json-ld',
+        metadata_filename=metadata_filename,
+        context=context,
+        structural=structural,
+        contextual=contextual,
+        indent=indent,
+        file_uri=file_uri,
+        skipND=skipND,
+    )
+
+
+def hdf2ttl(
+        filename: Union[str, pathlib.Path],
+        metadata_filename: Optional[Union[str, pathlib.Path]] = None,
+        context: Optional[dict] = None,
+        structural: bool = True,
+        contextual: bool = True,
+        indent: int = 2,
+        file_uri: Optional[str] = None,
+        skipND: Optional[int] = 1,
+):
+    return _hdf2ld(
+        filename=filename,
+        fmt='ttl',
+        metadata_filename=metadata_filename,
+        context=context,
+        structural=structural,
+        contextual=contextual,
+        indent=indent,
+        file_uri=file_uri,
+        skipND=skipND,
+    )
+
+
+def _hdf2ld(
+        filename: Union[str, pathlib.Path],
+        fmt: str,
+        metadata_filename: Optional[Union[str, pathlib.Path]] = None,
+        context: Optional[dict] = None,
+        structural: bool = True,
+        contextual: bool = True,
+        indent: int = 2,
+        file_uri: Optional[str] = None,
+        skipND: Optional[int] = 1,
+):
+    if fmt in ('json', 'json-ld', 'jsonld'):
+        suffix = '.jsonld'
+    elif fmt in ('turtle', 'ttl'):
+        suffix = '.ttl'
+    else:
+        raise ValueError(f"Format '{fmt}' currently not supported. Use 'json-ld' or 'ttl'.")
     if metadata_filename is None:
-        metadata_filename = pathlib.Path(filename).with_suffix('.jsonld')  # recommended suffix for JSON-LD is .jsonld!
+        metadata_filename = pathlib.Path(filename).with_suffix(suffix)  # recommended suffix for JSON-LD is .jsonld!
     else:
         metadata_filename = pathlib.Path(metadata_filename)
 
@@ -66,7 +119,7 @@ def hdf2jsonld(
 
     with open(metadata_filename, 'w', encoding='utf-8') as f:
         f.write(
-            graph.serialize(format='json-ld',
+            graph.serialize(format=fmt,
                             indent=indent,
                             auto_compact=True,
                             context=context)

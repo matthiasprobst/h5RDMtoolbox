@@ -1,4 +1,5 @@
 import abc
+import copy
 import json
 import logging
 import pathlib
@@ -95,16 +96,16 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
 
-    @property
-    def identifier(self) -> Union[str, None]:
-        identifier = self.get_metadata().get('identifier', None)
-        if identifier is None:
-            return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
-        return identifier
+    # @property
+    # def identifier(self) -> Union[str, None]:
+    #     identifier = self.get_metadata().get('identifier', None)
+    #     if identifier is None:
+    #         return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
+    #     return identifier
 
-    @property
-    def title(self):
-        return self.get_metadata().get('title', 'No title')
+    # @property
+    # def title(self):
+    #     return self.get_metadata().get('title', 'No title')
 
     @property
     @abc.abstractmethod
@@ -143,9 +144,9 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     def get_doi(self) -> str:
         """Get the DOI of the deposit."""
-        doi = self.json()['metadata'].get('doi', None)
+        doi = self.get_metadata().get('doi', None)
         if doi is None:
-            return self.json()['metadata']['prereserve_doi']['doi']
+            return self.get_metadata()['prereserve_doi']['doi']
         return doi
 
     def exists(self) -> bool:
@@ -154,7 +155,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
     def is_published(self) -> bool:
         """Check if the deposit is published."""
-        return self.json()['submitted']
+        return self._get()['submitted']
 
     submitted = is_published  # alias
 
@@ -185,11 +186,6 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
 
             self._cached_json = r.json()
         return self._cached_json
-
-    def refresh(self) -> None:
-        """Since the json dict is cached, calling this method will refresh the json dict."""
-        self._cached_json = {}
-        self.json()
 
     @property
     def files(self) -> Dict[str, RepositoryFile]:
@@ -222,7 +218,7 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
                         checksum=data.get('checksum', None),
                         access_token=self.access_token)
 
-        rfiles = [RepositoryFile(**_parse(data)) for data in self.json()['files']]
+        rfiles = [RepositoryFile(**_parse(data)) for data in self._get()['files']]
         return {f.name: f for f in rfiles}
 
     def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
@@ -288,22 +284,36 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
             raise APIError("Unable to create a new version. Please check your permission associated with "
                            "the Zenodo API Token.")
 
-        r = requests.post(new_vers_url,
-                          params={'access_token': self.access_token})
+        headers = {'Authorization': f'Bearer {self.access_token}'}
+        r = requests.post(
+            new_vers_url,
+            headers=headers
+        )
 
         r.raise_for_status()
+        self._cached_json = r.json()
         latest_draft = r.json()['links']['latest_draft']
         _id = latest_draft.split('/')[-1]
         self.rec_id = _id
+        current_metadata = self.get_metadata()
+        current_metadata['version'] = new_version_string
+        self.set_metadata(current_metadata)
         return self
 
-    def publish(self) -> None:
+    def publish(self):
         """Be careful. The record cannot be deleted afterward!"""
-        r = requests.post(self.json()['links']['publish'],
+        url = f"{self.base_url}/api/deposit/depositions/{self.rec_id}/actions/publish"
+        headers = {'Authorization': f'Bearer {self.access_token}'}
+        r = requests.post(url,
                           # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
-                          params={'access_token': self.access_token})
+                          headers=headers)
+        if "errors" in r.json():
+            for err in r.json()["errors"]:
+                logger.error(f"Error publishing record: {err}")
         r.raise_for_status()
-        self.refresh()
+        self._cached_json = r.json()
+        return self
+        # self.refresh()
 
     def discard(self):
         """Discard the latest action, e.g. creating a new version"""
@@ -337,128 +347,15 @@ class AbstractZenodoInterface(RepositoryInterface, abc.ABC):
         """Return the api token for the Zenodo API."""
 
 
-class ZenodoSandboxDeposit(AbstractZenodoInterface):
-    """Interface to Zenodo's testing (sandbox) api. API TOKEN needed.
-
-    Note: Metadata can always be changed, without publishing a new version!
-
-    Examples
-    --------
-    new repo:
-    >>> repo = ZenodoSandboxDeposit(rec_id=None)
-    new version:
-    >>> repo = ZenodoSandboxDeposit(rec_id=12345)
-    >>> new_repo = repo.new_version()
-    >>> new_repo.discard()
-
-    """
-
-    def get_metadata(self) -> Dict:
-        return self.json()['metadata']
-        # return Metadata(**self.json()['metadata'])
-
-    def set_metadata(self, metadata: Union[Dict, Metadata]):
-        """update the metadata of the deposit. Please refer to the Zenodo REST API
-        (https://developers.zenodo.org/#representation)"""
-        if isinstance(metadata, dict):
-            metadata = Metadata(**metadata)
-        else:
-            if not isinstance(metadata, Metadata):
-                raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
-        r = requests.put(
-            self.json()['links']['latest_draft'],
-            data=json.dumps(dict(metadata=metadata.model_dump(exclude_none=True))),
-            params={"access_token": self.access_token},
-            # headers={"Content-Type": "application/json"}
-        )
-        if r.status_code == 400:
-            logger.critical(f"Bad request message: {r.json()}")
-        r.raise_for_status()
-        self.refresh()
-
-    @property
-    def identifier(self) -> str:
-        identifier = self.get_metadata().get('identifier', None)
-        if identifier is None:
-            return self.get_metadata().get('prereserve_doi', {}).get('recid', 'no identifier found')
-        return identifier
-
-    @property
-    def title(self):
-        return self.get_metadata().get('title', 'No title')
-
-    @property
-    def base_url(self):
-        return 'https://sandbox.zenodo.org'
-
-    @property
-    def access_token(self):
-        """Return current access token for the Zenodo API."""
-        return get_api_token(sandbox=True, env_var_name=self.env_name_for_token)
-
-    def get_file_infos(self, suffix=None) -> Dict[str, Dict]:
-        """Get a dictionary of file information (name, size, checksum, ...)"""
-        file_dict = {f['filename']: f for f in self.json()['files']}
-        if suffix is not None:
-            remove = []
-            for f in file_dict:
-                if f.endswith(suffix):
-                    remove.append(f)
-            for r in remove:
-                file_dict.pop(r)
-        return file_dict
-
-    def __upload_file__(self, filename, overwrite: bool = False):
-        """Add a file to the deposit. If the filename already exists, it can
-        be overwritten with overwrite=True"""
-        filename = pathlib.Path(filename)
-        if not filename.exists():
-            raise FileNotFoundError(f'File "{filename}" does not exist.')
-
-        existing_file_infos = self.get_file_infos()
-        if not overwrite:
-            # we need to check if the file already exists
-            if filename.name in existing_file_infos:
-                logger.debug(f'Overwriting file "{filename}" in deposit "{self.rec_id}"')
-                warnings.warn(f'Filename "{filename}" already exists in deposit. Skipping..."', UserWarning)
-                return
-
-        # get file id
-        if filename.name in existing_file_infos:
-            file_id = existing_file_infos[filename.name]['id']
-            url = f"{self.depositions_url}/{self.rec_id}/files/{file_id}"
-            logger.debug(f'requests.delete(url={url}, ...)')
-            r = requests.delete(url=url,
-                                params={'access_token': self.access_token})
-            r.raise_for_status()
-
-        # https://developers.zenodo.org/?python#quickstart-upload
-        bucket_url = self.json()["links"]["bucket"]
-        logger.debug(f'adding file "{filename}" to deposit "{self.rec_id}"')
-        with open(filename, "rb") as fp:
-            r = requests.put(f"{bucket_url}/{filename.name}",
-                             data=fp,
-                             params={"access_token": self.access_token},
-                             )
-            if r.status_code == 403:
-                logger.critical(f"Access denied message: {r.json()}. This could be because the record is published. "
-                                f"You can only modify metadata.")
-            r.raise_for_status()
-
-    def get_jsonld(self) -> str:
-        """Get the jsonld data of the deposit."""
-        raise NotImplementedError("This method is not implemented. Please use the class ZenodoRecord(sandbox=True)")
-
-
 class ZenodoRecord(RepositoryInterface):
     """Interface to Zenodo records.
 
-    .. note: up to version 1.4.rc1, ZenodoRecord was inherited from `AbstractZenodoInterface`.
-        This is no longer needed. If you want to use the sandbox (testing) environment,
+    .. note: If you want to use the sandbox (testing) environment,
         please init with sandbox=True.
     """
 
-    def __init__(self, source: Union[int, str, None] = None,
+    def __init__(self,
+                 source: Union[int, str, None] = None,
                  sandbox: bool = False,
                  env_name_for_token: Optional[str] = None,
                  **kwargs):
@@ -536,8 +433,14 @@ class ZenodoRecord(RepositoryInterface):
         """Get the access token for the Zenodo API. This is needed to upload files."""
         return get_api_token(sandbox=self.sandbox, env_var_name=self.env_name_for_token)
 
+    def _get(self):
+        url = f"{self.depositions_url}/{self.rec_id}"
+        access_token = self.access_token
+        r = requests.get(url, params={"access_token": access_token})
+        return r.json()
+
     def get_metadata(self) -> Dict:
-        return self.json()['metadata']
+        return self._get()['metadata']
 
     def set_metadata(self, metadata: Union[Dict, Metadata]):
         """update the metadata of the deposit"""
@@ -546,9 +449,10 @@ class ZenodoRecord(RepositoryInterface):
 
         if not isinstance(metadata, Metadata):
             raise TypeError('The metadata must be of type Metadata, not {type(metadata)}')
-        # print(metadata)
+
+        url_latest_draft = f"{self.depositions_url}/{self.rec_id}"
         r = requests.put(
-            self.json()['links']['latest_draft'],
+            url_latest_draft,
             data=json.dumps(dict(metadata=metadata.model_dump(exclude_none=True))),
             params={"access_token": self.access_token},
             # headers={"Content-Type": "application/json"}
@@ -556,13 +460,14 @@ class ZenodoRecord(RepositoryInterface):
         if r.status_code == 400:
             logger.critical(f"Bad request message: {r.json()}")
         r.raise_for_status()
-        self.refresh()
+        self.rec_id = r.json()["id"]
 
     def get_doi(self) -> str:
         """Get the DOI of the deposit."""
-        doi = self.json()['metadata'].get('doi', None)
+        metadata = self.get_metadata()
+        doi = metadata.get('doi', None)
         if doi is None:
-            return self.json()['metadata']['prereserve_doi']['doi']
+            return metadata['prereserve_doi']['doi']
         return doi
 
     def exists(self) -> bool:
@@ -571,42 +476,42 @@ class ZenodoRecord(RepositoryInterface):
 
     def is_published(self) -> bool:
         """Check if the deposit is published."""
-        return self.json()['submitted']
+        return self._get()['submitted']
 
     submitted = is_published  # alias
 
-    def json(self, raise_for_status: bool = False):
-        """Get the deposit (json) data."""
-        if not self._cached_json:
-            url = f"{self.depositions_url}/{self.rec_id}"
-            access_token = self.access_token
-            r = requests.get(url, params={"access_token": access_token})
+    # def json(self, raise_for_status: bool = False):
+    #     """Get the deposit (json) data."""
+    #     if not self._cached_json:
+    #         url = f"{self.depositions_url}/{self.rec_id}"
+    #         access_token = self.access_token
+    #         r = requests.get(url, params={"access_token": access_token})
+    #
+    #         if r.status_code == 403:
+    #             logger.critical(
+    #                 f"You don't have the permission to request {url}. You may need to check your access token.")
+    #             r.raise_for_status()
+    #
+    #         while r.status_code == 429:
+    #             logger.info(f"Too many requests message: {r.json()}. Sleep for 60 seconds and try again.")
+    #             time.sleep(60)
+    #             r = requests.get(url, params={"access_token": access_token})
+    #
+    #         while r.status_code == 500:
+    #             logger.info(f"Internal error: {r.json()}. Sleep for 60 seconds and try again.")
+    #             time.sleep(60)
+    #             r = requests.get(url, params={"access_token": access_token})
+    #
+    #         if raise_for_status:
+    #             r.raise_for_status()
+    #
+    #         self._cached_json = r.json()
+    #     return self._cached_json
 
-            if r.status_code == 403:
-                logger.critical(
-                    f"You don't have the permission to request {url}. You may need to check your access token.")
-                r.raise_for_status()
-
-            while r.status_code == 429:
-                logger.info(f"Too many requests message: {r.json()}. Sleep for 60 seconds and try again.")
-                time.sleep(60)
-                r = requests.get(url, params={"access_token": access_token})
-
-            while r.status_code == 500:
-                logger.info(f"Internal error: {r.json()}. Sleep for 60 seconds and try again.")
-                time.sleep(60)
-                r = requests.get(url, params={"access_token": access_token})
-
-            if raise_for_status:
-                r.raise_for_status()
-
-            self._cached_json = r.json()
-        return self._cached_json
-
-    def refresh(self) -> None:
-        """Since the json dict is cached, calling this method will refresh the json dict."""
-        self._cached_json = {}
-        self.json()
+    # def refresh(self) -> None:
+    #     """Since the json dict is cached, calling this method will refresh the json dict."""
+    #     self._cached_json = {}
+    #     self.json()
 
     @property
     def files(self) -> Dict[str, RepositoryFile]:
@@ -644,7 +549,7 @@ class ZenodoRecord(RepositoryInterface):
                         checksum=data.get('checksum', None),
                         access_token=self.access_token)
 
-        rfiles = [RepositoryFile(**_parse(data)) for data in self.json()['files']]
+        rfiles = [RepositoryFile(**_parse(data)) for data in self._get()['files']]
         return {f.name: f for f in rfiles}
 
     def download_file(self, filename: str, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
@@ -697,17 +602,14 @@ class ZenodoRecord(RepositoryInterface):
             If the new version cannot be created because permission is missing.
         """
         self.unlock()
-        jdata = self.json()
+        jdata = self._get()
 
         curr_version = Version(jdata['metadata']['version'])
         new_version = Version(new_version_string)
         if not new_version > curr_version:
             raise ValueError(f'The new version must be higher than the current version {curr_version}.')
 
-        new_vers_url = jdata['links'].get('newversion', None)
-        if new_vers_url is None:
-            raise APIError("Unable to create a new version. Please check your permission associated with "
-                           "the Zenodo API Token.")
+        new_vers_url = self.get_actions_url("newversion")
 
         r = requests.post(new_vers_url,
                           params={'access_token': self.access_token})
@@ -715,20 +617,30 @@ class ZenodoRecord(RepositoryInterface):
         r.raise_for_status()
         latest_draft = r.json()['links']['latest_draft']
         _id = latest_draft.split('/')[-1]
-        self.rec_id = _id
-        return self
+
+        new_record = copy.deepcopy(self)
+        new_record.rec_id = _id
+        current_metadata = new_record.get_metadata()
+        current_metadata["version"] = str(new_version)
+        new_record.set_metadata(current_metadata)
+        return new_record
 
     def publish(self) -> requests.Response:
         """Be careful. The record cannot be deleted afterward!"""
-        r = requests.post(self.json()['links']['publish'],
+        url = self.get_actions_url("publish")
+        r = requests.post(url,
                           # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
                           params={'access_token': self.access_token})
         r.raise_for_status()
-        self.refresh()
+        self.rec_id = r.json()['id']
+        return r
+
+    def get_actions_url(self, action: str) -> str:
+        return f"{self.base_url}/api/deposit/depositions/{self.rec_id}/actions/{action}"
 
     def discard(self):
         """Discard the latest action, e.g. creating a new version"""
-        jdata = self.json()
+        jdata = self._get()
         r = requests.post(jdata['links']['discard'],
                           params={'access_token': self.access_token})
         r.raise_for_status()
@@ -741,7 +653,7 @@ class ZenodoRecord(RepositoryInterface):
         APIError
             If the record cannot be unlocked because permission is missing.
         """
-        edit_url = self.json()['links'].get('edit', None)
+        edit_url = self._get()['links'].get('edit', None)
         if edit_url is None:
             raise APIError('Unable to unlock the record. Please check your permission of the Zenodo API Token.')
 
@@ -776,7 +688,7 @@ class ZenodoRecord(RepositoryInterface):
             r.raise_for_status()
 
         # https://developers.zenodo.org/?python#quickstart-upload
-        bucket_url = self.json()["links"]["bucket"]
+        bucket_url = self._get()["links"]["bucket"]
         logger.debug(f'adding file "{filename}" to record "{self.rec_id}"')
         with open(filename, "rb") as fp:
             r = requests.put(f"{bucket_url}/{filename.name}",
@@ -798,7 +710,7 @@ class ZenodoRecord(RepositoryInterface):
         else:
             target_filename = pathlib.Path(target_filename)
 
-        export_url = f"{self.json()['links']['html']}/export/{fmt}"
+        export_url = f"{self._get()['links']['html']}/export/{fmt}"
         r = requests.get(export_url)
         r.raise_for_status()
         with open(target_filename, 'wb') as f:
