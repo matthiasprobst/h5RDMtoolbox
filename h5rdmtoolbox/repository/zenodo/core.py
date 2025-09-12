@@ -74,6 +74,7 @@ class ZenodoRecord(RepositoryInterface):
             rec_id = r.json()['id']
         self.rec_id = rec_id
         assert self.rec_id is not None
+        self._original_rec_id = rec_id
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} (id={self.rec_id}, url={self.record_url})"
@@ -100,15 +101,18 @@ class ZenodoRecord(RepositoryInterface):
     def depositions_url(self):
         return f"{self.base_url}/api/deposit/depositions"
 
-    @property
-    def records_url(self):
-        return f"{self.base_url}/api/deposit/depositions"
 
     @property
     def record_url(self):
         """Return the (published) url. Note, that it must not necessarily exist if you
         just created a new record and have not published it yet!"""
         return f"{self.base_url}/records/{self.rec_id}"
+
+    @property
+    def uploads_url(self):
+        """Return the (published) url. Note, that it must not necessarily exist if you
+        just created a new record and have not published it yet!"""
+        return f"{self.base_url}/uploads/{self.rec_id}"
 
     @property
     def access_token(self):
@@ -151,6 +155,10 @@ class ZenodoRecord(RepositoryInterface):
         if doi is None:
             return metadata['prereserve_doi']['doi']
         return doi
+
+    def get_doi_url(self) -> str:
+        """Get the DOI url of the deposit."""
+        return f"https://doi.org/{self.get_doi()}"
 
     def exists(self) -> bool:
         """Check if the deposit exists on Zenodo. Note, that only published records are detected!"""
@@ -274,7 +282,7 @@ class ZenodoRecord(RepositoryInterface):
         new_record.set_metadata(current_metadata)
         return new_record
 
-    def publish(self) -> requests.Response:
+    def publish(self):
         """Be careful. The record cannot be deleted afterward!"""
         url = self.get_actions_url("publish")
         r = requests.post(url,
@@ -282,7 +290,8 @@ class ZenodoRecord(RepositoryInterface):
                           params={'access_token': self.access_token})
         r.raise_for_status()
         self.rec_id = r.json()['id']
-        return r
+        self._original_rec_id = self.rec_id
+        return self
 
     def get_actions_url(self, action: str) -> str:
         return f"{self.base_url}/api/deposit/depositions/{self.rec_id}/actions/{action}"
@@ -293,6 +302,9 @@ class ZenodoRecord(RepositoryInterface):
         r = requests.post(jdata['links']['discard'],
                           params={'access_token': self.access_token})
         r.raise_for_status()
+
+        self.rec_id = self._original_rec_id
+        return self
 
     def unlock(self):
         """unlock the deposit. To lock it call publish()

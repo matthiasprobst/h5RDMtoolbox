@@ -292,7 +292,7 @@ class TestZenodo(unittest.TestCase):
                      reason="Only testing on min and max python version")
     def test_new_version(self):
         z = zenodo.ZenodoRecord(source=None, sandbox=True)
-
+        original_id = z.rec_id
         meta = Metadata(
             version="1.0.0",
             title='[deleteme]h5tbxZenodoInterfac!e',
@@ -326,10 +326,14 @@ class TestZenodo(unittest.TestCase):
         self.assertTrue(z.is_published())
 
         new_record = z.new_version("2.0.0")
+        discarded_record = new_record.discard()
+        self.assertEqual(discarded_record.rec_id, original_id)
+        new_record = z.new_version("2.0.0")
         new_metadata = new_record.get_metadata()
         self.assertEqual(new_metadata['version'], "2.0.0")
-        new_record.publish()
+        published_record = new_record.publish()
         self.assertTrue(new_record.is_published())
+        self.assertTrue(published_record.is_published())
 
         # new_record.delete()
 
