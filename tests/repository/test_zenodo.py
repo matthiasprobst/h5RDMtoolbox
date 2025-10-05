@@ -16,6 +16,7 @@ from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.interface import RepositoryFile
+from h5rdmtoolbox.repository.zenodo.core import _bump_version
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
@@ -335,7 +336,17 @@ class TestZenodo(unittest.TestCase):
         self.assertTrue(new_record.is_published())
         self.assertTrue(published_record.is_published())
 
+        with self.assertRaises(ValueError):
+            z.new_version("2.0.0", increase_part="patch")
         # new_record.delete()
+
+    def test__bump_version(self):
+        self.assertEqual("3.0.0", _bump_version("2.0.0", "major"))
+        self.assertEqual("2.1.0", _bump_version("2.0.0", "minor"))
+        self.assertEqual("2.0.1", _bump_version("2.0.0", "patch"))
+        with self.assertRaises(ValueError):
+            self.assertEqual("3.0.0", _bump_version("2.0.0", "micro"))
+
 
     @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
                      reason="Only testing on min and max python version")
@@ -516,18 +527,12 @@ class TestZenodo(unittest.TestCase):
             f.write('This is a test file.')
 
         with self.assertRaises(FileNotFoundError):
-            z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
+            z.upload_file('doesNotExist.txt', metamapper=None)
 
-        z.upload_file(tmpfile, overwrite=True, metamapper=None)
+        z.upload_file(tmpfile, metamapper=None)
         self.assertIn('testfile.txt', list(z.files.keys()))
 
-        with self.assertWarns(UserWarning):
-            z.upload_file('testfile.txt', overwrite=False, metamapper=None)
-
-        upload_file(z, tmpfile, overwrite=True, metamapper=None)
-
-        with self.assertWarns(UserWarning):
-            upload_file(z, tmpfile, overwrite=False, metamapper=None)
+        upload_file(z, tmpfile, metamapper=None)
 
         # delete file locally:
         tmpfile.unlink()
@@ -626,18 +631,12 @@ class TestZenodo(unittest.TestCase):
             f.write('This is a test file.')
 
         with self.assertRaises(FileNotFoundError):
-            z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
+            z.upload_file('doesNotExist.txt', metamapper=None)
 
-        z.upload_file(tmpfile, overwrite=True, metamapper=None)
+        z.upload_file(tmpfile, metamapper=None)
         self.assertIn('testfile.txt', list(z.files.keys()))
 
-        with self.assertWarns(UserWarning):
-            z.upload_file('testfile.txt', overwrite=False, metamapper=None)
-
-        upload_file(z, tmpfile, overwrite=True, metamapper=None)
-
-        with self.assertWarns(UserWarning):
-            upload_file(z, tmpfile, overwrite=False, metamapper=None)
+        upload_file(z, tmpfile, metamapper=None)
 
         # delete file locally:
         tmpfile.unlink()
