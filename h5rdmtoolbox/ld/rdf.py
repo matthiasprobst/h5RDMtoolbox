@@ -6,6 +6,7 @@ from typing import Dict, Union, Optional, List
 
 import h5py
 import pydantic
+import rdflib
 from ontolutils import Thing
 from pydantic import HttpUrl
 
@@ -143,11 +144,15 @@ def set_object(attr: h5py.AttributeManager,
         if not "@type" in data:
             raise RDFError(f"The input data is interpreted as JSON-LD, but no @type is found: {data}")
     else:
-        try:
-            data = str(HttpUrl(data))
-        except pydantic.ValidationError as e:
-            raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
-                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+        if isinstance(data, rdflib.Literal):
+            if data.language is not None and data.datatype is None:
+                data = {"lexical_or_value": str(data), "lang": data.language, "$type": "rdflib.term.Literal"}
+        else:
+            try:
+                data = str(HttpUrl(data))
+            except pydantic.ValidationError as e:
+                raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
+                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
     curr_data = iri_data_data.get(attr_name, None)
     if curr_data is None:
         iri_data_data.update({attr_name: data})
@@ -221,6 +226,9 @@ class IRIDict(Dict):
         if isinstance(o, str) and o.startswith("{"):
             """assuming, that it is a json string"""
             return json.loads(o)
+        if isinstance(o, dict) and o.get("$type", None) == "rdflib.term.Literal":
+            o.pop("$type")
+            return rdflib.Literal(**o)
         return o
 
     @object.setter
@@ -268,7 +276,11 @@ class _RDFPO(abc.ABC):
         if isinstance(attrs, dict):
             return attrs.get(item, default)
         assert isinstance(attrs, str)
-        return json.loads(attrs).get(item, default)
+        parsed_str = json.loads(attrs).get(item, default)
+        if isinstance(parsed_str, dict) and parsed_str.get("$type", None) == "rdflib.term.Literal":
+            parsed_str.pop("$type")
+            return rdflib.Literal(**parsed_str)
+        return parsed_str
 
     def __getitem__(self, item) -> Union[str, None]:
         return self.get(item, default=None)

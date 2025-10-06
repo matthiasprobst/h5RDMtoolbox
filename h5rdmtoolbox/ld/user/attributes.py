@@ -26,6 +26,8 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[rdflib
 
     if rdf_user_predicate:
         if rdf_user_object:
+            if isinstance(rdf_user_object, rdflib.Literal):
+                graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), rdf_user_object))
             if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
                 graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))
             elif isinstance(rdf_user_object, list):
@@ -92,6 +94,8 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
 
     if rdf_user_predicate:
         if rdf_user_object:
+            if isinstance(rdf_user_object, rdflib.Literal):
+                graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdf_user_object))
             if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
                 graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))
             else:

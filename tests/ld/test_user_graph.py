@@ -74,3 +74,56 @@ class TestUserGraph(unittest.TestCase):
             rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),
             rdflib.Graph().parse(data=exception_serialization, format="turtle").serialize(format="turtle")
         )
+
+    def test_literals_as_rdf_object(self):
+        with h5tbx.File() as h5:
+            h5.attrs["description"] = "A description"
+            h5.frdf["description"].predicate = SCHEMA.description
+            h5.frdf["description"].object = rdflib.Literal("An english description", "en")
+
+            self.assertEqual("A description", h5.attrs["description"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+
+        self.assertEqual(ttl, """@prefix schema: <https://schema.org/> .
+
+[] schema:description "An english description"@en .
+
+""")
+
+    def test_literals_as_rdf_group_object(self):
+        with h5tbx.File() as h5:
+            g = h5.create_group("group")
+            g.attrs["description"] = "A description"
+            g.rdf["description"].predicate = SCHEMA.description
+            g.rdf["description"].object = rdflib.Literal("An english description", "en")
+
+            print(g.rdf["description"].object)
+            self.assertEqual(rdflib.Literal("An english description", "en"), g.rdf["description"].object)
+            self.assertEqual("A description", g.attrs["description"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+
+        self.assertEqual(ttl, """@prefix schema: <https://schema.org/> .
+
+[] schema:description "An english description"@en .
+
+""")
+
+    def test_literals_as_rdf_dataset_object(self):
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset("ds", data=[1, 2, 3])
+            ds.attrs["description"] = "A description"
+            ds.rdf["description"].predicate = SCHEMA.description
+            ds.rdf["description"].object = rdflib.Literal("An english description", "en")
+
+            print(ds.rdf["description"].object)
+            self.assertEqual(rdflib.Literal("An english description", "en"), ds.rdf["description"].object)
+            self.assertEqual("A description", ds.attrs["description"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+
+        self.assertEqual(ttl, """@prefix schema: <https://schema.org/> .
+
+[] schema:description "An english description"@en .
+
+""")
+
+
