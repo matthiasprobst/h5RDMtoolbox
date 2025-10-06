@@ -92,30 +92,36 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
     if rdf_user_object and not rdf_user_predicate:
         rdf_user_predicate = DCTERMS.relation
 
-    if rdf_user_predicate:
-        if rdf_user_object:
-            if isinstance(rdf_user_object, rdflib.Literal):
-                graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdf_user_object))
-            if isinstance(rdf_user_object, str) and rdf_user_object.startswith('http'):
-                graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))
+    def _add_to_graph(_rdf_user_object, _graph):
+        if _rdf_user_object:
+            if isinstance(_rdf_user_object, rdflib.Literal):
+                _graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), _rdf_user_object))
+            elif isinstance(_rdf_user_object, str) and _rdf_user_object.startswith('http'):
+                _graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(_rdf_user_object)))
+            elif isinstance(_rdf_user_object, list):
+                for _itm in _rdf_user_object:
+                    _graph = _add_to_graph(_itm, _graph)
             else:
-                if isinstance(rdf_user_object, dict):
+                if isinstance(_rdf_user_object, dict):
                     try:
-                        obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(rdf_user_object)), format="json-ld")
+                        obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(_rdf_user_object)), format="json-ld")
                         # relate the obj_graph with the predicate:
                         _subjects = set(obj_graph.subjects())
                         if len(_subjects) != 1:
                             warnings.warn(f"Error parsing JSON-LD object for attribute. name={name}, data={data}. "
                                           f"Expected exactly one subject, found {len(_subjects)}")
                         obj_graph.add((parent_uri, rdflib.URIRef(rdf_user_predicate), list(_subjects)[0]))
-                        graph += obj_graph
+                        _graph += obj_graph
                     except Exception as e:
                         warnings.warn(
                             f"Error parsing JSON-LD object for attribute. name={name}, data={data}. Orig. Error: {e}")
         else:
-            graph.add(
+            _graph.add(
                 (parent_uri,
                  rdflib.URIRef(rdf_user_predicate),
                  rdflib.Literal(data, datatype=get_attr_dtype_as_XSD(data)))
             )
+        return _graph
+    if rdf_user_predicate:
+        graph = _add_to_graph(rdf_user_object, graph)
     return graph

@@ -2,7 +2,7 @@
 import abc
 import json
 import warnings
-from typing import Dict, Union, Optional, List
+from typing import Dict, Union, Optional, List, Any
 
 import h5py
 import pydantic
@@ -51,6 +51,10 @@ KNOWN_NAMESPACES = {
     "vann": "http://purl.org/vocab/vann/",
     "schema": "https://schema.org/",
     "dcterms": "http://purl.org/dc/terms/",
+}
+
+CLASS_DICT = {
+    "rdflib.term.Literal": rdflib.Literal,
 }
 
 
@@ -139,20 +143,19 @@ def set_object(attr: h5py.AttributeManager,
 
     if isinstance(data, Thing):
         data = data.get_jsonld_dict()
+    elif isinstance(data, rdflib.Literal):
+        if data.language is not None and data.datatype is None:
+            data = {"lexical_or_value": str(data), "lang": data.language, "$type": "rdflib.term.Literal"}
     elif isinstance(data, dict):
         # assuming it is a JSON-LD dict
         if not "@type" in data:
             raise RDFError(f"The input data is interpreted as JSON-LD, but no @type is found: {data}")
     else:
-        if isinstance(data, rdflib.Literal):
-            if data.language is not None and data.datatype is None:
-                data = {"lexical_or_value": str(data), "lang": data.language, "$type": "rdflib.term.Literal"}
-        else:
-            try:
-                data = str(HttpUrl(data))
-            except pydantic.ValidationError as e:
-                raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
-                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+        try:
+            data = str(HttpUrl(data))
+        except pydantic.ValidationError as e:
+            raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
+                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
     curr_data = iri_data_data.get(attr_name, None)
     if curr_data is None:
         iri_data_data.update({attr_name: data})
@@ -195,6 +198,18 @@ def append(attr: h5py.AttributeManager,
     attr[attr_identifier] = iri_data_data
 
 
+def parse_typed_data(data: Dict) -> Any:
+    if not isinstance(data, dict):
+        return data
+    _type = data.pop("$type", None)
+    if _type is not None:
+        cls = CLASS_DICT.get(_type, None)
+        if cls is None:
+            raise RDFError(f'Unknown class type: {_type}. Known types are: {list(CLASS_DICT.keys())}')
+        return cls(**data)
+    return data
+
+
 class IRIDict(Dict):
 
     def __init__(self, _dict: Dict, attr: h5py.AttributeManager = None, attr_name: str = None):
@@ -229,6 +244,8 @@ class IRIDict(Dict):
         if isinstance(o, dict) and o.get("$type", None) == "rdflib.term.Literal":
             o.pop("$type")
             return rdflib.Literal(**o)
+        if isinstance(o, list):
+            return [parse_typed_data(i) for i in o]
         return o
 
     @object.setter
@@ -278,8 +295,9 @@ class _RDFPO(abc.ABC):
         assert isinstance(attrs, str)
         parsed_str = json.loads(attrs).get(item, default)
         if isinstance(parsed_str, dict) and parsed_str.get("$type", None) == "rdflib.term.Literal":
-            parsed_str.pop("$type")
-            return rdflib.Literal(**parsed_str)
+            return parse_typed_data(parsed_str)
+        if isinstance(parsed_str, list):
+            return [parse_typed_data(i) for i in parsed_str]
         return parsed_str
 
     def __getitem__(self, item) -> Union[str, None]:

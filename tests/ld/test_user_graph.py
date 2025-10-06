@@ -126,4 +126,27 @@ class TestUserGraph(unittest.TestCase):
 
 """)
 
+    def test_multiple_literals_as_rdf_object(self):
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset("ds", data=[1, 2, 3])
+            ds.attrs["description"] = "A description"
+            ds.rdf["description"].predicate = SCHEMA.description
+            ds.rdf["description"].object = rdflib.Literal("Eine deutsche Beschreibung", "de")
+            ds.rdf["description"].object = rdflib.Literal("An english description", "en")
 
+            print(ds.rdf["description"].object)
+            self.assertEqual(
+                [
+                    rdflib.Literal("Eine deutsche Beschreibung", "de"),
+                    rdflib.Literal("An english description", "en")
+                ],
+                ds.rdf["description"].object)
+            self.assertEqual("A description", ds.attrs["description"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+
+        self.assertEqual(ttl, """@prefix schema: <https://schema.org/> .
+
+[] schema:description "Eine deutsche Beschreibung"@de,
+        "An english description"@en .
+
+""")
