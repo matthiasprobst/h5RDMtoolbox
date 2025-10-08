@@ -2,10 +2,17 @@
 
 Log of changes in the versions
 
+## v2.4.0
+
+- drop support for python 3.9
+- extend support for python 3.13 and 3.14
+- upgrade pint to 0.25
+- allow numpy 2.x versions
+
+
 ## v2.3.1
 
 - fixing error in parsing obj name. "/" is safed and will not be converted anymore
-
 
 ## v2.3.0
 
