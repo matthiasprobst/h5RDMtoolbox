@@ -126,6 +126,13 @@ def set_predicate(attr: h5py.AttributeManager,
     attr[rdf_predicate_attr_name] = iri_name_data
 
 
+def is_sdict(data):
+    if isinstance(data, str):
+        if data[0] == "{":
+            return True
+    return False
+
+
 def set_object(attr: h5py.AttributeManager,
                attr_name: str,
                data: str,
@@ -140,6 +147,8 @@ def set_object(attr: h5py.AttributeManager,
 
     if iri_data_data is None:
         iri_data_data = {}
+    elif is_sdict(iri_data_data):
+        iri_data_data = json.loads(iri_data_data)
 
     if isinstance(data, Thing):
         data = data.get_jsonld_dict()

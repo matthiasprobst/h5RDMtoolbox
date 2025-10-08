@@ -4,10 +4,16 @@ from typing import Union
 
 import numpy as np
 import rdflib
+from ontolutils import SCHEMA
 from rdflib import RDF, DCTERMS
 
 from h5rdmtoolbox.ld.utils import get_attr_dtype_as_XSD, get_obj_bnode
 from ..rdf import FileRDFManager, RDFManager
+
+# FALLBACK_PREDICATE = SCHEMA.additionalProperty
+# FALLBACK_PREDICATE = DCTERMS.relation
+FALLBACK_PREDICATE_FOR_LITERAL_OBJECTS = RDF.value
+FALLBACK_PREDICATE_FOR_IRI_OBJECTS = DCTERMS.relation
 
 
 def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[rdflib.URIRef, rdflib.BNode]):
@@ -22,7 +28,11 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[rdflib
 
     rdf_user_object = FileRDFManager(parent_obj.attrs).object[name]
     if rdf_user_object and not rdf_user_predicate:
-        rdf_user_predicate = DCTERMS.relation
+        if isinstance(rdf_user_object, (rdflib.Literal, str, int, float)) and not str(rdf_user_object).startswith("http"):
+            rdf_user_predicate = FALLBACK_PREDICATE_FOR_LITERAL_OBJECTS
+        else:
+            rdf_user_predicate = FALLBACK_PREDICATE_FOR_IRI_OBJECTS
+        rdf_user_object = SCHEMA.PropertyValue
 
     if rdf_user_predicate:
         if rdf_user_object:
@@ -90,7 +100,10 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
     rdf_user_predicate = rdf_manager.predicate[name]
     rdf_user_object = rdf_manager.object[name]
     if rdf_user_object and not rdf_user_predicate:
-        rdf_user_predicate = DCTERMS.relation
+        if isinstance(rdf_user_object, (rdflib.Literal, str, int, float)) and not str(rdf_user_object).startswith("http"):
+            rdf_user_predicate = FALLBACK_PREDICATE_FOR_LITERAL_OBJECTS
+        else:
+            rdf_user_predicate = FALLBACK_PREDICATE_FOR_IRI_OBJECTS
 
     def _add_to_graph(_rdf_user_object, _graph):
         if _rdf_user_object:
@@ -104,7 +117,8 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
             else:
                 if isinstance(_rdf_user_object, dict):
                     try:
-                        obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(_rdf_user_object)), format="json-ld")
+                        obj_graph = rdflib.Graph().parse(data=json.loads(json.dumps(_rdf_user_object)),
+                                                         format="json-ld")
                         # relate the obj_graph with the predicate:
                         _subjects = set(obj_graph.subjects())
                         if len(_subjects) != 1:
@@ -122,6 +136,7 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
                  rdflib.Literal(data, datatype=get_attr_dtype_as_XSD(data)))
             )
         return _graph
+
     if rdf_user_predicate:
         graph = _add_to_graph(rdf_user_object, graph)
     return graph

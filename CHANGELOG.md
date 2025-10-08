@@ -8,7 +8,7 @@ Log of changes in the versions
 - add support of Literals in RDF attributes, e.g. h5.frdf["description"].object = rdflib.Literal("An english description", "en")
 - removed deprecated methods in `ZenodoSandboxDeposit`
 - add support of Literals in RDF attributes, e.g. `h5.frdf["description"].object = rdflib.Literal("An english description", "en")`
-- 
+
 ## v2.4.0-rc.1
 
 - allow numpy 2.x versions

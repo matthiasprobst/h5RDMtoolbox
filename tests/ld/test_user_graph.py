@@ -77,16 +77,32 @@ class TestUserGraph(unittest.TestCase):
 
     def test_literals_as_rdf_object(self):
         with h5tbx.File() as h5:
-            h5.attrs["description"] = "A description"
+            h5.attrs["description"] = "An english description"
             h5.frdf["description"].predicate = SCHEMA.description
             h5.frdf["description"].object = rdflib.Literal("An english description", "en")
 
-            self.assertEqual("A description", h5.attrs["description"])
+            self.assertEqual("An english description", h5.attrs["description"])
             ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
 
         self.assertEqual(ttl, """@prefix schema: <https://schema.org/> .
 
 [] schema:description "An english description"@en .
+
+""")
+
+    def test_literals_as_rdf_object_shortcut(self):
+        """assigning a literal directly to the attribute should work as well"""
+        with h5tbx.File() as h5:
+            h5.attrs["description"] = rdflib.Literal("An english description", "en")
+            # h5.frdf["description"].predicate = SCHEMA.additionalProperty
+            # h5.frdf["description"].object = Thing(id="https://evalue=rdf_user_object")# rdflib.Literal("An english description", "en")
+
+            # self.assertEqual("An english description", h5.attrs["description"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+        print(ttl)
+        self.assertEqual(ttl, """@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+[] rdf:value "An english description"@en .
 
 """)
 
