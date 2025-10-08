@@ -187,7 +187,7 @@ def validate_f1(a, b, c=3, d=2):
             self.assertEqual(ds.symbol, 'P')
             self.assertEqual(str(ds.units), 'm/s')
             ds.units = h5tbx.get_ureg().Unit('N m')
-            self.assertEqual(str(ds.units), 'N*m')
+            self.assertEqual(str(ds.units), 'm*N')
 
         h5tbx.use(None)
         self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
