@@ -23,5 +23,5 @@ python-gitlab
 pypandoc>=1.11
 pydantic>=2.8.2,<3.0.0
 # other:
-ontolutils>=0.19.2,<0.20.0
+ontolutils @ git+https://github.com/matthiasprobst/ontology-utils@0.20.1
 click==8.1.7
