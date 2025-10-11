@@ -7,6 +7,12 @@ from h5rdmtoolbox import __version__, get_package_meta
 
 __this_dir__ = pathlib.Path(__file__).parent
 
+def parse_to_py_version(vstr):
+    """Parse a version string and return a standardized version string.
+    e.g. removes -rc.X to rcX
+    """
+    vstr = vstr.replace('-rc.', 'rc')
+    return vstr
 
 class TestVersion(unittest.TestCase):
 
@@ -17,7 +23,7 @@ class TestVersion(unittest.TestCase):
             lines = f.readlines()
             for line in lines:
                 if 'version' in line:
-                    this_version = line.split(' = ')[-1].strip()
+                    this_version = parse_to_py_version(line.split(' = ')[-1].strip())
         self.assertEqual(__version__, this_version)
 
     def test_codemeta(self):
@@ -25,7 +31,7 @@ class TestVersion(unittest.TestCase):
 
         codemeta = get_package_meta()
 
-        assert codemeta['version'] == __version__
+        assert parse_to_py_version(codemeta['version']) == __version__
 
     def test_colab_version(self):
         """open colab jupyter notebook and check first cell for version"""
@@ -54,7 +60,7 @@ class TestVersion(unittest.TestCase):
             lines = f.readlines()
             for line in lines:
                 if 'version: ' in line:
-                    this_version = line.split(':')[-1].strip()
+                    this_version = parse_to_py_version(line.split(':')[-1].strip())
                 # elif 'date-released:' in line:
                 #     # check if the date is the same as the one in codemeta.json
                 #     date_str = line.split(':')[-1].strip()
