@@ -4,10 +4,10 @@ Log of changes in the versions
 
 ## v2.5.0
 
-- drop support for python 3.9
-- extend support for python 3.13 and 3.14
-- upgrade pint to 0.25
-- allow numpy 2.x versions
+- fix issues with ZenodoRecord
+- removed deprecated methods in ZenodoSandboxDeposit
+- add support of Literals in RDF attributes, e.g. h5.frdf["description"].object = rdflib.Literal("An english description", "en")
+
 
 
 ## v2.4.0-rc.1
