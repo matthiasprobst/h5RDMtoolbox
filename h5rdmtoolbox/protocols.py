@@ -238,6 +238,14 @@ class H5TbxDataset(H5TbxHLObject):
         """Return the data array by the item name"""
         ...
 
+    def to_units(self, *args, **kwargs):
+        """Added to silence linters. to_units() is added via an accessor."""
+        pass
+
+    def normalize(self, *args, **kwargs):
+        """Added to silence linters. normalize() is added via an accessor."""
+        pass
+
 
 class StandardAttribute(Protocol):
 
