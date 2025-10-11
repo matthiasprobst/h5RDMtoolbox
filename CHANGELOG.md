@@ -2,12 +2,12 @@
 
 Log of changes in the versions
 
-## v2.4.0
+## v2.4.0-rc.1
 
-- drop support for python 3.9
-- extend support for python 3.13 and 3.14
-- upgrade pint to 0.25
 - allow numpy 2.x versions
+- extend support for python 3.13
+- upgrade pint to 0.25
+- upgrade pint-xarray up to 0.6.0
 
 
 ## v2.3.1
