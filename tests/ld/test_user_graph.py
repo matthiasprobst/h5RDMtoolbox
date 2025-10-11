@@ -46,7 +46,7 @@ class TestUserGraph(unittest.TestCase):
 [] a <http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable> ;
     ssno:hasStandardName [ a ssno:StandardName ;
             ssno:standardName "x_velocity" ;
-            ssno:unit "http://qudt.org/vocab/unit/M-PER-SEC" ] .
+            ssno:unit <http://qudt.org/vocab/unit/M-PER-SEC> ] .
     """
         self.assertEqual(
             rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),

@@ -16,7 +16,6 @@ HDF = Namespace(str(HDF5))
 def process_group(
         group,
         graph,
-        parent_uri,
         blank_node_iri_base: Optional[str] = None,
         skipND: int = 1
 ):
@@ -31,7 +30,7 @@ def process_group(
         graph.add((group_uri, HDF.member, item_uri))
 
         if isinstance(item, h5py.Group):
-            process_group(item, graph, parent_uri=group_uri, blank_node_iri_base=blank_node_iri_base)
+            process_group(item, graph, blank_node_iri_base=blank_node_iri_base)
         elif isinstance(item, h5py.Dataset):
             process_dataset(
                 item,

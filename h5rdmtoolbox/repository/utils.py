@@ -45,7 +45,7 @@ def download_file(file_url,
             links_content = _jdata.get('links', {}).get('content')
         else:
             links_content = None
-    except (requests.exceptions.JSONDecodeError, AttributeError, KeyError) as e:
+    except (requests.exceptions.JSONDecodeError, AttributeError, KeyError) as _:
         links_content = None
 
     with open(target_filename, 'wb') as file:

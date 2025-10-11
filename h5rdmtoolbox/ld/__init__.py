@@ -1,5 +1,4 @@
 import pathlib
-import warnings
 from typing import Union, Optional, Dict
 
 import h5py

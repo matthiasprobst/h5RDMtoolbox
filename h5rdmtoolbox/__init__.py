@@ -62,7 +62,7 @@ __author__ = 'Matthias Probst'
 __author_orcid__ = 'https://orcid.org/0000-0001-8729-0482'
 
 
-def get_package_meta():
+def get_package_meta() -> Dict:
     """Reads codemeta.json and returns it as dict"""
     with open(__this_dir__ / '../codemeta.json', 'r') as f:
         codemeta = json.loads(f.read())
@@ -172,7 +172,6 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
                      skipND: int = 1,
                      structural: bool = True,
                      contextual: bool = True,
-                     resolve_keys: bool = True,
                      context: Optional[Dict] = None,
                      blank_node_iri_base: Optional[str] = None
                      ) -> str:
@@ -189,19 +188,12 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
         considered if structural=True.
     structural : bool=True
         Include structural information in the JSON-LD output.
-    semantic : bool=True
-        Include semantic information in the JSON-LD output.
-    resolve_keys : bool=True
-        Resolve keys in the JSON-LD output. This is used when semantic=True.
-        If resolve_keys is False and an attribute name in the HDF5 file, which has
-        a predicate is different in its name from the predicate, the attribute name is used.
-        Example: an attribute "name" is associated with "foaf:lastName", then "name" is used
-        and "name": "http://xmlns.com/foaf/0.1/lastName" is added to the context.
+    contextual : bool=True
+        Include contextual information in the JSON-LD output.
     context: Optional[Dict]
         context in form of {prefix: IRI}, e.g. "ssno": "https://matthiasprobst.github.io/ssno#"
-        If resolve_keys is True, this is added to the built-in look-up table to be used in the
-        context part of JSON-LD
-
+    blank_node_iri_base: Optional[str]
+        IRI base used for blank nodes
     """
     if blank_node_iri_base is not None:
         if not isinstance(blank_node_iri_base, (str, HttpUrl)):
@@ -212,20 +204,18 @@ def dump_jsonld_depr(hdf_filename: Union[str, pathlib.Path],
 
     from h5rdmtoolbox.ld.hdf.file import get_serialized_ld
     if structural and not contextual:
-        return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context,
-                                 contextual=contextual, skipND=skipND)
-    return get_serialized_ld(hdf_filename, blank_node_iri_base, format="json-ld", context=context,
-                             contextual=contextual, skipND=skipND)
-    # with File(hdf_filename) as h5:
-    #     return jsonld.dumps(
-    #         h5,
-    #         structural=structural,
-    #         resolve_keys=resolve_keys,
-    #         context=context,
-    #         blank_node_iri_base=blank_node_iri_base,
-    #         skipND=skipND,
-    #         **kwargs
-    #     )
+        return get_serialized_ld(
+            hdf_filename,
+            blank_node_iri_base,
+            format="json-ld",
+            context=context,
+            skipND=skipND)
+    return get_serialized_ld(
+        hdf_filename,
+        blank_node_iri_base,
+        format="json-ld",
+        context=context,
+        skipND=skipND)
 
 
 def serialize(hdf_filename,
@@ -257,7 +247,7 @@ def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=Fa
     kg = kglab.KnowledgeGraph().load_rdf_text(
         serialize(hdf_filename, fmt="ttl", structural=structural, contextual=contextual)
     )
-    VIS_STYLE = style or {
+    vis_style = style or {
         "hdf": {
             "color": "orange",
             "size": 40,
@@ -268,7 +258,7 @@ def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=Fa
         },
     }
     subgraph = kglab.SubgraphTensor(kg)
-    pyvis_graph = subgraph.build_pyvis_graph(notebook=notebook, style=VIS_STYLE)
+    pyvis_graph = subgraph.build_pyvis_graph(notebook=notebook, style=vis_style)
     pyvis_graph.force_atlas_2based()
     pyvis_graph.show(output_filename)
     return pyvis_graph
@@ -372,4 +362,5 @@ __all__ = ('__version__', '__author__', '__author_orcid__',
            'File', 'Group', 'Dataset', 'Attribute',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
-           'Convention', 'jsonld', 'lazy', 'DownloadFileManager')
+           'Convention', 'jsonld', 'lazy', 'DownloadFileManager',
+           'get_package_meta')
