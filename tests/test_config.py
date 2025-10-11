@@ -46,7 +46,7 @@ class TestConfig(unittest.TestCase):
         DEFAULT_FORMAT = h5tbx.get_config('ureg_format')
         self.assertEqual(DEFAULT_FORMAT, 'C~')
         ureg = h5tbx.get_ureg()
-        self.assertEqual(h5tbx.get_ureg().default_format, DEFAULT_FORMAT)
+        self.assertEqual(h5tbx.get_ureg().formatter.default_format, DEFAULT_FORMAT)
         q = ureg('1 mm')
         self.assertEqual(f'{q}', '1 mm')
         h5tbx.set_config(ureg_format='Lx~')

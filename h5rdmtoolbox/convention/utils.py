@@ -97,8 +97,8 @@ def get_similar_names_ratio(a, b):
 # def equal_base_units(unit1, unit2):
 #     """Return if two units are equivalent"""
 #
-#     base_unit1 = get_ureg()(unit1).to_base_units().units.__format__(get_ureg().default_format)
-#     base_unit2 = get_ureg()(unit2).to_base_units().units.__format__(get_ureg().default_format)
+#     base_unit1 = get_ureg()(unit1).to_base_units().units.__format__(get_ureg().formatter.default_format)
+#     base_unit2 = get_ureg()(unit2).to_base_units().units.__format__(get_ureg().formatter.default_format)
 #     return base_unit1 == base_unit2
 
 

@@ -570,8 +570,8 @@ class TestCore(unittest.TestCase):
                     attrs_with_unit = obj.attrs['mean_with_unit'].to_pint()
                     self.assertEqual(f"{obj.attrs['mean_with_unit'].to_pint()}", '1.2 m')
                     self.assertEqual(h5tbx.get_config('ureg_format'), 'C~')
-                    self.assertEqual(h5tbx.get_ureg().default_format, 'C~')
-                    self.assertEqual(h5tbx.get_ureg().default_format, h5tbx.get_config('ureg_format'))
+                    self.assertEqual(h5tbx.get_ureg().formatter.default_format, 'C~')
+                    self.assertEqual(h5tbx.get_ureg().formatter.default_format, h5tbx.get_config('ureg_format'))
                     self.assertEqual(f"{obj.attrs['mean_with_unit'].to_pint()}", '1.2 m')
                     self.assertEqual(attrs_with_unit, h5tbx.get_ureg()(test_val))
                     obj.attrs['mean_with_unit'] = attrs_with_unit
