@@ -11,8 +11,7 @@ def parse_to_py_version(vstr):
     """Parse a version string and return a standardized version string.
     e.g. removes -rc.X to rcX
     """
-    vstr = vstr.replace('-rc.', 'rc')
-    return vstr
+    return vstr.replace('-rc.', 'rc')
 
 class TestVersion(unittest.TestCase):
 

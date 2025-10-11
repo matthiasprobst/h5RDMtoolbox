@@ -700,8 +700,8 @@ WHERE {
             context={'schema': 'http://schema.org/'})  # Note, that codemeta uses the unsecure http
 
         self.assertIsInstance(data, list)
-        self.assertTrue(len(data) == 1)
-        self.assertTrue(data[0]['version'] == __version__)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['version'].replace("-rc.", "rc"), __version__)
         self.assertTrue('author' in data[0])
         self.assertIsInstance(data[0]['author'], list)
         with h5tbx.File('test.hdf', 'w') as h5:
