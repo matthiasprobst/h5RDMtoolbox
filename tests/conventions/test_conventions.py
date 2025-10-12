@@ -18,7 +18,7 @@ from h5rdmtoolbox import convention, tutorial
 from h5rdmtoolbox.convention import core
 from h5rdmtoolbox.convention import yaml2jsonld
 from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
-from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
+from h5rdmtoolbox.repository.zenodo import ZenodoRecord
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
 from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
 
@@ -109,7 +109,7 @@ class TestConventions(unittest.TestCase):
             keywords=['h5rdmtoolbox', 'tutorial', 'convention'],
             publication_date=datetime.now(),
         )
-        zsr = ZenodoSandboxDeposit(source=None)
+        zsr = ZenodoRecord(source=None, sandbox=True)
         zsr.metadata = meta
         zsr.upload_file(cv_yaml_filename, overwrite=True, metamapper=None)
 
@@ -213,9 +213,10 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            cv = h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID,
-                                              overwrite=False,
-                                              force_download=True)
+            cv = h5tbx.convention.from_repo(
+                ZenodoRecord(source=15389242),
+                name="tutorial_convention.yaml"
+            )
             self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 

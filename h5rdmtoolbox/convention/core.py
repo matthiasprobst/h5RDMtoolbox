@@ -13,6 +13,8 @@ import yaml
 from pydoc import locate
 from typing import Union, List, Dict, Tuple, Any
 
+from forge import kwargs
+
 from h5rdmtoolbox import errors
 from h5rdmtoolbox.repository import RepositoryInterface
 from h5rdmtoolbox.wrapper import ds_decoder
@@ -696,24 +698,19 @@ def from_json(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Co
 
 
 def from_repo(repo_interface: RepositoryInterface,
-              name: str,
-              take_existing: bool = True,
-              force_download: bool = False):
-    """Download a YAML file from a repository"""
-    # check if file exists:
-    # path_compatible_doi = repo_interface.get_doi().replace('/', '_')
-    # estimated_filename = UserDir['cache'] / f'{path_compatible_doi}' / name
-    # estimated_filename.parent.mkdir(parents=True, exist_ok=True)
-    # if estimated_filename.exists():
-    #     if not take_existing:
-    #         raise FileExistsError(f'File {name} exists in cache but take_existing is set to False.')
-    #     if take_existing and not force_download:
-    #         return from_file(estimated_filename)
+              name: str):
+    """Download a YAML file from a repository
 
+    Parameters
+    ----------
+    repo_interface: RepositoryInterface
+        The repository interface to use for downloading the file
+    name: str
+        Name of the file to download
+    """
+    logger.debug(f"Downloading file {name} from repository {repo_interface}")
     filename = repo_interface.download_file(name)
-    # if estimated_filename.exists():
-    #     estimated_filename.unlink()
-    # filename.rename(estimated_filename)
+    logger.debug(f"File downloaded to {filename}. Now loading convention from file.")
     return from_file(filename)
 
 
@@ -723,7 +720,7 @@ def from_zenodo(doi_or_recid: str,
                 force_download: bool = False) -> Convention:
     """Download a YAML file from a zenodo repository
 
-    Depreciated. Use `from_repo` in future.
+    Depreciated. Use `from_repo` in the future.
 
     Parameters
     ----------
