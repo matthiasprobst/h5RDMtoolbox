@@ -42,8 +42,10 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[rdflib
                 graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(rdf_user_object)))
             elif isinstance(rdf_user_object, list):
                 for ruo in rdf_user_object:
+                    if isinstance(ruo, rdflib.Literal):
+                        graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), ruo))
 
-                    if isinstance(ruo, str) and ruo.startswith('http'):
+                    elif isinstance(ruo, str) and ruo.startswith('http'):
                         graph.add((file_uri, rdflib.URIRef(rdf_user_predicate), rdflib.URIRef(ruo)))
 
                     elif isinstance(ruo, dict):

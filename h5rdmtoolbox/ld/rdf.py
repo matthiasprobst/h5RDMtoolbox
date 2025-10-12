@@ -302,12 +302,13 @@ class _RDFPO(abc.ABC):
         if isinstance(attrs, dict):
             return attrs.get(item, default)
         assert isinstance(attrs, str)
-        parsed_str = json.loads(attrs).get(item, default)
-        if isinstance(parsed_str, dict) and parsed_str.get("$type", None) == "rdflib.term.Literal":
-            return parse_typed_data(parsed_str)
-        if isinstance(parsed_str, list):
-            return [parse_typed_data(i) for i in parsed_str]
-        return parsed_str
+        parsed_str = json.loads(attrs)
+        value = parsed_str.get(item, default)
+        if isinstance(value, dict) and value.get("$type", None) == "rdflib.term.Literal":
+            return parse_typed_data(value)
+        if isinstance(value, list):
+            return [parse_typed_data(i) for i in value]
+        return value
 
     def __getitem__(self, item) -> Union[str, None]:
         return self.get(item, default=None)
@@ -720,7 +721,8 @@ class FileRDFManager:
         return FileIRIDict(
             {
                 RDF_FILE_PREDICATE_ATTR_NAME: self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, {}).get(item, None),
-                RDF_FILE_OBJECT_ATTR_NAME: self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, {}).get(item, None)},
+                RDF_FILE_OBJECT_ATTR_NAME: self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, {}).get(item, None)
+            },
             self._attr, item)
 
     @property

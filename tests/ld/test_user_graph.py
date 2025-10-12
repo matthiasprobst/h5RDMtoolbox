@@ -90,6 +90,23 @@ class TestUserGraph(unittest.TestCase):
 
 """)
 
+    def test_literals_as_rdf_object2(self):
+        with h5tbx.File() as h5:
+            h5.attrs["description"] = "An english description"
+            h5.frdf["description"].predicate = SCHEMA.description
+            h5.frdf["description"].object = [rdflib.Literal("An english description", "en"),
+                                             rdflib.Literal("Eine deutsche Beschreibung", "de")]
+
+            self.assertEqual("An english description", h5.attrs["description"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+
+        self.assertEqual(ttl, """@prefix schema: <https://schema.org/> .
+
+[] schema:description "Eine deutsche Beschreibung"@de,
+        "An english description"@en .
+
+""")
+
     def test_literals_as_rdf_object_shortcut(self):
         """assigning a literal directly to the attribute should work as well"""
         with h5tbx.File() as h5:
