@@ -99,6 +99,10 @@ package via pip:
 
     pip install h5RDMtoolbox
 
+or if you prefer `uv`:
+
+    uv install h5RDMtoolbox
+
 ### Install from source:
 
 Developers may clone the repository and install the package from source. Clone the repository first:
