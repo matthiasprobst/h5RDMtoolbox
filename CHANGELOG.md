@@ -10,7 +10,8 @@ Log of changes in the versions
 - upgrade pint-xarray up to 0.6.0
 - upgrading to ontolutils 0.21.1
 - fixing linting issues
-
+- RDF-subjects set for dataset and group are modelled with property schema:about to express that a dataset or group is
+  described by the RDF subject. This is more in line with semantic web standards.
 
 ## v2.3.1
 
