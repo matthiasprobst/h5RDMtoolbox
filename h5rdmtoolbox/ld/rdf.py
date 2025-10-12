@@ -2,10 +2,11 @@
 import abc
 import json
 import warnings
-from typing import Dict, Union, Optional, List
+from typing import Dict, Union, Optional, List, Any
 
 import h5py
 import pydantic
+import rdflib
 from ontolutils import Thing
 from pydantic import HttpUrl
 
@@ -50,6 +51,10 @@ KNOWN_NAMESPACES = {
     "vann": "http://purl.org/vocab/vann/",
     "schema": "https://schema.org/",
     "dcterms": "http://purl.org/dc/terms/",
+}
+
+CLASS_DICT = {
+    "rdflib.term.Literal": rdflib.Literal,
 }
 
 
@@ -121,6 +126,13 @@ def set_predicate(attr: h5py.AttributeManager,
     attr[rdf_predicate_attr_name] = iri_name_data
 
 
+def is_sdict(data):
+    if isinstance(data, str):
+        if data[0] == "{":
+            return True
+    return False
+
+
 def set_object(attr: h5py.AttributeManager,
                attr_name: str,
                data: str,
@@ -135,9 +147,14 @@ def set_object(attr: h5py.AttributeManager,
 
     if iri_data_data is None:
         iri_data_data = {}
+    elif is_sdict(iri_data_data):
+        iri_data_data = json.loads(iri_data_data)
 
     if isinstance(data, Thing):
         data = data.get_jsonld_dict()
+    elif isinstance(data, rdflib.Literal):
+        if data.language is not None and data.datatype is None:
+            data = {"lexical_or_value": str(data), "lang": data.language, "$type": "rdflib.term.Literal"}
     elif isinstance(data, dict):
         # assuming it is a JSON-LD dict
         if not "@type" in data:
@@ -190,6 +207,18 @@ def append(attr: h5py.AttributeManager,
     attr[attr_identifier] = iri_data_data
 
 
+def parse_typed_data(data: Dict) -> Any:
+    if not isinstance(data, dict):
+        return data
+    _type = data.pop("$type", None)
+    if _type is not None:
+        cls = CLASS_DICT.get(_type, None)
+        if cls is None:
+            raise RDFError(f'Unknown class type: {_type}. Known types are: {list(CLASS_DICT.keys())}')
+        return cls(**data)
+    return data
+
+
 class IRIDict(Dict):
 
     def __init__(self, _dict: Dict, attr: h5py.AttributeManager = None, attr_name: str = None):
@@ -221,6 +250,11 @@ class IRIDict(Dict):
         if isinstance(o, str) and o.startswith("{"):
             """assuming, that it is a json string"""
             return json.loads(o)
+        if isinstance(o, dict) and o.get("$type", None) == "rdflib.term.Literal":
+            o.pop("$type")
+            return rdflib.Literal(**o)
+        if isinstance(o, list):
+            return [parse_typed_data(i) for i in o]
         return o
 
     @object.setter
@@ -268,7 +302,13 @@ class _RDFPO(abc.ABC):
         if isinstance(attrs, dict):
             return attrs.get(item, default)
         assert isinstance(attrs, str)
-        return json.loads(attrs).get(item, default)
+        parsed_str = json.loads(attrs)
+        value = parsed_str.get(item, default)
+        if isinstance(value, dict) and value.get("$type", None) == "rdflib.term.Literal":
+            return parse_typed_data(value)
+        if isinstance(value, list):
+            return [parse_typed_data(i) for i in value]
+        return value
 
     def __getitem__(self, item) -> Union[str, None]:
         return self.get(item, default=None)
@@ -334,9 +374,13 @@ class RDFManager:
         if key not in ('_attr',
                        'subject',
                        'predicate',
+                       'file_predicate',
                        'type'):
             raise KeyError(f"Cannot set {key}. Only subject, predicate and type can be set!")
-        if key in ("subject", "predicate"):
+        if key == "file_predicate":
+            if isinstance(self._attr._parent, h5py.File):
+                raise RuntimeError(f"Cannot set file_predicate on a group or dataset. ")
+        if key in ("subject", "predicate", "file_predicate"):
             try:
                 value = str(HttpUrl(value))
             except pydantic.ValidationError as e:
@@ -549,6 +593,32 @@ class RDFManager:
         self._attr[RDF_PREDICATE_ATTR_NAME] = iri_predicate_data
 
     @property
+    def file_predicate(self) -> str:
+        """Return the RDF predicate manager"""
+        return self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, None)
+
+    @file_predicate.setter
+    def file_predicate(self, file_predicate: str):
+        """Setting the predicate for a group or dataset, not for an attribute."""
+        if not isinstance(file_predicate, str):
+            raise TypeError(f'Expecting a string or URL. Got {type(file_predicate)}. Note, that a predicate of '
+                            'a group or dataset can only be one value.')
+        # iri_predicate_data = self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, None)
+        # if iri_predicate_data is None:
+        #     iri_predicate_data = {}
+        # iri_predicate_data.update({'SELF': file_predicate})
+        self._attr[RDF_FILE_PREDICATE_ATTR_NAME] = file_predicate
+
+    @file_predicate.deleter
+    def file_predicate(self):
+        """Delete the predicate of the group or dataset. It does not delete the predicate of the attributes.
+        Use `del h5.rdf.predicate[<attr_name>]` instead."""
+        iri_predicate_data = self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, None)
+        if RDF_FILE_PREDICATE_ATTR_NAME in self._attr:
+            del self._attr[RDF_FILE_PREDICATE_ATTR_NAME]
+        return
+
+    @property
     def object(self):
         """Return the RDF object manager"""
         return RDF_OBJECT(self._attr)
@@ -681,7 +751,8 @@ class FileRDFManager:
         return FileIRIDict(
             {
                 RDF_FILE_PREDICATE_ATTR_NAME: self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, {}).get(item, None),
-                RDF_FILE_OBJECT_ATTR_NAME: self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, {}).get(item, None)},
+                RDF_FILE_OBJECT_ATTR_NAME: self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, {}).get(item, None)
+            },
             self._attr, item)
 
     @property

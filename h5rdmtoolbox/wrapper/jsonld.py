@@ -97,7 +97,7 @@ def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool, blank_no
         if isinstance(data[i], int):
             flag_node = rdflib.Literal(int(data[i]), datatype=XSD.integer)
         elif isinstance(data[i], str):
-            flag_node = rdflib.Literal(str(data[i]), datatype=XSD.string)
+            flag_node = rdflib.Literal(str(data[i]))
         elif isinstance(data[i], float):
             flag_node = rdflib.Literal(float(data[i]), datatype=XSD.float)
         else:
@@ -768,7 +768,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 if av.startswith('http'):
                     attr_literal = rdflib.Literal(av, datatype=XSD.anyURI)
                 else:
-                    attr_literal = rdflib.Literal(av, datatype=XSD.string)
+                    attr_literal = rdflib.Literal(av)
             elif isinstance(av, (int, np.integer)):
                 attr_literal = rdflib.Literal(int(av), datatype=XSD.integer)
             elif isinstance(av, (float, np.floating)):

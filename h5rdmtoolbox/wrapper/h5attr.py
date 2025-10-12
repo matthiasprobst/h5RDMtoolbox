@@ -316,7 +316,13 @@ class WrapperAttributeManager(AttributeManager):
                             rdf_object=object_iri,
                             frdf_object=frdf_object_iri,
                             definition=attr_def)
-
+        elif isinstance(value, rdflib.Literal):
+            object_iri = value
+            value = value.value
+            self.create(name, value,
+                        rdf_predicate=None,
+                        rdf_object=object_iri,
+                        definition=None)
         else:
             object_iri = None
             predicate_iri = None

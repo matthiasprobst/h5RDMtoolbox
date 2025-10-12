@@ -7,7 +7,7 @@ from ontolutils.namespacelib import SCHEMA
 
 from h5rdmtoolbox.ld.user.attributes import process_attribute
 from h5rdmtoolbox.ld.user.datasets import process_dataset
-from h5rdmtoolbox.ld.utils import get_obj_bnode
+from h5rdmtoolbox.ld.utils import get_obj_bnode, get_file_bnode
 from ..rdf import RDFManager
 
 
@@ -16,12 +16,20 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
         process_attribute(group, ak, av, graph, blank_node_iri_base)
 
     group_uri = get_obj_bnode(group, blank_node_iri_base)
-    rdf_type = RDFManager(group.attrs).type
-    rdf_subject = RDFManager(group.attrs).subject
+    rdf_manager = RDFManager(group.attrs)
+    rdf_type = rdf_manager.type
+    rdf_subject = rdf_manager.subject
 
     # if rdf_type is None:
     if rdf_subject:
         graph.add((group_uri, SCHEMA.about, rdflib.URIRef(rdf_subject)))
+        rdf_predicate = rdf_manager.predicate
+        if rdf_predicate.get("SELF", None):
+            graph.add((group_uri, rdflib.URIRef(rdf_predicate["SELF"]), rdflib.URIRef(rdf_subject)))
+        rdf_file_predicate = rdf_manager.file_predicate
+        if rdf_file_predicate is not None:
+            file_uri = get_file_bnode(group.file, blank_node_iri_base)
+            graph.add((file_uri, rdflib.URIRef(rdf_file_predicate), rdflib.URIRef(rdf_subject)))
     if rdf_type is not None:
         if rdf_subject:
             if isinstance(rdf_type, (list, np.ndarray)):

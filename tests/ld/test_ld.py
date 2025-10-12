@@ -12,7 +12,7 @@ from rdflib import DCAT
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import __version__
-from h5rdmtoolbox.ld import hdf2jsonld
+from h5rdmtoolbox.ld import hdf2jsonld, hdf2ttl
 from h5rdmtoolbox.ld import rdf
 from h5rdmtoolbox.ld.rdf import RDFError, RDF_FILE_PREDICATE_ATTR_NAME, RDF_TYPE_ATTR_NAME
 from h5rdmtoolbox.wrapper import jsonld
@@ -759,6 +759,11 @@ WHERE {
         self.assertTrue(jsonld_filename.exists())
         self.assertTrue(jsonld_filename.suffix == '.jsonld')
         jsonld_filename.unlink()
+
+        ttl_filename = hdf2ttl('test.hdf', skipND=1)
+        self.assertTrue(ttl_filename.exists())
+        self.assertTrue(ttl_filename.suffix == '.ttl')
+        ttl_filename.unlink()
 
     def test_hdf2jsonld_with_standard_name_table(self):
         with h5tbx.File() as h5:

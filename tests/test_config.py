@@ -1,6 +1,5 @@
 """Unit tests for h5rdmtoolbox.config"""
 import unittest
-from tarfile import DEFAULT_FORMAT
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import File

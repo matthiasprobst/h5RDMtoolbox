@@ -2,6 +2,17 @@
 
 Log of changes in the versions
 
+## v2.4.0-rc.2
+
+- fix issues with ZenodoRecord
+- add support of Literals in RDF attributes, e.g. h5.frdf["description"].object = rdflib.Literal("An english
+  description", "en")
+- removed deprecated methods in `ZenodoSandboxDeposit`
+- add support of Literals in RDF attributes, e.g.
+  `h5.frdf["description"].object = rdflib.Literal("An english description", "en")`
+- improve serializing HDF5 contextual and structural metadata to RDF-based formats
+- minor bugfixes
+
 ## v2.4.0-rc.1
 
 - allow numpy 2.x versions
@@ -15,7 +26,7 @@ Log of changes in the versions
 
 ## v2.3.1
 
-- fixing error in parsing obj name. "/" is safed and will not be converted anymore
+- fixing error in parsing obj name. "/" is saved and will not be converted anymore
 
 ## v2.3.0
 
