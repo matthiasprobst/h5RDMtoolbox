@@ -40,7 +40,7 @@ class TestVersion(unittest.TestCase):
         found = False
         for line in lines:
             if 'pip install' in line:
-                self.assertTrue(f'"# !pip install h5rdmtoolbox=={__version__}"' in line.strip())
+                self.assertTrue(f'"# !pip install h5rdmtoolbox=={__version__}"' in parse_to_py_version(line.strip()))
                 found = True
                 break
         self.assertTrue(found)
