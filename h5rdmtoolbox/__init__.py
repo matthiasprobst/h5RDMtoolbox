@@ -363,4 +363,4 @@ __all__ = ('__version__', '__author__', '__author_orcid__',
            'dump', 'dumps', 'cv_h5py', 'lower', 'Lower',
            'set_config', 'get_config', 'get_ureg',
            'Convention', 'jsonld', 'lazy', 'DownloadFileManager',
-           'get_package_meta')
+           'get_package_meta', 'clean_temp_data')

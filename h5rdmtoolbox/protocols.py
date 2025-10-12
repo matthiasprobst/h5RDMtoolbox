@@ -227,6 +227,10 @@ class H5TbxDataset(H5TbxHLObject):
     def basename(self) -> str:
         """Return the basename, which is the last part
         of the HDF5 object path."""
+    @property
+    @abstractmethod
+    def chunks(self):
+        """Return the chunks of the dataset."""
 
     def sel(self, method=None, **coords) -> xr.DataArray:
         """Return the Dataset selected by the coordinates"""

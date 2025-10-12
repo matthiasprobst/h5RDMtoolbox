@@ -518,6 +518,10 @@ def validate_f1(a, b, c=3, d=2):
         )
         h5tbx.use(cv)
         snt_file = __this_dir__ / "fan_standard_name_table.jsonld"
+        snt = StandardNameTable.parse(snt_file)
+        self.assertEqual(snt.hasVersion, None)
+        self.assertEqual(snt.version, "6.0.0")
+        self.assertEqual(snt.modified, datetime(year=2025, month=10, day=12))
         with h5tbx.File(
                 data_type='experimental',
                 contact=h5tbx.__author_orcid__,
