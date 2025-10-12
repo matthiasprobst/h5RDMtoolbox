@@ -1,11 +1,12 @@
-import rdflib
+from dateutil import parser
 from ontolutils.namespacelib.hdf5 import HDF5
-from rdflib import Namespace, Literal
-from rdflib import XSD, RDF
+from rdflib import Namespace, Literal, XSD, RDF
 
 from ..utils import get_attr_node
 
 HDF = Namespace(str(HDF5))
+
+
 
 
 def process_attribute(*, name, value, graph, parent, parent_uri, blank_node_iri_base):
@@ -20,7 +21,7 @@ def process_attribute(*, name, value, graph, parent, parent_uri, blank_node_iri_
 
     if isinstance(value, str):
         graph.add((attr_uri, RDF.type, HDF5.StringAttribute))
-        graph.add((attr_uri, HDF.data, Literal(value, datatype=XSD.string)))
+        graph.add((attr_uri, HDF.data, Literal(value)))
     elif isinstance(value, int):
         graph.add((attr_uri, RDF.type, HDF5.IntegerAttribute))
         graph.add((attr_uri, HDF.data, Literal(value, datatype=XSD.integer)))
@@ -31,5 +32,5 @@ def process_attribute(*, name, value, graph, parent, parent_uri, blank_node_iri_
         graph.add((attr_uri, RDF.type, HDF5.Attribute))
         graph.add((attr_uri, HDF.data, Literal(value)))
 
-    graph.add((attr_uri, HDF.name, rdflib.Literal(name)))
+    graph.add((attr_uri, HDF.name, Literal(name)))
     graph.add((parent_uri, HDF.attribute, attr_uri))

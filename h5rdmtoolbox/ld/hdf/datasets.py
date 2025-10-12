@@ -42,8 +42,7 @@ def add_filter(dataset: h5py.Dataset, dataset_uri, graph, blank_node_iri_base) -
             graph.add((filter_uri, RDF.type, HDF5.Filter))
             graph.add((filter_uri, RDFS.label, rdflib.Literal(dataset.compression, datatype=XSD.integer)))
             graph.add((filter_uri, RDFS.comment,
-                       rdflib.Literal("Unknown compression filter. Could not determine class nor parameters.",
-                                      datatype=XSD.string)))
+                       rdflib.Literal("Unknown compression filter. Could not determine class nor parameters.")))
         graph.add((dataset_uri, HDF5.filter, filter_uri))
     return graph
 
@@ -63,7 +62,7 @@ def process_dataset(
 
     graph.add((parent_uri, HDF.member, dataset_uri))
 
-    graph.add((dataset_uri, HDF5.name, rdflib.Literal(dataset.name)))
+    graph.add((dataset_uri, HDF5.name, rdflib.Literal(dataset.name)))  # untyped simple literals are xsd:string by default, no need to specify
     graph.add((dataset_uri, HDF5.rank, rdflib.Literal(dataset.ndim, datatype=XSD.integer)))
     graph.add((dataset_uri, HDF5.size, rdflib.Literal(dataset.size, datatype=XSD.integer)))
 

@@ -48,15 +48,13 @@ Options:
         result = runner.invoke(h5tbx, ["ld", f"{h5.hdf_filename}"])
         self.assertIsNone(result.exception)
         expected = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 [] a hdf:File ;
     hdf:rootGroup [ a hdf:Group ;
-            hdf:name "/"^^xsd:string ] .
+            hdf:name "/" ] .
 
 
 """
-        print(result.output)
         self.assertEqual(
             expected,
             result.output

@@ -5,9 +5,13 @@ Log of changes in the versions
 ## v2.4.0-rc.2
 
 - fix issues with ZenodoRecord
-- add support of Literals in RDF attributes, e.g. h5.frdf["description"].object = rdflib.Literal("An english description", "en")
+- add support of Literals in RDF attributes, e.g. h5.frdf["description"].object = rdflib.Literal("An english
+  description", "en")
 - removed deprecated methods in `ZenodoSandboxDeposit`
-- add support of Literals in RDF attributes, e.g. `h5.frdf["description"].object = rdflib.Literal("An english description", "en")`
+- add support of Literals in RDF attributes, e.g.
+  `h5.frdf["description"].object = rdflib.Literal("An english description", "en")`
+- improve serializing HDF5 contextual and structural metadata to RDF-based formats
+- minor bugfixes
 
 ## v2.4.0-rc.1
 
@@ -19,6 +23,7 @@ Log of changes in the versions
 - fixing linting issues
 - RDF-subjects set for dataset and group are modelled with property schema:about to express that a dataset or group is
   described by the RDF subject. This is more in line with semantic web standards.
+
 ## v2.3.1
 
 - fixing error in parsing obj name. "/" is saved and will not be converted anymore

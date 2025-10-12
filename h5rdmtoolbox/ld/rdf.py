@@ -374,9 +374,13 @@ class RDFManager:
         if key not in ('_attr',
                        'subject',
                        'predicate',
+                       'file_predicate',
                        'type'):
             raise KeyError(f"Cannot set {key}. Only subject, predicate and type can be set!")
-        if key in ("subject", "predicate"):
+        if key == "file_predicate":
+            if isinstance(self._attr._parent, h5py.File):
+                raise RuntimeError(f"Cannot set file_predicate on a group or dataset. ")
+        if key in ("subject", "predicate", "file_predicate"):
             try:
                 value = str(HttpUrl(value))
             except pydantic.ValidationError as e:
@@ -587,6 +591,32 @@ class RDFManager:
         if 'SELF' in iri_predicate_data:
             del iri_predicate_data['SELF']
         self._attr[RDF_PREDICATE_ATTR_NAME] = iri_predicate_data
+
+    @property
+    def file_predicate(self) -> str:
+        """Return the RDF predicate manager"""
+        return self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, None)
+
+    @file_predicate.setter
+    def file_predicate(self, file_predicate: str):
+        """Setting the predicate for a group or dataset, not for an attribute."""
+        if not isinstance(file_predicate, str):
+            raise TypeError(f'Expecting a string or URL. Got {type(file_predicate)}. Note, that a predicate of '
+                            'a group or dataset can only be one value.')
+        # iri_predicate_data = self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, None)
+        # if iri_predicate_data is None:
+        #     iri_predicate_data = {}
+        # iri_predicate_data.update({'SELF': file_predicate})
+        self._attr[RDF_FILE_PREDICATE_ATTR_NAME] = file_predicate
+
+    @file_predicate.deleter
+    def file_predicate(self):
+        """Delete the predicate of the group or dataset. It does not delete the predicate of the attributes.
+        Use `del h5.rdf.predicate[<attr_name>]` instead."""
+        iri_predicate_data = self._attr.get(RDF_FILE_PREDICATE_ATTR_NAME, None)
+        if RDF_FILE_PREDICATE_ATTR_NAME in self._attr:
+            del self._attr[RDF_FILE_PREDICATE_ATTR_NAME]
+        return
 
     @property
     def object(self):

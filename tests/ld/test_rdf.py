@@ -201,14 +201,12 @@ class TestRDF(unittest.TestCase):
             h5.frdf.type = "https://example.org/HDFFile"
             self.assertEqual('\n<https://example.org/123123> a <https://example.org/HDFFile> .\n\n',
                              h5.serialize(fmt="ttl", structural=False))
-
             expected_ttl = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 <https://example.org/123123> a hdf:File,
         <https://example.org/HDFFile> ;
     hdf:rootGroup [ a hdf:Group ;
-            hdf:name "/"^^xsd:string ] .
+            hdf:name "/" ] .
 
 """
             self.assertEqual(h5.serialize(fmt="ttl", structural=True), expected_ttl)

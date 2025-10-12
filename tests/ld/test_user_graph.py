@@ -69,7 +69,7 @@ class TestUserGraph(unittest.TestCase):
         exception_serialization = """@prefix schema: <https://schema.org/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-[] schema:dateModified "today"^^xsd:string ."""
+[] schema:dateModified "today" ."""
         self.assertEqual(
             rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),
             rdflib.Graph().parse(data=exception_serialization, format="turtle").serialize(format="turtle")
@@ -183,3 +183,75 @@ class TestUserGraph(unittest.TestCase):
         "An english description"@en .
 
 """)
+
+    def test_parse_datetime_literal(self):
+        with h5tbx.File() as h5:
+            h5.attrs["created"] = "2025-01-10"
+            h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+
+            self.assertEqual("2025-01-10", h5.attrs["created"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+            print(ttl)
+
+
+    def test_group_predicate2(self):
+        """now relating it to the file"""
+        with h5tbx.File("deleteme.hdf", "w") as h5:
+            grp = h5.create_group(
+                'contact',
+                attrs=dict(orcid='https://orcid.org/0000-0001-8729-0482')
+            )
+            grp.attrs['first_name', rdflib.FOAF.givenName] = 'Matthias'
+            grp.attrs['last_name', rdflib.FOAF.familyName] = 'Probst'
+            grp.rdf['orcid'].predicate = 'http://w3id.org/nfdi4ing/metadata4ing#orcidId'  # relates this to the file
+
+            grp.rdf.type = 'http://xmlns.com/foaf/0.1/Person'  # what the content of group is, namely a foaf:Person
+            grp.rdf.file_predicate = rdflib.DCTERMS.creator  # relates the file to "contact" via dcterms:creator
+            self.assertEqual(grp.rdf.file_predicate, str(rdflib.DCTERMS.creator))
+            del grp.rdf.file_predicate
+            self.assertIsNone(grp.rdf.file_predicate)
+            grp.rdf.file_predicate = rdflib.DCTERMS.creator
+            grp.rdf.subject = 'https://orcid.org/0000-0001-8729-0482'  # corresponds to @ID in JSON-LD
+
+            ttl = h5.serialize("ttl", file_uri="http://example.com#")
+            self.assertEqual(ttl, """@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
+@prefix schema: <https://schema.org/> .
+
+<http://example.com#deleteme.hdf> a hdf:File ;
+    hdf:rootGroup <http://example.com#deleteme.hdf/> ;
+    dcterms:creator <https://orcid.org/0000-0001-8729-0482> .
+
+<http://example.com#deleteme.hdf/> a hdf:Group ;
+    hdf:member <http://example.com#deleteme.hdf/contact> ;
+    hdf:name "/" .
+
+<http://example.com#deleteme.hdf/contact> a hdf:Group ;
+    hdf:attribute <http://example.com#deleteme.hdf/contact@first_name>,
+        <http://example.com#deleteme.hdf/contact@last_name>,
+        <http://example.com#deleteme.hdf/contact@orcid> ;
+    hdf:name "/contact" ;
+    schema:about <https://orcid.org/0000-0001-8729-0482> .
+
+<http://example.com#deleteme.hdf/contact@first_name> a hdf:StringAttribute ;
+    hdf:data "Matthias" ;
+    hdf:name "first_name" .
+
+<http://example.com#deleteme.hdf/contact@last_name> a hdf:StringAttribute ;
+    hdf:data "Probst" ;
+    hdf:name "last_name" .
+
+<http://example.com#deleteme.hdf/contact@orcid> a hdf:StringAttribute ;
+    hdf:data "https://orcid.org/0000-0001-8729-0482" ;
+    hdf:name "orcid" .
+
+<https://orcid.org/0000-0001-8729-0482> a foaf:Person ;
+    m4i:orcidId <https://orcid.org/0000-0001-8729-0482> ;
+    foaf:familyName "Probst" ;
+    foaf:givenName "Matthias" .
+
+""")
+        if h5.hdf_filename.exists():
+            h5.hdf_filename.unlink()
