@@ -17,7 +17,8 @@ def get_ld(
         skipND: Optional[int] = 1,
         context: Optional[Dict] = None) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
-
+    if file_uri and not (str(file_uri)).endswith("#"):
+        file_uri = f"{file_uri}#"
     graph = None
     with h5py.File(hdf_filename) as h5:
         if contextual and structural:

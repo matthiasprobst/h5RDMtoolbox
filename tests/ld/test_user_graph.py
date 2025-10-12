@@ -1,3 +1,4 @@
+import datetime
 import pathlib
 import unittest
 
@@ -191,7 +192,24 @@ class TestUserGraph(unittest.TestCase):
 
             self.assertEqual("2025-01-10", h5.attrs["created"])
             ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
-            print(ttl)
+            self.assertEqual(ttl, """@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+[] dcterms:created "2025-01-10"^^xsd:date .
+
+""")
+        with h5tbx.File() as h5:
+            h5.attrs["created"] = datetime.datetime(year=2025, month=1, day=10)
+            h5.frdf["created"].predicate = "http://purl.org/dc/terms/created"
+
+            self.assertEqual("2025-01-10T00:00:00000000", h5.attrs["created"])
+            ttl = h5.serialize(fmt="ttl", contextual=True, structural=False)
+            self.assertEqual(ttl, """@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+[] dcterms:created "2025-01-10T00:00:00"^^xsd:dateTime .
+
+""")
 
 
     def test_group_predicate2(self):

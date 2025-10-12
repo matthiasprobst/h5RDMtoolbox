@@ -12,6 +12,7 @@ Log of changes in the versions
   `h5.frdf["description"].object = rdflib.Literal("An english description", "en")`
 - improve serializing HDF5 contextual and structural metadata to RDF-based formats
 - minor bugfixes
+- default dtime format used within h5rdmtoolbox is now ISO 8601 ('%Y-%m-%dT%H:%M:%S%f')
 
 ## v2.4.0-rc.1
 

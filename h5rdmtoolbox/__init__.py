@@ -2,6 +2,7 @@
 
 import logging
 import pathlib
+import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
@@ -227,6 +228,11 @@ def serialize(hdf_filename,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
     fmt = kwargs.pop("format", fmt)
+    if file_uri is None:
+        warnings.warn(
+            "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
+            category=UserWarning
+        )
     with File(hdf_filename) as h5:
         return h5.serialize(fmt=fmt,
                             skipND=skipND,
@@ -290,7 +296,7 @@ def register_dataset_decoder(decoder: Callable, decoder_name: str = None, overwr
     ds_decoder.registered_dataset_decoders[decoder_name] = decoder
 
 
-atexit_verbose = False
+_ATEXIT_VERBOSE = False
 
 
 def set_loglevel(level: Union[int, str]):
@@ -319,18 +325,18 @@ def clean_temp_data(full: bool = False):
         return
 
     for _tmp_session_dir in [UserDir['tmp'], ]:
-        if atexit_verbose:
+        if _ATEXIT_VERBOSE:
             print(f'cleaning up tmp directory "{_tmp_session_dir}"')
         if _tmp_session_dir.exists():
             try:
-                if atexit_verbose:
+                if _ATEXIT_VERBOSE:
                     print(f'try deleting tmp in session dir: {_tmp_session_dir}')
                 shutil.rmtree(_tmp_session_dir)
             except PermissionError as e:
-                if atexit_verbose:
+                if _ATEXIT_VERBOSE:
                     print(f'[!] failed deleting tmp session dir: {_tmp_session_dir}')
                 failed_dirs.append(UserDir['tmp'])
-                if atexit_verbose:
+                if _ATEXIT_VERBOSE:
                     print(f'removing tmp folder "{_tmp_session_dir}" failed due to "{e}". Best is you '
                           f'manually delete the directory.')
             finally:
