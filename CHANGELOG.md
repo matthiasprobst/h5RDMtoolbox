@@ -8,6 +8,8 @@ Log of changes in the versions
 - extend support for python 3.13
 - upgrade pint to 0.25
 - upgrade pint-xarray up to 0.6.0
+- upgrading to ontolutils 0.21.1
+- fixing linting issues
 
 
 ## v2.3.1

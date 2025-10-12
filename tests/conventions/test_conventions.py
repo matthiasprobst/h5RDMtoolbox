@@ -538,7 +538,8 @@ def validate_f1(a, b, c=3, d=2):
             with h5tbx.File(
                     data_type=h5tbx.Attribute(
                         value="experimental",
-                        frdf_object="https://www.wikidata.org/wiki/Q101965"),
+                        frdf_object="https://www.wikidata.org/wiki/Q101965"
+                    ),
                     contact=h5tbx.__author_orcid__,
                     title="test file") as h5:
                 self.assertEqual(h5.title, "test file")

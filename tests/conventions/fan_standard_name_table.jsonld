@@ -10,7 +10,7 @@
     },
     "@type": "ssno:StandardNameTable",
     "dcterms:title": "fan_standard_name_shorttable",
-    "dcterms:hasVersion": "v5.0.0",
+    "schema:version": "5.0.0",
     "identifier": "10.5281/zenodo.15300151",
     "dcterms:modified": "2023-07-18 09:05:38.112885+00:00",
     "ssno:standardNames": [

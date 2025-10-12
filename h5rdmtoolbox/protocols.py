@@ -168,8 +168,17 @@ class H5TbxHLObject(Protocol):
 
     def __delitem__(self, key): ...
 
-    # def __getitem__(self, *args, **kwargs):
-    #     ...
+    @property
+    @abstractmethod
+    def standard_attributes(self) -> Dict:
+        """Return the standard attributes of the dataset."""
+        ...
+
+    @property
+    @abstractmethod
+    def convention(self):
+        """Return the convention of the file"""
+        ...
 
 
 class H5TbxFile(H5TbxHLObject):
@@ -236,6 +245,9 @@ class H5TbxDataset(H5TbxHLObject):
                     nparray=False,
                     links_as_strings: bool = False) -> Union[xr.DataArray, np.ndarray]:
         """Return the data array by the item name"""
+        ...
+
+    def __setitem__(self, key, value):
         ...
 
     def to_units(self, *args, **kwargs):
