@@ -3,11 +3,13 @@ from typing import Optional
 import h5py
 import numpy as np
 import rdflib
+from ontolutils.namespacelib import SCHEMA
 
 from h5rdmtoolbox.ld.user.attributes import process_attribute
 from h5rdmtoolbox.ld.user.datasets import process_dataset
 from h5rdmtoolbox.ld.utils import get_obj_bnode
 from ..rdf import RDFManager
+
 
 def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
     for ak, av in group.attrs.items():
@@ -19,7 +21,7 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
 
     # if rdf_type is None:
     if rdf_subject:
-        graph.add((group_uri, rdflib.DCTERMS.relation, rdflib.URIRef(rdf_subject)))
+        graph.add((group_uri, SCHEMA.about, rdflib.URIRef(rdf_subject)))
     if rdf_type is not None:
         if rdf_subject:
             if isinstance(rdf_type, (list, np.ndarray)):

@@ -168,8 +168,17 @@ class H5TbxHLObject(Protocol):
 
     def __delitem__(self, key): ...
 
-    # def __getitem__(self, *args, **kwargs):
-    #     ...
+    @property
+    @abstractmethod
+    def standard_attributes(self) -> Dict:
+        """Return the standard attributes of the dataset."""
+        ...
+
+    @property
+    @abstractmethod
+    def convention(self):
+        """Return the convention of the file"""
+        ...
 
 
 class H5TbxFile(H5TbxHLObject):
@@ -218,6 +227,10 @@ class H5TbxDataset(H5TbxHLObject):
     def basename(self) -> str:
         """Return the basename, which is the last part
         of the HDF5 object path."""
+    @property
+    @abstractmethod
+    def chunks(self):
+        """Return the chunks of the dataset."""
 
     def sel(self, method=None, **coords) -> xr.DataArray:
         """Return the Dataset selected by the coordinates"""
@@ -237,6 +250,17 @@ class H5TbxDataset(H5TbxHLObject):
                     links_as_strings: bool = False) -> Union[xr.DataArray, np.ndarray]:
         """Return the data array by the item name"""
         ...
+
+    def __setitem__(self, key, value):
+        ...
+
+    def to_units(self, *args, **kwargs):
+        """Added to silence linters. to_units() is added via an accessor."""
+        pass
+
+    def normalize(self, *args, **kwargs):
+        """Added to silence linters. normalize() is added via an accessor."""
+        pass
 
 
 class StandardAttribute(Protocol):

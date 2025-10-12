@@ -18,7 +18,7 @@ from h5rdmtoolbox import convention, tutorial
 from h5rdmtoolbox.convention import core
 from h5rdmtoolbox.convention import yaml2jsonld
 from h5rdmtoolbox.convention.core import InvalidAttribute, MissingAttribute
-from h5rdmtoolbox.repository.zenodo import ZenodoSandboxDeposit
+from h5rdmtoolbox.repository.zenodo import ZenodoRecord
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
 from h5rdmtoolbox.tutorial import TutorialConventionZenodoRecordID
 
@@ -109,7 +109,7 @@ class TestConventions(unittest.TestCase):
             keywords=['h5rdmtoolbox', 'tutorial', 'convention'],
             publication_date=datetime.now(),
         )
-        zsr = ZenodoSandboxDeposit(source=None)
+        zsr = ZenodoRecord(source=None, sandbox=True)
         zsr.metadata = meta
         zsr.upload_file(cv_yaml_filename, overwrite=True, metamapper=None)
 
@@ -187,7 +187,7 @@ def validate_f1(a, b, c=3, d=2):
             self.assertEqual(ds.symbol, 'P')
             self.assertEqual(str(ds.units), 'm/s')
             ds.units = h5tbx.get_ureg().Unit('N m')
-            self.assertEqual(str(ds.units), 'N*m')
+            self.assertEqual(str(ds.units), 'm*N')
 
         h5tbx.use(None)
         self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
@@ -213,9 +213,10 @@ def validate_f1(a, b, c=3, d=2):
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
-            cv = h5tbx.convention.from_zenodo(doi_or_recid=TutorialConventionZenodoRecordID,
-                                              overwrite=False,
-                                              force_download=True)
+            cv = h5tbx.convention.from_repo(
+                ZenodoRecord(source=15389242),
+                name="tutorial_convention.yaml"
+            )
             self.assertEqual(cv.name, 'h5rdmtoolbox-tutorial-convention')
             h5tbx.use('h5rdmtoolbox-tutorial-convention')
 
@@ -517,6 +518,10 @@ def validate_f1(a, b, c=3, d=2):
         )
         h5tbx.use(cv)
         snt_file = __this_dir__ / "fan_standard_name_table.jsonld"
+        snt = StandardNameTable.parse(snt_file)
+        self.assertEqual(snt.hasVersion, None)
+        self.assertEqual(snt.version, "6.0.0")
+        self.assertEqual(snt.modified, datetime(year=2025, month=10, day=12))
         with h5tbx.File(
                 data_type='experimental',
                 contact=h5tbx.__author_orcid__,
@@ -538,7 +543,8 @@ def validate_f1(a, b, c=3, d=2):
             with h5tbx.File(
                     data_type=h5tbx.Attribute(
                         value="experimental",
-                        frdf_object="https://www.wikidata.org/wiki/Q101965"),
+                        frdf_object="https://www.wikidata.org/wiki/Q101965"
+                    ),
                     contact=h5tbx.__author_orcid__,
                     title="test file") as h5:
                 self.assertEqual(h5.title, "test file")

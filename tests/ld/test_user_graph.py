@@ -25,12 +25,16 @@ class TestUserGraph(unittest.TestCase):
 
             ds = h5.create_dataset("a/b/ds", data=[[1, 2], [3, 4]],
                                    chunks=(1, 2), compression="gzip", compression_opts=2)
+            self.assertEqual(ds.chunks, (1, 2))
             ds2 = h5.create_dataset("nochunk", data=[[1, 2], [3, 4]], chunks=None)
+            self.assertEqual(ds2.chunks, None)
             ds.rdf.type = M4I.NumericalVariable
             ds.attrs["standard_name", SSNO.hasStandardName] = "x_velocity"
-            ds.rdf["standard_name"].object = ssnolib.ssno.standard_name.StandardName(id="_:123",
-                                                                                     standardName="x_velocity",
-                                                                                     unit="m/s")
+            ds.rdf["standard_name"].object = ssnolib.ssno.standard_name.StandardName(
+                id="_:123",
+                standardName="x_velocity",
+                unit="m/s"
+            )
         self.hdf_filename = h5.hdf_filename
 
     def test_process_attributes(self):
@@ -46,7 +50,7 @@ class TestUserGraph(unittest.TestCase):
 [] a <http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable> ;
     ssno:hasStandardName [ a ssno:StandardName ;
             ssno:standardName "x_velocity" ;
-            ssno:unit "http://qudt.org/vocab/unit/M-PER-SEC" ] .
+            ssno:unit <http://qudt.org/vocab/unit/M-PER-SEC> ] .
     """
         self.assertEqual(
             rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),
@@ -70,5 +74,3 @@ class TestUserGraph(unittest.TestCase):
             rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),
             rdflib.Graph().parse(data=exception_serialization, format="turtle").serialize(format="turtle")
         )
-
-

@@ -1,5 +1,6 @@
 """Unit tests for h5rdmtoolbox.config"""
 import unittest
+from tarfile import DEFAULT_FORMAT
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import File
@@ -42,16 +43,23 @@ class TestConfig(unittest.TestCase):
             h5tbx.set_config(ureg_format=123)
 
     def test_changing_ureg_format(self):
-        self.assertEqual(h5tbx.get_config('ureg_format'), 'C~')
+        DEFAULT_FORMAT = h5tbx.get_config('ureg_format')
+        self.assertEqual(DEFAULT_FORMAT, 'C~')
         ureg = h5tbx.get_ureg()
-        self.assertEqual(h5tbx.get_ureg().default_format, h5tbx.get_config('ureg_format'))
+        self.assertEqual(h5tbx.get_ureg().formatter.default_format, DEFAULT_FORMAT)
         q = ureg('1 mm')
         self.assertEqual(f'{q}', '1 mm')
         h5tbx.set_config(ureg_format='Lx~')
         self.assertEqual(h5tbx.get_config('ureg_format'), 'Lx~')
-        self.assertEqual(f'{q}', '\\SI[]{\\begin{pmatrix}1\\end{pmatrix}}{\\milli\\meter}')
+        self.assertEqual(f'{q}', '\\SI[]{\\begin{pmatrix}\\end{pmatrix}}{\\milli\\meter}')
         h5tbx.set_config(ureg_format='C~')
         self.assertEqual(f'{q}', '1 mm')
+
+        q = ureg('2 mm')
+        h5tbx.set_config(ureg_format='Lx~')
+        self.assertEqual(f'{q}', '\\SI[]{\\begin{pmatrix}\\end{pmatrix}}{\\milli\\meter}')
+        self.assertEqual(f"{q:.2~Lx}", '\\SI[]{\\begin{pmatrix}.2\\end{pmatrix}}{\\milli\\meter}')
+        h5tbx.set_config(ureg_format=DEFAULT_FORMAT)
 
     def test_set_parameter(self):
         h5tbx.use(None)

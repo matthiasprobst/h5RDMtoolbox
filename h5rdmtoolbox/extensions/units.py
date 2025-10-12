@@ -16,7 +16,7 @@ class ToUnitsInterface:
         self.coord_units = coord_units
 
     def _convert_units(self, data: xr.DataArray):
-        assert isinstance(data, xr.DataArray)
+        assert isinstance(data, xr.DataArray), 'Data is not an xarray DataArray'
         assert 'units' in data.attrs, 'No units attribute found in the dataset'
         for c, cn in self.coord_units.items():
             assert 'units' in data.coords[c].attrs, f'No units attribute found in the coordinate {c}'
@@ -42,4 +42,7 @@ class ToUnitsAccessor(Accessor):
     """Accessor to await selected data to be converted to a new units"""
 
     def __call__(self, dataset_unit: Optional[str] = None, **coord_units) -> ToUnitsInterface:
+        if isinstance(dataset_unit, dict):  # fix for pint-xarray > 0.4.0
+            coord_units = dataset_unit
+            dataset_unit = None
         return ToUnitsInterface(self._obj, dataset_unit=dataset_unit, **coord_units)

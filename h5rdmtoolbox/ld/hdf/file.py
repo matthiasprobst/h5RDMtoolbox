@@ -34,10 +34,10 @@ def get_ld(source: Union[str, h5py.File],
 
     graph.add((_file_uri, RDF.type, HDF.File))
 
-    root_group_uri = get_obj_bnode(source["/"], blank_node_iri_base=file_uri)
+    root_group_uri = get_obj_bnode(obj=source["/"], blank_node_iri_base=file_uri)
     graph.add((_file_uri, HDF5.rootGroup, root_group_uri))
 
-    process_group(source["/"], graph, parent_uri=_file_uri, blank_node_iri_base=file_uri, skipND=skipND)
+    process_group(source["/"], graph, blank_node_iri_base=file_uri, skipND=skipND)
 
     return graph
 
@@ -49,6 +49,6 @@ def get_serialized_ld(
         context=None,
         skipND: int = 1
 ) -> str:
-    graph = get_ld(source, blank_node_iri_base, skipND=skipND)
+    graph = get_ld(source=source, file_uri=blank_node_iri_base, skipND=skipND)
     context = optimize_context(graph, context)
     return graph.serialize(format=format, indent=2, auto_compact=True, context=context)

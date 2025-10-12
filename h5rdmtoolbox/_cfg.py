@@ -73,7 +73,7 @@ class set_config:
                 raise KeyError(f'Not a configuration key: "{k}"')
             self.old[k] = CONFIG[k]
             if k == 'ureg_format':
-                get_ureg().default_format = str(v)
+                get_ureg().formatter.default_format = str(v)
         self._update(kwargs)
 
     def __enter__(self):

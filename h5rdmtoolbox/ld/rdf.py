@@ -164,8 +164,6 @@ def set_object(attr: h5py.AttributeManager,
             else:
                 iri_data_data.update({attr_name: [curr_data, data]})
     attr[rdf_object_attr_name] = iri_data_data
-    # iri_data_data.update({attr_name: data})
-    # attr[rdf_object_attr_name] = iri_data_data
 
 
 def append(attr: h5py.AttributeManager,
@@ -261,11 +259,6 @@ class _RDFPO(abc.ABC):
     def __setiri__(self, key, value):
         """Set IRI to an attribute"""
 
-    # @property
-    # def parent(self):
-    #     """Return the parent object"""
-    #     return self._attr._parent
-
     def get(self, item, default=None):
         attrs = self._attr.get(self.IRI_ATTR_NAME, None)
         if attrs is None:
@@ -279,13 +272,6 @@ class _RDFPO(abc.ABC):
 
     def __getitem__(self, item) -> Union[str, None]:
         return self.get(item, default=None)
-
-    # def __delitem__(self, key):
-    #     iri_data_data = self._attr.get(self.IRI_ATTR_NAME, None)
-    #     if iri_data_data is None:
-    #         iri_data_data = {}
-    #     iri_data_data.pop(key, None)
-    #     self._attr[self.IRI_ATTR_NAME] = iri_data_data
 
     def __setitem__(self, key, value: str):
         if key not in self._attr:
@@ -354,7 +340,8 @@ class RDFManager:
             try:
                 value = str(HttpUrl(value))
             except pydantic.ValidationError as e:
-                RDFError(f"Invalid value. Expecting a valid URL. This was validated with pydantic: {value}")
+                RDFError(f"Invalid value. Expecting a valid URL. This was validated with pydantic: {value}. "
+                         f"Original error: {e}")
         super().__setattr__(key, value)
 
     @property
@@ -394,7 +381,7 @@ class RDFManager:
         res_predicate = []
         res_object = []
 
-        def _find_subject(name, node):
+        def _find_subject(_, node):
             rdfm = RDFManager(node.attrs)
             _subject: str = rdfm.subject
             if _subject == str(rdf_subject):
@@ -409,13 +396,13 @@ class RDFManager:
             if str(rdf_type) in types:
                 res_types.append(node)
 
-        def _find_predicate(name, node):
+        def _find_predicate(_, node):
             rdfm = RDFManager(node.attrs)
             for k in rdfm.predicate.values():
                 if k == str(rdf_predicate):
                     res_predicate.append(node)
 
-        def _find_object(name, node):
+        def _find_object(_, node):
             rdfm = RDFManager(node.attrs)
             if str(rdf_object) in rdfm.object.values():
                 res_object.append(node)
@@ -569,9 +556,7 @@ class RDFManager:
     @property
     def subject(self) -> Optional[str]:
         """Return the RDF subject (a URL), which is equivalent to the @ID in JSON-LD syntax"""
-        if RDF_SUBJECT_ATTR_NAME not in self._attr:
-            return
-        return self._attr[RDF_SUBJECT_ATTR_NAME]
+        return self._attr.get(RDF_SUBJECT_ATTR_NAME, None)
 
     @subject.deleter
     def subject(self):
@@ -638,10 +623,7 @@ class FileIRIDict(Dict):
 
     @property
     def predicate(self):
-        p = self[RDF_FILE_PREDICATE_ATTR_NAME]
-        if p is not None:
-            return p
-        return p
+        return self[RDF_FILE_PREDICATE_ATTR_NAME]
 
     @predicate.setter
     def predicate(self, value):
@@ -652,15 +634,13 @@ class FileIRIDict(Dict):
 
     @property
     def object(self):
-        p = self[RDF_FILE_OBJECT_ATTR_NAME]
-        if p is not None:
-            return p
-        return p
+        return self[RDF_FILE_OBJECT_ATTR_NAME]
 
     @object.setter
     def object(self, value):
-        set_object(self._attr,
-                   self._attr_name, value,
+        set_object(attr=self._attr,
+                   attr_name=self._attr_name,
+                   data=value,
                    rdf_object_attr_name=RDF_FILE_OBJECT_ATTR_NAME)
 
 
@@ -754,7 +734,10 @@ class FileRDFManager:
 
     @object.setter
     def object(self, value):
-        set_object(self._attr, self._attr_name, value, rdf_predicate_attr_name=RDF_FILE_OBJECT_ATTR_NAME)
+        set_object(attr=self._attr,
+                   attr_name=self._attr_name,
+                   data=value,
+                   rdf_object_attr_name=RDF_FILE_OBJECT_ATTR_NAME)
 
     @property
     def type(self) -> Union[str, List[str], None]:

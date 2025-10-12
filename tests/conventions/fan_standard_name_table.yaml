@@ -1,11 +1,11 @@
-name: fan_standard_name_shorttable
+name: "Standard Name Table for Fan Measurements"
 institution: Karlsruhe Institute of Technology
 contact: https://orcid.org/0000-0001-8729-0482
 valid_characters:
 - ^a-zA-Z0-9_
 pattern: ^[0-9 ].*
-last_modified: '2023-07-18 09:05:38.112885+00:00'
-version: v4.1.0-alpha
+last_modified: '2025-10-12'
+version: 6.0.0
 standard_names:
   absolute_pressure:
     description: Pressure is force per unit area. Absolute air pressure is pressure

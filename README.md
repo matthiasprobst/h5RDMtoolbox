@@ -3,7 +3,7 @@
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
 [![codecov](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/graph/badge.svg?token=IVG4AQEW47)](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
-![pyvers](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)
+![pyvers](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
 
 *Note, that the project is still under development!*
 
@@ -99,6 +99,10 @@ package via pip:
 
     pip install h5RDMtoolbox
 
+or if you prefer `uv`:
+
+    uv install h5RDMtoolbox
+
 ### Install from source:
 
 Developers may clone the repository and install the package from source. Clone the repository first:
@@ -131,7 +135,7 @@ specific to the features of the package:
 
 **Specific to the package are ...**
 
-- `h5py=3.7.0`: HDF5 file interface
+- `h5py~=3.8`: HDF5 file interface
 - `xarray>=2022.3.0`: Working with scientific arrays in combination with attributes. Allows carrying metadata from HDF5
   to user
 - `pint>=0.19.2`: Allows working with units

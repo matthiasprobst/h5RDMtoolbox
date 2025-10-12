@@ -119,6 +119,10 @@ class RepositoryInterface(abc.ABC):
     def identifier(self) -> str:
         """Return the identifier of the Repository."""
 
+    @abc.abstractmethod
+    def download_file(self, name):
+        ...
+
     @property
     @abc.abstractmethod
     def title(self) -> str:

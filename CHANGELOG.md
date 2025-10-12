@@ -2,10 +2,20 @@
 
 Log of changes in the versions
 
+## v2.4.0-rc.1
+
+- allow numpy 2.x versions
+- extend support for python 3.13
+- upgrade pint to 0.25
+- upgrade pint-xarray up to 0.6.0
+- upgrading to ontolutils 0.21.1
+- fixing linting issues
+- RDF-subjects set for dataset and group are modelled with property schema:about to express that a dataset or group is
+  described by the RDF subject. This is more in line with semantic web standards.
+
 ## v2.3.1
 
 - fixing error in parsing obj name. "/" is safed and will not be converted anymore
-
 
 ## v2.3.0
 

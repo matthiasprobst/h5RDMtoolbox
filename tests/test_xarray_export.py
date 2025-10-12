@@ -1,11 +1,12 @@
 import json
 import pathlib
 import unittest
+from datetime import datetime
 
 import xarray as xr
 
 import h5rdmtoolbox as h5tbx
-from datetime import datetime
+
 logger = h5tbx.logger
 # logger.setLevel('ERROR')
 __this_dir__ = pathlib.Path(__file__).parent
@@ -27,8 +28,10 @@ class TestXrExport(unittest.TestCase):
 
     def test_export_timedata(self):
         with h5tbx.File() as h5:
-            ds = h5.create_time_dataset('ds', data=datetime.now(),
-                                        time_format='iso')
+            ds = h5.create_time_dataset(
+                'ds', data=datetime.now(),
+                time_format='iso'
+            )
             da = ds[()]
 
         self.assertIsInstance(da, xr.DataArray)
