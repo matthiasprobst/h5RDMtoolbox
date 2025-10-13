@@ -64,6 +64,7 @@ def _bump_version(version: str, part: str) -> str:
         raise ValueError('part must be one of "major", "minor", or "patch".')
     return f"{major}.{minor}.{patch}"
 
+
 class ZenodoRecord(RepositoryInterface):
     """Interface to Zenodo records.
 
@@ -233,15 +234,18 @@ class ZenodoRecord(RepositoryInterface):
             return IANA_DICT.get(suffix, suffix[1:])
 
         def _parse(data: Dict):
-            return dict(download_url=_parse_download_url(data['links']['download'], data['filename']),
-                        access_url=f"https://doi.org/{self.get_doi()}",
-                        name=data.get('filename', None),
-                        media_type=_get_media_type(data.get('filename', None)),
-                        identifier=data.get('id', None),
-                        identifier_url=data.get('id', None),
-                        size=data.get('filesize', None),
-                        checksum=data.get('checksum', None),
-                        access_token=self.access_token)
+            return dict(
+                download_url=_parse_download_url(data['links']['download'], data['filename']),
+                access_url=f"https://doi.org/{self.get_doi()}",
+                name=data.get('filename', None),
+                media_type=_get_media_type(data.get('filename', None)),
+                identifier=data.get('id', None),
+                identifier_url=data.get('id', None),
+                size=data.get('filesize', None),
+                checksum=data.get('checksum', None),
+                checksum_algorithm=data.get('checksum_algorithm', "md5"),
+                access_token=self.access_token
+            )
 
         rfiles = [RepositoryFile(**_parse(data)) for data in self._get()['files']]
         return {f.name: f for f in rfiles}
@@ -273,7 +277,7 @@ class ZenodoRecord(RepositoryInterface):
             logger.error(f'Only unpublished records can be deleted. Record "{self.rec_id}" is published.')
         return r
 
-    def new_version(self, new_version_string: str=None, increase_part: str=None):
+    def new_version(self, new_version_string: str = None, increase_part: str = None):
         """Sets the record into edit mode while creating a new version. You need to call `.publish()` after
         adding new files, metadata etc.
 

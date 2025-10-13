@@ -24,8 +24,8 @@ from rdflib.plugins.shared.jsonld.context import Context
 from . import get_config, get_ureg
 from . import user
 from ._version import __version__
-from .user import USER_CACHE_DIR, USER_DATA_DIR
 from .ld import rdf
+from .user import USER_CACHE_DIR, USER_DATA_DIR
 
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
@@ -650,6 +650,7 @@ class DownloadFileManager:
                 logger.info('Returning already downloaded file based on checksum')
                 return filename
             self.remove_corrupted_file(filename)
+        return None
 
     def add(self, *, url: str, filename: Union[str, pathlib.Path], checksum: Optional[str] = None):
         """Add to registry. Computes the checksum if not provided"""
@@ -670,6 +671,7 @@ class DownloadFileManager:
                 return found_by_url
         if checksum:
             return self.get_from_checksum(checksum)
+        return None
 
     def remove_corrupted_file(self, filename: Union[str, pathlib.Path]):
         """Removes a corrupted file from the registry"""
