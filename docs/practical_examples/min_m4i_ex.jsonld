@@ -20,30 +20,12 @@
             "realizes method": "local:cone_beam_scanning",
             "investigates": "https://www.wikidata.org/wiki/Q189259",
             "investigatesProperty": "https://www.wikidata.org/wiki/Q256699",
-            "has output": {
-                "@type": "dataset",
-                "@id": "local:xrct_data_0001",
-                "has file distribution": [
-                    {
-                        "media type": "image/tiff",
-                        "download URL": "file://path/to/xcrt_0001.tiff"
-                    },
-                    {
-                        "media type": "image/tiff",
-                        "download URL": "file://path/to/xcrt_0002.tiff"
-                    },
-                    {
-                        "media type": "image/tiff",
-                        "download URL": "file://path/to/xcrt_0003.tiff"
-                    }
-                ]
-            }
+	    "has output": "local:output/xrct-data"
         },
         {
             "@id": "local:reconstruction_0001",
             "@type": "processing step",
             "label": "Image Processing and Reconstruction",
-            "starts with": "local:normalization_0001",
             "has input": "local:xrct_data_0001"
         },
         {
@@ -77,6 +59,12 @@
                 "has numerical value": "140",
     	    	"has unit": "http://qudt.org/vocab/unit/KiloV"
             }
-        }
+        },
+  	{
+		"@type": "file set",
+                "@id": "local:output/xrct-data",
+  		"includes": "*.tiff",
+		"description": "TIFF files in folder output/image-files"
+  	}
     ]
 }

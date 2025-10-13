@@ -111,6 +111,7 @@ class RepositoryFile:
                              access_token=self.access_token)
 
 
+
 class RepositoryInterface(abc.ABC):
     """Abstract base class for repository interfaces."""
 
@@ -146,7 +147,7 @@ class RepositoryInterface(abc.ABC):
         """List of all files in the repository."""
 
     @abc.abstractmethod
-    def __upload_file__(self, filename: Union[str, pathlib.Path], overwrite: bool = False):
+    def __upload_file__(self, filename: Union[str, pathlib.Path]):
         """Upload a file to the repository. This is a regular file uploader, hence the
         file can be of any type. This is a private method, which needs to be implemented
         by every repository interface. Will be called by `upload_file`"""
@@ -155,7 +156,6 @@ class RepositoryInterface(abc.ABC):
                     filename: Union[str, pathlib.Path],
                     metamapper: Optional[Callable[[Union[str, pathlib.Path]], pathlib.Path]] = None,
                     auto_map_hdf: bool = True,
-                    overwrite: bool = False,
                     **metamapper_kwargs):
         """Upload a file to the repository. A metamapper function can be provided optionally. It
         extracts metadata from the target file and also uploads it to the repository. This feature is especially
@@ -179,9 +179,6 @@ class RepositoryInterface(abc.ABC):
         auto_map_hdf: bool=True
             Whether to automatically use the default metamapper function for HDF5 files. If True and the filename
             is scanned for its suffix ('.h5', '.hdf', '.hdf5'), the default metamapper function is used (hdf2jsonld).
-        overwrite: bool=False
-            If True, the file will be overwritten if it already exists in the repository. If False, an error
-            will be raised if the file already exists.
         metamapper_kwargs: dict
             Additional keyword arguments for the metamapper function.
 
@@ -197,11 +194,10 @@ class RepositoryInterface(abc.ABC):
         else:
             meta_data_file = None
 
-        self.__upload_file__(filename=filename, overwrite=overwrite)
+        self.__upload_file__(filename=filename)
 
         if meta_data_file is not None:
-            self.__upload_file__(filename=meta_data_file, overwrite=overwrite)
-        self.refresh()
+            self.__upload_file__(filename=meta_data_file)
 
     @abc.abstractmethod
     def get_doi(self):
@@ -210,7 +206,3 @@ class RepositoryInterface(abc.ABC):
     @abc.abstractmethod
     def get_jsonld(self) -> str:
         """Returns the JSONLD representation of the repository"""
-
-    @abc.abstractmethod
-    def refresh(self) -> str:
-        """update the cached information of the repository."""

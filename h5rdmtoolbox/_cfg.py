@@ -28,7 +28,7 @@ CONFIG = {
     'require_unit': True,  # datasets require units
     'ureg_format': 'C~',
     'init_logger_level': 'ERROR',
-    'dtime_fmt': '%Y%m%d%H%M%S%f',
+    'dtime_fmt': '%Y-%m-%dT%H:%M:%S%f',
     'expose_user_prop_to_attrs': True,
     'add_provenance': False,
     'ignore_set_std_attr_err': False,

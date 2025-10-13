@@ -212,7 +212,7 @@ class Metadata(BaseModel):
     """
     version: Optional[str]
     title: Optional[str]
-    description: str
+    description: Optional[str] = None
     creators: List[Creator]
     upload_type: UploadType
     additional_description: Optional[Dict] = None
@@ -253,7 +253,7 @@ class Metadata(BaseModel):
     def validate_version(cls, value):
         """Validate the version. See verify_version() for details."""
         if not verify_version(value):
-            raise ValueError('invalid version: {value}')
+            raise ValueError(f'The version string is invalid according to https://semver.org/: {value}')
         return value
 
     def __init__(self, *args, **kwargs):

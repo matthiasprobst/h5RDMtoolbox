@@ -94,14 +94,11 @@ A paper is published in the journal [inggrid](https://preprints.inggrid.org/repo
 
 ## Installation
 
-Use python 3.8 or higher (automatic testing is performed until 3.12). If you are a regular user, you can install the
+Use python 3.9 or higher (automatic testing is performed until 3.13). If you are a regular user, you can install the
 package via pip:
 
     pip install h5RDMtoolbox
 
-or if you prefer `uv`:
-
-    uv install h5RDMtoolbox
 
 ### Install from source:
 
@@ -176,10 +173,12 @@ Install optional dependencies by specifying them in square brackets after the pa
 ## Citing the package
 
 If you intend to use the package in your work, you may cite the software itself as published on paper in the
-[Zenodo](https://zenodo.org/records/14473697) repository. A related paper is published in the
+[Zenodo (latest version)](https://zenodo.org/records/13309253) repository. A related paper is published in the
 journal [inggrid](https://www.inggrid.org/article/id/4028/). Thank you!
 
-Here's the bibtext to it:
+Alternatively or additionally, you can consult the `CITATION.cff` file.
+
+Here is the BibTeX entry:
 
 ```
 @article{probst2024h5rdmtoolbox,

@@ -12,9 +12,13 @@ def _parse_obj_name(obj_name: str):
     return urllib.parse.quote(obj_name, safe='/')
 
 
-def get_attr_dtype_as_XSD(data):
+def get_attr_dtype_as_xsd(data):
+    """Get the XSD datatype for a given attribute value.
+    Return None if the datatype is not recognized or is string.
+    Returns None for strings, because they are the default and do not need a datatype.
+    """
     if isinstance(data, str):
-        return XSD.string
+        return None
     if isinstance(data, int):
         return XSD.integer
     if isinstance(data, float):

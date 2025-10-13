@@ -16,6 +16,7 @@ from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.interface import RepositoryFile
+from h5rdmtoolbox.repository.zenodo.core import _bump_version
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
@@ -67,8 +68,6 @@ class TestZenodo(unittest.TestCase):
     def test_ZenodoFile(self):
         z = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID)  # an existing repo
         self.assertDictEqual(z._cached_json, {})
-        z.refresh()
-        self.assertNotEqual(z._cached_json, {})
 
         self.assertTrue(z.exists())
         for file in z.files.values():
@@ -292,8 +291,67 @@ class TestZenodo(unittest.TestCase):
 
     @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
                      reason="Only testing on min and max python version")
+    def test_new_version(self):
+        z = zenodo.ZenodoRecord(source=None, sandbox=True)
+        original_id = z.rec_id
+        meta = Metadata(
+            version="1.0.0",
+            title='[deleteme]h5tbxZenodoInterfac!e',
+            description='A toolbox for managing HDF5-based research data management',
+            creators=[Creator(name="Probst, Matthias",
+                              affiliation="KIT - ITS",
+                              orcid="0000-0001-8729-0482")],
+            contributors=[Contributor(name="Probst, Matthias",
+                                      affiliation="KIT - ITS",
+                                      orcid="0000-0001-8729-0482",
+                                      type="ContactPerson")],
+            upload_type='image',
+            image_type='photo',
+            access_right='open',
+            keywords=['hdf5', 'research data management', 'rdm'],
+            publication_date=datetime.now(),
+            embargo_date='2020'
+        )
+
+        z.set_metadata(meta)
+
+        with h5tbx.File() as h5:
+            h5.create_dataset('test', data=1, attrs={'units': 'm/s', 'long_name': 'dataset 1'})
+
+        z.upload_file(h5.hdf_filename)
+
+        z.publish()
+
+        record_metadata = z.get_metadata()
+        self.assertEqual(record_metadata['version'], "1.0.0")
+        self.assertTrue(z.is_published())
+
+        new_record = z.new_version("2.0.0")
+        discarded_record = new_record.discard()
+        self.assertEqual(discarded_record.rec_id, original_id)
+        new_record = z.new_version("2.0.0")
+        new_metadata = new_record.get_metadata()
+        self.assertEqual(new_metadata['version'], "2.0.0")
+        published_record = new_record.publish()
+        self.assertTrue(new_record.is_published())
+        self.assertTrue(published_record.is_published())
+
+        with self.assertRaises(ValueError):
+            z.new_version("2.0.0", increase_part="patch")
+        # new_record.delete()
+
+    def test__bump_version(self):
+        self.assertEqual("3.0.0", _bump_version("2.0.0", "major"))
+        self.assertEqual("2.1.0", _bump_version("2.0.0", "minor"))
+        self.assertEqual("2.0.1", _bump_version("2.0.0", "patch"))
+        with self.assertRaises(ValueError):
+            self.assertEqual("3.0.0", _bump_version("2.0.0", "micro"))
+
+
+    @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
+                     reason="Only testing on min and max python version")
     def test_upload_hdf(self):
-        z = zenodo.ZenodoSandboxDeposit(None)
+        z = zenodo.ZenodoRecord(None, sandbox=True)
 
         with h5tbx.File() as h5:
             h5.attrs['long_name'] = 'root'
@@ -412,7 +470,7 @@ class TestZenodo(unittest.TestCase):
     @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
                      reason="Only testing on min and max python version")
     def test_ZenodoSandboxDeposit(self):
-        z = zenodo.ZenodoSandboxDeposit(None)
+        z = zenodo.ZenodoRecord(None, sandbox=True)
         self.assertIsInstance(z.get_metadata(), dict)
         self.assertEqual(z.get_doi(), f'10.5281/zenodo.{z.rec_id}')
         self.assertIn('access_right', z.get_metadata())
@@ -428,9 +486,9 @@ class TestZenodo(unittest.TestCase):
         # z.delete()
 
         with self.assertRaises(ValueError):
-            _ = zenodo.ZenodoSandboxDeposit('123123123123')
+            _ = zenodo.ZenodoRecord("123123123123", sandbox=True)
 
-        z = zenodo.ZenodoSandboxDeposit(None)
+        z = zenodo.ZenodoRecord(None, sandbox=True)
         self.assertNotEqual(old_rec_id, z.rec_id)
 
         # with self.assertRaises(TypeError):
@@ -469,18 +527,12 @@ class TestZenodo(unittest.TestCase):
             f.write('This is a test file.')
 
         with self.assertRaises(FileNotFoundError):
-            z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
+            z.upload_file('doesNotExist.txt', metamapper=None)
 
-        z.upload_file(tmpfile, overwrite=True, metamapper=None)
+        z.upload_file(tmpfile, metamapper=None)
         self.assertIn('testfile.txt', list(z.files.keys()))
 
-        with self.assertWarns(UserWarning):
-            z.upload_file('testfile.txt', overwrite=False, metamapper=None)
-
-        upload_file(z, tmpfile, overwrite=True, metamapper=None)
-
-        with self.assertWarns(UserWarning):
-            upload_file(z, tmpfile, overwrite=False, metamapper=None)
+        upload_file(z, tmpfile, metamapper=None)
 
         # delete file locally:
         tmpfile.unlink()
@@ -579,18 +631,12 @@ class TestZenodo(unittest.TestCase):
             f.write('This is a test file.')
 
         with self.assertRaises(FileNotFoundError):
-            z.upload_file('doesNotExist.txt', overwrite=True, metamapper=None)
+            z.upload_file('doesNotExist.txt', metamapper=None)
 
-        z.upload_file(tmpfile, overwrite=True, metamapper=None)
+        z.upload_file(tmpfile, metamapper=None)
         self.assertIn('testfile.txt', list(z.files.keys()))
 
-        with self.assertWarns(UserWarning):
-            z.upload_file('testfile.txt', overwrite=False, metamapper=None)
-
-        upload_file(z, tmpfile, overwrite=True, metamapper=None)
-
-        with self.assertWarns(UserWarning):
-            upload_file(z, tmpfile, overwrite=False, metamapper=None)
+        upload_file(z, tmpfile, metamapper=None)
 
         # delete file locally:
         tmpfile.unlink()
