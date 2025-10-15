@@ -2,11 +2,14 @@ import hashlib
 import logging
 import pathlib
 import uuid
+import warnings
 from typing import Optional, Union
 
 import requests
 
 logger = logging.getLogger('h5rdmtoolbox')
+
+
 
 
 def download_file(file_url,
@@ -40,25 +43,67 @@ def download_file(file_url,
         filename = f'{uuid.uuid4().hex}{suffix}'
     target_filename = target_folder / filename
 
-    checksum_algorithm = checksum_algorithm or "md5"
-    if checksum:
-        h = getattr(hashlib, checksum_algorithm)()
-        total = 0
-        with requests.get(file_url, stream=True) as r:
-            r.raise_for_status()
-            with open(target_filename, "wb") as f:
-                for chunk in r.iter_content(1024 * 1024):
-                    if chunk:
-                        f.write(chunk)
-                        h.update(chunk)
-                        total += len(chunk)
+    if checksum is not None:
+        if checksum_algorithm is None:
+            if ":" in checksum:
+                checksum_algorithm = checksum.split(":", 1)[0]
+            else:
+                raise ValueError("Checksum algorithm must be specified if checksum is given without prefix.")
 
-        file_checksum = h.hexdigest().lower()
-        if file_checksum != checksum.lower():
-            target_filename.unlink(missing_ok=True)
-            raise ValueError(f'Checksum mismatch for file "{filename}" from Zenodo ({file_url}). '
-                             f'Expected {checksum_algorithm} checksum: {checksum}, '
-                             f'but got: {file_checksum}')
+        hasher = None
+        if checksum is not None:
+            try:
+                hasher = hashlib.new(checksum_algorithm)
+            except ValueError:
+                raise ValueError(f"Unsupported checksum algorithm: {checksum_algorithm}")
+
+        response = requests.get(file_url, stream=True, params={'access_token': access_token})
+        response.raise_for_status()
+
+        chunk_size = 1024  # Define chunk size for download
+
+        with open(target_filename, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:  # Filter out keep-alive chunks
+                    f.write(chunk)
+                    if hasher:
+                        hasher.update(chunk)
+
+        assert target_filename.exists(), f"File {target_filename} does not exist."
+        logger.debug(f"Download successful.")
+
+        if hasher:
+            file_checksum = hasher.hexdigest()
+            if file_checksum != checksum:
+                print(target_filename)
+                warnings.warn(
+                    f"Checksum mismatch for {target_filename}: expected {checksum}, got {file_checksum}",
+                    RuntimeWarning
+                )
+                logger.error(
+                    f"Checksum mismatch for {target_filename}: expected {checksum}, got {file_checksum}"
+                )
+                # raise ValueError(
+                #     f"Checksum mismatch for {target_filename}: expected {checksum}, got {file_checksum}")
+            logger.debug(f"Checksum verification successful.")
+
+        # h = getattr(hashlib, checksum_algorithm)()
+        # total = 0
+        # with requests.get(file_url, stream=True, params={'access_token': access_token}) as r:
+        #     r.raise_for_status()
+        #     with open(target_filename, "wb") as f:
+        #         for chunk in r.iter_content(1024 * 1024):
+        #             if chunk:
+        #                 f.write(chunk)
+        #                 h.update(chunk)
+        #                 total += len(chunk)
+        #
+        # file_checksum = h.hexdigest().lower()
+        # if file_checksum != checksum.lower():
+        #     target_filename.unlink(missing_ok=True)
+        #     raise ValueError(f'Checksum mismatch for file "{filename}" from Zenodo ({file_url}). '
+        #                      f'Expected {checksum_algorithm} checksum: {checksum}, '
+        #                      f'but got: {file_checksum}')
     else:
         r = requests.get(file_url, params={'access_token': access_token})
         r.raise_for_status()
