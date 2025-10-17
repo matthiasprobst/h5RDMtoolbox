@@ -120,6 +120,10 @@ class TestConventions(unittest.TestCase):
 
         filename = zsr.files.get('tutorial_convention.yaml').download()
         self.assertTrue(filename.exists())
+
+        # this should not raise an error:
+        cv = h5tbx.convention.Convention.from_yaml(filename)
+
         zsr.delete()
 
     def test_delete(self):

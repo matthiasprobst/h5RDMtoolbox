@@ -222,8 +222,8 @@ class ZenodoRecord(RepositoryInterface):
                 return url
             if is_submitted:
                 return f"{self.record_url}/files/{filename}"
-            if url.endswith('/content'):
-                return url.rsplit('/', 1)[0]
+            # if url.endswith('/content'):
+            #     return url#.rsplit('/', 1)[0]
             return url
 
         def _get_media_type(filename: Optional[str]):
@@ -243,7 +243,7 @@ class ZenodoRecord(RepositoryInterface):
                 identifier_url=data.get('id', None),
                 size=data.get('filesize', None),
                 checksum=data.get('checksum', None),
-                checksum_algorithm=data.get('checksum_algorithm', "md5"),
+                checksum_algorithm=data.get('checksum_algorithm', None),
                 access_token=self.access_token
             )
 

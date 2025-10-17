@@ -10,9 +10,8 @@ import requests
 logger = logging.getLogger('h5rdmtoolbox')
 
 
-
-
 def download_file(file_url,
+                  filename: str,
                   target_folder: Union[str, pathlib.Path] = None,
                   access_token: Optional[str] = None,
                   checksum: Optional[str] = None,
@@ -21,7 +20,7 @@ def download_file(file_url,
     from ..utils import DownloadFileManager
     dfm = DownloadFileManager()
 
-    existing_filename = dfm.get(checksum=checksum, url=file_url)
+    existing_filename = dfm.get(checksum=checksum, filename=filename)
     if existing_filename:
         # checksum has been verified before because file is in cache
         return existing_filename
@@ -33,22 +32,20 @@ def download_file(file_url,
         print(f'A target folder was specified. Downloading file to this folder: {target_folder}')
         logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
         target_folder = pathlib.Path(target_folder)
-    target_folder.mkdir(exist_ok=True, parents=True)
 
-    guessed_filename_from_url = str(file_url).rsplit('/', 1)[-1]
-    suffix = pathlib.Path(guessed_filename_from_url).suffix
     if checksum:
-        filename = f'{checksum}{suffix}'
+        target_filename = target_folder / checksum / filename
     else:
-        filename = f'{uuid.uuid4().hex}{suffix}'
-    target_filename = target_folder / filename
+        target_filename = target_folder / f"{uuid.uuid4().hex}" / filename
+    if not target_filename.parent.exists():
+        target_filename.parent.mkdir(exist_ok=True, parents=True)
 
     if checksum is not None:
         if checksum_algorithm is None:
             if ":" in checksum:
                 checksum_algorithm = checksum.split(":", 1)[0]
             else:
-                raise ValueError("Checksum algorithm must be specified if checksum is given without prefix.")
+                checksum_algorithm = "md5"  # default
 
         hasher = None
         if checksum is not None:
@@ -128,5 +125,8 @@ def download_file(file_url,
                 raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({file_url}. '
                                          f'Status code: {_content_response.status_code}')
 
-    dfm.add(checksum=checksum, url=file_url, filename=target_filename)
+    dfm.add(checksum=checksum,
+            url=file_url,
+            filepath=target_filename,
+            filename=filename)
     return target_filename

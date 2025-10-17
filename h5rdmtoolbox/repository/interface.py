@@ -104,13 +104,13 @@ class RepositoryFile:
     def suffix(self) -> str:
         return pathlib.Path(self.name).suffix
 
-    def download(self,
-                 target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
+    def download(self, target_folder: Optional[Union[str, pathlib.Path]] = None) -> pathlib.Path:
         """Download the file to target_folder. If None, local user dir is used.
         Returns the file location"""
         from .utils import download_file
         return download_file(
             file_url=self.download_url,
+            filename=self.name,
             target_folder=target_folder,
             access_token=self.access_token,
             checksum=self.checksum,
