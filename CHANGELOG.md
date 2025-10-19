@@ -4,6 +4,7 @@ Log of changes in the versions
 
 ## v2.4.0
 
+- checksum is correctly checked when downloading files
 - added support for SHACL through function `shacl_validate`
 
 ## v2.4.0-rc.2
