@@ -6,6 +6,7 @@ import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
+import h5py
 import rdflib
 
 from ._version import __version__
@@ -54,6 +55,7 @@ from .wrapper.h5attr import Attribute
 import json
 from .wrapper.accessor import register_accessor
 
+from .ld.shacl import validate_hdf, ValidationResult
 # noinspection PyUnresolvedReferences
 from .utils import DownloadFileManager
 
@@ -166,6 +168,62 @@ def dump_jsonld(
         indent=indent,
         auto_compact=True,
         context=context
+    )
+
+
+def shacl_validate(
+        *,
+        hdf_data: Union[str, rdflib.Graph] = None,
+        hdf_source: Union[h5py.File, pathlib.Path] = None,
+        shacl_data: Union[str, rdflib.Graph] = None,
+        shacl_source: Union[str, pathlib.Path] = None,
+        hdf_file_uri="https://example.org/hdf5file#",
+        shacl_format: str = 'turtle',
+        hdf_data_format: str = 'turtle',
+        **pyshacl_kwargs
+) -> ValidationResult:
+    """Validate HDF5 file content against SHACL shapes.
+
+    Parameters
+    ----------
+    hdf_data : Union[str, rdflib.Graph], optional
+        RDF data of the HDF5 file as string or rdflib.Graph. If not
+        provided, `hdf_source` must be provided.
+    hdf_source : Union[h5py.File, pathlib.Path], optional
+        HDF5 file or h5py.File object to extract RDF data from. If not
+        provided, `hdf_data` must be provided.
+    shacl_data : Union[str, rdflib.Graph], optional
+        SHACL shapes as string or rdflib.Graph. If not provided,
+        `shacl_source` must be provided.
+    shacl_source : Union[str, pathlib.Path], optional
+        File path to SHACL shapes. If not provided, `shacl_data`
+        must be provided.
+    hdf_file_uri : str, optional
+        The file URI to use for the HDF5 file when extracting RDF data.
+        Default is "https://example.org/hdf5file#".
+    shacl_format : str, optional
+        The format of the SHACL shapes if `shacl_data` is provided as
+        string. Default is 'turtle'.
+    hdf_data_format : str, optional
+        The format of the HDF5 RDF data if `hdf_data` is provided as
+        string. Default is 'turtle'.
+    **pyshacl_kwargs
+        Additional keyword arguments passed to pyshacl.validate().
+
+    Returns
+    -------
+    ValidationResult
+        The result of the SHACL validation.
+    """
+    return validate_hdf(
+        hdf_data=hdf_data,
+        hdf_source=hdf_source,
+        shacl_data=shacl_data,
+        shacl_source=shacl_source,
+        hdf_file_uri=hdf_file_uri,
+        shacl_format=shacl_format,
+        hdf_data_format=hdf_data_format,
+        **pyshacl_kwargs
     )
 
 

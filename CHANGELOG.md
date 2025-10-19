@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.4.0
+
+- added support for SHACL through function `shacl_validate`
+
 ## v2.4.0-rc.2
 
 - fix issues with ZenodoRecord
