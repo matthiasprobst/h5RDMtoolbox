@@ -71,6 +71,15 @@ def validate_hdf(
         The format of the HDF5 data string. Default is 'turtle'.
     **pyshacl_kwargs:
         Additional keyword arguments to pass to pyshacl.validate().
+
+    Returns
+    -------
+    ValidationResult
+        The result of the validation containing:
+        - conforms: bool
+        - results_graph: rdflib.Graph
+        - results_text: str
+        - messages: List[str]
     """
     if shacl_data is not None and shacl_source is not None:
         raise ValueError('Only one of "shacl_data" or "shacl_source" should be provided.')

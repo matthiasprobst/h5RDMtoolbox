@@ -168,6 +168,10 @@ ex:HDFFileCreatedShape
         )
         self.assertTrue(conforms)
 
+        with h5tbx.File(h5.hdf_filename) as h5:
+            res = h5.shacl_validate(data=shapes_ttl)
+            self.assertTrue(res.conforms)
+
     def test_validate_hdf(self):
 
         with h5tbx.File() as h5:
