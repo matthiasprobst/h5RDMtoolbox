@@ -83,7 +83,6 @@ ex:CreatedDateShape
             allow_warnings=True,
         )
         self.assertFalse(conforms)
-        print(results_text)
 
         from rdflib.namespace import SH
 
@@ -96,9 +95,6 @@ ex:CreatedDateShape
         self.assertTrue(messages, "Keine sh:message im results_graph gefunden")
         msg = messages[0]
         self.assertIn("dcterms:created", msg)  # optional: erwarteten Inhalt prüfen
-
-        # oder nur ausgeben
-        print(msg)
 
     def test_hdf_must_have_dcterms_created(self):
         with h5tbx.File() as h5:
