@@ -115,16 +115,15 @@ class TestUtils(unittest.TestCase):
         self.assertFalse('e678a1eca79d5a836b58772eeee7f831' in dfm.registry)
         self.assertEqual(0, len(dfm))
 
-        time_st = time.time_ns()
-        downloaded_filename = dfm.download("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
-                                           checksum='e678a1eca79d5a836b58772eeee7f831')
-        time1 = time.time_ns() - time_st
+        downloaded_filename = dfm.download(
+            url="https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
+            checksum='e678a1eca79d5a836b58772eeee7f831')
         self.assertTrue(downloaded_filename.exists())
         self.assertTrue('e678a1eca79d5a836b58772eeee7f831' in dfm.registry)
 
         self.assertTrue(downloaded_filename.name, 'planar_piv.yaml=download=1')
         self.assertEqual(1, len(dfm))
-        
+
         downloaded_filename = dfm.download("https://zenodo.org/records/10428808/files/planar_piv.yaml?download=1",
                                            checksum='e678a1eca79d5a836b58772eeee7f831')
 

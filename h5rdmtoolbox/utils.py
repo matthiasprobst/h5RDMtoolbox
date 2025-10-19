@@ -24,8 +24,8 @@ from rdflib.plugins.shared.jsonld.context import Context
 from . import get_config, get_ureg
 from . import user
 from ._version import __version__
-from .user import USER_CACHE_DIR, USER_DATA_DIR
 from .ld import rdf
+from .user import USER_CACHE_DIR, USER_DATA_DIR
 
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
@@ -623,53 +623,39 @@ class DownloadFileManager:
     def registry_filename(self) -> pathlib.Path:
         return USER_DATA_DIR / 'download_registry.json'
 
-    def get_from_url(self, url):
-        remove_filenames = []
-        if url is None:
-            return None
-        for k, v in self.registry.items():
-            if v.get('url', None) == url:
-                filename = v.get('filepath', None)
-                if filename:
-                    filename = pathlib.Path(filename)
-                    if filename.exists():
-                        logger.info('Returning already downloaded file based on URL')
-                        return filename
-                    remove_filenames.append(filename)
-        for filename in remove_filenames:
-            self.remove_corrupted_file(filename)
-
-    def get_from_checksum(self, checksum):
-        if checksum is None:
-            return None
-        match = self.registry.get(checksum, None)
-        filename = match.get('filepath', None) if match else None
-        if filename:
-            filename = pathlib.Path(filename)
-            if filename.exists():
-                logger.info('Returning already downloaded file based on checksum')
-                return filename
-            self.remove_corrupted_file(filename)
-
-    def add(self, *, url: str, filename: Union[str, pathlib.Path], checksum: Optional[str] = None):
+    def add(self, *, url: str, filepath: Union[str, pathlib.Path], filename: str, checksum: Optional[str] = None):
         """Add to registry. Computes the checksum if not provided"""
-        assert url is not None, 'url must not be None!'
-        assert filename is not None, 'filename must not be None!'
-        logger.debug(f'Adding {filename} to download file cache registry')
+        filepath = pathlib.Path(filepath)
+        if not filepath.exists():
+            raise FileNotFoundError(f'File {filepath} does not exist!')
         if checksum is None:
-            checksum = get_checksum(filename)
-            logger.debug(f'Computing checksum for {filename}: {checksum}')
-        self.registry[checksum] = {'url': url, 'filepath': str(pathlib.Path(filename).absolute().resolve())}
+            checksum = get_checksum(filepath)
+            logger.debug(f"Checksum for {filepath} computed: {checksum}")
+        self.registry[checksum] = {
+            'url': url,
+            'filepath': str(filepath.resolve()),
+            'filename': filename
+        }
         self.save_registry()
 
-    def get(self, url=None, checksum=None) -> Optional[pathlib.Path]:
-        """Returns the filename of a file based on the URL or checksum"""
-        if url:
-            found_by_url = self.get_from_url(url)
-            if found_by_url is not None:
-                return found_by_url
-        if checksum:
-            return self.get_from_checksum(checksum)
+    def get(self, checksum: str, filename: str) -> Optional[pathlib.Path]:
+        """Returns the file path from the registry based on checksum and filename"""
+        entry = self.registry.get(checksum)
+        if entry and entry.get('filename') == filename:
+            path = pathlib.Path(entry['filepath'])
+            if path.exists():
+                return path
+        return None
+
+    def remove(self, checksum: str, filename: str):
+        """Removes a file from the registry based on checksum and filename"""
+        entry = self.registry.get(checksum)
+        if entry and entry.get('filename') == filename:
+            self.registry.pop(checksum)
+            self.save_registry()
+            logger.info(f"File removed: {filename} with checksum: {checksum}")
+        else:
+            logger.warning(f"No entry found for: {filename} with checksum: {checksum}")
 
     def remove_corrupted_file(self, filename: Union[str, pathlib.Path]):
         """Removes a corrupted file from the registry"""
@@ -725,14 +711,10 @@ class DownloadFileManager:
 
         if checksum and checksum in self.registry:
             logger.debug('Returning already downloaded file')
-            filename = pathlib.Path(self.registry[checksum]['filepath'])
-            if filename.exists():
-                return filename
+            filepath = pathlib.Path(self.registry[checksum]['filepath'])
+            if filepath.exists():
+                return filepath
             self.registry.pop(checksum)
-
-        existing_filename = self.get(url=url, checksum=checksum)
-        if existing_filename:
-            return existing_filename
 
         filename = sanitize_filename(str(url).rsplit('/', 1)[-1])
         if filename == '':

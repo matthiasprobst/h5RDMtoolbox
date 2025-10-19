@@ -43,6 +43,7 @@ class RepositoryFile:
                  download_url,
                  access_url,
                  checksum,
+                 checksum_algorithm,
                  name,
                  size,
                  media_type,
@@ -51,6 +52,7 @@ class RepositoryFile:
         self.download_url = download_url
         self.access_url = access_url
         self.checksum = checksum
+        self.checksum_algorithm = checksum_algorithm
         self.name = name
         self.media_type = media_type
         self.size = size
@@ -106,10 +108,14 @@ class RepositoryFile:
         """Download the file to target_folder. If None, local user dir is used.
         Returns the file location"""
         from .utils import download_file
-        return download_file(file_url=self.download_url,
-                             target_folder=target_folder,
-                             access_token=self.access_token)
-
+        return download_file(
+            file_url=self.download_url,
+            filename=self.name,
+            target_folder=target_folder,
+            access_token=self.access_token,
+            checksum=self.checksum,
+            checksum_algorithm=self.checksum_algorithm,
+        )
 
 
 class RepositoryInterface(abc.ABC):

@@ -2333,6 +2333,40 @@ class File(h5py.File, Group):
     #     """Return DefinitionManager"""
     #     return definition.DefinitionManager(self.attrs)
 
+    def shacl_validate(self,
+                       data: Union[str, rdflib.Graph] = None,
+                       source: Union[str, Path] = None,
+                       shacl_format: Union[str] = 'turtle',
+                       **kwargs):
+        """Validate the HDF5 file content against SHACL shapes.
+
+        Parameters
+        ----------
+        data : Union[str, rdflib.Graph]
+            The data graph as string or rdflib.Graph. If None, the data is taken from the HDF5 file.
+        source : Union[str, Path]
+            The SHACL shapes as string or path to file.
+        shacl_format : str
+            The format of the SHACL shapes. Default is 'turtle'.
+        **kwargs : Dict
+            Additional keyword arguments are passed to the validate_hdf function.
+
+        Returns
+        -------
+        ValidationResult
+            The result of the validation containing:
+            - conforms: bool
+            - results_graph: rdflib.Graph
+            - results_text: str
+            - messages: List[str]
+        """
+        from ..ld.shacl import validate_hdf
+        return validate_hdf(hdf_source=self,
+                            shacl_data=data,
+                            shacl_source=source,
+                            shacl_format=shacl_format,
+                            **kwargs)
+
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.
 
