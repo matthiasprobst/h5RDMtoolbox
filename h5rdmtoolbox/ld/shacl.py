@@ -16,6 +16,7 @@ class ValidationResult:
     results_graph: rdflib.Graph
     results_text: str
     messages: List[str]
+    nodes: List[str]
 
 
 def _parse_shacl(shacl: Union[str, pathlib.Path, rdflib.Graph], format) -> rdflib.Graph:
@@ -144,7 +145,8 @@ def validate_hdf(
         conforms=conforms,
         results_graph=results_graph,
         results_text=results_text,
-        messages=_get_messages(results_graph)
+        messages=_get_messages(results_graph),
+        nodes=_get_focus_nodes(results_graph)
     )
 
 
@@ -202,3 +204,18 @@ def _get_messages(results_graph):
     for s, p, o in results_graph.triples((None, rdflib.namespace.SH.resultMessage, None)):
         messages.append(str(o))
     return messages
+
+def _get_focus_nodes(results_graph):
+    """
+    Extract focus nodes from a SHACL results graph.
+
+    Parameters:
+    - results_graph: An RDF graph containing SHACL validation results.
+
+    Returns:
+    - A list of focus nodes.
+    """
+    focus_nodes = []
+    for s, p, o in results_graph.triples((None, rdflib.namespace.SH.focusNode, None)):
+        focus_nodes.append(o)
+    return focus_nodes

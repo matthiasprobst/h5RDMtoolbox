@@ -84,11 +84,11 @@ def process_dataset(
     is_string_dataset = False
     if dataset.dtype.kind == 'S':
         is_string_dataset = True
-        graph.add((dataset_uri, HDF5.datatype, rdflib.Literal('H5T_STRING')))
+        graph.add((dataset_uri, HDF5.datatype, HDF5.H5T_STRING))
     elif dataset.dtype.kind in ('i', 'u'):
-        graph.add((dataset_uri, HDF5.datatype, rdflib.Literal('H5T_INTEGER')))
+        graph.add((dataset_uri, HDF5.datatype, HDF5.H5T_INTEGER))
     else:
-        graph.add((dataset_uri, HDF5.datatype, rdflib.Literal('H5T_FLOAT')))
+        graph.add((dataset_uri, HDF5.datatype, HDF5.H5T_FLOAT))
 
     dataset_layout = dataset.id.get_create_plist().get_layout()
     if dataset.chunks is not None:
