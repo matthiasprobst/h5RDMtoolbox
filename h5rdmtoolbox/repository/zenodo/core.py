@@ -99,6 +99,7 @@ class ZenodoRecord(RepositoryInterface):
                                  params={"access_token": self.access_token},
                                  headers={"Content-Type": "application/json"}
                                  )
+                r.raise_for_status()
                 # the redirected url contains the ID:
                 rec_id = int(r.url.split('/')[-1])
         elif source is None:
@@ -161,6 +162,7 @@ class ZenodoRecord(RepositoryInterface):
         url = f"{self.depositions_url}/{self.rec_id}"
         access_token = self.access_token
         r = requests.get(url, params={"access_token": access_token})
+        r.raise_for_status()
         return r.json()
 
     def get_metadata(self) -> Dict:
@@ -200,7 +202,9 @@ class ZenodoRecord(RepositoryInterface):
 
     def exists(self) -> bool:
         """Check if the deposit exists on Zenodo. Note, that only published records are detected!"""
-        return requests.get(self.record_url, params={'access_token': self.access_token}).ok
+        resp = requests.get(self.record_url, params={'access_token': self.access_token})
+        resp.raise_for_status()
+        return resp.ok
 
     def is_published(self) -> bool:
         """Check if the deposit is published."""
