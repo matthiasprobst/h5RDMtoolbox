@@ -203,7 +203,6 @@ class ZenodoRecord(RepositoryInterface):
     def exists(self) -> bool:
         """Check if the deposit exists on Zenodo. Note, that only published records are detected!"""
         resp = requests.get(self.record_url, params={'access_token': self.access_token})
-        resp.raise_for_status()
         return resp.ok
 
     def is_published(self) -> bool:
