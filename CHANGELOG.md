@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v2.4.1
+
+- Shacl result object `ValidationResult` also provides nodes that caused the validation error
+- bugfix HDF serialization for HDF5 datatypes, which were literals and now are URIs
+
 ## v2.4.0
 
 - checksum is correctly checked when downloading files
