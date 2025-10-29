@@ -123,25 +123,25 @@ specific to the features of the package:
 
 **General dependencies are ...**
 
-- `numpy>=1.20`: Scientific computing, handling of arrays
-- `matplotlib>=3.5.2`: Plotting
-- `appdirs>=1.4.4`: Managing user and application directories
+- `numpy`: Scientific computing, handling of arrays
+- `matplotlib`: Plotting
+- `appdirs`: Managing user and application directories
 - `packaging`: Version handling
-- `IPython>=8.4.0`: Pretty display of data in notebooks
-- `regex>=2020.7.9`: Working with regular expressions
+- `IPython`: Pretty display of data in notebooks
+- `regex`: Working with regular expressions
 
 **Specific to the package are ...**
 
-- `h5py~=3.8`: HDF5 file interface
-- `xarray>=2022.3.0`: Working with scientific arrays in combination with attributes. Allows carrying metadata from HDF5
+- `h5py`: HDF5 file interface
+- `xarray`: Working with scientific arrays in combination with attributes. Allows carrying metadata from HDF5
   to user
-- `pint>=0.19.2`: Allows working with units
-- `pint_xarray>=0.2.1`: Working with units for usage with xarray
-- `python-forge==18.6.0`: Used to update function signatures when using
+- `pint`: Allows working with units
+- `pint_xarray`: Working with units for usage with xarray
+- `python-forge`: Used to update function signatures when using
   the [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
 - `pydantic`: Used to
   validate [standard attributes](https://h5rdmtoolbox.readthedocs.io/en/latest/conventions/standard_attributes_and_conventions.html)
-- `pyyaml>6.0.0`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions
+- `pyyaml`: Reading and writing of yaml files, e.g. metadata definitions (conventions). Note, lower versions
   collide with python 3.11
 - `requests`: Used to download files from the internet or validate URLs, e.g. metadata definitions (conventions)
 - `rdflib`: Used to enable working with RDF
@@ -157,18 +157,18 @@ Install optional dependencies by specifying them in square brackets after the pa
 
 [mongodb]
 
-- `pymongo>=4.2.0`: Database solution for HDF5 files
+- `pymongo`: Database solution for HDF5 files
 
 [csv]
 
-- `pandas>=1.4.3`: Mainly used for reading csv and pretty printing
+- `pandas`: Mainly used for reading csv and pretty printing
 
 [snt]
 
 - `xmltodict`: Reading of xml files
-- `tabulate>=0.8.10`: Pretty printing of tables
+- `tabulate`: Pretty printing of tables
 - `python-gitlab`: Access to gitlab repositories
-- `pypandoc>=2.3`: Conversion of markdown files to html
+- `pypandoc`: Conversion of markdown files to html
 
 ## Citing the package
 
