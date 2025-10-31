@@ -21,7 +21,7 @@ from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contribut
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
 from h5rdmtoolbox.user import USER_DATA_DIR
-
+from h5rdmtoolbox.repository.zenodo import dcat
 logger = logging.getLogger(__name__)
 
 
@@ -296,7 +296,7 @@ class TestZenodo(unittest.TestCase):
         original_id = z.rec_id
         meta = Metadata(
             version="1.0.0",
-            title='[deleteme]h5tbxZenodoInterfac!e',
+            title='[deleteme]h5tbxZenodoInterface',
             description='A toolbox for managing HDF5-based research data management',
             creators=[Creator(name="Probst, Matthias",
                               affiliation="KIT - ITS",
@@ -320,7 +320,25 @@ class TestZenodo(unittest.TestCase):
 
         z.upload_file(h5.hdf_filename)
 
-        z.publish()
+        dataset = z.publish()
+        self.assertIsInstance(
+            dataset,
+            dcat.Dataset
+        )
+        ttl = dataset.serialize("ttl")
+
+        c_dataset = z.as_dcat_dataset()
+        self.assertEqual(ttl, c_dataset.serialize("ttl"))
+
+        # print(dataset.serialize("ttl"))
+        target_dir = pathlib.Path.cwd() / "deleteme-dir"
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+
+        dataset.distribution[0].download(
+            target_folder=target_dir
+        )
+        shutil.rmtree(target_dir)
 
         record_metadata = z.get_metadata()
         self.assertEqual(record_metadata['version'], "1.0.0")
@@ -332,9 +350,8 @@ class TestZenodo(unittest.TestCase):
         new_record = z.new_version("2.0.0")
         new_metadata = new_record.get_metadata()
         self.assertEqual(new_metadata['version'], "2.0.0")
-        published_record = new_record.publish()
+        new_record.publish()
         self.assertTrue(new_record.is_published())
-        self.assertTrue(published_record.is_published())
 
         with self.assertRaises(ValueError):
             z.new_version("2.0.0", increase_part="patch")

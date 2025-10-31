@@ -9,6 +9,8 @@ import requests
 from packaging.version import Version
 from rdflib import Graph
 
+from . import dcat
+from . import foaf
 from .metadata import Metadata
 from .tokens import get_api_token
 from ..interface import RepositoryInterface, RepositoryFile
@@ -22,7 +24,24 @@ IANA_DICT = {
     '.png': 'image/png',
     '.tiff': 'image/tiff',
     '.yaml': 'application/x-yaml',
+    '.hdf': 'application/x-hdf5',
+    '.hdf5': 'application/x-hdf5',
+    '.h5': 'application/x-hdf5',
+    '.csv': 'text/csv',
+    '.txt': 'text/plain',
+    '.xml': 'application/xml',
+    '.zip': 'application/zip',
+    '.ttl': 'text/turtle',
+    '.turtle': 'text/turtle'
 }
+
+
+def _get_media_type(filename: Optional[str]):
+    if filename is None:
+        return None
+    suffix = pathlib.Path(filename).suffix
+
+    return IANA_DICT.get(suffix, suffix[1:])
 
 
 class APIError(Exception):
@@ -229,13 +248,6 @@ class ZenodoRecord(RepositoryInterface):
             #     return url#.rsplit('/', 1)[0]
             return url
 
-        def _get_media_type(filename: Optional[str]):
-            if filename is None:
-                return None
-            suffix = pathlib.Path(filename).suffix
-
-            return IANA_DICT.get(suffix, suffix[1:])
-
         def _parse(data: Dict):
             return dict(
                 download_url=_parse_download_url(data['links']['download'], data['filename']),
@@ -338,16 +350,93 @@ class ZenodoRecord(RepositoryInterface):
         new_record.set_metadata(current_metadata)
         return new_record
 
-    def publish(self):
+    def publish(self) -> dcat.Dataset:
         """Be careful. The record cannot be deleted afterward!"""
         url = self.get_actions_url("publish")
         r = requests.post(url,
                           # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
                           params={'access_token': self.access_token})
         r.raise_for_status()
-        self.rec_id = r.json()['id']
+        jdata = self._get()
+        self.rec_id = jdata['id']
         self._original_rec_id = self.rec_id
-        return self
+        return self.as_dcat_dataset()
+
+    def as_dcat_dataset(self) -> dcat.Dataset:
+        """Returns the record metadata as DCAT Dataset."""
+        jdata = self._get()
+        # must be submitted:
+        if not jdata.get('submitted', False):
+            raise ValueError('The record must be published to convert it to a DCAT Dataset.')
+        publisher = jdata["metadata"].get("imprint_publisher", None)
+        if publisher:
+            publisher = foaf.Organization(
+                id="https://www.wikidata.org/wiki/Q22661177",
+                name=publisher,
+                homepage="https://zenodo.org/"
+            )
+        _creators = jdata["metadata"].get("creators", [])
+        creators = []
+        for c in _creators:
+            if "orcid" in c:
+                if not c["orcid"].startswith('http'):
+                    c["id"] = f"https://orcid.org/{c['orcid']}"
+                else:
+                    c["id"] = c["orcid"]
+                creators.append(foaf.Person(
+                    **c
+                ))
+            else:
+                creators.append(c)
+        if len(creators) == 0:
+            creators = None
+        _contributors = jdata["metadata"].get("contributors", [])
+        contributors = []
+        for c in _contributors:
+            if "orcid" in c:
+                if not c["orcid"].startswith('http'):
+                    c["id"] = f"https://orcid.org/{c['orcid']}"
+                else:
+                    c["id"] = c["orcid"]
+                contributors.append(foaf.Person(
+                    **c
+                ))
+            else:
+                contributors.append(c)
+
+        def _parse_checksum(checksum_str: str, algorithm: str):
+            if checksum_str is None:
+                return None, None
+            return dcat.Checksum(
+                algorithm=algorithm or "md5",
+                value=checksum_str
+            )
+
+        distributions = [
+            dcat.Distribution(
+                id=file_data['links']['self'],
+                accessURL=jdata["links"]["doi"],
+                downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
+                name=file_data.get('filename', None),
+                mediaType=_get_media_type(file_data.get('filename', None)),
+                byteSize=file_data.get('filesize', None),
+                checksum=_parse_checksum(file_data.get('checksum', None), file_data.get('checksum_algorithm', None)),
+            )
+            for file_data in jdata['files']
+        ]
+
+        return dcat.Dataset(
+            id=jdata["links"]["doi"],
+            title=jdata["metadata"].get("title", None),
+            version=jdata["metadata"].get("version", None),
+            keyword=jdata["metadata"].get("keywords", []),
+            description=jdata["metadata"].get("description", None),
+            license=jdata["metadata"].get("license", None),
+            creator=creators,
+            contributor=contributors,
+            publisher=publisher,
+            distribution=distributions
+        )
 
     def get_actions_url(self, action: str) -> str:
         return f"{self.base_url}/api/deposit/depositions/{self.rec_id}/actions/{action}"

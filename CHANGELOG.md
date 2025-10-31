@@ -2,8 +2,10 @@
 
 Log of changes in the versions
 
-## v2.4.1
+## v2.5.0
 
+- Zenodo Record returns a "dcat:Dataset" object when `publish()` is called.
+- Zenodo Record provides `as_dcat_dataset()` method to obtain the "dcat:Dataset" object for a published record.
 - Shacl result object `ValidationResult` also provides nodes that caused the validation error
 - bugfix HDF serialization for HDF5 datatypes, which were literals and now are URIs
 

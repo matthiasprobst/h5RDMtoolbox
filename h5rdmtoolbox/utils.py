@@ -632,7 +632,7 @@ class DownloadFileManager:
             checksum = get_checksum(filepath)
             logger.debug(f"Checksum for {filepath} computed: {checksum}")
         self.registry[checksum] = {
-            'url': url,
+            'url': str(url),
             'filepath': str(filepath.resolve()),
             'filename': filename
         }
@@ -685,8 +685,12 @@ class DownloadFileManager:
     def load_registry(self) -> Dict[str, str]:
         registry_filename = self.registry_filename
         if registry_filename.exists():
-            with open(self.registry_filename, 'r') as f:
-                return json.load(f)
+            try:
+                with open(self.registry_filename, 'r') as f:
+                    return json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Could not load registry file {registry_filename}: {e}. Deleting the file.")
+                self.registry_filename.unlink()
         return {}
 
     def reset_registry(self):
