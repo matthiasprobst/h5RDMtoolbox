@@ -366,8 +366,6 @@ class ZenodoRecord(RepositoryInterface):
         """Returns the record metadata as DCAT Dataset."""
         jdata = self._get()
         # must be submitted:
-        if not jdata.get('submitted', False):
-            raise ValueError('The record must be published to convert it to a DCAT Dataset.')
         publisher = jdata["metadata"].get("imprint_publisher", None)
         if publisher:
             publisher = foaf.Organization(
@@ -412,10 +410,16 @@ class ZenodoRecord(RepositoryInterface):
                 value=checksum_str
             )
 
+        # doi is doi or prereserve_doi
+        doi = jdata["metadata"].get("doi", None)
+        if doi is None:
+            doi = jdata["metadata"].get("prereserve_doi", {}).get("doi", None)
+        if not doi.startswith('http'):
+            doi = f"https://doi.org/{doi}"
         distributions = [
             dcat.Distribution(
                 id=file_data['links']['self'],
-                accessURL=jdata["links"]["doi"],
+                accessURL=doi,
                 downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
                 name=file_data.get('filename', None),
                 mediaType=_get_media_type(file_data.get('filename', None)),
@@ -424,9 +428,8 @@ class ZenodoRecord(RepositoryInterface):
             )
             for file_data in jdata['files']
         ]
-
         return dcat.Dataset(
-            id=jdata["links"]["doi"],
+            id=doi,
             title=jdata["metadata"].get("title", None),
             version=jdata["metadata"].get("version", None),
             keyword=jdata["metadata"].get("keywords", []),

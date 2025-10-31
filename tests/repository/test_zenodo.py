@@ -338,6 +338,7 @@ class TestZenodo(unittest.TestCase):
             h5.create_dataset('test', data=1, attrs={'units': 'm/s', 'long_name': 'dataset 1'})
 
         z.upload_file(h5.hdf_filename)
+        c_dataset = z.as_dcat_dataset()
 
         dataset = z.publish()
         self.assertIsInstance(
