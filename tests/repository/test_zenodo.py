@@ -330,6 +330,8 @@ class TestZenodo(unittest.TestCase):
         c_dataset = z.as_dcat_dataset()
         self.assertEqual(ttl, c_dataset.serialize("ttl"))
 
+        self.assertEqual(dataset.license, "https://creativecommons.org/licenses/by/4.0/")
+
         # print(dataset.serialize("ttl"))
         target_dir = pathlib.Path.cwd() / "deleteme-dir"
         if target_dir.exists():

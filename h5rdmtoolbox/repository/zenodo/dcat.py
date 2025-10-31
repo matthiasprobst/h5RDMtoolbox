@@ -10,6 +10,51 @@ from pydantic import HttpUrl, field_validator, Field, model_validator
 
 from .foaf import Agent
 
+def license_to_url(license_str: str) -> str:
+    """
+    Convert a short license code (e.g., 'cc-by-4.0') to its official license URL.
+
+    Supports Creative Commons, MIT, Apache, GPL, BSD, MPL, and others.
+    Returns None if no match is found.
+    """
+    if not license_str:
+        return None
+
+    code = license_str.strip().lower()
+
+    mapping = {
+        # Creative Commons licenses
+        "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "cc-by": "https://creativecommons.org/licenses/by/4.0/",
+        "cc-by-3.0": "https://creativecommons.org/licenses/by/3.0/",
+        "cc-by-4.0": "https://creativecommons.org/licenses/by/4.0/",
+        "cc-by-sa": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "cc-by-sa-3.0": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "cc-by-sa-4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "cc-by-nd": "https://creativecommons.org/licenses/by-nd/4.0/",
+        "cc-by-nd-4.0": "https://creativecommons.org/licenses/by-nd/4.0/",
+        "cc-by-nc": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "cc-by-nc-4.0": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "cc-by-nc-sa": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "cc-by-nc-sa-4.0": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "cc-by-nc-nd": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        "cc-by-nc-nd-4.0": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+        # Software licenses
+        "mit": "https://opensource.org/licenses/MIT",
+        "apache-2.0": "https://www.apache.org/licenses/LICENSE-2.0",
+        "gpl-2.0": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html",
+        "gpl-3.0": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "lgpl-2.1": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html",
+        "lgpl-3.0": "https://www.gnu.org/licenses/lgpl-3.0.html",
+        "bsd-2-clause": "https://opensource.org/licenses/BSD-2-Clause",
+        "bsd-3-clause": "https://opensource.org/licenses/BSD-3-Clause",
+        "mpl-2.0": "https://www.mozilla.org/en-US/MPL/2.0/",
+        "epl-2.0": "https://www.eclipse.org/legal/epl-2.0/",
+        "unlicense": "https://unlicense.org/",
+        "proprietary": "https://en.wikipedia.org/wiki/Proprietary_software",
+    }
+
+    return mapping.get(code)
 
 @namespaces(dcat="http://www.w3.org/ns/dcat#",
             dcterms="http://purl.org/dc/terms/", )
@@ -17,7 +62,7 @@ from .foaf import Agent
          title='dcterms:title',
          description='dcterms:description',
          creator='dcterms:creator',
-         publisher='dcterms:pblisher',
+         publisher='dcterms:publisher',
          contributor='dcterms:contributor',
          license='dcterms:license',
          version='dcat:version',
@@ -62,11 +107,11 @@ class Resource(Thing):
     creator: Union[Agent, ResourceType, List[Union[ResourceType, Agent]]] = None  # dcterms:creator
     publisher: Union[Agent, List[Agent]] = None  # dcterms:publisher
     contributor: Union[Agent, List[Agent]] = None  # dcterms:contributor
-    license: Optional[Union[ResourceType, List[ResourceType], str, List[str]]] = None  # dcat:license
+    license: Optional[Union[ResourceType, List[ResourceType]]] = None  # dcat:license
     version: str = None  # dcat:version
     identifier: str = None  # dcterms:identifier
     hasPart: Optional[Union[ResourceType, List[ResourceType]]] = Field(default=None, alias='has_part')
-    keyword: List[str] = None  # dcat:keyword
+    keyword: Union[LangString, List[LangString]] = None  # dcat:keyword
 
     @model_validator(mode="before")
     def change_id(self):
@@ -80,6 +125,11 @@ class Resource(Thing):
         if identifier.startswith('http'):
             return str(HttpUrl(identifier))
         return identifier
+
+    @field_validator('license', mode='before')
+    @classmethod
+    def _license(cls, license):
+        return license_to_url(license) if isinstance(license, str) else license
 
 
 @namespaces(spdx="http://spdx.org/rdf/terms#")
