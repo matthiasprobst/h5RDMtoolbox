@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.5.1
+
+- hotfix Organization class
+
 ## v2.5.0
 
 - Zenodo Record returns a "dcat:Dataset" object when `publish()` is called.

@@ -184,7 +184,10 @@ class Person(Agent):
     img: AnyUrl = Field(default=None, alias="img")
     workplaceHomepage: AnyUrl = Field(default=None, alias="workplace_homepage")
 
-
+@namespaces(foaf="http://xmlns.com/foaf/0.1/")
+@urirefs(
+    Organization="foaf:Organization",
+)
 class Organization(Agent):
     """Pydantic Modell für http://xmlns.com/foaf/0.1/Organization
     """
