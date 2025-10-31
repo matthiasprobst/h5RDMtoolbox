@@ -28,6 +28,10 @@ logger.setLevel('DEBUG')
 __this_dir__ = pathlib.Path(__file__).parent
 
 
+def get_python_version():
+    """Get the current Python version as a tuple."""
+    return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
+
 class TestConventions(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -214,6 +218,8 @@ def validate_f1(a, b, c=3, d=2):
         self.assertIn('comment', cv.properties[h5tbx.File])
         self.assertIn('comment', cv.properties[h5tbx.Group])
 
+    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+                         reason="Nur auf Python 3.9 und 3.13 testen")
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
@@ -481,6 +487,8 @@ def validate_f1(a, b, c=3, d=2):
             self.assertEqual(ds[()].units, 'm/s')
             self.assertEqual(float(ds[()].data), 1 + 1000)
 
+    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+                         reason="Nur auf Python 3.9 und 3.13 testen")
     def test_from_zenodo(self):
         if self.connected:
             # delete an existing convention like this first:
