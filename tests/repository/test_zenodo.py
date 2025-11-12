@@ -31,6 +31,9 @@ def get_python_version():
     return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
 
+TESTING_VERSIONS = (9, 12)
+
+
 class TestZenodo(unittest.TestCase):
 
     def setUp(self):
@@ -47,7 +50,7 @@ class TestZenodo(unittest.TestCase):
             shutil.copy(bak_ini_filename, zenodo_ini_filename)
             bak_ini_filename.unlink()
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_zenodo_from_url(self):
         z = zenodo.ZenodoRecord("https://zenodo.org/records/10428817")
@@ -57,7 +60,7 @@ class TestZenodo(unittest.TestCase):
         z = zenodo.ZenodoRecord(10428817)
         self.assertEqual(str(z.rec_id), "10428817")
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_zenodo_export(self):
         z = zenodo.ZenodoRecord(10428817)
@@ -68,7 +71,7 @@ class TestZenodo(unittest.TestCase):
         self.assertIsInstance(z.get_jsonld(), str)
         print(z.get_jsonld())
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_ZenodoFile(self):
         z = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID)  # an existing repo
@@ -86,7 +89,7 @@ class TestZenodo(unittest.TestCase):
             self.assertTrue(downloaded_filename.is_file())
             self.assertIsInstance(file.jsonld(), str)
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_newSandboxImplementation(self):
         """from 1.4.0 on the sandbox can be init from ZenodoRecord"""
@@ -94,7 +97,7 @@ class TestZenodo(unittest.TestCase):
         self.assertTrue(z.sandbox)
         self.assertEqual(z.base_url, 'https://sandbox.zenodo.org')
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_ZenodoRecord_without_token(self):
         """remove all info about zenodo api token!"""
@@ -115,7 +118,7 @@ class TestZenodo(unittest.TestCase):
         if (UserDir['repository'] / 'zenodo.ini.tmpbak').exists():
             (UserDir['repository'] / 'zenodo.ini.tmpbak').rename(UserDir['repository'] / 'zenodo.ini')
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_creator(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Creator
@@ -126,7 +129,7 @@ class TestZenodo(unittest.TestCase):
         with self.assertRaises(pydantic.ValidationError):
             Creator(affiliation='University of Nowhere')
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_metadata(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
@@ -211,7 +214,7 @@ class TestZenodo(unittest.TestCase):
                          embargo_date='01-2022-01',  # wrong format!
                          publication_date='2023-01-01')
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)
@@ -245,7 +248,7 @@ class TestZenodo(unittest.TestCase):
         if tmp_zenodo_ini_filename:
             tmp_zenodo_ini_filename.rename(tmp_zenodo_ini_filename.with_suffix('.ini'))
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_get_api_token(self):
         env_token_sb = os.environ.pop('ZENODO_SANDBOX_API_TOKEN', None)
@@ -275,7 +278,7 @@ class TestZenodo(unittest.TestCase):
             os.environ.pop('ZENODO_API_TOKEN', None)
         self.assertEqual(env_token, os.environ.get('ZENODO_API_TOKEN', None))
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_set_api_token(self):
 
@@ -308,8 +311,8 @@ class TestZenodo(unittest.TestCase):
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
 
-    @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
-                     reason="Only testing on min and max python version")
+    # @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
+    #                  reason="Only testing on min and max python version")
     def test_new_version(self):
         z = zenodo.ZenodoRecord(source=None, sandbox=True)
         original_id = z.rec_id
@@ -379,7 +382,7 @@ class TestZenodo(unittest.TestCase):
             z.new_version("2.0.0", increase_part="patch")
         # new_record.delete()
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test__bump_version(self):
         self.assertEqual("3.0.0", _bump_version("2.0.0", "major"))
@@ -388,7 +391,7 @@ class TestZenodo(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.assertEqual("3.0.0", _bump_version("2.0.0", "micro"))
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_upload_hdf(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
@@ -446,7 +449,7 @@ class TestZenodo(unittest.TestCase):
             sorted(group_names)
         )
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_upload_hdf_new_implementation(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
@@ -507,7 +510,7 @@ class TestZenodo(unittest.TestCase):
             sorted(group_names)
         )
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
@@ -612,7 +615,7 @@ class TestZenodo(unittest.TestCase):
         # z.delete()
         # self.assertFalse(z.exists())
 
-    @unittest.skipUnless(get_python_version()[1] in (9, 13),
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
     def test_ZenodoSandboxDeposit_newImplementation(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)

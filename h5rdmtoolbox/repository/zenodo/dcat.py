@@ -2,13 +2,16 @@ import pathlib
 from datetime import datetime
 from typing import Union, List, Optional
 
+import rdflib
 from dateutil import parser
 from ontolutils import Thing, as_id, urirefs, namespaces, LangString
+from ontolutils.namespacelib.spdx import SPDX
 from ontolutils.typing import ResourceType
 from pydantic import FileUrl
 from pydantic import HttpUrl, field_validator, Field, model_validator
 
 from .foaf import Agent
+
 
 def license_to_url(license_str: str) -> str:
     """
@@ -55,6 +58,7 @@ def license_to_url(license_str: str) -> str:
     }
 
     return mapping.get(code)
+
 
 @namespaces(dcat="http://www.w3.org/ns/dcat#",
             dcterms="http://purl.org/dc/terms/", )
@@ -149,14 +153,27 @@ class Checksum(Thing):
     algorithm: Optional[Union[str, ResourceType]] = Field(default="None")  # dcat:algorithm
     checksumValue: str = Field(alias="value")  # dcat:value
 
+    @field_validator("algorithm", mode="before")
+    @classmethod
+    def validate_algorithm(cls, algorithm_value: Union[str, ResourceType]) -> Union[str, ResourceType]:
+        if isinstance(algorithm_value, rdflib.URIRef):
+            return str(algorithm_value)
+        if isinstance(algorithm_value, str) and str(algorithm_value).startswith("http"):
+            return str(algorithm_value)
+        if isinstance(algorithm_value, str):
+            guess_name = f"checksumAlgorithm_{algorithm_value.lower()}"
+            return str(SPDX[guess_name])
+        return str(algorithm_value)
 
-@namespaces(dcat="http://www.w3.org/ns/dcat#")
+
+@namespaces(dcat="http://www.w3.org/ns/dcat#",
+            spdx="http://spdx.org/rdf/terms#")
 @urirefs(Distribution='dcat:Distribution',
          downloadURL='dcat:downloadURL',
          accessURL='dcat:accessURL',
          mediaType='dcat:mediaType',
          byteSize='dcat:byteSize',
-         checksum='dcat:checksum')
+         checksum='spdx:checksum')
 class Distribution(Resource):
     """Implementation of dcat:Distribution
 

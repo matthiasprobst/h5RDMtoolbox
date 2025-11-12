@@ -9,7 +9,7 @@ import requests
 from packaging.version import Version
 from rdflib import Graph
 
-from . import dcat
+from ontolutils.ex import dcat
 from . import foaf
 from .metadata import Metadata
 from .tokens import get_api_token
@@ -32,7 +32,8 @@ IANA_DICT = {
     '.xml': 'application/xml',
     '.zip': 'application/zip',
     '.ttl': 'text/turtle',
-    '.turtle': 'text/turtle'
+    '.turtle': 'text/turtle',
+    '.md': 'text/markdown',
 }
 
 
@@ -416,18 +417,36 @@ class ZenodoRecord(RepositoryInterface):
             doi = jdata["metadata"].get("prereserve_doi", {}).get("doi", None)
         if not doi.startswith('http'):
             doi = f"https://doi.org/{doi}"
-        distributions = [
-            dcat.Distribution(
-                id=file_data['links']['self'],
-                accessURL=doi,
-                downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
-                name=file_data.get('filename', None),
-                mediaType=_get_media_type(file_data.get('filename', None)),
-                byteSize=file_data.get('filesize', None),
-                checksum=_parse_checksum(file_data.get('checksum', None), file_data.get('checksum_algorithm', None)),
+
+        distributions = []
+        for file_data in jdata['files']:
+            file_metadata_req = requests.get(jdata["files"][0]["links"]["self"], params={"access_token": self.access_token})
+            file_metadata_req.raise_for_status()
+            file_metadata = file_metadata_req.json()
+            distributions.append(
+                dcat.Distribution(
+                    id=file_data['links']['self'],
+                    identifier=file_metadata["id"],
+                    accessURL=doi,
+                    downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
+                    name=file_data.get('filename', None),
+                    mediaType=_get_media_type(file_data.get('filename', None)),
+                    byteSize=file_metadata.get('filesize', None),
+                    checksum=_parse_checksum(file_metadata.get('checksum', None), file_metadata.get('checksum_algorithm', None)),
+                )
             )
-            for file_data in jdata['files']
-        ]
+        # distributions = [
+        #     dcat.Distribution(
+        #         id=file_data['links']['self'],
+        #         accessURL=doi,
+        #         downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
+        #         name=file_data.get('filename', None),
+        #         mediaType=_get_media_type(file_data.get('filename', None)),
+        #         byteSize=file_data.get('filesize', None),
+        #         checksum=_parse_checksum(file_data.get('checksum', None), file_data.get('checksum_algorithm', None)),
+        #     )
+        #     for file_data in jdata['files']
+        # ]
         return dcat.Dataset(
             id=doi,
             title=jdata["metadata"].get("title", None),

@@ -512,7 +512,7 @@ def _import_convention(convention_name) -> "module":
     try:
         return importlib.import_module(f'{convention_name}')
     except ImportError:
-        print(f"Failed to import module {convention_name}")
+        logger.error(f"Failed to import module {convention_name}. Most likely the created convention file is erroneous.")
 
 
 def _get_convention_from_dir(convention_name: str) -> "Convention":
@@ -523,6 +523,7 @@ def _get_convention_from_dir(convention_name: str) -> "Convention":
     _convention_py_filename = CV_DIR / f'{_convention_name}' / f'{_convention_name}.py'
     if not _convention_py_filename.exists():
         raise ConventionNotFound(f'Convention "{convention_name}" not found.')
+    logger.debug(f"Adding path {_convention_py_filename.parent.absolute()} to system path...")
     sys.path.insert(0, str(_convention_py_filename.parent))
     # import:
     _import_convention(_convention_name)
@@ -611,15 +612,6 @@ def get_registered_conventions() -> Dict:
     """Return dictionary of registered convention"""
     return cfg._registered_conventions
 
-
-# unused:
-# def register_convention(new_convention: Convention) -> None:
-#     """Return dictionary of registered convention"""
-#     if new_convention in cfg._registered_conventions:
-#         raise ValueError(f'Convention "{new_convention}" is already registered')
-#     cfg._registered_conventions[new_convention.name] = new_convention
-
-
 def add_convention(convention: Convention, name=None):
     """Add a convention to the list of registered convention"""
     if not isinstance(convention, Convention):
@@ -689,6 +681,7 @@ def from_file(filename) -> Convention:
 
 def from_yaml(filename: Union[str, pathlib.Path], overwrite: bool = False) -> Convention:
     """Load a convention from a YAML file. See Convention.from_yaml() for details"""
+    logger.debug(f"Reading Convention from yaml file: {filename}")
     return Convention.from_yaml(filename, overwrite=overwrite)
 
 
