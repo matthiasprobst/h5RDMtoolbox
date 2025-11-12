@@ -16,7 +16,7 @@ from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.interface import RepositoryFile
-from h5rdmtoolbox.repository.zenodo import dcat
+from ontolutils.ex import dcat
 from h5rdmtoolbox.repository.zenodo.core import _bump_version
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token

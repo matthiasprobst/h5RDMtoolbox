@@ -6,11 +6,10 @@ import warnings
 from typing import Union, Dict, Optional
 
 import requests
+from ontolutils.ex import dcat, spdx, foaf
 from packaging.version import Version
 from rdflib import Graph
 
-from ontolutils.ex import dcat
-from . import foaf
 from .metadata import Metadata
 from .tokens import get_api_token
 from ..interface import RepositoryInterface, RepositoryFile
@@ -354,9 +353,11 @@ class ZenodoRecord(RepositoryInterface):
     def publish(self) -> dcat.Dataset:
         """Be careful. The record cannot be deleted afterward!"""
         url = self.get_actions_url("publish")
-        r = requests.post(url,
-                          # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
-                          params={'access_token': self.access_token})
+        r = requests.post(
+            url,
+            # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
+            params={'access_token': self.access_token}
+        )
         r.raise_for_status()
         jdata = self._get()
         self.rec_id = jdata['id']
@@ -406,7 +407,7 @@ class ZenodoRecord(RepositoryInterface):
         def _parse_checksum(checksum_str: str, algorithm: str):
             if checksum_str is None:
                 return None, None
-            return dcat.Checksum(
+            return spdx.Checksum(
                 algorithm=algorithm or "md5",
                 value=checksum_str
             )
@@ -420,7 +421,8 @@ class ZenodoRecord(RepositoryInterface):
 
         distributions = []
         for file_data in jdata['files']:
-            file_metadata_req = requests.get(jdata["files"][0]["links"]["self"], params={"access_token": self.access_token})
+            file_metadata_req = requests.get(jdata["files"][0]["links"]["self"],
+                                             params={"access_token": self.access_token})
             file_metadata_req.raise_for_status()
             file_metadata = file_metadata_req.json()
             distributions.append(
@@ -432,7 +434,8 @@ class ZenodoRecord(RepositoryInterface):
                     name=file_data.get('filename', None),
                     mediaType=_get_media_type(file_data.get('filename', None)),
                     byteSize=file_metadata.get('filesize', None),
-                    checksum=_parse_checksum(file_metadata.get('checksum', None), file_metadata.get('checksum_algorithm', None)),
+                    checksum=_parse_checksum(file_metadata.get('checksum', None),
+                                             file_metadata.get('checksum_algorithm', None)),
                 )
             )
         # distributions = [
