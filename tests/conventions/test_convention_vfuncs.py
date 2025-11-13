@@ -4,7 +4,7 @@ from typing import Union, Dict
 
 import pint
 import rdflib
-from ontlutils.ex import dcat
+from ontolutils.ex import dcat
 from ontolutils.utils.qudt_units import qudt_lookup
 from pydantic import HttpUrl, FileUrl
 from pydantic.functional_validators import WrapValidator
