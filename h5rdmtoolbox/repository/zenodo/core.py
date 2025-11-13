@@ -438,18 +438,6 @@ class ZenodoRecord(RepositoryInterface):
                                              file_metadata.get('checksum_algorithm', None)),
                 )
             )
-        # distributions = [
-        #     dcat.Distribution(
-        #         id=file_data['links']['self'],
-        #         accessURL=doi,
-        #         downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
-        #         name=file_data.get('filename', None),
-        #         mediaType=_get_media_type(file_data.get('filename', None)),
-        #         byteSize=file_data.get('filesize', None),
-        #         checksum=_parse_checksum(file_data.get('checksum', None), file_data.get('checksum_algorithm', None)),
-        #     )
-        #     for file_data in jdata['files']
-        # ]
         return dcat.Dataset(
             id=doi,
             title=jdata["metadata"].get("title", None),
