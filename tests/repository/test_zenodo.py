@@ -31,7 +31,7 @@ def get_python_version():
     return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
 
-TESTING_VERSIONS = (9, 12)
+TESTING_VERSIONS = (9, 13)
 
 
 class TestZenodo(unittest.TestCase):
@@ -311,8 +311,8 @@ class TestZenodo(unittest.TestCase):
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
 
-    # @unittest.skipIf(condition=10 < get_python_version()[1] < 12,
-    #                  reason="Only testing on min and max python version")
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason="Nur auf Python 3.9 und 3.13 testen")
     def test_new_version(self):
         z = zenodo.ZenodoRecord(source=None, sandbox=True)
         original_id = z.rec_id
@@ -342,6 +342,10 @@ class TestZenodo(unittest.TestCase):
 
         z.upload_file(h5.hdf_filename)
         c_dataset = z.as_dcat_dataset()
+        self.assertEqual(
+            c_dataset.title,
+            '[deleteme]h5tbxZenodoInterface'
+        )
 
         dataset = z.publish()
         self.assertIsInstance(

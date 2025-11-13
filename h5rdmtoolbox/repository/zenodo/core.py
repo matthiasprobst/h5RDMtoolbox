@@ -359,9 +359,42 @@ class ZenodoRecord(RepositoryInterface):
             params={'access_token': self.access_token}
         )
         r.raise_for_status()
-        jdata = self._get()
-        self.rec_id = jdata['id']
-        self._original_rec_id = self.rec_id
+
+        resp_json = {}
+        try:
+            resp_json = r.json()
+        except Exception:
+            resp_json = {}
+
+        rec_id = None
+        # Preferred: explicit id
+        if isinstance(resp_json, dict) and "id" in resp_json:
+            rec_id = resp_json.get("id")
+        else:
+            # try to find a URL to parse an id from
+            links = resp_json.get("links", {}) if isinstance(resp_json, dict) else {}
+            rec_url = links.get("record") or links.get("self") or links.get("latest_draft")
+            if rec_url:
+                try:
+                    rec_id = int(str(rec_url).rstrip("/").split("/")[-1])
+                except Exception:
+                    rec_id = None
+
+        # Fallback: try to refresh deposit data (may still work) to get id
+        if rec_id is None:
+            try:
+                jdata = self._get()
+                rec_id = jdata.get("id")
+            except Exception:
+                rec_id = None
+
+        if rec_id is not None:
+            self.rec_id = rec_id
+            self._original_rec_id = rec_id
+        #
+        # jdata = self._get()
+        # self.rec_id = jdata['id']
+        # self._original_rec_id = self.rec_id
         return self.as_dcat_dataset()
 
     def as_dcat_dataset(self) -> dcat.Dataset:
@@ -419,23 +452,54 @@ class ZenodoRecord(RepositoryInterface):
         if not doi.startswith('http'):
             doi = f"https://doi.org/{doi}"
 
+        token = self.access_token
+        headers = {}
+        if token:
+            headers = {"Authorization": f"Bearer {token}"}
+
         distributions = []
         for file_data in jdata['files']:
-            file_metadata_req = requests.get(jdata["files"][0]["links"]["self"],
-                                             params={"access_token": self.access_token})
-            file_metadata_req.raise_for_status()
-            file_metadata = file_metadata_req.json()
+            # Prefer local fields if available (filesize etc.), otherwise try to fetch metadata
+            file_metadata = {}
+            file_meta_url = file_data.get("links", {}).get("self") or file_data.get("links", {}).get("download")
+            if file_meta_url:
+                resp = requests.get(file_meta_url, headers=headers)
+                if resp.status_code == 404:
+                    # fallback: try depositions files endpoint (uses deposit id + file id)
+                    fallback_url = f"{self.depositions_url}/{self.rec_id}/files/{file_data.get('id')}"
+                    resp = requests.get(fallback_url, headers=headers)
+                resp.raise_for_status()
+                # some endpoints return a JSON with filesize/checksum, use that
+                try:
+                    file_metadata = resp.json()
+                except Exception:
+                    file_metadata = {}
+
+            # determine download URL robustly
+            download_url = file_data.get('links', {}).get('download')
+            if not download_url:
+                # try self + /content
+                self_link = file_data.get('links', {}).get('self', '')
+                if self_link:
+                    download_url = f"{self_link.rstrip('/')}/content"
+                else:
+                    download_url = None
+
+            if jdata["submitted"]:
+                download_url = download_url.replace("/draft/files", "/files")
             distributions.append(
                 dcat.Distribution(
                     id=file_data['links']['self'],
                     identifier=file_metadata["id"],
                     accessURL=doi,
-                    downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
+                    downloadURL=download_url,
                     name=file_data.get('filename', None),
                     mediaType=_get_media_type(file_data.get('filename', None)),
                     byteSize=file_metadata.get('filesize', None),
-                    checksum=_parse_checksum(file_metadata.get('checksum', None),
-                                             file_metadata.get('checksum_algorithm', None)),
+                    checksum=_parse_checksum(
+                        file_metadata.get('checksum', None),
+                        file_metadata.get('checksum_algorithm', None)
+                    ),
                 )
             )
         return dcat.Dataset(
