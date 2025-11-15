@@ -78,6 +78,8 @@ def validate_url(url: str) -> str:
     """
     if isinstance(url, rdflib.BNode):
         return url.n3()
+    if isinstance(url, str) and url.startswith("_:"):
+        return url
     try:
         if not url.startswith("http"):
             if ":" in url:
@@ -118,11 +120,14 @@ def set_predicate(attr: h5py.AttributeManager,
     if isinstance(value, rdflib.BNode):
         value = value.n3()
     else:
-        try:
-            HttpUrl(value)
-        except pydantic.ValidationError as e:
-            raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
-                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+        if isinstance(value, str) and value.startswith("_:"):
+            pass
+        else:
+            try:
+                HttpUrl(value)
+            except pydantic.ValidationError as e:
+                raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
+                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
     iri_name_data = attr.get(rdf_predicate_attr_name, None)
     if iri_name_data is None:
@@ -175,11 +180,14 @@ def set_object(attr: h5py.AttributeManager,
         if not "@type" in data:
             raise RDFError(f"The input data is interpreted as JSON-LD, but no '@type' is found: {data}")
     else:
-        try:
-            data = str(HttpUrl(data))
-        except pydantic.ValidationError as e:
-            raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
-                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+        if isinstance(data, str) and data.startswith("_:"):
+            pass
+        else:
+            try:
+                data = str(HttpUrl(data))
+            except pydantic.ValidationError as e:
+                raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
+                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
     curr_data = iri_data_data.get(attr_name, None)
     if curr_data is None:
         iri_data_data.update({attr_name: data})

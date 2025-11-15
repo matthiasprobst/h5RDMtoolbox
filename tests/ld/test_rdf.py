@@ -241,6 +241,40 @@ local:SubjectNode a local:BNodeType1,
                               file_uri={"local": "http://example.org/file#"})
         self.assertEqual(ttl, expected_ttl)
 
+    def test_serialization_with_blank_nodes_2(self):
+        with h5tbx.File() as h5:
+            h5.attrs['title', "_:title"] = 'test'
+            h5.rdf.subject = "_:SubjectNode"
+            h5.rdf.type = ["_:BNodeType1", "_:BNodeType2"]
+            h5.rdf["title"].object = "_:ObjectBNode"
+            ttl = h5.serialize("ttl", file_uri={"local": "http://example.org/file#"}, )
+
+        expected_ttl = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix local: <http://example.org/file#> .
+@prefix schema: <https://schema.org/> .
+
+local:tmp0.hdf a hdf:File ;
+    hdf:rootGroup <http://example.org/file#tmp0.hdf/> .
+
+local:SubjectNode a local:BNodeType1,
+        local:BNodeType2 .
+
+<http://example.org/file#tmp0.hdf/> a hdf:Group ;
+    hdf:attribute <http://example.org/file#tmp0.hdf@title> ;
+    hdf:name "/" ;
+    schema:about local:SubjectNode .
+
+<http://example.org/file#tmp0.hdf@title> a hdf:StringAttribute ;
+    hdf:data "test" ;
+    hdf:name "title" .
+
+""".replace("tmp0", h5.hdf_filename.stem)
+        self.assertEqual(ttl, expected_ttl)
+
+        ttl = h5tbx.serialize(h5.hdf_filename, format="ttl",
+                              file_uri={"local": "http://example.org/file#"})
+        self.assertEqual(ttl, expected_ttl)
+
     def test_rdf_error(self):
         with h5tbx.File() as h5:
             with self.assertRaises(RDFError):
