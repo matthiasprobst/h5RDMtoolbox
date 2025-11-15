@@ -31,6 +31,10 @@ class TestVersion(unittest.TestCase):
         codemeta = get_package_meta()
 
         assert parse_to_py_version(codemeta['version']) == __version__
+        self.assertIn("@id", codemeta)
+        with open(__this_dir__ / "../CITATION.cff", 'r') as f:
+            ccf = yaml.safe_load(f)
+        self.assertIn(ccf["doi"], codemeta["@id"])
 
     def test_colab_version(self):
         """open colab jupyter notebook and check first cell for version"""
