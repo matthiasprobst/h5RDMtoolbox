@@ -10,13 +10,13 @@ from datetime import datetime
 import pydantic
 import rdflib
 import requests
+from ontolutils.ex import dcat
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.interface import RepositoryFile
-from ontolutils.ex import dcat
 from h5rdmtoolbox.repository.zenodo.core import _bump_version
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
@@ -310,6 +310,11 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(env_token_sb, os.environ.get('ZENODO_SANDBOX_API_TOKEN', None))
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
+
+    def test_parse_to_dcat(self):
+        record = zenodo.ZenodoRecord(source=15389242)
+        ds = record.as_dcat_dataset()
+        print(ds.serialize("ttl"))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")

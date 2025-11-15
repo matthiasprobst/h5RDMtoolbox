@@ -2491,7 +2491,7 @@ class File(h5py.File, Group):
                   skipND: int = 1,
                   structural: bool = True,
                   contextual: bool = True,
-                  file_uri: Optional[str] = None,
+                  file_uri: Optional[Union[str, Dict]] = None,
                   context: Optional[Dict] = None,
                   indent: int = 2
                   ):
@@ -2499,11 +2499,27 @@ class File(h5py.File, Group):
         from h5rdmtoolbox.ld.utils import optimize_context
         from h5rdmtoolbox.ld import get_ld
 
+        if file_uri is None:
+            warnings.warn(
+                "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
+                category=UserWarning
+            )
+
+        if isinstance(file_uri, Dict):
+            if not len(file_uri.keys()) == 1:
+                raise ValueError('If file_uri is a dict, it must contain exactly one key-value pair.')
+            prefix = list(file_uri.keys())[0]
+            file_uri = list(file_uri.values())[0]
+        else:
+            prefix = None
+
         graph = get_ld(self.hdf_filename,
                        structural=structural,
                        contextual=contextual,
                        file_uri=file_uri,
                        skipND=skipND)
+        if prefix:
+            graph.bind(prefix, file_uri)
         context = context or {}
         context = optimize_context(graph, context)
         return graph.serialize(format=fmt,

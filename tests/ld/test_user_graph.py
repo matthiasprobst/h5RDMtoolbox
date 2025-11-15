@@ -32,7 +32,7 @@ class TestUserGraph(unittest.TestCase):
             ds.rdf.type = M4I.NumericalVariable
             ds.attrs["standard_name", SSNO.hasStandardName] = "x_velocity"
             ds.rdf["standard_name"].object = ssnolib.ssno.standard_name.StandardName(
-                id="_:123",
+                id="https://example.org/123",
                 standardName="x_velocity",
                 unit="m/s"
             )
@@ -48,11 +48,14 @@ class TestUserGraph(unittest.TestCase):
 
         exception_serialization = """@prefix ssno: <https://matthiasprobst.github.io/ssno#> .
 
+<https://example.org/123> a ssno:StandardName ;
+    ssno:standardName "x_velocity" ;
+    ssno:unit <http://qudt.org/vocab/unit/M-PER-SEC> .
+
 [] a <http://w3id.org/nfdi4ing/metadata4ing#NumericalVariable> ;
-    ssno:hasStandardName [ a ssno:StandardName ;
-            ssno:standardName "x_velocity" ;
-            ssno:unit <http://qudt.org/vocab/unit/M-PER-SEC> ] .
-    """
+    ssno:hasStandardName <https://example.org/123> .
+
+"""
         self.assertEqual(
             rdflib.Graph().parse(data=serialization, format="turtle").serialize(format="turtle"),
             rdflib.Graph().parse(data=exception_serialization, format="turtle").serialize(format="turtle")
@@ -65,7 +68,8 @@ class TestUserGraph(unittest.TestCase):
         with h5tbx.File() as h5:
             h5.attrs["mod_time"] = "today"
             h5.frdf["mod_time"].predicate = SCHEMA.dateModified
-            process_file_attribute(h5, "mod_time", h5.attrs["mod_time"], graph, rdflib.BNode("1234"))
+            process_file_attribute(h5, "mod_time", h5.attrs["mod_time"], graph, rdflib.BNode("1234"),
+                                   blank_node_iri_base=None)
         serialization = graph.serialize(format="turtle")
         exception_serialization = """@prefix schema: <https://schema.org/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -210,7 +214,6 @@ class TestUserGraph(unittest.TestCase):
 [] dcterms:created "2025-01-10T00:00:00"^^xsd:dateTime .
 
 """)
-
 
     def test_group_predicate2(self):
         """now relating it to the file"""

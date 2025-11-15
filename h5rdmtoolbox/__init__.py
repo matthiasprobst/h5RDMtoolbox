@@ -285,11 +285,6 @@ def serialize(hdf_filename,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
     fmt = kwargs.pop("format", fmt)
-    if file_uri is None:
-        warnings.warn(
-            "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
-            category=UserWarning
-        )
     with File(hdf_filename) as h5:
         return h5.serialize(fmt=fmt,
                             skipND=skipND,
