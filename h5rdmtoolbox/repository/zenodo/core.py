@@ -470,6 +470,8 @@ class ZenodoRecord(RepositoryInterface):
             links = f.get("links", {})
             access_url = links.get("self") or record.get("links", {}).get("files")
             download_url = links.get("download")
+            if record["submitted"]:
+                download_url = download_url.replace("/draft/files", "/files")
             checksum_value = f.get("checksum")
             if checksum_value:
                 checksum_value = f"md5:{checksum_value}"
@@ -489,7 +491,7 @@ class ZenodoRecord(RepositoryInterface):
 
         # Build dataset
         dataset = {
-            "id": record["links"]["doi"],
+            "id": record["links"].get("doi", record["links"].get("self", None)),
             "title": md.get("title"),
             "description": md.get("description"),
             "identifier": doi or str(record.get("id")),
@@ -508,129 +510,6 @@ class ZenodoRecord(RepositoryInterface):
             dataset
         )
         return dcat_dataset
-
-        # dcat_creators = []
-        # for c in creators:
-        #     name = c.get("name") or c.get("affiliation")
-        #     orcid = c.get("orcid") or ""
-        #     person = {
-        #         "id": f"https://orcid.org/{orcid.replace('https://orcid.org/', '')}",
-        #         "name": name,
-        #         "orcid": orcid,
-        #         "affiliation": {
-        #             "name": c.get("affiliation")
-        #         }
-        #     }
-        #     dcat_creators.append(prov.Person.model_validate(person))
-        #
-        # # must be submitted:
-        #
-        # _creators = jdata["metadata"].get("creators", [])
-        # creators = []
-        # for c in _creators:
-        #     if "orcid" in c:
-        #         if not c["orcid"].startswith('http'):
-        #             c["id"] = f"https://orcid.org/{c['orcid']}"
-        #         else:
-        #             c["id"] = c["orcid"]
-        #         creators.append(foaf.Person(
-        #             **c
-        #         ))
-        #     else:
-        #         creators.append(c)
-        # if len(creators) == 0:
-        #     creators = None
-        # _contributors = jdata["metadata"].get("contributors", [])
-        # contributors = []
-        # for c in _contributors:
-        #     if "orcid" in c:
-        #         if not c["orcid"].startswith('http'):
-        #             c["id"] = f"https://orcid.org/{c['orcid']}"
-        #         else:
-        #             c["id"] = c["orcid"]
-        #         contributors.append(foaf.Person(
-        #             **c
-        #         ))
-        #     else:
-        #         contributors.append(c)
-        #
-        # def _parse_checksum(checksum_str: str, algorithm: str):
-        #     if checksum_str is None:
-        #         return None, None
-        #     return spdx.Checksum(
-        #         algorithm=algorithm or "md5",
-        #         value=checksum_str
-        #     )
-        #
-        # # doi is doi or prereserve_doi
-        # doi = jdata["metadata"].get("doi", None)
-        # if doi is None:
-        #     doi = jdata["metadata"].get("prereserve_doi", {}).get("doi", None)
-        # if not doi.startswith('http'):
-        #     doi = f"https://doi.org/{doi}"
-        #
-        # token = self.access_token
-        # headers = {}
-        # if token:
-        #     headers = {"Authorization": f"Bearer {token}"}
-        #
-        # distributions = []
-        # for file_data in jdata['files']:
-        #     # Prefer local fields if available (filesize etc.), otherwise try to fetch metadata
-        #     file_metadata = {}
-        #     file_meta_url = file_data.get("links", {}).get("self") or file_data.get("links", {}).get("download")
-        #     if file_meta_url:
-        #         resp = requests.get(file_meta_url, headers=headers)
-        #         if resp.status_code == 404:
-        #             # fallback: try depositions files endpoint (uses deposit id + file id)
-        #             fallback_url = f"{self.depositions_url}/{self.rec_id}/files/{file_data.get('id')}"
-        #             resp = requests.get(fallback_url, headers=headers)
-        #         resp.raise_for_status()
-        #         # some endpoints return a JSON with filesize/checksum, use that
-        #         try:
-        #             file_metadata = resp.json()
-        #         except Exception:
-        #             file_metadata = {}
-        #
-        #     # determine download URL robustly
-        #     download_url = file_data.get('links', {}).get('download')
-        #     if not download_url:
-        #         # try self + /content
-        #         self_link = file_data.get('links', {}).get('self', '')
-        #         if self_link:
-        #             download_url = f"{self_link.rstrip('/')}/content"
-        #         else:
-        #             download_url = None
-        #
-        #     if jdata["submitted"]:
-        #         download_url = download_url.replace("/draft/files", "/files")
-        #     distributions.append(
-        #         dcat.Distribution(
-        #             id=file_data['links']['self'],
-        #             identifier=file_metadata["id"],
-        #             accessURL=doi,
-        #             downloadURL=download_url,
-        #             name=file_data.get('filename', None),
-        #             mediaType=_get_media_type(file_data.get('filename', None)),
-        #             byteSize=file_metadata.get('filesize', None),
-        #             checksum=_parse_checksum(
-        #                 file_metadata.get('checksum', None),
-        #                 file_metadata.get('checksum_algorithm', None)
-        #             ),
-        #         )
-        #     )
-        # return dcat.Dataset(
-        #     id=doi,
-        #     title=jdata["metadata"].get("title", None),
-        #     version=jdata["metadata"].get("version", None),
-        #     keyword=jdata["metadata"].get("keywords", []),
-        #     description=jdata["metadata"].get("description", None),
-        #     license=jdata["metadata"].get("license", None),
-        #     creator=creators,
-        #     contributor=contributors,
-        #     publisher=publisher,
-        #     distribution=distributions
-        # )
 
     def get_actions_url(self, action: str) -> str:
         return f"{self.base_url}/api/deposit/depositions/{self.rec_id}/actions/{action}"
