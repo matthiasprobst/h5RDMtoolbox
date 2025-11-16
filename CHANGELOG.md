@@ -6,6 +6,7 @@ Log of changes in the versions
 
 - fix passing json-ld as RDF object
 - support for blank nodes in contextual semantic metadata
+- fix serializing version strings in RDF data
 
 ## v2.5.1
 

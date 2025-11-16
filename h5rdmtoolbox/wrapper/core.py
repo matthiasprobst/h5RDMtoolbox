@@ -2279,10 +2279,6 @@ class File(h5py.File, Group):
                 if get_config('auto_create_h5tbx_version'):
                     if 'h5rdmtoolbox' not in self and get_config('auto_create_h5tbx_version'):
                         utils.create_h5tbx_version_grp(self)
-                        # logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
-                        # _tbx_grp = self.create_group('h5rdmtoolbox')
-                        # _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
-                        # _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
                 for k, v in attrs.items():
                     self.attrs[k] = v
 

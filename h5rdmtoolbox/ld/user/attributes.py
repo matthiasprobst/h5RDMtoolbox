@@ -25,8 +25,14 @@ def _is_date_str(value: str):
     # quick check, that first character is a digit
     if not re.match(r"^\d", value):
         return None
+    # reject version-like strings composed only of digits and dots, e.g. "2.5.2"
+    if re.match(r"^\d+(?:\.\d+)+$", value):
+        return None
     try:
         dt = parser.parse(value)
+        # reject implausible years (versions can parse as year 2, etc.)
+        if dt.year < 1000:
+            return None
         # Prüfe, ob nur ein Datum (YYYY-MM-DD) vorliegt
         if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
             return dt.date().isoformat(), XSD.date
@@ -53,7 +59,7 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef
             rdf_user_predicate = FALLBACK_PREDICATE_FOR_LITERAL_OBJECTS
         else:
             rdf_user_predicate = FALLBACK_PREDICATE_FOR_IRI_OBJECTS
-        rdf_user_object = SCHEMA.PropertyValue
+        # rdf_user_object = SCHEMA.PropertyValue
 
     if rdf_user_predicate:
         if rdf_user_object:
@@ -79,7 +85,8 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef
                                 warnings.warn(f"Error parsing JSON-LD object for attribute. name={name}, data={data}. "
                                               f"Expected exactly one subject, found {len(_subjects)}")
                             obj_graph.add(
-                                (file_uri, to_uriref(rdf_user_predicate, blank_node_iri_base), to_uriref(list(_subjects)[0], blank_node_iri_base)))
+                                (file_uri, to_uriref(rdf_user_predicate, blank_node_iri_base),
+                                 to_uriref(list(_subjects)[0], blank_node_iri_base)))
                             graph += obj_graph
                         except Exception as e:
                             warnings.warn(

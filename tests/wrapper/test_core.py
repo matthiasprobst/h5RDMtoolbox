@@ -47,6 +47,26 @@ class TestCore(unittest.TestCase):
         h5tbx.set_config(auto_create_h5tbx_version=True)
         self.assertEqual(h5tbx.get_config('auto_create_h5tbx_version'), True)
         with h5tbx.File() as h5:
+            ttl = h5.serialize("ttl")
+            self.assertEqual(ttl, """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix schema: <https://schema.org/> .
+
+[] a hdf:File ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:member [ a hdf:Group,
+                        schema:SoftwareSourceCode ;
+                    hdf:attribute [ a hdf:StringAttribute ;
+                            hdf:data "2.5.2" ;
+                            hdf:name "__h5rdmtoolbox_version__" ],
+                        [ a hdf:StringAttribute ;
+                            hdf:data "https://github.com/matthiasprobst/h5RDMtoolbox" ;
+                            hdf:name "code_repository" ] ;
+                    hdf:name "/h5rdmtoolbox" ;
+                    schema:codeRepository <https://github.com/matthiasprobst/h5RDMtoolbox> ;
+                    schema:softwareVersion "2.5.2" ] ;
+            hdf:name "/" ] .
+
+""")
             self.assertFalse('h5rdmtoolbox' not in h5)
             self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
 
