@@ -17,7 +17,7 @@ from h5rdmtoolbox import __version__
 from h5rdmtoolbox.extensions import units
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
-
+from ssnolib import SSNO
 logger = h5tbx.set_loglevel('ERROR')
 
 __this_dir__ = pathlib.Path(__file__).parent
@@ -47,6 +47,26 @@ class TestCore(unittest.TestCase):
         h5tbx.set_config(auto_create_h5tbx_version=True)
         self.assertEqual(h5tbx.get_config('auto_create_h5tbx_version'), True)
         with h5tbx.File() as h5:
+            ttl = h5.serialize("ttl")
+            self.assertEqual(ttl, """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix schema: <https://schema.org/> .
+
+[] a hdf:File ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:member [ a hdf:Group,
+                        schema:SoftwareSourceCode ;
+                    hdf:attribute [ a hdf:StringAttribute ;
+                            hdf:data "2.5.2" ;
+                            hdf:name "__h5rdmtoolbox_version__" ],
+                        [ a hdf:StringAttribute ;
+                            hdf:data "https://github.com/matthiasprobst/h5RDMtoolbox" ;
+                            hdf:name "code_repository" ] ;
+                    hdf:name "/h5rdmtoolbox" ;
+                    schema:codeRepository <https://github.com/matthiasprobst/h5RDMtoolbox> ;
+                    schema:softwareVersion "2.5.2" ] ;
+            hdf:name "/" ] .
+
+""")
             self.assertFalse('h5rdmtoolbox' not in h5)
             self.assertEqual(h5.__str__(), '<class "File" convention: "h5py">')
 
@@ -871,8 +891,6 @@ class TestCore(unittest.TestCase):
 
     def test_timedataset(self):
         abs_time = [datetime.now() + timedelta(minutes=i) for i in range(10)]
-        # print(abs_time)
-        # print(abs_time[0].strftime('%Y-%m-%dT%H:%M:%S.%f'))
 
         with h5tbx.File() as h5:
             ds = h5.create_time_dataset('time', data=abs_time, time_format='%Y-%m-%dT%H:%M:%S.%f')
@@ -880,14 +898,10 @@ class TestCore(unittest.TestCase):
             # ds.attrs['timeformat'] = Attribute(value='%Y-%m-%dT%H:%M:%S.%f',
             #                                    rdf_predicate='https://matthiasprobst.github.io/pivmeta#timeFormat')
             self.assertEqual(ds.attrs['time_format'], '%Y-%m-%dT%H:%M:%S.%f')
-            self.assertEqual(ds.rdf['time_format'].predicate, 'https://matthiasprobst.github.io/pivmeta#timeFormat')
-            self.assertEqual(ds.rdf.type, 'https://schema.org/DateTime')
 
         with h5tbx.File() as h5:
             ds = h5.create_time_dataset('time', data=abs_time, time_format='iso')
             self.assertEqual(ds.attrs['time_format'], '%Y-%m-%dT%H:%M:%S.%f')
-            self.assertEqual(ds.rdf['time_format'].predicate, 'https://matthiasprobst.github.io/pivmeta#timeFormat')
-            self.assertEqual(ds.rdf.type, 'https://schema.org/DateTime')
 
     def test_time_as_coord(self):
         with h5tbx.File() as h5:

@@ -2,8 +2,10 @@ import json
 import unittest
 
 import ontolutils
+import rdflib
 from ontolutils.namespacelib import M4I, OBO
 from rdflib import FOAF
+from ssnolib import SSNO, ssno
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Attribute
@@ -79,19 +81,199 @@ class TestRDF(unittest.TestCase):
             self.assertDictEqual(h5.attrs['flags'], {'valid': 1, 'invalid': 2})
 
     def test_rdf_object_thing(self):
-        """A RDF object can be an URI or RDF object or a ontolutils.Thing object.
+        """A RDF object can be a URI or RDF object or an ontolutils.Thing object.
         Idea behind it is to assign complex object through a single attribute, like a standard names that
         are defined in a standard name table and have no distinct IRI themselves
         """
+        snt = ssno.StandardNameTable(id="https://example.org/standard_name_table/1",
+                                     label="Example Standard Name Table")
+        sn = ssno.StandardName(id="https://example.org/standard_name/1",
+                               standard_name="x_velocity",
+                               unit="https://qudt.org/vocab/unit/M-PER-SEC",
+                               standard_name_table=snt)
 
         with h5tbx.File(mode='w') as h5:
-            from ssnolib import SSNO
             ds = h5.create_dataset('u', data=4.5)
-            # ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'
             ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'
-            ds.rdf.object['standard_name'] = ontolutils.Thing(label='x_velocity')
-            print(ds.rdf.object['standard_name'])
-            h5.dumps()
+            ds.rdf.object['standard_name'] = sn
+            self.assertEqual(h5.serialize("ttl"), """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssno: <https://matthiasprobst.github.io/ssno#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+hdf:H5T_IEEE_F64LE a hdf:Datatype .
+
+<https://example.org/standard_name/1> a ssno:StandardName ;
+    ssno:standardName "x_velocity" ;
+    ssno:standardNameTable <https://example.org/standard_name_table/1> ;
+    ssno:unit <https://qudt.org/vocab/unit/M-PER-SEC> .
+
+<https://example.org/standard_name_table/1> a ssno:StandardNameTable ;
+    rdfs:label "Example Standard Name Table" .
+
+[] a hdf:File ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:member [ a hdf:Dataset ;
+                    hdf:attribute [ a hdf:StringAttribute ;
+                            hdf:data "x_velocity" ;
+                            hdf:name "standard_name" ] ;
+                    hdf:dataspace [ a hdf:ScalarDataspace ] ;
+                    hdf:datatype hdf:H5T_FLOAT,
+                        hdf:H5T_IEEE_F64LE ;
+                    hdf:layout hdf:H5D_CONTIGUOUS ;
+                    hdf:maximumSize -1 ;
+                    hdf:name "/u" ;
+                    hdf:rank 0 ;
+                    hdf:size 1 ;
+                    hdf:value 4.5e+00 ;
+                    ssno:hasStandardName <https://example.org/standard_name/1> ] ;
+            hdf:name "/" ] .
+
+""")
+
+    def test_rdf_object_thing_with_at_graph(self):
+        with h5tbx.File(mode='w') as h5:
+            ds = h5.create_dataset('u', data=4.5)
+            ds.attrs['standard_name', SSNO.hasStandardName] = 'x_velocity'
+            with self.assertRaises(RDFError):
+                ds.rdf.object['standard_name'] = {
+                    "@context": {
+                        "dc11": "http://purl.org/dc/elements/1.1/",
+                        "ex": "http://example.org/vocab#",
+                        "xsd": "http://www.w3.org/2001/XMLSchema#",
+                    },
+                    "@graph": [
+                        {
+                            "@id": "http://example.org/library",
+                            "@type": "ex:Library",
+                            "ex:contains": "http://example.org/library/the-republic"
+                        },
+                        {
+                            "@id": "http://example.org/library/the-republic",
+                            "@type": "ex:Book",
+                            "dc11:creator": "Plato",
+                            "dc11:title": "The Republic",
+                            "ex:contains": "http://example.org/library/the-republic#introduction"
+                        },
+                        {
+                            "@id": "http://example.org/library/the-republic#introduction",
+                            "@type": "ex:Chapter",
+                            "dc11:description": "An introductory chapter on The Republic.",
+                            "dc11:title": "The Introduction"
+                        }
+                    ]
+                }
+            ds.rdf.object['standard_name'] = {
+                "@context": {
+                    "dc11": "http://purl.org/dc/elements/1.1/",
+                    "ex": "http://example.org/vocab#",
+                    "xsd": "http://www.w3.org/2001/XMLSchema#",
+                },
+                "@graph": [
+                    {
+                        "@id": "http://example.org/library",
+                        "@type": "ex:Library",
+                        "ex:contains": "http://example.org/library/the-republic"
+                    }
+                ]
+            }
+            self.assertEqual(h5.serialize("ttl"), """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix ns1: <http://example.org/vocab#> .
+@prefix ssno: <https://matthiasprobst.github.io/ssno#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://example.org/library> a ns1:Library ;
+    ns1:contains "http://example.org/library/the-republic" .
+
+hdf:H5T_IEEE_F64LE a hdf:Datatype .
+
+[] a hdf:File ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:member [ a hdf:Dataset ;
+                    hdf:attribute [ a hdf:StringAttribute ;
+                            hdf:data "x_velocity" ;
+                            hdf:name "standard_name" ] ;
+                    hdf:dataspace [ a hdf:ScalarDataspace ] ;
+                    hdf:datatype hdf:H5T_FLOAT,
+                        hdf:H5T_IEEE_F64LE ;
+                    hdf:layout hdf:H5D_CONTIGUOUS ;
+                    hdf:maximumSize -1 ;
+                    hdf:name "/u" ;
+                    hdf:rank 0 ;
+                    hdf:size 1 ;
+                    hdf:value 4.5e+00 ;
+                    ssno:hasStandardName <http://example.org/library> ] ;
+            hdf:name "/" ] .
+
+""")
+
+    def test_serialization_with_blank_nodes(self):
+        with h5tbx.File() as h5:
+            h5.attrs['title', rdflib.BNode("title")] = 'test'
+            h5.rdf.subject = rdflib.BNode("SubjectNode")
+            h5.rdf.type = [rdflib.BNode("BNodeType1"), rdflib.BNode("BNodeType2")]
+            h5.rdf["title"].object = rdflib.BNode("ObjectBNode")
+            ttl = h5.serialize("ttl", file_uri={"local": "http://example.org/file#"}, )
+
+        expected_ttl = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix local: <http://example.org/file#> .
+@prefix schema: <https://schema.org/> .
+
+local:tmp0.hdf a hdf:File ;
+    hdf:rootGroup <http://example.org/file#tmp0.hdf/> .
+
+local:SubjectNode a local:BNodeType1,
+        local:BNodeType2 .
+
+<http://example.org/file#tmp0.hdf/> a hdf:Group ;
+    hdf:attribute <http://example.org/file#tmp0.hdf@title> ;
+    hdf:name "/" ;
+    schema:about local:SubjectNode .
+
+<http://example.org/file#tmp0.hdf@title> a hdf:StringAttribute ;
+    hdf:data "test" ;
+    hdf:name "title" .
+
+""".replace("tmp0", h5.hdf_filename.stem)
+        self.assertEqual(ttl, expected_ttl)
+
+        ttl = h5tbx.serialize(h5.hdf_filename, format="ttl",
+                              file_uri={"local": "http://example.org/file#"})
+        self.assertEqual(ttl, expected_ttl)
+
+    def test_serialization_with_blank_nodes_2(self):
+        with h5tbx.File() as h5:
+            h5.attrs['title', "_:title"] = 'test'
+            h5.rdf.subject = "_:SubjectNode"
+            h5.rdf.type = ["_:BNodeType1", "_:BNodeType2"]
+            h5.rdf["title"].object = "_:ObjectBNode"
+            ttl = h5.serialize("ttl", file_uri={"local": "http://example.org/file#"}, )
+
+        expected_ttl = """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix local: <http://example.org/file#> .
+@prefix schema: <https://schema.org/> .
+
+local:tmp0.hdf a hdf:File ;
+    hdf:rootGroup <http://example.org/file#tmp0.hdf/> .
+
+local:SubjectNode a local:BNodeType1,
+        local:BNodeType2 .
+
+<http://example.org/file#tmp0.hdf/> a hdf:Group ;
+    hdf:attribute <http://example.org/file#tmp0.hdf@title> ;
+    hdf:name "/" ;
+    schema:about local:SubjectNode .
+
+<http://example.org/file#tmp0.hdf@title> a hdf:StringAttribute ;
+    hdf:data "test" ;
+    hdf:name "title" .
+
+""".replace("tmp0", h5.hdf_filename.stem)
+        self.assertEqual(ttl, expected_ttl)
+
+        ttl = h5tbx.serialize(h5.hdf_filename, format="ttl",
+                              file_uri={"local": "http://example.org/file#"})
+        self.assertEqual(ttl, expected_ttl)
 
     def test_rdf_error(self):
         with h5tbx.File() as h5:

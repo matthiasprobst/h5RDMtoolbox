@@ -4,10 +4,11 @@ from typing import Union, Dict
 
 import pint
 import rdflib
+from ontolutils.ex import dcat
 from ontolutils.utils.qudt_units import qudt_lookup
 from pydantic import HttpUrl, FileUrl
 from pydantic.functional_validators import WrapValidator
-from ssnolib import StandardNameTable, dcat, parse_table
+from ssnolib import StandardNameTable, parse_table
 from typing_extensions import Annotated
 
 from h5rdmtoolbox import get_ureg

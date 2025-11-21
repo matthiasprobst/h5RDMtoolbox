@@ -76,6 +76,10 @@ def validate_url(url: str) -> str:
         Returns the original string if the URL is valid. Thus, white spaces are not replaced
         by %20.
     """
+    if isinstance(url, rdflib.BNode):
+        return url.n3()
+    if isinstance(url, str) and url.startswith("_:"):
+        return url
     try:
         if not url.startswith("http"):
             if ":" in url:
@@ -113,11 +117,17 @@ def set_predicate(attr: h5py.AttributeManager,
     -------
     None
     """
-    try:
-        HttpUrl(value)
-    except pydantic.ValidationError as e:
-        raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
-                       f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+    if isinstance(value, rdflib.BNode):
+        value = value.n3()
+    else:
+        if isinstance(value, str) and value.startswith("_:"):
+            pass
+        else:
+            try:
+                HttpUrl(value)
+            except pydantic.ValidationError as e:
+                raise RDFError(f'Invalid IRI: "{value}" for attr name "{attr_name}". '
+                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
 
     iri_name_data = attr.get(rdf_predicate_attr_name, None)
     if iri_name_data is None:
@@ -152,19 +162,32 @@ def set_object(attr: h5py.AttributeManager,
 
     if isinstance(data, Thing):
         data = data.get_jsonld_dict()
+    elif isinstance(data, rdflib.BNode):
+        data = data.n3()
     elif isinstance(data, rdflib.Literal):
         if data.language is not None and data.datatype is None:
             data = {"lexical_or_value": str(data), "lang": data.language, "$type": "rdflib.term.Literal"}
     elif isinstance(data, dict):
         # assuming it is a JSON-LD dict
+        if "@graph" in data:
+            # if one entry, reduce it to a simpler form:
+            if len(data["@graph"]) == 1:
+                _ctx = data.get("@context", None)
+                _data = data["@graph"][0]
+                data = {"@context": _ctx, **_data} if _ctx is not None else _data
+            else:
+                raise RDFError(f"Cannot set multiple graph entries as object for attribute {attr_name}. ")
         if not "@type" in data:
-            raise RDFError(f"The input data is interpreted as JSON-LD, but no @type is found: {data}")
+            raise RDFError(f"The input data is interpreted as JSON-LD, but no '@type' is found: {data}")
     else:
-        try:
-            data = str(HttpUrl(data))
-        except pydantic.ValidationError as e:
-            raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
-                           f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
+        if isinstance(data, str) and data.startswith("_:"):
+            pass
+        else:
+            try:
+                data = str(HttpUrl(data))
+            except pydantic.ValidationError as e:
+                raise RDFError(f'Invalid IRI: "{data}" for attr name "{attr_name}". '
+                               f'Expecting a valid URL. This was validated with pydantic. Pydantic error: {e}')
     curr_data = iri_data_data.get(attr_name, None)
     if curr_data is None:
         iri_data_data.update({attr_name: data})
@@ -510,9 +533,9 @@ class RDFManager:
         """Add a rdf type (@type in JSON-LD syntax) to the group or dataset.
         If the subject already exists, it will not be added again."""
         if isinstance(rdf_type, list):
-            data = [validate_url(str(i)) for i in rdf_type]
+            data = [validate_url(i) for i in rdf_type]
         else:
-            data = validate_url(str(rdf_type))
+            data = validate_url(rdf_type)
 
         # get the attribute
         if '@TYPE' in self._attr:
@@ -825,9 +848,9 @@ class FileRDFManager:
     def type(self, rdf_type: Union[str, List[str]]):
         """Add a rdf type (@type in JSON-LD syntax) to the hdf5 file (not the root group!)"""
         if isinstance(rdf_type, list):
-            data = [validate_url(str(i)) for i in rdf_type]
+            data = [validate_url(i) for i in rdf_type]
         else:
-            data = validate_url(str(rdf_type))
+            data = validate_url(rdf_type)
 
         # get the attribute
         iri_sbj_data = self._attr.get(RDF_FILE_TYPE_ATTR_NAME, None)

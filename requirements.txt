@@ -23,7 +23,7 @@ python-gitlab
 pypandoc>=1.11
 pydantic>=2.8.2,<3.0.0
 # other:
-ontolutils>=0.21.1,<1.0.0
+ontolutils>=0.22.1,<1.0.0
 click>=8.1.7
 cftime>=1.6.4
 pyshacl>=0.30.1,<1.0.0

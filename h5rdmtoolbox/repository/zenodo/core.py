@@ -6,11 +6,12 @@ import warnings
 from typing import Union, Dict, Optional
 
 import requests
+from ontolutils.ex import dcat
+from ontolutils.ex import dcat, spdx, foaf
+from ontolutils.ex import prov
 from packaging.version import Version
 from rdflib import Graph
 
-from . import dcat
-from . import foaf
 from .metadata import Metadata
 from .tokens import get_api_token
 from ..interface import RepositoryInterface, RepositoryFile
@@ -32,7 +33,8 @@ IANA_DICT = {
     '.xml': 'application/xml',
     '.zip': 'application/zip',
     '.ttl': 'text/turtle',
-    '.turtle': 'text/turtle'
+    '.turtle': 'text/turtle',
+    '.md': 'text/markdown',
 }
 
 
@@ -82,6 +84,30 @@ def _bump_version(version: str, part: str) -> str:
     else:
         raise ValueError('part must be one of "major", "minor", or "patch".')
     return f"{major}.{minor}.{patch}"
+
+
+def _spdx_checksum_from_zenodo(checksum_str: str):
+    """
+    Convert Zenodo's 'md5:abcdef...' string to an SPDX checksum object.
+    """
+    if not checksum_str:
+        return None
+    if ":" in checksum_str:
+        algo, value = checksum_str.split(":", 1)
+    else:
+        algo, value = "md5", checksum_str  # fallback
+
+    algo_map = {
+        "md5": "https://spdx.org/rdf/terms#checksumAlgorithm_md5",
+        "sha1": "https://spdx.org/rdf/terms#checksumAlgorithm_sha1",
+        "sha256": "https://spdx.org/rdf/terms#checksumAlgorithm_sha256",
+        "sha512": "https://spdx.org/rdf/terms#checksumAlgorithm_sha512",
+    }
+    algo_iri = algo_map.get(algo.lower())
+    return {
+        "algorithm": algo_iri if algo_iri else algo,
+        "checksumValue": value,
+    }
 
 
 class ZenodoRecord(RepositoryInterface):
@@ -232,11 +258,6 @@ class ZenodoRecord(RepositoryInterface):
 
     @property
     def files(self) -> Dict[str, RepositoryFile]:
-        # def _parse_download_url(filename):
-        #     if filename is None:
-        #         return filename
-        #     return f"{self.rec_url}/{self.rec_id}/files/{filename}"
-
         is_submitted = self.submitted()
 
         def _parse_download_url(url, filename):
@@ -244,8 +265,6 @@ class ZenodoRecord(RepositoryInterface):
                 return url
             if is_submitted:
                 return f"{self.record_url}/files/{filename}"
-            # if url.endswith('/content'):
-            #     return url#.rsplit('/', 1)[0]
             return url
 
         def _parse(data: Dict):
@@ -353,93 +372,144 @@ class ZenodoRecord(RepositoryInterface):
     def publish(self) -> dcat.Dataset:
         """Be careful. The record cannot be deleted afterward!"""
         url = self.get_actions_url("publish")
-        r = requests.post(url,
-                          # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
-                          params={'access_token': self.access_token})
+        r = requests.post(
+            url,
+            # data=json.dumps({'publication_date': '2024-03-03', 'version': '1.2.3'}),
+            params={'access_token': self.access_token}
+        )
         r.raise_for_status()
-        jdata = self._get()
-        self.rec_id = jdata['id']
-        self._original_rec_id = self.rec_id
+
+        resp_json = {}
+        try:
+            resp_json = r.json()
+        except Exception:
+            resp_json = {}
+
+        rec_id = None
+        # Preferred: explicit id
+        if isinstance(resp_json, dict) and "id" in resp_json:
+            rec_id = resp_json.get("id")
+        else:
+            # try to find a URL to parse an id from
+            links = resp_json.get("links", {}) if isinstance(resp_json, dict) else {}
+            rec_url = links.get("record") or links.get("self") or links.get("latest_draft")
+            if rec_url:
+                try:
+                    rec_id = int(str(rec_url).rstrip("/").split("/")[-1])
+                except Exception:
+                    rec_id = None
+
+        # Fallback: try to refresh deposit data (may still work) to get id
+        if rec_id is None:
+            try:
+                jdata = self._get()
+                rec_id = jdata.get("id")
+            except Exception:
+                rec_id = None
+
+        if rec_id is not None:
+            self.rec_id = rec_id
+            self._original_rec_id = rec_id
+        #
+        # jdata = self._get()
+        # self.rec_id = jdata['id']
+        # self._original_rec_id = self.rec_id
         return self.as_dcat_dataset()
 
     def as_dcat_dataset(self) -> dcat.Dataset:
         """Returns the record metadata as DCAT Dataset."""
-        jdata = self._get()
-        # must be submitted:
-        publisher = jdata["metadata"].get("imprint_publisher", None)
+        record = self._get()
+
+        md = record.get("metadata", {})
+        if not md:
+            raise ValueError("No metadata found in the record.")
+
+        license_ = md.get("license") or None
+        creators = md.get("creators") or []
+        keywords = md.get("keywords") or []
+        doi = md.get("doi")
+        landing = record.get("links", {}).get("self")
+
+        publisher = record["metadata"].get("imprint_publisher", None)
         if publisher:
-            publisher = foaf.Organization(
-                id="https://www.wikidata.org/wiki/Q22661177",
-                name=publisher,
-                homepage="https://zenodo.org/"
-            )
-        _creators = jdata["metadata"].get("creators", [])
-        creators = []
-        for c in _creators:
-            if "orcid" in c:
-                if not c["orcid"].startswith('http'):
-                    c["id"] = f"https://orcid.org/{c['orcid']}"
-                else:
-                    c["id"] = c["orcid"]
-                creators.append(foaf.Person(
-                    **c
-                ))
+            if publisher.lower() == "zenodo":
+                publisher = foaf.Organization(
+                    id="https://www.wikidata.org/wiki/Q22661177",
+                    name=publisher,
+                    homepage="https://zenodo.org/"
+                )
             else:
-                creators.append(c)
-        if len(creators) == 0:
-            creators = None
-        _contributors = jdata["metadata"].get("contributors", [])
-        contributors = []
-        for c in _contributors:
-            if "orcid" in c:
-                if not c["orcid"].startswith('http'):
-                    c["id"] = f"https://orcid.org/{c['orcid']}"
-                else:
-                    c["id"] = c["orcid"]
-                contributors.append(foaf.Person(
-                    **c
-                ))
-            else:
-                contributors.append(c)
+                publisher = foaf.Agent(
+                    name=publisher
+                )
 
-        def _parse_checksum(checksum_str: str, algorithm: str):
-            if checksum_str is None:
-                return None, None
-            return dcat.Checksum(
-                algorithm=algorithm or "md5",
-                value=checksum_str
-            )
+        dcat_creators = []
+        for c in creators:
+            name = c.get("name") or c.get("affiliation")
+            orcid = c.get("orcid") or ""
+            affiliation = c.get("affiliation", None)
+            person = {
+                "id": f"https://orcid.org/{orcid.replace('https://orcid.org/', '')}",
+                "name": name,
+                "orcid": orcid
+            }
+            if affiliation:
+                person["affiliation"] = {
+                    "name": affiliation
+                }
+            dcat_creators.append(prov.Person.model_validate(person))
 
-        # doi is doi or prereserve_doi
-        doi = jdata["metadata"].get("doi", None)
-        if doi is None:
-            doi = jdata["metadata"].get("prereserve_doi", {}).get("doi", None)
-        if not doi.startswith('http'):
-            doi = f"https://doi.org/{doi}"
-        distributions = [
-            dcat.Distribution(
-                id=file_data['links']['self'],
-                accessURL=doi,
-                downloadURL=file_data["links"]["self"].strip(file_data["id"]) + file_data["filename"] + "/content",
-                name=file_data.get('filename', None),
-                mediaType=_get_media_type(file_data.get('filename', None)),
-                byteSize=file_data.get('filesize', None),
-                checksum=_parse_checksum(file_data.get('checksum', None), file_data.get('checksum_algorithm', None)),
-            )
-            for file_data in jdata['files']
-        ]
-        return dcat.Dataset(
-            id=doi,
-            title=jdata["metadata"].get("title", None),
-            version=jdata["metadata"].get("version", None),
-            keyword=jdata["metadata"].get("keywords", []),
-            description=jdata["metadata"].get("description", None),
-            license=jdata["metadata"].get("license", None),
-            creator=creators,
-            contributor=contributors,
-            publisher=publisher,
-            distribution=distributions
+        # Build distributions from files
+        distributions = []
+        for f in record.get("files"):
+            key = f.get("key") or f.get("filename") or "file"
+            doi = doi or str(record.get("doi"))
+            title = key
+            media_type = pathlib.Path(f.get("filename")).suffix
+            size = f.get("filesize")
+            links = f.get("links", {})
+            access_url = links.get("self") or record.get("links", {}).get("files")
+            download_url = links.get("download")
+            if record["submitted"]:
+                download_url = download_url.replace("/draft/files", "/files")
+            checksum_value = f.get("checksum")
+            if checksum_value:
+                checksum_value = f"md5:{checksum_value}"
+            checksum_obj = _spdx_checksum_from_zenodo(checksum_value)
+
+            dist = {
+                "id": links["self"],
+                "title": title,
+                "accessURL": access_url,
+                "downloadURL": download_url,
+                "mediaType": media_type,
+                "byteSize": size,
+                "checksum": checksum_obj
+            }
+            dcat_dist = dcat.Distribution.model_validate(dist)
+            distributions.append(dcat_dist)
+
+        # Build dataset
+        dataset = {
+            "id": record["links"].get("doi", record["links"].get("self", None)),
+            "title": md.get("title"),
+            "description": md.get("description"),
+            "identifier": doi or str(record.get("id")),
+            "issued": record.get("created"),
+            "modified": record.get("modified"),
+            "publisher": publisher,
+            "creator": dcat_creators,
+            "keyword": keywords,
+            "landingPage": landing,
+            "license": license_,
+            "accessRights": md.get("access_right"),
+            "version": md.get("version"),
+            "distribution": distributions,
+        }
+        dcat_dataset = dcat.Dataset.model_validate(
+            dataset
         )
+        return dcat_dataset
 
     def get_actions_url(self, action: str) -> str:
         return f"{self.base_url}/api/deposit/depositions/{self.rec_id}/actions/{action}"

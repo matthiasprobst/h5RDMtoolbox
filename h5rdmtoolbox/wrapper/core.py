@@ -571,9 +571,6 @@ class Group(h5py.Group):
             _reshaped_data = _flat_data.reshape(_orig_shape)
             ds = self.create_string_dataset(name, data=_reshaped_data.tolist(),
                                             overwrite=overwrite, attrs=attrs, **kwargs)
-        if assign_rdf:
-            ds.rdf.type = 'https://schema.org/DateTime'
-            ds.rdf['time_format'].predicate = 'https://matthiasprobst.github.io/pivmeta#timeFormat'
         return ds
 
     def create_string_dataset(self,
@@ -2279,10 +2276,6 @@ class File(h5py.File, Group):
                 if get_config('auto_create_h5tbx_version'):
                     if 'h5rdmtoolbox' not in self and get_config('auto_create_h5tbx_version'):
                         utils.create_h5tbx_version_grp(self)
-                        # logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
-                        # _tbx_grp = self.create_group('h5rdmtoolbox')
-                        # _tbx_grp.rdf.subject = 'https://schema.org/SoftwareSourceCode'
-                        # _tbx_grp.attrs['__h5rdmtoolbox_version__', 'https://schema.org/softwareVersion'] = __version__
                 for k, v in attrs.items():
                     self.attrs[k] = v
 
@@ -2491,7 +2484,7 @@ class File(h5py.File, Group):
                   skipND: int = 1,
                   structural: bool = True,
                   contextual: bool = True,
-                  file_uri: Optional[str] = None,
+                  file_uri: Optional[Union[str, Dict]] = None,
                   context: Optional[Dict] = None,
                   indent: int = 2
                   ):
@@ -2499,11 +2492,27 @@ class File(h5py.File, Group):
         from h5rdmtoolbox.ld.utils import optimize_context
         from h5rdmtoolbox.ld import get_ld
 
+        if file_uri is None:
+            warnings.warn(
+                "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
+                category=UserWarning
+            )
+
+        if isinstance(file_uri, Dict):
+            if not len(file_uri.keys()) == 1:
+                raise ValueError('If file_uri is a dict, it must contain exactly one key-value pair.')
+            prefix = list(file_uri.keys())[0]
+            file_uri = list(file_uri.values())[0]
+        else:
+            prefix = None
+
         graph = get_ld(self.hdf_filename,
                        structural=structural,
                        contextual=contextual,
                        file_uri=file_uri,
                        skipND=skipND)
+        if prefix:
+            graph.bind(prefix, file_uri)
         context = context or {}
         context = optimize_context(graph, context)
         return graph.serialize(format=fmt,
