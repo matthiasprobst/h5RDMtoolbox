@@ -571,9 +571,6 @@ class Group(h5py.Group):
             _reshaped_data = _flat_data.reshape(_orig_shape)
             ds = self.create_string_dataset(name, data=_reshaped_data.tolist(),
                                             overwrite=overwrite, attrs=attrs, **kwargs)
-        if assign_rdf:
-            ds.rdf.type = 'https://schema.org/DateTime'
-            ds.rdf['time_format'].predicate = 'https://matthiasprobst.github.io/pivmeta#timeFormat'
         return ds
 
     def create_string_dataset(self,

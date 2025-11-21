@@ -7,6 +7,8 @@ Log of changes in the versions
 - fix passing json-ld as RDF object
 - support for blank nodes in contextual semantic metadata
 - fix serializing version strings in RDF data
+- removing deprecated piv:timeFormat for time datasets
+- upgrade to ontolutils 0.22.1
 
 ## v2.5.1
 
