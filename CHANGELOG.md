@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.5.3
+
+- fix handling multiple RDF type metadata at file level
+
 ## v2.5.2
 
 - fix passing json-ld as RDF object

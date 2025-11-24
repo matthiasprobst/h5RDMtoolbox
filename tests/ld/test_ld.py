@@ -8,6 +8,7 @@ import rdflib
 import ssnolib
 from ontolutils import namespaces, urirefs, Thing
 from ontolutils.namespacelib import M4I
+from ontolutils.namespacelib import SCHEMA
 from rdflib import DCAT
 
 import h5rdmtoolbox as h5tbx
@@ -477,7 +478,7 @@ WHERE {
             h5.create_dataset('test_dataset', shape=(3,))
             grp = h5.create_group('grp')
             grp.attrs['test', sn_iri] = 'test'
-            grp.attrs['description', ontolutils.SCHEMA.commentCount] = 5.3
+            grp.attrs['description', SCHEMA.commentCount] = 5.3
             self.assertIsInstance(grp.attrs['description'], np.floating)
 
             sub_grp = grp.create_group('Fan')
@@ -825,6 +826,17 @@ WHERE {
                 sorted(jdict.get("@type")),
                 sorted("dcat:Dataset")
             )
+
+    def test_frdf_multiple_object(self):
+        with h5tbx.File() as h5:
+            h5.attrs["thing"] = "Thing"
+            h5.frdf["thing"].predicate = SCHEMA.about
+            h5.frdf["thing"].object = "https://example.org/Thing1"
+            h5.attrs["another_thing"] = "Thing 2"
+            h5.frdf["another_thing"].predicate = SCHEMA.about
+            h5.frdf["another_thing"].object = "https://example.org/Thing2"
+
+            print(h5.serialize("ttl", structural=False))
 
     def test_only_subject(self):
         with h5tbx.File() as h5:

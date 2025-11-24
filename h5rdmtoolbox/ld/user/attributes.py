@@ -25,7 +25,7 @@ def _is_date_str(value: str):
     # quick check, that first character is a digit
     if not re.match(r"^\d", value):
         return None
-    # reject version-like strings composed only of digits and dots, e.g. "2.5.2"
+    # reject version-like strings composed only of digits and dots, e.g. "2.5.3"
     if re.match(r"^\d+(?:\.\d+)+$", value):
         return None
     try:

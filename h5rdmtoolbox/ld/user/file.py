@@ -2,6 +2,7 @@ from typing import Optional
 from typing import Union
 
 import h5py
+import numpy as np
 import rdflib
 from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Graph
@@ -38,16 +39,16 @@ def get_ld(
         file_node = get_file_bnode(source, file_uri=file_uri)
 
     if source.name == "/":
-        file_rdf = file_frdf_manager.type
+        file_rdf_type = file_frdf_manager.type
     else:
-        file_rdf = None
+        file_rdf_type = None
 
-    if file_rdf:
-        if isinstance(file_rdf, list):
-            for rdf_type in file_rdf:
+    if file_rdf_type is not None:
+        if isinstance(file_rdf_type, list) or isinstance(file_rdf_type, np.ndarray):
+            for rdf_type in file_rdf_type:
                 graph.add((file_node, rdflib.RDF.type, to_uriref(rdf_type, file_uri)))
         else:
-            graph.add((file_node, rdflib.RDF.type, to_uriref(file_rdf, file_uri)))
+            graph.add((file_node, rdflib.RDF.type, to_uriref(file_rdf_type, file_uri)))
 
     for ak, av in source.attrs.items():
         process_file_attribute(source, ak, av, graph, file_node, blank_node_iri_base=file_uri)
