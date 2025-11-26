@@ -94,14 +94,35 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef
 
             elif isinstance(rdf_user_object, dict):
                 try:
-                    obj_graph = Graph().parse(data=json.loads(json.dumps(rdf_user_object)), format="json-ld")
-                    # relate the obj_graph with the predicate:
-                    _subjects = set(obj_graph.subjects())
-                    if len(_subjects) != 1:
-                        warnings.warn(f"Error parsing JSON-LD object for attribute. name={name}, data={data}. "
-                                      f"Expected exactly one subject, found {len(_subjects)}")
-                    obj_graph.add((file_uri, to_uriref(rdf_user_predicate, blank_node_iri_base),
-                                   to_uriref(list(_subjects)[0], blank_node_iri_base)))
+                    jsonld_dict = json.loads(json.dumps(rdf_user_object))
+                    obj_graph = Graph().parse(data=jsonld_dict,
+                                              format="json-ld")
+
+                    if "@graph" not in jsonld_dict:
+                        use_subject = jsonld_dict.get("@id")
+                        obj_graph.add((file_uri, to_uriref(rdf_user_predicate, blank_node_iri_base),
+                                       to_uriref(use_subject, blank_node_iri_base)))
+                    else:
+                        _graph_entities = jsonld_dict["@graph"]
+                        if len(_graph_entities) == 1:
+                            use_subject = _graph_entities[0].get("@id")
+                            obj_graph.add((file_uri, to_uriref(rdf_user_predicate, blank_node_iri_base),
+                                           to_uriref(use_subject, blank_node_iri_base)))
+                        else:
+                            for _entity in _graph_entities:
+                                if RDF.type in _entity and _entity[RDF.type] == str(SCHEMA.PropertyValue):
+                                    use_subject = _entity.get("@id")
+                                    obj_graph.add((file_uri, to_uriref(rdf_user_predicate, blank_node_iri_base),
+                                                   to_uriref(use_subject, blank_node_iri_base)))
+
+                    # obj_graph = Graph().parse(data=json.loads(json.dumps(rdf_user_object)), format="json-ld")
+                    # # relate the obj_graph with the predicate:
+                    # _subjects = set(obj_graph.subjects())
+                    # if len(_subjects) != 1:
+                    #     warnings.warn(f"Error parsing JSON-LD object for attribute. name={name}, data={data}. "
+                    #                   f"Expected exactly one subject, found {len(_subjects)}")
+                    # obj_graph.add((file_uri, to_uriref(rdf_user_predicate, blank_node_iri_base),
+                    #                to_uriref(list(_subjects)[0], blank_node_iri_base)))
                     graph += obj_graph
                 except Exception as e:
                     warnings.warn(

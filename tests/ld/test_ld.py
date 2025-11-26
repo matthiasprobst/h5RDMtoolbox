@@ -864,7 +864,8 @@ WHERE {
             self.assertEqual(str(bindings[0][rdflib.Variable("relation")]), "https://orcid.org/0000-0001-8729-0482")
 
     def test_setting_nested_objects(self):
-        with h5tbx.File() as h5:
+        filename = h5tbx.utils.generate_temporary_filename(suffix=".hdf")
+        with h5tbx.File(filename, "w") as h5:
             h5.attrs["snt"] = "123"
             h5.frdf["snt"].predicate = "https://matthiasprobst.github.io/ssno#usesStandardNameTable"
             h5.frdf["snt"].object = "https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld"
@@ -879,10 +880,10 @@ WHERE {
                     )
                 )
             )
-            self.assertEqual("""@prefix dcat: <http://www.w3.org/ns/dcat#> .
+            ttl = f"""@prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix ssno: <https://matthiasprobst.github.io/ssno#> .
 
-<https://example.org#tmp0.hdf> ssno:usesStandardNameTable <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> .
+<https://example.org#{filename.name}> ssno:usesStandardNameTable <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> .
 
 <https://doi.org/10.5281/zenodo.17572275> a dcat:Dataset ;
     dcat:distribution <https://doi.org/10.5281/zenodo.17572275#Distribution> .
@@ -893,5 +894,13 @@ WHERE {
 <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> a ssno:StandardNameTable ;
     ssno:dataset <https://doi.org/10.5281/zenodo.17572275> .
 
-""",
-                             h5.serialize("ttl", structural=False, file_uri="https://example.org#"))
+"""
+            g1 = rdflib.Graph().parse(data=ttl, format="ttl")
+            actual_ttl = h5.serialize("ttl", structural=False, file_uri=f"https://example.org#")
+            g2 = rdflib.Graph().parse(data=actual_ttl,
+                                      format="ttl")
+            g1ttl = g1.serialize(format="ttl")
+            g2ttl = g2.serialize(format="ttl")
+            self.assertEqual(g1ttl, g2ttl)
+            # self.assertEqual(ttl,
+            #                  h5.serialize("ttl", structural=False, file_uri="https://example.org#"))
