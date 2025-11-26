@@ -882,6 +882,8 @@ WHERE {
             self.assertEqual("""@prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix ssno: <https://matthiasprobst.github.io/ssno#> .
 
+<https://example.org#tmp0.hdf> ssno:usesStandardNameTable <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> .
+
 <https://doi.org/10.5281/zenodo.17572275> a dcat:Dataset ;
     dcat:distribution <https://doi.org/10.5281/zenodo.17572275#Distribution> .
 
@@ -891,7 +893,5 @@ WHERE {
 <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> a ssno:StandardNameTable ;
     ssno:dataset <https://doi.org/10.5281/zenodo.17572275> .
 
-[] ssno:usesStandardNameTable <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> .
-
 """,
-                             h5.serialize("ttl", structural=False))
+                             h5.serialize("ttl", structural=False, file_uri="https://example.org#"))
