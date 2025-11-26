@@ -309,6 +309,16 @@ local:SubjectNode a local:BNodeType1,
 
             h5.rdf.type = ['https://example.org/validURI', 'https://example.org/validURI2']
             self.assertEqual(h5.rdf.type, ['https://example.org/validURI', 'https://example.org/validURI2'])
+            self.assertEqual("""@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix schema: <https://schema.org/> .
+
+<https://example.org/validURI> a <https://example.org/validURI>,
+        <https://example.org/validURI2> ;
+    foaf:title "test" .
+
+[] schema:about <https://example.org/validURI> .
+
+""", h5.serialize("ttl", structural=False))
 
             # note, that the following will not overwrite, but append the value:
             h5.rdf.type = 'https://example.org/validURI3'

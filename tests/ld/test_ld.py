@@ -7,7 +7,9 @@ import ontolutils
 import rdflib
 import ssnolib
 from ontolutils import namespaces, urirefs, Thing
+from ontolutils.ex import dcat
 from ontolutils.namespacelib import M4I
+from ontolutils.namespacelib import SCHEMA
 from rdflib import DCAT
 
 import h5rdmtoolbox as h5tbx
@@ -477,7 +479,7 @@ WHERE {
             h5.create_dataset('test_dataset', shape=(3,))
             grp = h5.create_group('grp')
             grp.attrs['test', sn_iri] = 'test'
-            grp.attrs['description', ontolutils.SCHEMA.commentCount] = 5.3
+            grp.attrs['description', SCHEMA.commentCount] = 5.3
             self.assertIsInstance(grp.attrs['description'], np.floating)
 
             sub_grp = grp.create_group('Fan')
@@ -826,6 +828,17 @@ WHERE {
                 sorted("dcat:Dataset")
             )
 
+    def test_frdf_multiple_object(self):
+        with h5tbx.File() as h5:
+            h5.attrs["thing"] = "Thing"
+            h5.frdf["thing"].predicate = SCHEMA.about
+            h5.frdf["thing"].object = "https://example.org/Thing1"
+            h5.attrs["another_thing"] = "Thing 2"
+            h5.frdf["another_thing"].predicate = SCHEMA.about
+            h5.frdf["another_thing"].object = "https://example.org/Thing2"
+
+            print(h5.serialize("ttl", structural=False))
+
     def test_only_subject(self):
         with h5tbx.File() as h5:
             g = h5.create_group("contact")
@@ -849,3 +862,45 @@ WHERE {
             bindings = res.bindings
             self.assertEqual(len(bindings), 1)
             self.assertEqual(str(bindings[0][rdflib.Variable("relation")]), "https://orcid.org/0000-0001-8729-0482")
+
+    def test_setting_nested_objects(self):
+        filename = h5tbx.utils.generate_temporary_filename(suffix=".hdf")
+        with h5tbx.File(filename, "w") as h5:
+            h5.attrs["snt"] = "123"
+            h5.frdf["snt"].predicate = "https://matthiasprobst.github.io/ssno#usesStandardNameTable"
+            h5.frdf["snt"].object = "https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld"
+            del h5.frdf["snt"].object
+            h5.frdf["snt"].object = ssnolib.StandardNameTable(
+                id="https://doi.org/10.5281/zenodo.17572275#StandardNameTable",
+                dataset=dcat.Dataset(
+                    id="https://doi.org/10.5281/zenodo.17572275",
+                    distribution=dcat.Distribution(
+                        id="https://doi.org/10.5281/zenodo.17572275#Distribution",
+                        download_URL="https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld"
+                    )
+                )
+            )
+            ttl = f"""@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix ssno: <https://matthiasprobst.github.io/ssno#> .
+
+<https://example.org#{filename.name}> ssno:usesStandardNameTable <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> .
+
+<https://doi.org/10.5281/zenodo.17572275> a dcat:Dataset ;
+    dcat:distribution <https://doi.org/10.5281/zenodo.17572275#Distribution> .
+
+<https://doi.org/10.5281/zenodo.17572275#Distribution> a dcat:Distribution ;
+    dcat:downloadURL <https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld> .
+
+<https://doi.org/10.5281/zenodo.17572275#StandardNameTable> a ssno:StandardNameTable ;
+    ssno:dataset <https://doi.org/10.5281/zenodo.17572275> .
+
+"""
+            g1 = rdflib.Graph().parse(data=ttl, format="ttl")
+            actual_ttl = h5.serialize("ttl", structural=False, file_uri=f"https://example.org#")
+            g2 = rdflib.Graph().parse(data=actual_ttl,
+                                      format="ttl")
+            g1ttl = g1.serialize(format="ttl")
+            g2ttl = g2.serialize(format="ttl")
+            self.assertEqual(g1ttl, g2ttl)
+            # self.assertEqual(ttl,
+            #                  h5.serialize("ttl", structural=False, file_uri="https://example.org#"))
