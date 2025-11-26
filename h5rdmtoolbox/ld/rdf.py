@@ -729,6 +729,14 @@ class FileIRIDict(Dict):
     def object(self):
         return self[RDF_FILE_OBJECT_ATTR_NAME]
 
+    @object.deleter
+    def object(self):
+        iri_data_data = self._attr.get(RDF_FILE_OBJECT_ATTR_NAME, None)
+        if iri_data_data is None:
+            iri_data_data = {}
+        iri_data_data.pop(self._attr_name, None)
+        self._attr[RDF_FILE_OBJECT_ATTR_NAME] = iri_data_data
+
     @object.setter
     def object(self, value):
         set_object(attr=self._attr,

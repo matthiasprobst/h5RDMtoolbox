@@ -7,6 +7,7 @@ import ontolutils
 import rdflib
 import ssnolib
 from ontolutils import namespaces, urirefs, Thing
+from ontolutils.ex import dcat
 from ontolutils.namespacelib import M4I
 from ontolutils.namespacelib import SCHEMA
 from rdflib import DCAT
@@ -861,3 +862,36 @@ WHERE {
             bindings = res.bindings
             self.assertEqual(len(bindings), 1)
             self.assertEqual(str(bindings[0][rdflib.Variable("relation")]), "https://orcid.org/0000-0001-8729-0482")
+
+    def test_setting_nested_objects(self):
+        with h5tbx.File() as h5:
+            h5.attrs["snt"] = "123"
+            h5.frdf["snt"].predicate = "https://matthiasprobst.github.io/ssno#usesStandardNameTable"
+            h5.frdf["snt"].object = "https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld"
+            del h5.frdf["snt"].object
+            h5.frdf["snt"].object = ssnolib.StandardNameTable(
+                id="https://doi.org/10.5281/zenodo.17572275#StandardNameTable",
+                dataset=dcat.Dataset(
+                    id="https://doi.org/10.5281/zenodo.17572275",
+                    distribution=dcat.Distribution(
+                        id="https://doi.org/10.5281/zenodo.17572275#Distribution",
+                        download_URL="https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld"
+                    )
+                )
+            )
+            self.assertEqual("""@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix ssno: <https://matthiasprobst.github.io/ssno#> .
+
+<https://doi.org/10.5281/zenodo.17572275> a dcat:Dataset ;
+    dcat:distribution <https://doi.org/10.5281/zenodo.17572275#Distribution> .
+
+<https://doi.org/10.5281/zenodo.17572275#Distribution> a dcat:Distribution ;
+    dcat:downloadURL <https://zenodo.org/records/17572275/files/opencefadb_standard_name_table.jsonld> .
+
+<https://doi.org/10.5281/zenodo.17572275#StandardNameTable> a ssno:StandardNameTable ;
+    ssno:dataset <https://doi.org/10.5281/zenodo.17572275> .
+
+[] ssno:usesStandardNameTable <https://doi.org/10.5281/zenodo.17572275#StandardNameTable> .
+
+""",
+                             h5.serialize("ttl", structural=False))
