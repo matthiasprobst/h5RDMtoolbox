@@ -902,5 +902,3 @@ WHERE {
             g1ttl = g1.serialize(format="ttl")
             g2ttl = g2.serialize(format="ttl")
             self.assertEqual(g1ttl, g2ttl)
-            # self.assertEqual(ttl,
-            #                  h5.serialize("ttl", structural=False, file_uri="https://example.org#"))
