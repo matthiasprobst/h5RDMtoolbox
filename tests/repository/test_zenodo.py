@@ -639,7 +639,7 @@ class TestZenodo(unittest.TestCase):
 
         old_rec_id = z.rec_id
 
-        # z.delete()
+        z.delete()
 
         with self.assertRaises(ValueError):
             _ = zenodo.ZenodoRecord('123123123123', sandbox=True)
