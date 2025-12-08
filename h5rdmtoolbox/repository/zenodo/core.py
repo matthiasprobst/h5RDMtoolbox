@@ -203,15 +203,26 @@ class ZenodoRecord(RepositoryInterface):
         """Get the access token for the Zenodo API. This is needed to upload files."""
         return get_api_token(sandbox=self.sandbox, env_var_name=self.env_name_for_token)
 
-    def _get(self):
+    def _get(self, authenticate: bool = False):
+        """Get the deposit metadata as JSON. Using authenticate=True enforces authentication."""
         url = f"{self.depositions_url}/{self.rec_id}"
-        access_token = self.access_token
-        r = requests.get(url, params={"access_token": access_token})
+
+        if authenticate:
+            access_token = self.access_token
+            r = requests.get(url, params={"access_token": access_token})
+            r.raise_for_status()
+            return r.json()
+
+        record_url = url.replace("deposit/depositions/", "records/")
+        r = requests.get(record_url)
+        if r.status_code == 404:
+            access_token = self.access_token
+            r = requests.get(url, params={"access_token": access_token})
         r.raise_for_status()
         return r.json()
 
-    def get_metadata(self) -> Dict:
-        return self._get()['metadata']
+    def get_metadata(self, authenticate=False) -> Dict:
+        return self._get(authenticate=authenticate)['metadata']
 
     def set_metadata(self, metadata: Union[Dict, Metadata]):
         """update the metadata of the deposit"""
@@ -247,8 +258,13 @@ class ZenodoRecord(RepositoryInterface):
 
     def exists(self) -> bool:
         """Check if the deposit exists on Zenodo. Note, that only published records are detected!"""
-        resp = requests.get(self.record_url, params={'access_token': self.access_token})
-        return resp.ok
+        url = f"{self.depositions_url}/{self.rec_id}"
+        record_url = url.replace("deposit/depositions/", "records/")
+        r = requests.get(record_url)
+        if r.status_code == 404:
+            access_token = self.access_token
+            r = requests.get(url, params={"access_token": access_token})
+        return r.ok
 
     def is_published(self) -> bool:
         """Check if the deposit is published."""
@@ -268,6 +284,19 @@ class ZenodoRecord(RepositoryInterface):
             return url
 
         def _parse(data: Dict):
+            filename = data.get("filename", None)
+            if filename is None:
+                return dict(
+                    download_url=_parse_download_url(data['links']['self'], data['key']),
+                    access_url=f"https://doi.org/{self.get_doi()}",
+                    name=data["key"],
+                    media_type=_get_media_type(data.get('key')),
+                    identifier=data.get('id', None),
+                    identifier_url=None,
+                    size=data.get('size', None),
+                    checksum=data.get('checksum').strip("md5:") if data.get('checksum') else None,
+                    checksum_algorithm=data.get('checksum_algorithm', "md5"),
+                )
             return dict(
                 download_url=_parse_download_url(data['links']['download'], data['filename']),
                 access_url=f"https://doi.org/{self.get_doi()}",
@@ -343,10 +372,11 @@ class ZenodoRecord(RepositoryInterface):
         if new_version_string is not None and increase_part is not None:
             raise ValueError('Only one of new_version_string or increase_part must be provided.')
         if increase_part is not None:
-            new_version_string = _bump_version(self.get_metadata()['version'], increase_part)
+            metadata = self._get(authenticate=True)["metadata"]
+            new_version_string = _bump_version(metadata['version'], increase_part)
 
         self.unlock()
-        jdata = self._get()
+        jdata = self._get(authenticate=True)
 
         curr_version = Version(jdata['metadata']['version'])
         new_version = Version(new_version_string)
@@ -364,7 +394,7 @@ class ZenodoRecord(RepositoryInterface):
 
         new_record = copy.deepcopy(self)
         new_record.rec_id = _id
-        current_metadata = new_record.get_metadata()
+        current_metadata = new_record.get_metadata(authenticate=True)
         current_metadata["version"] = str(new_version)
         new_record.set_metadata(current_metadata)
         return new_record
@@ -402,7 +432,7 @@ class ZenodoRecord(RepositoryInterface):
         # Fallback: try to refresh deposit data (may still work) to get id
         if rec_id is None:
             try:
-                jdata = self._get()
+                jdata = self._get(authenticate=True)
                 rec_id = jdata.get("id")
             except Exception:
                 rec_id = None
@@ -424,13 +454,15 @@ class ZenodoRecord(RepositoryInterface):
         if not md:
             raise ValueError("No metadata found in the record.")
 
-        license_ = md.get("license") or None
+        license_ = md.get("license", None)
+        if isinstance(license_, dict):
+            license_ = license_["id"]
         creators = md.get("creators") or []
         keywords = md.get("keywords") or []
         doi = md.get("doi")
         landing = record.get("links", {}).get("self")
 
-        publisher = record["metadata"].get("imprint_publisher", None)
+        publisher = md.get("imprint_publisher", None)
         if publisher:
             if publisher.lower() == "zenodo":
                 publisher = foaf.Organization(
@@ -465,16 +497,17 @@ class ZenodoRecord(RepositoryInterface):
             key = f.get("key") or f.get("filename") or "file"
             doi = doi or str(record.get("doi"))
             title = key
-            media_type = pathlib.Path(f.get("filename")).suffix
-            size = f.get("filesize")
+            media_type = pathlib.Path(key).suffix
+            size = f.get("filesize", f.get("size", None))
             links = f.get("links", {})
             access_url = links.get("self") or record.get("links", {}).get("files")
-            download_url = links.get("download")
+            download_url = links.get("download", links.get("self"))
             if record["submitted"]:
                 download_url = download_url.replace("/draft/files", "/files")
             checksum_value = f.get("checksum")
             if checksum_value:
-                checksum_value = f"md5:{checksum_value}"
+                if not checksum_value.startswith(("md5:", "sha1:", "sha256:", "sha512:")):
+                    checksum_value = f"md5:{checksum_value}"
             checksum_obj = _spdx_checksum_from_zenodo(checksum_value)
 
             dist = {
@@ -507,7 +540,7 @@ class ZenodoRecord(RepositoryInterface):
             "distribution": distributions,
         }
         dcat_dataset = dcat.Dataset.model_validate(
-            dataset
+            remove_none(dataset)
         )
         return dcat_dataset
 
@@ -516,7 +549,7 @@ class ZenodoRecord(RepositoryInterface):
 
     def discard(self):
         """Discard the latest action, e.g. creating a new version"""
-        jdata = self._get()
+        jdata = self._get(authenticate=True)
         r = requests.post(jdata['links']['discard'],
                           params={'access_token': self.access_token})
         r.raise_for_status()
@@ -532,7 +565,7 @@ class ZenodoRecord(RepositoryInterface):
         APIError
             If the record cannot be unlocked because permission is missing.
         """
-        edit_url = self._get()['links'].get('edit', None)
+        edit_url = self._get(authenticate=True)['links'].get('edit', None)
         if edit_url is None:
             raise APIError('Unable to unlock the record. Please check your permission of the Zenodo API Token.')
 
@@ -567,7 +600,7 @@ class ZenodoRecord(RepositoryInterface):
         #     r.raise_for_status()
 
         # https://developers.zenodo.org/?python#quickstart-upload
-        bucket_url = self._get()["links"]["bucket"]
+        bucket_url = self._get(authenticate=True)["links"]["bucket"]
         logger.debug(f'adding file "{filename}" to record "{self.rec_id}"')
         with open(filename, "rb") as fp:
             r = requests.put(f"{bucket_url}/{filename.name}",
@@ -589,8 +622,14 @@ class ZenodoRecord(RepositoryInterface):
         else:
             target_filename = pathlib.Path(target_filename)
 
-        export_url = f"{self._get()['links']['html']}/export/{fmt}"
+        _links = self._get()["links"]
+        _html_url = _links.get("html", _links.get("self_html"))
+        export_url = f"{_html_url}/export/{fmt}"
+
         r = requests.get(export_url)
+        if r.status_code == 404:
+            access_token = self.access_token
+            r = requests.get(export_url, params={"access_token": access_token})
         r.raise_for_status()
         with open(target_filename, 'wb') as f:
             f.write(r.content)
@@ -614,3 +653,11 @@ class ZenodoRecord(RepositoryInterface):
                                     'owl': 'http://www.w3.org/2002/07/owl#',
                                     'dctype': 'http://purl.org/dc/dcmitype/'
                                     })
+
+
+def remove_none(obj):
+    if isinstance(obj, dict):
+        return {k: remove_none(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [remove_none(v) for v in obj if v is not None]
+    return obj

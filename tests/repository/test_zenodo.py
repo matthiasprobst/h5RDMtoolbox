@@ -69,7 +69,7 @@ class TestZenodo(unittest.TestCase):
         self.assertTrue(fname.exists())
 
         self.assertIsInstance(z.get_jsonld(), str)
-        print(z.get_jsonld())
+        rdflib.Graph().parse(data=json.loads(z.get_jsonld()), format="json-ld")  # should not raise an error
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
@@ -529,7 +529,7 @@ class TestZenodo(unittest.TestCase):
         self.assertIn('prereserve_doi', z.get_metadata())
         self.assertEqual('open', z.get_metadata()['access_right'])
         self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
-        self.assertFalse(z.exists())  # not yet published!
+        self.assertTrue(z.exists())  # exists, but not yet published!
         self.assertFalse(z.is_published())
         self.assertEqual(z.title, 'No title')
 
@@ -620,9 +620,9 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
+        self.assertTrue(z.exists())
+        z.delete()
         self.assertFalse(z.exists())
-        # z.delete()
-        # self.assertFalse(z.exists())
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason="Nur auf Python 3.9 und 3.13 testen")
@@ -634,7 +634,7 @@ class TestZenodo(unittest.TestCase):
         self.assertIn('prereserve_doi', z.get_metadata())
         self.assertEqual('open', z.get_metadata()['access_right'])
         self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
-        self.assertFalse(z.exists())  # not yet published!
+        self.assertTrue(z.exists())  # exists, but not yet published!
         self.assertFalse(z.is_published())
 
         old_rec_id = z.rec_id
@@ -723,6 +723,17 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
+        self.assertTrue(z.exists())
+        z.delete()
         self.assertFalse(z.exists())
-        # z.delete()
-        # self.assertFalse(z.exists())
+
+    def test_download_public_zenodo(self):
+        z = zenodo.ZenodoRecord(17271932)
+        ds = z.as_dcat_dataset()
+        checksum_values = [dist.checksum.checksumValue for dist in ds.distribution]
+        self.assertListEqual(
+            sorted(['e88359a859c72af4eefd7734aa77483d',
+                    'e23f2b98e4bfebacf5f3818208dcf1b6',
+                    '075eeffcfb3008f7f62332cea0e69662']),
+            sorted(checksum_values)
+        )

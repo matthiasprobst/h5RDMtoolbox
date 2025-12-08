@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.5.4
+
+- fix downloading public zenodo records (don't require authentication token)
+
 ## v2.5.3
 
 - fix handling multiple RDF type metadata at file level

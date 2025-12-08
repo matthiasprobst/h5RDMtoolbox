@@ -53,7 +53,12 @@ def download_file(file_url,
             except ValueError:
                 raise ValueError(f"Unsupported checksum algorithm: {checksum_algorithm}")
 
-        response = requests.get(file_url, stream=True, params={'access_token': access_token})
+        try:
+            response = requests.get(file_url, stream=True)
+            if response.status_code == 403:
+                response = requests.get(file_url, stream=True, params={'access_token': access_token})
+        except requests.RequestException as e:
+            response = requests.get(file_url, stream=True, params={'access_token': access_token})
         response.raise_for_status()
 
         chunk_size = 1024  # Define chunk size for download
@@ -101,7 +106,11 @@ def download_file(file_url,
         #                      f'Expected {checksum_algorithm} checksum: {checksum}, '
         #                      f'but got: {file_checksum}')
     else:
-        r = requests.get(file_url, params={'access_token': access_token})
+        try:
+            r = requests.get(file_url)
+        except requests.RequestException as e:
+            r = requests.get(file_url, params={'access_token': access_token})
+
         r.raise_for_status()
 
         try:
@@ -116,7 +125,10 @@ def download_file(file_url,
         with open(target_filename, 'wb') as file:
             file.write(r.content)
         if links_content:
-            _content_response = requests.get(links_content, params={'access_token': access_token})
+            try:
+                _content_response = requests.get(links_content)
+            except requests.RequestException:
+                _content_response = requests.get(links_content, params={'access_token': access_token})
             if _content_response.ok:
                 with open(target_filename, 'wb') as file:
                     file.write(_content_response.content)
