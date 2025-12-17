@@ -25,7 +25,7 @@ from . import get_config, get_ureg
 from . import user
 from ._version import __version__
 from .ld import rdf
-from .user import USER_CACHE_DIR, USER_DATA_DIR
+from .user import CACHE_DIR, USER_DATA_DIR
 
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
@@ -608,7 +608,7 @@ class DownloadFileManager:
         return cls._instance
 
     def __init__(self):
-        self.file_directory = USER_CACHE_DIR
+        self.file_directory = CACHE_DIR
         self.file_directory.mkdir(parents=True, exist_ok=True)
         self.registry: Dict[str, Dict[str, str]] = self.load_registry()
         atexit.register(self.save_registry)

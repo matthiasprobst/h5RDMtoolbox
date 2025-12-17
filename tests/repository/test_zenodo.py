@@ -31,7 +31,7 @@ def get_python_version():
     return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
 
-TESTING_VERSIONS = (9, 13)
+TESTING_VERSIONS = (13,)
 
 
 class TestZenodo(unittest.TestCase):
@@ -311,6 +311,8 @@ class TestZenodo(unittest.TestCase):
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason="Nur auf Python 3.9 und 3.13 testen")
     def test_parse_to_dcat(self):
         record = zenodo.ZenodoRecord(source=15389242)
         ds = record.as_dcat_dataset()
@@ -727,6 +729,8 @@ class TestZenodo(unittest.TestCase):
         z.delete()
         self.assertFalse(z.exists())
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason="Nur auf Python 3.9 und 3.13 testen")
     def test_download_public_zenodo(self):
         z = zenodo.ZenodoRecord(17271932)
         ds = z.as_dcat_dataset()

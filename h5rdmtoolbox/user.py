@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 import time
@@ -11,15 +12,28 @@ from ._version import __version__
 
 USER_LOG_DIR = pathlib.Path(appdirs.user_log_dir('h5rdmtoolbox', version=__version__))
 USER_DATA_DIR = pathlib.Path(appdirs.user_data_dir('h5rdmtoolbox', version=__version__))
-USER_CACHE_DIR = pathlib.Path(appdirs.user_cache_dir('h5rdmtoolbox', version=__version__))
+CACHE_DIR = pathlib.Path(appdirs.user_cache_dir('h5rdmtoolbox'))
 USER_LOG_DIR.mkdir(parents=True, exist_ok=True)
 USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
-USER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+USER_CACHE_DIR = CACHE_DIR  # deprecated name
 
 _filecounter = count()
 _dircounter = count()
 
 _now = time.time()
+
+
+def default_cache_dir(__version__: str) -> pathlib.Path:
+    # Your current approach
+    return USER_DATA_DIR / "cache"
+
+
+def cache_dir(__version__: str) -> pathlib.Path:
+    override = os.environ.get("H5RDMTOOLBOX_CACHE_DIR")
+    if override:
+        return pathlib.Path(override)
+    return default_cache_dir(__version__)
 
 
 class DirManger:

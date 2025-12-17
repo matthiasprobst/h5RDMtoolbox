@@ -1,5 +1,6 @@
 import pathlib
 import types
+from typing import Optional
 from typing import Union, Dict
 
 import pint
@@ -14,7 +15,7 @@ from typing_extensions import Annotated
 from h5rdmtoolbox import get_ureg
 from h5rdmtoolbox.errors import StandardAttributeError
 
-_snt = None
+_snt: Optional[StandardNameTable] = None
 
 inverse_qudt_lookup = {v: k for k, v in qudt_lookup.items()}
 
@@ -69,6 +70,7 @@ def __validate_standard_name(value, handler, info) -> str:
     def __sn_h5attr_repr__(self):
         if isinstance(value, str):
             return str(value)
+        return None
 
     if info.context:
         parent = info.context.get('parent', None)

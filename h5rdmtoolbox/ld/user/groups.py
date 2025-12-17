@@ -17,6 +17,7 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
 
     group_uri = get_obj_bnode(group, blank_node_iri_base)
     rdf_manager = RDFManager(group.attrs)
+    parent_rdf_manager = RDFManager(group.parent.attrs) if group.parent is not None else None
     rdf_type = rdf_manager.type
     rdf_subject = rdf_manager.subject
 
@@ -27,6 +28,8 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
         rdf_predicate = rdf_manager.predicate
         if rdf_predicate.get("SELF", None):
             graph.add((group_uri, rdflib.URIRef(rdf_predicate["SELF"]), rdflib.URIRef(rdf_subject)))
+            if parent_rdf_manager.subject:
+                graph.add((rdflib.URIRef(parent_rdf_manager.subject), rdflib.URIRef(rdf_predicate["SELF"]), rdflib.URIRef(rdf_subject)))
         rdf_file_predicate = rdf_manager.file_predicate
         if rdf_file_predicate is not None:
             file_uri = get_file_bnode(group.file, blank_node_iri_base)

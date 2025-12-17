@@ -26,8 +26,8 @@ def download_file(file_url,
         return existing_filename
 
     if target_folder is None:
-        from ..user import USER_CACHE_DIR
-        target_folder = USER_CACHE_DIR
+        from ..user import CACHE_DIR
+        target_folder = CACHE_DIR
     else:
         logger.debug(f'A target folder was specified. Downloading file to this folder: {target_folder}')
         target_folder = pathlib.Path(target_folder)
