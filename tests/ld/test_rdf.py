@@ -686,3 +686,43 @@ local:SubjectNode a local:BNodeType1,
                  "ssno": "https://matthiasprobst.github.io/ssno#",
                  "ex": "https://example.org/"}
             )
+
+    def test_storing_sensor(self):
+        from rdflib.namespace import SOSA, SSN
+        SSNSystem = rdflib.Namespace("http://www.w3.org/ns/ssn/systems/")
+        SIS = rdflib.Namespace("http://www.w3.org/ns/ssn/systems/")
+        with h5tbx.File() as h5:
+            sensor_grp = h5.create_group("sensor_1")
+            sensor_grp.rdf.subject = "http://example.org/PressureSensor"
+            sensor_grp.rdf.type = SOSA.Sensor
+
+            sensor_data = sensor_grp.create_group("data")
+            sensor_data.rdf.subject = "https://example.org/SystemCapability"
+            sensor_data.rdf.type = SSNSystem.SystemCapability
+            sensor_data.attrs["property", SSN.forProperty] = "Pressure"
+
+            # measurement_range = sensor_grp.create_group("measurement_range")
+            # measurement_range.rdf.subject = "https://example.org/MeasurementRage"
+            # measurement_range.rdf.type = SSNSystem.MeasurementRange
+            # measurement_range.attrs["label", rdflib.RDFS.label] = "Measurement range@en"
+            measurement_range = sensor_data.create_dataset("range", data=[0, 250], dtype='f4')
+            measurement_range.rdf.type = SSNSystem.MeasurementRange
+            measurement_range.rdf.subject = "https://example.org/MeasurementRage"
+            measurement_range.attrs["unit", M4I.hasUnit] = "https://qudt.org/vocab/unit/PASCAL"
+            measurement_range.attrs["label", rdflib.RDFS.label] = "Measurement range@en"
+
+            sensor_grp.attrs["hasSystemCapability", SSN.hasSystemCapability] = sensor_data
+            sensor_grp.rdf.object["hasSystemCapability"] = sensor_data.rdf.subject
+            sensor_data.attrs["hasSystemProperty", SSN.hasSystemProperty] = measurement_range
+            sensor_data.rdf.object["hasSystemProperty"] = measurement_range.rdf.subject
+
+            print(h5.serialize("ttl", structural=False))
+
+            # uncertainty  = sensor_grp.create_group("uncertainty")
+            # uncertainty.attrs["label", rdflib.RDFS.label] = "Standard uncertainty from max. linear error (rectangular)@en"
+            # uncertainty.rdf.subject = SIS.Accuracy
+            #
+            #
+            #
+            # sensor_grp.attrs["label", rdflib.RDFS.label] = "Temperature Sensor"
+            # sensor_grp.attrs["observes", SOSA.observes] = "Temperature"
