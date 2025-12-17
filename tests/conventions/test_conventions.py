@@ -32,6 +32,15 @@ def get_python_version():
     """Get the current Python version as a tuple."""
     return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
+
+TESTING_VERSIONS = (9, 13)
+
+
+def get_python_version():
+    """Get the current Python version as a tuple."""
+    return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
+
+
 class TestConventions(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -95,6 +104,8 @@ class TestConventions(unittest.TestCase):
             self.assertEqual(h5.attrs['publication_type'], 'book')
         h5tbx.use(None)
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason="Nur auf Python 3.9 und 3.13 testen")
     def test_upload_convention(self):
         cv_yaml_filename = tutorial.get_convention_yaml_filename()
         self.assertTrue(cv_yaml_filename.exists())

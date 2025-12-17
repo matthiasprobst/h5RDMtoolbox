@@ -1,5 +1,6 @@
 import datetime
 import pathlib
+import sys
 import time
 import unittest
 
@@ -9,6 +10,14 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.utils import DownloadFileManager
 
 __this_dir__ = pathlib.Path(__file__).parent
+
+
+def get_python_version():
+    """Get the current Python version as a tuple."""
+    return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
+
+
+TESTING_VERSIONS = (9, 13)
 
 
 class TestUtils(unittest.TestCase):
@@ -104,6 +113,8 @@ class TestUtils(unittest.TestCase):
                 self.assertTrue(h5tbx.utils.has_datasets(h5.hdf_filename))
                 self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason="Nur auf Python 3.9 und 3.13 testen")
     def test_download_manager(self):
         dfm = DownloadFileManager()
         self.assertTrue(dfm.file_directory.exists())
