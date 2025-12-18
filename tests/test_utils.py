@@ -114,7 +114,7 @@ class TestUtils(unittest.TestCase):
                 self.assertTrue(h5tbx.utils.has_groups(h5.hdf_filename))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_download_manager(self):
         dfm = DownloadFileManager()
         self.assertTrue(dfm.file_directory.exists())

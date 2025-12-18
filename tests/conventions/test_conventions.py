@@ -99,7 +99,7 @@ class TestConventions(unittest.TestCase):
         h5tbx.use(None)
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_upload_convention(self):
         cv_yaml_filename = tutorial.get_convention_yaml_filename()
         self.assertTrue(cv_yaml_filename.exists())
@@ -224,7 +224,7 @@ def validate_f1(a, b, c=3, d=2):
         self.assertIn('comment', cv.properties[h5tbx.Group])
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_overwrite_existing_file(self):
         if self.connected:
             # delete an existing convention like this first:
@@ -493,7 +493,7 @@ def validate_f1(a, b, c=3, d=2):
             self.assertEqual(float(ds[()].data), 1 + 1000)
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_from_zenodo(self):
         if self.connected:
             # delete an existing convention like this first:
