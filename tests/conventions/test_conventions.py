@@ -135,6 +135,9 @@ class TestConventions(unittest.TestCase):
 
         zsr.delete()
 
+
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_delete(self):
         cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
         self.assertTrue(cv.name in sys.modules)
@@ -215,6 +218,9 @@ def validate_f1(a, b, c=3, d=2):
                 self.assertEqual('m/s', str(h5.test.units))
         self.assertEqual('h5py', h5tbx.convention.get_current_convention().name)
 
+
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_overload_standard_attributes(self):
         yaml_filename = h5tbx.tutorial.get_convention_yaml_filename()
         cv = h5tbx.convention.Convention.from_yaml(yaml_filename, overwrite=True)
@@ -356,6 +362,9 @@ def validate_f1(a, b, c=3, d=2):
         with self.assertRaises(h5rdmtoolbox.errors.ConventionNotFound):
             h5tbx.use('invalid_convention')
 
+
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_from_yaml(self):
         with open(h5tbx.utils.generate_temporary_filename(suffix='.yaml'), 'w') as f:
             f.write("""name: test""")
@@ -533,6 +542,9 @@ def validate_f1(a, b, c=3, d=2):
                 self.assertNotEqual(h5.standard_attributes['comment'].description,
                                     h5['test'].standard_attributes['comment'].description)
 
+
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_standard_name_table_as_file(self):
         cv = h5tbx.Convention.from_yaml(
             __this_dir__ / "test_convention.yaml",
@@ -550,6 +562,8 @@ def validate_f1(a, b, c=3, d=2):
                 standard_name_table=f"file://{snt_file}") as h5:
             isinstance(h5.standard_name_table, StandardNameTable)
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_alternative_attribute(self):
         h5tbx.Convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
         with h5tbx.use('h5rdmtoolbox-tutorial-convention'):
@@ -559,6 +573,8 @@ def validate_f1(a, b, c=3, d=2):
                 ds = h5.create_dataset("u", data=0.0, long_name="x-velocity")
                 self.assertEqual(ds.long_name, "x-velocity")
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_standard_attributes_and_rdf(self):
         h5tbx.Convention.from_yaml(tutorial.get_convention_yaml_filename(), overwrite=True)
         with h5tbx.use('h5rdmtoolbox-tutorial-convention'):
@@ -582,6 +598,8 @@ def validate_f1(a, b, c=3, d=2):
         d = DefaultValue('$empty')
         self.assertEqual(d.value, DefaultValue.EMPTY)
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_validate_convention(self):
         cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml')
         cv.register()
@@ -608,6 +626,8 @@ def validate_f1(a, b, c=3, d=2):
         ma = MissingAttribute('/vel', 'units')
         self.assertEqual(str(ma), 'Attribute "units" is missing in "/vel".')
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_dates(self):
         cv = h5tbx.convention.from_yaml(
             __this_dir__ / 'date_convention.yaml', overwrite=True
@@ -632,6 +652,8 @@ def validate_f1(a, b, c=3, d=2):
             self.assertIsInstance(h5.specific_date.date, datetime)
             self.assertEqual(h5.specific_date.dateType, 'Created')
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_engmeta_example(self):
         cv = h5tbx.convention.from_yaml(__this_dir__ / 'EngMeta.yaml', overwrite=True)
         h5tbx.use(cv)
@@ -669,6 +691,8 @@ def validate_f1(a, b, c=3, d=2):
                             title='Test file to demonstrate usage of EngMeta schema') as h5:
                 pass
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_read_invalid_attribute(self):
         cv = h5tbx.convention.Convention.from_yaml(__this_dir__ / 'simple_cv.yaml', overwrite=True)
         # h5tbx.use(None)
