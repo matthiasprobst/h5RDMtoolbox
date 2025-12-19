@@ -55,6 +55,7 @@ def has_internet_connection(timeout: int = 5) -> bool:
 
 
 def _request_with_backoff(method, url, session=None, max_retries=8, timeout=30, **kwargs):
+    r = None
     s = session or requests.Session()
     for attempt in range(max_retries + 1):
         r = s.request(method, url, timeout=timeout, **kwargs)
