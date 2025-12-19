@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import re
 import time
 import uuid
@@ -25,10 +26,11 @@ from . import get_config, get_ureg
 from . import user
 from ._version import __version__
 from .ld import rdf
-from .user import USER_CACHE_DIR, USER_DATA_DIR
+from .user import CACHE_DIR, USER_DATA_DIR
 
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
+RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
 def get_filesize(filename: Union[str, pathlib.Path]) -> int:
@@ -52,12 +54,44 @@ def has_internet_connection(timeout: int = 5) -> bool:
         return False
 
 
+def _request_with_backoff(method, url, session=None, max_retries=8, timeout=30, **kwargs):
+    r = None
+    s = session or requests.Session()
+    for attempt in range(max_retries + 1):
+        r = s.request(method, url, timeout=timeout, **kwargs)
+
+        if r.status_code not in RETRY_STATUS:
+            return r
+
+        # Prefer server guidance
+        retry_after = r.headers.get("Retry-After")
+        if retry_after is not None:
+            try:
+                sleep_s = float(retry_after)
+            except ValueError:
+                sleep_s = None
+        else:
+            sleep_s = None
+
+        if sleep_s is None:
+            # Exponential backoff with jitter (full jitter)
+            base = min(60.0, 0.5 * (2 ** attempt))
+            sleep_s = random.uniform(0, base)
+
+        if attempt == max_retries:
+            return r
+
+        time.sleep(sleep_s)
+
+    return r
+
+
 def _download_file(url,
                    known_hash,
                    target: Optional[pathlib.Path] = None,
                    params: Optional[Dict] = None) -> pathlib.Path:
     """Download a file from a URL and check its hash"""
-    response = requests.get(url, stream=True, params=params)
+    response = _request_with_backoff('GET', url, params=params, stream=True)
     if response.status_code == 200:
         content = response.content
 
@@ -560,7 +594,8 @@ def download_context(url_source: Union[HttpUrl, List[HttpUrl]], force_download: 
             logger.debug(f'Downloading context file from {_url} to {context_file}')
             try:
                 with open(context_file, 'wb') as f:
-                    f.write(requests.get(_url).content)
+                    r = _request_with_backoff("GET", _url)
+                    f.write(r.content)
             except requests.RequestException:
                 raise RuntimeError(f'Failed to download context file from {_url}')
         filenames.append(str(context_file))
@@ -608,7 +643,7 @@ class DownloadFileManager:
         return cls._instance
 
     def __init__(self):
-        self.file_directory = USER_CACHE_DIR
+        self.file_directory = CACHE_DIR
         self.file_directory.mkdir(parents=True, exist_ok=True)
         self.registry: Dict[str, Dict[str, str]] = self.load_registry()
         atexit.register(self.save_registry)

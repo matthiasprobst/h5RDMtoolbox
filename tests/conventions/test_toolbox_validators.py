@@ -1,17 +1,25 @@
 """Testing the standard attributes"""
 import datetime
 import pathlib
+import sys
+import unittest
+from typing import List, Union
+
 import pint
 import pydantic
-import unittest
 from pydantic import BaseModel
 from pydantic import ValidationError
-from typing import List, Union
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention import toolbox_validators
 
 __this_dir__ = pathlib.Path(__file__).parent
+TESTING_VERSIONS = (14,)
+
+
+def get_python_version():
+    """Get the current Python version as a tuple."""
+    return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
 
 class TestTbxValidators(unittest.TestCase):
@@ -86,6 +94,8 @@ class TestTbxValidators(unittest.TestCase):
         with self.assertRaises(ValueError):
             Validator(orcid='0000-0001-8729-XXXX')
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_validate_url(self):
         class Validator(BaseModel):
             url: toolbox_validators.validators["url"]

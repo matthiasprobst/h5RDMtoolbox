@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import ontolutils
 import rdflib
-from ontolutils.classes.utils import split_URIRef
+from ontolutils.classes.utils import split_uri
 from ontolutils.namespacelib.hdf5 import HDF5
 from pydantic import HttpUrl
 from rdflib import Graph, URIRef, BNode, XSD, RDF, SKOS
@@ -197,7 +197,10 @@ def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef,
         import_context = {}
 
     def _process_attr_predicate(_attr_predicate) -> Tuple[URIRef, Dict]:
-        ns, _key = split_URIRef(_attr_predicate)
+        try:
+            ns, _key = split_uri(_attr_predicate)
+        except ValueError:
+            ns, _key = None, _attr_predicate
         known_prefix = CONTEXT_PREFIXES_INV.get(ns, None)
         if known_prefix:
             context[known_prefix] = ns
@@ -245,7 +248,7 @@ def process_rdf_key(rdf_name, rdf_value, context, resolve_keys) -> Tuple[URIRef,
 
         # the candidate may already be a full IRI
         # we need to guess the prefix:
-        ns_prefix, key = split_URIRef(iri_candidate)
+        ns_prefix, key = split_uri(iri_candidate)
         # search for ns_prefix in context
         # attr_predicate_uri = _get_iri_from_prefix(ns_prefix, context)  # prefix, prefix_iri
         prefix, prefix_iri = _get_iri_from_prefix(ns_prefix, context)  # prefix, prefix_iri
@@ -339,7 +342,7 @@ def to_hdf(grp: H5TbxGroup,
 
                 if label is None:  # still None...
                     _type = graph_entry.get('@type', None)
-                    ns, label = split_URIRef(_type)
+                    ns, label = split_uri(_type)
 
             i = 1
             while label in grp:
@@ -366,9 +369,11 @@ def to_hdf(grp: H5TbxGroup,
             grp.rdf.type = resolve_iri(v, ctx)
             continue
         else:
-            # spit predicate:
-            ns_predicate, value_predicate = split_URIRef(k)
-
+            # spit predicate:#
+            try:
+                ns_predicate, value_predicate = split_uri(k)
+            except ValueError as _:
+                ns_predicate, value_predicate = None, k
             # ns_predicate can be something like None, "schema" or "https://schema.org/"
             if ns_predicate is None:
                 _iri = ctx.expand(k)
@@ -403,12 +408,17 @@ def to_hdf(grp: H5TbxGroup,
                         else:
                             label = k
                     else:
-                        ns, label = split_URIRef(_label)
-
+                        try:
+                            ns, label = split_uri(_label)
+                        except ValueError:
+                            ns, label = None, _label
                     if label in grp:
                         sub_h5obj = grp[label]
                     else:
-                        ns_predicate, rdf_predicate = split_URIRef(k)
+                        try:
+                            ns_predicate, rdf_predicate = split_uri(k)
+                        except ValueError:
+                            ns_predicate, rdf_predicate = None, k
                         if ns_predicate is None:
                             rdf_predicate = data_context.get(k, None)
                         elif ns_predicate.startswith('http'):
@@ -424,7 +434,10 @@ def to_hdf(grp: H5TbxGroup,
                         sub_h5obj_type = entry.get('@type', None)
 
                         def _is_m4i_num_var(_type: str) -> bool:
-                            ns, key = split_URIRef(_type)
+                            try:
+                                ns, key = split_uri(_type)
+                            except ValueError:
+                                ns, key = None, _type
                             if ns is None:
                                 return False
                             return 'm4i' in ns and key == 'NumericalVariable'
@@ -473,8 +486,10 @@ def to_hdf(grp: H5TbxGroup,
                 if v.startswith('http'):
                     value_object = v
                 else:
-                    ns_object, value_object = split_URIRef(v)
-
+                    try:
+                        ns_object, value_object = split_uri(v)
+                    except ValueError:
+                        ns_object, value_object = None, v
                     if ns_object is None:
                         term = ctx.find_term(ctx.expand(v))
                         if term:
@@ -499,7 +514,8 @@ def to_hdf(grp: H5TbxGroup,
                 grp.rdf.subject = v
                 # grp.attrs.create(name=k, data=v)
             else:
-                grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate, rdf_object=rdf_object)
+                grp.attrs.create(name=value_predicate, data=value_object, rdf_predicate=rdf_predicate,
+                                 rdf_object=rdf_object)
 
 
 def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
@@ -591,7 +607,10 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             file_rdf = obj.frdf.type
             if isinstance(file_rdf, list):
                 for _type in file_rdf:
-                    nsp, key = split_URIRef(_type)
+                    try:
+                        nsp, key = split_uri(_type)
+                    except ValueError:
+                        nsp, key = None, _type
                     ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
                     if ns_iri is not None:
                         _context.update({ns_prefix: ns_iri})
@@ -601,7 +620,10 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             for ak, av in obj.attrs.items():
                 attr_predicate = obj.frdf.predicate.get(ak, None)
                 if attr_predicate is not None:
-                    _namespace, _predicate_name = split_URIRef(attr_predicate)
+                    try:
+                        _namespace, _predicate_name = split_uri(attr_predicate)
+                    except ValueError:
+                        _namespace, _predicate_name = None, attr_predicate
                     if resolve_keys:
                         _rdf_name = _predicate_name
                     else:
@@ -618,7 +640,10 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
                     file_rdf_object = obj.frdf.object.get(ak, None)
                     if file_rdf_object is not None:
-                        _namespace, _object_name = split_URIRef(file_rdf_object)
+                        try:
+                            _namespace, _object_name = split_uri(file_rdf_object)
+                        except ValueError:
+                            _namespace, _object_name = None, file_rdf_object
                         if resolve_keys:
                             _rdf_name = _object_name
                         else:
@@ -660,13 +685,19 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             group_type = obj.rdf.type
             if isinstance(group_type, list):
                 for gs in group_type:
-                    nsp, key = split_URIRef(gs)
+                    try:
+                        nsp, key = split_uri(gs)
+                    except ValueError:
+                        nsp, key = None, gs
                     ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
                     if ns_iri is not None:
                         _context.update({ns_prefix: ns_iri})
                     _add_node(g, (obj_node, RDF.type, rdflib.URIRef(gs)))
             elif group_type is not None:
-                nsp, key = split_URIRef(group_type)
+                try:
+                    nsp, key = split_uri(group_type)
+                except ValueError:
+                    nsp, key = None, group_type
                 ns_prefix, ns_iri = _get_iri_from_prefix(nsp, _context.get('@import', {}).values())
                 if ns_iri is not None:
                     _context.update({ns_prefix: ns_iri})
@@ -687,7 +718,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                         _add_node(g, (dimension_index_node, RDF.type, HDF5.DataspaceDimension))
                         _add_node(g, (chunk_dimension_node, HDF5.dimension, dimension_index_node))
                         _add_node(g, (dimension_index_node, HDF5.size, rdflib.Literal(chunk, datatype=XSD.integer)))
-                        _add_node(g, (dimension_index_node, HDF5.dimensionIndex, rdflib.Literal(ichunk, datatype=XSD.integer)))
+                        _add_node(g, (dimension_index_node, HDF5.dimensionIndex,
+                                      rdflib.Literal(ichunk, datatype=XSD.integer)))
 
                 _add_node(g, (obj_node, HDF5.rank, rdflib.Literal(obj.ndim, datatype=XSD.integer)))
                 _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
@@ -700,7 +732,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                         _add_node(g, (dataspace_dimension_node, RDF.type, HDF5.DataspaceDimension))
                         _add_node(g, (dataspace_node, HDF5.dimension, dataspace_dimension_node))
                         _add_node(g, (dataspace_dimension_node, HDF5.size, rdflib.Literal(dim, datatype=XSD.integer)))
-                        _add_node(g, (dataspace_dimension_node, HDF5.dimensionIndex, rdflib.Literal(idim, datatype=XSD.integer)))
+                        _add_node(g, (dataspace_dimension_node, HDF5.dimensionIndex,
+                                      rdflib.Literal(idim, datatype=XSD.integer)))
                 else:
                     dataspace_node = HDF5.scalarDataspace
                     _add_node(g, (dataspace_node, RDF.type, HDF5.scalarDataspace))
@@ -807,7 +840,10 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             logger.debug(f'Predicate for attribute "{ak}": "{attr_predicate}"')
 
             if attr_predicate is not None:
-                _namespace, _predicate_name = split_URIRef(attr_predicate)
+                try:
+                    _namespace, _predicate_name = split_uri(attr_predicate)
+                except ValueError:
+                    _namespace, _predicate_name = None, attr_predicate
                 if resolve_keys:
                     _rdf_name = _predicate_name
                 else:

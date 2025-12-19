@@ -702,7 +702,21 @@ def from_repo(repo_interface: RepositoryInterface,
         Name of the file to download
     """
     logger.debug(f"Downloading file {name} from repository {repo_interface}")
+
     filename = repo_interface.download_file(name)
+    _suffix = pathlib.Path(name).suffix
+    vfunc_filename = name.split(_suffix, 1)
+    has_vfunc = False
+    if len(vfunc_filename) == 2:
+        vfunc_filename = f'{vfunc_filename[0]}_vfuncs.py'
+        try:
+            downloaded_vfunc_filename = repo_interface.download_file(vfunc_filename)
+            has_vfunc = True
+        except Exception as e:
+            logger.debug(f'No vfuncs file found for {name}: {e}')
+    if has_vfunc:
+        shutil.copy(downloaded_vfunc_filename,
+                    filename.parent / downloaded_vfunc_filename.name)
     logger.debug(f"File downloaded to {filename}. Now loading convention from file.")
     return from_file(filename)
 

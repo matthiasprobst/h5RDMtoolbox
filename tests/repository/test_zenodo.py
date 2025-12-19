@@ -31,7 +31,7 @@ def get_python_version():
     return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
 
-TESTING_VERSIONS = (9, 13)
+TESTING_VERSIONS = (14,)
 
 
 class TestZenodo(unittest.TestCase):
@@ -51,7 +51,7 @@ class TestZenodo(unittest.TestCase):
             bak_ini_filename.unlink()
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_zenodo_from_url(self):
         z = zenodo.ZenodoRecord("https://zenodo.org/records/10428817")
         self.assertEqual(str(z.rec_id), "10428817")
@@ -61,7 +61,7 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(str(z.rec_id), "10428817")
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_zenodo_export(self):
         z = zenodo.ZenodoRecord(10428817)
         fname = z.export(fmt='dcat-ap')
@@ -69,10 +69,10 @@ class TestZenodo(unittest.TestCase):
         self.assertTrue(fname.exists())
 
         self.assertIsInstance(z.get_jsonld(), str)
-        print(z.get_jsonld())
+        rdflib.Graph().parse(data=json.loads(z.get_jsonld()), format="json-ld")  # should not raise an error
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_ZenodoFile(self):
         z = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID)  # an existing repo
         self.assertDictEqual(z._cached_json, {})
@@ -90,7 +90,7 @@ class TestZenodo(unittest.TestCase):
             self.assertIsInstance(file.jsonld(), str)
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_newSandboxImplementation(self):
         """from 1.4.0 on the sandbox can be init from ZenodoRecord"""
         z = zenodo.ZenodoRecord(TutorialSNTZenodoRecordID, sandbox=True)
@@ -98,7 +98,7 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(z.base_url, 'https://sandbox.zenodo.org')
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_ZenodoRecord_without_token(self):
         """remove all info about zenodo api token!"""
         curr_zenodo_api_token = os.environ.pop('ZENODO_API_TOKEN', None)
@@ -119,7 +119,7 @@ class TestZenodo(unittest.TestCase):
             (UserDir['repository'] / 'zenodo.ini.tmpbak').rename(UserDir['repository'] / 'zenodo.ini')
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_creator(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Creator
         with self.assertRaises(ValueError):
@@ -130,7 +130,7 @@ class TestZenodo(unittest.TestCase):
             Creator(affiliation='University of Nowhere')
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_metadata(self):
         from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator
         metadata = Metadata(version='0.1.0-rc.1+build.1',
@@ -215,7 +215,7 @@ class TestZenodo(unittest.TestCase):
                          publication_date='2023-01-01')
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_get_api(self):
         self.assertIsInstance(get_api_token(sandbox=True), str)
 
@@ -249,7 +249,7 @@ class TestZenodo(unittest.TestCase):
             tmp_zenodo_ini_filename.rename(tmp_zenodo_ini_filename.with_suffix('.ini'))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_get_api_token(self):
         env_token_sb = os.environ.pop('ZENODO_SANDBOX_API_TOKEN', None)
         env_token = os.environ.pop('ZENODO_API_TOKEN', None)
@@ -279,7 +279,7 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(env_token, os.environ.get('ZENODO_API_TOKEN', None))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_set_api_token(self):
 
         env_token_sb = os.environ.pop('ZENODO_SANDBOX_API_TOKEN', None)
@@ -311,13 +311,15 @@ class TestZenodo(unittest.TestCase):
         if env_token is not None:
             os.environ['ZENODO_API_TOKEN'] = env_token
 
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_parse_to_dcat(self):
         record = zenodo.ZenodoRecord(source=15389242)
         ds = record.as_dcat_dataset()
         print(ds.serialize("ttl"))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_new_version(self):
         z = zenodo.ZenodoRecord(source=None, sandbox=True)
         original_id = z.rec_id
@@ -392,7 +394,7 @@ class TestZenodo(unittest.TestCase):
         # new_record.delete()
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test__bump_version(self):
         self.assertEqual("3.0.0", _bump_version("2.0.0", "major"))
         self.assertEqual("2.1.0", _bump_version("2.0.0", "minor"))
@@ -401,7 +403,7 @@ class TestZenodo(unittest.TestCase):
             self.assertEqual("3.0.0", _bump_version("2.0.0", "micro"))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_upload_hdf(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
 
@@ -459,7 +461,7 @@ class TestZenodo(unittest.TestCase):
         )
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_upload_hdf_new_implementation(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
 
@@ -520,7 +522,7 @@ class TestZenodo(unittest.TestCase):
         )
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_ZenodoSandboxDeposit(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
         self.assertIsInstance(z.get_metadata(), dict)
@@ -529,7 +531,7 @@ class TestZenodo(unittest.TestCase):
         self.assertIn('prereserve_doi', z.get_metadata())
         self.assertEqual('open', z.get_metadata()['access_right'])
         self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
-        self.assertFalse(z.exists())  # not yet published!
+        self.assertTrue(z.exists())  # exists, but not yet published!
         self.assertFalse(z.is_published())
         self.assertEqual(z.title, 'No title')
 
@@ -620,12 +622,12 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
+        self.assertTrue(z.exists())
+        z.delete()
         self.assertFalse(z.exists())
-        # z.delete()
-        # self.assertFalse(z.exists())
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.13 testen")
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
     def test_ZenodoSandboxDeposit_newImplementation(self):
         z = zenodo.ZenodoRecord(None, sandbox=True)
         self.assertIsInstance(z.get_metadata(), dict)
@@ -634,12 +636,12 @@ class TestZenodo(unittest.TestCase):
         self.assertIn('prereserve_doi', z.get_metadata())
         self.assertEqual('open', z.get_metadata()['access_right'])
         self.assertEqual(z.rec_id, z.get_metadata()['prereserve_doi']['recid'])
-        self.assertFalse(z.exists())  # not yet published!
+        self.assertTrue(z.exists())  # exists, but not yet published!
         self.assertFalse(z.is_published())
 
         old_rec_id = z.rec_id
 
-        # z.delete()
+        z.delete()
 
         with self.assertRaises(ValueError):
             _ = zenodo.ZenodoRecord('123123123123', sandbox=True)
@@ -723,6 +725,19 @@ class TestZenodo(unittest.TestCase):
         self.assertEqual(len(hdf_and_txt_filenames), 1)
         self.assertEqual(hdf_and_txt_filenames[0].suffix, '.txt')
 
+        self.assertTrue(z.exists())
+        z.delete()
         self.assertFalse(z.exists())
-        # z.delete()
-        # self.assertFalse(z.exists())
+
+    @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
+                         reason=f"Nur auf Python {TESTING_VERSIONS} testen")
+    def test_download_public_zenodo(self):
+        z = zenodo.ZenodoRecord(17271932)
+        ds = z.as_dcat_dataset()
+        checksum_values = [dist.checksum.checksumValue for dist in ds.distribution]
+        self.assertListEqual(
+            sorted(['e88359a859c72af4eefd7734aa77483d',
+                    'e23f2b98e4bfebacf5f3818208dcf1b6',
+                    '075eeffcfb3008f7f62332cea0e69662']),
+            sorted(checksum_values)
+        )

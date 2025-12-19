@@ -10,7 +10,7 @@ import rdflib
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QFont
 from ontolutils import M4I, SCHEMA, OBO, CODEMETA, QUDT_UNIT, QUDT_KIND
-from ontolutils.classes.utils import split_URIRef
+from ontolutils.classes.utils import split_uri
 from pivmetalib.namespace import PIVMETA
 from ssnolib.namespace import SSNO
 
@@ -204,7 +204,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         if pred is None:
             pred = self.lineEditIRI1.text()
         self.log_message(f'updating prefix and suffix from text: {pred}')
-        ns, key = split_URIRef(pred)
+        ns, key = split_uri(pred)
         if ns is not None:
             if ns.startswith('http'):
                 for name, n in self.namespacelib.items():
@@ -221,7 +221,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         if pred is None:
             pred = self.lineEditIRI2.text()
         self.log_message(f'updating prefix and suffix from text: {pred}')
-        ns, key = split_URIRef(pred)
+        ns, key = split_uri(pred)
         self.log_message(f'Try to update combo boxes with ns={ns} and key={key}')
         if ns is not None:
             if ns.startswith('http'):
@@ -243,7 +243,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.log_message(f'Updating combo box with data: {current_prefix}...')
         self.comboBoxSuffix1.addItems(self.suffix_dict[current_prefix])
-        ns, key = split_URIRef(self.lineEditIRI1.text())
+        ns, key = split_uri(self.lineEditIRI1.text())
 
         ns_uri = self.namespacelib[current_prefix]._NS
 
@@ -258,7 +258,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.log_message(f'Updating combo box with data: {current_prefix}...')
         self.comboBoxSuffix2.addItems(self.suffix_dict[current_prefix])
-        ns, key = split_URIRef(self.lineEditIRI2.text())
+        ns, key = split_uri(self.lineEditIRI2.text())
 
         ns_uri = self.namespacelib[current_prefix]._NS
 

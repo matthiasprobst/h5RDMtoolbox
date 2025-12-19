@@ -3,8 +3,10 @@ import unittest
 
 import ontolutils
 import rdflib
-from ontolutils.namespacelib import M4I, OBO
+from ontolutils import QUDT_UNIT
+from ontolutils.namespacelib import M4I, OBO, SSN_SYSTEM, SCHEMA
 from rdflib import FOAF
+from rdflib.namespace import SOSA, SSN
 from ssnolib import SSNO, ssno
 
 import h5rdmtoolbox as h5tbx
@@ -347,23 +349,21 @@ local:SubjectNode a local:BNodeType1,
             del grp.rdf.predicate
             self.assertEqual(grp.rdf.predicate[None], None)
 
-            del grp.rdf.predicate
-            self.assertEqual(grp.rdf.predicate[None], None)
-
             grp.rdf.predicate = 'https://schema.org/author'
+            grp.rdf.subject = 'https://schema.org/john'
             self.assertEqual(grp.rdf.predicate[None], 'https://schema.org/author')
 
-            grp.rdf.subject = 'http://xmlns.com/foaf/0.1/Person'
-
-        print(
-            jsonld.dumps(
-                h5.hdf_filename,
-                indent=2,
-                context={'m4i': 'http://w3id.org/nfdi4ing/metadata4ing#',
-                         'foaf': 'http://xmlns.com/foaf/0.1/',
-                         'local': 'http://example.com/'}
-            )
-        )
+            grp.rdf.type = 'http://xmlns.com/foaf/0.1/Person'
+        print(h5.serialize("ttl", structural=False))
+        # print(
+        #     jsonld.dumps(
+        #         h5.hdf_filename,
+        #         indent=2,
+        #         context={'m4i': 'http://w3id.org/nfdi4ing/metadata4ing#',
+        #                  'foaf': 'http://xmlns.com/foaf/0.1/',
+        #                  'local': 'http://example.com/'}
+        #     )
+        # )
 
     def test_none_value(self):
         with h5tbx.File() as h5:
@@ -686,3 +686,64 @@ local:SubjectNode a local:BNodeType1,
                  "ssno": "https://matthiasprobst.github.io/ssno#",
                  "ex": "https://example.org/"}
             )
+
+    def test_storing_sensor(self):
+        SIS = rdflib.Namespace("http://www.w3.org/ns/ssn/systems/")
+        with h5tbx.File() as h5:
+            u_pa = QUDT_UNIT.PA
+            sensor_grp = h5.create_group("sensor_1")
+            sensor_grp.rdf.subject = "http://example.org/PressureSensor"
+            sensor_grp.rdf.type = SOSA.Sensor
+
+            sensor_data = sensor_grp.create_group("data")
+            sensor_data.rdf.subject = "https://example.org/SystemCapability"
+            sensor_data.rdf.type = SSN_SYSTEM.SystemCapability
+            sensor_data.attrs["property", SSN.forProperty] = "Pressure"
+
+            # measurement_range = sensor_grp.create_group("measurement_range")
+            # measurement_range.rdf.subject = "https://example.org/MeasurementRage"
+            # measurement_range.rdf.type = SSN_SYSTEM.MeasurementRange
+            # measurement_range.attrs["label", rdflib.RDFS.label] = "Measurement range@en"
+            measurement_range = sensor_data.create_dataset("range", data=[0, 250], dtype='f4')
+            measurement_range.rdf.type = SSN_SYSTEM.MeasurementRange
+            measurement_range.rdf.subject = "https://example.org/MeasurementRage"
+            measurement_range.attrs["unit", M4I.hasUnit] = "https://qudt.org/vocab/unit/PASCAL"
+            measurement_range.attrs["label", rdflib.RDFS.label] = "Measurement range@en"
+
+            accuracy = sensor_data.create_dataset("accuracy", data=0.5, dtype='f4')
+            accuracy.rdf.type = SSN_SYSTEM.Accuracy
+            accuracy.rdf.subject = "https://example.org/Accuracy"
+            accuracy.attrs["unit", SCHEMA.unitCode] = u_pa
+
+            sensor_grp.attrs["capability", SSN_SYSTEM.hasSystemCapability] = sensor_data
+            sensor_grp.rdf.object["capability"] = sensor_data.rdf.subject
+            sensor_data.attrs["accuracy", SSN_SYSTEM.hasSystemProperty] = accuracy
+            sensor_data.rdf.object["accuracy"] = accuracy.rdf.subject
+            sensor_data.attrs["measurement_range", SSN_SYSTEM.hasSystemProperty] = measurement_range
+            sensor_data.rdf.object["measurement_range"] = measurement_range.rdf.subject
+
+            print(h5.serialize("ttl", structural=False, context={"ssn-system": "http://www.w3.org/ns/ssn/systems/",}))
+            print(h5.dumps())
+
+            # uncertainty  = sensor_grp.create_group("uncertainty")
+            # uncertainty.attrs["label", rdflib.RDFS.label] = "Standard uncertainty from max. linear error (rectangular)@en"
+            # uncertainty.rdf.subject = SIS.Accuracy
+            #
+            #
+            #
+            # sensor_grp.attrs["label", rdflib.RDFS.label] = "Temperature Sensor"
+            # sensor_grp.attrs["observes", SOSA.observes] = "Temperature"
+
+    def test_subject_predicate_object_via_groups(self):
+        with h5tbx.File() as h5:
+            sensor_grp = h5.create_group("sensor_1")
+            sensor_grp.rdf.subject = "http://example.org/PressureSensor"
+            sensor_grp.rdf.type = SOSA.Sensor
+
+            sensor_data = sensor_grp.create_group("data")
+            sensor_data.rdf.subject = "https://example.org/SystemCapability"
+            sensor_data.rdf.predicate = SSN_SYSTEM.hasSystemCapability
+            sensor_data.rdf.type = SSN_SYSTEM.SystemCapability
+            sensor_data.attrs["property", SSN.forProperty] = "Pressure"
+
+            print(h5.serialize("ttl", structural=False))

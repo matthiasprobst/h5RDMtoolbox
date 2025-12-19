@@ -1,13 +1,14 @@
 """test_file.py"""
-import h5py
-import numpy as np
 import pathlib
 import time
 import unittest
 import uuid
-import yaml
 from datetime import datetime
 from pathlib import Path
+
+import h5py
+import numpy as np
+import yaml
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
