@@ -14,7 +14,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.convention import toolbox_validators
 
 __this_dir__ = pathlib.Path(__file__).parent
-TESTING_VERSIONS = (13,)
+TESTING_VERSIONS = (14,)
 
 
 def get_python_version():

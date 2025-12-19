@@ -31,7 +31,7 @@ def get_python_version():
     return sys.version_info.major, sys.version_info.minor, sys.version_info.micro
 
 
-TESTING_VERSIONS = (13,)
+TESTING_VERSIONS = (14,)
 
 
 class TestZenodo(unittest.TestCase):

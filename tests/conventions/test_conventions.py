@@ -27,7 +27,7 @@ logger = logging.getLogger('h5rdmtoolbox')
 logger.setLevel('DEBUG')
 __this_dir__ = pathlib.Path(__file__).parent
 
-TESTING_VERSIONS = (13,)
+TESTING_VERSIONS = (14,)
 
 
 def get_python_version():
