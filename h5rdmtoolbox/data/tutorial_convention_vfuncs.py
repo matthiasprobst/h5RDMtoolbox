@@ -54,6 +54,7 @@ def __validate_standard_name(value, handler, info) -> str:
     def __sn_h5attr_repr__(self):
         if isinstance(value, str):
             return str(value)
+        return None
 
     if info.context:
         parent = info.context.get('parent', None)
