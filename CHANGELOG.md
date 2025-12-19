@@ -5,6 +5,8 @@ Log of changes in the versions
 ## v2.5.4
 
 - fix downloading public zenodo records (don't require authentication token)
+- upgrade to ontolutils 0.25.1
+- fixed RDF serialization if group or dataset has predicate
 
 ## v2.5.3
 
