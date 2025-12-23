@@ -11,7 +11,6 @@ from ssnolib import SSNO, ssno
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import Attribute
-from h5rdmtoolbox import jsonld
 from h5rdmtoolbox import use
 from h5rdmtoolbox.ld.rdf import RDFError
 from h5rdmtoolbox.ld.rdf import RDF_PREDICATE_ATTR_NAME
@@ -354,16 +353,16 @@ local:SubjectNode a local:BNodeType1,
             self.assertEqual(grp.rdf.predicate[None], 'https://schema.org/author')
 
             grp.rdf.type = 'http://xmlns.com/foaf/0.1/Person'
-        print(h5.serialize("ttl", structural=False))
-        # print(
-        #     jsonld.dumps(
-        #         h5.hdf_filename,
-        #         indent=2,
-        #         context={'m4i': 'http://w3id.org/nfdi4ing/metadata4ing#',
-        #                  'foaf': 'http://xmlns.com/foaf/0.1/',
-        #                  'local': 'http://example.com/'}
-        #     )
-        # )
+
+        self.assertEqual("""@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix schema: <https://schema.org/> .
+
+schema:john a foaf:Person .
+
+[] schema:about schema:john ;
+    schema:author schema:john .
+
+""", h5.serialize("ttl", structural=False))
 
     def test_none_value(self):
         with h5tbx.File() as h5:
@@ -722,8 +721,8 @@ local:SubjectNode a local:BNodeType1,
             sensor_data.attrs["measurement_range", SSN_SYSTEM.hasSystemProperty] = measurement_range
             sensor_data.rdf.object["measurement_range"] = measurement_range.rdf.subject
 
-            print(h5.serialize("ttl", structural=False, context={"ssn-system": "http://www.w3.org/ns/ssn/systems/",}))
-            print(h5.dumps())
+            print(h5.serialize("ttl", structural=False, context={"ssn-system": "http://www.w3.org/ns/ssn/systems/", }))
+            # print(h5.dumps())
 
             # uncertainty  = sensor_grp.create_group("uncertainty")
             # uncertainty.attrs["label", rdflib.RDFS.label] = "Standard uncertainty from max. linear error (rectangular)@en"

@@ -8,8 +8,9 @@ from ontolutils.namespacelib import SCHEMA
 from h5rdmtoolbox.ld.user.attributes import process_attribute
 from h5rdmtoolbox.ld.user.datasets import process_dataset
 from h5rdmtoolbox.ld.utils import get_obj_bnode, get_file_bnode
-from ..rdf import RDFManager
 from .utils import to_uriref
+from ..rdf import RDFManager
+
 
 def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
     for ak, av in group.attrs.items():
@@ -29,7 +30,8 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
         if rdf_predicate.get("SELF", None):
             graph.add((group_uri, rdflib.URIRef(rdf_predicate["SELF"]), rdflib.URIRef(rdf_subject)))
             if parent_rdf_manager.subject:
-                graph.add((rdflib.URIRef(parent_rdf_manager.subject), rdflib.URIRef(rdf_predicate["SELF"]), rdflib.URIRef(rdf_subject)))
+                graph.add((rdflib.URIRef(parent_rdf_manager.subject), rdflib.URIRef(rdf_predicate["SELF"]),
+                           rdflib.URIRef(rdf_subject)))
         rdf_file_predicate = rdf_manager.file_predicate
         if rdf_file_predicate is not None:
             file_uri = get_file_bnode(group.file, blank_node_iri_base)
