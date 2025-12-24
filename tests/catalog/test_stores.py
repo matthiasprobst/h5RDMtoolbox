@@ -1,10 +1,7 @@
 import sys
 import unittest
 
-from h5rdmtoolbox.catalog.query import Query, QueryResult, RemoteSparqlQuery
-from h5rdmtoolbox.catalog.stores import DataStore
-from h5rdmtoolbox.catalog.stores import RemoteSparqlStore
-from h5rdmtoolbox.catalog.stores import StoreManager
+from h5rdmtoolbox.catalog import Query, QueryResult, RemoteSparqlQuery,  RemoteSparqlStore, StoreManager, DataStore
 
 
 class MockSqlQuery(Query):

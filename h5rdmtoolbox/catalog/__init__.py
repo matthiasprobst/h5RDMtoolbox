@@ -8,8 +8,9 @@ from typing import Union, List
 import rdflib
 
 from ._initialization import database_initialization, DownloadStatus
+from .core import MetadataStore, DataStore, RDFStore, Store, RemoteSparqlStore, StoreManager, HDF5SqlDB, Query, \
+    RemoteSparqlQuery, QueryResult, SparqlQuery, GraphDB, InMemoryRDFStore
 from .profiles import MINIMUM_DATASET_SHACL
-from .stores import Store, StoreManager, RemoteSparqlStore, DataStore, MetadataStore
 
 logger = logging.getLogger("h5rdmtoolbox.catalog")
 
@@ -20,7 +21,7 @@ class Catalog:
     def __init__(
             self,
             metadata_stores: Dict[str, MetadataStore],
-            hdf_store: DataStore,
+            hdf_store: DataStore = None,
             add_wikidata_store: bool = False
     ):
         if add_wikidata_store:
@@ -29,6 +30,9 @@ class Catalog:
             wikidata_store = RemoteSparqlStore(endpoint_url="https://query.wikidata.org/sparql", return_format="json")
             metadata_stores["wikidata"] = wikidata_store
         stores = metadata_stores
+
+        if hdf_store is None:
+            hdf_store = HDF5SqlDB(data_dir=self.working_dir)
 
         if hdf_store is not None:
             stores["hdf_store"] = hdf_store
@@ -53,6 +57,10 @@ class Catalog:
         return StoreManager(
             self.stores.metadata_stores
         )
+
+    @property
+    def rdf_stores(self) -> RDFStore:
+        return {k: v for k, v in self.stores.stores.items() if isinstance(v, RDFStore)}
 
     @property
     def hdf_store(self) -> DataStore:
@@ -112,3 +120,21 @@ class Catalog:
             config_filename=config_filename,
             download_directory=download_directory
         )
+
+
+__all__ = (
+    "Catalog",
+    "RemoteSparqlStore",
+    "GraphDB",
+    "InMemoryRDFStore",
+    "QueryResult",
+    "MetadataStore",
+    "DataStore",
+    "RDFStore",
+    "SparqlQuery",
+    "Store",
+    "StoreManager",
+    "HDF5SqlDB",
+    "Query",
+    "RemoteSparqlQuery",
+)
