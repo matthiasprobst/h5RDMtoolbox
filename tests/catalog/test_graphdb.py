@@ -4,8 +4,8 @@ from unittest.mock import patch, Mock
 import pandas as pd
 import pytest
 
-from h5rdmtoolbox.catalog.query.metadata_query import RemoteSparqlQuery
-from h5rdmtoolbox.catalog.stores import GraphDB
+from h5rdmtoolbox.catalog import RemoteSparqlQuery, GraphDB
+
 
 
 def make_graphdb():

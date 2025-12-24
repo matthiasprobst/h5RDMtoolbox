@@ -6,7 +6,7 @@ import sqlite3
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Union, Any
+from typing import Dict, Union, Any, List, Tuple
 from typing import Optional
 
 import pandas as pd
@@ -17,23 +17,11 @@ from rdflib import Graph
 
 from h5rdmtoolbox.catalog.abstracts import RDFStore
 from .abstracts import DataStore, Store, MetadataStore
-from .utils import sparql_json_to_dataframe
+from .utils import sparql_json_to_dataframe, sparql_result_to_df
 
 # from ..stores import RemoteSparqlStore
 
 logger = logging.getLogger('h5rdmtoolbox.catalog')
-
-
-def parse_literal(literal):
-    if isinstance(literal, rdflib.Literal):
-        return literal.value
-    if isinstance(literal, rdflib.URIRef):
-        return str(literal)
-    return literal
-
-
-def sparql_result_to_df(bindings):
-    return pd.DataFrame([{str(k): parse_literal(v) for k, v in binding.items()} for binding in bindings])
 
 
 @dataclass
@@ -56,6 +44,10 @@ class StoreManager:
         if item in self.stores:
             return self.stores[item]
         return super().__getattribute__(item)
+
+    def __getitem__(self, item):
+        """Allows access to stores via indexing."""
+        return self.stores[item]
 
     def __len__(self):
         """Returns the number of stores managed."""
@@ -115,7 +107,11 @@ class RemoteSparqlStore(MetadataStore):
 class GraphDB(RemoteSparqlStore):
     """GraphDB RDF database store."""
 
-    def __init__(self, endpoint: str, repository: str, username: str = None, password: str = None):
+    def __init__(self,
+                 endpoint: str,
+                 repository: str,
+                 username: str = None,
+                 password: str = None):
         super().__init__(f"{endpoint}/repositories/{repository}")
         try:
             from SPARQLWrapper import SPARQLWrapper, JSON
@@ -289,7 +285,7 @@ class InMemoryRDFStore(RDFStore):
             self,
             data_dir: Union[str, pathlib.Path],
             recursive_exploration: bool = False,
-            formats=None
+            formats: Union[str, List[str], Tuple[str]] = None
     ):
         if formats is None:
             formats = self._expected_file_extensions
@@ -374,6 +370,12 @@ class InMemoryRDFStore(RDFStore):
     def graph(self) -> rdflib.Graph:
         return self._combined_graph
 
+    def reset(self, *args, **kwargs):
+        self._filenames = []
+        self._graphs = rdflib.Graph()
+        self._combined_graph = rdflib.Graph()
+        return self
+
 
 class AbstractQuery(ABC):
 
@@ -384,10 +386,15 @@ class AbstractQuery(ABC):
 
 class QueryResult:
 
-    def __init__(self, query: AbstractQuery, data: Any, description: Optional[str] = None,
+    def __init__(self,
+                 query: AbstractQuery,
+                 data: Any,
+                 bindings: Any = None,
+                 description: Optional[str] = None,
                  derived_graph: Optional[Graph] = None):
         self.query = query
         self.data = data
+        self.bindings = bindings
         self.description = description
         self.derived_graph = derived_graph
 
@@ -587,12 +594,14 @@ class SparqlQuery(MetadataStoreQuery):
             return QueryResult(
                 query=self,
                 data=pd.DataFrame(),
+                bindings=bindings,
                 description=self.description,
                 derived_graph=derived_graph
             )
         return QueryResult(
             query=self,
             data=sparql_result_to_df(bindings),
+            bindings=bindings,
             description=self.description,
             derived_graph=derived_graph
         )
@@ -601,6 +610,8 @@ class SparqlQuery(MetadataStoreQuery):
 class RemoteSparqlQuery(MetadataStoreQuery):
 
     def execute(self, store: RemoteSparqlStore, *args, **kwargs) -> QueryResult:
+        if not isinstance(store, RemoteSparqlStore):
+            raise TypeError("store must be an instance of RemoteSparqlStore.")
         sparql = store.wrapper
         sparql.setQuery(self.query)
 

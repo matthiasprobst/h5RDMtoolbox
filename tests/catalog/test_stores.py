@@ -1,7 +1,14 @@
+import pathlib
 import sys
 import unittest
 
-from h5rdmtoolbox.catalog import Query, QueryResult, RemoteSparqlQuery,  RemoteSparqlStore, StoreManager, DataStore
+import rdflib
+
+from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, RemoteSparqlStore, StoreManager, \
+    DataStore, \
+    InMemoryRDFStore
+
+__this_dir__ = pathlib.Path(__file__).parent
 
 
 class MockSqlQuery(Query):
@@ -84,3 +91,44 @@ ORDER BY ?propertyLabel
         query = RemoteSparqlQuery(sparql_query)
         res = query.execute(remote_store)
         self.assertTrue(len(res.data) >= 172)
+
+    def test_InMemoryRDFStore(self):
+        ims = InMemoryRDFStore(
+            data_dir=__this_dir__ / "data",
+            recursive_exploration=True,
+            formats=["ttl"]
+        )
+        self.assertEqual(
+            {".ttl"},
+            ims._expected_file_extensions
+        )
+        self.assertIsInstance(ims, InMemoryRDFStore)
+        filenames = ims.filenames
+        self.assertEqual(2, len(filenames))
+        for filename in filenames:
+            self.assertTrue(filename.suffix in ims._expected_file_extensions)
+        self.assertIsInstance(ims.graph, rdflib.Graph)
+
+        # get the radius of planet with rdfs:label "Earth"
+        sparql_query = """
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX ex: <http://example.org/schema/>
+        
+SELECT ?radius
+WHERE {
+  ?planet a ex:Planet ;
+          rdfs:label ?label ;
+          ex:radius ?radius .
+
+  FILTER(STR(?label) = "Earth")
+}
+"""
+        rsq = RemoteSparqlQuery(sparql_query)
+        with self.assertRaises(TypeError):
+            rsq.execute(ims)  # should raise TypeError since rsq is RemoteSparqlQuery
+
+        sq = SparqlQuery(sparql_query)
+        res = sq.execute(ims)
+        self.assertEqual(1, len(res.data))
+        radius_value = res.data['radius'][0]
+        self.assertEqual(6371000.0, radius_value)

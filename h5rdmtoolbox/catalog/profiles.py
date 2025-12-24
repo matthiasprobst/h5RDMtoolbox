@@ -3,11 +3,21 @@ MINIMUM_DATASET_SHACL = """
 @prefix dcat:  <http://www.w3.org/ns/dcat#> .
 @prefix spdx:  <http://spdx.org/rdf/terms#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms:   <http://purl.org/dc/terms/> .
 @prefix ex:    <http://example.org/ns#> .
 
 ex:DatasetShape
   a sh:NodeShape ;
   sh:targetClass dcat:Dataset ;
+  
+  # Require a dcterms:identifier
+  sh:property [
+    sh:path dcterms:identifier ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:message "A dcat:Dataset must have exactly one dcterms:identifier." ;
+  ] ;
+
   sh:property [
     sh:path dcat:distribution ;
     sh:minCount 1 ;

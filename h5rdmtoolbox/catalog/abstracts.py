@@ -1,5 +1,4 @@
 import logging
-import logging
 import pathlib
 from abc import ABC, abstractmethod
 from typing import Union, Any
@@ -11,11 +10,6 @@ logger = logging.getLogger('h5rdmtoolbox.catalog')
 
 class Store(ABC):
     """Store interface."""
-
-    # @property
-    # @abstractmethod
-    # def query(self) -> Type[Query]:
-    #     """Returns the query class for the store."""
 
     @abstractmethod
     def upload_file(self, filename: Union[str, pathlib.Path]) -> Any:
@@ -83,3 +77,7 @@ class RDFStore(MetadataStore, ABC):
     @abstractmethod
     def graph(self) -> rdflib.Graph:
         """Return graph for the metadata store."""
+
+    @abstractmethod
+    def reset(self, *args, **kwargs):
+        """Resets the store/database."""

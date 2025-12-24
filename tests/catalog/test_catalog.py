@@ -4,9 +4,10 @@ import sys
 import unittest
 from typing import List
 
-from h5rdmtoolbox.catalog import Catalog
-from h5rdmtoolbox.catalog.query import QueryResult, FederatedQueryResult, SparqlQuery
-from h5rdmtoolbox.catalog.stores import RDFStore, DataStore, MetadataStore
+from ontolutils.ex import dcat, prov
+
+from h5rdmtoolbox.catalog import Catalog, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
+    MetadataStore
 
 logger = logging.getLogger("h5rdmtoolbox")
 logger.setLevel(logging.DEBUG)
@@ -16,7 +17,7 @@ for h in logger.handlers:
 __this_dir__ = pathlib.Path(__file__).parent
 
 sys.path.insert(0, str(__this_dir__))
-from h5rdmtoolbox.catalog.stores import InMemoryRDFStore
+from h5rdmtoolbox.catalog import InMemoryRDFStore
 from example_storage_db import CSVDatabase
 
 
@@ -36,14 +37,14 @@ def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
     }}
     """.format(date=date)
     # results = self["rdf_database"].execute_query(SparqlQuery(sparql_query))
-    _store: RDFStore = db.stores.rdf_database
+    _store: RDFStore = db.rdf_store
     results = SparqlQuery(sparql_query).execute(_store)
 
     # result_data = [{str(k): parse_literal(v) for k, v in binding.items()} for binding in results.data.bindings]
 
     federated_query_results = []
 
-    rdf_database = db.stores.rdf_database
+    rdf_database = db.rdf_store
     for dataset, url in zip(results.data["dataset"], results.data["url"]):
         filename = str(url).rsplit('/', 1)[-1]
 
@@ -76,23 +77,91 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         #         }
         #     )
 
-        db = Catalog(
-            metadata_stores={"rdf_database": InMemoryRDFStore(__this_dir__ / "data")},
-            hdf_store=CSVDatabase()
+        oraga = prov.Organization(
+            id="https://ror.org/04t3en479",
+            name="Institute of thermal Turbomachinery (ITS), Karlsruhe Institute of Technology@en",
+            url="https://www.its.kit.edu/english/index.php",
+            ror_id="https://ror.org/04t3en479")
+        creator = prov.Person(
+            id="https://orcid.org/0000-0001-8729-0482",
+            first_name="Matthias",
+            last_name="Probst",
+            orcid_id="https://orcid.org/0000-0001-8729-0482",
+            affiliation=oraga
         )
 
-        rdf_database: RDFStore = db.stores.rdf_database
-        hdf_store: DataStore = db.stores.hdf_store
+        catalog = dcat.Catalog(
+            id="https://example.org/catalogs/test_catalog",
+            title="Test Catalog",
+            description="A test catalog for unit testing.",
+            creator=creator,
+            primaryTopic="https://www.wikidata.org/entity/Q137561830",
+            dataset=[
+                dcat.Dataset(
+                    id="https://handle.test.datacite.org/10.5072/zenodo.411647",
+                    title="Dataset 1",
+                    description="First test dataset.",
+                    identifier="2023-11-07-14-03-39_run",
+                    distribution=[
+                        dcat.Distribution(
+                            id="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content",
+                            title="2023-11-07-14-03-39_run.hdf",
+                            downloadURL="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content",
+                            mediaType="https://www.iana.org/assignments/media-types/application/x-hdf"
+                        ),
+                        dcat.Distribution(
+                            id="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content",
+                            title="2023-11-07-14-03-39_run.ttl",
+                            downloadURL="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content",
+                            mediaType="https://www.iana.org/assignments/media-types/text/turtle"
+                        )
+                    ]
+                )
+            ]
+        )
+        catalog_file = __this_dir__ / "catalog.ttl"
+        with open(catalog_file, "w", encoding="utf-8") as f:
+            f.write(catalog.serialize(format="ttl"))
 
-        self.assertEqual(1, len(db.metadata_stores))
+        in_memory_store = InMemoryRDFStore(__this_dir__ / "data")
+
+        working_dir = __this_dir__ / "local-db"
+        working_dir.mkdir(exist_ok=True)
+
+        db = Catalog(
+            catalog,
+            rdf_store=in_memory_store,
+            hdf_store=CSVDatabase(),
+            working_directory=working_dir,
+            add_wikidata_store=True,
+            augment_wikidata_knowledge=True
+        )
+        self.assertIsInstance(db.catalog, dcat.Catalog)
+        db = Catalog(
+            catalog_file,
+            rdf_store=in_memory_store,
+            hdf_store=CSVDatabase(),
+            working_directory=working_dir
+        )
+        self.assertIsInstance(db.catalog, dcat.Catalog)
+        # return
+        # db = Catalog(
+        #     metadata_store=InMemoryRDFStore(__this_dir__ / "data"),
+        #     hdf_store=CSVDatabase()
+        # )
+
+        rdf_database: RDFStore = db.rdf_store
+        hdf_store: DataStore = db.hdf_store
+
+        self.assertEqual(391, len(db.rdf_store.graph))
 
         self.assertIsInstance(rdf_database, MetadataStore)
         self.assertIsInstance(rdf_database, InMemoryRDFStore)
         self.assertIsInstance(hdf_store, DataStore)
         self.assertIsInstance(hdf_store, CSVDatabase)
 
-        hdf_store = db.data_stores.hdf_store
-        rdf_database = db.metadata_stores.rdf_database
+        hdf_store = db.hdf_store
+        rdf_database = db.rdf_store
         self.assertIsInstance(hdf_store, CSVDatabase)
         self.assertIsInstance(rdf_database, InMemoryRDFStore)
 
@@ -117,7 +186,3 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         data = get_temperature_data_by_date(db, date="2024-01-01")
         self.assertIsInstance(data, list)
         self.assertIsInstance(data[0], FederatedQueryResult)
-
-    def test_validate_config(self):
-        res = Catalog.validate_config(__this_dir__ / "test-config.ttl")
-        self.assertTrue(res[0])

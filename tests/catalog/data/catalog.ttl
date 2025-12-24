@@ -1,0 +1,41 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix schema: <https://schema.org/> .
+
+<https://example.org/catalogs/test_catalog> a dcat:Catalog ;
+    dcterms:creator <https://orcid.org/0000-0001-8729-0482> ;
+    dcterms:description "A test catalog for unit testing." ;
+    dcterms:title "Test Catalog" ;
+    dcat:dataset <https://handle.test.datacite.org/10.5072/zenodo.411647> .
+
+<https://handle.test.datacite.org/10.5072/zenodo.411647> a dcat:Dataset ;
+    dcterms:description "First test dataset." ;
+    dcterms:identifier "2023-11-07-14-03-39_run" ;
+    dcterms:title "Dataset 1" ;
+    dcat:distribution <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content>,
+        <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content> .
+
+<https://orcid.org/0000-0001-8729-0482> a prov:Person ;
+    m4i:orcidId <https://orcid.org/0000-0001-8729-0482> ;
+    foaf:firstName "Matthias" ;
+    foaf:lastName "Probst" ;
+    schema:affiliation <https://ror.org/04t3en479> .
+
+<https://ror.org/04t3en479> a prov:Organization ;
+    m4i:hasRorId <https://ror.org/04t3en479> ;
+    foaf:name "Institute of thermal Turbomachinery (ITS), Karlsruhe Institute of Technology"@en ;
+    schema:url <https://www.its.kit.edu/english/index.php> .
+
+<https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content> a dcat:Distribution ;
+    dcterms:title "2023-11-07-14-03-39_run.hdf" ;
+    dcat:downloadURL <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content> ;
+    dcat:mediaType <https://www.iana.org/assignments/media-types/application/x-hdf> .
+
+<https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content> a dcat:Distribution ;
+    dcterms:title "2023-11-07-14-03-39_run.ttl" ;
+    dcat:downloadURL <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content> ;
+    dcat:mediaType <https://www.iana.org/assignments/media-types/text/turtle> .
+

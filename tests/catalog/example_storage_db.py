@@ -3,8 +3,8 @@ from typing import Type
 
 import pandas as pd
 
-from h5rdmtoolbox.catalog.stores import DataStore
-from h5rdmtoolbox.catalog.query import Query
+from h5rdmtoolbox.catalog import DataStore, Query
+
 
 
 class CSVDbQuery(Query):

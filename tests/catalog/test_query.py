@@ -5,9 +5,8 @@ import unittest
 import rdflib
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-from h5rdmtoolbox.catalog.query import Query, QueryResult, SparqlQuery, RemoteSparqlQuery
-from h5rdmtoolbox.catalog.query.metadata_query import sparql_result_to_df
-from h5rdmtoolbox.catalog.stores import InMemoryRDFStore, RemoteSparqlStore
+from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, InMemoryRDFStore, RemoteSparqlStore
+from h5rdmtoolbox.catalog.utils import sparql_result_to_df
 
 __this_dir__ = pathlib.Path(__file__).parent.resolve()
 
