@@ -6,7 +6,6 @@ import pandas as pd
 from h5rdmtoolbox.catalog import DataStore, Query
 
 
-
 class CSVDbQuery(Query):
     def __init__(self, query: str, description: str = None):
         super().__init__(query, description)
@@ -31,7 +30,7 @@ class CSVDatabase(DataStore):
     def expected_file_extensions(self):
         return self._expected_file_extensions
 
-    def upload_file(self, filename) -> bool:
+    def upload_file(self, filename, skip_unsupported: bool = False) -> bool:
         filename = pathlib.Path(filename)
         assert filename.exists(), f"File {filename} does not exist."
         assert filename.suffix in self._expected_file_extensions, f"File type {filename.suffix} not supported"

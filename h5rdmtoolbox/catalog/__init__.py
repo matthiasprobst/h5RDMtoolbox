@@ -2,16 +2,19 @@ import logging
 import pathlib
 import shutil
 import warnings
-from typing import Union, List
+from typing import Union, List, Dict
 
+import pandas as pd
 import pyshacl
 import rdflib
 from ontolutils.ex import dcat
 
 from ._initialization import database_initialization, DownloadStatus
 from .core import MetadataStore, DataStore, RDFStore, Store, RemoteSparqlStore, StoreManager, HDF5SqlDB, Query, \
-    RemoteSparqlQuery, QueryResult, SparqlQuery, GraphDB, InMemoryRDFStore, FederatedQueryResult
-from .profiles import MINIMUM_DATASET_SHACL
+    RemoteSparqlQuery, QueryResult, SparqlQuery, GraphDB, InMemoryRDFStore, FederatedQueryResult, MetadataStoreQuery
+from .profiles import IS_VALID_CATALOG_SHACL
+from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS
+from .utils import WebResource, download
 from ..repository.zenodo import ZenodoRecord
 
 logger = logging.getLogger("h5rdmtoolbox.catalog")
@@ -48,7 +51,7 @@ def _validate_catalog(catalog: dcat.Catalog) -> bool:
     catalog_graph = rdflib.Graph()
     catalog_graph.parse(data=catalog.serialize("ttl"), format="ttl")
     shacl_graph = rdflib.Graph()
-    shacl_graph.parse(data=MINIMUM_DATASET_SHACL, format="ttl")
+    shacl_graph.parse(data=IS_VALID_CATALOG_SHACL, format="ttl")
     results = pyshacl.validate(
         data_graph=catalog_graph,
         shacl_graph=shacl_graph,
@@ -65,11 +68,7 @@ def _validate_catalog(catalog: dcat.Catalog) -> bool:
     return conforms, results_graph, results_text
 
 
-from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS
-from .utils import WebResource, download
-
-
-def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathlib.Path) -> List[pathlib.Path]:
+def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathlib.Path) -> List[DownloadStatus]:
     """Downloads all datasets in the catalog to the specified directory."""
     g = rdflib.Graph()
     g.parse(data=catalog.serialize("ttl"), format="ttl")
@@ -92,8 +91,8 @@ def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathli
     )
 
 
-class Catalog:
-    """Catalog class to manage multiple metadata and data stores.
+class CatalogManager:
+    """Catalog managerclass to manage multiple metadata and data stores.
 
     Attributes:
         catalog (dcat.Catalog): The DCAT catalog representing the datasets.
@@ -112,8 +111,7 @@ class Catalog:
             rdf_store: MetadataStore,
             hdf_store: DataStore = None,
             working_directory: Union[str, pathlib.Path] = None,
-            add_wikidata_store: bool = False,
-            augment_wikidata_knowledge: bool = False,
+            secondary_rdf_stores: Dict[str, RDFStore] = None,
     ):
         """Initializes the Catalog.
 
@@ -126,21 +124,14 @@ class Catalog:
             working_directory (Union[str, pathlib.Path], optional): The
                 working directory for the catalog. If None, uses the current
                 working directory. Defaults to None.
-            add_wikidata_store (bool, optional): Whether to add a Wikidata
-                SPARQL store. Defaults to False.
-            augment_wikidata_knowledge (bool, optional): Whether to augment the
-                main RDF store with knowledge from Wikidata. Defaults to False.
-                This will query the rdf store for Wikidata entities and fetch
-                additional information from the Wikidata SPARQL endpoint (direct
-                properties, labels, descriptions, etc.).
-
-
+            secondary_rdf_stores: (Dict[str, RDFStore], optional): Additional RDF stores
+                to add to the catalog's store manager. Defaults to None.
         """
         self._catalog = _parse_catalog(catalog)
         logger.debug("Validating catalog against SHACL shapes...")
-        conforms, results_graph, results_text = _validate_catalog(self._catalog)
-        if not conforms:
-            raise ValueError(f"The provided catalog does not conform to SHACL shapes: {results_text}")
+        res = self._catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL, raise_on_error=False)
+        if not res.conforms:
+            raise ValueError(f"The provided catalog does not conform to SHACL shapes: {res.results_text}")
         logger.info("Catalog validation successful.")
 
         if working_directory is None:
@@ -164,12 +155,9 @@ class Catalog:
         logger.debug(f"Wrote catalog to {catalog_path.resolve()}")
 
         stores = {"main_rdf_store": rdf_store}
-        if add_wikidata_store:
-            wikidata_store = RemoteSparqlStore(endpoint_url="https://query.wikidata.org/sparql", return_format="json")
-            stores["wikidata"] = wikidata_store
 
         if hdf_store is None:
-            hdf_store = HDF5SqlDB(data_dir=self._hdf_directory, db_path=self._hdf_directory)
+            hdf_store = HDF5SqlDB(data_dir=self._hdf_directory)
 
         if hdf_store is not None:
             stores["hdf_store"] = hdf_store
@@ -182,45 +170,20 @@ class Catalog:
             self.stores.add_store(store_name, store)
 
         logger.debug("Downloading catalog datasets...")
-        filenames = _download_catalog_datasets(self._catalog, self._rdf_directory)
-        logger.info(f"Catalog datasets downloaded {len(filenames)} files.")
+        download_stati = _download_catalog_datasets(self._catalog, self._rdf_directory)
+        logger.info(f"Catalog datasets downloaded {len(download_stati)} files.")
 
         # populate graph if graph is empty but filenames are available
         rdf_store = self.stores["main_rdf_store"]
         if isinstance(rdf_store, RDFStore):
-            if len(rdf_store.graph) == 0 and len(filenames) > 0:
+            if len(rdf_store.graph) == 0 and len(download_stati) > 0:
                 logger.debug("Populating main RDF store with downloaded datasets...")
-                for filename in filenames:
-                    rdf_store.upload_file(filename)
-                logger.info(f"Main RDF store populated with {len(filenames)} files.")
-
-        if augment_wikidata_knowledge and not "wikidata" in stores:
-            warnings.warn("Wikidata knowledge addition requested, but no Wikidata store found.")
-        if "wikidata" in stores and augment_wikidata_knowledge:
-            from .query_templates import get_wikidata_property_query, get_all_wikidata_entities
-            # find all wikidata entities
-            res = get_all_wikidata_entities.execute(rdf_store)
-            logger.debug("Adding Wikidata knowledge to the main RDF store...")
-
-            wikidata_store = stores["wikidata"]
-            for entity in res.data["wikidata_entity"]:
-                sparql_query = get_wikidata_property_query(wikidata_entity=entity)
-                wikidata_results = sparql_query.execute(wikidata_store)
-                df = wikidata_results.data
-                subj = rdflib.URIRef(entity)
-                for _, row in df.iterrows():
-                    pred = rdflib.URIRef(row["property"])
-                    obj_value = row["value"]
-                    if isinstance(obj_value, str):
-                        if obj_value.startswith("http://") or obj_value.startswith("https://"):
-                            obj = rdflib.URIRef(obj_value)
-                        else:
-                            obj = rdflib.Literal(obj_value)
-                    else:
-                        obj = rdflib.Literal(obj_value)
-                    rdf_store.graph.add((subj, pred, obj))
-            logger.info("Wikidata knowledge added to the main RDF store.")
-
+                for download_status in download_stati:
+                    rdf_store.upload_file(download_status.filename, skip_unsupported=True)
+                logger.info(f"Main RDF store populated with {len(download_stati)} files.")
+        if secondary_rdf_stores:
+            for store_name, rdf_store in secondary_rdf_stores.items():
+                self.add_rdf_store(store_name, rdf_store)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(stores={self.stores})"
@@ -247,7 +210,7 @@ class Catalog:
         return self._store_manager
 
     @property
-    def rdf_stores(self) -> RDFStore:
+    def rdf_stores(self) -> Dict[str, RDFStore]:
         return {k: v for k, v in self.stores.stores.items() if isinstance(v, RDFStore)}
 
     @property
@@ -259,12 +222,12 @@ class Catalog:
         return self.stores["hdf_store"]
 
     @classmethod
-    def validate_config(cls, config_filename: Union[str, pathlib.Path]) -> bool:
+    def validate_catalog(cls, catalog_filename: Union[str, pathlib.Path]) -> bool:
         import pyshacl
         config_graph = rdflib.Graph()
-        config_graph.parse(source=config_filename, format="ttl")
+        config_graph.parse(source=catalog_filename, format="ttl")
         shacl_graph = rdflib.Graph()
-        shacl_graph.parse(data=MINIMUM_DATASET_SHACL, format="ttl")
+        shacl_graph.parse(data=IS_VALID_CATALOG_SHACL, format="ttl")
         results = pyshacl.validate(
             data_graph=config_graph,
             shacl_graph=shacl_graph,
@@ -293,7 +256,7 @@ class Catalog:
         print(
             f"Copying the config file {config_filename} to the target directory {download_directory.resolve()} ..."
         )
-        conforms, results_graph, results_text = cls.validate_config(config_filename)
+        conforms, results_graph, results_text = cls.validate_catalog(config_filename)
         if not conforms:
             raise ValueError(f"The provided config file is not valid according to SHACL shapes: {results_text}")
 
@@ -306,9 +269,71 @@ class Catalog:
             download_directory=download_directory
         )
 
+    def add_rdf_store(self, store_name: str, rdf_store: RDFStore):
+        """Adds an RDF store to the catalog's store manager."""
+        if not isinstance(rdf_store, RDFStore):
+            raise TypeError(f"Expected RDFStore, got {type(rdf_store)}")
+        self.stores.add_store(store_name, rdf_store)
+
+    def add_wikidata_store(self, store_name: str = "wikidata", augment_knowledge: bool = False):
+        """Adds a Wikidata SPARQL store to the catalog's store manager.
+
+        Parameters:
+        -----------
+        store_name (str): The name of the store to add. Default is "wikidata".
+        augment_knowledge (bool): If True, augments the main RDF store with
+            additional knowledge from Wikidata based on existing entities.
+            Default is False.
+        """
+        wikidata_store = RemoteSparqlStore(endpoint_url="https://query.wikidata.org/sparql", return_format="json")
+        self.stores.add_store(store_name, wikidata_store)
+
+        if augment_knowledge:
+            from .query_templates import get_wikidata_property_query, get_all_wikidata_entities
+            main_rdf_store = self.rdf_store
+            # find all wikidata entities
+            res = get_all_wikidata_entities.execute(main_rdf_store)
+            logger.debug("Adding Wikidata knowledge to the main RDF store...")
+
+            if res.data.empty:
+                logger.info("No Wikidata entities found in the main RDF store. Skipping Wikidata knowledge addition.")
+                return
+            for entity in res.data["wikidata_entity"]:
+                sparql_query = get_wikidata_property_query(wikidata_entity=entity)
+                wikidata_results = sparql_query.execute(wikidata_store)
+                df = wikidata_results.data
+                subj = rdflib.URIRef(entity)
+                for _, row in df.iterrows():
+                    pred = rdflib.URIRef(row["property"])
+                    obj_value = row["value"]
+                    if isinstance(obj_value, str):
+                        if obj_value.startswith("http://") or obj_value.startswith("https://"):
+                            obj = rdflib.URIRef(obj_value)
+                        else:
+                            obj = rdflib.Literal(obj_value)
+                    else:
+                        obj = rdflib.Literal(obj_value)
+                    main_rdf_store.graph.add((subj, pred, obj))
+            logger.info("Wikidata knowledge added to the main RDF store.")
+
+    def execute_query(self, query: Query) -> QueryResult:
+        """Depending on the query type, executes the query on the appropriate store(s).
+        Since there are possibly multiple RDF stores, the results are combined.
+        """
+        if isinstance(query, MetadataStoreQuery):
+            all_res = [query.execute(rdf_store) for rdf_store in self.rdf_stores.values()]
+            if len(all_res) == 1:
+                return all_res[0]
+            first_res = all_res[0]
+            combined_data = pd.concat([r.data for r in all_res], ignore_index=True)
+            res = QueryResult(data=combined_data, query=first_res.query)
+            return res
+        else:
+            raise TypeError(f"Unsupported query type: {type(query)}")
+
 
 __all__ = (
-    "Catalog",
+    "CatalogManager",
     "RemoteSparqlStore",
     "GraphDB",
     "InMemoryRDFStore",

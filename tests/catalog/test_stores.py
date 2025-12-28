@@ -32,7 +32,7 @@ class CSVDatabase(DataStore):
     # def query(self) -> Type[Query]:
     #     return MockSqlQuery
 
-    def upload_file(self, filename) -> bool:
+    def upload_file(self, filename, skip_unsupported:bool=False) -> bool:
         return True
 
     def execute_query(self, query: Query):
@@ -98,13 +98,14 @@ ORDER BY ?propertyLabel
             recursive_exploration=True,
             formats=["ttl"]
         )
+        ims.populate()
         self.assertEqual(
             {".ttl"},
             ims._expected_file_extensions
         )
         self.assertIsInstance(ims, InMemoryRDFStore)
         filenames = ims.filenames
-        self.assertEqual(2, len(filenames))
+        self.assertEqual(3, len(filenames))
         for filename in filenames:
             self.assertTrue(filename.suffix in ims._expected_file_extensions)
         self.assertIsInstance(ims.graph, rdflib.Graph)

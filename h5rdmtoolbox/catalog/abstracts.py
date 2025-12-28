@@ -12,7 +12,7 @@ class Store(ABC):
     """Store interface."""
 
     @abstractmethod
-    def upload_file(self, filename: Union[str, pathlib.Path]) -> Any:
+    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported:bool=False) -> Any:
         """Uploads a file to the store."""
 
     def __repr__(self):
@@ -24,7 +24,7 @@ class DataStore(Store, ABC):
     """Data store interface (concrete implementations can be sql or non sql databases)."""
 
     @abstractmethod
-    def upload_file(self, filename: Union[str, pathlib.Path]):
+    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported:bool=False):
         """Insert data into the data store."""
 
 
@@ -32,7 +32,7 @@ class MetadataStore(Store, ABC):
     """Metadata database interface using."""
 
     @abstractmethod
-    def upload_file(self, filename: Union[str, pathlib.Path]) -> bool:
+    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported:bool=False) -> bool:
         """Insert data into the data store."""
 
 

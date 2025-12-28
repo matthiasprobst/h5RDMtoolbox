@@ -4,10 +4,10 @@ import sys
 import unittest
 from typing import List
 
-from ontolutils.ex import dcat, prov
+from ontolutils.ex import dcat, prov, spdx
 
-from h5rdmtoolbox.catalog import Catalog, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
-    MetadataStore
+from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
+    MetadataStore, IS_VALID_CATALOG_SHACL
 
 logger = logging.getLogger("h5rdmtoolbox")
 logger.setLevel(logging.DEBUG)
@@ -69,15 +69,7 @@ def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
 class TestGenericLinkedDatabase(unittest.TestCase):
 
     def test_rdf_and_csv_stores(self):
-        # with self.assertRaises(TypeError):
-        #     Catalog(
-        #         stores={
-        #             "rdf_database": 2,
-        #             "hdf_store": "not_a_store"
-        #         }
-        #     )
-
-        oraga = prov.Organization(
+        orga = prov.Organization(
             id="https://ror.org/04t3en479",
             name="Institute of thermal Turbomachinery (ITS), Karlsruhe Institute of Technology@en",
             url="https://www.its.kit.edu/english/index.php",
@@ -87,7 +79,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             first_name="Matthias",
             last_name="Probst",
             orcid_id="https://orcid.org/0000-0001-8729-0482",
-            affiliation=oraga
+            affiliation=orga
         )
 
         catalog = dcat.Catalog(
@@ -95,6 +87,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             title="Test Catalog",
             description="A test catalog for unit testing.",
             creator=creator,
+            version="1.0.0",
             primaryTopic="https://www.wikidata.org/entity/Q137561830",
             dataset=[
                 dcat.Dataset(
@@ -116,44 +109,47 @@ class TestGenericLinkedDatabase(unittest.TestCase):
                             mediaType="https://www.iana.org/assignments/media-types/text/turtle"
                         )
                     ]
+                ),
+                dcat.Dataset(
+                    id="https://doi.org/10.5281/zenodo.17271932",
+                    identifier="10.5281/zenodo.17271932",
+                    distribution=[
+                        dcat.Distribution(
+                            id="https://zenodo.org/api/records/17271932/files/Standard_Name_Table_for_the_Property_Descriptions_of_Centrifugal_Fans.jsonld/content",
+                            title="Standard_Name_Table_for_the_Property_Descriptions_of_Centrifugal_Fans.jsonld",
+                            downloadURL="https://zenodo.org/api/records/17271932/files/Standard_Name_Table_for_the_Property_Descriptions_of_Centrifugal_Fans.jsonld/content",
+                            mediaType="https://www.iana.org/assignments/media-types/application/ld+json",
+                            checksum=spdx.Checksum(
+                                    algorithm="https://spdx.org/rdf/terms#checksumAlgorithm_md5",
+                                    value="e88359a859c72af4eefd7734aa77483d"
+                                )
+                        )
+                    ]
                 )
             ]
         )
-        catalog_file = __this_dir__ / "catalog.ttl"
-        with open(catalog_file, "w", encoding="utf-8") as f:
-            f.write(catalog.serialize(format="ttl"))
+        catalog.serialize("ttl")
+        validation_result = catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL)
+        self.assertTrue(validation_result)
 
         in_memory_store = InMemoryRDFStore(__this_dir__ / "data")
 
         working_dir = __this_dir__ / "local-db"
         working_dir.mkdir(exist_ok=True)
 
-        db = Catalog(
+        db = CatalogManager(
             catalog,
             rdf_store=in_memory_store,
             hdf_store=CSVDatabase(),
             working_directory=working_dir,
-            add_wikidata_store=True,
-            augment_wikidata_knowledge=True
         )
+        db.add_wikidata_store(augment_knowledge=True)
         self.assertIsInstance(db.catalog, dcat.Catalog)
-        db = Catalog(
-            catalog_file,
-            rdf_store=in_memory_store,
-            hdf_store=CSVDatabase(),
-            working_directory=working_dir
-        )
-        self.assertIsInstance(db.catalog, dcat.Catalog)
-        # return
-        # db = Catalog(
-        #     metadata_store=InMemoryRDFStore(__this_dir__ / "data"),
-        #     hdf_store=CSVDatabase()
-        # )
 
         rdf_database: RDFStore = db.rdf_store
         hdf_store: DataStore = db.hdf_store
 
-        self.assertEqual(391, len(db.rdf_store.graph))
+        self.assertEqual(2713, len(db.rdf_store.graph))
 
         self.assertIsInstance(rdf_database, MetadataStore)
         self.assertIsInstance(rdf_database, InMemoryRDFStore)
@@ -170,11 +166,13 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         query = SparqlQuery(query="SELECT * WHERE {?s ?p ?o}", description="Selects all triples")
         res = query.execute(rdf_database)
         self.assertEqual(res.description, "Selects all triples")
+        self.assertIsInstance(res, QueryResult)
+
+        res = db.execute_query(query)
+        self.assertEqual(res.description, "Selects all triples")
 
         self.assertIsInstance(res, QueryResult)
-        print(res.data)
-        # self.assertIn(25, sorted([i.get("foaf:age", -1) for i in res.data["@graph"]]))
-        # self.assertIn(30, sorted([i.get("foaf:age", -1) for i in res.data["@graph"]]))
+        self.assertEqual(2721, len(res.data))
 
         rdf_database.upload_file(__this_dir__ / "data/metadata.jsonld")
 
@@ -186,3 +184,43 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         data = get_temperature_data_by_date(db, date="2024-01-01")
         self.assertIsInstance(data, list)
         self.assertIsInstance(data[0], FederatedQueryResult)
+
+    def test_catalog_with_two_rdf_stores(self):
+        in_memory_store = InMemoryRDFStore(__this_dir__ / "data")
+
+        working_dir = __this_dir__ / "local-db"
+        working_dir.mkdir(exist_ok=True)
+
+        db = CatalogManager(
+            catalog=__this_dir__ / "data/catalog.ttl",
+            rdf_store=in_memory_store,
+            hdf_store=CSVDatabase(),
+            working_directory=working_dir,
+            secondary_rdf_stores={
+                "store2": InMemoryRDFStore(working_dir, populate=True)
+            }
+        )
+
+        self.assertIsInstance(db.catalog, dcat.Catalog)
+
+        rdf_database1: RDFStore = db.rdf_store
+        rdf_database2: RDFStore = db.rdf_stores["store2"]
+        hdf_store: DataStore = db.hdf_store
+
+        self.assertIsInstance(rdf_database1, MetadataStore)
+        self.assertIsInstance(rdf_database1, InMemoryRDFStore)
+        self.assertIsInstance(rdf_database2, MetadataStore)
+        self.assertIsInstance(rdf_database2, InMemoryRDFStore)
+        self.assertIsInstance(hdf_store, DataStore)
+        self.assertIsInstance(hdf_store, CSVDatabase)
+
+        q = SparqlQuery(query="""
+        PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+        SELECT ?file
+        WHERE {
+            ?file a hdf:File .
+        }
+        """, description="Selects all datasets")
+        res = db.execute_query(q)
+        self.assertIsInstance(res, QueryResult)
+        self.assertEqual(2, res.data.size)

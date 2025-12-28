@@ -1,10 +1,28 @@
-MINIMUM_DATASET_SHACL = """
+IS_VALID_CATALOG_SHACL = """
 @prefix sh:    <http://www.w3.org/ns/shacl#> .
 @prefix dcat:  <http://www.w3.org/ns/dcat#> .
 @prefix spdx:  <http://spdx.org/rdf/terms#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
 @prefix dcterms:   <http://purl.org/dc/terms/> .
 @prefix ex:    <http://example.org/ns#> .
+
+ex:CatalogShape
+  a sh:NodeShape ;
+  sh:targetClass dcat:Catalog ;
+  
+  sh:property [
+    sh:path dcat:dataset ;
+    sh:minCount 1 ;
+    sh:node ex:DatasetShape ;
+    sh:message "A dcat:Catalog must have at least one dcat:dataset, each conforming to DatasetShape." ;
+  ] ;
+  
+  sh:property [
+    sh:path dcat:version ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:message "A dcat:Catalog must have exactly one dcat:version." ;
+  ] .
 
 ex:DatasetShape
   a sh:NodeShape ;

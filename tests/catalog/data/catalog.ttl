@@ -9,9 +9,19 @@
     dcterms:creator <https://orcid.org/0000-0001-8729-0482> ;
     dcterms:description "A test catalog for unit testing." ;
     dcterms:title "Test Catalog" ;
-    dcat:dataset <https://handle.test.datacite.org/10.5072/zenodo.411647> .
+    dcat:version "1.0.0" ;
+    dcat:dataset <https://handle.test.datacite.org/10.5072/zenodo.411647>,
+     <https://handle.test.datacite.org/10.5072/zenodo.411648> .
 
 <https://handle.test.datacite.org/10.5072/zenodo.411647> a dcat:Dataset ;
+    dcterms:description "First test dataset." ;
+    dcterms:identifier "2023-11-07-14-03-39_run" ;
+    dcterms:title "Dataset 1" ;
+    dcat:distribution <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content>,
+        <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content> .
+
+
+<https://handle.test.datacite.org/10.5072/zenodo.411648> a dcat:Dataset ;
     dcterms:description "First test dataset." ;
     dcterms:identifier "2023-11-07-14-03-39_run" ;
     dcterms:title "Dataset 1" ;

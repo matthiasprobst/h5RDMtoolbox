@@ -104,6 +104,7 @@ ORDER BY ?propertyLabel
 
         sparql_query = SparqlQuery(query=construct_query)
         store = InMemoryRDFStore(data_dir=__this_dir__ / "data")
+        store.populate()
         res = sparql_query.execute(store)
 
         self.assertEqual(16, len(res.derived_graph))

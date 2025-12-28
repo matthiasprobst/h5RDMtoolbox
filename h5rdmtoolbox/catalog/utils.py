@@ -124,14 +124,10 @@ def parse_literal(literal):
     return literal
 
 
-def sparql_result_to_df(bindings):
-    return pd.DataFrame([{str(k): parse_literal(v) for k, v in binding.items()} for binding in bindings])
-
-
 @dataclass
 class DownloadStatus:
     record_id: str
-    filename: str
+    filename: pathlib.Path
     ok: bool
     message: str
 
@@ -346,7 +342,7 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
         if web_resource.checksum is None:
             if dest_path.exists():
                 print(f" > SKIP (exists, no checksum provided): {filename} -> {dest_path}")
-                overall.append(DownloadStatus(rec_id, filename, True, "exists, no checksum provided"))
+                overall.append(DownloadStatus(rec_id, dest_path, True, "exists, no checksum provided"))
                 continue
 
         expected_algo, expected_val = parse_checksum(web_resource.checksum)
@@ -357,7 +353,7 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
                 existing_md5 = compute_md5_of_file(dest_path)
                 if expected_algo == "md5" and existing_md5.lower() == expected_val.lower():
                     print(f" > SKIP (exists & checksum ok): {filename} -> {dest_path}")
-                    overall.append(DownloadStatus(rec_id, filename, True, f"exists, checksum matches"))
+                    overall.append(DownloadStatus(rec_id, dest_path, True, f"exists, checksum matches"))
                     continue
             except Exception:
                 # fall through to re-download
@@ -411,7 +407,7 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
                 message = f"saved to {dest_path} (unsupported checksum algorithm: {expected_algo})"
                 print(f" > SAVED (unsupported checksum alg '{expected_algo}'): {filename} -> {dest_path}")
 
-            overall.append(DownloadStatus(rec_id, filename, ok, message))
+            overall.append(DownloadStatus(rec_id, dest_path, ok, message))
 
         except Exception as exc:
             # cleanup tmp file when exists
@@ -421,7 +417,7 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
             except Exception:
                 pass
             print(f" > ERROR downloading {filename}: {exc}")
-            overall.append(DownloadStatus(rec_id, filename, False, str(exc)))
+            overall.append(DownloadStatus(rec_id, dest_path, False, str(exc)))
 
     # summary
     total = len(overall)
@@ -511,3 +507,7 @@ def database_initialization(
         download_directory=download_directory,
         web_resources=list_of_ttl_web_resources
     )
+
+
+def sparql_result_to_df(bindings):
+    return pd.DataFrame([{str(k): parse_literal(v) for k, v in binding.items()} for binding in bindings])
