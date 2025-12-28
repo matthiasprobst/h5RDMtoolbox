@@ -163,8 +163,6 @@ class CatalogManager:
         """Initializes the Catalog.
 
         Parameters:
-            catalog (Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]): The
-                DCAT catalog representing the datasets.
             rdf_store (MetadataStore): The main RDF metadata store.
             hdf_store (DataStore, optional): The HDF5 data store. If None
                 a default HDF5SqlDB store will be created.
@@ -237,14 +235,32 @@ class CatalogManager:
         return _rdf_directory, _hdf_directory
 
     @classmethod
-    def from_catalog(cls,
-                     catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
-                     rdf_store: MetadataStore,
-                     hdf_store: DataStore = None,
-                     working_directory: Union[str, pathlib.Path] = None,
-                     secondary_rdf_stores: Dict[str, RDFStore] = None,
-                     ):
+    def from_catalog(
+            cls,
+            catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
+            rdf_store: MetadataStore,
+            hdf_store: DataStore = None,
+            working_directory: Union[str, pathlib.Path] = None,
+            secondary_rdf_stores: Dict[str, RDFStore] = None,
+    ):
+        """Creates a CatalogManager from a catalog which defines the datasets used in the database.
+
+        Parameters
+        ----------
+        catalog (Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]): The
+            DCAT catalog representing the datasets.
+        rdf_store (MetadataStore): The main RDF metadata store.
+        hdf_store (DataStore, optional): The HDF5 data store. If None
+            a default HDF5SqlDB store will be created.
+        working_directory (Union[str, pathlib.Path], optional): The
+            working directory for the catalog. If None, uses the current
+            working directory. Defaults to None.
+        secondary_rdf_stores: (Dict[str, RDFStore], optional): Additional RDF stores
+            to add to the catalog's store manager. Defaults to None.
+        """
+        logger.info("Parsing catalog...")
         _catalog = _parse_catalog(catalog)
+
         logger.debug("Validating catalog against SHACL shapes...")
         res = _catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL, raise_on_error=False)
         if not res.conforms:

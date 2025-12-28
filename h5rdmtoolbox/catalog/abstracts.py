@@ -30,13 +30,14 @@ class DataStore(Store, ABC):
 
 class MetadataStore(Store, ABC):
     """Metadata database interface using."""
-
+    __populate_on_init__ = False
     @abstractmethod
     def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported:bool=False) -> bool:
         """Insert data into the data store."""
 
 
 class RDFStore(MetadataStore, ABC):
+
     namespaces = {
         "ex": "https://example.org/",
         "afn": "http://jena.apache.org/ARQ/function#",

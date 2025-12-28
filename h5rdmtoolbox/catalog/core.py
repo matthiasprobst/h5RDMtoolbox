@@ -280,13 +280,13 @@ class InMemoryRDFStore(RDFStore):
     """In-memory RDF database that can upload files and return a combined graph."""
 
     __default_expected_file_extensions__ = {".ttl", ".rdf", ".jsonld", ".nt", ".xml", ".n3"}
+    __populate_on_init__ = True
 
     def __init__(
             self,
             data_dir: Union[str, pathlib.Path],
             recursive_exploration: bool = True,
-            formats: Union[str, List[str], Tuple[str]] = None,
-            populate=False
+            formats: Union[str, List[str], Tuple[str]] = None
     ):
         """Initializes the InMemoryRDFStore.
 
@@ -323,7 +323,7 @@ class InMemoryRDFStore(RDFStore):
         self._filenames = []
         self._graphs = {}
         self._combined_graph = rdflib.Graph()
-        if populate:
+        if self.__populate_on_init__:
             self.populate()
 
     @property
@@ -331,7 +331,7 @@ class InMemoryRDFStore(RDFStore):
         """Returns the data directory where files are stored."""
         return self._data_dir
 
-    def populate(self, recursive:bool=None) -> "InMemoryRDFStore":
+    def populate(self, recursive: bool = None) -> "InMemoryRDFStore":
         """Populates the RDF store by scanning the data directory for RDF files and adding them to the graph."""
         _recursive_exploration = recursive or self._recursive_exploration
         for _ext in self._expected_file_extensions:
@@ -349,7 +349,7 @@ class InMemoryRDFStore(RDFStore):
         """Returns the list of filenames uploaded to the store."""
         return self._filenames
 
-    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported: bool=False) -> bool:
+    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported: bool = False) -> bool:
         """Uploads a file to the in-memory RDF store.
 
         Parameters
@@ -510,7 +510,7 @@ class HDF5SqlDB(DataStore):
     def __repr__(self):
         return f"<{self.__class__.__name__} (Endpoint URL={self._endpointURL})>"
 
-    def upload_file(self, filename, skip_unsupported:bool=False) -> DatabaseResource:
+    def upload_file(self, filename, skip_unsupported: bool = False) -> DatabaseResource:
         _id = self._insert_hdf5_reference(self._connection, filename)
         return DatabaseResource(_id, metadata=self.generate_mapping_dataset(str(_id)))
 

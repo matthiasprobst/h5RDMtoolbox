@@ -10,7 +10,7 @@ from h5rdmtoolbox.catalog.utils import sparql_result_to_df
 
 __this_dir__ = pathlib.Path(__file__).parent.resolve()
 
-TESTING_VERSIONS = (9, 12)
+TESTING_VERSIONS = (12,)
 
 
 def get_python_version():
@@ -49,7 +49,7 @@ class TestQuery(unittest.TestCase):
         self.assertTrue(res.data.equals(sparql_result_to_df(graph.query("SELECT * WHERE { ?s ?p ?o }"))))
 
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
-                         reason="Nur auf Python 3.9 und 3.12 testen")
+                         reason=f"Only test on Python {TESTING_VERSIONS}")
     def test_wikidata_query(self):
         enpoint_url = "https://query.wikidata.org/sparql"
         sparql_wrapper = SPARQLWrapper(enpoint_url)

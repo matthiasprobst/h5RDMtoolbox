@@ -98,7 +98,6 @@ ORDER BY ?propertyLabel
             recursive_exploration=True,
             formats=["ttl"]
         )
-        ims.populate()
         self.assertEqual(
             {".ttl"},
             ims._expected_file_extensions

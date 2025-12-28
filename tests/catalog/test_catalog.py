@@ -150,7 +150,9 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         in_memory_store.populate(recursive=True)
         db.download_metadata()
         in_memory_store.populate(recursive=True)
-        db.add_wikidata_store(augment_knowledge=True)
+        if sys.version_info.minor == 12:
+            # skip adding wikidata store on non-3.12 Python to avoid rate limiting
+            db.add_wikidata_store(augment_knowledge=True)
 
         self.assertIsInstance(db.catalog, dcat.Catalog)
 
