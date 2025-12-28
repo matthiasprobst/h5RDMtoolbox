@@ -1,6 +1,5 @@
 import logging
 import pathlib
-import shutil
 import sys
 import unittest
 from typing import List
@@ -38,14 +37,14 @@ def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
     }}
     """.format(date=date)
     # results = self["rdf_database"].execute_query(SparqlQuery(sparql_query))
-    _store: RDFStore = db.rdf_store
+    _store: RDFStore = db.main_rdf_store
     results = SparqlQuery(sparql_query).execute(_store)
 
     # result_data = [{str(k): parse_literal(v) for k, v in binding.items()} for binding in results.data.bindings]
 
     federated_query_results = []
 
-    rdf_database = db.rdf_store
+    rdf_database = db.main_rdf_store
     for dataset, url in zip(results.data["dataset"], results.data["url"]):
         filename = str(url).rsplit('/', 1)[-1]
 
@@ -72,11 +71,25 @@ class TestGenericLinkedDatabase(unittest.TestCase):
     def test_dcat_catalog_read_and_write(self):
         catalog_ttl = __this_dir__ / "data/catalog.ttl"
         self.assertTrue(catalog_ttl.exists())
-        in_memory_store = InMemoryRDFStore(__this_dir__ / "data")
-        in_memory_store.upload_file(catalog_ttl)
+
+        working_dir = __this_dir__ / "local-db"
+        working_dir.mkdir(parents=True, exist_ok=True)
+
+        cm = CatalogManager(
+            catalog=catalog_ttl,
+            working_directory=working_dir
+        )
+        with self.assertRaises(KeyError):
+            cm.download_metadata()
+
+        in_memory_store = InMemoryRDFStore(cm.rdf_directory)
+        cm.add_main_rdf_store(in_memory_store)
+        cm.download_metadata()
+        cm.main_rdf_store.populate()
 
         cat = _query_catalog_from_rdf_store(in_memory_store)
         ttl = cat.serialize("ttl")
+
         self.assertEqual(ttl, """@prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -136,111 +149,77 @@ class TestGenericLinkedDatabase(unittest.TestCase):
 
     def test_rdf_and_csv_stores(self):
         working_dir = __this_dir__ / "local-db"
-        working_dir.mkdir(exist_ok=True)
-
-        shutil.rmtree(working_dir)
         working_dir.mkdir(parents=True, exist_ok=True)
-        in_memory_store = InMemoryRDFStore(working_dir / "rdf")
-        db = CatalogManager(
-            rdf_store=in_memory_store,
-            hdf_store=CSVDatabase(),
-            working_directory=working_dir,
-        )
-        shutil.copy(__this_dir__ / "data/catalog.ttl", working_dir / "rdf/catalog.ttl")
-        in_memory_store.populate(recursive=True)
-        db.download_metadata()
-        in_memory_store.populate(recursive=True)
+
+        catalog_ttl = __this_dir__ / "data/catalog.ttl"
+
+        if working_dir.exists():
+            cm = CatalogManager(
+                working_directory=working_dir
+            )
+            in_memory_store = InMemoryRDFStore(cm.rdf_directory, formats="ttl")
+            cm.add_main_rdf_store(in_memory_store)
+        else:
+            cm = CatalogManager(
+                catalog=catalog_ttl,
+                working_directory=working_dir
+            )
+            in_memory_store = InMemoryRDFStore(cm.rdf_directory, formats="ttl")
+            cm.add_main_rdf_store(in_memory_store)
+            cm.download_metadata()
+            cm.main_rdf_store.populate()
+
+        cm.add_hdf_store(CSVDatabase())
         if sys.version_info.minor == 12:
             # skip adding wikidata store on non-3.12 Python to avoid rate limiting
-            db.add_wikidata_store(augment_knowledge=True)
+            cm.add_wikidata_store(augment_knowledge=True)
 
-        self.assertIsInstance(db.catalog, dcat.Catalog)
+        self.assertIsInstance(cm.catalog, dcat.Catalog)
 
-        rdf_database: RDFStore = db.rdf_store
-        hdf_store: DataStore = db.hdf_store
+        main_rdf_store: RDFStore = cm.main_rdf_store
+        hdf_store: DataStore = cm.hdf_store
 
-        self.assertEqual(4785, len(db.rdf_store.graph))
+        self.assertEqual(4785, len(cm.main_rdf_store.graph))
 
-        self.assertIsInstance(rdf_database, MetadataStore)
-        self.assertIsInstance(rdf_database, InMemoryRDFStore)
+        self.assertIsInstance(main_rdf_store, MetadataStore)
+        self.assertIsInstance(main_rdf_store, InMemoryRDFStore)
         self.assertIsInstance(hdf_store, DataStore)
         self.assertIsInstance(hdf_store, CSVDatabase)
 
-        hdf_store = db.hdf_store
-        rdf_database = db.rdf_store
+        hdf_store = cm.hdf_store
+        main_rdf_store = cm.main_rdf_store
         self.assertIsInstance(hdf_store, CSVDatabase)
-        self.assertIsInstance(rdf_database, InMemoryRDFStore)
+        self.assertIsInstance(main_rdf_store, InMemoryRDFStore)
 
-        rdf_database.upload_file(__this_dir__ / "data/data1.jsonld")
+        with self.assertRaises(ValueError):
+            main_rdf_store.upload_file(__this_dir__ / "data/data1.jsonld")
+        main_rdf_store._expected_file_extensions = {".jsonld", ".ttl", }
+        main_rdf_store.upload_file(__this_dir__ / "data/data1.jsonld")
 
         query = SparqlQuery(query="SELECT * WHERE {?s ?p ?o}", description="Selects all triples")
-        res = query.execute(rdf_database)
+        res = query.execute(main_rdf_store)
         self.assertEqual(res.description, "Selects all triples")
         self.assertIsInstance(res, QueryResult)
 
-        res = db.execute_query(query)
+        res = cm.execute_query(query)
         self.assertEqual(res.description, "Selects all triples")
 
         self.assertIsInstance(res, QueryResult)
         self.assertEqual(4793, len(res.data))
 
-        rdf_database.upload_file(__this_dir__ / "data/metadata.jsonld")
+        main_rdf_store.upload_file(__this_dir__ / "data/metadata.jsonld")
 
         hdf_store.upload_file(__this_dir__ / "data/random_data.csv")
         hdf_store.upload_file(__this_dir__ / "data/random_data.csv")
         hdf_store.upload_file(__this_dir__ / "data/temperature.csv")
         hdf_store.upload_file(__this_dir__ / "data/users.csv")
 
-        data = get_temperature_data_by_date(db, date="2024-01-01")
+        data = get_temperature_data_by_date(cm, date="2024-01-01")
         self.assertIsInstance(data, list)
         self.assertIsInstance(data[0], FederatedQueryResult)
 
-    # def test_catalog_with_two_rdf_stores(self):
-    #     in_memory_store = InMemoryRDFStore(__this_dir__ / "data")
-    #
-    #     working_dir = __this_dir__ / "local-db"
-    #     working_dir.mkdir(exist_ok=True)
-    #
-    #     db = CatalogManager.from_catalog(
-    #         catalog=__this_dir__ / "data/catalog.ttl",
-    #         rdf_store=in_memory_store,
-    #         hdf_store=CSVDatabase(),
-    #         working_directory=working_dir,
-    #         secondary_rdf_stores={
-    #             "store2": InMemoryRDFStore(working_dir, populate=False)
-    #         }
-    #     )
-    #     in_memory_store.populate(recursive=True)
-    #
-    #     self.assertIsInstance(db.catalog, dcat.Catalog)
-    #
-    #     rdf_database1: RDFStore = db.rdf_store
-    #     rdf_database2: RDFStore = db.rdf_stores["store2"]
-    #     hdf_store: DataStore = db.hdf_store
-    #
-    #     self.assertIsInstance(rdf_database1, MetadataStore)
-    #     self.assertIsInstance(rdf_database1, InMemoryRDFStore)
-    #     self.assertIsInstance(rdf_database2, MetadataStore)
-    #     self.assertIsInstance(rdf_database2, InMemoryRDFStore)
-    #     self.assertIsInstance(hdf_store, DataStore)
-    #     self.assertIsInstance(hdf_store, CSVDatabase)
-    #
-    #     q = SparqlQuery(query="""
-    #     PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
-    #     SELECT DISTINCT ?file
-    #     WHERE {
-    #         ?file a hdf:File .
-    #     }
-    #     """, description="Selects all HDF5 files.")
-    #     res = db.execute_query(q)
-    #     self.assertIsInstance(res, QueryResult)
-    #     self.assertEqual(2, res.data.size)
-    #     self.assertListEqual(
-    #         sorted(['https://doi.org/10.5281/zenodo.411647#2023-11-07-14-03-39_run.hdf',
-    #                 'https://doi.org/10.5281/zenodo.411652#2023-11-07-18-45-45_run.hdf']),
-    #         sorted(res.data["file"].to_list())
-    #     )
-    #
-    #     for _filename in in_memory_store._filenames:
-    #         if _filename.name.startswith("2023-11-07"):
-    #             _filename.unlink()
+        self.assertTrue((cm.rdf_directory / "data1.jsonld").exists())
+        self.assertTrue((cm.rdf_directory / "metadata.jsonld").exists())
+
+        (cm.rdf_directory / "data1.jsonld").unlink()
+        (cm.rdf_directory / "metadata.jsonld").unlink()

@@ -2,7 +2,7 @@ import logging
 import pathlib
 import shutil
 import warnings
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 
 import pandas as pd
 import pyshacl
@@ -117,9 +117,11 @@ def _query_catalog_from_rdf_store(rdf_store: RDFStore) -> dcat.Catalog:
             cat[0].creator = _creators[0]
         else:
             cat[0].creator = _creators
-
     # augment catalog with datasets and distributions
     _datasets = []
+    if cat[0].dataset is None:
+        return cat[0]
+
     for dataset_iri in cat[0].dataset:
         datasets = dcat.Dataset.from_graph(
             rdf_store.graph,
@@ -127,6 +129,9 @@ def _query_catalog_from_rdf_store(rdf_store: RDFStore) -> dcat.Catalog:
         )
         _distributions = []
         for dataset in datasets:
+            distributions = dataset.distribution
+            if distributions is None:
+                continue
             for distribution_iri in dataset.distribution:
                 dist = dcat.Distribution.from_graph(
                     rdf_store.graph,
@@ -155,10 +160,8 @@ class CatalogManager:
 
     def __init__(
             self,
-            rdf_store: MetadataStore,
-            hdf_store: DataStore = None,
+            catalog: Optional[Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]] = None,
             working_directory: Union[str, pathlib.Path] = None,
-            secondary_rdf_stores: Dict[str, RDFStore] = None,
     ):
         """Initializes the Catalog.
 
@@ -172,39 +175,47 @@ class CatalogManager:
             secondary_rdf_stores: (Dict[str, RDFStore], optional): Additional RDF stores
                 to add to the catalog's store manager. Defaults to None.
         """
-        self._catalog = None
-
-        if isinstance(rdf_store, InMemoryRDFStore):
-            _rdf_directory = rdf_store.data_dir
+        if catalog is not None:
+            self._catalog = _parse_catalog(catalog)
         else:
-            _rdf_directory = None
-        self._rdf_directory, self._hdf_directory = self._setup_file_structure(working_directory, _rdf_directory)
+            self._catalog = None
 
-        stores = {"main_rdf_store": rdf_store}
-
-        if hdf_store is None:
-            hdf_store = HDF5SqlDB(data_dir=self._hdf_directory)
-
-        if hdf_store is not None:
-            stores["hdf_store"] = hdf_store
-
+        self._rdf_directory, self._hdf_directory = self._setup_file_structure(working_directory)
         self._store_manager = StoreManager()
-        for store_name, store in stores.items():
-            if not isinstance(store, Store):
-                raise TypeError(f"Expected Store, got {type(store)}")
-            logger.debug(f"Adding store {store_name} to the database.")
-            self.stores.add_store(store_name, store)
 
-        if secondary_rdf_stores:
-            for store_name, rdf_store in secondary_rdf_stores.items():
-                self.add_rdf_store(store_name, rdf_store)
+        if catalog is not None:
+            catalog_path = self._rdf_directory / "catalog.ttl"
+            with open(catalog_path, "w", encoding="utf-8") as f:
+                f.write(self._catalog.serialize(format="ttl"))
+            logger.debug(f"Wrote catalog to {catalog_path.resolve()}")
+
+    def add_main_rdf_store(self, rdf_store: RDFStore):
+        """Adds the main RDF store to the catalog's store manager."""
+        if not isinstance(rdf_store, RDFStore):
+            raise TypeError(f"Expected RDFStore, got {type(rdf_store)}")
+        if "main_rdf_store" in self.stores:
+            raise KeyError(
+                "Main RDF store already exists in the catalog. Use 'add_rdf_store()' to add additional stores.")
+        self.stores.add_store("main_rdf_store", rdf_store)
+
+    def add_hdf_store(self, hdf_store: DataStore):
+        """Adds the HDF5 data store to the catalog's store manager."""
+        if not isinstance(hdf_store, DataStore):
+            raise TypeError(f"Expected DataStore, got {type(hdf_store)}")
+        self.stores.add_store("hdf_store", hdf_store)
+
+    def add_secondary_rdf_store(self, store_name: str, rdf_store: RDFStore):
+        """Adds a secondary RDF store to the catalog's store manager."""
+        if not isinstance(rdf_store, RDFStore):
+            raise TypeError(f"Expected RDFStore, got {type(rdf_store)}")
+        self.stores.add_store(store_name, rdf_store)
 
     def download_metadata(self):
         logger.debug("Downloading catalog datasets...")
         download_stati = _download_catalog_datasets(self.catalog, self.rdf_directory)
         logger.info(f"Catalog datasets downloaded {len(download_stati)} files.")
 
-        rdf_store = self.stores["main_rdf_store"]
+        rdf_store = self.main_rdf_store
         if isinstance(rdf_store, RDFStore):
             if len(rdf_store.graph) == 0 and len(download_stati) > 0:
                 logger.debug("Populating main RDF store with downloaded datasets...")
@@ -234,70 +245,13 @@ class CatalogManager:
 
         return _rdf_directory, _hdf_directory
 
-    @classmethod
-    def from_catalog(
-            cls,
-            catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
-            rdf_store: MetadataStore,
-            hdf_store: DataStore = None,
-            working_directory: Union[str, pathlib.Path] = None,
-            secondary_rdf_stores: Dict[str, RDFStore] = None,
-    ):
-        """Creates a CatalogManager from a catalog which defines the datasets used in the database.
-
-        Parameters
-        ----------
-        catalog (Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]): The
-            DCAT catalog representing the datasets.
-        rdf_store (MetadataStore): The main RDF metadata store.
-        hdf_store (DataStore, optional): The HDF5 data store. If None
-            a default HDF5SqlDB store will be created.
-        working_directory (Union[str, pathlib.Path], optional): The
-            working directory for the catalog. If None, uses the current
-            working directory. Defaults to None.
-        secondary_rdf_stores: (Dict[str, RDFStore], optional): Additional RDF stores
-            to add to the catalog's store manager. Defaults to None.
-        """
-        logger.info("Parsing catalog...")
-        _catalog = _parse_catalog(catalog)
-
-        logger.debug("Validating catalog against SHACL shapes...")
-        res = _catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL, raise_on_error=False)
-        if not res.conforms:
-            raise ValueError(f"The provided catalog does not conform to SHACL shapes: {res.results_text}")
-        logger.info("Catalog validation successful.")
-
-        if isinstance(rdf_store, InMemoryRDFStore):
-            _rdf_directory = rdf_store.data_dir
-        else:
-            _rdf_directory = None
-        _rdf_directory, _hdf_directory = cls._setup_file_structure(working_directory, _rdf_directory)
-
-        # write catalog to rdf directory
-        catalog_path = _rdf_directory / "catalog.ttl"
-        with open(catalog_path, "w", encoding="utf-8") as f:
-            f.write(_catalog.serialize(format="ttl"))
-        logger.debug(f"Wrote catalog to {catalog_path.resolve()}")
-
-        cat = cls(
-            rdf_store=rdf_store,
-            hdf_store=hdf_store,
-            working_directory=working_directory,
-            secondary_rdf_stores=secondary_rdf_stores
-        )
-        # populate graph if graph is empty but filenames are available
-        rdf_store.upload_file(catalog_path)
-        cat.download_metadata()
-
-        return cat
-
     def __repr__(self):
         return f"{self.__class__.__name__}(stores={self.stores})"
 
     @property
     def catalog(self) -> dcat.Catalog:
         if self._catalog is None:
-            self._catalog = _query_catalog_from_rdf_store(self.rdf_store)
+            self._catalog = _query_catalog_from_rdf_store(self.main_rdf_store)
         return self._catalog
 
     @property
@@ -322,7 +276,10 @@ class CatalogManager:
         return {k: v for k, v in self.stores.stores.items() if isinstance(v, RDFStore)}
 
     @property
-    def rdf_store(self) -> RDFStore:
+    def main_rdf_store(self) -> RDFStore:
+        """Returns the main RDF store."""
+        if "main_rdf_store" not in self.stores:
+            raise KeyError("No main RDF store found in the catalog. Please add one using 'add_main_rdf_store()'.")
         return self.stores["main_rdf_store"]
 
     @property
@@ -398,7 +355,7 @@ class CatalogManager:
 
         if augment_knowledge:
             from .query_templates import get_wikidata_property_query, get_all_wikidata_entities
-            main_rdf_store = self.rdf_store
+            main_rdf_store = self.main_rdf_store
             # find all wikidata entities
             res = get_all_wikidata_entities.execute(main_rdf_store)
             logger.debug("Adding Wikidata knowledge to the main RDF store...")

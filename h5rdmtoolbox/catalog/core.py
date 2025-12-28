@@ -58,6 +58,10 @@ class StoreManager:
         store_names = ", ".join(self.stores.keys())
         return f"{self.__class__.__name__}(stores=[{store_names}])"
 
+    def __contains__(self, item) -> bool:
+        """Checks if a store exists in the manager."""
+        return item in self.stores
+
     @property
     def stores(self) -> Dict[str, Store]:
         """Returns the stores managed by the manager."""
@@ -341,6 +345,7 @@ class InMemoryRDFStore(RDFStore):
                 self._filenames.extend([f.resolve().absolute() for f in self.data_dir.glob(f"*{_ext}")])
         self._filenames = list(set(self._filenames))  # remove duplicates
         for filename in self._filenames:
+            logger.debug(f"Adding file '{filename}' to the RDF store {self.__class__.__name__}.")
             self._add_to_graph(filename)
         return self
 
