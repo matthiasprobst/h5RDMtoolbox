@@ -1,9 +1,22 @@
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Union, Any
+from functools import lru_cache
+from typing import Union, Any, Dict
 
 import rdflib
+
+
+@lru_cache(maxsize=1)
+def _get_pyshacl():
+    try:
+        import pyshacl as sh
+        return sh
+    except ImportError as e:
+        raise ImportError(
+            "pyshacl is required but not installed"
+        ) from e
+
 
 logger = logging.getLogger('h5rdmtoolbox.catalog')
 
@@ -12,7 +25,7 @@ class Store(ABC):
     """Store interface."""
 
     @abstractmethod
-    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported:bool=False) -> Any:
+    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported: bool = False) -> Any:
         """Uploads a file to the store."""
 
     def __repr__(self):
@@ -24,20 +37,85 @@ class DataStore(Store, ABC):
     """Data store interface (concrete implementations can be sql or non sql databases)."""
 
     @abstractmethod
-    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported:bool=False):
+    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported: bool = False):
         """Insert data into the data store."""
 
 
 class MetadataStore(Store, ABC):
     """Metadata database interface using."""
     __populate_on_init__ = False
+    __shacl_shapes__: Dict[str, rdflib.Graph] = {}
+
     @abstractmethod
-    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported:bool=False) -> bool:
+    def _upload_file(self,
+                     filename: Union[str, pathlib.Path],
+                     validate: bool = True,
+                     skip_unsupported: bool = False) -> bool:
         """Insert data into the data store."""
+
+    def upload_file(self,
+                    filename: Union[str, pathlib.Path],
+                    validate: bool = True,
+                    skip_unsupported: bool = False) -> bool:
+        """Insert data into the data store."""
+        if self.__shacl_shapes__:
+            self._validate_filename(filename)
+        return self._upload_file(
+            filename,
+            validate=validate,
+            skip_unsupported=skip_unsupported
+        )
+
+    def _validate_filename(self, filename: Union[str, pathlib.Path]) -> bool:
+        g = rdflib.Graph().parse(source=filename)
+        for shacl_name, shacl_shape in self.__shacl_shapes__.items():
+            logger.debug(f"Validating file {filename} against SHACL shape {shacl_name}.")
+            conforms, results_graph, results_text = _get_pyshacl().validate(
+                data_graph=g,
+                shacl_graph=shacl_shape,
+                inference='rdfs',
+                abort_on_first=False,
+                meta_shacl=False,
+                debug=False
+            )
+            if not conforms:
+                logger.error(
+                    f"SHACL validation failed for file {filename}:\n{results_text}"
+                )
+                raise ValueError(
+                    f"SHACL validation failed for file {filename}:\n{results_text}"
+                )
+        return True
+
+    def register_shacl_shape(
+            self,
+            name: str,
+            *,
+            shacl_source: Union[str, pathlib.Path] = None,
+            shacl_data: Union[str, rdflib.Graph] = None):
+        """Register SHACL shapes for validation."""
+        if shacl_source is not None and shacl_data is not None:
+            raise ValueError("Cannot provide both shacl_source and shacl_data.")
+        if name in self.__shacl_shapes__:
+            raise ValueError(f"SHACL shape with name '{name}' is already registered. Call drop_shacl_shap()) first.")
+        if shacl_data is not None:
+            if isinstance(shacl_data, rdflib.Graph):
+                shacl_graph = shacl_data
+            else:
+                shacl_graph = rdflib.Graph()
+                shacl_graph.parse(data=shacl_data, format="ttl")
+        else:
+            shacl_graph = rdflib.Graph()
+            shacl_graph.parse(source=shacl_source)
+        self.__shacl_shapes__[name] = shacl_graph
+
+    def drop_shacl_shap(self, shacl_name):
+        """Drop registered SHACL shape."""
+        if shacl_name in self.__shacl_shapes__:
+            del self.__shacl_shapes__[shacl_name]
 
 
 class RDFStore(MetadataStore, ABC):
-
     namespaces = {
         "ex": "https://example.org/",
         "afn": "http://jena.apache.org/ARQ/function#",

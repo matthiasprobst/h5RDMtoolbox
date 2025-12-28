@@ -189,10 +189,10 @@ class CatalogManager:
                 f.write(self._catalog.serialize(format="ttl"))
             logger.debug(f"Wrote catalog to {catalog_path.resolve()}")
 
-    def add_main_rdf_store(self, rdf_store: RDFStore):
+    def add_main_rdf_store(self, rdf_store: MetadataStore):
         """Adds the main RDF store to the catalog's store manager."""
-        if not isinstance(rdf_store, RDFStore):
-            raise TypeError(f"Expected RDFStore, got {type(rdf_store)}")
+        if not isinstance(rdf_store, MetadataStore):
+            raise TypeError(f"Expected MetadataStore, got {type(rdf_store)}")
         if "main_rdf_store" in self.stores:
             raise KeyError(
                 "Main RDF store already exists in the catalog. Use 'add_rdf_store()' to add additional stores.")
@@ -204,10 +204,10 @@ class CatalogManager:
             raise TypeError(f"Expected DataStore, got {type(hdf_store)}")
         self.stores.add_store("hdf_store", hdf_store)
 
-    def add_secondary_rdf_store(self, store_name: str, rdf_store: RDFStore):
+    def add_secondary_rdf_store(self, store_name: str, rdf_store: MetadataStore):
         """Adds a secondary RDF store to the catalog's store manager."""
-        if not isinstance(rdf_store, RDFStore):
-            raise TypeError(f"Expected RDFStore, got {type(rdf_store)}")
+        if not isinstance(rdf_store, MetadataStore):
+            raise TypeError(f"Expected MetadataStore, got {type(rdf_store)}")
         self.stores.add_store(store_name, rdf_store)
 
     def download_metadata(self):
@@ -354,6 +354,7 @@ class CatalogManager:
         self.stores.add_store(store_name, wikidata_store)
 
         if augment_knowledge:
+            _count = 0
             from .query_templates import get_wikidata_property_query, get_all_wikidata_entities
             main_rdf_store = self.main_rdf_store
             # find all wikidata entities
@@ -378,8 +379,9 @@ class CatalogManager:
                             obj = rdflib.Literal(obj_value)
                     else:
                         obj = rdflib.Literal(obj_value)
+                    _count += 1
                     main_rdf_store.graph.add((subj, pred, obj))
-            logger.info("Wikidata knowledge added to the main RDF store.")
+            logger.info(f"Added {_count} wikidata triples to the main RDF store.")
 
     def execute_query(self, query: Query) -> QueryResult:
         """Depending on the query type, executes the query on the appropriate store(s).

@@ -103,13 +103,15 @@ class RemoteSparqlStore(MetadataStore):
     def wrapper(self):
         return self._wrapper
 
-    def upload_file(self, filename: Union[str, pathlib.Path]) -> bool:
+    def _upload_file(self, filename: Union[str, pathlib.Path], validate: bool = True,
+                    skip_unsupported: bool = False) -> bool:
         """Uploads a file to the remote SPARQL endpoint."""
         raise NotImplementedError("Remote SPARQL Store does not support file uploads.")
 
 
 class GraphDB(RemoteSparqlStore):
     """GraphDB RDF database store."""
+    __supported_file_extensions__ = {".ttl", ".rdf", ".jsonld"}
 
     def __init__(self,
                  endpoint: str,
@@ -154,9 +156,15 @@ class GraphDB(RemoteSparqlStore):
     def password(self) -> str:
         return self._password
 
-    def upload_file(self, filename: Union[str, pathlib.Path]) -> bool:
+    def _upload_file(self, filename: Union[str, pathlib.Path], validate: bool = True,
+                    skip_unsupported: bool = False) -> bool:
         """Uploads an RDF file to das GraphDB-Repository."""
         filename = pathlib.Path(filename).resolve().absolute()
+        if filename.suffix not in self.__supported_file_extensions__:
+            if not skip_unsupported:
+                raise ValueError(f"File type {filename.suffix} not supported.")
+            if skip_unsupported:
+                return False
         if not filename.exists():
             raise FileNotFoundError(f"File {filename} not found.")
         # Determine content type based on file extension
@@ -303,9 +311,6 @@ class InMemoryRDFStore(RDFStore):
         formats : Union[str, List[str], Tuple[str]], optional
             The expected file formats/extensions. Can be a single string or a list/tuple of strings.
             Default is None, which uses the default expected file extensions.
-        populate : bool, optional
-            If True, the store will be populated with existing files in the data directory upon initialization.
-            Default is False.
         """
         if formats is None:
             formats = self.__default_expected_file_extensions__
@@ -334,7 +339,6 @@ class InMemoryRDFStore(RDFStore):
     def data_dir(self) -> pathlib.Path:
         """Returns the data directory where files are stored."""
         return self._data_dir
-
     def populate(self, recursive: bool = None) -> "InMemoryRDFStore":
         """Populates the RDF store by scanning the data directory for RDF files and adding them to the graph."""
         _recursive_exploration = recursive or self._recursive_exploration
@@ -354,13 +358,19 @@ class InMemoryRDFStore(RDFStore):
         """Returns the list of filenames uploaded to the store."""
         return self._filenames
 
-    def upload_file(self, filename: Union[str, pathlib.Path], skip_unsupported: bool = False) -> bool:
+    def _upload_file(
+            self,
+            filename: Union[str, pathlib.Path],
+            validate: bool = True,
+            skip_unsupported: bool = False) -> bool:
         """Uploads a file to the in-memory RDF store.
 
         Parameters
         ----------
         filename : Union[str, pathlib.Path]
             The path to the RDF file to upload.
+        validate : bool, optional
+            If True, the file will be validated before uploading. Default is True.
         skip_unsupported : bool, optional
             If True, unsupported file types will be skipped without raising an error.
 
@@ -515,7 +525,7 @@ class HDF5SqlDB(DataStore):
     def __repr__(self):
         return f"<{self.__class__.__name__} (Endpoint URL={self._endpointURL})>"
 
-    def upload_file(self, filename, skip_unsupported: bool = False) -> DatabaseResource:
+    def _upload_file(self, filename, validate: bool = True, skip_unsupported: bool = False) -> DatabaseResource:
         _id = self._insert_hdf5_reference(self._connection, filename)
         return DatabaseResource(_id, metadata=self.generate_mapping_dataset(str(_id)))
 
