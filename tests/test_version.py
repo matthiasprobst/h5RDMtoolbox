@@ -1,28 +1,29 @@
 import pathlib
 import unittest
 
+import toml
 import yaml
 
 from h5rdmtoolbox import __version__, get_package_meta
 
 __this_dir__ = pathlib.Path(__file__).parent
 
+
 def parse_to_py_version(vstr):
     """Parse a version string and return a standardized version string.
     e.g. removes -rc.X to rcX
     """
-    return vstr.replace('-rc.', 'rc')
+    return vstr.replace("-rc.", "rc")
+
 
 class TestVersion(unittest.TestCase):
 
     def test_version(self):
-        this_version = 'x.x.x'
-        setupcfg_filename = __this_dir__ / '../setup.cfg'
-        with open(setupcfg_filename, 'r') as f:
-            lines = f.readlines()
-            for line in lines:
-                if 'version' in line:
-                    this_version = parse_to_py_version(line.split(' = ')[-1].strip())
+        this_version = "x.x.x"
+        pyproject_filename = __this_dir__ / "../pyproject.toml"
+        with open(pyproject_filename, "r") as f:
+            pyproject_data = toml.load(f)
+            this_version = parse_to_py_version(pyproject_data["project"]["version"])
         self.assertEqual(__version__, this_version)
 
     def test_codemeta(self):
@@ -30,40 +31,45 @@ class TestVersion(unittest.TestCase):
 
         codemeta = get_package_meta()
 
-        assert parse_to_py_version(codemeta['version']) == __version__
+        assert parse_to_py_version(codemeta["version"]) == __version__
         self.assertIn("@id", codemeta)
-        with open(__this_dir__ / "../CITATION.cff", 'r') as f:
+        with open(__this_dir__ / "../CITATION.cff", "r") as f:
             ccf = yaml.safe_load(f)
         self.assertIn(ccf["doi"], codemeta["@id"])
 
     def test_colab_version(self):
         """open colab jupyter notebook and check first cell for version"""
-        with open(__this_dir__ / '../docs' / 'colab' / 'quickstart.ipynb') as f:
+        with open(__this_dir__ / "../docs" / "colab" / "quickstart.ipynb") as f:
             lines = f.readlines()
 
         found = False
         for line in lines:
-            if 'pip install' in line:
-                self.assertTrue(f'"# !pip install h5rdmtoolbox=={__version__}"' in parse_to_py_version(line.strip()))
+            if "pip install" in line:
+                self.assertTrue(
+                    f'"# !pip install h5rdmtoolbox=={__version__}"'
+                    in parse_to_py_version(line.strip())
+                )
                 found = True
                 break
         self.assertTrue(found)
 
     def test_citation_cff(self):
         citation_cff = __this_dir__ / "../CITATION.cff"
-        with open(citation_cff, 'r') as f:
+        with open(citation_cff, "r") as f:
             cff = yaml.safe_load(f)
-        self.assertTrue("todo" not in cff["doi"].lower(), "Please replace 'todo' in CITATION.cff")
+        self.assertTrue(
+            "todo" not in cff["doi"].lower(), "Please replace 'todo' in CITATION.cff"
+        )
 
     def test_citation_cff_version(self):
         """checking if the version in CITATION.cff is the same as the one of the h5rdmtoolbox"""
-        this_version = 'x.x.x'
-        setupcfg_filename = __this_dir__ / '../CITATION.cff'
-        with open(setupcfg_filename, 'r') as f:
+        this_version = "x.x.x"
+        setupcfg_filename = __this_dir__ / "../CITATION.cff"
+        with open(setupcfg_filename, "r") as f:
             lines = f.readlines()
             for line in lines:
-                if 'version: ' in line:
-                    this_version = parse_to_py_version(line.split(':')[-1].strip())
+                if "version: " in line:
+                    this_version = parse_to_py_version(line.split(":")[-1].strip())
                 # elif 'date-released:' in line:
                 #     # check if the date is the same as the one in codemeta.json
                 #     date_str = line.split(':')[-1].strip()

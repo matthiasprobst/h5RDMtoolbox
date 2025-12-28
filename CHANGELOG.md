@@ -5,7 +5,7 @@ Log of changes in the versions
 ## v2.6.0
 
 - add module `catalog` to manage distributed HDF5+RDF datasets
-- upgrade to ontolutils 0.26.0
+- upgrade to ontolutils 0.27.0
 
 ## v2.5.4
 
