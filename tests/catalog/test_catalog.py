@@ -8,7 +8,7 @@ from typing import List
 from ontolutils.ex import dcat, prov, spdx
 
 from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
-    MetadataStore, IS_VALID_CATALOG_SHACL
+    MetadataStore
 
 logger = logging.getLogger("h5rdmtoolbox")
 logger.setLevel(logging.DEBUG)
@@ -18,7 +18,7 @@ for h in logger.handlers:
 __this_dir__ = pathlib.Path(__file__).parent
 
 sys.path.insert(0, str(__this_dir__))
-from h5rdmtoolbox.catalog import InMemoryRDFStore
+from h5rdmtoolbox.catalog import InMemoryRDFStore, _query_catalog_from_rdf_store
 from example_storage_db import CSVDatabase
 
 
@@ -69,89 +69,95 @@ def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
 
 class TestGenericLinkedDatabase(unittest.TestCase):
 
-    def test_rdf_and_csv_stores(self):
-        orga = prov.Organization(
-            id="https://ror.org/04t3en479",
-            name="Institute of thermal Turbomachinery (ITS), Karlsruhe Institute of Technology@en",
-            url="https://www.its.kit.edu/english/index.php",
-            ror_id="https://ror.org/04t3en479")
-        creator = prov.Person(
-            id="https://orcid.org/0000-0001-8729-0482",
-            first_name="Matthias",
-            last_name="Probst",
-            orcid_id="https://orcid.org/0000-0001-8729-0482",
-            affiliation=orga
-        )
-
-        catalog = dcat.Catalog(
-            id="https://example.org/catalogs/test_catalog",
-            title="Test Catalog",
-            description="A test catalog for unit testing.",
-            creator=creator,
-            version="1.0.0",
-            primaryTopic="https://www.wikidata.org/entity/Q137561830",
-            dataset=[
-                dcat.Dataset(
-                    id="https://handle.test.datacite.org/10.5072/zenodo.411647",
-                    title="Dataset 1",
-                    description="First test dataset.",
-                    identifier="2023-11-07-14-03-39_run",
-                    distribution=[
-                        dcat.Distribution(
-                            id="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content",
-                            title="2023-11-07-14-03-39_run.hdf",
-                            downloadURL="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content",
-                            mediaType="https://www.iana.org/assignments/media-types/application/x-hdf"
-                        ),
-                        dcat.Distribution(
-                            id="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content",
-                            title="2023-11-07-14-03-39_run.ttl",
-                            downloadURL="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content",
-                            mediaType="https://www.iana.org/assignments/media-types/text/turtle"
-                        )
-                    ]
-                ),
-                dcat.Dataset(
-                    id="https://doi.org/10.5281/zenodo.17271932",
-                    identifier="10.5281/zenodo.17271932",
-                    distribution=[
-                        dcat.Distribution(
-                            id="https://zenodo.org/api/records/17271932/files/Standard_Name_Table_for_the_Property_Descriptions_of_Centrifugal_Fans.jsonld/content",
-                            title="Standard_Name_Table_for_the_Property_Descriptions_of_Centrifugal_Fans.jsonld",
-                            downloadURL="https://zenodo.org/api/records/17271932/files/Standard_Name_Table_for_the_Property_Descriptions_of_Centrifugal_Fans.jsonld/content",
-                            mediaType="https://www.iana.org/assignments/media-types/application/ld+json",
-                            checksum=spdx.Checksum(
-                                algorithm="https://spdx.org/rdf/terms#checksumAlgorithm_md5",
-                                value="e88359a859c72af4eefd7734aa77483d"
-                            )
-                        )
-                    ]
-                )
-            ]
-        )
-        validation_result = catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL)
-        self.assertTrue(validation_result)
-
+    def test_dcat_catalog_read_and_write(self):
+        catalog_ttl = __this_dir__ / "data/catalog.ttl"
+        self.assertTrue(catalog_ttl.exists())
         in_memory_store = InMemoryRDFStore(__this_dir__ / "data")
+        in_memory_store.upload_file(catalog_ttl)
 
+        cat = _query_catalog_from_rdf_store(in_memory_store)
+        ttl = cat.serialize("ttl")
+        self.assertEqual(ttl, """@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix schema: <https://schema.org/> .
+
+<https://example.org/catalogs/test_catalog> a dcat:Catalog ;
+    dcterms:creator <https://orcid.org/0000-0001-8729-0482> ;
+    dcterms:description "A test catalog for unit testing." ;
+    dcterms:title "Test Catalog" ;
+    dcat:dataset <https://handle.test.datacite.org/10.5072/zenodo.411647>,
+        <https://handle.test.datacite.org/10.5072/zenodo.411652> ;
+    dcat:version "1.0.0" .
+
+<https://handle.test.datacite.org/10.5072/zenodo.411647> a dcat:Dataset ;
+    dcterms:description "First test dataset." ;
+    dcterms:identifier "2023-11-07-14-03-39_run" ;
+    dcterms:title "Dataset 1" ;
+    dcat:distribution <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content>,
+        <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content> .
+
+<https://handle.test.datacite.org/10.5072/zenodo.411652> a dcat:Dataset ;
+    dcterms:description "First test dataset." ;
+    dcterms:identifier "2023-11-07-18-45-45_run" ;
+    dcterms:title "Dataset 2" ;
+    dcat:distribution <https://sandbox.zenodo.org/api/records/411652/files/2023-11-07-18-45-45_run.hdf/content>,
+        <https://sandbox.zenodo.org/api/records/411652/files/2023-11-07-18-45-45_run.ttl/content> .
+
+<https://orcid.org/0000-0001-8729-0482> a prov:Person ;
+    m4i:orcidId <https://orcid.org/0000-0001-8729-0482> ;
+    foaf:firstName "Matthias" ;
+    foaf:lastName "Probst" ;
+    schema:affiliation <https://ror.org/04t3en479> .
+
+<https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content> a dcat:Distribution ;
+    dcterms:title "2023-11-07-14-03-39_run.hdf" ;
+    dcat:downloadURL <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.hdf/content> ;
+    dcat:mediaType <https://www.iana.org/assignments/media-types/application/x-hdf> .
+
+<https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content> a dcat:Distribution ;
+    dcterms:title "2023-11-07-14-03-39_run.ttl" ;
+    dcat:downloadURL <https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-03-39_run.ttl/content> ;
+    dcat:mediaType <https://www.iana.org/assignments/media-types/text/turtle> .
+
+<https://sandbox.zenodo.org/api/records/411652/files/2023-11-07-18-45-45_run.hdf/content> a dcat:Distribution ;
+    dcterms:title "2023-11-07-18-45-45_run.hdf" ;
+    dcat:downloadURL <https://sandbox.zenodo.org/api/records/411652/files/2023-11-07-18-45-45_run.hdf/content> ;
+    dcat:mediaType <https://www.iana.org/assignments/media-types/application/x-hdf> .
+
+<https://sandbox.zenodo.org/api/records/411652/files/2023-11-07-18-45-45_run.ttl/content> a dcat:Distribution ;
+    dcterms:title "2023-11-07-18-45-45_run.ttl" ;
+    dcat:downloadURL <https://sandbox.zenodo.org/api/records/411652/files/2023-11-07-18-45-45_run.ttl/content> ;
+    dcat:mediaType <https://www.iana.org/assignments/media-types/text/turtle> .
+
+""")
+
+    def test_rdf_and_csv_stores(self):
         working_dir = __this_dir__ / "local-db"
         working_dir.mkdir(exist_ok=True)
 
         shutil.rmtree(working_dir)
         working_dir.mkdir(parents=True, exist_ok=True)
+        in_memory_store = InMemoryRDFStore(working_dir / "rdf")
         db = CatalogManager(
-            catalog,
             rdf_store=in_memory_store,
             hdf_store=CSVDatabase(),
             working_directory=working_dir,
         )
+        shutil.copy(__this_dir__ / "data/catalog.ttl", working_dir / "rdf/catalog.ttl")
+        in_memory_store.populate(recursive=True)
+        db.download_metadata()
+        in_memory_store.populate(recursive=True)
         db.add_wikidata_store(augment_knowledge=True)
+
         self.assertIsInstance(db.catalog, dcat.Catalog)
 
         rdf_database: RDFStore = db.rdf_store
         hdf_store: DataStore = db.hdf_store
 
-        self.assertEqual(2713, len(db.rdf_store.graph))
+        self.assertEqual(4785, len(db.rdf_store.graph))
 
         self.assertIsInstance(rdf_database, MetadataStore)
         self.assertIsInstance(rdf_database, InMemoryRDFStore)
@@ -174,7 +180,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertEqual(res.description, "Selects all triples")
 
         self.assertIsInstance(res, QueryResult)
-        self.assertEqual(2721, len(res.data))
+        self.assertEqual(4793, len(res.data))
 
         rdf_database.upload_file(__this_dir__ / "data/metadata.jsonld")
 
@@ -193,15 +199,16 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         working_dir = __this_dir__ / "local-db"
         working_dir.mkdir(exist_ok=True)
 
-        db = CatalogManager(
+        db = CatalogManager.from_catalog(
             catalog=__this_dir__ / "data/catalog.ttl",
             rdf_store=in_memory_store,
             hdf_store=CSVDatabase(),
             working_directory=working_dir,
             secondary_rdf_stores={
-                "store2": InMemoryRDFStore(working_dir, populate=True)
+                "store2": InMemoryRDFStore(working_dir, populate=False)
             }
         )
+        in_memory_store.populate(recursive=True)
 
         self.assertIsInstance(db.catalog, dcat.Catalog)
 
@@ -218,15 +225,22 @@ class TestGenericLinkedDatabase(unittest.TestCase):
 
         q = SparqlQuery(query="""
         PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
-        SELECT ?file
+        SELECT DISTINCT ?file
         WHERE {
             ?file a hdf:File .
         }
-        """, description="Selects all datasets")
+        """, description="Selects all HDF5 files.")
+        print(q.query)
         res = db.execute_query(q)
+        print(res.data)
         self.assertIsInstance(res, QueryResult)
         self.assertEqual(2, res.data.size)
+        print(res.data["file"].to_list())
         self.assertListEqual(
             ['https://doi.org/10.5281/zenodo.411647#2023-11-07-14-03-39_run.hdf',
              'https://doi.org/10.5281/zenodo.411652#2023-11-07-18-45-45_run.hdf'],
             res.data["file"].to_list())
+
+        for _filename in in_memory_store._filenames:
+            if _filename.name.startswith("2023-11-07"):
+                _filename.unlink()

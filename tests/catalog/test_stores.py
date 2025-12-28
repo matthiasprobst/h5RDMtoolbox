@@ -105,7 +105,8 @@ ORDER BY ?propertyLabel
         )
         self.assertIsInstance(ims, InMemoryRDFStore)
         filenames = ims.filenames
-        self.assertEqual(3, len(filenames))
+
+        self.assertEqual(2, len(filenames))
         for filename in filenames:
             self.assertTrue(filename.suffix in ims._expected_file_extensions)
         self.assertIsInstance(ims.graph, rdflib.Graph)

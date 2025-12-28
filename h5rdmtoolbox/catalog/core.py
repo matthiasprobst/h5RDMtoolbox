@@ -284,7 +284,7 @@ class InMemoryRDFStore(RDFStore):
     def __init__(
             self,
             data_dir: Union[str, pathlib.Path],
-            recursive_exploration: bool = False,
+            recursive_exploration: bool = True,
             formats: Union[str, List[str], Tuple[str]] = None,
             populate=False
     ):
@@ -331,10 +331,11 @@ class InMemoryRDFStore(RDFStore):
         """Returns the data directory where files are stored."""
         return self._data_dir
 
-    def populate(self) -> "InMemoryRDFStore":
+    def populate(self, recursive:bool=None) -> "InMemoryRDFStore":
         """Populates the RDF store by scanning the data directory for RDF files and adding them to the graph."""
+        _recursive_exploration = recursive or self._recursive_exploration
         for _ext in self._expected_file_extensions:
-            if self._recursive_exploration:
+            if _recursive_exploration:
                 self._filenames.extend([f.resolve().absolute() for f in self.data_dir.rglob(f"*{_ext}")])
             else:
                 self._filenames.extend([f.resolve().absolute() for f in self.data_dir.glob(f"*{_ext}")])

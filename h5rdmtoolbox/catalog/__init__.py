@@ -7,7 +7,7 @@ from typing import Union, List, Dict
 import pandas as pd
 import pyshacl
 import rdflib
-from ontolutils.ex import dcat
+from ontolutils.ex import dcat, prov
 
 from ._initialization import database_initialization, DownloadStatus
 from .core import MetadataStore, DataStore, RDFStore, Store, RemoteSparqlStore, StoreManager, HDF5SqlDB, Query, \
@@ -92,6 +92,53 @@ def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathli
     )
 
 
+def _query_catalog_from_rdf_store(rdf_store: RDFStore) -> dcat.Catalog:
+    """Queries the catalog from the given RDF store."""
+    q = dcat.Catalog.create_query()
+    res = rdf_store.graph.query(q)
+    cat = dcat.Catalog.from_sparql(res)
+
+    if len(cat) != 1:
+        raise ValueError(f"Expected one catalog in RDF store, found {len(cat)}.")
+
+    _creators = []
+    creator = cat[0].creator
+    if creator is not None:
+        if isinstance(creator, str):
+            _creator = prov.Person.from_graph(rdf_store.graph, subject=creator)
+            _creators.extend(_creator)
+        elif isinstance(creator, list):
+            for person in creator:
+                if isinstance(person, str):
+                    _creator = prov.Person.from_graph(rdf_store.graph, subject=person)
+                    _creators.extend(_creator)
+    if len(_creators) > 0:
+        if len(_creators) == 1:
+            cat[0].creator = _creators[0]
+        else:
+            cat[0].creator = _creators
+
+    # augment catalog with datasets and distributions
+    _datasets = []
+    for dataset_iri in cat[0].dataset:
+        datasets = dcat.Dataset.from_graph(
+            rdf_store.graph,
+            subject=dataset_iri
+        )
+        _distributions = []
+        for dataset in datasets:
+            for distribution_iri in dataset.distribution:
+                dist = dcat.Distribution.from_graph(
+                    rdf_store.graph,
+                    subject=distribution_iri
+                )
+                _distributions.extend(dist)
+            dataset.distribution = _distributions
+        _datasets.extend(datasets)
+    cat[0].dataset = _datasets
+    return cat[0]
+
+
 class CatalogManager:
     """Catalog managerclass to manage multiple metadata and data stores.
 
@@ -108,7 +155,6 @@ class CatalogManager:
 
     def __init__(
             self,
-            catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
             rdf_store: MetadataStore,
             hdf_store: DataStore = None,
             working_directory: Union[str, pathlib.Path] = None,
@@ -128,32 +174,13 @@ class CatalogManager:
             secondary_rdf_stores: (Dict[str, RDFStore], optional): Additional RDF stores
                 to add to the catalog's store manager. Defaults to None.
         """
-        self._catalog = _parse_catalog(catalog)
-        logger.debug("Validating catalog against SHACL shapes...")
-        res = self._catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL, raise_on_error=False)
-        if not res.conforms:
-            raise ValueError(f"The provided catalog does not conform to SHACL shapes: {res.results_text}")
-        logger.info("Catalog validation successful.")
+        self._catalog = None
 
-        if working_directory is None:
-            working_directory = pathlib.Path.cwd()
-        self._working_directory = pathlib.Path(working_directory)
-        if not self._working_directory.exists():
-            raise NotADirectoryError(f"Working directory {self._working_directory} does not exist.")
-        if not self._working_directory.is_dir():
-            raise NotADirectoryError(f"Working directory {self._working_directory} is not a directory.")
-
-        self._rdf_directory = pathlib.Path(working_directory) / "rdf"
-        self._rdf_directory.mkdir(parents=True, exist_ok=True)
-
-        self._hdf_directory = pathlib.Path(working_directory) / "hdf"
-        self._hdf_directory.mkdir(parents=True, exist_ok=True)
-
-        # write catalog to rdf directory
-        catalog_path = self._rdf_directory / "catalog.ttl"
-        with open(catalog_path, "w", encoding="utf-8") as f:
-            f.write(self._catalog.serialize(format="ttl"))
-        logger.debug(f"Wrote catalog to {catalog_path.resolve()}")
+        if isinstance(rdf_store, InMemoryRDFStore):
+            _rdf_directory = rdf_store.data_dir
+        else:
+            _rdf_directory = None
+        self._rdf_directory, self._hdf_directory = self._setup_file_structure(working_directory, _rdf_directory)
 
         stores = {"main_rdf_store": rdf_store}
 
@@ -170,11 +197,15 @@ class CatalogManager:
             logger.debug(f"Adding store {store_name} to the database.")
             self.stores.add_store(store_name, store)
 
+        if secondary_rdf_stores:
+            for store_name, rdf_store in secondary_rdf_stores.items():
+                self.add_rdf_store(store_name, rdf_store)
+
+    def download_metadata(self):
         logger.debug("Downloading catalog datasets...")
-        download_stati = _download_catalog_datasets(self._catalog, self._rdf_directory)
+        download_stati = _download_catalog_datasets(self.catalog, self.rdf_directory)
         logger.info(f"Catalog datasets downloaded {len(download_stati)} files.")
 
-        # populate graph if graph is empty but filenames are available
         rdf_store = self.stores["main_rdf_store"]
         if isinstance(rdf_store, RDFStore):
             if len(rdf_store.graph) == 0 and len(download_stati) > 0:
@@ -182,15 +213,75 @@ class CatalogManager:
                 for download_status in download_stati:
                     rdf_store.upload_file(download_status.filename, skip_unsupported=True)
                 logger.info(f"Main RDF store populated with {len(download_stati)} files.")
-        if secondary_rdf_stores:
-            for store_name, rdf_store in secondary_rdf_stores.items():
-                self.add_rdf_store(store_name, rdf_store)
+
+    @staticmethod
+    def _setup_file_structure(working_directory: Union[str, pathlib.Path],
+                              rdf_directory: Union[str, pathlib.Path] = None):
+        if working_directory is None:
+            working_directory = pathlib.Path.cwd()
+        _working_directory = pathlib.Path(working_directory)
+        if not _working_directory.exists():
+            raise NotADirectoryError(f"Working directory {_working_directory} does not exist.")
+        if not _working_directory.is_dir():
+            raise NotADirectoryError(f"Working directory {_working_directory} is not a directory.")
+
+        if rdf_directory is None:
+            _rdf_directory = pathlib.Path(working_directory) / "rdf"
+        else:
+            _rdf_directory = pathlib.Path(rdf_directory)
+        _rdf_directory.mkdir(parents=True, exist_ok=True)
+
+        _hdf_directory = pathlib.Path(working_directory) / "hdf"
+        _hdf_directory.mkdir(parents=True, exist_ok=True)
+
+        return _rdf_directory, _hdf_directory
+
+    @classmethod
+    def from_catalog(cls,
+                     catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
+                     rdf_store: MetadataStore,
+                     hdf_store: DataStore = None,
+                     working_directory: Union[str, pathlib.Path] = None,
+                     secondary_rdf_stores: Dict[str, RDFStore] = None,
+                     ):
+        _catalog = _parse_catalog(catalog)
+        logger.debug("Validating catalog against SHACL shapes...")
+        res = _catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL, raise_on_error=False)
+        if not res.conforms:
+            raise ValueError(f"The provided catalog does not conform to SHACL shapes: {res.results_text}")
+        logger.info("Catalog validation successful.")
+
+        if isinstance(rdf_store, InMemoryRDFStore):
+            _rdf_directory = rdf_store.data_dir
+        else:
+            _rdf_directory = None
+        _rdf_directory, _hdf_directory = cls._setup_file_structure(working_directory, _rdf_directory)
+
+        # write catalog to rdf directory
+        catalog_path = _rdf_directory / "catalog.ttl"
+        with open(catalog_path, "w", encoding="utf-8") as f:
+            f.write(_catalog.serialize(format="ttl"))
+        logger.debug(f"Wrote catalog to {catalog_path.resolve()}")
+
+        cat = cls(
+            rdf_store=rdf_store,
+            hdf_store=hdf_store,
+            working_directory=working_directory,
+            secondary_rdf_stores=secondary_rdf_stores
+        )
+        # populate graph if graph is empty but filenames are available
+        rdf_store.upload_file(catalog_path)
+        cat.download_metadata()
+
+        return cat
 
     def __repr__(self):
         return f"{self.__class__.__name__}(stores={self.stores})"
 
     @property
     def catalog(self) -> dcat.Catalog:
+        if self._catalog is None:
+            self._catalog = _query_catalog_from_rdf_store(self.rdf_store)
         return self._catalog
 
     @property
