@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import shutil
 import sys
 import unittest
 from typing import List
@@ -120,15 +121,14 @@ class TestGenericLinkedDatabase(unittest.TestCase):
                             downloadURL="https://zenodo.org/api/records/17271932/files/Standard_Name_Table_for_the_Property_Descriptions_of_Centrifugal_Fans.jsonld/content",
                             mediaType="https://www.iana.org/assignments/media-types/application/ld+json",
                             checksum=spdx.Checksum(
-                                    algorithm="https://spdx.org/rdf/terms#checksumAlgorithm_md5",
-                                    value="e88359a859c72af4eefd7734aa77483d"
-                                )
+                                algorithm="https://spdx.org/rdf/terms#checksumAlgorithm_md5",
+                                value="e88359a859c72af4eefd7734aa77483d"
+                            )
                         )
                     ]
                 )
             ]
         )
-        catalog.serialize("ttl")
         validation_result = catalog.validate(shacl_data=IS_VALID_CATALOG_SHACL)
         self.assertTrue(validation_result)
 
@@ -137,6 +137,8 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         working_dir = __this_dir__ / "local-db"
         working_dir.mkdir(exist_ok=True)
 
+        shutil.rmtree(working_dir)
+        working_dir.mkdir(parents=True, exist_ok=True)
         db = CatalogManager(
             catalog,
             rdf_store=in_memory_store,
@@ -224,3 +226,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         res = db.execute_query(q)
         self.assertIsInstance(res, QueryResult)
         self.assertEqual(2, res.data.size)
+        self.assertListEqual(
+            ['https://doi.org/10.5281/zenodo.411647#2023-11-07-14-03-39_run.hdf',
+             'https://doi.org/10.5281/zenodo.411652#2023-11-07-18-45-45_run.hdf'],
+            res.data["file"].to_list())

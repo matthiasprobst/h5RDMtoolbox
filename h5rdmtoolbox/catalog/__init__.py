@@ -75,6 +75,7 @@ def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathli
 
     results = g.query(GET_ALL_METADATA_CATALOG_DATASETS.query)
 
+    print("found datasets:", len(results))
     list_of_ttl_web_resources = [WebResource(
         download_url=row.download,
         checksum=row.checksumValue,
@@ -83,8 +84,8 @@ def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathli
         mediaType="text/turtle"
     ) for row in results]
 
-    print(
-        f"Found {len(list_of_ttl_web_resources)} TTL web resources to download. Downloading to {download_directory}...")
+    n_ttl_resources = len(list_of_ttl_web_resources)
+    print(f"Found {n_ttl_resources} TTL web resources to download. Downloading to {download_directory}...")
     return download(
         download_directory=download_directory,
         web_resources=list_of_ttl_web_resources
