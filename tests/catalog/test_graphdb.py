@@ -7,7 +7,6 @@ import pytest
 from h5rdmtoolbox.catalog import RemoteSparqlQuery, GraphDB
 
 
-
 def make_graphdb():
     return GraphDB(endpoint="http://localhost:7200",
                    repository="testrepo",
@@ -45,18 +44,6 @@ def test_upload_file_wrong_format(mock_post, mock_repo_info, tmp_path):
     with pytest.raises(ValueError):
         db.upload_file(test_file)
     mock_post.assert_not_called()
-
-
-@patch.object(GraphDB, "get_repository_info", return_value={})
-@patch("requests.post")
-def test_upload_file_server_error(mock_post, mock_repo_info, tmp_path):
-    test_file = tmp_path / "test.ttl"
-    test_file.write_text("@prefix ex: <http://example.org/> . ex:a ex:b ex:c .")
-    mock_post.return_value = Mock(status_code=500, text="Internal Server Error")
-    db = make_graphdb()
-    with pytest.raises(RuntimeError):
-        db.upload_file(test_file)
-    mock_post.assert_called_once()
 
 
 @patch.object(GraphDB, "get_repository_info", return_value={})

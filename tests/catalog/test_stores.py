@@ -3,10 +3,11 @@ import sys
 import unittest
 
 import rdflib
+import requests
 
 from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, RemoteSparqlStore, StoreManager, \
     DataStore, \
-    InMemoryRDFStore
+    InMemoryRDFStore, GraphDB
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -32,7 +33,7 @@ class CSVDatabase(DataStore):
     # def query(self) -> Type[Query]:
     #     return MockSqlQuery
 
-    def upload_file(self, filename, skip_unsupported:bool=False) -> bool:
+    def upload_file(self, filename, skip_unsupported: bool = False) -> bool:
         return True
 
     def execute_query(self, query: Query):
@@ -133,3 +134,60 @@ WHERE {
         self.assertEqual(1, len(res.data))
         radius_value = res.data['radius'][0]
         self.assertEqual(6371000.0, radius_value)
+
+    def test_graphdb(self):
+        try:
+            gdb = GraphDB(
+                endpoint="http://localhost:7201",
+                repository="h5rdmtoolbox-sandbox",
+                username="admin",
+                password="admin"
+            )
+            gdb.get_repository_info("h5rdmtoolbox-sandbox")
+        except requests.exceptions.ConnectionError as e:
+            self.skipTest(f"GraphDB not available: {e}")
+
+        # reset repository:
+        if gdb.get_repository_info("h5rdmtoolbox-sandbox"):
+            gdb.delete_repository("h5rdmtoolbox-sandbox")
+        res = gdb.get_or_create_repository(__this_dir__ / "graphdb-config-sandbox.ttl")
+
+        shapes_ttl = """
+@prefix ex: <http://example.com/ns#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:PersonShape
+  a sh:NodeShape ;
+  sh:targetClass ex:Person ;
+  sh:property [
+    sh:path ex:age ;
+    sh:datatype xsd:integer ;
+  ] .
+        """
+
+        gdb.register_shacl_shape(name="person shape", shacl_data=shapes_ttl)
+
+        invalid_person_data = """
+        @prefix ex: <http://example.com/ns#> .
+        
+        ex:Bob a ex:Person ;
+            ex:age "not_an_integer" .  
+        """
+        # upload to graphdb
+        with open("invalid_person.ttl", "w") as f:
+            f.write(invalid_person_data)
+        valid_person_data = """
+        @prefix ex: <http://example.com/ns#> .
+        
+        ex:Alice a ex:Person ;
+            ex:age 30 .
+        """
+        with open("valid_person.ttl", "w") as f:
+            f.write(valid_person_data)
+        gdb.upload_file("valid_person.ttl")
+        with self.assertRaises(ValueError):
+            gdb.upload_file("invalid_person.ttl")
+
+        pathlib.Path("valid_person.ttl").unlink()
+        pathlib.Path("invalid_person.ttl").unlink()

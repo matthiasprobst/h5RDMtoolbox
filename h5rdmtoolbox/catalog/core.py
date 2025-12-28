@@ -13,14 +13,15 @@ import pandas as pd
 import rdflib
 import requests
 from ontolutils.ex import dcat
-from rdflib import Graph
+from rdflib import Graph, Namespace
+from rdflib.namespace import RDF
 
 from h5rdmtoolbox.catalog.abstracts import RDFStore
 from .abstracts import DataStore, Store, MetadataStore
 from .utils import sparql_json_to_dataframe, sparql_result_to_df
 
-# from ..stores import RemoteSparqlStore
-
+SH = Namespace("http://www.w3.org/ns/shacl#")
+RSX = Namespace("http://rdf4j.org/shacl-extensions#")
 logger = logging.getLogger('h5rdmtoolbox.catalog')
 
 
@@ -104,7 +105,7 @@ class RemoteSparqlStore(MetadataStore):
         return self._wrapper
 
     def _upload_file(self, filename: Union[str, pathlib.Path], validate: bool = True,
-                    skip_unsupported: bool = False) -> bool:
+                     skip_unsupported: bool = False) -> bool:
         """Uploads a file to the remote SPARQL endpoint."""
         raise NotImplementedError("Remote SPARQL Store does not support file uploads.")
 
@@ -157,7 +158,7 @@ class GraphDB(RemoteSparqlStore):
         return self._password
 
     def _upload_file(self, filename: Union[str, pathlib.Path], validate: bool = True,
-                    skip_unsupported: bool = False) -> bool:
+                     skip_unsupported: bool = False) -> bool:
         """Uploads an RDF file to das GraphDB-Repository."""
         filename = pathlib.Path(filename).resolve().absolute()
         if filename.suffix not in self.__supported_file_extensions__:
@@ -186,6 +187,9 @@ class GraphDB(RemoteSparqlStore):
         response = requests.post(url, data=data, headers=headers, auth=auth)
         if response.status_code in (200, 201, 204):
             return True
+        elif response.status_code == 500:
+            readable_shacl_errors = _format_shacl_report(response.text)
+            raise ValueError(f"SHACL validation failed:\n\n{readable_shacl_errors}")
         else:
             raise RuntimeError(f"Upload failed: {response.status_code} {response.text}")
 
@@ -287,6 +291,42 @@ class GraphDB(RemoteSparqlStore):
         else:
             raise RuntimeError(f"Error deleting the repository: {response.status_code} {response.text}")
 
+    def _validate_filename(self, *args, **kwargs):
+        return True
+
+    def register_shacl_shape(
+            self,
+            name: str,
+            *,
+            shacl_source: Union[str, pathlib.Path] = None,
+            shacl_data: Union[str, rdflib.Graph] = None):
+        """Register SHACL shapes for validation."""
+        super().register_shacl_shape(name, shacl_source=shacl_source, shacl_data=shacl_data)
+        if shacl_source is None and shacl_data is None:
+            raise ValueError("Either shacl_source or shacl_data must be provided.")
+        if shacl_source is not None:
+            if isinstance(shacl_source, rdflib.Graph):
+                shacl_data = shacl_source.serialize(format="turtle")
+            else:
+                g = rdflib.Graph().parse(source=shacl_source)
+                shacl_data = g.serialize(format="turtle")
+        if not isinstance(shacl_data, str):
+            raise ValueError("shacl_data must be a string in Turtle format.")
+
+        headers = {"Content-Type": "text/turtle"}
+        SHAPES_GRAPH = "http://rdf4j.org/schema/rdf4j#SHACLShapeGraph"
+        params = {"context": f"<{SHAPES_GRAPH}>"}
+        url = f"{self.endpoint}/repositories/{self.repository}/statements"
+        # ulr = f"{self.endpoint}/rest/repositories/{self.repository}/validate/text",
+        resp = requests.post(
+            url,
+            data=shacl_data.encode("utf-8"),
+            headers=headers,
+            params=params,
+            auth=(self.username, self.password) if self.username and self.password else None
+        )
+        resp.raise_for_status()
+
 
 class InMemoryRDFStore(RDFStore):
     """In-memory RDF database that can upload files and return a combined graph."""
@@ -339,6 +379,7 @@ class InMemoryRDFStore(RDFStore):
     def data_dir(self) -> pathlib.Path:
         """Returns the data directory where files are stored."""
         return self._data_dir
+
     def populate(self, recursive: bool = None) -> "InMemoryRDFStore":
         """Populates the RDF store by scanning the data directory for RDF files and adding them to the graph."""
         _recursive_exploration = recursive or self._recursive_exploration
@@ -679,3 +720,27 @@ class RemoteSparqlQuery(MetadataStoreQuery):
             data=data,
             description=self.description
         )
+
+
+def _format_shacl_report(turtle_text: str) -> str:
+    g = Graph()
+    g.parse(data=turtle_text, format="turtle")
+
+    messages = []
+
+    for result in g.subjects(RDF.type, SH.ValidationResult):
+        focus = g.value(result, SH.focusNode)
+        path = g.value(result, SH.resultPath)
+        value = g.value(result, SH.value)
+        severity = g.value(result, SH.resultSeverity)
+        component = g.value(result, SH.sourceConstraintComponent)
+
+        messages.append(
+            f"- Resource: {focus}\n"
+            f"  Property: {path}\n"
+            f"  Invalid value: {value}\n"
+            f"  Constraint: {component.split('#')[-1] if component else 'Unknown'}\n"
+            f"  Severity: {severity.split('#')[-1] if severity else 'Unknown'}"
+        )
+
+    return "\n\n".join(messages) if messages else "No SHACL violations found."
