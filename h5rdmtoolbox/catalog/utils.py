@@ -510,4 +510,4 @@ def database_initialization(
 
 
 def sparql_result_to_df(bindings):
-    return pd.DataFrame([{str(k): parse_literal(v) for k, v in binding.items()} for binding in bindings])
+    return pd.DataFrame([{str(k): v for k, v in binding.items()} for binding in bindings])

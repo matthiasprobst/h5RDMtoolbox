@@ -340,28 +340,34 @@ class CatalogManager:
             raise TypeError(f"Expected RDFStore, got {type(rdf_store)}")
         self.stores.add_store(store_name, rdf_store)
 
-    def add_wikidata_store(self, store_name: str = "wikidata", augment_knowledge: bool = False):
+    def add_wikidata_store(self, store_name: str = "wikidata", augment_main_rdf_store: bool = False, exists_ok: bool = False):
         """Adds a Wikidata SPARQL store to the catalog's store manager.
 
         Parameters:
         -----------
         store_name (str): The name of the store to add. Default is "wikidata".
-        augment_knowledge (bool): If True, augments the main RDF store with
+        augment_main_rdf_store (bool): If True, augments the main RDF store with
             additional knowledge from Wikidata based on existing entities.
             Default is False.
         """
-        wikidata_store = RemoteSparqlStore(endpoint_url="https://query.wikidata.org/sparql", return_format="json")
-        self.stores.add_store(store_name, wikidata_store)
+        if store_name in self.stores and not exists_ok:
+            raise KeyError(f"Store with name '{store_name}' already exists in the catalog. Use 'exists_ok=True' to overwrite.")
+        if store_name in self.stores and exists_ok:
+            wikidata_store = self.stores[store_name]
+        else:
+            wikidata_store = RemoteSparqlStore(endpoint_url="https://query.wikidata.org/sparql", return_format="json")
+            self.stores.add_store(store_name, wikidata_store)
 
-        if augment_knowledge:
+        if augment_main_rdf_store:
             _count = 0
-            from .query_templates import get_wikidata_property_query, get_all_wikidata_entities
+            from .query_templates import get_wikidata_property_query, GET_ALL_WIKIDATA_ENTITIES
             main_rdf_store = self.main_rdf_store
             # find all wikidata entities
-            res = get_all_wikidata_entities.execute(main_rdf_store)
+            res = GET_ALL_WIKIDATA_ENTITIES.execute(main_rdf_store)
             logger.debug("Adding Wikidata knowledge to the main RDF store...")
 
             if res.data.empty:
+                print("empty")
                 logger.info("No Wikidata entities found in the main RDF store. Skipping Wikidata knowledge addition.")
                 return
             for entity in res.data["wikidata_entity"]:

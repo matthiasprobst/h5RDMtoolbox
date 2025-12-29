@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import Union, Any, Dict
 
 import rdflib
+from rdflib.graph import _TripleType
 
 
 @lru_cache(maxsize=1)
@@ -52,6 +53,26 @@ class MetadataStore(Store, ABC):
                      validate: bool = True,
                      skip_unsupported: bool = False) -> bool:
         """Insert data into the data store."""
+
+    @abstractmethod
+    def _upload_triple(
+            self,
+            triple: _TripleType
+    ) -> bool:
+        """Insert a triple into the data store."""
+
+    def upload_triple(
+            self,
+            triple: _TripleType):
+        """Insert a triple into the data store.
+
+        Parameters
+        ----------
+        triple : _TripleType
+            A triple to insert into the data store.
+
+        """
+        return self._upload_triple(triple)
 
     def upload_file(self,
                     filename: Union[str, pathlib.Path],

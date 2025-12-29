@@ -133,7 +133,27 @@ WHERE {
         res = sq.execute(ims)
         self.assertEqual(1, len(res.data))
         radius_value = res.data['radius'][0]
-        self.assertEqual(6371000.0, radius_value)
+        self.assertEqual(6371000.0, radius_value.value)
+
+    def test_upload_triples(self):
+        ims = InMemoryRDFStore(data_dir="tmp", recursive_exploration=False)
+        ims.upload_triple(
+            (rdflib.URIRef("http://example.org/subject"),
+             rdflib.URIRef("http://example.org/predicate"),
+             rdflib.Literal("object", lang="en")
+             )
+        )
+        self.assertEqual(1, len(ims.graph))
+        # query the triple back
+        from h5rdmtoolbox.catalog.query_templates import get_properties
+        sq = get_properties("http://example.org/subject")
+        res = sq.execute(ims)
+        self.assertEqual(1, len(res.data))
+
+        self.assertEqual(
+            res.data.iloc[0]["value"],
+            rdflib.Literal('object', lang='en')
+        )
 
     def test_graphdb(self):
         try:
@@ -191,3 +211,37 @@ ex:PersonShape
 
         pathlib.Path("valid_person.ttl").unlink()
         pathlib.Path("invalid_person.ttl").unlink()
+
+        gdb._upload_triple(
+            (rdflib.URIRef("http://example.com/ns#Charlie"),
+             rdflib.URIRef("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+             rdflib.URIRef("http://example.com/ns#Person")
+             )
+        )
+        gdb._upload_triple(
+            (rdflib.URIRef("http://example.com/ns#Charlie"),
+             rdflib.URIRef("http://example.com/ns#age"),
+             rdflib.Literal(25, datatype=rdflib.XSD.integer)
+             )
+        )
+        # add a label to charlie
+        gdb._upload_triple(
+            (rdflib.URIRef("http://example.com/ns#Charlie"),
+             rdflib.URIRef("http://www.w3.org/2000/01/rdf-schema#label"),
+             rdflib.Literal("Charlie", lang="en")
+             )
+        )
+        # query back Charlie
+        from h5rdmtoolbox.catalog.query_templates import get_properties
+        sq = get_properties("http://example.com/ns#Charlie")
+        res = sq.execute(gdb)
+        self.assertEqual(3, len(res.data))
+        self.assertEqual(
+            res.data.iloc[0]["property"],
+            'http://example.com/ns#age'
+        )
+        self.assertEqual(
+            res.data.iloc[0]["value"],
+            25
+        )
+

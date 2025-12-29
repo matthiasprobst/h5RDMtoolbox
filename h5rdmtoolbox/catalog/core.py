@@ -19,7 +19,7 @@ from rdflib.namespace import RDF
 from h5rdmtoolbox.catalog.abstracts import RDFStore
 from .abstracts import DataStore, Store, MetadataStore
 from .utils import sparql_json_to_dataframe, sparql_result_to_df
-
+from rdflib.graph import _TripleType
 SH = Namespace("http://www.w3.org/ns/shacl#")
 RSX = Namespace("http://rdf4j.org/shacl-extensions#")
 logger = logging.getLogger('h5rdmtoolbox.catalog')
@@ -109,6 +109,11 @@ class RemoteSparqlStore(MetadataStore):
         """Uploads a file to the remote SPARQL endpoint."""
         raise NotImplementedError("Remote SPARQL Store does not support file uploads.")
 
+    def _upload_triple(
+            self,
+            triple: _TripleType
+    ) -> bool:
+        raise NotImplementedError("Remote SPARQL Store does not support triple uploads.")
 
 class GraphDB(RemoteSparqlStore):
     """GraphDB RDF database store."""
@@ -157,7 +162,54 @@ class GraphDB(RemoteSparqlStore):
     def password(self) -> str:
         return self._password
 
-    def _upload_file(self, filename: Union[str, pathlib.Path], validate: bool = True,
+    def _upload_triple(
+            self,
+            triple: _TripleType
+    ) -> bool:
+        """Uploads a single triple to the GraphDB-Repository."""
+        url = f"{self.endpoint}/repositories/{self.repository}/statements"
+        s, p, o = triple
+
+        # Normalize incoming terms into rdflib terms (URIRef, Literal, BNode)
+        from rdflib import URIRef, Literal, BNode
+
+        def _normalize_term(t):
+            # If already an rdflib Node, return as-is
+            if isinstance(t, rdflib.term.Node):
+                return t
+            # Strings: strip angle brackets, detect blank nodes and absolute URIs
+            if isinstance(t, str):
+                st = t.strip()
+                if st.startswith("<") and st.endswith(">"):
+                    st = st[1:-1]
+                if st.startswith("_:"):
+                    return BNode(st[2:])
+                # Treat absolute URIs (containing scheme) as URIRefs
+                if "://" in st or st.startswith("http:") or st.startswith("https:") or st.startswith("urn:"):
+                    return URIRef(st)
+                # Fallback to Literal for anything else
+                return Literal(st)
+            # For other types, try to convert to Literal
+            return Literal(t)
+
+        gs = Graph()
+        gs.add((_normalize_term(s), _normalize_term(p), _normalize_term(o)))
+
+        # Serialize to N-Triples to avoid needing a base URI (GraphDB accepts this)
+        data = gs.serialize(format="nt")
+        headers = {"Content-Type": "application/n-triples; charset=utf-8"}
+        auth = (self.username, self.password) if self.username and self.password else None
+        response = requests.post(url, data=data.encode("utf-8"), headers=headers, auth=auth)
+        if response.status_code in (200, 201, 204):
+            return True
+        elif response.status_code == 500:
+            readable_shacl_errors = _format_shacl_report(response.text)
+            raise ValueError(f"SHACL validation failed:\n\n{readable_shacl_errors}")
+        else:
+            raise RuntimeError(f"Upload failed: {response.status_code} {response.text}")
+
+    def _upload_file(self,
+                     filename: Union[str, pathlib.Path], validate: bool = True,
                      skip_unsupported: bool = False) -> bool:
         """Uploads an RDF file to das GraphDB-Repository."""
         filename = pathlib.Path(filename).resolve().absolute()
@@ -434,6 +486,26 @@ class InMemoryRDFStore(RDFStore):
         if filename.parent != self.data_dir:
             shutil.copy(filename, self.data_dir / filename.name)
         self._add_to_graph(filename)
+        return True
+
+    def _upload_triple(
+            self,
+            triple: _TripleType
+    ) -> bool:
+        """Uploads a single triple to the in-memory RDF store.
+
+        Parameters
+        ----------
+        triple : _TripleType
+            The RDF triple to upload.
+
+        Returns
+        -------
+        bool
+            True if the triple was uploaded successfully.
+        """
+        s, p, o = triple
+        self.graph.add((s, p, o))
         return True
 
     def _add_to_graph(self, filename: pathlib.Path):

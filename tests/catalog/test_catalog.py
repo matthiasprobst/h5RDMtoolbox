@@ -4,10 +4,12 @@ import sys
 import unittest
 from typing import List
 
+import rdflib
 from ontolutils.ex import dcat
 
 from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
     MetadataStore
+from h5rdmtoolbox.catalog.query_templates import get_properties
 
 logger = logging.getLogger("h5rdmtoolbox")
 logger.setLevel(logging.DEBUG)
@@ -170,16 +172,28 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             cm.main_rdf_store.populate()
 
         cm.add_hdf_store(CSVDatabase())
+
+        self.assertEqual(4785, len(cm.main_rdf_store.graph))
+        cm.main_rdf_store.graph.add(
+            (rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"), rdflib.RDF.type, rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"))
+        )
+        self.assertEqual(4786, len(cm.main_rdf_store.graph))
+
         if sys.version_info.minor == 12:
             # skip adding wikidata store on non-3.12 Python to avoid rate limiting
-            cm.add_wikidata_store(augment_knowledge=True)
+            cm.add_wikidata_store(augment_main_rdf_store=True)
+        self.assertEqual(4786, len(cm.main_rdf_store.graph))
 
+        res = get_properties("https://www.wikidata.org/wiki/Q137525225").execute(
+            cm.main_rdf_store
+        )
+        self.assertTrue(len(res.data) > 0)
         self.assertIsInstance(cm.catalog, dcat.Catalog)
 
         main_rdf_store: RDFStore = cm.main_rdf_store
         hdf_store: DataStore = cm.hdf_store
 
-        self.assertEqual(4785, len(cm.main_rdf_store.graph))
+        self.assertEqual(4786, len(cm.main_rdf_store.graph))
 
         self.assertIsInstance(main_rdf_store, MetadataStore)
         self.assertIsInstance(main_rdf_store, InMemoryRDFStore)
@@ -205,7 +219,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertEqual(res.description, "Selects all triples")
 
         self.assertIsInstance(res, QueryResult)
-        self.assertEqual(4793, len(res.data))
+        self.assertEqual(4794, len(res.data))
 
         main_rdf_store.upload_file(__this_dir__ / "data/metadata.jsonld")
 
