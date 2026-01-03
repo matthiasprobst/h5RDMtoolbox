@@ -10,8 +10,24 @@ import rdflib
 from ontolutils.ex import dcat, prov
 
 from ._initialization import database_initialization, DownloadStatus
-from .core import MetadataStore, DataStore, RDFStore, Store, RemoteSparqlStore, StoreManager, HDF5SqlDB, Query, \
-    RemoteSparqlQuery, QueryResult, SparqlQuery, GraphDB, InMemoryRDFStore, FederatedQueryResult, MetadataStoreQuery
+from .core import (
+    MetadataStore,
+    DataStore,
+    RDFStore,
+    Store,
+    RemoteSparqlStore,
+    StoreManager,
+    HDF5SqlDB,
+    Query,
+    RemoteSparqlQuery,
+    QueryResult,
+    SparqlQuery,
+    GraphDB,
+    InMemoryRDFStore,
+    FederatedQueryResult,
+    MetadataStoreQuery,
+)
+from .stores.hdf5_store import HDF5Store
 from .profiles import IS_VALID_CATALOG_SHACL
 from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS
 from .utils import WebResource, download
@@ -20,7 +36,9 @@ from ..repository.zenodo import ZenodoRecord
 logger = logging.getLogger("h5rdmtoolbox.catalog")
 
 
-def _parse_catalog(catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]) -> dcat.Catalog:
+def _parse_catalog(
+    catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
+) -> dcat.Catalog:
     """Parses the user input to a dcat.Catalog object.
 
     - If catalog is a filename (str or pathlib.Path), load the catalog from the file.
@@ -32,14 +50,18 @@ def _parse_catalog(catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]
     if isinstance(catalog, str) and catalog.startswith("http"):
         raise NotImplementedError("Loading catalog from URL is not implemented yet.")
     if isinstance(catalog, ZenodoRecord):
-        raise NotImplementedError("Loading catalog from ZenodoRecord is not implemented yet.")
+        raise NotImplementedError(
+            "Loading catalog from ZenodoRecord is not implemented yet."
+        )
     if isinstance(catalog, (str, pathlib.Path)):
         catalog_path = pathlib.Path(catalog)
         if not catalog_path.exists():
             raise FileNotFoundError(f"Catalog file {catalog} does not exist.")
         catalogs = dcat.Catalog.from_ttl(source=catalog)
         if len(catalogs) > 1:
-            raise ValueError(f"Multiple catalogs found in file {catalog}. Expected only one.")
+            raise ValueError(
+                f"Multiple catalogs found in file {catalog}. Expected only one."
+            )
         if len(catalogs) == 0:
             raise ValueError(f"No catalog found in file {catalog}.")
         return catalogs[0]
@@ -55,7 +77,7 @@ def _validate_catalog(catalog: dcat.Catalog) -> bool:
     results = pyshacl.validate(
         data_graph=catalog_graph,
         shacl_graph=shacl_graph,
-        inference='rdfs',
+        inference="rdfs",
         abort_on_first=False,
         meta_shacl=False,
         advanced=True,
@@ -68,7 +90,9 @@ def _validate_catalog(catalog: dcat.Catalog) -> bool:
     return conforms, results_graph, results_text
 
 
-def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathlib.Path) -> List[DownloadStatus]:
+def _download_catalog_datasets(
+    catalog: dcat.Catalog, download_directory: pathlib.Path
+) -> List[DownloadStatus]:
     """Downloads all datasets in the catalog to the specified directory."""
     g = rdflib.Graph()
     g.parse(data=catalog.serialize("ttl"), format="ttl")
@@ -76,19 +100,23 @@ def _download_catalog_datasets(catalog: dcat.Catalog, download_directory: pathli
     results = g.query(GET_ALL_METADATA_CATALOG_DATASETS.query)
 
     print("found datasets:", len(results))
-    list_of_ttl_web_resources = [WebResource(
-        download_url=row.download,
-        checksum=row.checksumValue,
-        title=row.title,
-        identifier=row.identifier,
-        mediaType="text/turtle"
-    ) for row in results]
+    list_of_ttl_web_resources = [
+        WebResource(
+            download_url=row.download,
+            checksum=row.checksumValue,
+            title=row.title,
+            identifier=row.identifier,
+            mediaType="text/turtle",
+        )
+        for row in results
+    ]
 
     n_ttl_resources = len(list_of_ttl_web_resources)
-    print(f"Found {n_ttl_resources} TTL web resources to download. Downloading to {download_directory}...")
+    print(
+        f"Found {n_ttl_resources} TTL web resources to download. Downloading to {download_directory}..."
+    )
     return download(
-        download_directory=download_directory,
-        web_resources=list_of_ttl_web_resources
+        download_directory=download_directory, web_resources=list_of_ttl_web_resources
     )
 
 
@@ -123,10 +151,7 @@ def _query_catalog_from_rdf_store(rdf_store: RDFStore) -> dcat.Catalog:
         return cat[0]
 
     for dataset_iri in cat[0].dataset:
-        datasets = dcat.Dataset.from_graph(
-            rdf_store.graph,
-            subject=dataset_iri
-        )
+        datasets = dcat.Dataset.from_graph(rdf_store.graph, subject=dataset_iri)
         _distributions = []
         for dataset in datasets:
             distributions = dataset.distribution
@@ -134,8 +159,7 @@ def _query_catalog_from_rdf_store(rdf_store: RDFStore) -> dcat.Catalog:
                 continue
             for distribution_iri in dataset.distribution:
                 dist = dcat.Distribution.from_graph(
-                    rdf_store.graph,
-                    subject=distribution_iri
+                    rdf_store.graph, subject=distribution_iri
                 )
                 _distributions.extend(dist)
             dataset.distribution = _distributions
@@ -159,9 +183,9 @@ class CatalogManager:
     """
 
     def __init__(
-            self,
-            catalog: Optional[Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]] = None,
-            working_directory: Union[str, pathlib.Path] = None,
+        self,
+        catalog: Optional[Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]] = None,
+        working_directory: Union[str, pathlib.Path] = None,
     ):
         """Initializes the Catalog.
 
@@ -180,7 +204,9 @@ class CatalogManager:
         else:
             self._catalog = None
 
-        self._rdf_directory, self._hdf_directory = self._setup_file_structure(working_directory)
+        self._rdf_directory, self._hdf_directory = self._setup_file_structure(
+            working_directory
+        )
         self._store_manager = StoreManager()
 
         if catalog is not None:
@@ -195,7 +221,8 @@ class CatalogManager:
             raise TypeError(f"Expected MetadataStore, got {type(rdf_store)}")
         if "main_rdf_store" in self.stores:
             raise KeyError(
-                "Main RDF store already exists in the catalog. Use 'add_rdf_store()' to add additional stores.")
+                "Main RDF store already exists in the catalog. Use 'add_rdf_store()' to add additional stores."
+            )
         self.stores.add_store("main_rdf_store", rdf_store)
 
     def add_hdf_store(self, hdf_store: DataStore):
@@ -220,19 +247,29 @@ class CatalogManager:
             if len(rdf_store.graph) == 0 and len(download_stati) > 0:
                 logger.debug("Populating main RDF store with downloaded datasets...")
                 for download_status in download_stati:
-                    rdf_store.upload_file(download_status.filename, skip_unsupported=True)
-                logger.info(f"Main RDF store populated with {len(download_stati)} files.")
+                    rdf_store.upload_file(
+                        download_status.filename, skip_unsupported=True
+                    )
+                logger.info(
+                    f"Main RDF store populated with {len(download_stati)} files."
+                )
 
     @staticmethod
-    def _setup_file_structure(working_directory: Union[str, pathlib.Path],
-                              rdf_directory: Union[str, pathlib.Path] = None):
+    def _setup_file_structure(
+        working_directory: Union[str, pathlib.Path],
+        rdf_directory: Union[str, pathlib.Path] = None,
+    ):
         if working_directory is None:
             working_directory = pathlib.Path.cwd()
         _working_directory = pathlib.Path(working_directory)
         if not _working_directory.exists():
-            raise NotADirectoryError(f"Working directory {_working_directory} does not exist.")
+            raise NotADirectoryError(
+                f"Working directory {_working_directory} does not exist."
+            )
         if not _working_directory.is_dir():
-            raise NotADirectoryError(f"Working directory {_working_directory} is not a directory.")
+            raise NotADirectoryError(
+                f"Working directory {_working_directory} is not a directory."
+            )
 
         if rdf_directory is None:
             _rdf_directory = pathlib.Path(working_directory) / "rdf"
@@ -279,7 +316,9 @@ class CatalogManager:
     def main_rdf_store(self) -> RDFStore:
         """Returns the main RDF store."""
         if "main_rdf_store" not in self.stores:
-            raise KeyError("No main RDF store found in the catalog. Please add one using 'add_main_rdf_store()'.")
+            raise KeyError(
+                "No main RDF store found in the catalog. Please add one using 'add_main_rdf_store()'."
+            )
         return self.stores["main_rdf_store"]
 
     @property
@@ -289,6 +328,7 @@ class CatalogManager:
     @classmethod
     def validate_catalog(cls, catalog_filename: Union[str, pathlib.Path]) -> bool:
         import pyshacl
+
         config_graph = rdflib.Graph()
         config_graph.parse(source=catalog_filename, format="ttl")
         shacl_graph = rdflib.Graph()
@@ -296,7 +336,7 @@ class CatalogManager:
         results = pyshacl.validate(
             data_graph=config_graph,
             shacl_graph=shacl_graph,
-            inference='rdfs',
+            inference="rdfs",
             abort_on_first=False,
             meta_shacl=False,
             advanced=True,
@@ -310,9 +350,9 @@ class CatalogManager:
 
     @classmethod
     def initialize(
-            cls,
-            config_filename: Union[str, pathlib.Path],
-            working_directory: Union[str, pathlib.Path] = None
+        cls,
+        config_filename: Union[str, pathlib.Path],
+        working_directory: Union[str, pathlib.Path] = None,
     ) -> List[DownloadStatus]:
         if working_directory is None:
             working_directory = pathlib.Path.cwd()
@@ -323,15 +363,15 @@ class CatalogManager:
         )
         conforms, results_graph, results_text = cls.validate_catalog(config_filename)
         if not conforms:
-            raise ValueError(f"The provided config file is not valid according to SHACL shapes: {results_text}")
+            raise ValueError(
+                f"The provided config file is not valid according to SHACL shapes: {results_text}"
+            )
 
         shutil.copy(
-            config_filename,
-            download_directory / pathlib.Path(config_filename).name
+            config_filename, download_directory / pathlib.Path(config_filename).name
         )
         return database_initialization(
-            config_filename=config_filename,
-            download_directory=download_directory
+            config_filename=config_filename, download_directory=download_directory
         )
 
     def add_rdf_store(self, store_name: str, rdf_store: RDFStore):
@@ -340,7 +380,12 @@ class CatalogManager:
             raise TypeError(f"Expected RDFStore, got {type(rdf_store)}")
         self.stores.add_store(store_name, rdf_store)
 
-    def add_wikidata_store(self, store_name: str = "wikidata", augment_main_rdf_store: bool = False, exists_ok: bool = False):
+    def add_wikidata_store(
+        self,
+        store_name: str = "wikidata",
+        augment_main_rdf_store: bool = False,
+        exists_ok: bool = False,
+    ):
         """Adds a Wikidata SPARQL store to the catalog's store manager.
 
         Parameters:
@@ -351,16 +396,24 @@ class CatalogManager:
             Default is False.
         """
         if store_name in self.stores and not exists_ok:
-            raise KeyError(f"Store with name '{store_name}' already exists in the catalog. Use 'exists_ok=True' to overwrite.")
+            raise KeyError(
+                f"Store with name '{store_name}' already exists in the catalog. Use 'exists_ok=True' to overwrite."
+            )
         if store_name in self.stores and exists_ok:
             wikidata_store = self.stores[store_name]
         else:
-            wikidata_store = RemoteSparqlStore(endpoint_url="https://query.wikidata.org/sparql", return_format="json")
+            wikidata_store = RemoteSparqlStore(
+                endpoint_url="https://query.wikidata.org/sparql", return_format="json"
+            )
             self.stores.add_store(store_name, wikidata_store)
 
         if augment_main_rdf_store:
             _count = 0
-            from .query_templates import get_wikidata_property_query, GET_ALL_WIKIDATA_ENTITIES
+            from .query_templates import (
+                get_wikidata_property_query,
+                GET_ALL_WIKIDATA_ENTITIES,
+            )
+
             main_rdf_store = self.main_rdf_store
             # find all wikidata entities
             res = GET_ALL_WIKIDATA_ENTITIES.execute(main_rdf_store)
@@ -368,7 +421,9 @@ class CatalogManager:
 
             if res.data.empty:
                 print("empty")
-                logger.info("No Wikidata entities found in the main RDF store. Skipping Wikidata knowledge addition.")
+                logger.info(
+                    "No Wikidata entities found in the main RDF store. Skipping Wikidata knowledge addition."
+                )
                 return
             for entity in res.data["wikidata_entity"]:
                 sparql_query = get_wikidata_property_query(wikidata_entity=entity)
@@ -379,7 +434,9 @@ class CatalogManager:
                     pred = rdflib.URIRef(row["property"])
                     obj_value = row["value"]
                     if isinstance(obj_value, str):
-                        if obj_value.startswith("http://") or obj_value.startswith("https://"):
+                        if obj_value.startswith("http://") or obj_value.startswith(
+                            "https://"
+                        ):
                             obj = rdflib.URIRef(obj_value)
                         else:
                             obj = rdflib.Literal(obj_value)
@@ -394,7 +451,9 @@ class CatalogManager:
         Since there are possibly multiple RDF stores, the results are combined.
         """
         if isinstance(query, MetadataStoreQuery):
-            all_res = [query.execute(rdf_store) for rdf_store in self.rdf_stores.values()]
+            all_res = [
+                query.execute(rdf_store) for rdf_store in self.rdf_stores.values()
+            ]
             if len(all_res) == 1:
                 return all_res[0]
             first_res = all_res[0]
@@ -418,6 +477,7 @@ __all__ = (
     "Store",
     "StoreManager",
     "HDF5SqlDB",
+    "HDF5Store",
     "Query",
     "RemoteSparqlQuery",
     "FederatedQueryResult",

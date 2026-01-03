@@ -1,13 +1,18 @@
 import pathlib
 import sys
 import unittest
+from contextlib import contextmanager
 
+import numpy as np
 import rdflib
 import requests
+from ontolutils.ex import dcat
 
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, RemoteSparqlStore, StoreManager, \
     DataStore, \
     InMemoryRDFStore, GraphDB
+from h5rdmtoolbox.catalog.stores.hdf5_store import HDF5Store
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -33,11 +38,73 @@ class CSVDatabase(DataStore):
     # def query(self) -> Type[Query]:
     #     return MockSqlQuery
 
-    def upload_file(self, filename, skip_unsupported: bool = False) -> bool:
+    def _upload_file(self, filename, skip_unsupported: bool = False) -> bool:
         return True
 
     def execute_query(self, query: Query):
         raise NotImplementedError("CSVDatabase does not support queries.")
+
+
+class SimpleHDF5Store(HDF5Store):
+
+    def __init__(self, data_directory):
+        super().__init__(data_directory)
+        self.data_directory = pathlib.Path(data_directory)
+        self.data_directory.mkdir(parents=True, exist_ok=True)
+        self._downloaded_files = {}
+
+    def _get_or_download_file(self, download_url: str) -> pathlib.Path:
+        """Download HDF5 file if not already present."""
+        file_info = self._file_registry.get(download_url)
+        if not file_info:
+            raise FileNotFoundError(f"File {download_url} not registered in store")
+
+        filename = file_info["filename"]
+        local_filename = self.data_directory / file_info["filename"]
+        if local_filename.exists():
+            return local_filename
+
+        # download to target directory
+        dist = dcat.Distribution(
+            download_URL=file_info["download_url"]
+        )
+        return dist.download(
+            dest_filename=local_filename,
+        )
+
+    @contextmanager
+    def open_hdf5_object(
+            self,
+            download_url: str,
+            object_name: str = None):
+        """Open HDF5 file and return object using context manager."""
+        local_path = self._get_or_download_file(download_url)
+        with h5tbx.File(local_path, "r") as f:
+            if object_name is None:
+                yield f["/"]
+            else:
+                yield f[object_name] if object_name in f else None
+
+
+def create_test_hdf5_file():
+    """Create a test HDF5 file for demonstration."""
+
+    with h5tbx.File() as f:
+        # Create test datasets
+        f.create_dataset("temperature", data=np.random.rand(10, 5) * 25 + 273.15)
+        f.create_dataset("pressure", data=np.random.rand(10, 5) * 1000 + 101325)
+
+        # Create groups
+        group = f.create_group("measurements")
+        group.create_dataset("humidity", data=np.random.rand(10, 5) * 100)
+
+        # Add metadata
+        f.attrs["title"] = "Test Dataset"
+        f.attrs["created"] = "2024-01-01"
+        f["temperature"].attrs["units"] = "K"
+        f["pressure"].attrs["units"] = "Pa"
+
+    return f.hdf_filename
 
 
 class TestDataStore(unittest.TestCase):
@@ -245,3 +312,56 @@ ex:PersonShape
             25
         )
 
+    def test_hdf_store(self):
+        # print("Creating test HDF5 file...")
+        # hdf5_filename = create_test_hdf5_file()
+        # print(f"Created: {hdf5_filename}")
+        #
+        # print("\n1. Setting up HDF5 store...")
+        working_dir = __this_dir__ / "local-db/hdf"
+        hdf5_store = SimpleHDF5Store(working_dir)
+        #
+        # # insert_result = hdf5_store._upload_file(
+        # #     download_url=hdf5_filename.as_uri(),
+        # #     filename=hdf5_filename
+        # # )
+        # insert_result = hdf5_store._upload_file(
+        #     download_url="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-05-20_run.hdf/content",
+        #     filename=hdf5_filename
+        # )
+        # self.assertEqual(
+        #     insert_result,
+        #     {
+        #         "local_path": None,
+        #         "filename": hdf5_filename,
+        #         "downloaded": False,
+        #         "download_url": hdf5_filename.as_uri(),
+        #     }
+        # )
+        #
+        # query_result = {
+        #     "identifier": "test_dataset_001",
+        #     "download_url": hdf5_filename.as_uri(),
+        #     "hdf_name": "/temperature",  # This is the key information!
+        # }
+
+        download_URL = "https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-05-20_run.hdf/content"
+        hdf5_store.upload_file(
+            distribution=dcat.Distribution(
+                id=download_URL,
+                download_URL=download_URL,
+                title="Test HDF5 Dataset",
+            )
+        )
+
+        # a RDF query on the RDF store would return a distribution and a dataset
+        # --> ready to use SPARQL: get_distribution_to_hdf_dataset(hdf_dataset_uri: str)
+
+        with hdf5_store.open_hdf5_object(
+                download_url=download_URL,
+                object_name="/dp_sm"
+        ) as dataset:
+            print(f"Dataset shape: {dataset.shape}")
+            print(f"Dataset dtype: {dataset.dtype}")
+            print(f"First 5 values: {dataset[:5]}")
+            print(f"Units: {dataset.attrs.get('units', 'N/A')}")

@@ -142,3 +142,28 @@ def get_properties(
         query=query_str,
         description=f"Selects all properties of the target URI {subject_uri}"
     )
+
+def get_distribution_to_hdf_dataset(
+        hdf_dataset_uri: Union[str, HttpUrl, rdflib.URIRef]
+):
+    """Returns a SPARQL query that selects the distribution that represents a hdf:File, which contains
+    a hdf:Dataset. Relation between File and RootGroup is hdf:rootGroup and between any Group and its member Datasets is hdf:member.
+    This query assumes that the hdf:Dataset is uniquely contained in a single distribution."""
+    hdf_dataset_uri = str(HttpUrl(hdf_dataset_uri))
+    query_str = f"""
+PREFIX hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#>
+PREDIX dcat: <http://www.w3.org/ns/dcat#>
+SELECT ?distribution ?downloadURL
+WHERE {{
+    ?distribution a dcat:Distribution ;
+                  a hdf:File ;
+                  dcat:downloadURL ?downloadURL ;
+                  hdf:rootGroup ?rootGroup .
+
+    ?rootGroup (hdf:member|^hdf:member)* <{hdf_dataset_uri}> .
+}}
+"""
+    return SparqlQuery(
+        query=query_str,
+        description=f"Selects the distribution containing the HDF5 dataset {hdf_dataset_uri}"
+    )

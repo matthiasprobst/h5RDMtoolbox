@@ -2,6 +2,8 @@ import pathlib
 from typing import Type
 
 import pandas as pd
+from ontolutils.ex import dcat
+from pydantic import FileUrl
 
 from h5rdmtoolbox.catalog import DataStore, Query
 
@@ -18,6 +20,7 @@ class CSVDbQuery(Query):
 class CSVDatabase(DataStore):
 
     def __init__(self):
+        super().__init__()
         self._filenames = []
         self.tables = {}
         self._expected_file_extensions = {".csv", }
@@ -30,7 +33,18 @@ class CSVDatabase(DataStore):
     def expected_file_extensions(self):
         return self._expected_file_extensions
 
-    def upload_file(self, filename, skip_unsupported: bool = False) -> bool:
+    def _upload_file(
+            self,
+            distribution: dcat.Distribution = None,
+            validate=False, skip_unsupported: bool = False
+    ) -> bool:
+        filename = distribution.download_URL
+        if isinstance(filename, FileUrl):
+            filename = str(filename)
+        if filename.startswith("file:///"):
+            filename = filename[8:]
+        elif filename.startswith("file://"):
+            filename = filename[7:]
         filename = pathlib.Path(filename)
         assert filename.exists(), f"File {filename} does not exist."
         assert filename.suffix in self._expected_file_extensions, f"File type {filename.suffix} not supported"
