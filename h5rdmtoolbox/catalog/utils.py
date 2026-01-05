@@ -1,14 +1,18 @@
 import hashlib
+import os
 import pathlib
 import re
 from dataclasses import dataclass
 from datetime import datetime, date, time
 from decimal import Decimal
 from typing import Dict, Tuple, Iterator, List
+from urllib.parse import urlparse, unquote
+from urllib.request import url2pathname
 
 import pandas as pd
 import rdflib
 import requests
+from pydantic import FileUrl
 from pydantic.v1 import HttpUrl
 from rdflib import Graph
 
@@ -21,6 +25,41 @@ _NUM_DT = {
 }
 _FLOAT_DT = {_XSD + "float", _XSD + "double"}
 _DEC_DT = {_XSD + "decimal"}
+
+
+def file_uri_or_path_to_path(value) -> pathlib.Path:
+    # Keep behavior close to your code
+    if isinstance(value, pathlib.Path):
+        return value
+
+    # Your custom type
+    if "FileUrl" in globals() and isinstance(value, FileUrl):
+        value = str(value)
+
+    if not isinstance(value, str):
+        raise TypeError(f"Expected str/Path, got {type(value)!r}")
+
+    parsed = urlparse(value)
+
+    # Not a URI -> treat as normal filesystem path
+    if parsed.scheme != "file":
+        return pathlib.Path(value)
+
+    # File URI -> convert to OS path
+    # parsed.path is already the URI path part, still percent-encoded
+    path = url2pathname(unquote(parsed.path))
+
+    # Handle file://localhost/... (same as local)
+    netloc = parsed.netloc
+    if netloc and netloc not in ("localhost",):
+        # UNC style (mostly Windows): file://server/share/file.txt
+        if os.name == "nt":
+            path = f"\\\\{netloc}{path}"
+        else:
+            # Rare on POSIX; best effort
+            path = f"/{netloc}{path}"
+
+    return pathlib.Path(path)
 
 
 def sparql_query_to_jsonld(graph: Graph, query: str) -> dict:

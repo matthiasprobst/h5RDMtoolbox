@@ -27,7 +27,7 @@ from .core import (
     FederatedQueryResult,
     MetadataStoreQuery,
 )
-from .stores.hdf5_store import HDF5Store
+from .stores.hdf5 import HDF5Store
 from .profiles import IS_VALID_CATALOG_SHACL
 from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS
 from .utils import WebResource, download

@@ -44,8 +44,8 @@ class DataStore(Store, ABC):
 
     def upload_file(
             self,
-            filename: Union[str, pathlib.Path]=None,
-            distribution: dcat.Distribution=None,
+            filename: Union[str, pathlib.Path] = None,
+            distribution: dcat.Distribution = None,
             validate: bool = True,
             skip_unsupported: bool = False,
     ) -> bool:
@@ -56,7 +56,7 @@ class DataStore(Store, ABC):
             raise ValueError("Only one of filename or distribution can be provided.")
         if filename is not None:
             distribution = dcat.Distribution(
-                downloadURL=pathlib.Path(filename).resolve().absolute().as_uri()
+                download_URL=pathlib.Path(filename).resolve().absolute().as_uri()
             )
 
         return self._upload_file(
@@ -68,7 +68,7 @@ class DataStore(Store, ABC):
     @abstractmethod
     def _upload_file(
             self,
-            distribution: dcat.Distribution=None,
+            distribution: dcat.Distribution = None,
             validate: bool = True,
             skip_unsupported: bool = False,
     ):

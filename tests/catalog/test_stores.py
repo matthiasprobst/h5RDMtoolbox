@@ -1,7 +1,6 @@
 import pathlib
 import sys
 import unittest
-from contextlib import contextmanager
 
 import numpy as np
 import rdflib
@@ -12,7 +11,7 @@ import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, RemoteSparqlStore, StoreManager, \
     DataStore, \
     InMemoryRDFStore, GraphDB
-from h5rdmtoolbox.catalog.stores.hdf5_store import HDF5Store
+from h5rdmtoolbox.catalog.stores.hdf5 import HDF5FileStore
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -27,63 +26,22 @@ class MockSqlQuery(Query):
         return QueryResult(self, "mock_result")
 
 
-class CSVDatabase(DataStore):
-
-    def __init__(self):
-        self._filenames = []
-        self.tables = {}
-        self._expected_file_extensions = {".csv", }
-
-    # @property
-    # def query(self) -> Type[Query]:
-    #     return MockSqlQuery
-
-    def _upload_file(self, filename, skip_unsupported: bool = False) -> bool:
-        return True
-
-    def execute_query(self, query: Query):
-        raise NotImplementedError("CSVDatabase does not support queries.")
-
-
-class SimpleHDF5Store(HDF5Store):
-
-    def __init__(self, data_directory):
-        super().__init__(data_directory)
-        self.data_directory = pathlib.Path(data_directory)
-        self.data_directory.mkdir(parents=True, exist_ok=True)
-        self._downloaded_files = {}
-
-    def _get_or_download_file(self, download_url: str) -> pathlib.Path:
-        """Download HDF5 file if not already present."""
-        file_info = self._file_registry.get(download_url)
-        if not file_info:
-            raise FileNotFoundError(f"File {download_url} not registered in store")
-
-        filename = file_info["filename"]
-        local_filename = self.data_directory / file_info["filename"]
-        if local_filename.exists():
-            return local_filename
-
-        # download to target directory
-        dist = dcat.Distribution(
-            download_URL=file_info["download_url"]
-        )
-        return dist.download(
-            dest_filename=local_filename,
-        )
-
-    @contextmanager
-    def open_hdf5_object(
-            self,
-            download_url: str,
-            object_name: str = None):
-        """Open HDF5 file and return object using context manager."""
-        local_path = self._get_or_download_file(download_url)
-        with h5tbx.File(local_path, "r") as f:
-            if object_name is None:
-                yield f["/"]
-            else:
-                yield f[object_name] if object_name in f else None
+# class CSVDatabase(DataStore):
+#
+#     def __init__(self):
+#         self._filenames = []
+#         self.tables = {}
+#         self._expected_file_extensions = {".csv", }
+#
+#     # @property
+#     # def query(self) -> Type[Query]:
+#     #     return MockSqlQuery
+#
+#     def _upload_file(self, filename, skip_unsupported: bool = False) -> bool:
+#         return True
+#
+#     def execute_query(self, query: Query):
+#         raise NotImplementedError("CSVDatabase does not support queries.")
 
 
 def create_test_hdf5_file():
@@ -119,12 +77,12 @@ class TestDataStore(unittest.TestCase):
 
     def test_add_store(self):
         manager = StoreManager()
-        store = CSVDatabase()
+        store = HDF5FileStore()
         self.assertEqual(
             len(manager.stores),
             0
         )
-        self.assertEqual(store.__repr__(), "CSVDatabase()")
+        self.assertEqual(store.__repr__(), f"HDF5FileStore(data_directory={store.data_directory})")
         manager.add_store("test_store", store)
 
         self.assertEqual(len(manager), 1)
@@ -133,7 +91,7 @@ class TestDataStore(unittest.TestCase):
             manager.does_not_exist
 
     def test_query_store(self):
-        store = CSVDatabase()
+        store = HDF5FileStore()
         query = MockSqlQuery(query="SELECT * FROM test_table;")
         self.assertIsInstance(query, Query)
         self.assertIsInstance(query, MockSqlQuery)
@@ -314,12 +272,19 @@ ex:PersonShape
 
     def test_hdf_store(self):
         # print("Creating test HDF5 file...")
-        # hdf5_filename = create_test_hdf5_file()
+        hdf5_filename = create_test_hdf5_file()
         # print(f"Created: {hdf5_filename}")
         #
         # print("\n1. Setting up HDF5 store...")
         working_dir = __this_dir__ / "local-db/hdf"
-        hdf5_store = SimpleHDF5Store(working_dir)
+        hdf5_store = HDF5FileStore(working_dir)
+
+        local_file_dist = dcat.Distribution(
+            download_URL=hdf5_filename.as_uri(),
+            title="Test HDF5 Dataset",
+            mediaType="application/x-hdf5"
+        )
+        print(local_file_dist.serialize("ttl"))
         #
         # # insert_result = hdf5_store._upload_file(
         # #     download_url=hdf5_filename.as_uri(),

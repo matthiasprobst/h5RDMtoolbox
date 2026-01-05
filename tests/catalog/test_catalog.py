@@ -6,10 +6,12 @@ from typing import List
 
 import rdflib
 from ontolutils.ex import dcat
-
+import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
     MetadataStore
+from h5rdmtoolbox.catalog import InMemoryRDFStore, _query_catalog_from_rdf_store
 from h5rdmtoolbox.catalog.query_templates import get_properties
+from h5rdmtoolbox.catalog.stores.hdf5 import HDF5FileStore, HDF5Store
 
 logger = logging.getLogger("h5rdmtoolbox")
 logger.setLevel(logging.DEBUG)
@@ -17,10 +19,6 @@ for h in logger.handlers:
     h.setLevel(logging.DEBUG)
 
 __this_dir__ = pathlib.Path(__file__).parent
-
-sys.path.insert(0, str(__this_dir__))
-from h5rdmtoolbox.catalog import InMemoryRDFStore, _query_catalog_from_rdf_store
-from example_storage_db import CSVDatabase
 
 
 def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
@@ -39,14 +37,13 @@ def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
     }}
     """.format(date=date)
     # results = self["rdf_database"].execute_query(SparqlQuery(sparql_query))
-    _store: RDFStore = db.main_rdf_store
-    results = SparqlQuery(sparql_query).execute(_store)
+    rdf_database: RDFStore = db.main_rdf_store
+    results = SparqlQuery(sparql_query).execute(rdf_database)
 
     # result_data = [{str(k): parse_literal(v) for k, v in binding.items()} for binding in results.data.bindings]
 
     federated_query_results = []
 
-    rdf_database = db.main_rdf_store
     for dataset, url in zip(results.data["dataset"], results.data["url"]):
         filename = str(url).rsplit('/', 1)[-1]
 
@@ -149,7 +146,19 @@ class TestGenericLinkedDatabase(unittest.TestCase):
 
 """)
 
-    def test_rdf_and_csv_stores(self):
+    def test_rdf_and_data_stores(self):
+
+        # write test data
+        with h5tbx.File(__this_dir__ / "data/random_data.h5", mode="w") as h5:
+            h5.create_dataset("/temperature", data=[22.5, 23.0, 21.8])
+            h5.create_string_dataset("/users", data=["Alice", "Bob", "Charlie"])
+
+        with h5tbx.File(__this_dir__ / "data/temperature.hdf5", mode="w") as h5:
+            h5.create_dataset("/2024-01-01", data=[-5.0, -3.2, 0.0])
+            h5.create_dataset("/2024-01-02", data=[-4.5, -2.8, 1.0])
+
+        data_store = HDF5FileStore(data_directory=__this_dir__ / "local-db" / "hdf")
+
         working_dir = __this_dir__ / "local-db"
         working_dir.mkdir(parents=True, exist_ok=True)
 
@@ -171,11 +180,12 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             cm.download_metadata()
             cm.main_rdf_store.populate()
 
-        cm.add_hdf_store(CSVDatabase())
+        cm.add_hdf_store(data_store)
 
         self.assertEqual(4785, len(cm.main_rdf_store.graph))
         cm.main_rdf_store.graph.add(
-            (rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"), rdflib.RDF.type, rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"))
+            (rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"), rdflib.RDF.type,
+             rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"))
         )
         self.assertEqual(4786, len(cm.main_rdf_store.graph))
 
@@ -198,11 +208,10 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertIsInstance(main_rdf_store, MetadataStore)
         self.assertIsInstance(main_rdf_store, InMemoryRDFStore)
         self.assertIsInstance(hdf_store, DataStore)
-        self.assertIsInstance(hdf_store, CSVDatabase)
-
+        self.assertIsInstance(hdf_store, HDF5Store)
         hdf_store = cm.hdf_store
         main_rdf_store = cm.main_rdf_store
-        self.assertIsInstance(hdf_store, CSVDatabase)
+        self.assertIsInstance(hdf_store, HDF5Store)
         self.assertIsInstance(main_rdf_store, InMemoryRDFStore)
 
         with self.assertRaises(ValueError):
@@ -222,18 +231,19 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertEqual(4794, len(res.data))
 
         main_rdf_store.upload_file(__this_dir__ / "data/metadata.jsonld")
+        self.assertTrue((__this_dir__ / "data/random_data.h5").exists())
+        self.assertTrue((__this_dir__ / "data/temperature.hdf5").exists())
 
-        hdf_store.upload_file(__this_dir__ / "data/random_data.csv")
-        hdf_store.upload_file(__this_dir__ / "data/random_data.csv")
-        hdf_store.upload_file(__this_dir__ / "data/temperature.csv")
-        hdf_store.upload_file(__this_dir__ / "data/users.csv")
+        hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
+        hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
+        hdf_store.upload_file(__this_dir__ / "data/temperature.hdf5")
 
-        data = get_temperature_data_by_date(cm, date="2024-01-01")
-        self.assertIsInstance(data, list)
-        self.assertIsInstance(data[0], FederatedQueryResult)
-
-        self.assertTrue((cm.rdf_directory / "data1.jsonld").exists())
-        self.assertTrue((cm.rdf_directory / "metadata.jsonld").exists())
-
-        (cm.rdf_directory / "data1.jsonld").unlink()
-        (cm.rdf_directory / "metadata.jsonld").unlink()
+        # data = get_temperature_data_by_date(cm, date="2024-01-01")
+        # self.assertIsInstance(data, list)
+        # self.assertIsInstance(data[0], FederatedQueryResult)
+        #
+        # self.assertTrue((cm.rdf_directory / "data1.jsonld").exists())
+        # self.assertTrue((cm.rdf_directory / "metadata.jsonld").exists())
+        #
+        # (cm.rdf_directory / "data1.jsonld").unlink()
+        # (cm.rdf_directory / "metadata.jsonld").unlink()

@@ -1,14 +1,15 @@
 import os
 import pathlib
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from contextlib import contextmanager
-from typing import Union, Optional, Dict
+from typing import Union, Optional
 from urllib.parse import urlparse
 
 import h5py
 from ontolutils.ex import dcat
 
 from ..abstracts import DataStore
+from ...wrapper.core import File
 
 
 def _get_filename(downloadURL):
@@ -21,12 +22,12 @@ def _get_filename(downloadURL):
     return filename
 
 
-class HDF5Store(DataStore):
+class HDF5Store(DataStore, ABC):
     """HDF5 data store that downloads and provides access to HDF5 files."""
 
     __expected_file_types__ = {".h5", ".hdf5", ".hdf"}
 
-    def __init__(self, data_directory: Union[str, pathlib.Path]):
+    def __init__(self, data_directory: Union[str, pathlib.Path] = None):
         """Initialize HDF5 store.
 
         Parameters
@@ -34,9 +35,15 @@ class HDF5Store(DataStore):
         data_directory : Union[str, pathlib.Path]
             Directory to store downloaded HDF5 files
         """
+        if data_directory is None:
+            data_directory = pathlib.Path.cwd() / "hdf"
         self.data_directory = pathlib.Path(data_directory)
         self.data_directory.mkdir(parents=True, exist_ok=True)
         self._file_registry = {}
+
+    def __repr__(self):
+        """String representation of the Store."""
+        return f"{self.__class__.__name__}(data_directory={self.data_directory})"
 
     def _upload_file(
             self,
@@ -97,3 +104,45 @@ class HDF5Store(DataStore):
     #         "download_url": download_url,
     #         "downloaded": False,
     #     }
+
+
+class HDF5FileStore(HDF5Store):
+    """HDF5 file store that downloads and provides access to HDF5 files. Files are stored locally."""
+
+    def _get_or_download_file(self, download_url: str) -> pathlib.Path:
+        """Download HDF5 file if not already present."""
+        file_info = self._file_registry.get(download_url)
+        if not file_info:
+            raise FileNotFoundError(f"File {download_url} not registered in store")
+
+        filename = file_info["filename"]
+        local_filename = self.data_directory / filename
+        if local_filename.exists():
+            return local_filename
+
+        # download to target directory
+        dist = dcat.Distribution(
+            download_URL=file_info["download_url"]
+        )
+        return dist.download(
+            dest_filename=local_filename,
+        )
+
+    def __len__(self):
+        """Number of registered files in the store."""
+        # Each file is registered under both its download URL and its ID,
+        # so we count only unique entries by dividing by 2
+        return len(self._file_registry) // 2
+
+    @contextmanager
+    def open_hdf5_object(
+            self,
+            download_url: str,
+            object_name: str = None):
+        """Open HDF5 file and return object using context manager."""
+        local_path = self._get_or_download_file(download_url)
+        with File(local_path, "r") as f:
+            if object_name is None:
+                yield f["/"]
+            else:
+                yield f[object_name] if object_name in f else None
