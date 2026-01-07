@@ -27,9 +27,9 @@ from .core import (
     FederatedQueryResult,
     MetadataStoreQuery,
 )
-from .stores.hdf5 import HDF5Store
 from .profiles import IS_VALID_CATALOG_SHACL
 from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS
+from .stores.hdf5 import HDF5Store
 from .utils import WebResource, download
 from ..repository.zenodo import ZenodoRecord
 
@@ -37,7 +37,7 @@ logger = logging.getLogger("h5rdmtoolbox.catalog")
 
 
 def _parse_catalog(
-    catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
+        catalog: Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog],
 ) -> dcat.Catalog:
     """Parses the user input to a dcat.Catalog object.
 
@@ -91,7 +91,7 @@ def _validate_catalog(catalog: dcat.Catalog) -> bool:
 
 
 def _download_catalog_datasets(
-    catalog: dcat.Catalog, download_directory: pathlib.Path
+        catalog: dcat.Catalog, download_directory: pathlib.Path
 ) -> List[DownloadStatus]:
     """Downloads all datasets in the catalog to the specified directory."""
     g = rdflib.Graph()
@@ -183,9 +183,9 @@ class CatalogManager:
     """
 
     def __init__(
-        self,
-        catalog: Optional[Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]] = None,
-        working_directory: Union[str, pathlib.Path] = None,
+            self,
+            catalog: Optional[Union[str, pathlib.Path, ZenodoRecord, dcat.Catalog]] = None,
+            working_directory: Union[str, pathlib.Path] = None,
     ):
         """Initializes the Catalog.
 
@@ -256,8 +256,8 @@ class CatalogManager:
 
     @staticmethod
     def _setup_file_structure(
-        working_directory: Union[str, pathlib.Path],
-        rdf_directory: Union[str, pathlib.Path] = None,
+            working_directory: Union[str, pathlib.Path],
+            rdf_directory: Union[str, pathlib.Path] = None,
     ):
         if working_directory is None:
             working_directory = pathlib.Path.cwd()
@@ -350,9 +350,9 @@ class CatalogManager:
 
     @classmethod
     def initialize(
-        cls,
-        config_filename: Union[str, pathlib.Path],
-        working_directory: Union[str, pathlib.Path] = None,
+            cls,
+            config_filename: Union[str, pathlib.Path],
+            working_directory: Union[str, pathlib.Path] = None,
     ) -> List[DownloadStatus]:
         if working_directory is None:
             working_directory = pathlib.Path.cwd()
@@ -381,10 +381,10 @@ class CatalogManager:
         self.stores.add_store(store_name, rdf_store)
 
     def add_wikidata_store(
-        self,
-        store_name: str = "wikidata",
-        augment_main_rdf_store: bool = False,
-        exists_ok: bool = False,
+            self,
+            store_name: str = "wikidata",
+            augment_main_rdf_store: bool = False,
+            exists_ok: bool = False,
     ):
         """Adds a Wikidata SPARQL store to the catalog's store manager.
 
@@ -435,7 +435,7 @@ class CatalogManager:
                     obj_value = row["value"]
                     if isinstance(obj_value, str):
                         if obj_value.startswith("http://") or obj_value.startswith(
-                            "https://"
+                                "https://"
                         ):
                             obj = rdflib.URIRef(obj_value)
                         else:
@@ -462,6 +462,20 @@ class CatalogManager:
             return res
         else:
             raise TypeError(f"Unsupported query type: {type(query)}")
+
+    def upload_hdf_file(self, hdf_filename):
+        from .. import serialize
+        download_url = str(pathlib.Path(hdf_filename).resolve().as_uri())
+        hdf_dist = dcat.Distribution(
+            id=download_url, download_URL=download_url,
+            mediaType="application/x-hdf5",
+        )
+        _filename = pathlib.Path(hdf_filename).name
+        file_uri = download_url.strip(_filename)
+        hdf_ttl = serialize(hdf_filename, format="ttl", file_uri=file_uri)
+        self.main_rdf_store.upload_data(data=hdf_ttl, format="ttl")
+        self.hdf_store.upload_file(distribution=hdf_dist)
+        return hdf_dist
 
 
 __all__ = (

@@ -48,22 +48,24 @@ class DataStore(Store, ABC):
             distribution: dcat.Distribution = None,
             validate: bool = True,
             skip_unsupported: bool = False,
-    ) -> bool:
+    ) -> dcat.Distribution:
         """Insert data into the data store. Source can be either a filename or a dcat.Distribution."""
         if filename is None and distribution is None:
             raise ValueError("Either filename or distribution must be provided.")
         if filename is not None and distribution is not None:
             raise ValueError("Only one of filename or distribution can be provided.")
         if filename is not None:
+            download_url = str(pathlib.Path(filename).resolve().absolute().as_uri())
             distribution = dcat.Distribution(
-                download_URL=pathlib.Path(filename).resolve().absolute().as_uri()
+                id=download_url,
+                download_URL=download_url
             )
-
-        return self._upload_file(
+        self._upload_file(
             distribution=distribution,
             validate=validate,
             skip_unsupported=skip_unsupported
         )
+        return distribution
 
     @abstractmethod
     def _upload_file(
@@ -104,6 +106,20 @@ class MetadataStore(Store, ABC):
 
         """
         return self._upload_triple(triple)
+    @abstractmethod
+    def _upload_data(self, data: str, format: str) -> bool:
+        """Insert rdf data, e.g. in form of a TURTLE string, into the data store."""
+
+    def upload_data(self, data: str, format: str):
+        """Insert rdf data, e.g. in form of a TURTLE string, into the data store.
+
+        Parameters
+        ----------
+        data : str
+            RDF data, e.g. in form of a TURTLE string, to insert into the data store.
+
+        """
+        return self._upload_data(data=data, format=format)
 
     def upload_file(
             self,
@@ -219,3 +235,6 @@ class RDFStore(MetadataStore, ABC):
     @abstractmethod
     def reset(self, *args, **kwargs):
         """Resets the store/database."""
+
+    def populate(self):
+        pass

@@ -14,12 +14,13 @@ import rdflib
 import requests
 from ontolutils.ex import dcat
 from rdflib import Graph, Namespace
+from rdflib.graph import _TripleType
 from rdflib.namespace import RDF
 
 from h5rdmtoolbox.catalog.abstracts import RDFStore
 from .abstracts import DataStore, Store, MetadataStore
 from .utils import sparql_json_to_dataframe, sparql_result_to_df
-from rdflib.graph import _TripleType
+
 SH = Namespace("http://www.w3.org/ns/shacl#")
 RSX = Namespace("http://rdf4j.org/shacl-extensions#")
 logger = logging.getLogger('h5rdmtoolbox.catalog')
@@ -114,6 +115,9 @@ class RemoteSparqlStore(MetadataStore):
             triple: _TripleType
     ) -> bool:
         raise NotImplementedError("Remote SPARQL Store does not support triple uploads.")
+
+    def _upload_data(self, data: str, format: str) -> bool:
+        raise NotImplementedError("Remote SPARQL Store does not support data uploads.")
 
 class GraphDB(RemoteSparqlStore):
     """GraphDB RDF database store."""
@@ -506,6 +510,26 @@ class InMemoryRDFStore(RDFStore):
         """
         s, p, o = triple
         self.graph.add((s, p, o))
+        return True
+
+    def _upload_data(self, data: str, format: str) -> bool:
+        """Uploads RDF data to the in-memory RDF store.
+
+        Parameters
+        ----------
+        data : str
+            The RDF data to upload.
+        format : str
+            The format of the RDF data (e.g., "turtle", "xml", "json-ld").
+
+        Returns
+        -------
+        bool
+            True if the data was uploaded successfully.
+        """
+        g = rdflib.Graph()
+        g.parse(data=data, format=format)
+        self._combined_graph += g
         return True
 
     def _add_to_graph(self, filename: pathlib.Path):

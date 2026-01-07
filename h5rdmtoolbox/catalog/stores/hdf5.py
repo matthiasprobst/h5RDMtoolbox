@@ -53,11 +53,15 @@ class HDF5Store(DataStore, ABC):
     ):
         """Register an HDF5 file in the store (without downloading)."""
         media_type = distribution.mediaType
-        if media_type is not None and media_type.lower() not in {"application/x-hdf5", "application/hdf5"}:
+        if media_type is not None and media_type.lower() not in {"application/x-hdf5", "application/hdf5",
+                                                                 "https://www.iana.org/assignments/media-types/application/x-hdf5",
+                                                                 "https://www.iana.org/assignments/media-types/application/hdf5"}:
             raise ValueError(f"Unsupported media type: {media_type}")
         downloadURL = distribution.download_URL
         if downloadURL is None:
             raise ValueError("Distribution must have a downloadURL to register.")
+        if downloadURL in self._file_registry:
+            return  # already registered
         local_filename = _get_filename(downloadURL=downloadURL)
         entry = {
             "id": str(distribution.id),

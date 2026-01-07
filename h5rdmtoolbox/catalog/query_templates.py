@@ -1,7 +1,7 @@
 from typing import Union
 
 import rdflib
-from pydantic import HttpUrl
+from pydantic import HttpUrl, AnyUrl
 
 from .core import SparqlQuery, RemoteSparqlQuery
 
@@ -115,7 +115,7 @@ def get_properties(
 ):
     """Returns a SPARQL query that selects all properties of the given subject URI. If cls_uri is provided,
     only properties for which the subject is of the given class are returned."""
-    subject_uri = str(HttpUrl(subject_uri))
+    subject_uri = str(AnyUrl(subject_uri))
     if cls_uri is None:
         query_str = f"""
     PREFIX ssno: <https://matthiasprobst.github.io/ssno#>

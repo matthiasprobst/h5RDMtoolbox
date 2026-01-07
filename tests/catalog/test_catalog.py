@@ -6,6 +6,7 @@ from typing import List
 
 import rdflib
 from ontolutils.ex import dcat
+
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
     MetadataStore
@@ -14,9 +15,9 @@ from h5rdmtoolbox.catalog.query_templates import get_properties
 from h5rdmtoolbox.catalog.stores.hdf5 import HDF5FileStore, HDF5Store
 
 logger = logging.getLogger("h5rdmtoolbox")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 for h in logger.handlers:
-    h.setLevel(logging.DEBUG)
+    h.setLevel(logging.INFO)
 
 __this_dir__ = pathlib.Path(__file__).parent
 
@@ -234,9 +235,65 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertTrue((__this_dir__ / "data/random_data.h5").exists())
         self.assertTrue((__this_dir__ / "data/temperature.hdf5").exists())
 
-        hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
-        hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
-        hdf_store.upload_file(__this_dir__ / "data/temperature.hdf5")
+        uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
+        self.assertIsInstance(
+            uploaded_dist,
+            dcat.Distribution
+        )
+        self.assertEqual(
+            str(uploaded_dist.download_URL),
+            (__this_dir__ / "data/random_data.h5").resolve().absolute().as_uri()
+        )
+        re_uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
+        self.assertEqual(
+            uploaded_dist,
+            re_uploaded_dist
+        )
+        uploaded_dist_temperature = hdf_store.upload_file(__this_dir__ / "data/temperature.hdf5")
+        self.assertEqual(
+            str(uploaded_dist_temperature.download_URL),
+            (__this_dir__ / "data/temperature.hdf5").resolve().absolute().as_uri()
+        )
+        self.assertEqual(4, len(hdf_store._file_registry))
+
+        main_rdf_store.upload_data(
+            data=uploaded_dist.serialize("ttl"),
+            format="ttl",
+        )
+
+        res = get_properties(subject_uri=uploaded_dist.id).execute(
+            main_rdf_store
+        )
+        self.assertEqual(
+            2, len(res.data)
+        )
+
+        # re-initialize catalog manager to test persistence
+        cm2 = CatalogManager(
+            catalog=catalog_ttl,
+            working_directory=working_dir
+        )
+        in_memory_store = InMemoryRDFStore(cm2.rdf_directory, formats="ttl")
+        cm2.add_main_rdf_store(in_memory_store)
+        cm2.add_hdf_store(data_store)
+        cm2.download_metadata()
+        cm2.main_rdf_store.populate()
+        res = get_properties(subject_uri=uploaded_dist.id).execute(
+            cm2.main_rdf_store
+        )
+        self.assertEqual(
+            0, len(res.data)
+        )
+        cm2.upload_hdf_file(__this_dir__ / "data/random_data.h5")
+        res = get_properties(subject_uri=uploaded_dist.id).execute(
+            cm2.main_rdf_store
+        )
+        self.assertEqual(
+            2, len(res.data)
+        )
+
+
+        # find
 
         # data = get_temperature_data_by_date(cm, date="2024-01-01")
         # self.assertIsInstance(data, list)
