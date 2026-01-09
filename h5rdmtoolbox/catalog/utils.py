@@ -16,6 +16,8 @@ from pydantic import FileUrl
 from pydantic.v1 import HttpUrl
 from rdflib import Graph
 
+from .. import logger
+
 # --- minimal caster for common XSD datatypes ---
 _XSD = "http://www.w3.org/2001/XMLSchema#"
 _NUM_DT = {
@@ -380,7 +382,7 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
 
         if web_resource.checksum is None:
             if dest_path.exists():
-                print(f" > SKIP (exists, no checksum provided): {filename} -> {dest_path}")
+                logger.debug(f" > SKIP (exists, no checksum provided): {filename} -> {dest_path}")
                 overall.append(DownloadStatus(rec_id, dest_path, True, "exists, no checksum provided"))
                 continue
 
@@ -391,7 +393,7 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
             try:
                 existing_md5 = compute_md5_of_file(dest_path)
                 if expected_algo == "md5" and existing_md5.lower() == expected_val.lower():
-                    print(f" > SKIP (exists & checksum ok): {filename} -> {dest_path}")
+                    logger.debug(f" > SKIP (exists & checksum ok): {filename} -> {dest_path}")
                     overall.append(DownloadStatus(rec_id, dest_path, True, f"exists, checksum matches"))
                     continue
             except Exception:
