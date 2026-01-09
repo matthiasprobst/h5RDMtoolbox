@@ -62,7 +62,8 @@ def process_dataset(
 
     graph.add((parent_uri, HDF.member, dataset_uri))
 
-    graph.add((dataset_uri, HDF5.name, rdflib.Literal(dataset.name)))  # untyped simple literals are xsd:string by default, no need to specify
+    graph.add((dataset_uri, HDF5.name,
+               rdflib.Literal(dataset.name)))  # untyped simple literals are xsd:string by default, no need to specify
     graph.add((dataset_uri, HDF5.rank, rdflib.Literal(dataset.ndim, datatype=XSD.integer)))
     graph.add((dataset_uri, HDF5.size, rdflib.Literal(dataset.size, datatype=XSD.integer)))
 

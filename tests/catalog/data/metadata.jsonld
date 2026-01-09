@@ -1,0 +1,31 @@
+{
+  "@context": {
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dcterms": "http://purl.org/dc/terms/",
+    "foaf": "http://xmlns.com/foaf/0.1/"
+  },
+  "@id": "file:temperature_data.csv",
+  "@type": "dcat:Dataset",
+  "dcterms:title": "Temperature Data Over Time",
+  "dcterms:creator": {
+    "@type": "foaf:Person",
+    "foaf:name": "John Doe"
+  },
+  "dcterms:created": "2024-01-01",
+  "dcterms:description": "CSV file containing temperature data over time (timestamp and temperature).",
+  "dcterms:format": "text/csv",
+  "dcat:distribution": {
+    "@type": "dcat:Distribution",
+    "dcterms:format": "text/csv",
+    "dcat:downloadURL": "http://example.com/temperature.csv"
+  },
+  "dcterms:subject": {
+    "@type": "dcterms:Agent",
+    "dcterms:title": "Temperature measurements"
+  },
+  "dcat:keyword": [
+    "temperature",
+    "time series",
+    "weather data"
+  ]
+}

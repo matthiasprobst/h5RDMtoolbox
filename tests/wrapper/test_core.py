@@ -17,7 +17,7 @@ from h5rdmtoolbox import __version__
 from h5rdmtoolbox.extensions import units
 from h5rdmtoolbox.wrapper import h5yaml
 from h5rdmtoolbox.wrapper.h5attr import AttributeString
-from ssnolib import SSNO
+
 logger = h5tbx.set_loglevel('ERROR')
 
 __this_dir__ = pathlib.Path(__file__).parent
@@ -56,14 +56,14 @@ class TestCore(unittest.TestCase):
             hdf:member [ a hdf:Group,
                         schema:SoftwareSourceCode ;
                     hdf:attribute [ a hdf:StringAttribute ;
-                            hdf:data "2.5.4" ;
+                            hdf:data "2.6.0" ;
                             hdf:name "__h5rdmtoolbox_version__" ],
                         [ a hdf:StringAttribute ;
                             hdf:data "https://github.com/matthiasprobst/h5RDMtoolbox" ;
                             hdf:name "code_repository" ] ;
                     hdf:name "/h5rdmtoolbox" ;
                     schema:codeRepository <https://github.com/matthiasprobst/h5RDMtoolbox> ;
-                    schema:softwareVersion "2.5.4" ] ;
+                    schema:softwareVersion "2.6.0" ] ;
             hdf:name "/" ] .
 
 """)
@@ -981,7 +981,7 @@ class TestCore(unittest.TestCase):
             dt = h5py.string_dtype(encoding='utf-8')  # variable-length UTF-8 strings
             dset = h5.create_dataset("varlen_strings", data=data, dtype=dt)
             varlen_data = dset[()]
-            d = h5.create_dataset("data", [1,2,3])
+            d = h5.create_dataset("data", [1, 2, 3])
         self.assertEqual(varlen_data[0], b"hello")
         self.assertEqual(varlen_data[1], b"world")
         self.assertEqual(varlen_data[2], b"hdf5")

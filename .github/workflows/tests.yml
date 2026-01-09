@@ -9,7 +9,10 @@ on:
   push:
     branches:
       - main
-      - develop*
+      - develop/*
+      - develop-*
+      - dev-*
+      - dev/*
 
 jobs:
   test:
@@ -17,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-        python-version: [ '3.9', '3.11', '3.13' ]
+        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
         mongodb-version: ['5.0', ]
 
     steps:
@@ -38,12 +41,15 @@ jobs:
         if: startsWith(matrix.os, 'windows-')
         run: choco install pandoc -y
 
+      - name: Install pandoc for macOS
+        if: startsWith(matrix.os, 'macos-')
+        run: brew install pandoc
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools>=79.1.1
-          pip install -r requirements-dev.txt
-          pip install pymongo
+          pip install setuptools>=78.1.1
+          pip install -e ".[test]"
 
 #      - name: Install MongoDB (Windows)  # see: https://github.com/ankane/setup-mongodb
 #        if: startsWith(matrix.os, 'windows-')
@@ -60,7 +66,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache/zenodo
-          key: zenodo-${{ runner.os }}-${{ hashFiles('**/pyproject.toml', '**/poetry.lock', '**/requirements*.txt') }}
+          key: zenodo-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             zenodo-${{ runner.os }}-
 
@@ -79,7 +85,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
             
@@ -92,7 +98,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        # This is the version of the action for setting up Python, not the Python version.
+        # This is version of action for setting up Python, not Python version.
         uses: actions/setup-python@v4
         with:
           # Semantic version range syntax or exact version of a Python version
@@ -101,8 +107,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools>=79.1.1
-          pip install -r requirements-dev.txt
+          pip install setuptools>=78.1.1
+          pip install -e ".[test]"
 
       - name: Cleanup Zenodo Sandbox
         env:

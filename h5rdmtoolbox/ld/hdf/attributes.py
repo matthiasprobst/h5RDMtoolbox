@@ -1,12 +1,9 @@
-from dateutil import parser
 from ontolutils.namespacelib.hdf5 import HDF5
 from rdflib import Namespace, Literal, XSD, RDF
 
 from ..utils import get_attr_node
 
 HDF = Namespace(str(HDF5))
-
-
 
 
 def process_attribute(*, name, value, graph, parent, parent_uri, blank_node_iri_base):

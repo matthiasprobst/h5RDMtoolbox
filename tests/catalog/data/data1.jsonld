@@ -1,0 +1,26 @@
+{
+  "@context": {
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "ex": "http://example.org/"
+  },
+  "@graph": [
+    {
+      "@id": "ex:john_doe",
+      "@type": "foaf:Person",
+      "foaf:name": "John Doe",
+      "foaf:age": 30,
+      "foaf:knows": {
+        "@id": "ex:jane_smith"
+      }
+    },
+    {
+      "@id": "ex:jane_smith",
+      "@type": "foaf:Person",
+      "foaf:name": "Jane Smith",
+      "foaf:age": 25,
+      "foaf:knows": {
+        "@id": "ex:john_doe"
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+@prefix ex:   <http://example.org/schema/> .
+@prefix wd:   <http://www.wikidata.org/entity/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ─────────────────────────────
+# Planet metadata (simplified)
+# ─────────────────────────────
+
+wd:Q2
+    a ex:Planet ;
+    rdfs:label "Earth"@en ;
+    ex:mass   "5.972e24"^^xsd:double ;
+    ex:radius "6.371e6"^^xsd:double .
+
+wd:Q111
+    a ex:Planet ;
+    rdfs:label "Mars"@en ;
+    ex:mass   "6.417e23"^^xsd:double ;
+    ex:radius "3.389e6"^^xsd:double .
+
+wd:Q313
+    a ex:Planet ;
+    rdfs:label "Jupiter"@en ;
+    ex:mass   "1.898e27"^^xsd:double ;
+    ex:radius "6.9911e7"^^xsd:double .
+
+wd:Q308
+    a ex:Planet ;
+    rdfs:label "Saturn"@en ;
+    ex:mass   "5.683e26"^^xsd:double ;
+    ex:radius "5.8232e7"^^xsd:double .
+
+# ─────────────────────────────
+# Non-planet resource (control)
+# ─────────────────────────────
+
+ex:Asteroid123
+    a ex:Asteroid ;
+    rdfs:label "Ceres (asteroid)"@en ;
+    ex:mass "9.393e20"^^xsd:double .

@@ -1,5 +1,6 @@
 """test_file.py"""
 import pathlib
+import re
 import time
 import unittest
 import uuid
@@ -9,6 +10,10 @@ from pathlib import Path
 import h5py
 import numpy as np
 import yaml
+from pydantic import BaseModel
+from pydantic.functional_validators import WrapValidator
+from requests import HTTPError
+from typing_extensions import Annotated
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import tutorial
@@ -66,27 +71,26 @@ class TestFile(unittest.TestCase):
             h5.hdf_filename.unlink()
 
     def test_reopen_file(self):
-        cv_yaml_filename = tutorial.get_convention_yaml_filename()
-        cv = h5tbx.convention.from_yaml(cv_yaml_filename, overwrite=True)
-        h5tbx.use(cv)
-        with h5tbx.File(data_type='experimental',
-                        contact=h5tbx.__author_orcid__) as h5:
-            pass
-        # reopen file with read-only mode works fine
-        with h5tbx.File(h5.hdf_filename, 'r') as h5:
-            self.assertTrue('data_type' in h5.attrs.raw)
-            self.assertTrue('contact' in h5.attrs.raw)
+        try:
+            cv_yaml_filename = tutorial.get_convention_yaml_filename()
+            cv = h5tbx.convention.from_yaml(cv_yaml_filename, overwrite=True)
+            h5tbx.use(cv)
+            with h5tbx.File(data_type='experimental',
+                            contact=h5tbx.__author_orcid__) as h5:
+                pass
+            # reopen file with read-only mode works fine
+            with h5tbx.File(h5.hdf_filename, 'r') as h5:
+                self.assertTrue('data_type' in h5.attrs.raw)
+                self.assertTrue('contact' in h5.attrs.raw)
 
-        # reopen file with read-write mode must also. the mandatory root attributes are set earlier...
-        with h5tbx.File(h5.hdf_filename, 'r+') as h5:
-            self.assertTrue('data_type' in h5.attrs.raw)
-            self.assertTrue('contact' in h5.attrs.raw)
+            # reopen file with read-write mode must also. the mandatory root attributes are set earlier...
+            with h5tbx.File(h5.hdf_filename, 'r+') as h5:
+                self.assertTrue('data_type' in h5.attrs.raw)
+                self.assertTrue('contact' in h5.attrs.raw)
+        except HTTPError:
+            self.skipTest('Cannot download convention file from tutorial repository!')
 
     def test_grrrr(self):
-        from pydantic.functional_validators import WrapValidator
-        from typing_extensions import Annotated
-        from pydantic import BaseModel
-        import re
         def regex_0(value, handler):
             pattern = re.compile(r'^[a-zA-Z].*$')
             if not pattern.match(value):

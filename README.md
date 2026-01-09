@@ -39,7 +39,8 @@ For everybody, who is...
 - ... looking for a management approach for his or her data.
 - ... community has not yet established a stable convention.
 - ... working with small and big data, that fits into HDF5 files.
-- ... looking for an easy way to work with HDF5, especially through [Jupyter Notebooks](https://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html).
+- ... looking for an easy way to work with HDF5, especially
+  through [Jupyter Notebooks](https://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html).
 - ... trying to integrate HDF5 with repositories and databases.
 - ... wishing to enrich data semantically with the RDF standard.
 - ... looking for a way to do all the above whiles not needing to learn a new syntax.
@@ -55,8 +56,9 @@ For everybody, who ...
 ## Package Architecture/structure
 
 The toolbox implements six modules, which are shown below. The numbers reference to their main usage in the stages in
-the data lifecycle above. The wrapper module implements the main interface between the user and the HDF5 file. It 
-extends the features of the underlying `h5py` library. Some of the features are implemented in other modules, hence the 
+the data lifecycle shown [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/index.html). The wrapper
+module implements the main interface between the user and the HDF5 file. It
+extends the features of the underlying `h5py` library. Some of the features are implemented in other modules, hence the
 wrapper module depends on the convention, database and linked data (ld) module.
 
 <a href="https://h5rdmtoolbox.readthedocs.io/en/latest/"><img src="docs/_static/h5tbx_modules.svg" alt="H5TBX modules" style="widht:600px;"></a>
@@ -77,6 +79,9 @@ Current implementation highlights in the modules:
   are implemented.
 - The **layout** module allows to define expectations on the internal layout (object names, location, attributes,
   properties) of HDF5 files.
+- The **catalog** module allows interfacing to HDF5 and RDF data published on Zenodo. Via a catalog file, a providers
+  describe the data in various zenodo records they want to share. Through the catalog file, users can work with the
+  data without downloading the full HDF5 files first.
 
 ## Quickstart
 
@@ -98,7 +103,6 @@ Use python 3.9 or higher (automatic testing is performed until 3.13). If you are
 package via pip:
 
     pip install h5RDMtoolbox
-
 
 ### Install from source:
 
