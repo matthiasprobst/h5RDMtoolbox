@@ -44,10 +44,10 @@ class MockSqlQuery(Query):
 #         raise NotImplementedError("CSVDatabase does not support queries.")
 
 
-def create_test_hdf5_file():
+def create_test_hdf5_file(filename):
     """Create a test HDF5 file for demonstration."""
 
-    with h5tbx.File() as f:
+    with h5tbx.File(filename, mode="w") as f:
         # Create test datasets
         f.create_dataset("temperature", data=np.random.rand(10, 5) * 25 + 273.15)
         f.create_dataset("pressure", data=np.random.rand(10, 5) * 1000 + 101325)
@@ -271,16 +271,12 @@ ex:PersonShape
         )
 
     def test_hdf_store(self):
-        # print("Creating test HDF5 file...")
-        hdf5_filename = create_test_hdf5_file()
-        # print(f"Created: {hdf5_filename}")
-        #
-        # print("\n1. Setting up HDF5 store...")
+        hdf5_filename = create_test_hdf5_file("tmp.hdf")
         working_dir = __this_dir__ / "local-db/hdf"
         hdf5_store = HDF5FileStore(working_dir)
 
         local_file_dist = dcat.Distribution(
-            download_URL=hdf5_filename.as_uri(),
+            download_URL=hdf5_filename.absolute().as_uri(),
             title="Test HDF5 Dataset",
             mediaType="application/x-hdf5"
         )
@@ -298,3 +294,4 @@ ex:PersonShape
                 title="Test HDF5 Dataset",
             )
         )
+        hdf5_filename.unlink(missing_ok=True)

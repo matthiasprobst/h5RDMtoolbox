@@ -2,10 +2,9 @@ import os
 import pathlib
 from abc import abstractmethod, ABC
 from contextlib import contextmanager
-from typing import Union, Optional
+from typing import Union
 from urllib.parse import urlparse
 
-import h5py
 import rdflib
 from ontolutils.ex import dcat
 
@@ -78,38 +77,6 @@ class HDF5Store(DataStore, ABC):
     def _get_or_download_file(self, identifier: str) -> pathlib.Path:
         """Download HDF5 file if not already present."""
 
-    # @contextmanager
-    # def open_hdf5_object(self, identifier: str, hdf_name: Optional[str] = None):
-    #     """Open HDF5 file and return object.
-    #
-    #     Parameters
-    #     ----------
-    #     identifier : str
-    #         File identifier (URL or path)
-    #     hdf_name : Optional[str]
-    #         Name/path within HDF5 file. If None, returns the root group.
-    #
-    #     Returns
-    #     -------
-    #     h5py.Dataset or h5py.Group
-    #         HDF5 object
-    #     """
-    #     local_path = self._get_or_download_file(identifier)
-    #
-    #     with h5py.File(local_path, "r") as f:
-    #         if hdf_name is None:
-    #             return f["/"]
-    #         else:
-    #             return f[hdf_name] if hdf_name in f else None
-
-    # def register_file_from_metadata(self, download_url: str, identifier: str):
-    #     """Register file from metadata query results."""
-    #     self._downloaded_files[identifier] = {
-    #         "local_path": None,
-    #         "download_url": download_url,
-    #         "downloaded": False,
-    #     }
-
 
 class HDF5FileStore(HDF5Store):
     """HDF5 file store that downloads and provides access to HDF5 files. Files are stored locally."""
@@ -126,6 +93,9 @@ class HDF5FileStore(HDF5Store):
             return local_filename
 
         # download to target directory
+        # _download_url = file_info["download_url"]
+        # if str(_download_url).startswith("file:///"):
+        #     _download_url = pathlib.Path(urlparse(str(_download_url)).path).as_uri()
         dist = dcat.Distribution(
             download_URL=file_info["download_url"]
         )
@@ -149,7 +119,6 @@ class HDF5FileStore(HDF5Store):
                 yield f["/"]
             else:
                 yield f[object_name] if object_name in f else None
-
 
     def open(self, identifier_download_url_or_filename: Union[str, rdflib.URIRef, pathlib.Path, dcat.Distribution]):
         if isinstance(identifier_download_url_or_filename, dcat.Distribution):
