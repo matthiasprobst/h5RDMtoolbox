@@ -4,8 +4,13 @@ import sys
 import unittest
 from typing import List
 
+import numpy as np
 import rdflib
+from ontolutils import M4I, SCHEMA
+from ontolutils import QUDT_UNIT
 from ontolutils.ex import dcat
+from rdflib.namespace import FOAF, PROV
+from ssnolib import SSNO, StandardName
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import CatalogManager, QueryResult, FederatedQueryResult, SparqlQuery, RDFStore, DataStore, \
@@ -148,15 +153,46 @@ class TestGenericLinkedDatabase(unittest.TestCase):
 """)
 
     def test_rdf_and_data_stores(self):
-
         # write test data
-        with h5tbx.File(__this_dir__ / "data/random_data.h5", mode="w") as h5:
-            h5.create_dataset("/temperature", data=[22.5, 23.0, 21.8])
-            h5.create_string_dataset("/users", data=["Alice", "Bob", "Charlie"])
+        with h5tbx.File(__this_dir__ / "data/random_velocity_data.h5", mode="w") as h5:
+            g = h5.create_group("creator")
+            g.rdf.subject = "https://orcid.org/0000-0001-8729-0482"
+            g.rdf.type = PROV.Person
+            g.attrs["name", FOAF.firstName] = "Matthias"
+            g.attrs["name", FOAF.lastName] = "Probst"
+            g.attrs["name", M4I.orcidId] = "https://orcid.org/0000-0001-8729-0482"
+            ds_time = h5.create_dataset("/time", data=[1, 5, 20], make_scale=True)
+            ds_u = h5.create_dataset("/u", data=[22.5, 23.0, 21.8], attach_scales=(ds_time.name),
+                                     attrs=dict(units="m/s"))
+            ds_u.rdf.predicate["units"] = M4I.hasUnit
+            ds_u.attrs["standard_name", SSNO.hasStandardName] = StandardName(standard_name="x_velocity",
+                                                                             unit=QUDT_UNIT.M_PER_SEC)
 
-        with h5tbx.File(__this_dir__ / "data/temperature.hdf5", mode="w") as h5:
-            h5.create_dataset("/2024-01-01", data=[-5.0, -3.2, 0.0])
-            h5.create_dataset("/2024-01-02", data=[-4.5, -2.8, 1.0])
+            h5.attrs["description", SCHEMA.description] = "h5rdmtoolbox test data showing random velocity data"
+
+            # with open(__this_dir__ / "data/random_velocity_data.ttl", "w") as f:
+            #     f.write(h5.serialize("ttl", file_uri="https://doi.org/10.5281/zenodo.18187577#"))
+
+        with h5tbx.File(__this_dir__ / "data/random_temperature_data.hdf", mode="w") as h5:
+            ds1 = h5.create_dataset("x", data=np.linspace(0, 100.0, 20), make_scale=True)
+            ds2 = h5.create_dataset("y", data=np.linspace(-30, 30, 30) * 1000.0, make_scale=True)
+            ds3 = h5.create_dataset("temperature", data=273.15 + np.random.rand(20, 30) * 20,
+                                    attach_scales=(ds1.name, ds2.name))
+            ds1.attrs["units"] = "m"
+            ds2.attrs["units"] = "mm"
+            ds1.attrs["standard_name"] = "x_coordinate"
+            ds2.attrs["standard_name"] = "y_coordinate"
+            ds2.rdf.predicate["units"] = M4I.hasUnit
+            ds2.rdf.object["units"] = QUDT_UNIT.MilliM_PER_SEC
+            ds1.rdf.object["units"] = QUDT_UNIT.M_PER_SEC
+            ds3.attrs["units", M4I.hasUnit] = "Kelvin"
+            ds3.rdf.object["units"] = QUDT_UNIT.K
+
+            h5.attrs[
+                "description", SCHEMA.description] = "h5rdmtoolbox test data showing temperature data with spatial dimensions"
+
+            # with open(__this_dir__ / "data/random_temperature_data.ttl", "w") as f:
+            #     f.write(h5.serialize("ttl", file_uri="https://doi.org/10.5281/zenodo.18187577#"))
 
         data_store = HDF5FileStore(data_directory=__this_dir__ / "local-db" / "hdf")
 
@@ -167,6 +203,7 @@ class TestGenericLinkedDatabase(unittest.TestCase):
 
         if working_dir.exists():
             cm = CatalogManager(
+                catalog=catalog_ttl,
                 working_directory=working_dir
             )
             in_memory_store = InMemoryRDFStore(cm.rdf_directory, formats="ttl")
@@ -188,12 +225,12 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             (rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"), rdflib.RDF.type,
              rdflib.URIRef("https://www.wikidata.org/wiki/Q137525225"))
         )
-        self.assertEqual(4786, len(cm.main_rdf_store.graph))
+        self.assertEqual(4785+1, len(cm.main_rdf_store.graph))
 
         if sys.version_info.minor == 12:
             # skip adding wikidata store on non-3.12 Python to avoid rate limiting
             cm.add_wikidata_store(augment_main_rdf_store=True)
-        self.assertEqual(4786, len(cm.main_rdf_store.graph))
+        self.assertEqual(4785+1, len(cm.main_rdf_store.graph))
 
         res = get_properties("https://www.wikidata.org/wiki/Q137525225").execute(
             cm.main_rdf_store
@@ -232,29 +269,29 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertEqual(4794, len(res.data))
 
         main_rdf_store.upload_file(__this_dir__ / "data/metadata.jsonld")
-        self.assertTrue((__this_dir__ / "data/random_data.h5").exists())
-        self.assertTrue((__this_dir__ / "data/temperature.hdf5").exists())
+        self.assertTrue((__this_dir__ / "data/random_velocity_data.h5").exists())
+        self.assertTrue((__this_dir__ / "data/random_temperature_data.hdf").exists())
 
-        uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
+        uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_velocity_data.h5")
         self.assertIsInstance(
             uploaded_dist,
             dcat.Distribution
         )
         self.assertEqual(
             str(uploaded_dist.download_URL),
-            (__this_dir__ / "data/random_data.h5").resolve().absolute().as_uri()
+            (__this_dir__ / "data/random_velocity_data.h5").resolve().absolute().as_uri()
         )
-        re_uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_data.h5")
+        re_uploaded_dist = hdf_store.upload_file(__this_dir__ / "data/random_velocity_data.h5")
         self.assertEqual(
             uploaded_dist,
             re_uploaded_dist
         )
-        uploaded_dist_temperature = hdf_store.upload_file(__this_dir__ / "data/temperature.hdf5")
+        uploaded_dist_temperature = hdf_store.upload_file(__this_dir__ / "data/random_temperature_data.hdf")
         self.assertEqual(
             str(uploaded_dist_temperature.download_URL),
-            (__this_dir__ / "data/temperature.hdf5").resolve().absolute().as_uri()
+            (__this_dir__ / "data/random_temperature_data.hdf").resolve().absolute().as_uri()
         )
-        self.assertEqual(4, len(hdf_store._file_registry))
+        self.assertEqual(2, len(hdf_store._file_registry))
 
         main_rdf_store.upload_data(
             data=uploaded_dist.serialize("ttl"),
@@ -284,14 +321,13 @@ class TestGenericLinkedDatabase(unittest.TestCase):
         self.assertEqual(
             0, len(res.data)
         )
-        cm2.upload_hdf_file(__this_dir__ / "data/random_data.h5")
+        cm2.upload_hdf_file(__this_dir__ / "data/random_velocity_data.h5")
         res = get_properties(subject_uri=uploaded_dist.id).execute(
             cm2.main_rdf_store
         )
         self.assertEqual(
             2, len(res.data)
         )
-
 
         # find
 

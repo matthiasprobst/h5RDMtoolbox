@@ -6,6 +6,7 @@ from typing import Union, Optional
 from urllib.parse import urlparse
 
 import h5py
+import rdflib
 from ontolutils.ex import dcat
 
 from ..abstracts import DataStore
@@ -47,11 +48,13 @@ class HDF5Store(DataStore, ABC):
 
     def _upload_file(
             self,
-            distribution: dcat.Distribution = None,
+            distribution: dcat.Distribution,
             validate: bool = True,
             skip_unsupported: bool = False,
     ):
         """Register an HDF5 file in the store (without downloading)."""
+        if not isinstance(distribution, dcat.Distribution):
+            raise ValueError("distribution must be a dcat.Distribution instance.")
         media_type = distribution.mediaType
         if media_type is not None and media_type.lower() not in {"application/x-hdf5", "application/hdf5",
                                                                  "https://www.iana.org/assignments/media-types/application/x-hdf5",
@@ -69,37 +72,35 @@ class HDF5Store(DataStore, ABC):
             "title": distribution.title,
             "filename": local_filename,
         }
-        # save the entry under both the download URL and the distribution ID
-        self._file_registry[downloadURL] = entry
         self._file_registry[str(distribution.id)] = entry
 
     @abstractmethod
     def _get_or_download_file(self, identifier: str) -> pathlib.Path:
         """Download HDF5 file if not already present."""
 
-    @contextmanager
-    def open_hdf5_object(self, identifier: str, hdf_name: Optional[str] = None):
-        """Open HDF5 file and return object.
-
-        Parameters
-        ----------
-        identifier : str
-            File identifier (URL or path)
-        hdf_name : Optional[str]
-            Name/path within HDF5 file. If None, returns the root group.
-
-        Returns
-        -------
-        h5py.Dataset or h5py.Group
-            HDF5 object
-        """
-        local_path = self._get_or_download_file(identifier)
-
-        with h5py.File(local_path, "r") as f:
-            if hdf_name is None:
-                return f["/"]
-            else:
-                return f[hdf_name] if hdf_name in f else None
+    # @contextmanager
+    # def open_hdf5_object(self, identifier: str, hdf_name: Optional[str] = None):
+    #     """Open HDF5 file and return object.
+    #
+    #     Parameters
+    #     ----------
+    #     identifier : str
+    #         File identifier (URL or path)
+    #     hdf_name : Optional[str]
+    #         Name/path within HDF5 file. If None, returns the root group.
+    #
+    #     Returns
+    #     -------
+    #     h5py.Dataset or h5py.Group
+    #         HDF5 object
+    #     """
+    #     local_path = self._get_or_download_file(identifier)
+    #
+    #     with h5py.File(local_path, "r") as f:
+    #         if hdf_name is None:
+    #             return f["/"]
+    #         else:
+    #             return f[hdf_name] if hdf_name in f else None
 
     # def register_file_from_metadata(self, download_url: str, identifier: str):
     #     """Register file from metadata query results."""
@@ -134,9 +135,7 @@ class HDF5FileStore(HDF5Store):
 
     def __len__(self):
         """Number of registered files in the store."""
-        # Each file is registered under both its download URL and its ID,
-        # so we count only unique entries by dividing by 2
-        return len(self._file_registry) // 2
+        return len(self._file_registry)
 
     @contextmanager
     def open_hdf5_object(
@@ -150,3 +149,23 @@ class HDF5FileStore(HDF5Store):
                 yield f["/"]
             else:
                 yield f[object_name] if object_name in f else None
+
+
+    def open(self, identifier_download_url_or_filename: Union[str, rdflib.URIRef, pathlib.Path, dcat.Distribution]):
+        if isinstance(identifier_download_url_or_filename, dcat.Distribution):
+            local_filename = self._get_or_download_file(identifier_download_url_or_filename.id)
+        elif isinstance(identifier_download_url_or_filename, rdflib.URIRef):
+            download_url_or_filename = str(identifier_download_url_or_filename)
+            local_filename = self._get_or_download_file(download_url_or_filename)
+            return File(local_filename, "r")
+        elif isinstance(identifier_download_url_or_filename, str):
+            _potential_path = pathlib.Path(identifier_download_url_or_filename)
+            if _potential_path.exists():
+                local_filename = _potential_path
+            else:
+                local_filename = self._get_or_download_file(identifier_download_url_or_filename)
+        elif isinstance(identifier_download_url_or_filename, pathlib.Path):
+            local_filename = identifier_download_url_or_filename
+        else:
+            raise ValueError("Input must be a download URL or a valid file path.")
+        return File(local_filename, "r")

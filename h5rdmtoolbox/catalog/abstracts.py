@@ -70,7 +70,7 @@ class DataStore(Store, ABC):
     @abstractmethod
     def _upload_file(
             self,
-            distribution: dcat.Distribution = None,
+            distribution: dcat.Distribution,
             validate: bool = True,
             skip_unsupported: bool = False,
     ):
@@ -106,6 +106,7 @@ class MetadataStore(Store, ABC):
 
         """
         return self._upload_triple(triple)
+
     @abstractmethod
     def _upload_data(self, data: str, format: str) -> bool:
         """Insert rdf data, e.g. in form of a TURTLE string, into the data store."""

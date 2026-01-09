@@ -27,6 +27,7 @@ from .core import (
     FederatedQueryResult,
     MetadataStoreQuery,
 )
+from .stores.hdf5 import HDF5FileStore
 from .profiles import IS_VALID_CATALOG_SHACL
 from .query_templates import GET_ALL_METADATA_CATALOG_DATASETS
 from .stores.hdf5 import HDF5Store
@@ -485,6 +486,7 @@ __all__ = (
     "InMemoryRDFStore",
     "QueryResult",
     "MetadataStore",
+    "HDF5FileStore",
     "DataStore",
     "RDFStore",
     "SparqlQuery",

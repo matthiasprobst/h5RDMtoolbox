@@ -284,31 +284,11 @@ ex:PersonShape
             title="Test HDF5 Dataset",
             mediaType="application/x-hdf5"
         )
-        print(local_file_dist.serialize("ttl"))
-        #
-        # # insert_result = hdf5_store._upload_file(
-        # #     download_url=hdf5_filename.as_uri(),
-        # #     filename=hdf5_filename
-        # # )
-        # insert_result = hdf5_store._upload_file(
-        #     download_url="https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-05-20_run.hdf/content",
-        #     filename=hdf5_filename
-        # )
-        # self.assertEqual(
-        #     insert_result,
-        #     {
-        #         "local_path": None,
-        #         "filename": hdf5_filename,
-        #         "downloaded": False,
-        #         "download_url": hdf5_filename.as_uri(),
-        #     }
-        # )
-        #
-        # query_result = {
-        #     "identifier": "test_dataset_001",
-        #     "download_url": hdf5_filename.as_uri(),
-        #     "hdf_name": "/temperature",  # This is the key information!
-        # }
+
+        hdf5_store.upload_file(distribution=local_file_dist)
+
+        with hdf5_store.open(local_file_dist.id) as h5:
+            "temperature" in h5
 
         download_URL = "https://sandbox.zenodo.org/api/records/411647/files/2023-11-07-14-05-20_run.hdf/content"
         hdf5_store.upload_file(
@@ -318,15 +298,3 @@ ex:PersonShape
                 title="Test HDF5 Dataset",
             )
         )
-
-        # a RDF query on the RDF store would return a distribution and a dataset
-        # --> ready to use SPARQL: get_distribution_to_hdf_dataset(hdf_dataset_uri: str)
-
-        with hdf5_store.open_hdf5_object(
-                download_url=download_URL,
-                object_name="/dp_sm"
-        ) as dataset:
-            print(f"Dataset shape: {dataset.shape}")
-            print(f"Dataset dtype: {dataset.dtype}")
-            print(f"First 5 values: {dataset[:5]}")
-            print(f"Units: {dataset.attrs.get('units', 'N/A')}")
