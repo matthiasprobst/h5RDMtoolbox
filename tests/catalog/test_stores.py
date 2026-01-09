@@ -9,7 +9,6 @@ from ontolutils.ex import dcat
 
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox.catalog import Query, QueryResult, SparqlQuery, RemoteSparqlQuery, RemoteSparqlStore, StoreManager, \
-    DataStore, \
     InMemoryRDFStore, GraphDB
 from h5rdmtoolbox.catalog.stores.hdf5 import HDF5FileStore
 

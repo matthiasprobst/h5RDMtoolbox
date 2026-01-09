@@ -7,7 +7,9 @@ build:
 
 python:
   install:
-    - requirements: requirements-readthedocs.txt
+    - method: pip
+      path: .
+      extra_require: complete-with-docs
 
 sphinx:
   configuration: docs/conf.py
