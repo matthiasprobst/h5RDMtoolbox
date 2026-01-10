@@ -51,7 +51,7 @@ User Guide
         data with persistent identifiers.
 
     .. grid-item-card:: Catalog
-        :img-top: ../_static/icon_misc.svg
+        :img-top: ../_static/icon_catalog.svg
         :link: catalog/index
         :link-type: doc
 
