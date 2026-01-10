@@ -426,27 +426,27 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
                         # move tmp to final
                         tmp_path.replace(dest_path)
                         message = f"saved to {dest_path}"
-                        print(f" > OK: {filename} -> {dest_path} (md5 matches)")
+                        logger.debug(f" > OK: {filename} -> {dest_path} (md5 matches)")
                     else:
                         # conflict: keep both, rename new file with record id + short hash
                         new_name = f"{pathlib.Path(filename).stem}__{rec_id}__{computed[:8]}{pathlib.Path(filename).suffix}"
                         new_path = record_dir / new_name
                         tmp_path.replace(new_path)
                         message = f"checksum mismatch: expected={expected_val}, computed={computed}; saved as {new_path}"
-                        print(
+                        logger.error(
                             f" > MISMATCH: {filename} -> {new_path} (expected md5: {expected_val}, computed md5: {computed})")
                 else:
                     # no expected checksum provided — accept and move
                     tmp_path.replace(dest_path)
                     ok = True
                     message = f"saved to {dest_path} (no expected checksum)"
-                    print(f" > SAVED (no expected checksum): {filename} -> {dest_path}")
+                    logger.debug(f" > SAVED (no expected checksum): {filename} -> {dest_path}")
             else:
                 # unsupported algorithm: save file but mark as not-verified
                 tmp_path.replace(dest_path)
                 ok = False
                 message = f"saved to {dest_path} (unsupported checksum algorithm: {expected_algo})"
-                print(f" > SAVED (unsupported checksum alg '{expected_algo}'): {filename} -> {dest_path}")
+                logger.debug(f" > SAVED (unsupported checksum alg '{expected_algo}'): {filename} -> {dest_path}")
 
             overall.append(DownloadStatus(rec_id, dest_path, ok, message))
 
@@ -457,13 +457,13 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
                     tmp_path.unlink()
             except Exception:
                 pass
-            print(f" > ERROR downloading {filename}: {exc}")
+            logger.error(f" > ERROR downloading {filename}: {exc}")
             overall.append(DownloadStatus(rec_id, dest_path, False, str(exc)))
 
     # summary
     total = len(overall)
     ok_count = sum(1 for o in overall if o.ok)
-    print(f"Summary: {ok_count}/{total} files verified successfully")
+    logger.debug(f"Summary: {ok_count}/{total} files verified successfully")
 
     return overall
 
@@ -542,7 +542,7 @@ def database_initialization(
         mediaType="text/turtle"
     ) for row in results]
 
-    print(
+    logger.debug(
         f"Found {len(list_of_ttl_web_resources)} TTL web resources to download. Downloading to {download_directory}...")
     return download(
         download_directory=download_directory,

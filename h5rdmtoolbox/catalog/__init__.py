@@ -100,7 +100,7 @@ def _download_catalog_datasets(
 
     results = g.query(GET_ALL_METADATA_CATALOG_DATASETS.query)
 
-    print("found datasets:", len(results))
+    logger.debug("found datasets:", len(results))
     list_of_ttl_web_resources = [
         WebResource(
             download_url=row.download,
@@ -113,7 +113,7 @@ def _download_catalog_datasets(
     ]
 
     n_ttl_resources = len(list_of_ttl_web_resources)
-    print(
+    logger.debug(
         f"Found {n_ttl_resources} TTL web resources to download. Downloading to {download_directory}..."
     )
     return download(
@@ -421,7 +421,6 @@ class CatalogManager:
             logger.debug("Adding Wikidata knowledge to the main RDF store...")
 
             if res.data.empty:
-                print("empty")
                 logger.info(
                     "No Wikidata entities found in the main RDF store. Skipping Wikidata knowledge addition."
                 )

@@ -383,6 +383,21 @@ class GraphDB(RemoteSparqlStore):
         )
         resp.raise_for_status()
 
+    def _post_update(self, update):
+        url = f"{self.endpoint}/repositories/{self.repository}/statements"
+        headers = {"Content-Type": "application/sparql-update"}
+        auth = (self.username, self.password) if self.username and self.password else None
+        r = requests.post(
+            url,
+            data=update.encode("utf-8"),
+            headers=headers,
+            auth=auth,
+        )
+        if not r.ok:
+            raise RuntimeError(
+                f"GraphDB SPARQL update failed "
+                f"(status {r.status_code}):\n{r.text}"
+            )
 
 class InMemoryRDFStore(RDFStore):
     """In-memory RDF database that can upload files and return a combined graph."""
@@ -565,6 +580,27 @@ class InMemoryRDFStore(RDFStore):
         self._combined_graph = rdflib.Graph()
         return self
 
+    def save(self, filename: Union[str, pathlib.Path]):
+        """Saves the combined graph to a file.
+
+        Parameters
+        ----------
+        filename : Union[str, pathlib.Path]
+            The path to the file where the graph will be saved.
+        """
+        filename = pathlib.Path(filename).resolve().absolute()
+        filename_suffix = filename.suffix.lower()
+        if filename_suffix == ".ttl":
+            _format = "turtle"
+        elif filename_suffix == ".rdf" or filename_suffix == ".xml":
+            _format = "xml"
+        elif filename_suffix == ".jsonld":
+            _format = "json-ld"
+        elif filename_suffix == ".nt":
+            _format = "nt"
+        else:
+            raise ValueError(f"File format '{filename_suffix}' not supported for saving.")
+        self.graph.serialize(destination=str(filename), format=_format)
 
 class AbstractQuery(ABC):
 

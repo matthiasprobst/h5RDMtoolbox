@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import shutil
 import sys
 import unittest
 from typing import List
@@ -72,6 +73,12 @@ def get_temperature_data_by_date(db, date: str) -> List[FederatedQueryResult]:
 
 
 class TestGenericLinkedDatabase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # clean up previous test data
+        working_dir = __this_dir__ / "local-db"
+        shutil.rmtree(working_dir, ignore_errors=True)
 
     def test_dcat_catalog_read_and_write(self):
         catalog_ttl = __this_dir__ / "data/catalog.ttl"
@@ -208,6 +215,8 @@ class TestGenericLinkedDatabase(unittest.TestCase):
             )
             in_memory_store = InMemoryRDFStore(cm.rdf_directory, formats="ttl")
             cm.add_main_rdf_store(in_memory_store)
+            cm.download_metadata()
+            cm.main_rdf_store.populate()
         else:
             cm = CatalogManager(
                 catalog=catalog_ttl,

@@ -57,8 +57,6 @@ Highlights
         The h5rdmtoolbox API. Getting insight into the code of the h5rdmtoolbox.
 
 
-
-
 .. toctree::
    :maxdepth: 3
    :hidden:

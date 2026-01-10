@@ -50,6 +50,18 @@ User Guide
         Provides interfaces to data repositories using to store your (HDF5)
         data with persistent identifiers.
 
+    .. grid-item-card:: Catalog
+        :img-top: ../_static/icon_misc.svg
+        :link: catalog/index
+        :link-type: doc
+
+        The catalog manager lets you work with your (remote and) distributed HDF5 and RDF datasets.
+
+
+
+.. grid:: 3
+    :gutter: 2
+
     .. grid-item-card:: Misc
         :img-top: ../_static/icon_misc.svg
         :link: misc/index
@@ -57,8 +69,6 @@ User Guide
 
         Discover what else there is beyond the core functionalities packed
         into the sub-packages.
-
-
 
 
 .. toctree::
