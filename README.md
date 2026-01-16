@@ -26,7 +26,7 @@ Let's see how we can use RDF (semantic metadata) together with HDF5 files using 
 ```bash
 # Install the package
 pip install h5RDMtoolbox
-```bash
+```
 
 ```python
 import h5rdmtoolbox as h5tbx
