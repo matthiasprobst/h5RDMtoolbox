@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v2.6.1
+
+- hotfix for zenodo requests as they are blocking requests without header containing "User-Agent" to distinguish
+  legitimate tools from abusive traffic
+
 ## v2.6.0
 
 - add module `catalog` to manage distributed HDF5+RDF datasets

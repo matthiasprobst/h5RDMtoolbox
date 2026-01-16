@@ -1,11 +1,11 @@
 {
-    "@id": "https://doi.org/10.5281/zenodo.18042736",
+    "@id": "https://doi.org/10.5281/zenodo.18268771",
     "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
     "@type": "SoftwareSourceCode",
     "license": "https://spdx.org/licenses/MIT",
     "codeRepository": "git+https://github.com/matthiasprobst/h5RDMtoolbox.git",
     "name": "h5RDMtoolbox",
-    "version": "2.6.0",
+    "version": "2.6.1",
     "description": "Supporting a FAIR Research Data lifecycle using Python and HDF5.",
     "applicationCategory": "Engineering",
     "programmingLanguage": [
