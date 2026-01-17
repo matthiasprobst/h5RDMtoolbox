@@ -17,7 +17,7 @@ from h5rdmtoolbox import UserDir
 from h5rdmtoolbox.repository import upload_file
 from h5rdmtoolbox.repository import zenodo
 from h5rdmtoolbox.repository.interface import RepositoryFile
-from h5rdmtoolbox.repository.zenodo.core import _bump_version
+from h5rdmtoolbox.repository.zenodo.core import _bump_version, USER_AGENT_HEADER
 from h5rdmtoolbox.repository.zenodo.metadata import Metadata, Creator, Contributor
 from h5rdmtoolbox.repository.zenodo.tokens import get_api_token, set_api_token
 from h5rdmtoolbox.tutorial import TutorialSNTZenodoRecordID
@@ -82,7 +82,7 @@ class TestZenodo(unittest.TestCase):
             self.assertIsInstance(file, RepositoryFile)
         self.assertEqual(len(z.files), 1)
         for file in z.files.values():
-            r = requests.get(file.download_url)
+            r = requests.get(file.download_url, headers=USER_AGENT_HEADER)
             self.assertEqual(r.status_code, 200)
             downloaded_filename = file.download()
             self.assertTrue(downloaded_filename.exists())

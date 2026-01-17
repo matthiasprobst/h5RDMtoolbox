@@ -100,7 +100,7 @@ def _download_catalog_datasets(
 
     results = g.query(GET_ALL_METADATA_CATALOG_DATASETS.query)
 
-    logger.debug("found datasets:", len(results))
+    logger.debug(f"found datasets: {len(results)}")
     list_of_ttl_web_resources = [
         WebResource(
             download_url=row.download,

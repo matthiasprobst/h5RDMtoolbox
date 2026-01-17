@@ -3,34 +3,109 @@
 ![Tests](https://github.com/matthiasprobst/h5RDMtoolbox/actions/workflows/tests.yml/badge.svg)
 [![codecov](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox/graph/badge.svg?token=IVG4AQEW47)](https://codecov.io/gh/matthiasprobst/h5RDMtoolbox)
 [![Documentation Status](https://readthedocs.org/projects/h5rdmtoolbox/badge/?version=latest)](https://h5rdmtoolbox.readthedocs.io/en/latest/?badge=latest)
+[![PyPI version](https://badge.fury.io/py/h5RDMtoolbox.svg)](https://badge.fury.io/py/h5RDMtoolbox)
 ![pyvers](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
 
-*Note, that the project is still under development!*
+A Python package that helps researchers achieve sustainable 
+[**FAIR (Findable, Accessible, Interoperable, Reusable)**](https://www.nature.com/articles/sdata201618) data management with HDF5 files. The toolbox provides a comprehensive
+approach to the research data lifecycle through five main stages: **planning**, **collecting**, **analyzing**,
+**sharing**, and **reusing** data.
 
-The "HDF5 Research Data Management Toolbox" (h5RDMtoolbox) is a Python package supporting everybody who is working with
-HDF5 to achieve a sustainable data lifecycle which follows
-the [FAIR (Findable, Accessible, Interoperable, Reusable)](https://www.nature.com/articles/sdata201618)
-principles. It specifically supports the five main steps of *planning*, *collecting*, *analyzing*, *sharing* and
-*reusing* data. Please visit the [documentation](https://h5rdmtoolbox.readthedocs.io/en/latest/) for detailed
-information of try the [quickstart using colab](#quickstart).
+> **Note**: This project is actively under development.
 
-## Highlights
 
-- Combining HDF5 and [xarray](https://docs.xarray.dev/en/stable/) to allow easy access to metadata and data during
-  analysis and processing (
-  see [here](https://h5rdmtoolbox.readthedocs.io/en/latest/gettingstarted/quickoverview.html#datasets-xarray-interface)).
-- Assigning [metadata with "globally unique and persistent identifiers"]() as required
-  by [F1 of the FAIR principles](https://www.go-fair.org/fair-principles/f1-meta-data-assigned-globally-unique-persistent-identifiers/).
-  This can be achieved by using [RDF triples](https://www.w3.org/RDF/), which removes "ambiguity in the meaning of your
-  published data".
-- Define standard attributes through
-  [conventions](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/convention/index.html) and enforce users to use
-  certain attributes in their HDF5 files, such as units and a description, for example.
-- Upload HDF5 files directly
-  to [repositories](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/repository/index.html)
-  like [Zenodo](https://zenodo.org/)
-  or [use them with noSQL databases](https://h5rdmtoolbox.readthedocs.io/en/latest/userguide/database/index.html) like
-  [mongoDB](https://www.mongodb.com/).
+
+
+## ✨ Quick Start
+
+
+One of the core features of the toolbox and success factors for achieving FAIR data, is using semantic metadata.
+
+Let's see how we can use RDF (semantic metadata) together with HDF5 files using the toolbox:
+
+```bash
+# Install the package
+pip install h5RDMtoolbox
+```
+
+```python
+import h5rdmtoolbox as h5tbx
+import rdflib
+import numpy as np
+
+# Create a new HDF5 file with semantic metadata
+M4I = rdflib.Namespace("http://w3id.org/nfdi4ing/metadata4ing#")
+
+# Create a new HDF5 file with FAIR metadata
+with h5tbx.File("example.h5", "w") as h5:
+    h5.create_dataset("temperature", data=np.array([20, 21, 19, 22]))
+    h5.attrs["units", M4I.hasUnit] = "degree_Celsius"
+    h5.rdf["units"].object = "http://qudt.org/vocab/unit/DEG_C"
+    h5.attrs["description", "https://schema.org/description"] = "Room temperature measurements"
+
+    ttl = h5.serialize("ttl")
+
+```
+The serialization in Turtle (ttl) is teh RDF serialization of the HDF5 data (without arrays):
+```ttl
+@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
+@prefix schema: <https://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+hdf:H5T_INTEL_I64 a hdf:Datatype .
+
+[] a hdf:File ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:attribute [ a hdf:StringAttribute ;
+                    hdf:data "Room temperature measurements" ;
+                    hdf:name "description" ],
+                [ a hdf:StringAttribute ;
+                    hdf:data "degree_Celsius" ;
+                    hdf:name "units" ] ;
+            hdf:member [ a hdf:Dataset ;
+                    hdf:dataspace [ a hdf:SimpleDataspace ;
+                            hdf:dimension [ a hdf:DataspaceDimension ;
+                                    hdf:dimensionIndex 0 ;
+                                    hdf:size 4 ] ] ;
+                    hdf:datatype hdf:H5T_INTEGER,
+                        hdf:H5T_INTEL_I64 ;
+                    hdf:layout hdf:H5D_CONTIGUOUS ;
+                    hdf:maximumSize 4 ;
+                    hdf:name "/temperature" ;
+                    hdf:rank 1 ;
+                    hdf:size 4 ] ;
+            hdf:name "/" ;
+            m4i:hasUnit <http://qudt.org/vocab/unit/DEG_C> ;
+            schema:description "Room temperature measurements" ] .
+```
+
+[//]: # (The "HDF5 Research Data Management Toolbox" &#40;h5RDMtoolbox&#41; is a Python package supporting everybody who is working with)
+
+[//]: # (HDF5 to achieve a sustainable data lifecycle which follows)
+
+[//]: # (the [FAIR &#40;Findable, Accessible, Interoperable, Reusable&#41;]&#40;https://www.nature.com/articles/sdata201618&#41;)
+
+[//]: # (principles. It specifically supports the five main steps of *planning*, *collecting*, *analyzing*, *sharing* and)
+
+[//]: # (*reusing* data. Please visit the [documentation]&#40;https://h5rdmtoolbox.readthedocs.io/en/latest/&#41; for detailed)
+
+[//]: # (information of try the [quickstart using colab]&#40;#quickstart&#41;.)
+
+
+## 🚀 Key Features
+
+- **🔗 HDF5 + [Xarray](https://docs.xarray.dev/en/stable/) Integration**: Seamless access to metadata during data analysis with native xarray support
+- **🏷️ Persistent Identifiers**: Assign globally unique identifiers using RDF triples for FAIR compliance  
+- **📋 Standardized Conventions**: Define and enforce community-specific metadata standards
+- **☁️ Repository Integration**: Direct upload to Zenodo and other research repositories
+- **🗄️ Database Support**: Use HDF5 files with MongoDB or native HDF5 databases
+- **🔒 Semantic Enrichment**: Add RDF-based semantic meaning to your data
+- **🌐 Catalog Integration**: Search and discover datasets through SPARQL-based catalogs
+
+
+Find an example code in  [![In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/matthiasprobst/h5RDMtoolbox/blob/main/docs/colab/quickstart.ipynb) or check out the 
+[📚 full Documentation](https://h5rdmtoolbox.readthedocs.io/en/latest/)
 
 ## Who is the package for?
 

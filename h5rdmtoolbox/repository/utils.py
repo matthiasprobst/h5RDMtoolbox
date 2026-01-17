@@ -3,7 +3,7 @@ import logging
 import pathlib
 import uuid
 import warnings
-from typing import Optional, Union
+from typing import Optional, Union, Dict
 
 import requests
 
@@ -15,7 +15,8 @@ def download_file(file_url,
                   target_folder: Union[str, pathlib.Path] = None,
                   access_token: Optional[str] = None,
                   checksum: Optional[str] = None,
-                  checksum_algorithm: Optional[str] = None) -> pathlib.Path:
+                  checksum_algorithm: Optional[str] = None,
+                  headers: Optional[Dict]=None) -> pathlib.Path:
     logger.debug(f'Attempting to provide file from URL (download or return from cache): {file_url}')
     from ..utils import DownloadFileManager
     dfm = DownloadFileManager()
@@ -54,11 +55,11 @@ def download_file(file_url,
                 raise ValueError(f"Unsupported checksum algorithm: {checksum_algorithm}")
 
         try:
-            response = requests.get(file_url, stream=True)
+            response = requests.get(file_url, stream=True, headers=headers)
             if response.status_code == 403:
-                response = requests.get(file_url, stream=True, params={'access_token': access_token})
+                response = requests.get(file_url, stream=True, params={'access_token': access_token}, headers=headers)
         except requests.RequestException as e:
-            response = requests.get(file_url, stream=True, params={'access_token': access_token})
+            response = requests.get(file_url, stream=True, params={'access_token': access_token}, headers=headers)
         response.raise_for_status()
 
         chunk_size = 1024  # Define chunk size for download
@@ -107,7 +108,7 @@ def download_file(file_url,
         #                      f'but got: {file_checksum}')
     else:
         try:
-            r = requests.get(file_url)
+            r = requests.get(file_url, headers=headers)
         except requests.RequestException as e:
             r = requests.get(file_url, params={'access_token': access_token})
 
@@ -126,9 +127,9 @@ def download_file(file_url,
             file.write(r.content)
         if links_content:
             try:
-                _content_response = requests.get(links_content)
+                _content_response = requests.get(links_content, headers=headers)
             except requests.RequestException:
-                _content_response = requests.get(links_content, params={'access_token': access_token})
+                _content_response = requests.get(links_content, params={'access_token': access_token}, headers=headers)
             if _content_response.ok:
                 with open(target_filename, 'wb') as file:
                     file.write(_content_response.content)
