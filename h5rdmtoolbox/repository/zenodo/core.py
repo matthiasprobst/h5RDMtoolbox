@@ -221,7 +221,7 @@ class ZenodoRecord(RepositoryInterface):
             return r.json()
 
         record_url = url.replace("deposit/depositions/", "records/")
-        r = requests.get(record_url)
+        r = requests.get(record_url, headers=USER_AGENT_HEADER)
         if r.status_code == 404:
             access_token = self.access_token
             r = requests.get(url, params={"access_token": access_token})

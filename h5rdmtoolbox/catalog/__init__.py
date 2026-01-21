@@ -117,7 +117,9 @@ def _download_catalog_datasets(
         f"Found {n_ttl_resources} TTL web resources to download. Downloading to {download_directory}..."
     )
     return download(
-        download_directory=download_directory, web_resources=list_of_ttl_web_resources
+        download_directory=download_directory,
+        web_resources=list_of_ttl_web_resources,
+        use_agent_header=True
     )
 
 

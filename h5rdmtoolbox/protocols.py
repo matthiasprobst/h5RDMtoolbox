@@ -149,6 +149,8 @@ class H5TbxAttributeManager(Protocol):
     def parent(self):
         ...
 
+    def items(self):
+        pass
 
 class H5TbxHLObject(Protocol):
     name: str

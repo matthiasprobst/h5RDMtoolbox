@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.6.2
+
+- adding USER-AGENT to more requests
+
 ## v2.6.1
 
 - hotfix for zenodo requests as they are blocking requests without header containing "User-Agent" to distinguish

@@ -17,6 +17,7 @@ from pydantic.v1 import HttpUrl
 from rdflib import Graph
 
 from .. import logger
+from .._version import __version__
 
 # --- minimal caster for common XSD datatypes ---
 _XSD = "http://www.w3.org/2001/XMLSchema#"
@@ -27,6 +28,10 @@ _NUM_DT = {
 }
 _FLOAT_DT = {_XSD + "float", _XSD + "double"}
 _DEC_DT = {_XSD + "decimal"}
+
+USER_AGENT_HEADER = {
+    "User-Agent": f"h5rdmtoolbox/{__version__} (https://github.com/matthiasprobst/h5rdmtoolbox)",
+}
 
 
 def file_uri_or_path_to_path(value) -> pathlib.Path:
@@ -190,40 +195,8 @@ def extract_record_id(value: str) -> str:
     raise ValueError(f"Could not extract a numeric record ID from '{value}'")
 
 
-def get_file_metadata(record: str, sandbox: bool = False) -> Iterator[Tuple[str, Dict]]:
-    """
-    Fetch the Zenodo record JSON and yield (filename, file-metadata-dict) tuples.
-    """
-    record_id = extract_record_id(record)
-    base_url = "https://sandbox.zenodo.org/api/records" if sandbox else "https://zenodo.org/api/records"
-    url = f"{base_url}/{record_id}"
-
-    resp = requests.get(url)
-    if resp.status_code != 200:
-        raise RuntimeError(
-            f"Failed to fetch record {record_id}: HTTP {resp.status_code} - {resp.text}"
-        )
-
-    data = resp.json()
-
-    # Zenodo records normally have 'files' at the top level
-    files = data.get("files", [])
-
-    if not files:
-        # Some records may store file info differently; handle gracefully
-        raise RuntimeError(f"No files found in record {record_id} (or unexpected schema).")
-
-    for f in files:
-        # Common fields in Zenodo API
-        name = f.get("key") or f.get("filename") or "<unknown>"
-        yield name, f
 
 
-def _is_sandbox_doi(doi: str) -> bool:
-    """Return True if the provided doi string looks like a sandbox URL/DOI."""
-    if "10.5281/zenodo" in doi:
-        return True
-    return False
 
 
 def download_and_verify_file(file_meta: Dict, dest_dir: pathlib.Path) -> Tuple[pathlib.Path, bool, str, str]:
@@ -312,7 +285,8 @@ def parse_checksum(raw: str) -> Tuple[str, str]:
     return algo.lower(), val.lower()
 
 
-def download(download_directory: pathlib.Path, web_resources: List[WebResource]) -> List[DownloadStatus]:
+def download(download_directory: pathlib.Path, web_resources: List[WebResource], use_agent_header=True) -> List[
+    DownloadStatus]:
     """Download and verify a list of WebResource items.
 
     For each resource:
@@ -403,7 +377,11 @@ def download(download_directory: pathlib.Path, web_resources: List[WebResource])
         # stream download to tmp file while computing md5
         tmp_path = record_dir / (filename + ".tmp")
         try:
-            resp = requests.get(url, stream=True, timeout=60)
+            if use_agent_header:
+                kwargs_request = {"headers": USER_AGENT_HEADER}
+            else:
+                kwargs_request = {}
+            resp = requests.get(url, stream=True, timeout=60, **kwargs_request)
             resp.raise_for_status()
 
             md5 = hashlib.md5()

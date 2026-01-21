@@ -84,5 +84,6 @@ def database_initialization(
         f"Found {len(list_of_ttl_web_resources)} TTL web resources to download. Downloading to {download_directory}...")
     return download(
         download_directory=download_directory,
-        web_resources=list_of_ttl_web_resources
+        web_resources=list_of_ttl_web_resources,
+        use_agent_header=True
     )
