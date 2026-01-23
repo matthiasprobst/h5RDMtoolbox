@@ -9,7 +9,7 @@ from .hdf.file import get_ld as get_hdf_ld
 from .user.file import get_ld as get_contextual_ld
 from .utils import optimize_context
 
-
+BINARY_AS_STRING=True
 def get_ld(
         hdf_filename: Union[str, pathlib.Path],
         structural: bool = True,

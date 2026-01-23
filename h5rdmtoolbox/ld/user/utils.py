@@ -2,6 +2,7 @@ import rdflib
 from rdflib import URIRef
 
 from h5rdmtoolbox.ld.rdf import PROTECTED_ATTRIBUTE_NAMES
+from ..utils import to_literal
 
 
 def to_uriref(value: str, blank_node_iri_base: str = None) -> URIRef:
@@ -26,7 +27,7 @@ def apply_rdf_mappings(obj, obj_uri, graph, rdf_mappings):
                                 return
                         graph.add((obj_uri, predicate_uri, rdflib.URIRef(object_uri)))
                     else:
-                        graph.add((obj_uri, predicate_uri, rdflib.Literal(av)))
+                        graph.add((obj_uri, predicate_uri, to_literal(av)))
                 type_uri = mapping.get('type')
                 if type_uri:
                     graph.add((obj_uri, rdflib.RDF.type, rdflib.URIRef(type_uri)))

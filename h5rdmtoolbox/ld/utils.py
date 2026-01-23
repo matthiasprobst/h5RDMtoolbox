@@ -9,8 +9,7 @@ import rdflib
 from rdflib import Literal
 from rdflib.namespace import XSD
 
-
-def to_literal(value, *, binary_as_string=False, encoding="utf-8") -> Literal:
+def to_literal(value, *, binary_as_string=None, encoding="utf-8") -> Literal:
     """
     Convert a Python value to an rdflib Literal.
 
@@ -18,6 +17,9 @@ def to_literal(value, *, binary_as_string=False, encoding="utf-8") -> Literal:
     - bytes -> xsd:base64Binary (default)
     - bytes -> xsd:string if binary_as_string=True
     """
+    if binary_as_string is None:
+        from . import BINARY_AS_STRING
+        binary_as_string = BINARY_AS_STRING
     if isinstance(value, bytes):
         if binary_as_string:
             return Literal(value.decode(encoding))
