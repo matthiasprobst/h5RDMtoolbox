@@ -14,6 +14,7 @@ from h5rdmtoolbox.ld.utils import get_file_bnode
 from .utils import to_uriref
 from .._types import RDFMappingEntry
 from ..rdf import FileRDFManager
+from .utils import apply_rdf_mappings
 
 HDF = Namespace(str(HDF5))
 
@@ -56,11 +57,8 @@ def get_ld(
 
     for ak, av in source.attrs.items():
         process_file_attribute(source, ak, av, graph, file_node, blank_node_iri_base=file_uri)
-        if ak in rdf_mappings:
-            mapping = rdf_mappings[ak]
-            predicate = to_uriref(mapping.get("predicate"), file_uri)
-            if predicate is not None:
-                graph.add((file_node, predicate, rdflib.Literal(av)))
+
+    apply_rdf_mappings(source, file_node, graph, rdf_mappings)
 
     process_group(group=source, graph=graph, blank_node_iri_base=file_uri, rdf_mappings=rdf_mappings)
 

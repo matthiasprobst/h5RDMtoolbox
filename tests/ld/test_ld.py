@@ -910,11 +910,22 @@ WHERE {
         with h5tbx.File(_filename, mode="w") as h5:
             ds = h5.create_dataset("u", data=[1, 2, 3])
             ds.attrs["units"] = "m/s"
+            ds.attrs["standard_name"] = "x_velocity"
             g = h5.create_group("grp")
             g.attrs["long_name"] = "velocity"
 
-        def _get_qudt_unit(value):
+        def _get_qudt_unit(value, _):
             return qudt_lookup.get(value, None)
+
+        def _make_standard_name(value, ctx):
+            _unit = ctx.get("units", None)
+            if _unit is not None:
+                units = _get_qudt_unit(_unit, None)
+                if units is not None:
+                    return ssnolib.StandardName(
+                        standard_name=value,
+                        unit=units)  # units should be canonical, so this is not yet totally correct
+            return None
 
         rdf_mappings = {
             "units": {
@@ -923,6 +934,10 @@ WHERE {
             },
             "long_name": {
                 "predicate": SKOS.altLabel
+            },
+            "standard_name": {
+                "predicate": ssnolib.SSNO.hasStandardName,
+                "object": _make_standard_name
             }
         }
         ttl = h5tbx.serialize(
@@ -931,33 +946,36 @@ WHERE {
             rdf_mappings=rdf_mappings,
             file_uri="https://example.org#"
         )
+        print(ttl)
         self.assertEqual("""@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix ssno: <https://matthiasprobst.github.io/ssno#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-<https://example.org#tmp0.hdf> a hdf:File ;
-    hdf:rootGroup <https://example.org#tmp0.hdf/> .
+<https://example.org#deleteme.hdf> a hdf:File ;
+    hdf:rootGroup <https://example.org#deleteme.hdf/> .
 
 hdf:H5T_INTEL_I64 a hdf:Datatype .
 
-<https://example.org#tmp0.hdf/> a hdf:Group ;
-    hdf:member <https://example.org#tmp0.hdf/grp>,
-        <https://example.org#tmp0.hdf/u> ;
+<https://example.org#deleteme.hdf/> a hdf:Group ;
+    hdf:member <https://example.org#deleteme.hdf/grp>,
+        <https://example.org#deleteme.hdf/u> ;
     hdf:name "/" .
 
-<https://example.org#tmp0.hdf/grp> a hdf:Group ;
-    hdf:attribute <https://example.org#tmp0.hdf/grp@long_name> ;
+<https://example.org#deleteme.hdf/grp> a hdf:Group ;
+    hdf:attribute <https://example.org#deleteme.hdf/grp@long_name> ;
     hdf:name "/grp" ;
     skos:altLabel "velocity" .
 
-<https://example.org#tmp0.hdf/grp@long_name> a hdf:StringAttribute ;
+<https://example.org#deleteme.hdf/grp@long_name> a hdf:StringAttribute ;
     hdf:data "velocity" ;
     hdf:name "long_name" .
 
-<https://example.org#tmp0.hdf/u> a hdf:Dataset ;
-    hdf:attribute <https://example.org#tmp0.hdf/u@units> ;
-    hdf:dataspace <https://example.org#tmp0.hdf/u__dataspace> ;
+<https://example.org#deleteme.hdf/u> a hdf:Dataset ;
+    hdf:attribute <https://example.org#deleteme.hdf/u@standard_name>,
+        <https://example.org#deleteme.hdf/u@units> ;
+    hdf:dataspace <https://example.org#deleteme.hdf/u__dataspace> ;
     hdf:datatype hdf:H5T_INTEGER,
         hdf:H5T_INTEL_I64 ;
     hdf:layout hdf:H5D_CONTIGUOUS ;
@@ -965,16 +983,21 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
     hdf:name "/u" ;
     hdf:rank 1 ;
     hdf:size 3 ;
-    m4i:hasUnit <http://qudt.org/vocab/unit/M-PER-SEC> .
+    m4i:hasUnit <http://qudt.org/vocab/unit/M-PER-SEC> ;
+    ssno:hasStandardName <x_velocity> .
 
-<https://example.org#tmp0.hdf/u@units> a hdf:StringAttribute ;
+<https://example.org#deleteme.hdf/u@standard_name> a hdf:StringAttribute ;
+    hdf:data "x_velocity" ;
+    hdf:name "standard_name" .
+
+<https://example.org#deleteme.hdf/u@units> a hdf:StringAttribute ;
     hdf:data "m/s" ;
     hdf:name "units" .
 
-<https://example.org#tmp0.hdf/u__dataspace> a hdf:SimpleDataspace ;
-    hdf:dimension <https://example.org#tmp0.hdf/u__dataspace_dimension_0> .
+<https://example.org#deleteme.hdf/u__dataspace> a hdf:SimpleDataspace ;
+    hdf:dimension <https://example.org#deleteme.hdf/u__dataspace_dimension_0> .
 
-<https://example.org#tmp0.hdf/u__dataspace_dimension_0> a hdf:DataspaceDimension ;
+<https://example.org#deleteme.hdf/u__dataspace_dimension_0> a hdf:DataspaceDimension ;
     hdf:dimensionIndex 0 ;
     hdf:size 3 .
 

@@ -8,6 +8,7 @@ from ontolutils.namespacelib import SCHEMA
 from h5rdmtoolbox.ld.user.attributes import process_attribute
 from h5rdmtoolbox.ld.user.datasets import process_dataset
 from h5rdmtoolbox.ld.utils import get_obj_bnode, get_file_bnode
+from .utils import apply_rdf_mappings
 from .utils import to_uriref
 from ..rdf import RDFManager
 
@@ -17,11 +18,7 @@ def process_group(*, group, graph, rdf_mappings, blank_node_iri_base: Optional[s
 
     for ak, av in group.attrs.items():
         process_attribute(group, ak, av, graph, blank_node_iri_base)
-        if ak in rdf_mappings:
-            mapping = rdf_mappings[ak]
-            predicate = to_uriref(mapping.get("predicate"), group_uri)
-            if predicate is not None:
-                graph.add((group_uri, predicate, rdflib.Literal(av)))
+    apply_rdf_mappings(group, group_uri, graph, rdf_mappings)
 
     rdf_manager = RDFManager(group.attrs)
     parent_rdf_manager = RDFManager(group.parent.attrs) if group.parent is not None else None
@@ -63,7 +60,9 @@ def process_group(*, group, graph, rdf_mappings, blank_node_iri_base: Optional[s
         # graph.add((group_uri, HDF.member, sub_group_or_dataset_uri))
 
         if isinstance(sub_group_or_dataset, h5py.Group):
-            process_group(group=sub_group_or_dataset, graph=graph, rdf_mappings=rdf_mappings, blank_node_iri_base=blank_node_iri_base)
+            process_group(group=sub_group_or_dataset, graph=graph, rdf_mappings=rdf_mappings,
+                          blank_node_iri_base=blank_node_iri_base)
 
         elif isinstance(sub_group_or_dataset, h5py.Dataset):
-            process_dataset(dataset=sub_group_or_dataset, graph=graph, rdf_mappings=rdf_mappings, blank_node_iri_base=blank_node_iri_base)
+            process_dataset(dataset=sub_group_or_dataset, graph=graph, rdf_mappings=rdf_mappings,
+                            blank_node_iri_base=blank_node_iri_base)
