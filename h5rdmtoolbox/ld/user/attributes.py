@@ -9,7 +9,7 @@ from ontolutils import SCHEMA
 from ontolutils.classes.thing import is_url
 from rdflib import RDF, DCTERMS, XSD, URIRef, Literal, Graph, BNode
 
-from h5rdmtoolbox.ld.utils import get_attr_dtype_as_xsd, get_obj_bnode
+from h5rdmtoolbox.ld.utils import get_attr_dtype_as_xsd, get_obj_bnode, to_literal
 from .utils import to_uriref
 from ..rdf import FileRDFManager, RDFManager
 
@@ -230,9 +230,11 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
                 )
             else:
                 graph.add(
-                    (parent_uri,
-                     to_uriref(rdf_user_predicate, blank_node_iri_base),
-                     Literal(data, datatype=get_attr_dtype_as_xsd(data)))
+                    (
+                        parent_uri,
+                        to_uriref(rdf_user_predicate, blank_node_iri_base),
+                        to_literal(data)
+                    )  # Literal(data, datatype=get_attr_dtype_as_xsd(data)))
                 )
         return _graph
 

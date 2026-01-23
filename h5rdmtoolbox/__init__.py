@@ -55,6 +55,7 @@ import json
 from .wrapper.accessor import register_accessor
 
 from .ld.shacl import validate_hdf, ValidationResult
+from .ld._types import RDFMappingEntry
 # noinspection PyUnresolvedReferences
 from .utils import DownloadFileManager
 
@@ -282,6 +283,7 @@ def serialize(hdf_filename,
               structural: bool = True,
               contextual: bool = True,
               file_uri: Optional[str] = None,
+              rdf_mappings: Dict[str, RDFMappingEntry] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
     fmt = kwargs.pop("format", fmt)
@@ -290,7 +292,8 @@ def serialize(hdf_filename,
                             skipND=skipND,
                             structural=structural,
                             contextual=contextual,
-                            file_uri=file_uri)
+                            file_uri=file_uri,
+                            rdf_mappings=rdf_mappings)
 
 
 def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,

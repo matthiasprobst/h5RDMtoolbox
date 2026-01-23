@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v2.7.0
+
+- rdf serialization support for binary and 1d attribute data
+- add rdf mapping support during serialization of hdf5 data without changing the hdf5 file
+
 ## v2.6.2
 
 - adding USER-AGENT to more requests

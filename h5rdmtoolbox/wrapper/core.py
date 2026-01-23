@@ -32,6 +32,7 @@ from .. import protocols
 from .._repr import H5Repr, H5PY_SPECIAL_ATTRIBUTES
 from ..convention.consts import DefaultValue
 from ..ld import rdf
+from ..ld._types import RDFMappingEntry
 
 logger = logging.getLogger('h5rdmtoolbox')
 
@@ -2486,7 +2487,8 @@ class File(h5py.File, Group):
                   contextual: bool = True,
                   file_uri: Optional[Union[str, Dict]] = None,
                   context: Optional[Dict] = None,
-                  indent: int = 2
+                  indent: int = 2,
+                  rdf_mappings: Dict[str, RDFMappingEntry] = None
                   ):
         """Serialize the file content to a specific format"""
         from h5rdmtoolbox.ld.utils import optimize_context
@@ -2510,7 +2512,8 @@ class File(h5py.File, Group):
                        structural=structural,
                        contextual=contextual,
                        file_uri=file_uri,
-                       skipND=skipND)
+                       skipND=skipND,
+                       rdf_mappings=rdf_mappings)
         if prefix:
             graph.bind(prefix, file_uri)
         context = context or {}

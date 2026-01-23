@@ -4,6 +4,7 @@ from typing import Union, Optional, Dict
 import h5py
 import rdflib
 
+from ._types import RDFMappingEntry
 from .hdf.file import get_ld as get_hdf_ld
 from .user.file import get_ld as get_contextual_ld
 from .utils import optimize_context
@@ -15,7 +16,9 @@ def get_ld(
         contextual: bool = True,
         file_uri: Optional[str] = None,
         skipND: Optional[int] = 1,
-        context: Optional[Dict] = None) -> rdflib.Graph:
+        context: Optional[Dict] = None,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None
+) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
     if file_uri and not (str(file_uri).endswith("#") or str(file_uri).endswith("/")):
         raise ValueError("file_uri must end with '#' or '/'")
@@ -23,7 +26,8 @@ def get_ld(
     with h5py.File(hdf_filename) as h5:
         if contextual and structural:
             graph1 = get_hdf_ld(h5, file_uri=file_uri, skipND=skipND)
-            graph2 = get_contextual_ld(h5, file_uri=file_uri)
+            graph2 = get_contextual_ld(h5, file_uri=file_uri,
+                                       rdf_mappings=rdf_mappings)
             graph = graph1 + graph2
         else:
             if structural:

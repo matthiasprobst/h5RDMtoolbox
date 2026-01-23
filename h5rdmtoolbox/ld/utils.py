@@ -1,3 +1,4 @@
+import base64
 import pathlib
 import urllib.parse
 from typing import Optional
@@ -5,7 +6,25 @@ from typing import Union
 
 import h5py
 import rdflib
+from rdflib import Literal
 from rdflib.namespace import XSD
+
+
+def to_literal(value, *, binary_as_string=False, encoding="utf-8") -> Literal:
+    """
+    Convert a Python value to an rdflib Literal.
+
+    - str   -> xsd:string
+    - bytes -> xsd:base64Binary (default)
+    - bytes -> xsd:string if binary_as_string=True
+    """
+    if isinstance(value, bytes):
+        if binary_as_string:
+            return Literal(value.decode(encoding))
+        encoded = base64.b64encode(value).decode("ascii")
+        return Literal(encoded, datatype=XSD.base64Binary)
+
+    return Literal(value, datatype=get_attr_dtype_as_xsd(value))
 
 
 def _parse_obj_name(obj_name: str):

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 from typing import Union
 
 import h5py
@@ -12,6 +12,7 @@ from h5rdmtoolbox.ld.user.attributes import process_file_attribute
 from h5rdmtoolbox.ld.user.groups import process_group
 from h5rdmtoolbox.ld.utils import get_file_bnode
 from .utils import to_uriref
+from .._types import RDFMappingEntry
 from ..rdf import FileRDFManager
 
 HDF = Namespace(str(HDF5))
@@ -19,9 +20,12 @@ HDF = Namespace(str(HDF5))
 
 def get_ld(
         source: Union[str, h5py.File],
-        file_uri: Optional[str] = None) -> rdflib.Graph:
+        file_uri: Optional[str] = None,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None
+) -> rdflib.Graph:
     """Convert an HDF5 file into an RDF graph."""
-
+    if rdf_mappings is None:
+        rdf_mappings = {}
     if not isinstance(source, h5py.File):
         with h5py.File(source) as h5f:
             return get_ld(h5f, file_uri=file_uri)
@@ -52,7 +56,12 @@ def get_ld(
 
     for ak, av in source.attrs.items():
         process_file_attribute(source, ak, av, graph, file_node, blank_node_iri_base=file_uri)
+        if ak in rdf_mappings:
+            mapping = rdf_mappings[ak]
+            predicate = to_uriref(mapping.get("predicate"), file_uri)
+            if predicate is not None:
+                graph.add((file_node, predicate, rdflib.Literal(av)))
 
-    process_group(source, graph, blank_node_iri_base=file_uri)
+    process_group(group=source, graph=graph, blank_node_iri_base=file_uri, rdf_mappings=rdf_mappings)
 
     return graph

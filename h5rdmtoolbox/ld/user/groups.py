@@ -12,11 +12,17 @@ from .utils import to_uriref
 from ..rdf import RDFManager
 
 
-def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
+def process_group(*, group, graph, rdf_mappings, blank_node_iri_base: Optional[str] = None):
+    group_uri = get_obj_bnode(group, blank_node_iri_base)
+
     for ak, av in group.attrs.items():
         process_attribute(group, ak, av, graph, blank_node_iri_base)
+        if ak in rdf_mappings:
+            mapping = rdf_mappings[ak]
+            predicate = to_uriref(mapping.get("predicate"), group_uri)
+            if predicate is not None:
+                graph.add((group_uri, predicate, rdflib.Literal(av)))
 
-    group_uri = get_obj_bnode(group, blank_node_iri_base)
     rdf_manager = RDFManager(group.attrs)
     parent_rdf_manager = RDFManager(group.parent.attrs) if group.parent is not None else None
     rdf_type = rdf_manager.type
@@ -57,7 +63,7 @@ def process_group(group, graph, blank_node_iri_base: Optional[str] = None):
         # graph.add((group_uri, HDF.member, sub_group_or_dataset_uri))
 
         if isinstance(sub_group_or_dataset, h5py.Group):
-            process_group(sub_group_or_dataset, graph, blank_node_iri_base=blank_node_iri_base)
+            process_group(group=sub_group_or_dataset, graph=graph, rdf_mappings=rdf_mappings, blank_node_iri_base=blank_node_iri_base)
 
         elif isinstance(sub_group_or_dataset, h5py.Dataset):
-            process_dataset(sub_group_or_dataset, graph, blank_node_iri_base=blank_node_iri_base)
+            process_dataset(dataset=sub_group_or_dataset, graph=graph, rdf_mappings=rdf_mappings, blank_node_iri_base=blank_node_iri_base)
