@@ -906,7 +906,8 @@ WHERE {
             self.assertEqual(g1ttl, g2ttl)
 
     def test_rdf_mappings(self):
-        with h5tbx.File(name="deleteme.hdf", mode="w") as h5:
+        _filename = pathlib.Path("deleteme.hdf")
+        with h5tbx.File(_filename, mode="w") as h5:
             ds = h5.create_dataset("u", data=[1, 2, 3])
             ds.attrs["units"] = "m/s"
             g = h5.create_group("grp")
@@ -977,5 +978,5 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
     hdf:dimensionIndex 0 ;
     hdf:size 3 .
 
-""".replace("tmp0.hdf", h5.hdf_filename.name), ttl)
-        h5.hdf_filename.unlink(missing_ok=True)
+""".replace("tmp0.hdf", _filename.name), ttl)
+        _filename.unlink(missing_ok=True)

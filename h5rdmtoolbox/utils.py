@@ -31,7 +31,6 @@ from .user import CACHE_DIR, USER_DATA_DIR
 logger = logging.getLogger('h5rdmtoolbox')
 DEFAULT_LOGGING_LEVEL = logging.INFO
 RETRY_STATUS = {429, 500, 502, 503, 504}
-USER_TMP_DIR = user.UserDir['tmp']
 
 def get_filesize(filename: Union[str, pathlib.Path]) -> int:
     """Get the size of a file in bytes"""
@@ -199,9 +198,9 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = Fa
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _filename = USER_TMP_DIR / f"{prefix}{next(user._filecounter)}{suffix}"
+    _filename =  user.UserDir['tmp'] / f"{prefix}{next(user._filecounter)}{suffix}"
     while _filename.exists():
-        _filename = USER_TMP_DIR / f"{prefix}{next(user._filecounter)}{suffix}"
+        _filename =  user.UserDir['tmp'] / f"{prefix}{next(user._filecounter)}{suffix}"
     if touch:
         if _filename.suffix in ('.h5', '.hdf', '.hdf5'):
             with h5py.File(_filename, 'w'):
@@ -225,9 +224,9 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir = USER_TMP_DIR / f"{prefix}{next(user._dircounter)}"
+    _dir =  user.UserDir['tmp'] / f"{prefix}{next(user._dircounter)}"
     while _dir.exists():
-        _dir = USER_TMP_DIR / f"{prefix}{next(user._dircounter)}"
+        _dir =  user.UserDir['tmp'] / f"{prefix}{next(user._dircounter)}"
     _dir.mkdir(parents=True)
     return _dir
 
