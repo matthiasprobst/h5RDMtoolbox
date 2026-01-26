@@ -121,6 +121,8 @@ class RemoteSparqlStore(MetadataStore):
 
 class GraphDB(RemoteSparqlStore):
     """GraphDB RDF database store."""
+
+    __supports_named_graphs__: bool=True
     __supported_file_extensions__ = {".ttl", ".rdf", ".jsonld"}
 
     def __init__(self,
@@ -401,7 +403,7 @@ class GraphDB(RemoteSparqlStore):
 
 class InMemoryRDFStore(RDFStore):
     """In-memory RDF database that can upload files and return a combined graph."""
-
+    __supports_named_graphs__=False
     __default_expected_file_extensions__ = {".ttl", ".rdf", ".jsonld", ".nt", ".xml", ".n3"}
     __populate_on_init__ = True
 
@@ -785,6 +787,10 @@ class HDF5SqlDB(DataStore):
 
 class MetadataStoreQuery(Query, ABC):
     """RDF Store Query interface."""
+
+    @abstractmethod
+    def execute(self, store: "Store", named_graph: Optional[str]=None) -> "QueryResult":
+        """Executes the query against the given metadata store with optional named graph."""
 
 
 class SparqlQuery(MetadataStoreQuery):

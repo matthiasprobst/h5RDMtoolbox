@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.7.1
+
+- hotfix serialization for string values with spaces
+
 ## v2.7.0
 
 - rdf serialization support for binary and 1d attribute data

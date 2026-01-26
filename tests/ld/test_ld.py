@@ -1003,3 +1003,18 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
 
 """.replace("tmp0.hdf", _filename.name), ttl)
         _filename.unlink(missing_ok=True)
+
+    def test_quote(self):
+        with h5tbx.File() as h5:
+            h5.attrs['quote_test'] = 'This is a "quote" test'
+            ttl = h5.serialize("ttl")
+        self.assertEqual(ttl, """@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+
+[] a hdf:File ;
+    hdf:rootGroup [ a hdf:Group ;
+            hdf:attribute [ a hdf:StringAttribute ;
+                    hdf:data "This is a \\"quote\\" test" ;
+                    hdf:name "quote_test" ] ;
+            hdf:name "/" ] .
+
+""")

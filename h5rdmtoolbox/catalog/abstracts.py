@@ -80,7 +80,8 @@ class DataStore(Store, ABC):
 class MetadataStore(Store, ABC):
     """Metadata database interface using."""
 
-    __populate_on_init__ = False
+    __supports_named_graphs__: bool
+    __populate_on_init__: bool = False
     __shacl_shapes__: Dict[str, rdflib.Graph] = {}
 
     @abstractmethod

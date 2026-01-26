@@ -132,9 +132,9 @@ def get_property_node(
     """Get a property node for an HDF5 object."""
     _file_id = _get_file_id(obj.file)
     if obj.name == "/":
-        _id = f"{_file_id}@{name}"
+        _id = f"{_file_id}@{_parse_obj_name(name)}"
     else:
-        _id = f"{_file_id}{_parse_obj_name(obj.name)}__{name}"
+        _id = f"{_file_id}{_parse_obj_name(obj.name)}__{_parse_obj_name(name)}"
     if blank_node_iri_base:
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(_id)
@@ -146,9 +146,9 @@ def get_attr_node(
         blank_node_iri_base: str) -> Union[rdflib.URIRef, rdflib.BNode]:
     _file_id = _get_file_id(obj.file)
     if obj.name == "/":
-        _id = f"{_file_id}@{name}"
+        _id = f"{_file_id}@{_parse_obj_name(name)}"
     else:
-        _id = f"{_file_id}{_parse_obj_name(obj.name)}@{name}"
+        _id = f"{_file_id}{_parse_obj_name(obj.name)}@{_parse_obj_name(name)}"
     if blank_node_iri_base:
         return rdflib.URIRef(f'{blank_node_iri_base}{_id}')
     return rdflib.BNode(f"{_id}")
