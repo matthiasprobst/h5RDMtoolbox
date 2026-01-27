@@ -2513,6 +2513,7 @@ class File(h5py.File, Group):
                        contextual=contextual,
                        file_uri=file_uri,
                        skipND=skipND,
+                       context=context,
                        rdf_mappings=rdf_mappings)
         if prefix:
             graph.bind(prefix, file_uri)

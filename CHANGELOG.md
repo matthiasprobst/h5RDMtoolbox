@@ -2,6 +2,10 @@
 
 Log of changes in the versions
 
+## v2.7.2
+
+- hotfix rdf serialization for hdf datasets using predicate
+
 ## v2.7.1
 
 - hotfix serialization for string values with spaces
