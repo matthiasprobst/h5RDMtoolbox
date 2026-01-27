@@ -747,43 +747,44 @@ schema:john a foaf:Person .
 
             print(h5.serialize("ttl", structural=False))
 
-        def test_datasets_with_predicate(self):
-            """We describe a fan with speed dataset including RDF properties. We shall check
-            if the serialization works as expected.
-            """
-            with h5tbx.File() as h5:
-                g = h5.create_group("fan")
-                g.rdf.type = "https://example.org/Fan"
-                g.rdf.subject = "https://example.org/myfan"
+    def test_datasets_with_predicate(self):
+        """We describe a fan with speed dataset including RDF properties. We shall check
+        if the serialization works as expected.
+        """
+        with h5tbx.File("deleteme.hdf", "w") as h5:
+            g = h5.create_group("fan")
+            g.rdf.type = "https://example.org/Fan"
+            g.rdf.subject = "https://example.org/myfan"
 
-                ds1 = g.create_dataset("speed", data=1500, attrs={"units": "rpm"})
-                ds1.rdf.predicate = "https://example.org/hasSpeed"
-                ds1.rdf.subject = "https://example.org/FanSpeed"
-                ds1.rdf.type = "https://example.org/Variable"
-                ds1.rdf["units"].predicate = "https://example.org/hasUnits"
-                ds1.rdf["units"].object = "https://example.org/Unit/RPM"
+            ds1 = g.create_dataset("speed", data=1500, attrs={"units": "rpm"})
+            ds1.rdf.predicate = "https://example.org/hasSpeed"
+            ds1.rdf.subject = "https://example.org/FanSpeed"
+            ds1.rdf.type = "https://example.org/Variable"
+            ds1.rdf["units"].predicate = "https://example.org/hasUnits"
+            ds1.rdf["units"].object = "https://example.org/Unit/RPM"
 
-                ttl = h5.serialize(
-                    "ttl",
-                    structural=False,
-                    file_uri="https://example.org/fan_data.h5#",
-                    context={"ex": "https://example.org/"},
-                )
+            ttl = h5.serialize(
+                "ttl",
+                structural=False,
+                file_uri="https://example.org/fan_data.h5#",
+                context={"ex": "https://example.org/"},
+            )
 
-                self.assertEqual(ttl,
-                                 """@prefix ex: <https://example.org/> .
-    @prefix schema: <https://schema.org/> .
+        h5.hdf_filename.unlink(missing_ok=True)
+        self.assertEqual(ttl,
+                             """@prefix ex: <https://example.org/> .
+@prefix schema: <https://schema.org/> .
 
-    <https://example.org/fan_data.h5#tmp0.hdf/fan> schema:about ex:myfan .
+<https://example.org/fan_data.h5#deleteme.hdf/fan> schema:about ex:myfan .
 
-    <https://example.org/fan_data.h5#tmp0.hdf/fan/speed> a ex:Variable ;
-        schema:about ex:FanSpeed .
+<https://example.org/fan_data.h5#deleteme.hdf/fan/speed> a ex:Variable ;
+    schema:about ex:FanSpeed .
 
-    ex:myfan a ex:Fan ;
-        ex:hasSpeed ex:FanSpeed .
+ex:myfan a ex:Fan ;
+    ex:hasSpeed ex:FanSpeed .
 
-    ex:FanSpeed a ex:Variable ;
-        ex:hasUnits <https://example.org/Unit/RPM> .
+ex:FanSpeed a ex:Variable ;
+    ex:hasUnits <https://example.org/Unit/RPM> .
 
-    """)
+""")
 
