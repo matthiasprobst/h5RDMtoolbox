@@ -1,10 +1,12 @@
 import json
 import unittest
 
+import numpy as np
 import ontolutils
 import rdflib
 from ontolutils import QUDT_UNIT
 from ontolutils.namespacelib import M4I, OBO, SSN_SYSTEM, SCHEMA
+from ontolutils.utils.qudt_units import qudt_lookup
 from rdflib import FOAF
 from rdflib.namespace import SOSA, SSN
 from ssnolib import SSNO, ssno
@@ -337,7 +339,7 @@ local:SubjectNode a local:BNodeType1,
 
     def test_group_predicate(self):
         with h5tbx.File() as h5:
-            grp = h5.create_group('has_contact')
+            grp = h5.create_group('JohnDoe')
             # assign parent group
             with self.assertRaises(TypeError):
                 grp.rdf.predicate = ['1.4', ]
@@ -348,21 +350,23 @@ local:SubjectNode a local:BNodeType1,
             del grp.rdf.predicate
             self.assertEqual(grp.rdf.predicate[None], None)
 
+            grp.attrs["firstname", FOAF.firstName] = "John"
+            grp.attrs["lastname", FOAF.lastName] = "Doe"
             grp.rdf.predicate = 'https://schema.org/author'
-            grp.rdf.subject = 'https://schema.org/john'
+            # grp.rdf.subject = 'https://example.org#john'
             self.assertEqual(grp.rdf.predicate[None], 'https://schema.org/author')
 
-            grp.rdf.type = 'http://xmlns.com/foaf/0.1/Person'
+            grp.rdf.type = FOAF.Person
 
-        self.assertEqual("""@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+            ttl = h5.serialize("ttl", structural=False)
+            self.assertEqual(ttl, """@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix schema: <https://schema.org/> .
 
-schema:john a foaf:Person .
+[] schema:about [ a foaf:Person ;
+            foaf:firstName "John" ;
+            foaf:lastName "Doe" ] .
 
-[] schema:about schema:john ;
-    schema:author schema:john .
-
-""", h5.serialize("ttl", structural=False))
+""")
 
     def test_none_value(self):
         with h5tbx.File() as h5:
@@ -736,16 +740,38 @@ schema:john a foaf:Person .
     def test_subject_predicate_object_via_groups(self):
         with h5tbx.File() as h5:
             sensor_grp = h5.create_group("sensor_1")
-            sensor_grp.rdf.subject = "http://example.org/PressureSensor"
+
+            # sensor has an ID and is of type SOSA.Sensor:
             sensor_grp.rdf.type = SOSA.Sensor
+            sensor_grp.rdf.subject = "http://example.org/PressureSensor"
 
             sensor_data = sensor_grp.create_group("data")
-            sensor_data.rdf.subject = "https://example.org/SystemCapability"
-            sensor_data.rdf.predicate = SSN_SYSTEM.hasSystemCapability
+            sensor_data.rdf.subject = "https://example.org/TheSensorCapability"
+            sensor_data.rdf.predicate = SSN_SYSTEM.hasSystemCapability  # Sensor has capability SystemCapability
             sensor_data.rdf.type = SSN_SYSTEM.SystemCapability
             sensor_data.attrs["property", SSN.forProperty] = "Pressure"
 
-            print(h5.serialize("ttl", structural=False))
+            ttl = h5.serialize(
+                "ttl",
+                structural=False,
+                file_uri="https://example.org/",
+                context={"ssn-system": "http://www.w3.org/ns/ssn/systems/"})
+            self.assertEqual(ttl, """@prefix ex: <http://www.w3.org/ns/ssn/systems/> .
+@prefix schema: <https://schema.org/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
+
+<https://example.org/tmp0.hdf/sensor_1> schema:about <http://example.org/PressureSensor> .
+
+<https://example.org/tmp0.hdf/sensor_1/data> schema:about <https://example.org/TheSensorCapability> .
+
+<http://example.org/PressureSensor> a sosa:Sensor ;
+    ex:hasSystemCapability <https://example.org/TheSensorCapability> .
+
+<https://example.org/TheSensorCapability> a ex:SystemCapability ;
+    ssn:forProperty "Pressure" .
+
+""".replace("tmp0", h5.hdf_filename.stem))
 
     def test_datasets_with_predicate(self):
         """We describe a fan with speed dataset including RDF properties. We shall check
@@ -772,7 +798,7 @@ schema:john a foaf:Person .
 
         h5.hdf_filename.unlink(missing_ok=True)
         self.assertEqual(ttl,
-                             """@prefix ex: <https://example.org/> .
+                         """@prefix ex: <https://example.org/> .
 @prefix schema: <https://schema.org/> .
 
 <https://example.org/fan_data.h5#deleteme.hdf/fan> schema:about ex:myfan .
@@ -788,3 +814,59 @@ ex:FanSpeed a ex:Variable ;
 
 """)
 
+    def test_secribing_observation(self):
+        class Unit(h5tbx.Attribute):
+
+            def __init__(self, unit):
+                super().__init__(value=unit, rdf_predicate=M4I.hasUnit, rdf_object=qudt_lookup.get(unit))
+
+        with h5tbx.File() as h5:
+            grp_raw = h5.create_group("raw")
+            ds_dp_sm = grp_raw.create_dataset("dp_sm", data=np.random.random(100), attrs={"units": Unit("Pa")})
+
+            g = h5.create_group("processed/mean_dp_sm/result")
+            ds = g.create_dataset("data", data=np.mean(ds_dp_sm[()]), attrs={"units": Unit("Pa")})
+            ds.rdf.type = M4I.NumericalVariable
+            ds.rdf.predicate = M4I.hasNumericalValue
+
+            h5["processed/mean_dp_sm"].rdf.type = SOSA.Observation
+
+            h5["processed/mean_dp_sm/result"].rdf.predicate = SOSA.hasResult
+            h5["processed/mean_dp_sm/result"].rdf.type = SOSA.Result
+
+
+            g_unc = h5["processed/mean_dp_sm/result"].create_group("uncertainty")
+            g_unc.rdf.type = "https://ptb.de/sis/ExpandedMU"
+            g_unc.rdf.predicate = "https://www.ptb.de/sis/hasUncertaintyDeclaration"
+            g_unc.attrs["label", rdflib.RDFS.label] = "Standard uncertainty from standard deviation@en"
+            g_unc.attrs["hasCoverageFactor", "https://ptb.de/sis/hasCoverageFactor"] = 2
+            g_unc.attrs["hasCoverageProbability", "https://ptb.de/sis/hasCoverageProbability"] = 0.95
+            g_unc.attrs["hasValueExpandedMU", "https://ptb.de/sis/hasValueExpandedMU"] = 0.25
+
+            print(h5.dumps())
+
+            ttl = h5.serialize("ttl", structural=True, file_uri="https://example.org#",
+                               context={"sis:": "https://ptb.de/sis/",})
+            print(ttl)
+#             self.assertEqual(ttl, """@prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
+# @prefix schema: <https://schema.org/> .
+# @prefix sosa: <http://www.w3.org/ns/sosa/> .
+#
+# <https://example.org#tmp0.hdf/processed/mean_dp_sm> schema:about <https://example.org#11062048643547883767> .
+#
+# <https://example.org#tmp0.hdf/processed/mean_dp_sm/result> schema:about <https://example.org#2186664091312143070> .
+#
+# <https://example.org#tmp0.hdf/processed/mean_dp_sm/result/data> a m4i:NumericalVariable .
+#
+# <https://example.org#tmp0.hdf/raw/dp_sm> m4i:hasUnit <http://qudt.org/vocab/unit/PA> .
+#
+# <https://example.org#11062048643547883767> a sosa:Observation ;
+#     sosa:hasResult <https://example.org#2186664091312143070> .
+#
+# <https://example.org#4997424838367323461> a m4i:NumericalVariable ;
+#     m4i:hasUnit <http://qudt.org/vocab/unit/PA> .
+#
+# <https://example.org#2186664091312143070> a sosa:Result ;
+#     m4i:hasNumericalValue <https://example.org#4997424838367323461> .
+#
+# """.replace("tmp0", h5.hdf_filename.stem))

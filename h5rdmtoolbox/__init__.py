@@ -282,7 +282,7 @@ def serialize(hdf_filename,
               skipND: int = 1,
               structural: bool = True,
               contextual: bool = True,
-              file_uri: Optional[str] = None,
+              file_uri: Optional[Union[str, Dict[str, str]]] = None,
               rdf_mappings: Dict[str, RDFMappingEntry] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
