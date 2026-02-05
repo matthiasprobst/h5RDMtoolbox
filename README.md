@@ -38,32 +38,85 @@ M4I = rdflib.Namespace("http://w3id.org/nfdi4ing/metadata4ing#")
 
 # Create a new HDF5 file with FAIR metadata
 with h5tbx.File("example.h5", "w") as h5:
-    h5.create_dataset("temperature", data=np.array([20, 21, 19, 22]))
-    h5.attrs["units", M4I.hasUnit] = "degree_Celsius"
-    h5.rdf["units"].object = "http://qudt.org/vocab/unit/DEG_C"
-    h5.attrs["description", "https://schema.org/description"] = "Room temperature measurements"
+    ds = h5.create_dataset("temperature", data=np.array([20, 21, 19, 22]))
+    ds.attrs["units"] = h5tbx.Attribute(
+        value="degree_Celsius",
+        rdf_predicate=M4I.hasUnit,
+        rdf_object="http://qudt.org/vocab/unit/DEG_C",
+    )
+    ds.attrs["description", "https://schema.org/description"] = "Room temperature measurements"
 
-    ttl = h5.serialize("ttl")
+    ds_mean = h5.create_dataset("mean_temperature", data=np.mean(h5["temperature"][()]))
+    ds_mean.attrs["units", M4I.hasUnit] = "degree_Celsius"
+    ds_mean.rdf["units"].object = "http://qudt.org/vocab/unit/DEG_C"
+    ds_mean.attrs["description", "https://schema.org/description"] = "Mean room temperature measurements"
 
+    ds_mean.rdf.type = M4I.NumericalVariable
+    ds_mean.rdf.data_predicate = M4I.hasNumericalValue
+
+    ttl_ctx = h5.serialize("ttl", structural=False, contextual=True)
+    ttl_struc = h5.serialize("ttl", structural=True, contextual=False)
+    ttl_full = h5.serialize("ttl")
 ```
-The serialization in Turtle (ttl) is teh RDF serialization of the HDF5 data (without arrays):
+
+The above saves three different serializations of the HDF5 content as RDF in Turtle (ttl) format.
+The first one (`ttl_ctx`) is the **contextual** RDF serialization, which only includes the RDF triples that the user
+has enriched the HDF5 file with. The second one (`ttl_struc`) is the **structural** RDF serialization, which includes 
+all RDF triples that can be derived from the HDF5 file content. the third one (`ttl_full`) is the combination of the 
+first two, which includes both the user enriched RDF triples and the RDF triples that can be derived from the HDF5 file 
+content.
+
+Below we show the first two serializations.
+
+`ttl_ctx`:
 ```ttl
-@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
 @prefix schema: <https://schema.org/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+[] a m4i:NumericalVariable ;
+    m4i:hasNumericalValue "20.5"^^xsd:float ;
+    m4i:hasUnit <http://qudt.org/vocab/unit/DEG_C> ;
+    schema:description "Mean room temperature measurements" .
+
+[] m4i:hasUnit <http://qudt.org/vocab/unit/DEG_C> ;
+    schema:description "Room temperature measurements" .
+```
+
+`ttl_ctx`:
+```ttl
+@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+hdf:H5T_IEEE_F64LE a hdf:Datatype .
 
 hdf:H5T_INTEL_I64 a hdf:Datatype .
 
 [] a hdf:File ;
     hdf:rootGroup [ a hdf:Group ;
-            hdf:attribute [ a hdf:StringAttribute ;
-                    hdf:data "Room temperature measurements" ;
-                    hdf:name "description" ],
-                [ a hdf:StringAttribute ;
-                    hdf:data "degree_Celsius" ;
-                    hdf:name "units" ] ;
             hdf:member [ a hdf:Dataset ;
+                    hdf:attribute [ a hdf:StringAttribute ;
+                            hdf:data "Mean room temperature measurements" ;
+                            hdf:name "description" ],
+                        [ a hdf:StringAttribute ;
+                            hdf:data "degree_Celsius" ;
+                            hdf:name "units" ] ;
+                    hdf:dataspace [ a hdf:ScalarDataspace ] ;
+                    hdf:datatype hdf:H5T_FLOAT,
+                        hdf:H5T_IEEE_F64LE ;
+                    hdf:layout hdf:H5D_CONTIGUOUS ;
+                    hdf:maximumSize -1 ;
+                    hdf:name "/mean_temperature" ;
+                    hdf:rank 0 ;
+                    hdf:size 1 ;
+                    hdf:value 2.05e+01 ],
+                [ a hdf:Dataset ;
+                    hdf:attribute [ a hdf:StringAttribute ;
+                            hdf:data "Room temperature measurements" ;
+                            hdf:name "description" ],
+                        [ a hdf:StringAttribute ;
+                            hdf:data "degree_Celsius" ;
+                            hdf:name "units" ] ;
                     hdf:dataspace [ a hdf:SimpleDataspace ;
                             hdf:dimension [ a hdf:DataspaceDimension ;
                                     hdf:dimensionIndex 0 ;
@@ -75,9 +128,7 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
                     hdf:name "/temperature" ;
                     hdf:rank 1 ;
                     hdf:size 4 ] ;
-            hdf:name "/" ;
-            m4i:hasUnit <http://qudt.org/vocab/unit/DEG_C> ;
-            schema:description "Room temperature measurements" ] .
+            hdf:name "/" ] .
 ```
 
 [//]: # (The "HDF5 Research Data Management Toolbox" &#40;h5RDMtoolbox&#41; is a Python package supporting everybody who is working with)
