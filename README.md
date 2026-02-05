@@ -54,9 +54,9 @@ with h5tbx.File("example.h5", "w") as h5:
     ds_mean.rdf.type = M4I.NumericalVariable
     ds_mean.rdf.data_predicate = M4I.hasNumericalValue
 
-    ttl_ctx = h5.serialize("ttl", structural=False, contextual=True)
-    ttl_struc = h5.serialize("ttl", structural=True, contextual=False)
-    ttl_full = h5.serialize("ttl")
+    ttl_ctx = h5.serialize("ttl", structural=False, contextual=True, file_uri="https://example.org#example.h5/")
+    ttl_struc = h5.serialize("ttl", structural=True, contextual=False, file_uri="https://example.org#example.h5/")
+    ttl_full = h5.serialize("ttl", file_uri="https://example.org#example.h5/")
 ```
 
 The above saves three different serializations of the HDF5 content as RDF in Turtle (ttl) format.
@@ -74,12 +74,12 @@ Below we show the first two serializations.
 @prefix schema: <https://schema.org/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-[] a m4i:NumericalVariable ;
+<https://example.org#example.h5/example.h5/mean_temperature> a m4i:NumericalVariable ;
     m4i:hasNumericalValue "20.5"^^xsd:float ;
     m4i:hasUnit <http://qudt.org/vocab/unit/DEG_C> ;
     schema:description "Mean room temperature measurements" .
 
-[] m4i:hasUnit <http://qudt.org/vocab/unit/DEG_C> ;
+<https://example.org#example.h5/example.h5/temperature> m4i:hasUnit <http://qudt.org/vocab/unit/DEG_C> ;
     schema:description "Room temperature measurements" .
 ```
 
@@ -88,47 +88,67 @@ Below we show the first two serializations.
 @prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
+<https://example.org#example.h5/example.h5> a hdf:File ;
+    hdf:rootGroup <https://example.org#example.h5/example.h5/> .
+
 hdf:H5T_IEEE_F64LE a hdf:Datatype .
 
 hdf:H5T_INTEL_I64 a hdf:Datatype .
 
-[] a hdf:File ;
-    hdf:rootGroup [ a hdf:Group ;
-            hdf:member [ a hdf:Dataset ;
-                    hdf:attribute [ a hdf:StringAttribute ;
-                            hdf:data "Mean room temperature measurements" ;
-                            hdf:name "description" ],
-                        [ a hdf:StringAttribute ;
-                            hdf:data "degree_Celsius" ;
-                            hdf:name "units" ] ;
-                    hdf:dataspace [ a hdf:ScalarDataspace ] ;
-                    hdf:datatype hdf:H5T_FLOAT,
-                        hdf:H5T_IEEE_F64LE ;
-                    hdf:layout hdf:H5D_CONTIGUOUS ;
-                    hdf:maximumSize -1 ;
-                    hdf:name "/mean_temperature" ;
-                    hdf:rank 0 ;
-                    hdf:size 1 ;
-                    hdf:value 2.05e+01 ],
-                [ a hdf:Dataset ;
-                    hdf:attribute [ a hdf:StringAttribute ;
-                            hdf:data "Room temperature measurements" ;
-                            hdf:name "description" ],
-                        [ a hdf:StringAttribute ;
-                            hdf:data "degree_Celsius" ;
-                            hdf:name "units" ] ;
-                    hdf:dataspace [ a hdf:SimpleDataspace ;
-                            hdf:dimension [ a hdf:DataspaceDimension ;
-                                    hdf:dimensionIndex 0 ;
-                                    hdf:size 4 ] ] ;
-                    hdf:datatype hdf:H5T_INTEGER,
-                        hdf:H5T_INTEL_I64 ;
-                    hdf:layout hdf:H5D_CONTIGUOUS ;
-                    hdf:maximumSize 4 ;
-                    hdf:name "/temperature" ;
-                    hdf:rank 1 ;
-                    hdf:size 4 ] ;
-            hdf:name "/" ] .
+<https://example.org#example.h5/example.h5/> a hdf:Group ;
+    hdf:member <https://example.org#example.h5/example.h5/mean_temperature>,
+        <https://example.org#example.h5/example.h5/temperature> ;
+    hdf:name "/" .
+
+<https://example.org#example.h5/example.h5/mean_temperature> a hdf:Dataset ;
+    hdf:attribute <https://example.org#example.h5/example.h5/mean_temperature@description>,
+        <https://example.org#example.h5/example.h5/mean_temperature@units> ;
+    hdf:dataspace <https://example.org#example.h5/example.h5/mean_temperature__dataspace> ;
+    hdf:datatype hdf:H5T_FLOAT,
+        hdf:H5T_IEEE_F64LE ;
+    hdf:layout hdf:H5D_CONTIGUOUS ;
+    hdf:maximumSize -1 ;
+    hdf:name "/mean_temperature" ;
+    hdf:rank 0 ;
+    hdf:size 1 ;
+    hdf:value 2.05e+01 .
+
+<https://example.org#example.h5/example.h5/mean_temperature@description> a hdf:StringAttribute ;
+    hdf:data "Mean room temperature measurements" ;
+    hdf:name "description" .
+
+<https://example.org#example.h5/example.h5/mean_temperature@units> a hdf:StringAttribute ;
+    hdf:data "degree_Celsius" ;
+    hdf:name "units" .
+
+<https://example.org#example.h5/example.h5/mean_temperature__dataspace> a hdf:ScalarDataspace .
+
+<https://example.org#example.h5/example.h5/temperature> a hdf:Dataset ;
+    hdf:attribute <https://example.org#example.h5/example.h5/temperature@description>,
+        <https://example.org#example.h5/example.h5/temperature@units> ;
+    hdf:dataspace <https://example.org#example.h5/example.h5/temperature__dataspace> ;
+    hdf:datatype hdf:H5T_INTEGER,
+        hdf:H5T_INTEL_I64 ;
+    hdf:layout hdf:H5D_CONTIGUOUS ;
+    hdf:maximumSize 4 ;
+    hdf:name "/temperature" ;
+    hdf:rank 1 ;
+    hdf:size 4 .
+
+<https://example.org#example.h5/example.h5/temperature@description> a hdf:StringAttribute ;
+    hdf:data "Room temperature measurements" ;
+    hdf:name "description" .
+
+<https://example.org#example.h5/example.h5/temperature@units> a hdf:StringAttribute ;
+    hdf:data "degree_Celsius" ;
+    hdf:name "units" .
+
+<https://example.org#example.h5/example.h5/temperature__dataspace> a hdf:SimpleDataspace ;
+    hdf:dimension <https://example.org#example.h5/example.h5/temperature__dataspace_dimension_0> .
+
+<https://example.org#example.h5/example.h5/temperature__dataspace_dimension_0> a hdf:DataspaceDimension ;
+    hdf:dimensionIndex 0 ;
+    hdf:size 4 .
 ```
 
 [//]: # (The "HDF5 Research Data Management Toolbox" &#40;h5RDMtoolbox&#41; is a Python package supporting everybody who is working with)

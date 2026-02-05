@@ -29,5 +29,5 @@ class TestReadme(unittest.TestCase):
             ds_mean.rdf.type = M4I.NumericalVariable
             ds_mean.rdf.data_predicate = M4I.hasNumericalValue
 
-            ttl = h5.serialize("ttl", structural=True, contextual=False)
+            ttl = h5.serialize("ttl", structural=True, contextual=False, file_uri="https://example.org#example.h5/")
             print(ttl)
