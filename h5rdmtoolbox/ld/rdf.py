@@ -16,6 +16,7 @@ from h5rdmtoolbox.protocols import H5TbxAttributeManager
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
+RDF_DATA_PREDICATE_ATTR_NAME = 'RDF_DATASET_DATA_PREDICATE'
 RDF_FILE_PREDICATE_ATTR_NAME = 'RDF_FILE_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = 'RDF_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
 RDF_FILE_SUBJECT_ATTR_NAME = 'RDF_FILE_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
@@ -26,6 +27,7 @@ PROTECTED_ATTRIBUTE_NAMES = (
     RDF_OBJECT_ATTR_NAME,
     RDF_FILE_OBJECT_ATTR_NAME,
     RDF_PREDICATE_ATTR_NAME,
+    RDF_DATA_PREDICATE_ATTR_NAME,
     RDF_FILE_PREDICATE_ATTR_NAME,
     RDF_SUBJECT_ATTR_NAME,
     RDF_FILE_TYPE_ATTR_NAME,
@@ -363,6 +365,12 @@ class _RDFPO(abc.ABC):
     def __iter__(self):
         return iter(self.keys())
 
+class RDF_Data_Predicate(_RDFPO):
+    """IRI dataset data attribute manager for predicates"""
+    IRI_ATTR_NAME = RDF_DATA_PREDICATE_ATTR_NAME
+
+    def __setiri__(self, key, value):
+        set_predicate(self._attr, key, value, rdf_predicate_attr_name=RDF_FILE_PREDICATE_ATTR_NAME)
 
 class RDF_Predicate(_RDFPO):
     """IRI class attribute manager"""
@@ -397,6 +405,7 @@ class RDFManager:
         if key not in ('_attr',
                        'subject',
                        'predicate',
+                       'data_predicate',
                        'file_predicate',
                        'type'):
             raise KeyError(f"Cannot set {key}. Only subject, predicate and type can be set!")
@@ -587,6 +596,25 @@ class RDFManager:
             self._attr[RDF_TYPE_ATTR_NAME] = iri_type_data[0]
         else:
             self._attr[RDF_TYPE_ATTR_NAME] = iri_type_data
+
+
+    @property
+    def data_predicate(self) -> RDF_Data_Predicate:
+        """Return the RDF predicate manager"""
+        return RDF_Data_Predicate(self._attr)
+
+    @data_predicate.setter
+    def data_predicate(self, data_predicate) -> RDF_Data_Predicate:
+        """Sets the predicate associated with the dataset data. This is useful for JSON-LD export, where the dataset data is represented as a value of a predicate."""
+        if not isinstance(data_predicate, str):
+            raise TypeError(f'Expecting a string or URL. Got {type(data_predicate)}. Note, that a predicate of '
+                            'a group or dataset can only be one value. If you meant to set one or multiple RDF types, '
+                            'use .type instead.')
+        iri_predicate_data = self._attr.get(RDF_PREDICATE_ATTR_NAME, None)
+        if iri_predicate_data is None:
+            iri_predicate_data = {}
+        iri_predicate_data.update({'DATA_PREDICATE': data_predicate})
+        self._attr[RDF_PREDICATE_ATTR_NAME] = iri_predicate_data
 
     @property
     def predicate(self) -> RDF_Predicate:

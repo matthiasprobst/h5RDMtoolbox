@@ -10,7 +10,7 @@ from ontolutils.classes.thing import is_url
 from rdflib import RDF, DCTERMS, XSD, URIRef, Literal, Graph, BNode
 
 from h5rdmtoolbox.ld.utils import get_attr_dtype_as_xsd, get_obj_bnode, to_literal
-from .utils import to_uriref, bnode_from_string
+from .utils import to_uriref
 from ..rdf import FileRDFManager, RDFManager
 
 # FALLBACK_PREDICATE = SCHEMA.additionalProperty
@@ -159,10 +159,10 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
     if parent_uri:
         parent_uri = to_uriref(parent_uri, blank_node_iri_base)
     else:
-        if rdf_user_type:
-            parent_uri = bnode_from_string(parent_obj.name, blank_node_iri_base=blank_node_iri_base)
-        else:
-            parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base)
+        # if rdf_user_type:
+        #     parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base=blank_node_iri_base)
+        # else:
+        parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base)
 
     if rdf_user_type is not None:
         if isinstance(rdf_user_type, (list, np.ndarray)):

@@ -9,8 +9,7 @@ from h5rdmtoolbox.ld.rdf import PROTECTED_ATTRIBUTE_NAMES
 from h5rdmtoolbox.ld.user.attributes import process_attribute
 from h5rdmtoolbox.ld.user.datasets import process_dataset
 from h5rdmtoolbox.ld.utils import get_obj_bnode, get_file_bnode
-from .utils import apply_rdf_mappings, bnode_from_string
-from .utils import to_uriref
+from .utils import apply_rdf_mappings, to_uriref
 from ..rdf import RDFManager
 
 
@@ -48,7 +47,7 @@ def process_group(*, group, graph, rdf_mappings, blank_node_iri_base: Optional[s
     #                     graph.add((parent_uri, rdflib.URIRef(self_predicate), group_uri))
 
     if rdf_type is not None and not rdf_subject:
-        rdf_subject = bnode_from_string(group.name, blank_node_iri_base=blank_node_iri_base)
+        rdf_subject = get_obj_bnode(group, blank_node_iri_base=blank_node_iri_base)
 
     if rdf_type is not None:
         if rdf_subject:
@@ -66,7 +65,8 @@ def process_group(*, group, graph, rdf_mappings, blank_node_iri_base: Optional[s
 
     if rdf_subject:
         rdf_subject = to_uriref(rdf_subject, blank_node_iri_base)
-        graph.add((group_uri, SCHEMA.about, rdf_subject))
+        if group_uri != rdf_subject:
+            graph.add((group_uri, SCHEMA.about, rdf_subject))
         rdf_predicate = rdf_manager.predicate
         if rdf_predicate.get("SELF", None):
             # graph.add((group_uri, rdflib.URIRef(rdf_predicate["SELF"]), rdf_subject))
@@ -74,10 +74,10 @@ def process_group(*, group, graph, rdf_mappings, blank_node_iri_base: Optional[s
                 _parent_subject = to_uriref(parent_rdf_manager.subject)
             else:
                 _parent_type = parent_rdf_manager.type
-                if _parent_type is None:
-                    _parent_subject = None
-                else:
-                    _parent_subject = bnode_from_string(group.parent.name, blank_node_iri_base=blank_node_iri_base)
+                # if _parent_type is None:
+                #     _parent_subject = None
+                # else:
+                _parent_subject = get_obj_bnode(group.parent, blank_node_iri_base=blank_node_iri_base)
             if _parent_subject is not None:
                 graph.add(
                     (

@@ -7,11 +7,11 @@ from h5rdmtoolbox.ld.rdf import PROTECTED_ATTRIBUTE_NAMES
 from ..utils import to_literal
 
 
-def bnode_from_string(s: str, bits: int = 64, blank_node_iri_base=None) -> rdflib.URIRef:
-    """Create a deterministic blank node from a string."""
-    digest = hashlib.sha256(s.encode("utf-8")).digest()
-    number = int.from_bytes(digest[:bits // 8], "big")
-    return to_uriref(f"_:{str(number)}", blank_node_iri_base)
+# def get_obj_bnode(s: str, bits: int = 64, blank_node_iri_base=None) -> rdflib.URIRef:
+#     """Create a deterministic blank node from a string."""
+#     digest = hashlib.sha256(s.encode("utf-8")).digest()
+#     number = int.from_bytes(digest[:bits // 8], "big")
+#     return to_uriref(f"_:{str(number)}", blank_node_iri_base)
 
 
 def to_uriref(value: str, blank_node_iri_base: str = None) -> Union[rdflib.URIRef, rdflib.BNode]:
