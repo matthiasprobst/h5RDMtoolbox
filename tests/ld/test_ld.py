@@ -6,7 +6,7 @@ import numpy as np
 import ontolutils
 import rdflib
 import ssnolib
-from ontolutils import namespaces, urirefs, Thing
+from ontolutils import namespaces, urirefs, Thing, QUDT_UNIT
 from ontolutils.ex import dcat
 from ontolutils.namespacelib import M4I
 from ontolutils.namespacelib import SCHEMA
@@ -1016,5 +1016,26 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
                     hdf:data "This is a \\"quote\\" test" ;
                     hdf:name "quote_test" ] ;
             hdf:name "/" ] .
+
+""")
+
+    def test_dataset_predicate(self):
+        with h5tbx.File() as h5:
+            ds = h5.create_dataset("test", data=2.3)
+            ds.rdf.type = M4I.NumericalVariable
+            ds.rdf.predicate = M4I.hasVariable
+            ds.rdf.data_predicate = M4I.hasNumericalValue
+            ds.attrs["unit", "http://qudt.org/schema/qudt/unit"] = QUDT_UNIT.PERCENT
+            ds.rdf["unit"].object = QUDT_UNIT.PERCENT
+            ttl = h5.serialize("ttl", structural=False)
+            print(ttl)
+
+            self.assertEqual(ttl, """@prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
+@prefix ns1: <http://qudt.org/schema/qudt/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+[] m4i:hasVariable [ a m4i:NumericalVariable ;
+            ns1:unit <http://qudt.org/vocab/unit/PERCENT> ;
+            m4i:hasNumericalValue "2.3"^^xsd:float ] .
 
 """)

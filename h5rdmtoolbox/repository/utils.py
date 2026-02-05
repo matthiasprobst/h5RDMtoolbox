@@ -16,8 +16,9 @@ def download_file(file_url,
                   access_token: Optional[str] = None,
                   checksum: Optional[str] = None,
                   checksum_algorithm: Optional[str] = None,
-                  headers: Optional[Dict]=None) -> pathlib.Path:
+                  headers: Optional[Dict] = None) -> pathlib.Path:
     logger.debug(f'Attempting to provide file from URL (download or return from cache): {file_url}')
+
     from ..utils import DownloadFileManager
     dfm = DownloadFileManager()
 
@@ -37,108 +38,162 @@ def download_file(file_url,
         target_filename = target_folder / checksum / filename
     else:
         target_filename = target_folder / f"{uuid.uuid4().hex}" / filename
+
     if not target_filename.parent.exists():
         target_filename.parent.mkdir(exist_ok=True, parents=True)
+
+    # ---- helpers: session w/ retry, auth headers, resolve Zenodo links.content ----
+    def _make_session() -> requests.Session:
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.retry import Retry
+
+        retry = Retry(
+            total=8,
+            connect=4,
+            read=4,
+            status=8,
+            backoff_factor=0.8,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=frozenset(["GET", "HEAD"]),
+            raise_on_status=False,
+            respect_retry_after_header=True,
+        )
+        sess = requests.Session()
+        adapter = HTTPAdapter(max_retries=retry)
+        sess.mount("https://", adapter)
+        sess.mount("http://", adapter)
+        return sess
+
+    def _merge_headers(headers_in: Optional[Dict], token: Optional[str]) -> Dict:
+        h = dict(headers_in or {})
+        # Zenodo-recommended style; still keep query-param fallback below.
+        if token and "Authorization" not in h:
+            h["Authorization"] = f"Bearer {token}"
+        if "User-Agent" not in h:
+            h["User-Agent"] = "download_file/1.0"
+        return h
+
+    def _get_with_fallback(sess: requests.Session, url: str, stream: bool, h: Dict):
+        # timeouts: (connect timeout, read timeout)
+        timeout = (15, 120)
+
+        # 1) try with headers (Authorization if available)
+        r = sess.get(url, stream=stream, headers=h, timeout=timeout, allow_redirects=True)
+
+        # 2) if forbidden/unauthorized and we have a token, try query param fallback
+        if r.status_code in (401, 403) and access_token:
+            r.close()
+            r = sess.get(
+                url,
+                stream=stream,
+                params={"access_token": access_token},
+                headers=h,
+                timeout=timeout,
+                allow_redirects=True,
+            )
+        return r
+
+    def _resolve_content_url(sess: requests.Session, url: str, h: Dict) -> str:
+        """
+        If url points to Zenodo JSON (record/metadata), and it contains links.content,
+        download from that content link instead.
+        """
+        try:
+            r = _get_with_fallback(sess, url, stream=False, h=h)
+            # don't raise here; we only want to resolve if it is JSON and valid
+            ctype = (r.headers.get("Content-Type") or "").lower()
+            if r.ok and "application/json" in ctype:
+                try:
+                    j = r.json()
+                except Exception:
+                    return url
+                if isinstance(j, dict):
+                    links_content = (j.get("links") or {}).get("content")
+                    if links_content:
+                        return links_content
+            return url
+        finally:
+            try:
+                r.close()
+            except Exception:
+                pass
+
+    sess = _make_session()
+    h = _merge_headers(headers, access_token)
+
+    # ---- checksum handling ----
+    hasher = None
+    expected_checksum_value = None
 
     if checksum is not None:
         if checksum_algorithm is None:
             if ":" in checksum:
-                checksum_algorithm = checksum.split(":", 1)[0]
+                checksum_algorithm = checksum.split(":", 1)[0].strip().lower()
             else:
-                checksum_algorithm = "md5"  # default
+                checksum_algorithm = "md5"
 
-        hasher = None
-        if checksum is not None:
-            try:
-                hasher = hashlib.new(checksum_algorithm)
-            except ValueError:
-                raise ValueError(f"Unsupported checksum algorithm: {checksum_algorithm}")
+        # If checksum has algo:value, compare only to value
+        if ":" in checksum:
+            _, expected_checksum_value = checksum.split(":", 1)
+            expected_checksum_value = expected_checksum_value.strip().lower()
+        else:
+            expected_checksum_value = checksum.strip().lower()
 
         try:
-            response = requests.get(file_url, stream=True, headers=headers)
-            if response.status_code == 403:
-                response = requests.get(file_url, stream=True, params={'access_token': access_token}, headers=headers)
-        except requests.RequestException as e:
-            response = requests.get(file_url, stream=True, params={'access_token': access_token}, headers=headers)
-        response.raise_for_status()
+            hasher = hashlib.new(checksum_algorithm)
+        except ValueError:
+            raise ValueError(f"Unsupported checksum algorithm: {checksum_algorithm}")
 
-        chunk_size = 1024  # Define chunk size for download
+    # ---- always resolve to content URL if needed; then stream download ----
+    content_url = _resolve_content_url(sess, file_url, h)
 
-        with open(target_filename, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:  # Filter out keep-alive chunks
+    # Use a temp file then atomic replace to avoid partial files in cache on failures
+    tmp_filename = target_filename.with_suffix(target_filename.suffix + ".part")
+
+    try:
+        with _get_with_fallback(sess, content_url, stream=True, h=h) as response:
+            response.raise_for_status()
+
+            chunk_size = 1024 * 1024  # 1 MiB
+
+            with open(tmp_filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if not chunk:
+                        continue
                     f.write(chunk)
                     if hasher:
                         hasher.update(chunk)
 
+        # Move into place only after success
+        tmp_filename.replace(target_filename)
+
         assert target_filename.exists(), f"File {target_filename} does not exist."
-        logger.debug(f"Download successful.")
+        logger.debug("Download successful.")
 
         if hasher:
-            file_checksum = hasher.hexdigest()
-            if file_checksum != checksum:
-                print(target_filename)
+            file_checksum = hasher.hexdigest().lower()
+            if expected_checksum_value and file_checksum != expected_checksum_value:
                 warnings.warn(
-                    f"Checksum mismatch for {target_filename}: expected {checksum}, got {file_checksum}",
+                    f"Checksum mismatch for {target_filename}: expected {expected_checksum_value}, got {file_checksum}",
                     RuntimeWarning
                 )
                 logger.error(
-                    f"Checksum mismatch for {target_filename}: expected {checksum}, got {file_checksum}"
+                    f"Checksum mismatch for {target_filename}: expected {expected_checksum_value}, got {file_checksum}"
                 )
-                # raise ValueError(
-                #     f"Checksum mismatch for {target_filename}: expected {checksum}, got {file_checksum}")
-            logger.debug(f"Checksum verification successful.")
-
-        # h = getattr(hashlib, checksum_algorithm)()
-        # total = 0
-        # with requests.get(file_url, stream=True, params={'access_token': access_token}) as r:
-        #     r.raise_for_status()
-        #     with open(target_filename, "wb") as f:
-        #         for chunk in r.iter_content(1024 * 1024):
-        #             if chunk:
-        #                 f.write(chunk)
-        #                 h.update(chunk)
-        #                 total += len(chunk)
-        #
-        # file_checksum = h.hexdigest().lower()
-        # if file_checksum != checksum.lower():
-        #     target_filename.unlink(missing_ok=True)
-        #     raise ValueError(f'Checksum mismatch for file "{filename}" from Zenodo ({file_url}). '
-        #                      f'Expected {checksum_algorithm} checksum: {checksum}, '
-        #                      f'but got: {file_checksum}')
-    else:
-        try:
-            r = requests.get(file_url, headers=headers)
-        except requests.RequestException as e:
-            r = requests.get(file_url, params={'access_token': access_token})
-
-        r.raise_for_status()
-
-        try:
-            _jdata = r.json()
-            if isinstance(_jdata, dict):
-                links_content = _jdata.get('links', {}).get('content')
             else:
-                links_content = None
-        except (requests.exceptions.JSONDecodeError, AttributeError, KeyError) as _:
-            links_content = None
+                logger.debug("Checksum verification successful.")
 
-        with open(target_filename, 'wb') as file:
-            file.write(r.content)
-        if links_content:
-            try:
-                _content_response = requests.get(links_content, headers=headers)
-            except requests.RequestException:
-                _content_response = requests.get(links_content, params={'access_token': access_token}, headers=headers)
-            if _content_response.ok:
-                with open(target_filename, 'wb') as file:
-                    file.write(_content_response.content)
-            else:
-                raise requests.HTTPError(f'Could not download file "{filename}" from Zenodo ({file_url}. '
-                                         f'Status code: {_content_response.status_code}')
+    finally:
+        # Cleanup partial file if it exists
+        try:
+            if tmp_filename.exists():
+                tmp_filename.unlink()
+        except Exception:
+            pass
 
     dfm.add(checksum=checksum,
             url=file_url,
             filepath=target_filename,
             filename=filename)
     return target_filename
+

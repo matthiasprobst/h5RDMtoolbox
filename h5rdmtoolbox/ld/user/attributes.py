@@ -155,11 +155,15 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
     rdf_manager = RDFManager(parent_obj.attrs)
 
     parent_uri = rdf_manager.subject
+    rdf_user_type = rdf_manager.type
     if parent_uri:
         parent_uri = to_uriref(parent_uri, blank_node_iri_base)
     else:
+        # if rdf_user_type:
+        #     parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base=blank_node_iri_base)
+        # else:
         parent_uri = get_obj_bnode(parent_obj, blank_node_iri_base)
-    rdf_user_type = rdf_manager.type
+
     if rdf_user_type is not None:
         if isinstance(rdf_user_type, (list, np.ndarray)):
             for t in rdf_user_type:

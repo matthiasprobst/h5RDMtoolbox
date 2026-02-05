@@ -2,6 +2,11 @@
 
 Log of changes in the versions
 
+## v2.7.3
+
+- bugfixes in user rdf serialization
+- add option to add predicate for dataset value, i.e. linking the dataset RDF instance with the value, e.g. using `m4i:hasNumericalValue`
+
 ## v2.7.2
 
 - hotfix rdf serialization for hdf datasets using predicate

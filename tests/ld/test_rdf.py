@@ -1,11 +1,13 @@
 import json
 import unittest
 
+import numpy as np
 import ontolutils
 import rdflib
 from ontolutils import QUDT_UNIT
 from ontolutils.namespacelib import M4I, OBO, SSN_SYSTEM, SCHEMA
-from rdflib import FOAF
+from ontolutils.utils.qudt_units import qudt_lookup
+from rdflib import FOAF, PROV
 from rdflib.namespace import SOSA, SSN
 from ssnolib import SSNO, ssno
 
@@ -14,9 +16,10 @@ from h5rdmtoolbox import Attribute
 from h5rdmtoolbox import use
 from h5rdmtoolbox.ld.rdf import RDFError
 from h5rdmtoolbox.ld.rdf import RDF_PREDICATE_ATTR_NAME
+from h5rdmtoolbox.ld.utils import get_obj_bnode
 from h5rdmtoolbox.wrapper.h5attr import AttrDescriptionError
 
-
+from ontolutils.ex import time
 class TestRDF(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -337,7 +340,7 @@ local:SubjectNode a local:BNodeType1,
 
     def test_group_predicate(self):
         with h5tbx.File() as h5:
-            grp = h5.create_group('has_contact')
+            grp = h5.create_group('JohnDoe')
             # assign parent group
             with self.assertRaises(TypeError):
                 grp.rdf.predicate = ['1.4', ]
@@ -348,21 +351,22 @@ local:SubjectNode a local:BNodeType1,
             del grp.rdf.predicate
             self.assertEqual(grp.rdf.predicate[None], None)
 
+            grp.attrs["firstname", FOAF.firstName] = "John"
+            grp.attrs["lastname", FOAF.lastName] = "Doe"
             grp.rdf.predicate = 'https://schema.org/author'
-            grp.rdf.subject = 'https://schema.org/john'
+            # grp.rdf.subject = 'https://example.org#john'
             self.assertEqual(grp.rdf.predicate[None], 'https://schema.org/author')
 
-            grp.rdf.type = 'http://xmlns.com/foaf/0.1/Person'
-
-        self.assertEqual("""@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+            grp.rdf.type = FOAF.Person
+            ttl = h5.serialize("ttl", structural=False)
+            self.assertEqual(ttl, """@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix schema: <https://schema.org/> .
 
-schema:john a foaf:Person .
+[] schema:author [ a foaf:Person ;
+            foaf:firstName "John" ;
+            foaf:lastName "Doe" ] .
 
-[] schema:about schema:john ;
-    schema:author schema:john .
-
-""", h5.serialize("ttl", structural=False))
+""")
 
     def test_none_value(self):
         with h5tbx.File() as h5:
@@ -736,16 +740,38 @@ schema:john a foaf:Person .
     def test_subject_predicate_object_via_groups(self):
         with h5tbx.File() as h5:
             sensor_grp = h5.create_group("sensor_1")
-            sensor_grp.rdf.subject = "http://example.org/PressureSensor"
+
+            # sensor has an ID and is of type SOSA.Sensor:
             sensor_grp.rdf.type = SOSA.Sensor
+            sensor_grp.rdf.subject = "http://example.org/PressureSensor"
 
             sensor_data = sensor_grp.create_group("data")
-            sensor_data.rdf.subject = "https://example.org/SystemCapability"
-            sensor_data.rdf.predicate = SSN_SYSTEM.hasSystemCapability
+            sensor_data.rdf.subject = "https://example.org/TheSensorCapability"
+            sensor_data.rdf.predicate = SSN_SYSTEM.hasSystemCapability  # Sensor has capability SystemCapability
             sensor_data.rdf.type = SSN_SYSTEM.SystemCapability
             sensor_data.attrs["property", SSN.forProperty] = "Pressure"
 
-            print(h5.serialize("ttl", structural=False))
+            ttl = h5.serialize(
+                "ttl",
+                structural=False,
+                file_uri="https://example.org/",
+                context={"ssn-system": "http://www.w3.org/ns/ssn/systems/"})
+            self.assertEqual(ttl, """@prefix ex: <http://www.w3.org/ns/ssn/systems/> .
+@prefix schema: <https://schema.org/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
+
+<https://example.org/tmp0.hdf/sensor_1> schema:about <http://example.org/PressureSensor> .
+
+<https://example.org/tmp0.hdf/sensor_1/data> schema:about <https://example.org/TheSensorCapability> .
+
+<http://example.org/PressureSensor> a sosa:Sensor ;
+    ex:hasSystemCapability <https://example.org/TheSensorCapability> .
+
+<https://example.org/TheSensorCapability> a ex:SystemCapability ;
+    ssn:forProperty "Pressure" .
+
+""".replace("tmp0", h5.hdf_filename.stem))
 
     def test_datasets_with_predicate(self):
         """We describe a fan with speed dataset including RDF properties. We shall check
@@ -772,7 +798,7 @@ schema:john a foaf:Person .
 
         h5.hdf_filename.unlink(missing_ok=True)
         self.assertEqual(ttl,
-                             """@prefix ex: <https://example.org/> .
+                         """@prefix ex: <https://example.org/> .
 @prefix schema: <https://schema.org/> .
 
 <https://example.org/fan_data.h5#deleteme.hdf/fan> schema:about ex:myfan .
@@ -788,3 +814,127 @@ ex:FanSpeed a ex:Variable ;
 
 """)
 
+    def test_describing_observation(self):
+        class Unit(h5tbx.Attribute):
+
+            def __init__(self, unit):
+                super().__init__(value=unit, rdf_predicate=M4I.hasUnit, rdf_object=qudt_lookup.get(unit))
+
+        with h5tbx.File() as h5:
+            grp_setup = h5.create_group("setup")
+
+
+            sensor1_grp = grp_setup.create_group("sensor_1")
+            sensor1_grp.rdf.type = SOSA.Sensor
+            sensor1_grp.rdf.subject = "http://example.org/PressureSensor"
+
+            grp_testo = grp_setup.create_group("testo")
+            grp_testo.rdf.type = SOSA.System
+            grp_testo.rdf.subject = "http://example.org/Testo622"
+
+            grp_testo_tamperature = grp_setup.create_group("testo_tamperature")
+            grp_testo_tamperature.rdf.type = SOSA.Sensor
+            grp_testo_tamperature.rdf.subject = "http://example.org/Testo622_Temperature_Sensor"
+            grp_testo_tamperature.rdf.predicate = SOSA.hasSubSystem
+
+            grp_testo_pambient = grp_setup.create_group("testo_pambient")
+            grp_testo_pambient.rdf.type = SOSA.Sensor
+            grp_testo_pambient.rdf.subject = "http://example.org/Testo622_Temperature_Sensor"
+            grp_testo_pambient.rdf.predicate = SOSA.hasSubSystem
+
+            grp_dp_kalinsky = grp_setup.create_group("dp_sm")
+            grp_dp_kalinsky.rdf.type = SOSA.Sensor
+            grp_dp_kalinsky.rdf.subject = "http://example.org/kalinsky"
+            # accuracy of sensor:
+            kalisnky_accuracy = grp_dp_kalinsky.create_dataset("accuracy", data=0.8, dtype='f4')
+            kalisnky_accuracy.attrs["unit", "http://qudt.org/schema/qudt/unit"] = "https://qudt.org/vocab/unit/PERCENT"
+            kalisnky_accuracy.rdf.subject = "_:KalinskyDS2_LinearError_Max_0_100mbar"
+            kalisnky_accuracy.rdf.type = "http://www.w3.org/ns/ssn/systems/Accuracy"
+            kalisnky_accuracy.rdf.predicate = "http://www.w3.org/ns/ssn/systems/hasSystemProperty"
+
+
+            grp_raw = h5.create_group("raw")
+
+            ds_dp_sm_t = grp_raw.create_dataset("time", data=np.arange(0, 100), attrs={"units": Unit("s")}, make_scale=True)
+            ds_dp_sm_t.rdf.type = M4I.NumericalVariable
+            ds_dp_sm = grp_raw.create_dataset("dp_sm", data=np.random.random(100), attrs={"units": Unit("Pa")}, attach_scales=ds_dp_sm_t)
+            ds_dp_sm.rdf.type = M4I.NumericalVariable
+
+            g_processed_dp_sm = h5.create_group("processed/dp_sm")
+            g_processed_dp_sm.rdf.type = SOSA.Observation
+            g_processed_dp_sm.attrs["label", rdflib.RDFS.label] = "Mean static pressure difference observation@en"
+
+            interval = time.Interval(
+                id="http://example.org/intervals/1",
+                label="Test Interval",
+                has_beginning=time.Instant(label="Start Instant", datetime="2024-01-01T00:00:00Z"),
+                has_end=time.Instant(label="End Instant", datetime="2024-01-01T00:01:40Z"),
+            )
+            g_processed_dp_sm.attrs["mittelungszeittraum", SOSA.phenomenonTime] = "0-100 s"
+            g_processed_dp_sm.rdf["mittelungszeittraum"].object = interval
+
+
+            g_processed_dp_sm.attrs["madeBySensor", SOSA.madeBySensor] = h5["setup/sensor_1"]
+            g_processed_dp_sm.attrs["foi", SOSA.hasFeatureOfInterest] = "https://example.org/my_feature_of_interest"
+
+            ds_mean = g_processed_dp_sm.create_dataset("mean", data=np.mean(ds_dp_sm[()]), attrs={"units": Unit("Pa")})
+            ds_mean.rdf.type = M4I.NumericalVariable
+            ds_mean.rdf.predicate = SOSA.hasResult
+
+            ds_std = g_processed_dp_sm.create_dataset("data", data=np.std(ds_dp_sm[()]), attrs={"units": Unit("Pa")})
+            ds_std.rdf.type = M4I.NumericalVariable
+
+
+            activity_grp = grp_setup.create_group("activities")
+            dp_acquisition_grp = activity_grp.create_group("dp_acquisition")
+            dp_acquisition_grp.rdf.type = PROV.Activity
+            dp_acquisition_grp.rdf.subject = "http://example.org/activities/dp_acquisition"
+            dp_acquisition_grp.attrs["label", rdflib.RDFS.label] = "Differential pressure acquisition activity@en"
+            dp_acquisition_grp.attrs["sensor", PROV.wasAssociatedWith] = "http://example.org/kalinsky"
+            dp_acquisition_grp.attrs["generated", PROV.generated] = h5["/raw/dp_sm"]
+
+
+            # ds_std.rdf.predicate = M4I.hasNumericalValue
+
+            # g_unc = h5["processed/mean_dp_sm/result"].create_group("uncertainty")
+            # g_unc.rdf.type = "https://ptb.de/sis/ExpandedMU"
+            # g_unc.rdf.predicate = "https://www.ptb.de/sis/hasUncertaintyDeclaration"
+            # g_unc.attrs["label", rdflib.RDFS.label] = "Standard uncertainty from standard deviation@en"
+            # g_unc.attrs["hasCoverageFactor", "https://ptb.de/sis/hasCoverageFactor"] = 2
+            # g_unc.attrs["hasCoverageProbability", "https://ptb.de/sis/hasCoverageProbability"] = 0.95
+            # g_unc.attrs["hasValueExpandedMU", "https://ptb.de/sis/hasValueExpandedMU"] = 0.25
+            #
+            # print(h5.dumps())
+
+            ttl = h5.serialize("ttl",
+                               structural=False,
+                               file_uri="https://example.org#",
+                               context={"sis:": "https://ptb.de/sis/",})
+            print(ttl)
+            return
+            self.assertEqual(ttl, """@prefix ex: <https://ptb.de/sis/> .
+@prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
+@prefix ns1: <https://www.ptb.de/sis/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org#tmp0.hdf/processed/mean_dp_sm> a sosa:Observation ;
+    sosa:hasResult <https://example.org#tmp0.hdf/processed/mean_dp_sm/result> .
+
+<https://example.org#tmp0.hdf/raw/dp_sm> m4i:hasUnit <http://qudt.org/vocab/unit/PA> .
+
+<https://example.org#tmp0.hdf/processed/mean_dp_sm/result> a sosa:Result ;
+    m4i:hasNumericalValue <https://example.org#tmp0.hdf/processed/mean_dp_sm/result/data> ;
+    ns1:hasUncertaintyDeclaration <https://example.org#tmp0.hdf/processed/mean_dp_sm/result/uncertainty> .
+
+<https://example.org#tmp0.hdf/processed/mean_dp_sm/result/data> a m4i:NumericalVariable ;
+    m4i:hasUnit <http://qudt.org/vocab/unit/PA> .
+
+<https://example.org#tmp0.hdf/processed/mean_dp_sm/result/uncertainty> a ex:ExpandedMU ;
+    rdfs:label "Standard uncertainty from standard deviation@en" ;
+    ex:hasCoverageFactor "2" ;
+    ex:hasCoverageProbability "0.95"^^xsd:float ;
+    ex:hasValueExpandedMU "0.25"^^xsd:float .
+
+""".replace("tmp0", h5.hdf_filename.stem))
