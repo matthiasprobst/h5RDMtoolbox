@@ -16,7 +16,6 @@ from h5rdmtoolbox.protocols import H5TbxAttributeManager
 RDF_OBJECT_ATTR_NAME = 'RDF_OBJECT'
 RDF_FILE_OBJECT_ATTR_NAME = 'RDF_FILE_OBJECT'
 RDF_PREDICATE_ATTR_NAME = 'RDF_PREDICATE'
-RDF_DATA_PREDICATE_ATTR_NAME = 'RDF_DATASET_DATA_PREDICATE'
 RDF_FILE_PREDICATE_ATTR_NAME = 'RDF_FILE_PREDICATE'
 RDF_SUBJECT_ATTR_NAME = 'RDF_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
 RDF_FILE_SUBJECT_ATTR_NAME = 'RDF_FILE_ID'  # equivalent to @ID in JSON-LD, thus can only be one value!!!
@@ -27,7 +26,6 @@ PROTECTED_ATTRIBUTE_NAMES = (
     RDF_OBJECT_ATTR_NAME,
     RDF_FILE_OBJECT_ATTR_NAME,
     RDF_PREDICATE_ATTR_NAME,
-    RDF_DATA_PREDICATE_ATTR_NAME,
     RDF_FILE_PREDICATE_ATTR_NAME,
     RDF_SUBJECT_ATTR_NAME,
     RDF_FILE_TYPE_ATTR_NAME,
@@ -367,7 +365,7 @@ class _RDFPO(abc.ABC):
 
 class RDF_Data_Predicate(_RDFPO):
     """IRI dataset data attribute manager for predicates"""
-    IRI_ATTR_NAME = RDF_DATA_PREDICATE_ATTR_NAME
+    IRI_ATTR_NAME = RDF_PREDICATE_ATTR_NAME
 
     def __setiri__(self, key, value):
         set_predicate(self._attr, key, value, rdf_predicate_attr_name=RDF_FILE_PREDICATE_ATTR_NAME)
@@ -604,7 +602,7 @@ class RDFManager:
         return RDF_Data_Predicate(self._attr)
 
     @data_predicate.setter
-    def data_predicate(self, data_predicate) -> RDF_Data_Predicate:
+    def data_predicate(self, data_predicate) -> RDF_Predicate:
         """Sets the predicate associated with the dataset data. This is useful for JSON-LD export, where the dataset data is represented as a value of a predicate."""
         if not isinstance(data_predicate, str):
             raise TypeError(f'Expecting a string or URL. Got {type(data_predicate)}. Note, that a predicate of '
