@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=78.1.1,<79.0.0",
+    "setuptools>=78.1.1",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
@@ -77,7 +77,7 @@ test-core = [
     "pytest-cov>=5.0.0",
     "pylint",
     "ssnolib>=2.2.0.2, <3.0.0",
-    "mongomock==4.1.2",
+    "mongomock==4.3.0",
     "scipy>=1.10.1",
     "scikit-image>=0.21.0",
     "scikit-learn"
