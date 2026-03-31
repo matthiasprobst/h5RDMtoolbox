@@ -27,7 +27,7 @@ logger = logging.getLogger("h5rdmtoolbox")
 logger.setLevel("DEBUG")
 __this_dir__ = pathlib.Path(__file__).parent
 
-TESTING_VERSIONS = (14,)
+TESTING_VERSIONS = (12,)
 
 
 def get_python_version():
@@ -951,3 +951,17 @@ def validate_f1(a, b, c=3, d=2):
             ) as h5:
                 self.assertEqual(h5.creator.name, "Joe")
                 self.assertEqual(str(h5.creator.orcid), h5tbx.__author_orcid__)
+
+    def test_lazy_loading(self):
+        from h5rdmtoolbox.user import UserDir
+
+        conv_dir = UserDir["convention"] / "h5tbx"
+        conv_file = conv_dir / "h5tbx.py"
+
+        h5tbx.use(None)
+
+        h5tbx.use("h5tbx")
+        self.assertTrue(conv_file.exists())
+        self.assertIn("h5tbx", convention.get_registered_conventions())
+
+        h5tbx.use(None)

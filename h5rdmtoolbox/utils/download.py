@@ -1,26 +1,23 @@
 """Download utilities for h5rdmtoolbox."""
 
 import atexit
-import datetime
 import json
 import pathlib
 import time
 import uuid
-import warnings
 from typing import Dict, Optional, Union, List
 
 import requests
 from pydantic import HttpUrl, validate_call
 from rdflib.plugins.shared.jsonld.context import Context
 
-from .. import user
-from .._version import __version__
 from .file_io import (
     _request_with_backoff,
     _download_file,
     get_checksum,
-    generate_temporary_filename,
 )
+from .. import user, USER_DATA_DIR
+from .._version import __version__
 
 logger = __import__("h5rdmtoolbox", fromlist=["logger"]).logger
 USER_AGENT_HEADER = {
@@ -29,7 +26,7 @@ USER_AGENT_HEADER = {
 
 
 def download_context(
-    url_source: Union[HttpUrl, List[HttpUrl]], force_download: bool = False
+        url_source: Union[HttpUrl, List[HttpUrl]], force_download: bool = False
 ) -> Context:
     """Download a context file from one URL or list of URLs.
     Will check if a context file is already downloaded and use that one.
@@ -72,11 +69,11 @@ def download_context(
 
 
 def download_file(
-    url,
-    known_hash=None,
-    target_folder: Optional[pathlib.Path] = None,
-    checksum: Optional[str] = None,
-    params: Optional[Dict] = None,
+        url,
+        known_hash=None,
+        target_folder: Optional[pathlib.Path] = None,
+        checksum: Optional[str] = None,
+        params: Optional[Dict] = None,
 ):
     """Downloads the file or returns the already downloaded file.
 
@@ -125,7 +122,7 @@ class DownloadFileManager:
         return cls._instance
 
     def __init__(self):
-        from ..user import CACHE_DIR, USER_DATA_DIR
+        from ..user import CACHE_DIR
 
         self.file_directory = CACHE_DIR
         self.file_directory.mkdir(parents=True, exist_ok=True)
@@ -143,12 +140,12 @@ class DownloadFileManager:
         return USER_DATA_DIR / "download_registry.json"
 
     def add(
-        self,
-        *,
-        url: str,
-        filepath: pathlib.Path,
-        filename: str,
-        checksum: Optional[str] = None,
+            self,
+            *,
+            url: str,
+            filepath: pathlib.Path,
+            filename: str,
+            checksum: Optional[str] = None,
     ):
         """Add to registry. Computes the checksum if not provided.
 
@@ -228,7 +225,7 @@ class DownloadFileManager:
         remove_keys = []
         for k, v in self.registry.items():
             if pathlib.Path(self.registry[k].get("filepath", None)) == pathlib.Path(
-                filename
+                    filename
             ):
                 remove_keys.append(k)
         for k in remove_keys:
@@ -283,13 +280,13 @@ class DownloadFileManager:
 
     @validate_call
     def download(
-        self,
-        url: HttpUrl,
-        *,
-        target_folder: Optional[pathlib.Path] = None,
-        params: Optional[Dict] = None,
-        checksum: Optional[str] = None,
-        known_hash: Optional[str] = None,
+            self,
+            url: HttpUrl,
+            *,
+            target_folder: Optional[pathlib.Path] = None,
+            params: Optional[Dict] = None,
+            checksum: Optional[str] = None,
+            known_hash: Optional[str] = None,
     ) -> pathlib.Path:
         """Returns the downloaded file. Based on an optionally provided checksum
         already downloaded files can be quickly returned.

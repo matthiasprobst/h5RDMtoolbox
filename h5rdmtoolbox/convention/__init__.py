@@ -1,4 +1,4 @@
-""""
+""" "
 
 This sub-package provides convention such as standard_names
 
@@ -13,29 +13,46 @@ Helpful functions:
 
 import pathlib
 
-from .core import Convention, from_yaml, from_repo, get_current_convention, from_zenodo, get_registered_conventions, \
-    yaml2jsonld
+from .core import (
+    Convention,
+    from_yaml,
+    from_repo,
+    get_current_convention,
+    from_zenodo,
+    get_registered_conventions,
+    yaml2jsonld,
+)
 from .standard_attributes import StandardAttribute
 from .toolbox_validators import get_list_of_validators
 from ..user import UserDir
 
 __this_dir__ = pathlib.Path(__file__).parent
 
-convention_user_dir = UserDir['convention'] / 'h5tbx'
+convention_user_dir = UserDir["convention"] / "h5tbx"
 
 
 def build_convention():
-    """Build the toolbox convention from the yaml file"""
+    """Build the toolbox convention from the yaml file.
+
+    Note: This is now called lazily on first use of `use('h5tbx')`,
+    not on package import.
+    """
     from . import generate
-    h5tbx_convention_yaml = __this_dir__.parent / f'data/h5tbx.yaml'
+
+    h5tbx_convention_yaml = __this_dir__.parent / f"data/h5tbx.yaml"
     convention_user_dir.mkdir(parents=True, exist_ok=True)
     generate.write_convention_module_from_yaml(h5tbx_convention_yaml)
 
 
-if not (convention_user_dir / f'h5tbx.py').exists():
-    build_convention()
-
-__all__ = ['Convention', 'from_yaml', 'from_zenodo', 'from_repo',
-           'get_current_convention', 'get_registered_conventions',
-           'from_zenodo', 'StandardAttribute', 'yaml2jsonld',
-           'get_list_of_validators']
+__all__ = [
+    "Convention",
+    "from_yaml",
+    "from_zenodo",
+    "from_repo",
+    "get_current_convention",
+    "get_registered_conventions",
+    "from_zenodo",
+    "StandardAttribute",
+    "yaml2jsonld",
+    "get_list_of_validators",
+]

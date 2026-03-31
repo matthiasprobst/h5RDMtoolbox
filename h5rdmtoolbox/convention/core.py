@@ -632,12 +632,36 @@ def _get_convention_from_dir(convention_name: str) -> "Convention":
         f"Adding path {_convention_py_filename.parent.absolute()} to system path..."
     )
     sys.path.insert(0, str(_convention_py_filename.parent))
-    # import:
     _import_convention(_convention_name)
-    # now it is registered and can be returned:
     cv = get_registered_conventions()[convention_name]
     cv.filename = _convention_py_filename
     return cv
+
+
+def _is_builtin_convention(name: str) -> bool:
+    """Check if convention name is a built-in convention that can be auto-generated."""
+    return name.lower().replace("-", "_") == "h5tbx"
+
+
+def _ensure_builtin_convention(name: str) -> bool:
+    """Ensure a built-in convention is built and registered.
+
+    Returns True if the convention was built, False if already existed or not a builtin.
+    """
+    if not _is_builtin_convention(name):
+        return False
+    _convention_name = name.lower().replace("-", "_")
+    if _convention_name in get_registered_conventions():
+        return False
+    _convention_py_filename = CV_DIR / f"{_convention_name}" / f"{_convention_name}.py"
+    if not _convention_py_filename.exists():
+        logger.debug(f"Auto-building built-in convention '{name}' on first use")
+        from . import generate
+
+        h5tbx_yaml = pathlib.Path(__file__).parent.parent / "data/h5tbx.yaml"
+        generate.write_convention_module_from_yaml(h5tbx_yaml)
+        return True
+    return False
 
 
 class use:
@@ -666,8 +690,10 @@ class use:
                 n.lower().replace("-", "_") for n in registered_conventions
             ]
             if _convention_name not in registered_convention_names:
-                cv = _get_convention_from_dir(convention_name)
-                convention_name = cv.name
+                _ensure_builtin_convention(convention_name)
+                if _convention_name not in registered_convention_names:
+                    cv = _get_convention_from_dir(convention_name)
+                    convention_name = cv.name
             self._current_convention = _use(convention_name)
 
     def __repr__(self):
@@ -693,7 +719,9 @@ def _use(convention_or_name: Union[str, Convention, None]) -> Convention:
         convention_name = "h5py"
 
     if convention_name not in get_registered_conventions():
-        raise ValueError(f'Convention "{convention_name}" is not registered')
+        _ensure_builtin_convention(convention_name)
+        if convention_name not in get_registered_conventions():
+            raise ValueError(f'Convention "{convention_name}" is not registered')
 
     logger.debug(f'Switching to convention "{convention_name}"')
 
