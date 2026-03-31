@@ -1,4 +1,5 @@
 """utilities of the h5rdmtoolbox"""
+
 import atexit
 import datetime
 import hashlib
@@ -28,32 +29,36 @@ from ._version import __version__
 from .ld import rdf
 from .user import CACHE_DIR, USER_DATA_DIR
 
-logger = logging.getLogger('h5rdmtoolbox')
+logger = logging.getLogger("h5rdmtoolbox")
 DEFAULT_LOGGING_LEVEL = logging.INFO
 RETRY_STATUS = {429, 500, 502, 503, 504}
+
 
 def get_filesize(filename: Union[str, pathlib.Path]) -> int:
     """Get the size of a file in bytes"""
     return os.path.getsize(filename) * get_ureg().byte
 
 
-def get_checksum(filename: Union[str, pathlib.Path], hash_func: Callable = hashlib.md5) -> str:
+def get_checksum(
+    filename: Union[str, pathlib.Path], hash_func: Callable = hashlib.md5
+) -> str:
     """Get the checksum of a file. Default hash function is hashlib.md5"""
-    with open(str(filename), 'rb') as file:
+    with open(str(filename), "rb") as file:
         return hash_func(file.read()).hexdigest()
 
 
 def has_internet_connection(timeout: int = 5) -> bool:
     """Figure out whether there's an internet connection"""
     try:
-        requests.get('https://git.scc.kit.edu', timeout=timeout)
+        requests.get("https://git.scc.kit.edu", timeout=timeout)
         return True
-    except (requests.ConnectionError,
-            requests.Timeout):
+    except (requests.ConnectionError, requests.Timeout):
         return False
 
 
-def _request_with_backoff(method, url, session=None, max_retries=8, timeout=30, **kwargs):
+def _request_with_backoff(
+    method, url, session=None, max_retries=8, timeout=30, **kwargs
+):
     r = None
     s = session or requests.Session()
     for attempt in range(max_retries + 1):
@@ -74,7 +79,7 @@ def _request_with_backoff(method, url, session=None, max_retries=8, timeout=30, 
 
         if sleep_s is None:
             # Exponential backoff with jitter (full jitter)
-            base = min(60.0, 0.5 * (2 ** attempt))
+            base = min(60.0, 0.5 * (2**attempt))
             sleep_s = random.uniform(0, base)
 
         if attempt == max_retries:
@@ -85,12 +90,14 @@ def _request_with_backoff(method, url, session=None, max_retries=8, timeout=30, 
     return r
 
 
-def _download_file(url,
-                   known_hash,
-                   target: Optional[pathlib.Path] = None,
-                   params: Optional[Dict] = None) -> pathlib.Path:
+def _download_file(
+    url,
+    known_hash,
+    target: Optional[pathlib.Path] = None,
+    params: Optional[Dict] = None,
+) -> pathlib.Path:
     """Download a file from a URL and check its hash"""
-    response = _request_with_backoff('GET', url, params=params, stream=True)
+    response = _request_with_backoff("GET", url, params=params, stream=True)
     if response.status_code == 200:
         content = response.content
 
@@ -98,9 +105,11 @@ def _download_file(url,
         calculated_hash = hashlib.sha256(content).hexdigest()
         if known_hash:
             if not calculated_hash == known_hash:
-                raise ValueError('File does not match the expected hash')
+                raise ValueError("File does not match the expected hash")
         else:
-            logger.warning('No hash given! This is recommended when downloading files from the web.')
+            logger.warning(
+                "No hash given! This is recommended when downloading files from the web."
+            )
 
         # Save the content to a file
         if target:
@@ -112,40 +121,49 @@ def _download_file(url,
             f.write(content)
 
         return fname
-    raise RuntimeError(f'Failed to download the file from {url}')
+    raise RuntimeError(f"Failed to download the file from {url}")
 
 
 def is_xml_file(filename):
     """Check if file is an xml file"""
-    with open(filename, 'rb') as file:
+    with open(filename, "rb") as file:
         bcontent = file.read()
-        content = bcontent.decode('utf-8')
-        return re.match(r'^\s*<\?xml', content) is not None
+        content = bcontent.decode("utf-8")
+        return re.match(r"^\s*<\?xml", content) is not None
+
+
+def _has_object_type(target: Union[h5py.Group, pathlib.Path], obj_type: type) -> bool:
+    """Check if target contains any object of the given type.
+
+    Parameters
+    ----------
+    target : h5py.Group or pathlib.Path
+        HDF5 group or path to HDF5 file.
+    obj_type : type
+        The type to check for (h5py.Dataset or h5py.Group).
+
+    Returns
+    -------
+    bool
+        True if target contains at least one object of the given type.
+    """
+    if not isinstance(target, h5py.Group):
+        with h5py.File(target) as h5:
+            return _has_object_type(h5, obj_type)
+    return any(isinstance(obj, obj_type) for obj in target.values())
 
 
 def has_datasets(target: Union[h5py.Group, pathlib.Path]) -> bool:
     """Check if file has datasets"""
-    if not isinstance(target, h5py.Group):
-        with h5py.File(target) as h5:
-            return has_datasets(h5)
-    for obj in target.values():
-        if isinstance(obj, h5py.Dataset):
-            return True
-    return False
+    return _has_object_type(target, h5py.Dataset)
 
 
 def has_groups(target: Union[h5py.Group, pathlib.Path]) -> bool:
     """Check if file has groups"""
-    if not isinstance(target, h5py.Group):
-        with h5py.File(target) as h5:
-            return has_groups(h5)
-    for obj in target.values():
-        if isinstance(obj, h5py.Group):
-            return True
-    return False
+    return _has_object_type(target, h5py.Group)
 
 
-def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
+def remove_special_chars(input_string, keep_special="/_", replace_spaces="_"):
     """Generally removes all characters that are no number
     or letter. Per default, underscores and forward slashes
     are kept and spaces are replaced with underscores.
@@ -173,15 +191,17 @@ def remove_special_chars(input_string, keep_special='/_', replace_spaces='_'):
         spaces.
     """
     if keep_special:
-        _cleaned_str = re_sub('[^a-zA-Z0-9%s ]' % keep_special, '', input_string)
+        _cleaned_str = re_sub("[^a-zA-Z0-9%s ]" % keep_special, "", input_string)
     else:
-        _cleaned_str = re_sub('[^a-zA-Z0-9 ]', '', input_string)
+        _cleaned_str = re_sub("[^a-zA-Z0-9 ]", "", input_string)
     if replace_spaces:
-        return _cleaned_str.replace(' ', replace_spaces)
+        return _cleaned_str.replace(" ", replace_spaces)
     return _cleaned_str
 
 
-def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = False) -> pathlib.Path:
+def generate_temporary_filename(
+    prefix="tmp", suffix: str = "", touch: bool = False
+) -> pathlib.Path:
     """generates a temporary filename in user tmp file directory
 
     Parameters
@@ -198,20 +218,20 @@ def generate_temporary_filename(prefix='tmp', suffix: str = '', touch: bool = Fa
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _filename =  user.UserDir['tmp'] / f"{prefix}{next(user._filecounter)}{suffix}"
+    _filename = user.UserDir["tmp"] / f"{prefix}{next(user._filecounter)}{suffix}"
     while _filename.exists():
-        _filename =  user.UserDir['tmp'] / f"{prefix}{next(user._filecounter)}{suffix}"
+        _filename = user.UserDir["tmp"] / f"{prefix}{next(user._filecounter)}{suffix}"
     if touch:
-        if _filename.suffix in ('.h5', '.hdf', '.hdf5'):
-            with h5py.File(_filename, 'w'):
+        if _filename.suffix in (".h5", ".hdf", ".hdf5"):
+            with h5py.File(_filename, "w"):
                 pass
         else:
-            with open(_filename, 'w'):
+            with open(_filename, "w"):
                 pass
     return _filename
 
 
-def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
+def generate_temporary_directory(prefix="tmp") -> pathlib.Path:
     """generates a temporary directory in user tmp file directory
 
     Parameters
@@ -224,26 +244,34 @@ def generate_temporary_directory(prefix='tmp') -> pathlib.Path:
     tmp_filename: pathlib.Path
         The generated temporary filename
     """
-    _dir =  user.UserDir['tmp'] / f"{prefix}{next(user._dircounter)}"
+    _dir = user.UserDir["tmp"] / f"{prefix}{next(user._dircounter)}"
     while _dir.exists():
-        _dir =  user.UserDir['tmp'] / f"{prefix}{next(user._dircounter)}"
+        _dir = user.UserDir["tmp"] / f"{prefix}{next(user._dircounter)}"
     _dir.mkdir(parents=True)
     return _dir
 
 
 def create_h5tbx_version_grp(root: h5py.Group) -> h5py.Group:
     """Creates a group in an HDF5 file with the h5rdmtoolbox version as an attribute"""
-    logger.debug('Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file')
-    version_group = root.create_group('h5rdmtoolbox')
-    # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
-    version_group.attrs['__h5rdmtoolbox_version__'] = __version__
-    # version_group.attrs['name'] = "h5rdmtoolbox"
-    version_group.attrs['code_repository'] = "https://github.com/matthiasprobst/h5RDMtoolbox"
-    version_group.attrs[rdf.RDF_PREDICATE_ATTR_NAME] = json.dumps(
-        {'code_repository': 'https://schema.org/codeRepository',
-         '__h5rdmtoolbox_version__': 'https://schema.org/softwareVersion'}
+    logger.debug(
+        'Creating group "h5rdmtoolbox" with attribute "__h5rdmtoolbox_version__" in file'
     )
-    version_group.attrs[rdf.RDF_TYPE_ATTR_NAME] = 'https://schema.org/SoftwareSourceCode'
+    version_group = root.create_group("h5rdmtoolbox")
+    # g.rdf.object = 'https://schema.org/SoftwareSourceCode'
+    version_group.attrs["__h5rdmtoolbox_version__"] = __version__
+    # version_group.attrs['name'] = "h5rdmtoolbox"
+    version_group.attrs["code_repository"] = (
+        "https://github.com/matthiasprobst/h5RDMtoolbox"
+    )
+    version_group.attrs[rdf.RDF_PREDICATE_ATTR_NAME] = json.dumps(
+        {
+            "code_repository": "https://schema.org/codeRepository",
+            "__h5rdmtoolbox_version__": "https://schema.org/softwareVersion",
+        }
+    )
+    version_group.attrs[rdf.RDF_TYPE_ATTR_NAME] = (
+        "https://schema.org/SoftwareSourceCode"
+    )
     return version_group
 
 
@@ -262,10 +290,10 @@ def touch_tmp_hdf5_file(touch=True, attrs=None) -> pathlib.Path:
         touches the file
 
     """
-    hdf_filepath = generate_temporary_filename(suffix='.hdf')
+    hdf_filepath = generate_temporary_filename(suffix=".hdf")
     if touch:
         with File(hdf_filepath, "w") as h5touch:
-            if get_config('auto_create_h5tbx_version'):
+            if get_config("auto_create_h5tbx_version"):
                 create_h5tbx_version_grp(h5touch)
             if attrs is not None:
                 for ak, av in attrs.items():
@@ -293,14 +321,14 @@ def try_making_serializable(d: Dict) -> Dict:
             try:
                 result_dict[key] = value.__to_h5attr__()
             except AttributeError:
-                warnings.warn(f"Type {type(value)} of value {value} not supported. Maybe json can handle it?")
+                warnings.warn(
+                    f"Type {type(value)} of value {value} not supported. Maybe json can handle it?"
+                )
                 result_dict[key] = value
     return result_dict
 
 
-def create_special_attribute(h5obj: h5py.AttributeManager,
-                             name: str,
-                             value):
+def create_special_attribute(h5obj: h5py.AttributeManager, name: str, value):
     """Allows writing more than the usual hdf5 attributes"""
     if isinstance(value, dict):
         # some value might be changed to a string first, like h5py objects
@@ -317,16 +345,17 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
     elif isinstance(value, pathlib.Path):
         _value = str(value)
     elif isinstance(value, datetime.datetime):
-        _value = value.strftime(get_config('dtime_fmt'))
+        _value = value.strftime(get_config("dtime_fmt"))
     else:
         _value = value
 
     # parse name as well, it could be an identifier (URI or IRI):
-    if hasattr(name, 'fragment'):
+    if hasattr(name, "fragment"):
         fragment = name.fragment
         if not fragment:
-            raise ValueError(f'Name {name} has no fragment')
+            raise ValueError(f"Name {name} has no fragment")
         from h5rdmtoolbox.ld.rdf import set_predicate
+
         set_predicate(h5obj, fragment, name)
         name = fragment
 
@@ -336,12 +365,16 @@ def create_special_attribute(h5obj: h5py.AttributeManager,
         try:
             h5obj.create(name, data=str(_value))
         except TypeError as e2:
-            raise RuntimeError(f'Error setting attribute to HDF object {h5obj._parent}:'
-                               f'\n  name: {name}\n  value: {value} \n  type: {type(value)}\n'
-                               f'Original error: {e2}') from e2
+            raise RuntimeError(
+                f"Error setting attribute to HDF object {h5obj._parent}:"
+                f"\n  name: {name}\n  value: {value} \n  type: {type(value)}\n"
+                f"Original error: {e2}"
+            ) from e2
 
 
-def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, List[str], Tuple]:
+def parse_object_for_attribute_setting(
+    value,
+) -> Union[str, int, float, bool, List[str], Tuple]:
     """Parses an object to a string for setting an attribute"""
     if isinstance(value, pint.Unit):
         return str(value)
@@ -363,7 +396,7 @@ def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, Li
         return value
     if isinstance(value, (h5py.Dataset, h5py.Group)):
         return value.name
-    if hasattr(value, '__h5attr_repr__'):
+    if hasattr(value, "__h5attr_repr__"):
         return value.__h5attr_repr__()
     try:
         return str(value)  # try parsing to string
@@ -371,14 +404,16 @@ def parse_object_for_attribute_setting(value) -> Union[str, int, float, bool, Li
         raise TypeError(f"Cannot parse type {type(value)} to string")
 
 
-OBJ_FLT_DICT = {'group': h5py.Group,
-                'groups': h5py.Group,
-                'dataset': h5py.Dataset,
-                'datasets': h5py.Dataset,
-                '$group': h5py.Group,
-                '$groups': h5py.Group,
-                '$dataset': h5py.Dataset,
-                '$datasets': h5py.Dataset}
+OBJ_FLT_DICT = {
+    "group": h5py.Group,
+    "groups": h5py.Group,
+    "dataset": h5py.Dataset,
+    "datasets": h5py.Dataset,
+    "$group": h5py.Group,
+    "$groups": h5py.Group,
+    "$dataset": h5py.Dataset,
+    "$datasets": h5py.Dataset,
+}
 
 
 def process_obj_filter_input(objfilter: str) -> Union[h5py.Dataset, h5py.Group, None]:
@@ -402,9 +437,13 @@ def process_obj_filter_input(objfilter: str) -> Union[h5py.Dataset, h5py.Group, 
         try:
             return OBJ_FLT_DICT[objfilter.lower()]
         except KeyError:
-            raise ValueError(f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"')
+            raise ValueError(
+                f'Expected values for argument objfilter are "dataset" or "group", not "{objfilter}"'
+            )
     if not isinstance(objfilter, (h5py.Dataset, h5py.Group)):
-        raise TypeError(f'Expected values for argument objfilter are "dataset" or "group", not {type(objfilter)}')
+        raise TypeError(
+            f'Expected values for argument objfilter are "dataset" or "group", not {type(objfilter)}'
+        )
     return objfilter
 
 
@@ -415,8 +454,8 @@ class DocStringParser:
     def __init__(self, cls_or_method: Callable, additional_parameters: Dict = None):
         self._callable = cls_or_method
         self.original_docstring = cls_or_method.__doc__
-        self.abstract, self.parameters, self.returns, self.notes = DocStringParser.parse_docstring(
-            self.original_docstring
+        self.abstract, self.parameters, self.returns, self.notes = (
+            DocStringParser.parse_docstring(self.original_docstring)
         )
         self.additional_parameters = {}
         if additional_parameters is None:
@@ -431,33 +470,37 @@ class DocStringParser:
         """Reassembles the docstring from the parsed components"""
         from .convention.standard_attributes import DefaultValue
 
-        new_doc = ''
+        new_doc = ""
         if self.abstract:
             for a in self.abstract:
-                new_doc += f'{a}\n'
-        new_doc += f'\n\nParameters\n----------'
+                new_doc += f"{a}\n"
+        new_doc += f"\n\nParameters\n----------"
         for k in self.parameters:
             # if k['name'].startswith('**'):
-            new_doc += f"\n{k['name']}: {k['type']} = {k['default']}\n\t{k['description']}"
+            new_doc += (
+                f"\n{k['name']}: {k['type']} = {k['default']}\n\t{k['description']}"
+            )
 
-        new_doc += f'\n\nStandard Attributes\n-------------------'
+        new_doc += f"\n\nStandard Attributes\n-------------------"
         for ak, av in self.additional_parameters.items():
-            if av['default'] == DefaultValue.EMPTY:
+            if av["default"] == DefaultValue.EMPTY:
                 new_doc += f"\n{ak}: {av['type']} \n\t{av['description']}"
             else:
-                new_doc += f"\n{ak}: {av['type']} = {av['default']}\n\t{av['description']}"
-        new_doc += '\n'
+                new_doc += (
+                    f"\n{ak}: {av['type']} = {av['default']}\n\t{av['description']}"
+                )
+        new_doc += "\n"
 
         if self.returns:
-            new_doc += f'\n\nReturns\n-------'
+            new_doc += f"\n\nReturns\n-------"
 
             for k in self.returns:
                 new_doc += f"\n{k['name']}: {k['type']}\n\t{k['description']}"
 
         if self.notes:
-            new_doc += f'\n\nNotes'
+            new_doc += f"\n\nNotes"
             for n in self.notes:
-                new_doc += f'\n{n}'
+                new_doc += f"\n{n}"
 
         return new_doc
 
@@ -468,12 +511,13 @@ class DocStringParser:
     def update_docstring(self) -> None:
         """Updates the docstring of the class, method or function with the new docstring"""
         import h5rdmtoolbox as h5tbx
-        if self._callable.__name__ == 'create_dataset':
+
+        if self._callable.__name__ == "create_dataset":
             h5tbx.Group.__dict__[self._callable.__name__].__doc__ = self.get_docstring()
-        elif self._callable.__name__ == 'create_group':
+        elif self._callable.__name__ == "create_group":
             h5tbx.Group.__dict__[self._callable.__name__].__doc__ = self.get_docstring()
         else:
-            h5tbx.File.__dict__['__init__'].__doc__ = self.get_docstring()
+            h5tbx.File.__dict__["__init__"].__doc__ = self.get_docstring()
 
     def add_additional_parameters(self, additional_parameters: Dict):
         """Adds additional parameters to the docstring
@@ -484,18 +528,20 @@ class DocStringParser:
             Dictionary of additional parameters to add to the docstring
             Must contain
         """
-        _required = ('description', 'default', 'type')
+        _required = ("description", "default", "type")
         for k, v in additional_parameters.items():
             for _r in _required:
                 if _r not in v:
-                    raise ValueError(f'Item "{_r}" missing for additional parameter "{k}"')
+                    raise ValueError(
+                        f'Item "{_r}" missing for additional parameter "{k}"'
+                    )
         for k, v in additional_parameters.items():
             self.additional_parameters.update({k: v})
 
     @staticmethod
     def parse_parameter(param_str):
         # Regular expression pattern to extract parameter name, type, and default value
-        pattern = r'^\s*([\w\d_*]+)\s*:\s*(.+?)(?:\s*,\s*optional(?:\s*=\s*(.*))?)?$'
+        pattern = r"^\s*([\w\d_*]+)\s*:\s*(.+?)(?:\s*,\s*optional(?:\s*=\s*(.*))?)?$"
 
         # Matching the regex pattern with the parameter string
         match = re.match(pattern, param_str)
@@ -517,54 +563,64 @@ class DocStringParser:
         if not docstring:
             return abstract, kw, rkw, notes_lines
 
-        lines = docstring.strip().split('\n')
+        lines = docstring.strip().split("\n")
 
         current_section = None
         nlines = len(lines)
         for iline, line in enumerate(lines):
             line = line.strip()
 
-            if line in ['Parameters', 'Returns', 'Notes']:
+            if line in ["Parameters", "Returns", "Notes"]:
                 current_section = line.lower()
                 if abstract is None:
                     abstract = [l.strip() for l in lines[:iline]]
-            elif current_section == 'parameters':
+            elif current_section == "parameters":
                 if line:
                     # if current_param is None:
-                    param_info = line.split(':')
+                    param_info = line.split(":")
                     if len(param_info) >= 2:
-                        param_name, param_type, param_default = DocStringParser.parse_parameter(line)
+                        param_name, param_type, param_default = (
+                            DocStringParser.parse_parameter(line)
+                        )
 
                         desc_lines = []
                         for i in range(iline + 1, nlines):
-                            if lines[i] == '' or DocStringParser.parse_parameter(lines[i]) is not None:
+                            if (
+                                lines[i] == ""
+                                or DocStringParser.parse_parameter(lines[i]) is not None
+                            ):
                                 break
                             desc_lines.append(lines[i].strip())
-                        desc = '\n\t'.join(desc_lines)
+                        desc = "\n\t".join(desc_lines)
                         current_param = {
-                            'name': param_name,
-                            'type': param_type,
-                            'default': param_default,
-                            'description': desc.strip(),
+                            "name": param_name,
+                            "type": param_type,
+                            "default": param_default,
+                            "description": desc.strip(),
                         }
                         kw.append(current_param)
-            elif current_section == 'notes':
+            elif current_section == "notes":
                 notes_lines.append(line.strip())
-            elif current_section == 'returns':
-                param_info = line.split(':')
+            elif current_section == "returns":
+                param_info = line.split(":")
                 if len(param_info) >= 2:
-                    param_name, param_type, param_default = DocStringParser.parse_parameter(line)
+                    param_name, param_type, param_default = (
+                        DocStringParser.parse_parameter(line)
+                    )
                     desc_lines = []
                     for i in range(iline + 1, nlines):
-                        if lines[i] == '' or DocStringParser.parse_parameter(lines[i]) is not None:
+                        if (
+                            lines[i] == ""
+                            or DocStringParser.parse_parameter(lines[i]) is not None
+                        ):
                             break
                         desc_lines.append(lines[i].strip())
-                    desc = '\n\t'.join(desc_lines)
+                    desc = "\n\t".join(desc_lines)
                     current_ret_param = {
-                        'name': param_name,
-                        'type': param_type,
-                        'default': param_default,
-                        'description': desc.strip(),
+                        "name": param_name,
+                        "type": param_type,
+                        "default": param_default,
+                        "description": desc.strip(),
                     }
                     rkw.append(current_ret_param)
 
@@ -572,7 +628,9 @@ class DocStringParser:
 
 
 @validate_call
-def download_context(url_source: Union[HttpUrl, List[HttpUrl]], force_download: bool = False) -> Context:
+def download_context(
+    url_source: Union[HttpUrl, List[HttpUrl]], force_download: bool = False
+) -> Context:
     """Download a context file from one URL or list of URLs
     Will check if a context file is already downloaded and use that one.
 
@@ -587,16 +645,16 @@ def download_context(url_source: Union[HttpUrl, List[HttpUrl]], force_download: 
     filenames = []
     for url in url_source:
         _url = str(url)
-        _fname = _url.rsplit('/', 1)[-1]
-        context_file = user.UserDir['cache'] / _fname
+        _fname = _url.rsplit("/", 1)[-1]
+        context_file = user.UserDir["cache"] / _fname
         if not context_file.exists() or force_download:
-            logger.debug(f'Downloading context file from {_url} to {context_file}')
+            logger.debug(f"Downloading context file from {_url} to {context_file}")
             try:
-                with open(context_file, 'wb') as f:
+                with open(context_file, "wb") as f:
                     r = _request_with_backoff("GET", _url)
                     f.write(r.content)
             except requests.RequestException:
-                raise RuntimeError(f'Failed to download context file from {_url}')
+                raise RuntimeError(f"Failed to download context file from {_url}")
         filenames.append(str(context_file))
     return Context(filenames)
 
@@ -607,10 +665,16 @@ def deprecated(version: str, msg: str, removing_in: str = None):
     def deprecated_decorator(func):
         def depr_func(*args, **kwargs):
             if removing_in:
-                warnings.warn(f"{func.__name__} is deprecated since {version}. Will be removed in {removing_in}."
-                              f" {msg}", DeprecationWarning)
+                warnings.warn(
+                    f"{func.__name__} is deprecated since {version}. Will be removed in {removing_in}."
+                    f" {msg}",
+                    DeprecationWarning,
+                )
             else:
-                warnings.warn(f"{func.__name__} is deprecated since {version}. {msg}", DeprecationWarning)
+                warnings.warn(
+                    f"{func.__name__} is deprecated since {version}. {msg}",
+                    DeprecationWarning,
+                )
             return func(*args, **kwargs)
 
         return depr_func
@@ -623,7 +687,7 @@ def sanitize_filename(filename: str) -> str:
     illegal_chars = r'[\/:*?"<>|\\]'
 
     # Replace illegal characters with an underscore or remove them
-    sanitized = re.sub(illegal_chars, '_', filename)
+    sanitized = re.sub(illegal_chars, "_", filename)
 
     return sanitized
 
@@ -634,11 +698,14 @@ class DownloadFileManager:
     checksum matches. If the file is not downloaded, it will be downloaded and the checksum will be checked.
 
     This class is a singleton, hence only one instance can be created."""
+
     _instance = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(DownloadFileManager, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(DownloadFileManager, cls).__new__(
+                cls, *args, **kwargs
+            )
         return cls._instance
 
     def __init__(self):
@@ -651,32 +718,39 @@ class DownloadFileManager:
         return len(self.registry)
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.file_directory})'
+        return f"{self.__class__.__name__}({self.file_directory})"
 
     @property
     def registry_filename(self) -> pathlib.Path:
-        return USER_DATA_DIR / 'download_registry.json'
+        return USER_DATA_DIR / "download_registry.json"
 
-    def add(self, *, url: str, filepath: Union[str, pathlib.Path], filename: str, checksum: Optional[str] = None):
+    def add(
+        self,
+        *,
+        url: str,
+        filepath: Union[str, pathlib.Path],
+        filename: str,
+        checksum: Optional[str] = None,
+    ):
         """Add to registry. Computes the checksum if not provided"""
         filepath = pathlib.Path(filepath)
         if not filepath.exists():
-            raise FileNotFoundError(f'File {filepath} does not exist!')
+            raise FileNotFoundError(f"File {filepath} does not exist!")
         if checksum is None:
             checksum = get_checksum(filepath)
             logger.debug(f"Checksum for {filepath} computed: {checksum}")
         self.registry[checksum] = {
-            'url': str(url),
-            'filepath': str(filepath.resolve()),
-            'filename': filename
+            "url": str(url),
+            "filepath": str(filepath.resolve()),
+            "filename": filename,
         }
         self.save_registry()
 
     def get(self, checksum: str, filename: str) -> Optional[pathlib.Path]:
         """Returns the file path from the registry based on checksum and filename"""
         entry = self.registry.get(checksum)
-        if entry and entry.get('filename') == filename:
-            path = pathlib.Path(entry['filepath'])
+        if entry and entry.get("filename") == filename:
+            path = pathlib.Path(entry["filepath"])
             if path.exists():
                 return path
         return None
@@ -684,7 +758,7 @@ class DownloadFileManager:
     def remove(self, checksum: str, filename: str):
         """Removes a file from the registry based on checksum and filename"""
         entry = self.registry.get(checksum)
-        if entry and entry.get('filename') == filename:
+        if entry and entry.get("filename") == filename:
             self.registry.pop(checksum)
             self.save_registry()
             logger.info(f"File removed: {filename} with checksum: {checksum}")
@@ -696,7 +770,9 @@ class DownloadFileManager:
         logger.info(f"Removing corrupted file from registry: {filename}")
         remove_keys = []
         for k, v in self.registry.items():
-            if pathlib.Path(self.registry[k].get('filepath', None)) == pathlib.Path(filename):
+            if pathlib.Path(self.registry[k].get("filepath", None)) == pathlib.Path(
+                filename
+            ):
                 remove_keys.append(k)
         for k in remove_keys:
             self.registry.pop(k)
@@ -707,71 +783,95 @@ class DownloadFileManager:
         self.registry_filename.parent.mkdir(parents=True, exist_ok=True)
         while n_tries < max_tries:
             try:
-                with open(self.registry_filename, 'w') as f:
+                with open(self.registry_filename, "w") as f:
                     json.dump(self.registry, f, indent=2)
                 return
             except PermissionError:
-                logger.debug(f'Could not save registry. Trying again in 0.1s')
+                logger.debug(f"Could not save registry. Trying again in 0.1s")
                 n_tries += 1
                 time.sleep(0.1)
-        logger.debug(f'Could not save registry after {max_tries} tries. File seems to be locked.')
+        logger.debug(
+            f"Could not save registry after {max_tries} tries. File seems to be locked."
+        )
 
     def load_registry(self) -> Dict[str, str]:
         registry_filename = self.registry_filename
         if registry_filename.exists():
             try:
-                with open(self.registry_filename, 'r') as f:
+                with open(self.registry_filename, "r") as f:
                     return json.load(f)
             except json.JSONDecodeError as e:
-                logger.error(f"Could not load registry file {registry_filename}: {e}. Deleting the file.")
+                logger.error(
+                    f"Could not load registry file {registry_filename}: {e}. Deleting the file."
+                )
                 self.registry_filename.unlink()
         return {}
 
     def reset_registry(self):
         """Resets the registry. This will also delete the downloaded files"""
         for k, v in self.registry.items():
-            fpath = v.get('filepath', None)
+            fpath = v.get("filepath", None)
             if fpath:
                 pathlib.Path(fpath).unlink(missing_ok=True)
         self.registry_filename.unlink(missing_ok=True)
         self.registry = self.load_registry()
 
     @validate_call
-    def download(self,
-                 url: HttpUrl,
-                 *,
-                 target_folder: Optional[Union[str, pathlib.Path]] = None,
-                 params: Optional[Dict] = None,
-                 checksum: Optional[str] = None,
-                 known_hash: Optional[str] = None) -> pathlib.Path:
+    def download(
+        self,
+        url: HttpUrl,
+        *,
+        target_folder: Optional[Union[str, pathlib.Path]] = None,
+        params: Optional[Dict] = None,
+        checksum: Optional[str] = None,
+        known_hash: Optional[str] = None,
+    ) -> pathlib.Path:
         """Returns the downloaded file. Based on an optionally provided checksum
         already downloaded files can be quickly returned"""
 
         if checksum and checksum in self.registry:
-            logger.debug('Returning already downloaded file')
-            filepath = pathlib.Path(self.registry[checksum]['filepath'])
+            logger.debug("Returning already downloaded file")
+            filepath = pathlib.Path(self.registry[checksum]["filepath"])
             if filepath.exists():
                 return filepath
             self.registry.pop(checksum)
 
-        filename = sanitize_filename(str(url).rsplit('/', 1)[-1])
-        if filename == '':
+        filename = sanitize_filename(str(url).rsplit("/", 1)[-1])
+        if filename == "":
             filename = uuid.uuid4().hex
-        assert len(filename) > 0, f'Could not extract filename from URL {url}'
+        assert len(filename) > 0, f"Could not extract filename from URL {url}"
         if target_folder is None:
             file_path = self.file_directory / filename
         else:
             file_path = pathlib.Path(target_folder) / filename
-        downloaded_filename = _download_file(url, known_hash, target=file_path, params=params)
-        assert downloaded_filename == file_path, f'Expected {file_path}, got {downloaded_filename}'
+        downloaded_filename = _download_file(
+            url, known_hash, target=file_path, params=params
+        )
+        assert downloaded_filename == file_path, (
+            f"Expected {file_path}, got {downloaded_filename}"
+        )
         if not checksum:
             checksum = get_checksum(downloaded_filename)
-        self.registry[checksum] = {'url': str(url), 'filepath': str(downloaded_filename.absolute().resolve())}
+        self.registry[checksum] = {
+            "url": str(url),
+            "filepath": str(downloaded_filename.absolute().resolve()),
+        }
         return downloaded_filename
 
 
-def download_file(url, known_hash=None, target_folder: Optional[Union[str, pathlib.Path]] = None,
-                  checksum: Optional[str] = None, params: Optional[Dict] = None):
+def download_file(
+    url,
+    known_hash=None,
+    target_folder: Optional[Union[str, pathlib.Path]] = None,
+    checksum: Optional[str] = None,
+    params: Optional[Dict] = None,
+):
     """Downloads the file or returns the already downloaded file"""
     dfm = DownloadFileManager()
-    return dfm.download(url, target_folder=target_folder, known_hash=known_hash, checksum=checksum, params=params)
+    return dfm.download(
+        url,
+        target_folder=target_folder,
+        known_hash=known_hash,
+        checksum=checksum,
+        params=params,
+    )
