@@ -360,6 +360,10 @@ class Group(h5py.Group):
                 "Could not initialize Group. A h5py.h5f.FileID object must be passed"
             )
         self._hdf_filename = Path(self.file.filename)
+        self._convention = (
+            getattr(self.file, "_convention", None)
+            or convention.get_current_convention()
+        )
 
     def __setitem__(
         self, name: str, obj: Union[xr.DataArray, List, Tuple, Dict, h5py.ExternalLink]
@@ -437,17 +441,15 @@ class Group(h5py.Group):
             raise AttributeError(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in convention.get_current_convention().properties:
-            if key in convention.get_current_convention().properties[self.__class__]:
-                return (
-                    convention.get_current_convention()
-                    .properties[self.__class__][key](self)
-                    .set(value)
-                )
+        _convention = self.__dict__.get("_convention")
+        if _convention is not None:
+            if self.__class__ in _convention.properties:
+                if key in _convention.properties[self.__class__]:
+                    return _convention.properties[self.__class__][key](self).set(value)
         super().__setattr__(key, value)
 
     def __str__(self) -> str:
-        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{convention.get_current_convention().name}")>'
+        return f'<HDF5 wrapper group "{self.name}" (members: {len(self)}, convention: "{self._convention.name}")>'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -461,12 +463,15 @@ class Group(h5py.Group):
     @property
     def convention(self):
         """Return the convention currently enabled."""
-        return convention.get_current_convention()
+        return self._convention
 
     @property
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
-        return self.convention.properties.get(self.__class__, {})
+        _convention = self.__dict__.get("_convention")
+        if _convention is None:
+            return {}
+        return _convention.properties.get(self.__class__, {})
 
     @property
     def rdf(self):
@@ -1686,12 +1691,15 @@ class Dataset(h5py.Dataset):
     @property
     def convention(self):
         """Return the convention currently enabled."""
-        return convention.get_current_convention()
+        return self._convention
 
     @property
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
-        return self.convention.properties.get(self.__class__, {})
+        _convention = self.__dict__.get("_convention")
+        if _convention is None:
+            return {}
+        return _convention.properties.get(self.__class__, {})
 
     @property
     def rdf(self):
@@ -2064,13 +2072,11 @@ class Dataset(h5py.Dataset):
         return super().__getattribute__(item)
 
     def __setattr__(self, key, value):
-        if self.__class__ in convention.get_current_convention().properties:
-            if key in convention.get_current_convention().properties[self.__class__]:
-                return (
-                    convention.get_current_convention()
-                    .properties[self.__class__][key]
-                    .set(self, value)
-                )
+        _convention = self.__dict__.get("_convention")
+        if _convention is not None:
+            if self.__class__ in _convention.properties:
+                if key in _convention.properties[self.__class__]:
+                    return _convention.properties[self.__class__][key].set(self, value)
         return super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
@@ -2306,13 +2312,9 @@ class Dataset(h5py.Dataset):
     def __repr__(self) -> str:
         r = super().__repr__()
         if not self:
-            return (
-                r[:-1] + f' (convention "{convention.get_current_convention().name}")>'
-            )
+            return r[:-1] + f' (convention "{self._convention.name}")>'
         else:
-            return (
-                r[:-1] + f', convention "{convention.get_current_convention().name}">'
-            )
+            return r[:-1] + f', convention "{self._convention.name}">'
 
     def dump(self) -> None:
         """Call sdump()"""
@@ -2359,6 +2361,10 @@ class Dataset(h5py.Dataset):
 
         super().__init__(_id)
         self._hdf_filename = Path(self.file.filename)
+        self._convention = (
+            getattr(self.file, "_convention", None)
+            or convention.get_current_convention()
+        )
 
     def set_primary_scale(self, axis, iscale: int):
         """Set the primary scale for a specific axis.
@@ -2476,6 +2482,7 @@ class File(h5py.File, Group):
         attrs: Dict = None,
         **kwargs,
     ):
+        self._convention = convention.get_current_convention()
         is_fileobj_init = False
         # path is file object:
         if isinstance(name, ObjectID):
@@ -2627,13 +2634,15 @@ class File(h5py.File, Group):
                     self.attrs[k] = v
 
     def __setattr__(self, key, value):
-        props = self.convention.properties.get(self.__class__, None)
-        if props:
-            prop = props.get(key, None)
-            if (
-                prop
-            ):  # does the object have a standard attribute with name stored in key?
-                return prop.set(self, value)
+        _convention = self.__dict__.get("_convention")
+        if _convention is not None:
+            props = _convention.properties.get(self.__class__, None)
+            if props:
+                prop = props.get(key, None)
+                if (
+                    prop
+                ):  # does the object have a standard attribute with name stored in key?
+                    return prop.set(self, value)
         if key.startswith("_"):
             return super().__setattr__(key, value)
         raise AttributeError(
@@ -2643,12 +2652,12 @@ class File(h5py.File, Group):
 
     def __repr__(self) -> str:
         r = super().__repr__()
-        return r.replace(
-            "HDF5", f'HDF5 (convention: "{convention.get_current_convention().name}")'
-        )
+        return r.replace("HDF5", f'HDF5 (convention: "{self._convention.name}")')
 
     def __str__(self) -> str:
-        return f'<class "{self.__class__.__name__}" convention: "{convention.get_current_convention().name}">'
+        return (
+            f'<class "{self.__class__.__name__}" convention: "{self._convention.name}">'
+        )
 
     def __delattr__(self, item):
         _delattr(self, item)
@@ -2656,12 +2665,15 @@ class File(h5py.File, Group):
     @property
     def convention(self):
         """Return the convention currently enabled."""
-        return convention.get_current_convention()
+        return self._convention
 
     @property
     def standard_attributes(self) -> Dict:
         """Return the standard attributes of the class."""
-        return self.convention.properties.get(self.__class__, {})
+        _convention = self.__dict__.get("_convention")
+        if _convention is None:
+            return {}
+        return _convention.properties.get(self.__class__, {})
 
     @property
     def rdf(self):

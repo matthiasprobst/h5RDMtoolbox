@@ -41,11 +41,9 @@ class LazyObject(Protocol):
         """Return the equality between two objects."""
         ...
 
-    def __enter__(self):
-        ...
+    def __enter__(self): ...
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        ...
+    def __exit__(self, exc_type, exc_val, exc_tb): ...
 
     @property
     def basename(self) -> str:
@@ -81,8 +79,7 @@ class LazyObject(Protocol):
 class LazyDataset(LazyObject):
     """Lazy Dataset Protocol class"""
 
-    def __init__(self, obj: h5py.Dataset):
-        ...
+    def __init__(self, obj: h5py.Dataset): ...
 
     def __getitem__(self, item):
         """Return the item by the item name or index"""
@@ -102,9 +99,7 @@ class LazyDataset(LazyObject):
 
 
 class LazyGroup(LazyObject):
-
-    def __init__(self, obj: h5py.Group):
-        ...
+    def __init__(self, obj: h5py.Group): ...
 
     def keys(self):
         """Return the keys of the group which are the names of datasets and groups"""
@@ -117,47 +112,45 @@ class LazyGroup(LazyObject):
 
 class H5TbxAttributeManager(Protocol):
     """Protocol for the AttributeManager class."""
+
     _parent: Union[h5py.Group, h5py.Dataset]
 
     @property
-    def raw(self) -> h5py.AttributeManager:
-        ...
+    def raw(self) -> h5py.AttributeManager: ...
 
-    def pop(self, key: str, default=None):
-        ...
+    def pop(self, key: str, default=None): ...
 
-    def get(self, key: str, default=None):
-        ...
+    def get(self, key: str, default=None): ...
 
-    def __setitem__(self, name: Union[str, Tuple[str, str]],
-                    value, attrs: Optional[Dict] = None):
-        ...
+    def __setitem__(
+        self, name: Union[str, Tuple[str, str]], value, attrs: Optional[Dict] = None
+    ): ...
 
-    def __getitem__(self, name: str):
-        ...
+    def __getitem__(self, name: str): ...
 
-    def create(self,
-               name,
-               data,
-               shape=None, dtype=None,
-               rdf_predicate: Union[str, rdflib.URIRef] = None,
-               rdf_object: Optional[Union[str, rdflib.URIRef]] = None,
-               definition: Optional[str] = None) -> Any:
-        ...
+    def create(
+        self,
+        name,
+        data,
+        shape=None,
+        dtype=None,
+        rdf_predicate: Union[str, rdflib.URIRef] = None,
+        rdf_object: Optional[Union[str, rdflib.URIRef]] = None,
+        definition: Optional[str] = None,
+    ) -> Any: ...
 
     @property
-    def parent(self):
-        ...
+    def parent(self): ...
 
     def items(self):
         pass
+
 
 class H5TbxHLObject(Protocol):
     name: str
 
     @property
-    def rootparent(self):
-        ...
+    def rootparent(self): ...
 
     @property
     def hdf_filename(self) -> pathlib.Path:
@@ -190,8 +183,7 @@ class H5TbxFile(H5TbxHLObject):
 class H5TbxGroup(H5TbxFile):
     """Protocol for the h5tbx.Group class."""
 
-    def __getitem__(self, name: str):
-        ...
+    def __getitem__(self, name: str): ...
 
     @property
     @abstractmethod
@@ -201,23 +193,21 @@ class H5TbxGroup(H5TbxFile):
 
     @property
     @abstractmethod
-    def rdf(self):
-        ...
+    def rdf(self): ...
 
 
 class H5TbxDataset(H5TbxHLObject):
     """Protocol for the h5tbx.Dataset class."""
+
     name: str
 
     @property
     @abstractmethod
-    def coords(self):
-        ...
+    def coords(self): ...
 
     @property
     @abstractmethod
-    def rdf(self):
-        ...
+    def rdf(self): ...
 
     @property
     @abstractmethod
@@ -229,6 +219,7 @@ class H5TbxDataset(H5TbxHLObject):
     def basename(self) -> str:
         """Return the basename, which is the last part
         of the HDF5 object path."""
+
     @property
     @abstractmethod
     def chunks(self):
@@ -242,19 +233,15 @@ class H5TbxDataset(H5TbxHLObject):
         """Return the Dataset indexed by the indexers"""
         ...
 
-    def make_scale(self, name: str = ''):
-        ...
+    def make_scale(self, name: str = ""): ...
 
-    def __getitem__(self,
-                    args,
-                    new_dtype=None,
-                    nparray=False,
-                    links_as_strings: bool = False) -> Union[xr.DataArray, np.ndarray]:
+    def __getitem__(
+        self, args, new_dtype=None, nparray=False, links_as_strings: bool = False
+    ) -> Union[xr.DataArray, np.ndarray]:
         """Return the data array by the item name"""
         ...
 
-    def __setitem__(self, key, value):
-        ...
+    def __setitem__(self, key, value): ...
 
     def to_units(self, *args, **kwargs):
         """Added to silence linters. to_units() is added via an accessor."""
@@ -266,5 +253,44 @@ class H5TbxDataset(H5TbxHLObject):
 
 
 class StandardAttribute(Protocol):
-
     def get(self, parent) -> str: ...
+
+
+class ConventionProtocol(Protocol):
+    """Protocol for convention interface.
+
+    This protocol defines the interface that convention objects must implement
+    to be used with the h5rdmtoolbox wrapper classes.
+    """
+
+    @property
+    def name(self) -> str:
+        """Return the name of the convention."""
+        ...
+
+    @property
+    def properties(self) -> Dict:
+        """Return the properties dictionary of the convention."""
+        ...
+
+    @property
+    def methods(self) -> Dict:
+        """Return the methods dictionary of the convention."""
+        ...
+
+    def get_standard_attributes(self, cls: type, method: str) -> Dict:
+        """Get standard attributes for a class and method.
+
+        Parameters
+        ----------
+        cls : type
+            The class to get standard attributes for.
+        method : str
+            The method name.
+
+        Returns
+        -------
+        Dict
+            Dictionary of standard attributes.
+        """
+        ...

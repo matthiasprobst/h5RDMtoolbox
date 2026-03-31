@@ -132,6 +132,72 @@ class TestConventions(unittest.TestCase):
 
         h5tbx.use(None)
 
+    def test_convention_caching(self):
+        """Test that convention is cached on File/Group/Dataset objects."""
+        import tempfile
+
+        h5tbx.use("h5py")
+        with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as f:
+            temp_file = pathlib.Path(f.name)
+
+        try:
+            with h5tbx.File(temp_file, mode="w") as h5:
+                file_conv = h5.convention
+                self.assertEqual(file_conv.name, "h5py")
+                self.assertEqual(h5._convention.name, "h5py")
+
+                grp = h5.create_group("test_group")
+                grp_conv = grp.convention
+                self.assertEqual(grp_conv.name, "h5py")
+                self.assertEqual(grp._convention.name, "h5py")
+
+                ds = h5.create_dataset("test_dataset", data=[1, 2, 3])
+                ds_conv = ds.convention
+                self.assertEqual(ds_conv.name, "h5py")
+                self.assertEqual(ds._convention.name, "h5py")
+
+                nested_grp = grp.create_group("nested")
+                nested_conv = nested_grp.convention
+                self.assertEqual(nested_conv.name, "h5py")
+                self.assertEqual(nested_grp._convention.name, "h5py")
+
+        finally:
+            h5tbx.use(None)
+            try:
+                temp_file.unlink(missing_ok=True)
+            except PermissionError:
+                pass
+
+    def test_convention_caching_with_convention_switch(self):
+        """Test that cached convention is isolated from global convention changes."""
+        import tempfile
+
+        h5tbx.use("h5py")
+        with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as f:
+            temp_file = pathlib.Path(f.name)
+
+        try:
+            with h5tbx.File(temp_file, mode="w") as h5:
+                cached_conv = h5._convention
+                self.assertEqual(cached_conv.name, "h5py")
+
+                h5tbx.use("h5tbx")
+
+                self.assertEqual(h5._convention.name, "h5py")
+                self.assertEqual(h5.convention.name, "h5py")
+
+                self.assertNotEqual(
+                    h5.convention.name, h5tbx.convention.get_current_convention().name
+                )
+
+        finally:
+            h5tbx.use("h5py")
+            try:
+                temp_file.unlink(missing_ok=True)
+            except PermissionError:
+                pass
+            h5tbx.use(None)
+
     @unittest.skipUnless(
         get_python_version()[1] in TESTING_VERSIONS,
         reason=f"Nur auf Python {TESTING_VERSIONS} testen",
