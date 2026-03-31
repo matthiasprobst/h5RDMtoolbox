@@ -19,11 +19,11 @@ from rdflib.namespace import RDF
 
 from h5rdmtoolbox.catalog.abstracts import RDFStore
 from .abstracts import DataStore, Store, MetadataStore
-from .utils import sparql_json_to_dataframe, sparql_result_to_df
+from .utils import sparql_json_to_dataframe, sparql_result_to_df, USER_AGENT_HEADER
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
 RSX = Namespace("http://rdf4j.org/shacl-extensions#")
-logger = logging.getLogger('h5rdmtoolbox.catalog')
+logger = logging.getLogger("h5rdmtoolbox.catalog")
 
 
 @dataclass
@@ -90,51 +90,57 @@ class StoreManager:
 
 
 class RemoteSparqlStore(MetadataStore):
-
     def __init__(self, endpoint_url, return_format: str = None):
         try:
             from SPARQLWrapper import SPARQLWrapper
         except ImportError:
-            raise ImportError("Please install SPARQLWrapper to use this class: 'pip install SPARQLWrapper'")
+            raise ImportError(
+                "Please install SPARQLWrapper to use this class: 'pip install SPARQLWrapper'"
+            )
 
         self._wrapper = SPARQLWrapper(endpoint_url)
         if return_format is not None:
             self._wrapper.setReturnFormat(return_format)
+        self._wrapper.addCustomHttpHeader("User-Agent", USER_AGENT_HEADER["User-Agent"])
 
     @property
     def wrapper(self):
         return self._wrapper
 
-    def _upload_file(self, filename: Union[str, pathlib.Path], validate: bool = True,
-                     skip_unsupported: bool = False) -> bool:
+    def _upload_file(
+        self,
+        filename: Union[str, pathlib.Path],
+        validate: bool = True,
+        skip_unsupported: bool = False,
+    ) -> bool:
         """Uploads a file to the remote SPARQL endpoint."""
         raise NotImplementedError("Remote SPARQL Store does not support file uploads.")
 
-    def _upload_triple(
-            self,
-            triple: _TripleType
-    ) -> bool:
-        raise NotImplementedError("Remote SPARQL Store does not support triple uploads.")
+    def _upload_triple(self, triple: _TripleType) -> bool:
+        raise NotImplementedError(
+            "Remote SPARQL Store does not support triple uploads."
+        )
 
     def _upload_data(self, data: str, format: str) -> bool:
         raise NotImplementedError("Remote SPARQL Store does not support data uploads.")
 
+
 class GraphDB(RemoteSparqlStore):
     """GraphDB RDF database store."""
 
-    __supports_named_graphs__: bool=True
+    __supports_named_graphs__: bool = True
     __supported_file_extensions__ = {".ttl", ".rdf", ".jsonld"}
 
-    def __init__(self,
-                 endpoint: str,
-                 repository: str,
-                 username: str = None,
-                 password: str = None):
+    def __init__(
+        self, endpoint: str, repository: str, username: str = None, password: str = None
+    ):
         super().__init__(f"{endpoint}/repositories/{repository}")
         try:
             from SPARQLWrapper import SPARQLWrapper, JSON
         except ImportError:
-            raise ImportError("Please install SPARQLWrapper to use this class: pip install SPARQLWrapper")
+            raise ImportError(
+                "Please install SPARQLWrapper to use this class: pip install SPARQLWrapper"
+            )
         self._endpoint = endpoint
         self._repository = repository
         self._username = username
@@ -145,9 +151,11 @@ class GraphDB(RemoteSparqlStore):
 
         repo_info = self.get_repository_info(self.repository)
         if not repo_info:
-            logger.info(f"The repository '{self.repository}' does not exist. "
-                        "Call create_repository('config.ttl') with a valid configuration "
-                        "('config.ttl') file to create it.")
+            logger.info(
+                f"The repository '{self.repository}' does not exist. "
+                "Call create_repository('config.ttl') with a valid configuration "
+                "('config.ttl') file to create it."
+            )
 
     def __repr__(self):
         return f"<{self.__class__.__name__} (GraphDB-Repo={self.get_repository_info()['id']})>"
@@ -168,10 +176,7 @@ class GraphDB(RemoteSparqlStore):
     def password(self) -> str:
         return self._password
 
-    def _upload_triple(
-            self,
-            triple: _TripleType
-    ) -> bool:
+    def _upload_triple(self, triple: _TripleType) -> bool:
         """Uploads a single triple to the GraphDB-Repository."""
         url = f"{self.endpoint}/repositories/{self.repository}/statements"
         s, p, o = triple
@@ -191,7 +196,12 @@ class GraphDB(RemoteSparqlStore):
                 if st.startswith("_:"):
                     return BNode(st[2:])
                 # Treat absolute URIs (containing scheme) as URIRefs
-                if "://" in st or st.startswith("http:") or st.startswith("https:") or st.startswith("urn:"):
+                if (
+                    "://" in st
+                    or st.startswith("http:")
+                    or st.startswith("https:")
+                    or st.startswith("urn:")
+                ):
                     return URIRef(st)
                 # Fallback to Literal for anything else
                 return Literal(st)
@@ -204,8 +214,12 @@ class GraphDB(RemoteSparqlStore):
         # Serialize to N-Triples to avoid needing a base URI (GraphDB accepts this)
         data = gs.serialize(format="nt")
         headers = {"Content-Type": "application/n-triples; charset=utf-8"}
-        auth = (self.username, self.password) if self.username and self.password else None
-        response = requests.post(url, data=data.encode("utf-8"), headers=headers, auth=auth)
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
+        response = requests.post(
+            url, data=data.encode("utf-8"), headers=headers, auth=auth
+        )
         if response.status_code in (200, 201, 204):
             return True
         elif response.status_code == 500:
@@ -214,9 +228,12 @@ class GraphDB(RemoteSparqlStore):
         else:
             raise RuntimeError(f"Upload failed: {response.status_code} {response.text}")
 
-    def _upload_file(self,
-                     filename: Union[str, pathlib.Path], validate: bool = True,
-                     skip_unsupported: bool = False) -> bool:
+    def _upload_file(
+        self,
+        filename: Union[str, pathlib.Path],
+        validate: bool = True,
+        skip_unsupported: bool = False,
+    ) -> bool:
         """Uploads an RDF file to das GraphDB-Repository."""
         filename = pathlib.Path(filename).resolve().absolute()
         if filename.suffix not in self.__supported_file_extensions__:
@@ -241,7 +258,9 @@ class GraphDB(RemoteSparqlStore):
         with open(filename, "rb") as f:
             data = f.read()
         headers = {"Content-Type": content_type}
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         response = requests.post(url, data=data, headers=headers, auth=auth)
         if response.status_code in (200, 201, 204):
             return True
@@ -257,20 +276,26 @@ class GraphDB(RemoteSparqlStore):
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}.")
         url = f"{self.endpoint}/rest/repositories"
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         with open(config_path, "rb") as f:
             files = {"config": (config_path.name, f, "application/x-turtle")}
             response = requests.post(url, files=files, auth=auth)
         if response.status_code in (201, 204):
             return True
         else:
-            raise RuntimeError(f"Repository konnte nicht angelegt werden: {response.status_code} {response.text}")
+            raise RuntimeError(
+                f"Repository konnte nicht angelegt werden: {response.status_code} {response.text}"
+            )
 
     def list_repositories(self) -> Any:
         """Lists all repositories in the GraphDB instance."""
         url = f"{self.endpoint}/rest/repositories"
         headers = {"Accept": "application/json"}
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         response = requests.get(url, headers=headers, auth=auth)
         if response.status_code == 200:
             return response.json()
@@ -281,7 +306,9 @@ class GraphDB(RemoteSparqlStore):
         repo = repository or self.repository
         url = f"{self.endpoint}/rest/repositories/{repo}"
         headers = {"Accept": "application/json"}
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         response = requests.get(url, headers=headers, auth=auth)
 
         if response.status_code == 200:
@@ -290,10 +317,16 @@ class GraphDB(RemoteSparqlStore):
             logger.debug(f"Repository '{repo}' does not exist.")
             return {}
         if response.status_code == 401:
-            raise RuntimeError(f"Unauthorized access to repository '{repo}'. Check your credentials.")
+            raise RuntimeError(
+                f"Unauthorized access to repository '{repo}'. Check your credentials."
+            )
         if response.status_code == 403:
-            raise RuntimeError(f"Forbidden access to repository '{repo}'. Check your permissions.")
-        raise RuntimeError(f"Error fetching repository info: {response.status_code} {response.text}")
+            raise RuntimeError(
+                f"Forbidden access to repository '{repo}'. Check your permissions."
+            )
+        raise RuntimeError(
+            f"Error fetching repository info: {response.status_code} {response.text}"
+        )
 
     def get_or_create_repository(self, config_path: Union[str, pathlib.Path]) -> bool:
         """Gets the repository info if it exists, otherwise creates it using the provided config file."""
@@ -316,7 +349,9 @@ class GraphDB(RemoteSparqlStore):
         """
         repo = repository or self.repository
         url = f"{self.endpoint}/rest/repositories/{repo}/size"
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         response = requests.get(url, auth=auth)
         if response.status_code == 200:
             try:
@@ -325,41 +360,54 @@ class GraphDB(RemoteSparqlStore):
             except Exception:
                 raise RuntimeError(f"Error parsing the triple number: {response.text}")
         else:
-            raise RuntimeError(f"Error fetching the triple number: {response.status_code} {response.text}")
+            raise RuntimeError(
+                f"Error fetching the triple number: {response.status_code} {response.text}"
+            )
 
     def restart_repository(self, repository: str = None) -> bool:
         """Restarts a repository in the GraphDB instance."""
         repo = repository or self.repository
         url = f"{self.endpoint}/rest/repositories/{repo}/restart"
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         response = requests.post(url, auth=auth)
         if response.status_code in (200, 204):
             return True
         else:
-            raise RuntimeError(f"Error restarting the repository: {response.status_code} {response.text}")
+            raise RuntimeError(
+                f"Error restarting the repository: {response.status_code} {response.text}"
+            )
 
     def delete_repository(self, repository: str = None) -> bool:
         """Deletes a repository from the GraphDB instance."""
         repo = repository or self.repository
         url = f"{self.endpoint}/rest/repositories/{repo}"
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         response = requests.delete(url, auth=auth)
         if response.status_code in (200, 204):
             return True
         else:
-            raise RuntimeError(f"Error deleting the repository: {response.status_code} {response.text}")
+            raise RuntimeError(
+                f"Error deleting the repository: {response.status_code} {response.text}"
+            )
 
     def _validate_filename(self, *args, **kwargs):
         return True
 
     def register_shacl_shape(
-            self,
-            name: str,
-            *,
-            shacl_source: Union[str, pathlib.Path] = None,
-            shacl_data: Union[str, rdflib.Graph] = None):
+        self,
+        name: str,
+        *,
+        shacl_source: Union[str, pathlib.Path] = None,
+        shacl_data: Union[str, rdflib.Graph] = None,
+    ):
         """Register SHACL shapes for validation."""
-        super().register_shacl_shape(name, shacl_source=shacl_source, shacl_data=shacl_data)
+        super().register_shacl_shape(
+            name, shacl_source=shacl_source, shacl_data=shacl_data
+        )
         if shacl_source is None and shacl_data is None:
             raise ValueError("Either shacl_source or shacl_data must be provided.")
         if shacl_source is not None:
@@ -381,14 +429,18 @@ class GraphDB(RemoteSparqlStore):
             data=shacl_data.encode("utf-8"),
             headers=headers,
             params=params,
-            auth=(self.username, self.password) if self.username and self.password else None
+            auth=(self.username, self.password)
+            if self.username and self.password
+            else None,
         )
         resp.raise_for_status()
 
     def _post_update(self, update):
         url = f"{self.endpoint}/repositories/{self.repository}/statements"
         headers = {"Content-Type": "application/sparql-update"}
-        auth = (self.username, self.password) if self.username and self.password else None
+        auth = (
+            (self.username, self.password) if self.username and self.password else None
+        )
         r = requests.post(
             url,
             data=update.encode("utf-8"),
@@ -397,21 +449,29 @@ class GraphDB(RemoteSparqlStore):
         )
         if not r.ok:
             raise RuntimeError(
-                f"GraphDB SPARQL update failed "
-                f"(status {r.status_code}):\n{r.text}"
+                f"GraphDB SPARQL update failed (status {r.status_code}):\n{r.text}"
             )
+
 
 class InMemoryRDFStore(RDFStore):
     """In-memory RDF database that can upload files and return a combined graph."""
-    __supports_named_graphs__=False
-    __default_expected_file_extensions__ = {".ttl", ".rdf", ".jsonld", ".nt", ".xml", ".n3"}
+
+    __supports_named_graphs__ = False
+    __default_expected_file_extensions__ = {
+        ".ttl",
+        ".rdf",
+        ".jsonld",
+        ".nt",
+        ".xml",
+        ".n3",
+    }
     __populate_on_init__ = True
 
     def __init__(
-            self,
-            data_dir: Union[str, pathlib.Path],
-            recursive_exploration: bool = True,
-            formats: Union[str, List[str], Tuple[str]] = None
+        self,
+        data_dir: Union[str, pathlib.Path],
+        recursive_exploration: bool = True,
+        formats: Union[str, List[str], Tuple[str]] = None,
     ):
         """Initializes the InMemoryRDFStore.
 
@@ -428,7 +488,9 @@ class InMemoryRDFStore(RDFStore):
         if formats is None:
             formats = self.__default_expected_file_extensions__
         elif isinstance(formats, str):
-            formats = {f".{formats.lstrip('.')}", }
+            formats = {
+                f".{formats.lstrip('.')}",
+            }
         elif isinstance(formats, (list, set, tuple)):
             formats = {f".{fmt.lstrip('.')}" for fmt in formats}
         else:
@@ -458,12 +520,18 @@ class InMemoryRDFStore(RDFStore):
         _recursive_exploration = recursive or self._recursive_exploration
         for _ext in self._expected_file_extensions:
             if _recursive_exploration:
-                self._filenames.extend([f.resolve().absolute() for f in self.data_dir.rglob(f"*{_ext}")])
+                self._filenames.extend(
+                    [f.resolve().absolute() for f in self.data_dir.rglob(f"*{_ext}")]
+                )
             else:
-                self._filenames.extend([f.resolve().absolute() for f in self.data_dir.glob(f"*{_ext}")])
+                self._filenames.extend(
+                    [f.resolve().absolute() for f in self.data_dir.glob(f"*{_ext}")]
+                )
         self._filenames = list(set(self._filenames))  # remove duplicates
         for filename in self._filenames:
-            logger.debug(f"Adding file '{filename}' to the RDF store {self.__class__.__name__}.")
+            logger.debug(
+                f"Adding file '{filename}' to the RDF store {self.__class__.__name__}."
+            )
             self._add_to_graph(filename)
         return self
 
@@ -473,10 +541,11 @@ class InMemoryRDFStore(RDFStore):
         return self._filenames
 
     def _upload_file(
-            self,
-            filename: Union[str, pathlib.Path],
-            validate: bool = True,
-            skip_unsupported: bool = False) -> bool:
+        self,
+        filename: Union[str, pathlib.Path],
+        validate: bool = True,
+        skip_unsupported: bool = False,
+    ) -> bool:
         """Uploads a file to the in-memory RDF store.
 
         Parameters
@@ -509,10 +578,7 @@ class InMemoryRDFStore(RDFStore):
         self._add_to_graph(filename)
         return True
 
-    def _upload_triple(
-            self,
-            triple: _TripleType
-    ) -> bool:
+    def _upload_triple(self, triple: _TripleType) -> bool:
         """Uploads a single triple to the in-memory RDF store.
 
         Parameters
@@ -601,24 +667,27 @@ class InMemoryRDFStore(RDFStore):
         elif filename_suffix == ".nt":
             _format = "nt"
         else:
-            raise ValueError(f"File format '{filename_suffix}' not supported for saving.")
+            raise ValueError(
+                f"File format '{filename_suffix}' not supported for saving."
+            )
         self.graph.serialize(destination=str(filename), format=_format)
 
-class AbstractQuery(ABC):
 
+class AbstractQuery(ABC):
     @abstractmethod
     def execute(self, store: "Store") -> "QueryResult":
         """Executes the query."""
 
 
 class QueryResult:
-
-    def __init__(self,
-                 query: AbstractQuery,
-                 data: Any,
-                 bindings: Any = None,
-                 description: Optional[str] = None,
-                 derived_graph: Optional[Graph] = None):
+    def __init__(
+        self,
+        query: AbstractQuery,
+        data: Any,
+        bindings: Any = None,
+        description: Optional[str] = None,
+        derived_graph: Optional[Graph] = None,
+    ):
         self.query = query
         self.data = data
         self.bindings = bindings
@@ -639,7 +708,6 @@ class FederatedQueryResult:
 
 
 class Query(AbstractQuery, ABC):
-
     def __init__(self, query, description=None):
         self.query = query
         self.description = description
@@ -651,7 +719,7 @@ class Query(AbstractQuery, ABC):
 
     def __repr__(self):
         description_repr = self.description or ""
-        return f"{self.__class__.__name__}(query=\"{self.query}\", description=\"{description_repr}\")"
+        return f'{self.__class__.__name__}(query="{self.query}", description="{description_repr}")'
 
 
 class DataStoreQuery(Query, ABC):
@@ -659,8 +727,12 @@ class DataStoreQuery(Query, ABC):
 
 
 class SQLQuery(DataStoreQuery):
-
-    def __init__(self, query: str, description: str = None, filters=None, ):
+    def __init__(
+        self,
+        query: str,
+        description: str = None,
+        filters=None,
+    ):
         super().__init__(query, description)
         self.filters = filters
 
@@ -673,7 +745,11 @@ class HDF5SqlDB(DataStore):
     HDF5SQLDB is a SQL database interface that stores data in HDF5 files.
     """
 
-    def __init__(self, data_dir: Union[str, pathlib.Path], db_path: Union[str, pathlib.Path] = None):
+    def __init__(
+        self,
+        data_dir: Union[str, pathlib.Path],
+        db_path: Union[str, pathlib.Path] = None,
+    ):
         if data_dir is not None and db_path is not None:
             raise ValueError("Specify either data_dir or db_path, not both.")
         if db_path is not None:
@@ -700,7 +776,9 @@ class HDF5SqlDB(DataStore):
     def __repr__(self):
         return f"<{self.__class__.__name__} (Endpoint URL={self._endpointURL})>"
 
-    def _upload_file(self, filename, validate: bool = True, skip_unsupported: bool = False) -> DatabaseResource:
+    def _upload_file(
+        self, filename, validate: bool = True, skip_unsupported: bool = False
+    ) -> DatabaseResource:
         _id = self._insert_hdf5_reference(self._connection, filename)
         return DatabaseResource(_id, metadata=self.generate_mapping_dataset(str(_id)))
 
@@ -732,7 +810,9 @@ class HDF5SqlDB(DataStore):
         return conn
 
     def reset(self):
-        logger.info(f"Resetting the database. Dropping table {self._hdf5_file_table_name}.")
+        logger.info(
+            f"Resetting the database. Dropping table {self._hdf5_file_table_name}."
+        )
         cursor = self._connection.cursor()
         cursor.execute(f"DROP TABLE {self._hdf5_file_table_name}")
         self._initialize_database(self._db_path)
@@ -741,12 +821,15 @@ class HDF5SqlDB(DataStore):
     def _insert_hdf5_reference(cls, conn, filename, metadata=None):
         filename = pathlib.Path(filename).resolve().absolute()
         cursor = conn.cursor()
-        metadata_dump = json.dumps(metadata) or '{}'
+        metadata_dump = json.dumps(metadata) or "{}"
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
             INSERT INTO hdf5_files (file_path, metadata)
             VALUES (?, ?)
-            """, (str(filename), metadata_dump))
+            """,
+                (str(filename), metadata_dump),
+            )
             conn.commit()
             generated_id = cursor.lastrowid
             logger.debug(f"File {filename} inserted successfully.")
@@ -761,7 +844,7 @@ class HDF5SqlDB(DataStore):
 
     def generate_data_service_serving_a_dataset(self, dataset_identifier: str):
         endpoint_url = self._endpointURL
-        endpoint_url_file_name = endpoint_url.rsplit('/', 1)[-1]
+        endpoint_url_file_name = endpoint_url.rsplit("/", 1)[-1]
         dataservice_id = f"{self._sql_base_uri}{endpoint_url_file_name}"
         data_service = dcat.DataService(
             id=dataservice_id,
@@ -775,21 +858,25 @@ class HDF5SqlDB(DataStore):
                     id=f"{self._sql_base_uri}12345",
                     identifier=dataset_identifier,
                     mediaType="application/vnd.sqlite3",
-                )
-            )
+                ),
+            ),
         )
         return data_service
 
     def generate_mapping_dataset(self, dataset_identifier: str):
         data_service = self.generate_data_service_serving_a_dataset(dataset_identifier)
-        return rdflib.Graph().parse(data=data_service.model_dump_jsonld(), format="json-ld")
+        return rdflib.Graph().parse(
+            data=data_service.model_dump_jsonld(), format="json-ld"
+        )
 
 
 class MetadataStoreQuery(Query, ABC):
     """RDF Store Query interface."""
 
     @abstractmethod
-    def execute(self, store: "Store", named_graph: Optional[str]=None) -> "QueryResult":
+    def execute(
+        self, store: "Store", named_graph: Optional[str] = None
+    ) -> "QueryResult":
         """Executes the query against the given metadata store with optional named graph."""
 
 
@@ -827,19 +914,18 @@ class SparqlQuery(MetadataStoreQuery):
                 data=pd.DataFrame(),
                 bindings=bindings,
                 description=self.description,
-                derived_graph=derived_graph
+                derived_graph=derived_graph,
             )
         return QueryResult(
             query=self,
             data=sparql_result_to_df(bindings),
             bindings=bindings,
             description=self.description,
-            derived_graph=derived_graph
+            derived_graph=derived_graph,
         )
 
 
 class RemoteSparqlQuery(MetadataStoreQuery):
-
     def execute(self, store: RemoteSparqlStore, *args, **kwargs) -> QueryResult:
         if not isinstance(store, RemoteSparqlStore):
             raise TypeError("store must be an instance of RemoteSparqlStore.")
@@ -853,11 +939,7 @@ class RemoteSparqlQuery(MetadataStoreQuery):
         except Exception as e:
             logger.debug("Failed to convert SPARQL results to DataFrame: %s", e)
             data = results
-        return QueryResult(
-            query=self,
-            data=data,
-            description=self.description
-        )
+        return QueryResult(query=self, data=data, description=self.description)
 
 
 def _format_shacl_report(turtle_text: str) -> str:
