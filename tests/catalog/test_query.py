@@ -51,6 +51,7 @@ class TestQuery(unittest.TestCase):
     @unittest.skipUnless(get_python_version()[1] in TESTING_VERSIONS,
                          reason=f"Only test on Python {TESTING_VERSIONS}")
     def test_wikidata_query(self):
+        # FIXME: sometimes I have this error: urllib.error.HTTPError: HTTP Error 429: Too Many Requests
         enpoint_url = "https://query.wikidata.org/sparql"
         sparql_wrapper = SPARQLWrapper(enpoint_url)
         sparql_wrapper.setReturnFormat(JSON)

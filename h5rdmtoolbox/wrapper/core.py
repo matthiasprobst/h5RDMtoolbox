@@ -154,6 +154,10 @@ def process_attributes(
 
     curr_cv = convention.get_current_convention()
 
+    # Guard against None convention (can happen during initialization or with ContextVar edge cases)
+    if curr_cv is None:
+        return attrs, {}, kwargs
+
     # go through list of registered standard attributes, and check whether they are in kwargs:
     if meth_name not in curr_cv.methods[cls]:
         return attrs, {}, kwargs
