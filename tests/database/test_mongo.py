@@ -38,7 +38,6 @@ except ServerSelectionTimeoutError:
 
             return mongomock.MongoClient()
     else:
-
         def get_client():
             # When running on newer Pythons without a MongoDB server, skip DB tests.
             raise unittest.SkipTest(

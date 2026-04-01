@@ -20,8 +20,8 @@ Who is it for?
 --------------
 Dependent on your role within a data project, you may be interested in different aspects of the conventions:
 
-- A **data manager** defines, creates and shares standardized attributes in the form of a convention Start [here]() if you are a data manager.
-- A **user** will use the standardized attributes to create or read HDF5 files. Start [here]() if you are a user.
+- A **data manager** defines, creates and shares standardized attributes in the form of a convention. Start :doc:`creating a new convention <creating_a_new_convention>` if you are a data manager.
+- A **user** will use the standardized attributes to create or read HDF5 files. Start :doc:`working with conventions <working_with_conventions>` if you are a user.
 
 The following sketch illustrates the relevance of a convention in the workflow of using HDF5 files: Data managers define
 conventions and share them with the users. The users load and enable the conventions and use them to create HDF5 files.
@@ -72,7 +72,7 @@ python package, e.g. ``pint``), the user should be informed and the dataset shou
 So the example shows, how standardized attributes help by writing consistent metadata to HDF5 files. The user
 even can profit of the standardized attributes when accessing the data. In the example, the return value of
 ``h5['u'].units`` is a ``pint.Unit`` object, which can be used to check compatibility with other units, for
-instance. More useful examples are outlined in the [practical example section]().
+instance. More useful examples are outlined in the :doc:`practical examples section </practical_examples/index>`.
 
 
 We can make ``StandardAttribute`` objects mandatory or optional. If they are mandatory, the user has to provide
@@ -83,8 +83,9 @@ Note, a ``Convention`` can be designed and therefore stored in a YAML or JSON fi
 
 The following sections will provide detailed examples on how to use and construct conventions. Depending on your role
 within a data project, you may be interested in different aspects of the conventions:
-- Usage: Start [here]() if you are a user.
-- Creation: Start [here]() if you are a data manager.
+
+- Usage: Start :doc:`working with conventions <working_with_conventions>` if you are a user.
+- Creation: Start :doc:`creating a new convention <creating_a_new_convention>` if you are a data manager.
 
 
 .. toctree::

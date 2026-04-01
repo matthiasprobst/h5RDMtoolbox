@@ -28,5 +28,5 @@ Glossary
         title, description, type of data, but not for the content of the data (see database).
 
     database
-        A database hosts data and allows to query the content of the data. Examples for databases in the context
-        ofHDF5 is mongoDB.
+        A database hosts data and allows querying of the data content. Examples for databases in the context
+        of HDF5 is MongoDB. Databases allow complex queries that would be slow or impossible on the raw HDF5 files.
