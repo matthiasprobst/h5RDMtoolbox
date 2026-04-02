@@ -285,17 +285,29 @@ class TestFile(unittest.TestCase):
             sub_grp.create_dataset("sub_grp_ds", shape=(2, 40, 3))
             tree = h5.get_tree_structure()
 
-            # TODO: there is a branch with improved tree structure code. however, the monogoDB scripts depend on it and nee to be changed accordingly first!
+            self.assertIn("/", tree)
+            self.assertEqual(tree["/"], {"one": 1, "two": 2})
+            self.assertIn("grp", tree)
+            self.assertIn("root_ds", tree)
+            self.assertNotIn("sub_grp", tree)
+            self.assertNotIn("sub_grp", tree["/"])
 
-            # self.assertTrue('/' in tree)
-            # self.assertTrue('grp' in tree)
-            # self.assertTrue('root_ds' in tree)
+            self.assertIn("/", tree["grp"])
+            self.assertEqual(tree["grp"]["/"], {"description": "group description"})
+            self.assertIn("sub_grp", tree["grp"])
+            self.assertIn("grp_ds", tree["grp"])
 
-            # self.assertFalse('sub_grp' in tree)
-            # self.assertFalse('sub_grp' in tree['/'])
-            #
-            # self.assertTrue('sub_grp' in tree['grp'])
-            # self.assertTrue('sub_grp' in tree['grp'])
+            self.assertIn("/", tree["grp"]["sub_grp"])
+            self.assertEqual(
+                tree["grp"]["sub_grp"]["/"], {"description": "sub group description"}
+            )
+            self.assertIn("sub_grp_ds", tree["grp"]["sub_grp"])
+
+            self.assertEqual(tree["root_ds"], {"shape": (2, 40, 3), "ndim": 3})
+            self.assertEqual(tree["grp"]["grp_ds"], {"shape": (2, 40, 3), "ndim": 3})
+            self.assertEqual(
+                tree["grp"]["sub_grp"]["sub_grp_ds"], {"shape": (2, 40, 3), "ndim": 3}
+            )
 
     def test_dimension_scales(self):
         with File(mode="w") as h5:

@@ -498,27 +498,36 @@ class Group(h5py.Group):
         )
         return rdf.RDFManager(self.attrs)
 
-    # @property
-    # def attrsdef(self) -> definition.DefinitionManager:
-    #     """Return DefinitionManager"""
-    #     return definition.DefinitionManager(self.attrs)
 
-    def get_tree_structure(self, recursive=True, ignore_attrs: List[str] = None):
-        """Return the tree (attributes, names, shapes) of the group and subgroups"""
+    def get_tree_structure(
+        self, recursive=True, ignore_attrs: List[str] = None
+    ) -> Dict:
+        """Return the tree (attributes, names, shapes) of the group and subgroups.
+
+        The structure uses '/' as the key for root attributes, with child groups and
+        datasets as sibling keys at the same level.
+
+        Returns
+        -------
+        Dict
+            Dictionary with '/' containing root attributes, and other keys for
+            groups/datasets. Groups contain nested dictionaries with the same structure.
+        """
         if ignore_attrs is None:
             ignore_attrs = H5PY_SPECIAL_ATTRIBUTES
-        tree = dict(self.attrs.items())
+        tree: Dict = {"/": {}}
+        for ak, av in self.attrs.items():
+            if ak not in H5_DIM_ATTRS and ak not in ignore_attrs:
+                tree["/"][ak] = av
         for k, v in self.items():
             if isinstance(v, h5py.Dataset):
-                ds_dict = {"shape": v.shape, "ndim": v.ndim}
+                ds_dict: Dict = {"shape": v.shape, "ndim": v.ndim}
                 for ak, av in v.attrs.items():
-                    if ak not in H5_DIM_ATTRS:
-                        if ak not in ignore_attrs:
-                            ds_dict[ak] = av
+                    if ak not in H5_DIM_ATTRS and ak not in ignore_attrs:
+                        ds_dict[ak] = av
                 tree[k] = ds_dict
-            else:
-                if recursive:
-                    tree[k] = v.get_tree_structure(recursive)
+            elif isinstance(v, h5py.Group) and recursive:
+                tree[k] = v.get_tree_structure(recursive, ignore_attrs)
         return tree
 
     def create_group(
