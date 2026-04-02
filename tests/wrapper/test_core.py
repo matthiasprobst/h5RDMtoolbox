@@ -57,14 +57,14 @@ class TestCore(unittest.TestCase):
             hdf:member [ a hdf:Group,
                         schema:SoftwareSourceCode ;
                     hdf:attribute [ a hdf:StringAttribute ;
-                            hdf:data "2.7.3" ;
+                            hdf:data "2.7.4" ;
                             hdf:name "__h5rdmtoolbox_version__" ],
                         [ a hdf:StringAttribute ;
                             hdf:data "https://github.com/matthiasprobst/h5RDMtoolbox" ;
                             hdf:name "code_repository" ] ;
                     hdf:name "/h5rdmtoolbox" ;
                     schema:codeRepository <https://github.com/matthiasprobst/h5RDMtoolbox> ;
-                    schema:softwareVersion "2.7.3" ] ;
+                    schema:softwareVersion "2.7.4" ] ;
             hdf:name "/" ] .
 
 """,
