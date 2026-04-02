@@ -2,7 +2,6 @@
 
 import logging
 import pathlib
-import warnings
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict
 
@@ -294,6 +293,32 @@ def serialize(hdf_filename,
                             contextual=contextual,
                             file_uri=file_uri,
                             rdf_mappings=rdf_mappings)
+
+
+def sparql(
+        hdf_filename: Union[str, pathlib.Path],
+        query: str,
+        structural: bool = True,
+        contextual: bool = True,
+        skipND: int = 1,
+        file_uri: Optional[Union[str, Dict[str, str]]] = None,
+        rdf_mappings: Dict[str, RDFMappingEntry] = None,
+        as_dataframe: bool = False,
+        **kwargs
+) -> rdflib.query.Result:
+    """Run a SPARQL query on the HDF5 file content. Returns a rdflib.query.Result object."""
+    from .ld import sparql
+    return sparql(
+        source=hdf_filename,
+        query=query,
+        structural=structural,
+        contextual=contextual,
+        skipND=skipND,
+        file_uri=file_uri,
+        rdf_mappings=rdf_mappings,
+        as_dataframe=as_dataframe,
+        **kwargs
+    )
 
 
 def build_pyvis_graph(hdf_filename, output_filename="kg-graph.html", notebook=False,

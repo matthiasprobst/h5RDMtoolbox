@@ -8,7 +8,7 @@ to improve the reusability and interoperability of data.
 
 Background/Motivation
 ---------------------
-HDF5 file are very popular due to their hierarchical structure and the possibility to store
+HDF5 files are very popular due to their hierarchical structure and the possibility to store
 large amounts of data and, more importantly, metadata together with data. **However, the management of
 the key-value pairs (HDF attributes) are not standardized, and their correctness is left to the user**.
 

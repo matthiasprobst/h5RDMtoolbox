@@ -2732,6 +2732,13 @@ class File(h5py.File, Group):
             **kwargs,
         )
 
+    def sparql(self,
+               query,
+               **kwargs):
+        """Run a SPARQL query on the RDF graph of the file."""
+        from ..ld.sparql import sparql
+        return sparql(self, query, **kwargs)
+
     def moveto(self, destination: Path, overwrite: bool = False) -> Path:
         """Move the opened file to a new destination.
 

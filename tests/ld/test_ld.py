@@ -1039,3 +1039,54 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
             m4i:hasNumericalValue "2.3"^^xsd:float ] .
 
 """)
+
+    def test_sparql(self):
+        M4I = rdflib.Namespace("http://w3id.org/nfdi4ing/metadata4ing#")
+
+        hdf_filename = pathlib.Path("linked_data_example.h5")
+        with h5tbx.File(hdf_filename, "w") as h5:
+            ds = h5.create_dataset("temperature", data=np.array([20.0, 21.0, 19.0, 22.0]))
+
+            ds.attrs["units"] = h5tbx.Attribute(
+                value="degree_Celsius",
+                rdf_predicate=M4I.hasUnit,
+                rdf_object="http://qudt.org/vocab/unit/DEG_C",
+            )
+            ds.attrs["description", "https://schema.org/description"] = "Room temperature measurements"
+
+            ds_mean = h5.create_dataset("mean_temperature", data=np.mean(ds[()]))
+            ds_mean.attrs["units", M4I.hasUnit] = "degree_Celsius"
+            ds_mean.rdf["units"].object = "http://qudt.org/vocab/unit/DEG_C"
+            ds_mean.attrs["description", "https://schema.org/description"] = "Mean room temperature"
+
+            ds_mean.rdf.type = M4I.NumericalVariable
+            ds_mean.rdf.data_predicate = M4I.hasNumericalValue
+
+        query = """
+        PREFIX schema: <https://schema.org/>
+
+        SELECT ?resource ?description
+        WHERE {
+            ?resource schema:description ?description .
+        }
+        """
+
+        res = h5tbx.sparql(
+            h5.hdf_filename,
+            query
+        )
+        self.assertEqual(
+            len(res),
+            2
+        )
+
+        with h5tbx.File(hdf_filename, "r") as h5:
+            res = h5.sparql(
+                query
+            )
+
+            self.assertEqual(
+                len(res),
+                2
+            )
+        hdf_filename.unlink(missing_ok=True)
