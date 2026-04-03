@@ -25,6 +25,7 @@ from h5rdmtoolbox.wrapper.core import File
 
 
 class TestFile(unittest.TestCase):
+
     def setUp(self) -> None:
         """setup"""
         use(None)
@@ -51,6 +52,11 @@ class TestFile(unittest.TestCase):
             if fname.suffix not in ("py", ".py", ".yaml"):
                 if fname.is_file():
                     fname.unlink()
+
+    def test_file_type(self):
+        with File() as h5:
+            self.assertIsInstance(h5, File)
+            self.assertIsInstance(h5, h5py.File)
 
     def test_filename(self):
         with h5tbx.File() as h5:
@@ -488,6 +494,10 @@ class TestFile(unittest.TestCase):
             x = h5["x"][:]
             ix = h5["ix"][:]
             s = h5["signal"][:, :]
+            self.assertEqual(s.ndim, 2)
+            self.assertEqual(s.shape, (3, 3))
+            self.assertEqual(x.values.tolist(), [0.0, 10.5, 20.13])
+            self.assertEqual(ix.values.tolist(), [0, 16, 32])
 
     def test_init_with_file_object(self):
         """Test File initialization with file-like object (BytesIO).

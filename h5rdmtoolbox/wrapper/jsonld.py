@@ -17,8 +17,8 @@ from rdflib.plugins.shared.jsonld.context import Context
 
 from h5rdmtoolbox.convention import ontology as hdf_ontology
 from h5rdmtoolbox.convention.ontology.hdf_datatypes import get_datatype
-from .core import Dataset, File
 from h5rdmtoolbox.ld.rdf import RDF_TYPE_ATTR_NAME
+from .core import Dataset, File
 # from ..convention.ontology.h5ontocls import Datatype
 from ..protocols import H5TbxGroup
 
@@ -79,6 +79,21 @@ def _build_bnode(simple, blank_node_iri_base: str):
     return rdflib.BNode(value=f'N{next(_bnode_counter)}') if simple else rdflib.BNode()
 
 
+def _to_native(value):
+    """Convert NumPy scalars/arrays to plain Python values."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return [_to_native(item) for item in value.tolist()]
+    if isinstance(value, list):
+        return [_to_native(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_to_native(item) for item in value)
+    if isinstance(value, dict):
+        return {key: _to_native(item) for key, item in value.items()}
+    return value
+
+
 def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool, blank_node_iri_base: Optional[str]) -> BNode:
     """Build an RDF List from a list of data"""
     # Create an RDF List for flag values
@@ -94,12 +109,15 @@ def build_node_list(g: Graph, data: List, use_simple_bnode_value: bool, blank_no
 
     # Add flag values to the RDF List
     for i in range(0, n):
-        if isinstance(data[i], int):
-            flag_node = rdflib.Literal(int(data[i]), datatype=XSD.integer)
-        elif isinstance(data[i], str):
-            flag_node = rdflib.Literal(str(data[i]))
-        elif isinstance(data[i], float):
-            flag_node = rdflib.Literal(float(data[i]), datatype=XSD.float)
+        value = _to_native(data[i])
+        if isinstance(value, bool):
+            flag_node = rdflib.Literal(value, datatype=XSD.boolean)
+        elif isinstance(value, int):
+            flag_node = rdflib.Literal(int(value), datatype=XSD.integer)
+        elif isinstance(value, str):
+            flag_node = rdflib.Literal(str(value))
+        elif isinstance(value, float):
+            flag_node = rdflib.Literal(float(value), datatype=XSD.float)
         else:
             raise TypeError(f'Unsupported type: {type(data[i])}')
 
@@ -717,12 +735,13 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                         dimension_index_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
                         _add_node(g, (dimension_index_node, RDF.type, HDF5.DataspaceDimension))
                         _add_node(g, (chunk_dimension_node, HDF5.dimension, dimension_index_node))
-                        _add_node(g, (dimension_index_node, HDF5.size, rdflib.Literal(chunk, datatype=XSD.integer)))
+                        _add_node(g, (dimension_index_node, HDF5.size,
+                                      rdflib.Literal(int(chunk), datatype=XSD.integer)))
                         _add_node(g, (dimension_index_node, HDF5.dimensionIndex,
-                                      rdflib.Literal(ichunk, datatype=XSD.integer)))
+                                      rdflib.Literal(int(ichunk), datatype=XSD.integer)))
 
-                _add_node(g, (obj_node, HDF5.rank, rdflib.Literal(obj.ndim, datatype=XSD.integer)))
-                _add_node(g, (obj_node, HDF5.size, rdflib.Literal(obj.size, datatype=XSD.integer)))
+                _add_node(g, (obj_node, HDF5.rank, rdflib.Literal(int(obj.ndim), datatype=XSD.integer)))
+                _add_node(g, (obj_node, HDF5.size, rdflib.Literal(int(obj.size), datatype=XSD.integer)))
 
                 if obj.ndim > 0:
                     dataspace_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
@@ -731,9 +750,10 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                         dataspace_dimension_node = _build_bnode(use_simple_bnode_value, blank_node_iri_base)
                         _add_node(g, (dataspace_dimension_node, RDF.type, HDF5.DataspaceDimension))
                         _add_node(g, (dataspace_node, HDF5.dimension, dataspace_dimension_node))
-                        _add_node(g, (dataspace_dimension_node, HDF5.size, rdflib.Literal(dim, datatype=XSD.integer)))
+                        _add_node(g, (dataspace_dimension_node, HDF5.size,
+                                      rdflib.Literal(int(dim), datatype=XSD.integer)))
                         _add_node(g, (dataspace_dimension_node, HDF5.dimensionIndex,
-                                      rdflib.Literal(idim, datatype=XSD.integer)))
+                                      rdflib.Literal(int(idim), datatype=XSD.integer)))
                 else:
                     dataspace_node = HDF5.scalarDataspace
                     _add_node(g, (dataspace_node, RDF.type, HDF5.scalarDataspace))
@@ -754,9 +774,9 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
                 if _ndim < skipND:
                     if _ndim > 0:
-                        _add_node(g, (obj_node, HDF5.value, rdflib.Literal(obj.values[()].tolist())))
+                        _add_node(g, (obj_node, HDF5.value, rdflib.Literal(_to_native(obj.values[()].tolist()))))
                     else:
-                        _add_node(g, (obj_node, HDF5.value, rdflib.Literal(obj.values[()])))
+                        _add_node(g, (obj_node, HDF5.value, rdflib.Literal(_to_native(obj.values[()]))))
 
             h5_rdf_type = obj.attrs.get(RDF_TYPE_ATTR_NAME, None)
             if h5_rdf_type:
@@ -779,9 +799,9 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
             if structural:  # add hdf type and name nodes
                 if isinstance(av, str):
                     _add_node(g, (attr_node, RDF.type, HDF5.StringAttribute))
-                elif isinstance(av, int):
+                elif isinstance(av, (int, np.integer)):
                     _add_node(g, (attr_node, RDF.type, HDF5.IntegerAttribute))
-                elif isinstance(av, float):
+                elif isinstance(av, (float, np.floating)):
                     _add_node(g, (attr_node, RDF.type, HDF5.FloatAttribute))
                 else:
                     _add_node(g, (attr_node, RDF.type, HDF5.Attribute))
@@ -819,7 +839,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 attr_literal = rdflib.Literal(av.name)
             else:
                 try:
-                    attr_literal = rdflib.Literal(json.dumps(av))
+                    attr_literal = rdflib.Literal(json.dumps(_to_native(av)))
                 except TypeError as e:
                     logger.debug(f'Could not serialize {av} to JSON. Will apply str(). Error: {e}')
                     attr_literal = rdflib.Literal(str(av))
@@ -884,7 +904,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                         else:
                             _k_pred = resolve_iri(_k, context=attr_context)
                             if _k_pred:
-                                _add_node(g, (_sub_obj_node, rdflib.URIRef(_k_pred), rdflib.Literal(_v)))
+                                _add_node(g, (_sub_obj_node, rdflib.URIRef(_k_pred), rdflib.Literal(_to_native(_v))))
 
                     for k, v in _val.items():
                         if isinstance(v, list):
@@ -895,7 +915,8 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
 
                 _attr_context: Optional[dict] = attr_object.pop('@context', None)
                 attr_context: Context = Context(source=_attr_context)
-                _context.update(_attr_context)
+                if _attr_context:
+                    _context.update(_attr_context)
 
                 _create_obj_node(obj_node, predicate_uri, attr_object)
 
@@ -910,7 +931,7 @@ def get_rdflib_graph(source: Union[str, pathlib.Path, h5py.File],
                 if attr_object:
                     _add_node(g, (attr_node, HDF5.value, rdflib.URIRef(attr_object)))
                 if isinstance(attr_object, str) and attr_object.startswith("http"):
-                    _add_node(g, (rdflib.URIRef(attr_object), SKOS.prefLabel, rdflib.Literal(av)))
+                    _add_node(g, (rdflib.URIRef(attr_object), SKOS.prefLabel, rdflib.Literal(_to_native(av))))
                 if list_node:
                     _add_node(g, (attr_node, HDF5.value, list_node))
 
@@ -1026,7 +1047,7 @@ def dumps(grp,
           skipND: Optional[int] = None,
           **kwargs) -> str:
     """Dump a group or a dataset to string."""
-    return json.dumps(dumpd(
+    dd = dumpd(
         grp=grp,
         iri_only=iri_only,
         recursive=recursive,
@@ -1035,9 +1056,9 @@ def dumps(grp,
         blank_node_iri_base=blank_node_iri_base,
         structural=structural,
         resolve_keys=resolve_keys,
-        skipND=skipND),
-        **kwargs
+        skipND=skipND
     )
+    return json.dumps(dd, **kwargs)
 
 
 h5dumps = dumps  # alias, use this in future

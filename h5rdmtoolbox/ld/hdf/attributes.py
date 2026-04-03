@@ -24,12 +24,12 @@ def process_attribute(*, name, value, graph, parent, parent_uri, blank_node_iri_
         if isinstance(value, bytes):
             value = value.decode('utf-8', errors='ignore')
         graph.add((attr_uri, HDF.data, to_literal(value)))
-    elif isinstance(value, int):
+    elif isinstance(value, (int, np.integer)):
         graph.add((attr_uri, RDF.type, HDF5.IntegerAttribute))
-        graph.add((attr_uri, HDF.data, Literal(value, datatype=XSD.integer)))
-    elif isinstance(value, float):
+        graph.add((attr_uri, HDF.data, Literal(int(value), datatype=XSD.integer)))
+    elif isinstance(value, (float, np.floating)):
         graph.add((attr_uri, RDF.type, HDF5.FloatAttribute))
-        graph.add((attr_uri, HDF.data, Literal(value, datatype=XSD.float)))
+        graph.add((attr_uri, HDF.data, Literal(float(value), datatype=XSD.float)))
     elif isinstance(value, np.ndarray):
         if value.ndim == 1:
             for v in value:

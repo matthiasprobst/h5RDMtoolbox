@@ -947,6 +947,7 @@ WHERE {
             file_uri="https://example.org#"
         )
         print(ttl)
+        native_int_datatype = f"H5T_INTEL_I{np.dtype(np.int_).itemsize * 8}"
         self.assertEqual("""@prefix hdf: <http://purl.allotrope.org/ontologies/hdf5/1.8#> .
 @prefix m4i: <http://w3id.org/nfdi4ing/metadata4ing#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
@@ -1001,7 +1002,7 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
     hdf:dimensionIndex 0 ;
     hdf:size 3 .
 
-""".replace("tmp0.hdf", _filename.name), ttl)
+""".replace("tmp0.hdf", _filename.name).replace("H5T_INTEL_I64", native_int_datatype), ttl)
         _filename.unlink(missing_ok=True)
 
     def test_quote(self):

@@ -9,13 +9,22 @@ from ontolutils import SCHEMA
 from ontolutils.classes.thing import is_url
 from rdflib import RDF, DCTERMS, XSD, URIRef, Literal, Graph, BNode
 
-from h5rdmtoolbox.ld.utils import get_attr_dtype_as_xsd, get_obj_bnode, to_literal
+from h5rdmtoolbox.ld.utils import get_obj_bnode, to_literal
 from .utils import to_uriref
 from ..rdf import FileRDFManager, RDFManager
 
 # FALLBACK_PREDICATE = SCHEMA.additionalProperty
 FALLBACK_PREDICATE_FOR_LITERAL_OBJECTS = RDF.value
 FALLBACK_PREDICATE_FOR_IRI_OBJECTS = DCTERMS.relation
+
+
+def _json_default(value):
+    """JSON serializer helper that normalizes NumPy objects."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
 def _is_date_str(value: str):
@@ -78,7 +87,8 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef
 
                     elif isinstance(ruo, dict):
                         try:
-                            obj_graph = Graph().parse(data=json.loads(json.dumps(ruo)), format="json-ld")
+                            obj_graph = Graph().parse(data=json.loads(json.dumps(ruo, default=_json_default)),
+                                                      format="json-ld")
                             # relate the obj_graph with the predicate:
                             _subjects = set(obj_graph.subjects())
                             if len(_subjects) != 1:
@@ -94,7 +104,7 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef
 
             elif isinstance(rdf_user_object, dict):
                 try:
-                    jsonld_dict = json.loads(json.dumps(rdf_user_object))
+                    jsonld_dict = json.loads(json.dumps(rdf_user_object, default=_json_default))
                     obj_graph = Graph().parse(data=jsonld_dict,
                                               format="json-ld")
 
@@ -146,7 +156,7 @@ def process_file_attribute(parent_obj, name, data, graph, file_uri: Union[URIRef
                 graph.add(
                     (file_uri,
                      to_uriref(rdf_user_predicate, blank_node_iri_base),
-                     Literal(data, datatype=get_attr_dtype_as_xsd(data)))
+                     to_literal(data))
                 )
     return graph
 
@@ -192,7 +202,7 @@ def process_attribute(parent_obj, name, data, graph, blank_node_iri_base):
             else:
                 if isinstance(_rdf_user_object, dict):
                     try:
-                        jsonld_dict = json.loads(json.dumps(_rdf_user_object))
+                        jsonld_dict = json.loads(json.dumps(_rdf_user_object, default=_json_default))
                         obj_graph = Graph().parse(data=jsonld_dict,
                                                   format="json-ld")
 

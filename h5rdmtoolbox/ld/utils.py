@@ -5,9 +5,26 @@ from typing import Optional
 from typing import Union
 
 import h5py
+import numpy as np
 import rdflib
 from rdflib import Literal
 from rdflib.namespace import XSD
+
+
+def _to_python_value(value):
+    """Convert NumPy types to plain Python equivalents."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return [_to_python_value(item) for item in value.tolist()]
+    if isinstance(value, list):
+        return [_to_python_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_to_python_value(item) for item in value)
+    if isinstance(value, dict):
+        return {key: _to_python_value(item) for key, item in value.items()}
+    return value
+
 
 def to_literal(value, *, binary_as_string=None, encoding="utf-8") -> Literal:
     """
@@ -20,6 +37,7 @@ def to_literal(value, *, binary_as_string=None, encoding="utf-8") -> Literal:
     if binary_as_string is None:
         from . import BINARY_AS_STRING
         binary_as_string = BINARY_AS_STRING
+    value = _to_python_value(value)
     if isinstance(value, bytes):
         if binary_as_string:
             return Literal(value.decode(encoding))
@@ -38,6 +56,7 @@ def get_attr_dtype_as_xsd(data):
     Return None if the datatype is not recognized or is string.
     Returns None for strings, because they are the default and do not need a datatype.
     """
+    data = _to_python_value(data)
     if isinstance(data, str):
         return None
     if isinstance(data, int):

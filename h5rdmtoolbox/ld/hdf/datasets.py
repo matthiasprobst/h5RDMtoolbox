@@ -36,7 +36,7 @@ def add_filter(dataset: h5py.Dataset, dataset_uri, graph, blank_node_iri_base) -
             graph.add((filter_uri, RDF.type, filter_type))
             if filter_type == HDF5.FilterDeflate:
                 graph.add(
-                    (filter_uri, HDF5.deflateLevel, rdflib.Literal(dataset.compression_opts, datatype=XSD.integer))
+                    (filter_uri, HDF5.deflateLevel, rdflib.Literal(int(dataset.compression_opts), datatype=XSD.integer))
                 )
         else:
             graph.add((filter_uri, RDF.type, HDF5.Filter))
@@ -64,8 +64,8 @@ def process_dataset(
 
     graph.add((dataset_uri, HDF5.name,
                rdflib.Literal(dataset.name)))  # untyped simple literals are xsd:string by default, no need to specify
-    graph.add((dataset_uri, HDF5.rank, rdflib.Literal(dataset.ndim, datatype=XSD.integer)))
-    graph.add((dataset_uri, HDF5.size, rdflib.Literal(dataset.size, datatype=XSD.integer)))
+    graph.add((dataset_uri, HDF5.rank, rdflib.Literal(int(dataset.ndim), datatype=XSD.integer)))
+    graph.add((dataset_uri, HDF5.size, rdflib.Literal(int(dataset.size), datatype=XSD.integer)))
 
     if dataset.maxshape:
         if all(dataset.maxshape):
@@ -118,8 +118,8 @@ def process_dataset(
             )
             graph.add((dimension_index_uri, RDF.type, HDF5.DataspaceDimension))
             graph.add((chunk_dimension_uri, HDF5.dimension, dimension_index_uri))
-            graph.add((dimension_index_uri, HDF5.size, rdflib.Literal(chunk, datatype=XSD.integer)))
-            graph.add((dimension_index_uri, HDF5.dimensionIndex, rdflib.Literal(ichunk, datatype=XSD.integer)))
+            graph.add((dimension_index_uri, HDF5.size, rdflib.Literal(int(chunk), datatype=XSD.integer)))
+            graph.add((dimension_index_uri, HDF5.dimensionIndex, rdflib.Literal(int(ichunk), datatype=XSD.integer)))
 
     dataspace_uri = get_property_node(
         obj=dataset, name='dataspace', blank_node_iri_base=blank_node_iri_base
@@ -134,8 +134,8 @@ def process_dataset(
             )
             graph.add((dataspace_dimension_node, RDF.type, HDF5.DataspaceDimension))
             graph.add((dataspace_uri, HDF5.dimension, dataspace_dimension_node))
-            graph.add((dataspace_dimension_node, HDF5.size, rdflib.Literal(dim, datatype=XSD.integer)))
-            graph.add((dataspace_dimension_node, HDF5.dimensionIndex, rdflib.Literal(idim, datatype=XSD.integer)))
+            graph.add((dataspace_dimension_node, HDF5.size, rdflib.Literal(int(dim), datatype=XSD.integer)))
+            graph.add((dataspace_dimension_node, HDF5.dimensionIndex, rdflib.Literal(int(idim), datatype=XSD.integer)))
 
         if skipND and dataset.ndim < skipND:
             data = dataset[()].tolist()
@@ -151,6 +151,8 @@ def process_dataset(
             if is_string_dataset:
                 graph.add((dataset_uri, HDF5.value, rdflib.Literal(data.decode())))
             else:
+                if isinstance(data, np.generic):
+                    data = data.item()
                 graph.add((dataset_uri, HDF5.value, rdflib.Literal(data)))
 
     graph.add((dataset_uri, HDF5.dataspace, dataspace_uri))
