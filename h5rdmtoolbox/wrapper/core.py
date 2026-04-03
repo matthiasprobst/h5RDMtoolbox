@@ -265,6 +265,55 @@ def _delattr(obj: protocols.H5TbxHLObject, item: str):
     # super().__delattr__(item)
 
 
+def _validate_jsonld_file_uri(file_uri: Optional[str]) -> None:
+    if file_uri is not None and not file_uri.endswith("#"):
+        raise ValueError(
+            "The base URI for semantic metadata describing HDF5 internals must end with '#' to indicate that "
+            "fragment identifiers (e.g., '#entry/data') refer to conceptual parts of the file. Without the '#', "
+            "it would incorrectly suggest that internal components are resolvable sub-resources on the web."
+        )
+
+
+def _warn_on_missing_file_uri(file_uri: Optional[Union[str, Dict]]) -> None:
+    if file_uri is None:
+        warnings.warn(
+            "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
+            category=UserWarning,
+        )
+
+
+def _normalize_file_uri_and_prefix(
+    file_uri: Optional[Union[str, Dict]],
+) -> Tuple[Optional[Union[str, Dict]], Optional[str]]:
+    if not isinstance(file_uri, Dict):
+        return file_uri, None
+
+    if len(file_uri) != 1:
+        raise ValueError(
+            "If file_uri is a dict, it must contain exactly one key-value pair."
+        )
+
+    prefix, normalized_file_uri = next(iter(file_uri.items()))
+    return normalized_file_uri, prefix
+
+
+def _serialize_ld_graph(
+    graph: rdflib.Graph,
+    fmt: str,
+    indent: int,
+    context: Optional[Dict],
+) -> str:
+    from h5rdmtoolbox.ld.utils import optimize_context
+
+    optimized_context = optimize_context(graph, context or {})
+    return graph.serialize(
+        format=fmt,
+        indent=indent,
+        auto_compact=True,
+        context=optimized_context,
+    )
+
+
 class Group(h5py.Group):
     """Inherited Group of the package h5py. Adds some useful methods on top
     of the underlying *h5py* package.
@@ -2855,13 +2904,7 @@ class File(h5py.File, Group):
         file_uri: Optional[str] = None,
     ) -> str:
         """Dump the file content as JSON-LD string"""
-        if file_uri is not None:
-            if not file_uri.endswith("#"):
-                raise ValueError(
-                    "The base URI for semantic metadata describing HDF5 internals must end with '#' to indicate that "
-                    "fragment identifiers (e.g., '#entry/data') refer to conceptual parts of the file. Without the '#', "
-                    "it would incorrectly suggest that internal components are resolvable sub-resources on the web."
-                )
+        _validate_jsonld_file_uri(file_uri)
 
         return self.serialize(
             fmt="json-ld",
@@ -2885,24 +2928,10 @@ class File(h5py.File, Group):
         rdf_mappings: Dict[str, RDFMappingEntry] = None,
     ):
         """Serialize the file content to a specific format"""
-        from h5rdmtoolbox.ld.utils import optimize_context
         from h5rdmtoolbox.ld import get_ld
 
-        if file_uri is None:
-            warnings.warn(
-                "Not providing a file-uri is not good practice because it will generate blank nodes. Consider providing an URI such as the DOI URL for example.",
-                category=UserWarning,
-            )
-
-        if isinstance(file_uri, Dict):
-            if not len(file_uri.keys()) == 1:
-                raise ValueError(
-                    "If file_uri is a dict, it must contain exactly one key-value pair."
-                )
-            prefix = list(file_uri.keys())[0]
-            file_uri = list(file_uri.values())[0]
-        else:
-            prefix = None
+        _warn_on_missing_file_uri(file_uri)
+        file_uri, prefix = _normalize_file_uri_and_prefix(file_uri)
 
         graph = get_ld(
             self.hdf_filename,
@@ -2913,13 +2942,9 @@ class File(h5py.File, Group):
             context=context,
             rdf_mappings=rdf_mappings,
         )
-        if prefix:
+        if prefix is not None:
             graph.bind(prefix, file_uri)
-        context = context or {}
-        context = optimize_context(graph, context)
-        return graph.serialize(
-            format=fmt, indent=indent, auto_compact=True, context=context
-        )
+        return _serialize_ld_graph(graph, fmt=fmt, indent=indent, context=context)
 
 
 Dataset._h5grp = Group

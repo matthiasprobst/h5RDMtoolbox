@@ -135,13 +135,24 @@ def get_ld(
         context: Optional[Dict] = None
 ) -> rdflib.Graph:
     """Return the HDF file content as a rdflib.Graph object."""
-    from h5rdmtoolbox.ld import get_ld
-    return get_ld(hdf_filename,
-                  structural=structural,
-                  contextual=contextual,
-                  skipND=skipND,
-                  file_uri=file_uri,
-                  context=context)
+    from . import ld
+    return ld.get_ld(
+        hdf_filename,
+        structural=structural,
+        contextual=contextual,
+        skipND=skipND,
+        file_uri=file_uri,
+        context=context,
+    )
+
+
+def _optimize_ld_context(graph: rdflib.Graph, context: Optional[Dict]) -> Dict:
+    from .ld import optimize_context
+    return optimize_context(graph, context or {})
+
+
+def _resolve_serialize_format(fmt: str, kwargs: Dict) -> str:
+    return kwargs.pop("format", fmt)
 
 
 def dump_jsonld(
@@ -154,19 +165,16 @@ def dump_jsonld(
         file_uri: Optional[str] = None
 ):
     """Return the file content as a JSON-LD string."""
-    from .ld import optimize_context
-    context = context or {}
     graph = get_ld(hdf_filename,
                    structural=structural,
                    contextual=contextual,
                    file_uri=file_uri,
                    skipND=skipND)
-    context = optimize_context(graph, context)
     return graph.serialize(
         format="json-ld",
         indent=indent,
         auto_compact=True,
-        context=context
+        context=_optimize_ld_context(graph, context)
     )
 
 
@@ -285,7 +293,7 @@ def serialize(hdf_filename,
               rdf_mappings: Dict[str, RDFMappingEntry] = None,
               **kwargs):
     """Alternative to json-ld but allows multiple serialization options"""
-    fmt = kwargs.pop("format", fmt)
+    fmt = _resolve_serialize_format(fmt, kwargs)
     with File(hdf_filename) as h5:
         return h5.serialize(fmt=fmt,
                             skipND=skipND,
