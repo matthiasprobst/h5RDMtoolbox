@@ -315,6 +315,26 @@ class TestFile(unittest.TestCase):
                 tree["grp"]["sub_grp"]["sub_grp_ds"], {"shape": (2, 40, 3), "ndim": 3}
             )
 
+    def test_iteration_yields_wrapped_objects(self):
+        with File() as h5:
+            grp = h5.create_group("grp")
+            grp.create_dataset("ds", data=[1, 2, 3])
+
+            root_items = dict(h5.items())
+            self.assertTrue(hasattr(root_items["grp"], "rdf"))
+
+            root_values = list(h5.values())
+            self.assertTrue(hasattr(root_values[0], "rdf"))
+
+            visited = {}
+
+            def _collector(name, obj):
+                visited[name] = obj
+
+            h5.visititems(_collector)
+            self.assertTrue(hasattr(visited["grp"], "rdf"))
+            self.assertTrue(hasattr(visited["grp/ds"], "rdf"))
+
     def test_dimension_scales(self):
         with File(mode="w") as h5:
             _ = h5.create_dataset("x", data=[1, 2, 3], make_scale=True)

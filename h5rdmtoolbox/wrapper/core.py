@@ -456,6 +456,23 @@ class Group(h5py.Group):
         if isinstance(ret, h5py.Group):
             return self._h5grp(ret.id)
 
+    def values(self):
+        """Yield wrapped group/dataset objects."""
+        for key in self.keys():
+            yield self[key]
+
+    def items(self):
+        """Yield `(name, wrapped-object)` pairs."""
+        for key in self.keys():
+            yield key, self[key]
+
+    def visititems(self, func):
+        """Visit wrapped objects to keep wrapper APIs available in callbacks."""
+        def _visitor(name):
+            return func(name, self[name])
+
+        return super().visit(_visitor)
+
     def __getattr__(self, item: str):
         standard_attributes: Dict = self.standard_attributes
         if standard_attributes:  # are there standard attributes registered?
@@ -2499,6 +2516,18 @@ class File(h5py.File, Group):
         """Return an attribute manager that is inherited from h5py's attribute manager"""
         with phil:
             return WrapperAttributeManager(self)
+
+    def __getitem__(self, name):
+        return Group.__getitem__(self, name)
+
+    def values(self):
+        return Group.values(self)
+
+    def items(self):
+        return Group.items(self)
+
+    def visititems(self, func):
+        return Group.visititems(self, func)
 
     @property
     def version(self) -> str:
