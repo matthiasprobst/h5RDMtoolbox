@@ -65,6 +65,7 @@ H5KWARGS = (
     "alignment_interval",
     "meta_block_size",
 )
+ISO_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 
 def assert_filename_existence(filename: pathlib.Path) -> pathlib.Path:
@@ -94,6 +95,7 @@ def assert_filename_existence(filename: pathlib.Path) -> pathlib.Path:
 
 def convert_strings_to_datetimes(array, time_format="%Y-%m-%dT%H:%M:%S.%f"):
     assert np.issubdtype(array.dtype, np.str_), "Unexpected array type"
+    time_format = _normalize_time_format(time_format)
     return np.array(
         [datetime.strptime(date_str, time_format) for date_str in array.flat]
     ).reshape(array.shape)
@@ -263,6 +265,12 @@ def _delattr(obj: protocols.H5TbxHLObject, item: str):
         return
     del obj[item]
     # super().__delattr__(item)
+
+
+def _normalize_time_format(time_format: str) -> str:
+    if isinstance(time_format, str) and time_format.lower() == "iso":
+        return ISO_TIME_FORMAT
+    return time_format
 
 
 def _validate_jsonld_file_uri(file_uri: Optional[str]) -> None:
@@ -713,8 +721,7 @@ class Group(h5py.Group):
         """
         if attrs is None:
             attrs = {}
-        if time_format.lower() == "iso":
-            time_format = "%Y-%m-%dT%H:%M:%S.%f"
+        time_format = _normalize_time_format(time_format)
 
         attrs.update({"time_format": time_format})
 
@@ -738,6 +745,11 @@ class Group(h5py.Group):
                 overwrite=overwrite,
                 attrs=attrs,
                 **kwargs,
+            )
+        if assign_rdf:
+            ds.rdf.type = "https://schema.org/DateTime"
+            ds.rdf["time_format"].predicate = (
+                "https://matthiasprobst.github.io/pivmeta#timeFormat"
             )
         return ds
 
@@ -2233,16 +2245,20 @@ class Dataset(h5py.Dataset):
                     if dim_ds_data.dtype.kind == "S":
                         # decode string array
                         if dim_ds_attrs.get("time_format", False):
+                            _time_format = _normalize_time_format(
+                                dim_ds_attrs["time_format"]
+                            )
                             if dim_ds_data.ndim == 0:
                                 dim_ds_data = np.array(
                                     datetime.strptime(
                                         dim_ds_data.astype(str),
-                                        dim_ds_attrs["time_format"],
+                                        _time_format,
                                     )
                                 ).astype(datetime)
                             else:
                                 dim_ds_data = convert_strings_to_datetimes(
-                                    dim_ds_data.astype(str)
+                                    dim_ds_data.astype(str),
+                                    time_format=_time_format,
                                 )
                                 # dim_ds_data = np.array(
                                 #     [datetime.fromisoformat(t) for t in dim_ds_data.astype(str)]).astype(
@@ -2332,8 +2348,7 @@ class Dataset(h5py.Dataset):
 
             time_format = self.attrs.get("time_format", None)
             if time_format is not None:
-                if time_format.lower() == "iso":
-                    time_format = "%Y-%m-%dT%H:%M:%S.%f"
+                time_format = _normalize_time_format(time_format)
                 if _arr.ndim == 0:
                     _arr = np.asarray(datetime.strptime(_arr, time_format))
                 elif _arr.ndim == 1:

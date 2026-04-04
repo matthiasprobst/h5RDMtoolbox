@@ -133,7 +133,7 @@ class TestExtension(unittest.TestCase):
                 attrs=dict(units="m/s"),
             )
 
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 u.normalize(10)
 
             with self.assertRaises(TypeError):

@@ -52,7 +52,6 @@ class HDFArrayAccessor:
                                      f'"{name}". Either delete the existing coordinate dataset '
                                      'or write the dataset to a different group.')
 
-        attach_scales = []
         coordinates_0dim = []
 
 
@@ -60,16 +59,17 @@ class HDFArrayAccessor:
             if coord not in group:
                 _data = self._obj.coords[coord].values
                 coord_attrs = self._obj.coords[coord].attrs
+                coord_kwargs = kwargs.copy()
                 if _data.ndim == 0:
-                    _ = kwargs.pop('compression_opts', None)
-                    _ = kwargs.pop('compression', None)
+                    coord_kwargs.pop('compression_opts', None)
+                    coord_kwargs.pop('compression', None)
                     cds = group.create_dataset(coord,
                                                data=self._obj.coords[coord].values,
-                                               attrs=coord_attrs, **kwargs)
+                                               attrs=coord_attrs, **coord_kwargs)
                 else:
                     cds = group.create_dataset(coord,
                                                data=self._obj.coords[coord].values,
-                                               attrs=coord_attrs, **kwargs)
+                                               attrs=coord_attrs, **coord_kwargs)
                 for k, v in self._obj.coords[coord].attrs.items():
                     cds.attrs[k] = v
                 if self._obj.shape != cds.shape and cds.ndim == 0:

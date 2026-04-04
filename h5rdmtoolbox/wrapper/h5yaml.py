@@ -20,33 +20,34 @@ class _H5DictDataInterface(Protocol):
                 # is an attribute of the grou
                 h5.attrs[k] = v
             else:
+                item = v.copy()
                 # can be dataset or group
-                if self.is_dataset(v):
-                    v.pop('type', None)
-                    if 'name' not in v:
-                        v['name'] = k
+                if self.is_dataset(item):
+                    item.pop('type', None)
+                    if 'name' not in item:
+                        item['name'] = k
                     # units = v.pop('units', None)
                     # standard_name = v.pop('standard_name', None)
                     # TODO remove the following hotfix
-                    name = v.pop('name')
-                    data = v.pop('data')
-                    dtype = v.pop('dtype', None)
+                    name = item.pop('name')
+                    dataset_data = item.pop('data')
+                    dtype = item.pop('dtype', None)
                     try:
-                        if dtype is None and num_dtype and not isinstance(data, str):
+                        if dtype is None and num_dtype and not isinstance(dataset_data, str):
                             dtype = num_dtype
-                        if isinstance(data, str):
-                            h5.create_string_dataset(name, data=data, **v)
+                        if isinstance(dataset_data, str):
+                            h5.create_string_dataset(name, data=dataset_data, **item)
                         else:
-                            h5.create_dataset(name, data=data, dtype=dtype, **v)
+                            h5.create_dataset(name, data=dataset_data, dtype=dtype, **item)
                     except (TypeError,) as e:
                         raise RuntimeError('Could not create dataset. Please check the yaml file. The orig. '
                                            f'error is "{e}"')
-                elif self.is_group(v):
-                    v.pop('type', None)
+                elif self.is_group(item):
+                    item.pop('type', None)
 
-                    group_data = v.copy()
+                    group_data = item.copy()
 
-                    datasets = {_k: group_data.pop(_k) for _k, _v in v.items() if H5Yaml.is_dataset(_v)}
+                    datasets = {_k: group_data.pop(_k) for _k, _v in item.items() if H5Yaml.is_dataset(_v)}
 
                     group_data['overwrite'] = group_data.get('overwrite', None)
                     group_data['update_attrs'] = group_data.get('update_attrs', True)
@@ -57,6 +58,7 @@ class _H5DictDataInterface(Protocol):
                     g = h5.create_group(**group_data)
 
                     for ds_name, ds_params in datasets.items():
+                        ds_params = ds_params.copy()
                         dtype = ds_params.pop('dtype', None)
                         if dtype is None and num_dtype and not isinstance(ds_params['data'], str):
                             dtype = num_dtype

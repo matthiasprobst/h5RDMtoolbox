@@ -1005,6 +1005,44 @@ hdf:H5T_INTEL_I64 a hdf:Datatype .
 """.replace("tmp0.hdf", _filename.name).replace("H5T_INTEL_I64", native_int_datatype), ttl)
         _filename.unlink(missing_ok=True)
 
+    def test_rdf_mappings_callable_none_does_not_abort(self):
+        filename = pathlib.Path("rdf_mapping_none.hdf")
+        with h5tbx.File(filename, mode="w") as h5:
+            ds = h5.create_dataset("u", data=[1, 2, 3])
+            ds.attrs["units"] = "m/s"
+            ds.attrs["standard_name"] = "x_velocity"
+
+        rdf_mappings = {
+            "units": {
+                "predicate": M4I.hasUnit,
+                "object": lambda *_: None,
+            },
+            "standard_name": {
+                "predicate": ssnolib.SSNO.hasStandardName,
+                "object": lambda value, _: f"https://example.org/standard-name/{value}",
+            },
+        }
+        ttl = h5tbx.serialize(
+            filename,
+            fmt="ttl",
+            rdf_mappings=rdf_mappings,
+            file_uri="https://example.org#",
+        )
+        graph = rdflib.Graph().parse(data=ttl, format="ttl")
+        has_standard_name = graph.query(
+            """PREFIX ssno: <https://matthiasprobst.github.io/ssno#>
+SELECT ?o WHERE {
+    ?s ssno:hasStandardName ?o .
+}"""
+        )
+        self.assertEqual(len(has_standard_name.bindings), 1)
+        self.assertEqual(
+            str(has_standard_name.bindings[0][rdflib.Variable("o")]),
+            "https://example.org/standard-name/x_velocity",
+        )
+        self.assertNotIn("None", ttl)
+        filename.unlink(missing_ok=True)
+
     def test_quote(self):
         with h5tbx.File() as h5:
             h5.attrs['quote_test'] = 'This is a "quote" test'

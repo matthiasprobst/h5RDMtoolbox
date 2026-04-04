@@ -272,7 +272,7 @@ class WrapperAttributeManager(AttributeManager):
                 'The "predicate" argument is deprecated. Use "rdf_predicate" instead.',
                 DeprecationWarning,
             )
-        _object = kwargs.get("predicate", None)
+        _object = kwargs.get("object", None)
         if _object is not None:
             rdf_object = _object
             warnings.warn(

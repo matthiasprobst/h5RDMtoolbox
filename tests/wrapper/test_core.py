@@ -2,6 +2,7 @@ import datetime
 import json
 import pathlib
 import unittest
+from copy import deepcopy
 from datetime import datetime, timedelta
 
 import h5py
@@ -741,6 +742,31 @@ class TestCore(unittest.TestCase):
             self.assertEqual("0000-1234-1234-1234", h5.attrs["contact"])
             h5.dumps()
 
+    def test_create_from_dict_does_not_mutate_input(self):
+        data = {
+            "group_a": {
+                "attrs": {"note": "test"},
+                "dataset_a": {"data": [1, 2, 3], "dtype": "float32"},
+            }
+        }
+        reference = deepcopy(data)
+        with h5tbx.File() as h5:
+            h5.create_from_dict(data)
+        self.assertDictEqual(data, reference)
+
+    def test_deprecated_object_kwarg_sets_rdf_object(self):
+        with h5tbx.File() as h5:
+            with self.assertWarns(DeprecationWarning):
+                h5.attrs.create(
+                    name="contact",
+                    data="matthias",
+                    object="https://example.org/person/1",
+                )
+            self.assertEqual(
+                h5.rdf.object["contact"],
+                "https://example.org/person/1",
+            )
+
     def test_flag(self):
         with h5tbx.File() as h5:
             time = h5.create_dataset("time", data=[1, 2, 3], make_scale=True)
@@ -1115,10 +1141,37 @@ class TestCore(unittest.TestCase):
             # ds.attrs['timeformat'] = Attribute(value='%Y-%m-%dT%H:%M:%S.%f',
             #                                    rdf_predicate='https://matthiasprobst.github.io/pivmeta#timeFormat')
             self.assertEqual(ds.attrs["time_format"], "%Y-%m-%dT%H:%M:%S.%f")
+            self.assertIn("https://schema.org/DateTime", ds.rdf.type)
+            self.assertEqual(
+                ds.rdf.predicate["time_format"],
+                "https://matthiasprobst.github.io/pivmeta#timeFormat",
+            )
 
         with h5tbx.File() as h5:
             ds = h5.create_time_dataset("time", data=abs_time, time_format="iso")
             self.assertEqual(ds.attrs["time_format"], "%Y-%m-%dT%H:%M:%S.%f")
+
+    def test_time_as_coord_with_custom_time_format(self):
+        timestamps = [
+            datetime.now(),
+            datetime.now() + timedelta(hours=1),
+            datetime.now() + timedelta(hours=2),
+        ]
+        fmt = "%Y-%m-%d %H:%M:%S"
+        with h5tbx.File() as h5:
+            h5.create_time_dataset(
+                "time_custom",
+                data=timestamps,
+                time_format=fmt,
+                make_scale=True,
+            )
+            h5.create_dataset("vel", data=[1, 2, -3], attach_scale="time_custom")
+            v = h5.vel[()]
+
+            self.assertEqual(
+                parse(str(v.time_custom[0].data)).strftime(fmt),
+                timestamps[0].strftime(fmt),
+            )
 
     def test_time_as_coord(self):
         with h5tbx.File() as h5:

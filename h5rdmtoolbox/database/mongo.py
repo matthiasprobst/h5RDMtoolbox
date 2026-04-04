@@ -158,6 +158,8 @@ def _generate_dataset_document(
     if axis == 0:
         docs = []
         for i in range(dataset.shape[axis]):
+            dataset_slice = [(i, i + 1, 1)]
+            dataset_slice.extend((0, None, 1) for _ in range(dataset.ndim - 1))
             doc = {
                 "filename": filename,
                 "name": dataset.name,
@@ -166,7 +168,7 @@ def _generate_dataset_document(
                 "shape": dataset.shape,
                 "ndim": dataset.ndim,
                 "hdfobj": "dataset",
-                "slice": ((i, i + 1, 1), (0, None, 1), (0, None, 1)),
+                "slice": tuple(dataset_slice),
             }
 
             dim_ls = []
@@ -345,7 +347,7 @@ class MongoDBLazyDataset(lazy.LDataset):
             _slice = self.__mongo_doc__["slice"]
             sliced_ds = super().__getitem__(tuple(slice(*s) for s in _slice))
             return sliced_ds.__getitem__(item)
-        super().__getitem__(item)
+        return super().__getitem__(item)
 
 
 class MongoDB(ExtHDF5DBInterface):

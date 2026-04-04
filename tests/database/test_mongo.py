@@ -15,6 +15,7 @@ from sklearn.datasets import load_digits  # ! pip install scikit-learn
 import h5rdmtoolbox as h5tbx
 from h5rdmtoolbox import use
 from h5rdmtoolbox.database.mongo import MongoDB
+from h5rdmtoolbox.database.mongo import MongoDBLazyDataset
 from h5rdmtoolbox.database.mongo import make_dict_mongo_compatible
 from h5rdmtoolbox.database.lazy import LDataset
 
@@ -177,6 +178,25 @@ class TestH5Mongo(unittest.TestCase):
         self.assertEqual(10, mongoDBInterface.collection.count_documents({}))
         res = mongoDBInterface.find_one({"basename": "dataset"})
         self.assertEqual(res[()].shape, (1, 20, 4))
+
+    def test_find_one_axis0_for_2d_dataset(self):
+        mongoDBInterface = MongoDB(collection=self.collection)
+
+        with h5py.File("test.h5", "w") as h5:
+            h5.create_dataset("dataset2d", shape=(10, 5))
+            mongoDBInterface.insert_dataset(h5["dataset2d"], axis=0)
+
+        self.assertEqual(10, mongoDBInterface.collection.count_documents({}))
+        res = mongoDBInterface.find_one({"basename": "dataset2d"})
+        self.assertEqual(res[()].shape, (1, 5))
+
+    def test_mongo_lazy_dataset_getitem_without_slice(self):
+        with h5py.File("test.h5", "w") as h5:
+            h5.create_dataset("dataset", data=[1, 2, 3])
+
+        with h5py.File("test.h5", "r") as h5:
+            lazy_dataset = MongoDBLazyDataset(h5["dataset"], mongo_doc={})
+            np.testing.assert_array_equal(lazy_dataset[()], np.array([1, 2, 3]))
 
     def test_find_one_with_missing_file(self):
         """Test that find_one returns None when file no longer exists."""
